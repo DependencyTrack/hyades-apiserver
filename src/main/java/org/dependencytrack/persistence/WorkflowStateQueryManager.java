@@ -35,7 +35,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public class WorkflowStateQueryManager extends QueryManager implements IQueryManager {
@@ -112,18 +111,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         return singleResult(query.execute(id));
     }
 
-    public WorkflowState updateWorkflowState(WorkflowState transientWorkflowState) {
-        //update fields
-        WorkflowState workflowState = getObjectById(WorkflowState.class, transientWorkflowState.getId());
-        if (workflowState != null) {
-            workflowState.setStatus(transientWorkflowState.getStatus());
-            workflowState.setUpdatedAt(transientWorkflowState.getUpdatedAt());
-            workflowState.setFailureReason(transientWorkflowState.getFailureReason());
-            return persist(workflowState);
-        }
-        return null;
-    }
-
     public void deleteWorkflowState(WorkflowState workflowState) {
         delete(workflowState);
     }
@@ -165,9 +152,8 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             } else { // Other Databases need the "RECURSIVE" keyword in the "WITH" clause to correctly execute the query
                 preparedStatement = connection.prepareStatement("WITH RECURSIVE " + CTE_WORKFLOW_STATE_QUERY);
             }
-
             preparedStatement.setLong(1, parentWorkflowState.getId());
-            preparedStatement.setString(2, parentWorkflowState.getToken().toString());
+            preparedStatement.setObject(2, parentWorkflowState.getToken());
 
             preparedStatement.execute();
             rs = preparedStatement.getResultSet();
@@ -202,7 +188,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
         if(parentWorkflowState == null || parentWorkflowState.getId() <= 0 ) {
             throw new IllegalArgumentException("Parent workflow state cannot be null and id of parent cannot be missing to get workflow states hierarchically");
         }
-
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         try {
@@ -212,7 +197,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             preparedStatement.setString(1, transientStatus.name());
             preparedStatement.setTimestamp(2, new java.sql.Timestamp(updatedAt.getTime()));
             preparedStatement.setLong(3, parentWorkflowState.getId());
-            preparedStatement.setString(4, parentWorkflowState.getToken().toString());
+            preparedStatement.setObject(4, parentWorkflowState.getToken());
 
             return preparedStatement.executeUpdate();
         } catch (Exception ex) {
@@ -328,22 +313,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             if (trx.isActive()) {
                 trx.rollback();
             }
-        }
-    }
-
-    public boolean hasWorkflowStepWithStatus(final UUID token, final WorkflowStep step, final WorkflowStatus status) {
-        final Query<WorkflowState> stateQuery = pm.newQuery(WorkflowState.class);
-        stateQuery.setFilter("token == :token && step == :step && status == :status");
-        stateQuery.setNamedParameters(Map.of(
-                "token", token,
-                "step", step,
-                "status", status
-        ));
-        stateQuery.setResult("count(this)");
-        try {
-            return stateQuery.executeResultUnique(Long.class) > 0;
-        } finally {
-            stateQuery.closeAll();
         }
     }
 

@@ -40,10 +40,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask.partition;
 
 @NotThreadSafe
 public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
@@ -361,6 +363,38 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         assertThat(componentUnaudited.getLastInheritedRiskScore()).isZero();
         assertThat(componentAudited.getLastInheritedRiskScore()).isZero();
         assertThat(componentSuppressed.getLastInheritedRiskScore()).isZero();
+    }
+
+    @Test
+    public void testPartitionWithNull() {
+        final List<Integer> list = null;
+        final List<List<Integer>> partitions = partition(list, 4);
+        assertThat(partitions).isEmpty();
+    }
+
+    @Test
+    public void testPartitionWithEmptyList() {
+        final List<Integer> list = Collections.emptyList();
+        final List<List<Integer>> partitions = partition(list, 4);
+        assertThat(partitions).isEmpty();
+    }
+
+    @Test
+    public void testPartitionWithSmallList() {
+        final List<Integer> list = List.of(1, 2);
+        final List<List<Integer>> partitions = partition(list, 4);
+        assertThat(partitions).hasSize(2);
+    }
+
+    @Test
+    public void testPartitionWithUnevenSizeList() {
+        final List<Integer> list = List.of(1, 2, 3, 4, 5);
+        final List<List<Integer>> partitions = partition(list, 4);
+        assertThat(partitions).satisfiesExactlyInAnyOrder(
+                partition -> assertThat(partition).hasSize(2),
+                partition -> assertThat(partition).hasSize(1),
+                partition -> assertThat(partition).hasSize(1),
+                partition -> assertThat(partition).hasSize(1));
     }
 
 }

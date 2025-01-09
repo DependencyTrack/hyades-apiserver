@@ -20,18 +20,29 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.validation.RegexSequence;
 import alpine.common.validation.ValidationTask;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
+import alpine.model.ApiKey;
+import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
-import io.swagger.annotations.Authorization;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Analysis;
@@ -46,15 +57,8 @@ import org.dependencytrack.util.AnalysisCommentFormatter.AnalysisCommentField;
 import org.dependencytrack.util.AnalysisCommentUtil;
 import org.dependencytrack.util.NotificationUtil;
 
-import javax.validation.Validator;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.dependencytrack.util.AnalysisCommentFormatter.formatComment;
 
@@ -65,26 +69,34 @@ import static org.dependencytrack.util.AnalysisCommentFormatter.formatComment;
  * @since 3.1.0
  */
 @Path("/v1/analysis")
-@Api(value = "analysis", authorizations = @Authorization(value = "X-Api-Key"))
+@Tag(name = "analysis")
+@SecurityRequirements({
+        @SecurityRequirement(name = "ApiKeyAuth"),
+        @SecurityRequirement(name = "BearerAuth")
+})
 public class AnalysisResource extends AlpineResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Retrieves an analysis trail",
-            response = Analysis.class,
-            notes = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
+    @Operation(
+            summary = "Retrieves an analysis trail",
+            description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 404, message = "The project, component, or vulnerability could not be found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "An analysis trail",
+                    content = @Content(schema = @Schema(implementation = Analysis.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response retrieveAnalysis(@ApiParam(value = "The UUID of the project", format = "uuid")
+    public Response retrieveAnalysis(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"))
                                      @QueryParam("project") @ValidUuid String projectUuid,
-                                     @ApiParam(value = "The UUID of the component", format = "uuid", required = true)
+                                     @Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
                                      @QueryParam("component") @ValidUuid String componentUuid,
-                                     @ApiParam(value = "The UUID of the vulnerability", format = "uuid", required = true)
+                                     @Parameter(description = "The UUID of the vulnerability", schema = @Schema(type = "string", format = "uuid"), required = true)
                                      @QueryParam("vulnerability") @ValidUuid String vulnerabilityUuid) {
         failOnValidationError(
                 new ValidationTask(RegexSequence.Pattern.UUID, projectUuid, "Project is not a valid UUID", false), // this is optional
@@ -118,16 +130,20 @@ public class AnalysisResource extends AlpineResource {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Records an analysis decision",
-            response = Analysis.class,
-            notes = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong></p>"
+    @Operation(
+            summary = "Records an analysis decision",
+            description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong></strong> or <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 404, message = "The project, component, or vulnerability could not be found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The created analysis",
+                    content = @Content(schema = @Schema(implementation = Analysis.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS)
+    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
     public Response updateAnalysis(AnalysisRequest request) {
         final Validator validator = getValidator();
         failOnValidationError(
@@ -155,8 +171,13 @@ public class AnalysisResource extends AlpineResource {
             }
 
             String commenter = null;
-            if (getPrincipal() instanceof LdapUser || getPrincipal() instanceof ManagedUser || getPrincipal() instanceof OidcUser) {
-                commenter = ((UserPrincipal) getPrincipal()).getUsername();
+            if (getPrincipal() instanceof UserPrincipal principal) {
+                commenter = principal.getUsername();
+            } else if (getPrincipal() instanceof ApiKey apiKey) {
+                List<Team> teams = apiKey.getTeams();
+                List<String> teamNames = new ArrayList<>();
+                teams.forEach(team -> teamNames.add(team.getName()));
+                commenter = String.join(", ", teamNames);
             }
 
             boolean analysisStateChange = false;

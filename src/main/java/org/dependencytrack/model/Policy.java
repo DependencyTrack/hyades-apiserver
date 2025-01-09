@@ -34,10 +34,10 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -120,7 +120,7 @@ public class Policy implements Serializable {
     /**
      * A list of zero-to-n tags
      */
-    @Persistent(table = "POLICY_TAGS", defaultFetchGroup = "true")
+    @Persistent(table = "POLICY_TAGS", defaultFetchGroup = "true", mappedBy = "policies")
     @Join(column = "POLICY_ID")
     @Element(column = "TAG_ID")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
@@ -131,7 +131,7 @@ public class Policy implements Serializable {
      */
     @Persistent(customValueStrategy = "uuid")
     @Unique(name = "POLICY_UUID_IDX")
-    @Column(name = "UUID", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
+    @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
     @NotNull
     private UUID uuid;
 
@@ -141,6 +141,10 @@ public class Policy implements Serializable {
     @Persistent
     @Column(name = "INCLUDE_CHILDREN", allowsNull = "true") // New column, must allow nulls on existing data bases)
     private boolean includeChildren;
+
+    @Persistent
+    @Column(name = "ONLY_LATEST_PROJECT_VERSION", defaultValue = "false")
+    private boolean onlyLatestProjectVersion = false;
 
     public long getId() {
         return id;
@@ -223,5 +227,13 @@ public class Policy implements Serializable {
 
     public void setIncludeChildren(boolean includeChildren) {
         this.includeChildren = includeChildren;
+    }
+
+    public boolean isOnlyLatestProjectVersion() {
+        return onlyLatestProjectVersion;
+    }
+
+    public void setOnlyLatestProjectVersion(boolean onlyLatestProjectVersion) {
+        this.onlyLatestProjectVersion = onlyLatestProjectVersion;
     }
 }

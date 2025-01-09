@@ -37,11 +37,11 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -555,6 +555,19 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals(409, response.getStatus(), 0);
         String body = getPlainTextBody(response);
         Assert.assertEquals("A user with the same username already exists. Cannot create new user.", body);
+    }
+
+    @Test
+    public void deleteOidcUserTest() {
+        qm.createOidcUser("blackbeard");
+        OidcUser user = new OidcUser();
+        user.setUsername("blackbeard");
+        Response response = jersey.target(V1_USER + "/oidc").request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true) // HACK
+                .method("DELETE", Entity.entity(user, MediaType.APPLICATION_JSON)); // HACK
+        // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
+        Assert.assertEquals(204, response.getStatus(), 0);
     }
 
     @Test

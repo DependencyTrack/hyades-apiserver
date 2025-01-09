@@ -23,6 +23,11 @@ import alpine.model.Team;
 import alpine.notification.NotificationLevel;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.NotificationPublisher;
@@ -39,11 +44,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -190,7 +190,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToRuleTest() {
-        Project project = qm.createProject("Acme Example", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
@@ -207,7 +207,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToRuleInvalidRuleTest() {
-        Project project = qm.createProject("Acme Example", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
@@ -220,7 +220,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToRuleInvalidScopeTest() {
-        Project project = qm.createProject("Acme Example", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.SYSTEM, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
@@ -247,7 +247,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToRuleDuplicateProjectTest() {
-        Project project = qm.createProject("Acme Example", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         List<Project> projects = new ArrayList<>();
@@ -263,7 +263,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromRuleTest() {
-        Project project = qm.createProject("Acme Example", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         List<Project> projects = new ArrayList<>();
@@ -279,8 +279,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromRuleInvalidRuleTest() {
-        Project project = qm.createProject("Acme Example", null, null, null, null, null, true, false);
-        NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
+        Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
+        qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
@@ -292,7 +292,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromRuleInvalidScopeTest() {
-        Project project = qm.createProject("Acme Example", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.SYSTEM, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
@@ -319,7 +319,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromRuleDuplicateProjectTest() {
-        Project project = qm.createProject("Acme Example", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
@@ -425,6 +425,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
                           "scope": "PORTFOLIO",
                           "notificationLevel": "INFORMATIONAL",
                           "projects": [],
+                          "tags": [],
                           "teams": [
                             {
                               "uuid": "${json-unit.matches:teamUuid}",
@@ -512,5 +513,111 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
         Assert.assertEquals("Team subscriptions are only possible on notification rules with EMAIL publisher.", body);
+    }
+
+    @Test
+    public void updateNotificationRuleWithTagsTest() {
+        final NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
+        final NotificationRule rule = qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
+
+        // Tag the rule with "foo" and "bar".
+        Response response = jersey.target(V1_NOTIFICATION_RULE).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(/* language=JSON */ """
+                        {
+                          "uuid": "%s",
+                          "name": "Rule 1",
+                          "scope": "PORTFOLIO",
+                          "notificationLevel": "INFORMATIONAL",
+                          "tags": [
+                            {
+                              "name": "foo"
+                            },
+                            {
+                              "name": "bar"
+                            }
+                          ]
+                        }
+                        """.formatted(rule.getUuid()), MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("ruleUuid", equalTo(rule.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "name": "Rule 1",
+                          "enabled": false,
+                          "notifyChildren": false,
+                          "logSuccessfulPublish": false,
+                          "scope": "PORTFOLIO",
+                          "notificationLevel": "INFORMATIONAL",
+                          "projects": [],
+                          "tags": [
+                            {
+                              "name": "foo"
+                            },
+                            {
+                              "name": "bar"
+                            }
+                          ],
+                          "teams": [],
+                          "notifyOn": [],
+                          "publisher": {
+                            "name": "${json-unit.any-string}",
+                            "description": "${json-unit.any-string}",
+                            "publisherClass": "${json-unit.any-string}",
+                            "templateMimeType": "${json-unit.any-string}",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          },
+                          "uuid": "${json-unit.matches:ruleUuid}"
+                        }
+                        """);
+
+        // Replace the previous tags with only "baz".
+        response = jersey.target(V1_NOTIFICATION_RULE).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(/* language=JSON */ """
+                        {
+                          "uuid": "%s",
+                          "name": "Rule 1",
+                          "scope": "PORTFOLIO",
+                          "notificationLevel": "INFORMATIONAL",
+                          "tags": [
+                            {
+                              "name": "baz"
+                            }
+                          ]
+                        }
+                        """.formatted(rule.getUuid()), MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("ruleUuid", equalTo(rule.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "name": "Rule 1",
+                          "enabled": false,
+                          "notifyChildren": false,
+                          "logSuccessfulPublish": false,
+                          "scope": "PORTFOLIO",
+                          "notificationLevel": "INFORMATIONAL",
+                          "projects": [],
+                          "tags": [
+                            {
+                              "name": "baz"
+                            }
+                          ],
+                          "teams": [],
+                          "notifyOn": [],
+                          "publisher": {
+                            "name": "${json-unit.any-string}",
+                            "description": "${json-unit.any-string}",
+                            "publisherClass": "${json-unit.any-string}",
+                            "templateMimeType": "${json-unit.any-string}",
+                            "defaultPublisher": true,
+                            "uuid": "${json-unit.any-string}"
+                          },
+                          "uuid": "${json-unit.matches:ruleUuid}"
+                        }
+                        """);
     }
 }

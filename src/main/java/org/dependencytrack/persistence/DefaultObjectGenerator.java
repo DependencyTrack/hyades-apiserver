@@ -18,24 +18,34 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.auth.PasswordService;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
 import org.dependencytrack.util.NotificationUtil;
+import org.dependencytrack.util.WaitingLockConfiguration;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+
+import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
+import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_DEFAULT_OBJECTS_VERSION;
+import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 
 /**
  * Creates default objects on an empty database.
@@ -52,8 +62,57 @@ public class DefaultObjectGenerator implements ServletContextListener {
      */
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        LOGGER.info("Initializing default object generator");
+        if (!Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_TASKS_ENABLED)) {
+            LOGGER.info("Not populating database with default objects because %s is disabled"
+                    .formatted(ConfigKey.INIT_TASKS_ENABLED.getPropertyName()));
+            return;
+        }
 
+        // Ensure that this task is only executed by a single instance at once.
+        // Wait for lock acquisition rather than simply skipping execution,
+        // since application logic may depend on default objects being present.
+        final var lockConfig = new WaitingLockConfiguration(
+                /* createdAt */ Instant.now(),
+                /* name */ getClass().getName(),
+                /* lockAtMostFor */ Duration.ofMinutes(5),
+                /* lockAtLeastFor */ Duration.ZERO,
+                /* pollInterval */ Duration.ofSeconds(1),
+                /* waitTimeout */ Duration.ofMinutes(5)
+        );
+
+        try {
+            executeWithLockWaiting(lockConfig, this::executeLocked);
+        } catch (Throwable t) {
+            if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+                // Make absolutely sure that we exit with non-zero code so
+                // the container orchestrator knows to restart the container.
+                LOGGER.error("Failed to populate database with default objects", t);
+                System.exit(1);
+            }
+
+            throw new RuntimeException("Failed to populate database with default objects", t);
+        }
+
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+            LOGGER.info("Exiting because %s is enabled".formatted(ConfigKey.INIT_AND_EXIT.getPropertyName()));
+            System.exit(0);
+        }
+    }
+
+    private void executeLocked() {
+        assertLocked();
+
+        if (!shouldExecute()) {
+            LOGGER.info("Default objects already populated for build %s (timestamp: %s); Skipping".formatted(
+                    Config.getInstance().getApplicationBuildUuid(),
+                    Config.getInstance().getApplicationBuildTimestamp()
+            ));
+            return;
+        }
+
+        // TODO: Make population transactional with recordDefaultObjectsVersion().
+
+        LOGGER.info("Initializing default object generator");
         loadDefaultPermissions();
         loadDefaultPersonas();
         loadDefaultLicenses();
@@ -61,6 +120,8 @@ public class DefaultObjectGenerator implements ServletContextListener {
         loadDefaultRepositories();
         loadDefaultConfigProperties();
         loadDefaultNotificationPublishers();
+
+        recordDefaultObjectsVersion();
     }
 
     /**
@@ -69,6 +130,32 @@ public class DefaultObjectGenerator implements ServletContextListener {
     @Override
     public void contextDestroyed(final ServletContextEvent event) {
         /* Intentionally blank to satisfy interface */
+    }
+
+    private boolean shouldExecute() {
+        try (final var qm = new QueryManager()) {
+            final ConfigProperty configProperty = qm.getConfigProperty(
+                    INTERNAL_DEFAULT_OBJECTS_VERSION.getGroupName(),
+                    INTERNAL_DEFAULT_OBJECTS_VERSION.getPropertyName()
+            );
+
+            return configProperty == null
+                    || configProperty.getPropertyValue() == null
+                    || !Config.getInstance().getApplicationBuildUuid().equals(configProperty.getPropertyValue());
+        }
+    }
+
+    private void recordDefaultObjectsVersion() {
+        try (final var qm = new QueryManager()) {
+            qm.runInTransaction(() -> {
+                final ConfigProperty configProperty = qm.getConfigProperty(
+                        INTERNAL_DEFAULT_OBJECTS_VERSION.getGroupName(),
+                        INTERNAL_DEFAULT_OBJECTS_VERSION.getPropertyName()
+                );
+
+                configProperty.setPropertyValue(Config.getInstance().getApplicationBuildUuid());
+            });
+        }
     }
 
     /**
@@ -145,6 +232,8 @@ public class DefaultObjectGenerator implements ServletContextListener {
             final Team managers = qm.createTeam("Portfolio Managers", false);
             LOGGER.debug("Creating team: Automation");
             final Team automation = qm.createTeam("Automation", true);
+            LOGGER.debug("Creating team: Badge Viewers");
+            final Team badges = qm.createTeam("Badge Viewers", true);
 
             final List<Permission> fullList = qm.getPermissions();
 
@@ -152,10 +241,12 @@ public class DefaultObjectGenerator implements ServletContextListener {
             sysadmins.setPermissions(fullList);
             managers.setPermissions(getPortfolioManagersPermissions(fullList));
             automation.setPermissions(getAutomationPermissions(fullList));
+            badges.setPermissions(getBadgesPermissions(fullList));
 
             qm.persist(sysadmins);
             qm.persist(managers);
             qm.persist(automation);
+            qm.persist(badges);
 
             LOGGER.debug("Adding admin user to System Administrators");
             qm.addUserToTeam(admin, sysadmins);
@@ -170,7 +261,11 @@ public class DefaultObjectGenerator implements ServletContextListener {
         final List<Permission> permissions = new ArrayList<>();
         for (final Permission permission: fullList) {
             if (permission.getName().equals(Permissions.Constants.VIEW_PORTFOLIO) ||
-                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT)) {
+                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT) ||
+                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) ||
+                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_READ) ||
+                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE) ||
+                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE)) {
                 permissions.add(permission);
             }
         }
@@ -182,6 +277,16 @@ public class DefaultObjectGenerator implements ServletContextListener {
         for (final Permission permission: fullList) {
             if (permission.getName().equals(Permissions.Constants.VIEW_PORTFOLIO) ||
                     permission.getName().equals(Permissions.Constants.BOM_UPLOAD)) {
+                permissions.add(permission);
+            }
+        }
+        return permissions;
+    }
+
+    private List<Permission> getBadgesPermissions(final List<Permission> fullList) {
+        final List<Permission> permissions = new ArrayList<>();
+        for (final Permission permission : fullList) {
+            if (permission.getName().equals(Permissions.Constants.VIEW_BADGES)) {
                 permissions.add(permission);
             }
         }

@@ -22,26 +22,30 @@ import alpine.common.util.UuidUtil;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
+import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -50,11 +54,29 @@ import static org.hamcrest.CoreMatchers.equalTo;
 
 public class TeamResourceTest extends ResourceTest {
 
+    private String jwt;
+    private Team userNotPartof;
+
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(TeamResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class));
+
+    public void setUpUser(boolean isAdmin) {
+        ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        jwt = new JsonWebToken().createToken(testUser);
+        qm.addUserToTeam(testUser, team);
+        userNotPartof = qm.createTeam("UserNotPartof", false);
+        if (isAdmin) {
+            final var generator = new DefaultObjectGenerator();
+            generator.loadDefaultPermissions();
+            List<Permission> permissionsList = new ArrayList<>();
+            final Permission adminPermission = qm.getPermission("ACCESS_MANAGEMENT");
+            permissionsList.add(adminPermission);
+            testUser.setPermissions(permissionsList);
+        }
+    }
 
     @Test
     public void getTeamsTest() {
@@ -195,7 +217,7 @@ public class TeamResourceTest extends ResourceTest {
             aclToogle.setPropertyValue("true");
             qm.persist(aclToogle);
         }
-        Project project = qm.createProject("Acme Example", null, "1", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1", null, null, null, null, false);
         project.addAccessTeam(team);
         qm.persist(project);
         Response response = jersey.target(V1_TEAM).request()
@@ -314,4 +336,77 @@ public class TeamResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(getPlainTextBody(response)).isEqualTo("The API key could not be found.");
     }
+
+    @Test
+    public void getVisibleNonApiKeyTeams() {
+        Response response = jersey.target(V1_TEAM + "/visible")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        JsonArray teams = parseJsonArray(response);
+        Assert.assertEquals(1, teams.size());
+        Assert.assertEquals(this.team.getUuid().toString(), teams.getFirst().asJsonObject().getString("uuid"));
+    }
+
+    @Test
+    public void getVisibleAdminApiKeyTeams() {
+        userNotPartof = qm.createTeam("UserNotPartof", false);
+        final var generator = new DefaultObjectGenerator();
+        generator.loadDefaultPermissions();
+        List<Permission> permissionsList = new ArrayList<>();
+        final Permission adminPermission = qm.getPermission("ACCESS_MANAGEMENT");
+        permissionsList.add(adminPermission);
+        this.team.setPermissions(permissionsList);
+
+        Response response = jersey.target(V1_TEAM + "/visible")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assert.assertEquals(200, response.getStatus(), 0);
+        JsonArray teams = parseJsonArray(response);
+        Assert.assertEquals(2, teams.size());
+        Assert.assertEquals(this.team.getUuid().toString(), teams.getFirst().asJsonObject().getString("uuid"));
+        Assert.assertEquals(userNotPartof.getUuid().toString(), teams.get(1).asJsonObject().getString("uuid"));
+    }
+
+    @Test
+    public void getVisibleAdminTeams() {
+        setUpUser(true);
+        Response response = jersey.target(V1_TEAM + "/visible")
+                .request()
+                .header("Authorization", "Bearer " + jwt)
+                .get();
+        Assert.assertEquals(200, response.getStatus(), 0);
+        JsonArray teams = parseJsonArray(response);
+        Assert.assertEquals(2, teams.size());
+        Assert.assertEquals(this.team.getUuid().toString(), teams.getFirst().asJsonObject().getString("uuid"));
+        Assert.assertEquals(userNotPartof.getUuid().toString(), teams.get(1).asJsonObject().getString("uuid"));
+    }
+
+    @Test
+    public void getVisibleNotAdminTeams() {
+        setUpUser(false);
+        Response response = jersey.target(V1_TEAM + "/visible")
+                .request()
+                .header("Authorization", "Bearer " + jwt)
+                .get();
+        Assert.assertEquals(200, response.getStatus(), 0);
+        JsonArray teams = parseJsonArray(response);
+        Assert.assertEquals(1, teams.size());
+        Assert.assertEquals(this.team.getUuid().toString(), teams.getFirst().asJsonObject().getString("uuid"));
+    }
+
+    @Test
+    public void getVisibleNotAdminApiKeyTeams() {
+        Response response = jersey.target(V1_TEAM + "/visible")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assert.assertEquals(200, response.getStatus(), 0);
+        JsonArray teams = parseJsonArray(response);
+        Assert.assertEquals(1, teams.size());
+        Assert.assertEquals(this.team.getUuid().toString(), teams.getFirst().asJsonObject().getString("uuid"));
+    }
+
 }

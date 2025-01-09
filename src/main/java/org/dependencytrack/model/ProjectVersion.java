@@ -21,44 +21,16 @@ package org.dependencytrack.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.UUID;
 
 /**
  * Value object holding UUID and version for a project
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class ProjectVersion implements Serializable {
+@JsonInclude(JsonInclude.Include.ALWAYS)
+public record ProjectVersion(UUID uuid, String version, Boolean active) implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-
-    private UUID uuid;
-
-    private String version;
-
-    public ProjectVersion() {
-        this.uuid = null;
-        this.version = null;
-    }
-
-    public ProjectVersion(UUID uuid, String version) {
-        this.uuid = uuid;
-        this.version = version;
-
-    }
-
-    public void setUuid(UUID uuid) {
-        this.uuid = uuid;
-    }
-
-    public UUID getUuid() {
-        return uuid;
-    }
-
-    public void setVersion(String version) {
-        this.version = version;
-    }
-
-    public String getVersion() {
-        return version;
+    public ProjectVersion(UUID uuid, String version, Date inactiveSince) {
+        this(uuid, version, inactiveSince == null);
     }
 }

@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.resources.v1.vo;
 
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -27,7 +27,7 @@ public class BomUploadResponse implements Serializable {
 
     private static final long serialVersionUID = -7592436786586686865L;
 
-    @ApiModelProperty(required = true, value = "Token used to check task progress")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Token used to check task progress")
     private UUID token;
 
     public void setToken(UUID token) {

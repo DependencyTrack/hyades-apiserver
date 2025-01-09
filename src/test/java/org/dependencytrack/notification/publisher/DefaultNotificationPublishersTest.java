@@ -21,7 +21,7 @@ package org.dependencytrack.notification.publisher;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MediaType;
 
 import static org.dependencytrack.notification.publisher.PublisherClass.ConsolePublisher;
 import static org.dependencytrack.notification.publisher.PublisherClass.JiraPublisher;

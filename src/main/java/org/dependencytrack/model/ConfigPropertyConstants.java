@@ -28,8 +28,9 @@ import java.util.UUID;
 public enum ConfigPropertyConstants {
 
     INTERNAL_CLUSTER_ID("internal", "cluster.id", UUID.randomUUID().toString(), PropertyType.STRING, "Unique identifier of the cluster", ConfigPropertyAccessMode.READ_ONLY),
+    INTERNAL_DEFAULT_OBJECTS_VERSION("internal", "default.objects.version", null, PropertyType.STRING, "Version of the default objects in the database", ConfigPropertyAccessMode.READ_ONLY),
     GENERAL_BASE_URL("general", "base.url", null, PropertyType.URL, "URL used to construct links back to Dependency-Track from external systems", ConfigPropertyAccessMode.READ_WRITE),
-    GENERAL_BADGE_ENABLED("general", "badge.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable SVG badge support from metrics", ConfigPropertyAccessMode.READ_WRITE),
+    GENERAL_BADGE_ENABLED("general", "badge.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable unauthenticated access to SVG badge from metrics", ConfigPropertyAccessMode.READ_WRITE),
     EMAIL_SMTP_ENABLED("email", "smtp.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable SMTP", ConfigPropertyAccessMode.READ_WRITE),
     EMAIL_SMTP_FROM_ADDR("email", "smtp.from.address", null, PropertyType.STRING, "The from email address to use to send output SMTP mail", ConfigPropertyAccessMode.READ_WRITE),
     EMAIL_SMTP_SERVER_HOSTNAME("email", "smtp.server.hostname", null, PropertyType.STRING, "The hostname or IP address of the SMTP mail server", ConfigPropertyAccessMode.READ_WRITE),
@@ -43,6 +44,11 @@ public enum ConfigPropertyConstants {
     JIRA_URL("integrations", "jira.url", null, PropertyType.URL, "The base URL of the JIRA instance", ConfigPropertyAccessMode.READ_WRITE),
     JIRA_USERNAME("integrations", "jira.username", null, PropertyType.STRING, "The optional username to authenticate with when creating an Jira issue", ConfigPropertyAccessMode.READ_WRITE),
     JIRA_PASSWORD("integrations", "jira.password", null, PropertyType.ENCRYPTEDSTRING, "The optional password for the username used for authentication", ConfigPropertyAccessMode.READ_WRITE),
+    MAINTENANCE_METRICS_RETENTION_DAYS("maintenance", "metrics.retention.days", "90", PropertyType.INTEGER, "Number of days to retain metrics data for", ConfigPropertyAccessMode.READ_WRITE),
+    MAINTENANCE_TAGS_DELETE_UNUSED("maintenance", "tags.delete.unused", "true", PropertyType.BOOLEAN, "Whether unused tags shall be deleted", ConfigPropertyAccessMode.READ_WRITE),
+    MAINTENANCE_VULNERABILITY_SCAN_RETENTION_HOURS("maintenance", "vuln.scan.retention.hours", "24", PropertyType.INTEGER, "Number of hours to retain vulnerability scan records for", ConfigPropertyAccessMode.READ_WRITE),
+    MAINTENANCE_WORKFLOW_RETENTION_HOURS("maintenance", "workflow.retention.hours", "72", PropertyType.INTEGER, "Number of hours to retain workflow records for", ConfigPropertyAccessMode.READ_WRITE),
+    MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES("maintenance", "workflow.step.timeout.minutes", "60", PropertyType.INTEGER, "Number of minutes after which workflow steps are timed out", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_INTERNAL_ENABLED("scanner", "internal.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable the internal analyzer", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_INTERNAL_FUZZY_ENABLED("scanner", "internal.fuzzy.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable non-exact fuzzy matching using the internal analyzer", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_INTERNAL_FUZZY_EXCLUDE_PURL("scanner", "internal.fuzzy.exclude.purl", "true", PropertyType.BOOLEAN, "Flag to enable/disable fuzzy matching on components that have a Package URL (PURL) defined", ConfigPropertyAccessMode.READ_WRITE),
@@ -59,15 +65,20 @@ public enum ConfigPropertyConstants {
     SCANNER_SNYK_BASE_URL("scanner", "snyk.base.url", "https://api.snyk.io", PropertyType.URL, "Base Url pointing to the hostname and path for Snyk analysis", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_POLICY_FILE_LAST_MODIFIED_HASH("vulnerability-policy", "vulnerability.policy.file.last.modified.hash", null,  PropertyType.STRING, "Hash value or etag of the last fetched bundle if any", ConfigPropertyAccessMode.READ_ONLY),
     VULNERABILITY_SOURCE_NVD_ENABLED("vuln-source", "nvd.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable National Vulnerability Database", ConfigPropertyAccessMode.READ_WRITE),
-    VULNERABILITY_SOURCE_NVD_FEEDS_URL("vuln-source", "nvd.feeds.url", "https://nvd.nist.gov/feeds", PropertyType.URL, "A base URL pointing to the hostname and path of the NVD feeds", ConfigPropertyAccessMode.READ_WRITE),
+    VULNERABILITY_SOURCE_NVD_API_URL("vuln-source", "nvd.api.url", "https://services.nvd.nist.gov/rest/json/cves/2.0", PropertyType.URL, "REST API URL for the NVD's CVE API 2.0", ConfigPropertyAccessMode.READ_WRITE),
+    VULNERABILITY_SOURCE_NVD_API_KEY("vuln-source", "nvd.api.key", null, PropertyType.ENCRYPTEDSTRING, "API key for the NVD REST API", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ENABLED("vuln-source", "github.advisories.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable GitHub Advisories", ConfigPropertyAccessMode.READ_WRITE),
+    VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ALIAS_SYNC_ENABLED("vuln-source", "github.advisories.alias.sync.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable alias synchronization for GitHub Advisories", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ACCESS_TOKEN("vuln-source", "github.advisories.access.token", null, PropertyType.STRING, "The access token used for GitHub API authentication", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_SOURCE_GOOGLE_OSV_BASE_URL("vuln-source", "google.osv.base.url", "https://osv-vulnerabilities.storage.googleapis.com/", PropertyType.URL, "A base URL pointing to the hostname and path for OSV mirroring", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_SOURCE_GOOGLE_OSV_ENABLED("vuln-source", "google.osv.enabled", null, PropertyType.STRING, "List of enabled ecosystems to mirror OSV", ConfigPropertyAccessMode.READ_WRITE),
+    VULNERABILITY_SOURCE_GOOGLE_OSV_ALIAS_SYNC_ENABLED("vuln-source", "google.osv.alias.sync.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable alias synchronization for OSV", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_SOURCE_EPSS_ENABLED("vuln-source", "epss.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable Exploit Prediction Scoring System", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_SOURCE_EPSS_FEEDS_URL("vuln-source", "epss.feeds.url", "https://epss.cyentia.com", PropertyType.URL, "A base URL pointing to the hostname and path of the EPSS feeds", ConfigPropertyAccessMode.READ_WRITE),
     ACCEPT_ARTIFACT_CYCLONEDX("artifact", "cyclonedx.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable the systems ability to accept CycloneDX uploads", ConfigPropertyAccessMode.READ_WRITE),
-    BOM_VALIDATION_ENABLED("artifact", "bom.validation.enabled", "true", PropertyType.BOOLEAN, "Flag to control bom validation", ConfigPropertyAccessMode.READ_WRITE),
+    BOM_VALIDATION_MODE("artifact", "bom.validation.mode", BomValidationMode.ENABLED.name(), PropertyType.STRING, "Flag to control the BOM validation mode", ConfigPropertyAccessMode.READ_WRITE),
+    BOM_VALIDATION_TAGS_INCLUSIVE("artifact", "bom.validation.tags.inclusive", "[]", PropertyType.STRING, "JSON array of tags for which BOM validation shall be performed", ConfigPropertyAccessMode.READ_WRITE),
+    BOM_VALIDATION_TAGS_EXCLUSIVE("artifact", "bom.validation.tags.exclusive", "[]", PropertyType.STRING, "JSON array of tags for which BOM validation shall NOT be performed", ConfigPropertyAccessMode.READ_WRITE),
     FORTIFY_SSC_ENABLED("integrations", "fortify.ssc.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable Fortify SSC integration", ConfigPropertyAccessMode.READ_WRITE),
     FORTIFY_SSC_SYNC_CADENCE("integrations", "fortify.ssc.sync.cadence", "60", PropertyType.INTEGER, "The cadence (in minutes) to upload to Fortify SSC", ConfigPropertyAccessMode.READ_WRITE),
     FORTIFY_SSC_URL("integrations", "fortify.ssc.url", null, PropertyType.URL, "Base URL to Fortify SSC", ConfigPropertyAccessMode.READ_WRITE),
@@ -81,7 +92,7 @@ public enum ConfigPropertyConstants {
     KENNA_SYNC_CADENCE("integrations", "kenna.sync.cadence", "60", PropertyType.INTEGER, "The cadence (in minutes) to upload to Kenna Security", ConfigPropertyAccessMode.READ_WRITE),
     KENNA_TOKEN("integrations", "kenna.token", null, PropertyType.ENCRYPTEDSTRING, "The token to use when authenticating to Kenna Security", ConfigPropertyAccessMode.READ_WRITE),
     KENNA_CONNECTOR_ID("integrations", "kenna.connector.id", null, PropertyType.STRING, "The Kenna Security connector identifier to upload to", ConfigPropertyAccessMode.READ_WRITE),
-    ACCESS_MANAGEMENT_ACL_ENABLED("access-management", "acl.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable access control to projects in the portfolio", ConfigPropertyAccessMode.READ_WRITE),
+    ACCESS_MANAGEMENT_ACL_ENABLED("access-management", "acl.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable access control to projects in the portfolio", ConfigPropertyAccessMode.READ_WRITE, true),
     NOTIFICATION_TEMPLATE_BASE_DIR("notification", "template.baseDir", SystemUtils.getEnvironmentVariable("DEFAULT_TEMPLATES_OVERRIDE_BASE_DIRECTORY", System.getProperty("user.home")), PropertyType.STRING, "The base directory to use when searching for notification templates", ConfigPropertyAccessMode.READ_WRITE),
     NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED("notification", "template.default.override.enabled", SystemUtils.getEnvironmentVariable("DEFAULT_TEMPLATES_OVERRIDE_ENABLED", "false"), PropertyType.BOOLEAN, "Flag to enable/disable override of default notification templates", ConfigPropertyAccessMode.READ_WRITE),
     TASK_SCHEDULER_LDAP_SYNC_CADENCE("task-scheduler", "ldap.sync.cadence", "6", PropertyType.INTEGER, "Sync cadence (in hours) for LDAP", ConfigPropertyAccessMode.READ_WRITE),
@@ -101,7 +112,10 @@ public enum ConfigPropertyConstants {
     CUSTOM_RISK_SCORE_HIGH("risk-score", "weight.high", "5", PropertyType.INTEGER, "High severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_MEDIUM("risk-score", "weight.medium", "3", PropertyType.INTEGER, "Medium severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_LOW("risk-score", "weight.low", "1", PropertyType.INTEGER, "Low severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
-    CUSTOM_RISK_SCORE_UNASSIGNED("risk-score", "weight.unassigned", "5", PropertyType.INTEGER, "Unassigned severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE);
+    CUSTOM_RISK_SCORE_UNASSIGNED("risk-score", "weight.unassigned", "5", PropertyType.INTEGER, "Unassigned severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
+    WELCOME_MESSAGE("general", "welcome.message.html", "%20%3Chtml%3E%3Ch1%3EYour%20Welcome%20Message%3C%2Fh1%3E%3C%2Fhtml%3E", PropertyType.STRING, "Custom HTML Code that is displayed before login", ConfigPropertyAccessMode.READ_WRITE, true),
+    IS_WELCOME_MESSAGE("general", "welcome.message.enabled", "false", PropertyType.BOOLEAN, "Bool that says wheter to show the welcome message or not", ConfigPropertyAccessMode.READ_WRITE, true),
+    DEFAULT_LANGUAGE("general", "default.locale", null, PropertyType.STRING, "Determine the default Language to use", ConfigPropertyAccessMode.READ_WRITE, true);
 
     private final String groupName;
     private final String propertyName;
@@ -109,6 +123,7 @@ public enum ConfigPropertyConstants {
     private final PropertyType propertyType;
     private final String description;
     private final ConfigPropertyAccessMode accessMode;
+    private final Boolean isPublic;
 
     ConfigPropertyConstants(final String groupName,
                             final String propertyName,
@@ -122,11 +137,29 @@ public enum ConfigPropertyConstants {
         this.propertyType = propertyType;
         this.description = description;
         this.accessMode = accessMode;
+        this.isPublic = false;
+    }
+
+    ConfigPropertyConstants(final String groupName,
+                            final String propertyName,
+                            final String defaultPropertyValue,
+                            final PropertyType propertyType,
+                            final String description,
+                            final ConfigPropertyAccessMode accessMode,
+                            final Boolean isPublic) {
+        this.groupName = groupName;
+        this.propertyName = propertyName;
+        this.defaultPropertyValue = defaultPropertyValue;
+        this.propertyType = propertyType;
+        this.description = description;
+        this.accessMode = accessMode;
+        this.isPublic = isPublic;
     }
 
     public static ConfigPropertyConstants ofProperty(final IConfigProperty property) {
         return Arrays.stream(values())
-                .filter(value -> value.groupName.equals(property.getGroupName()) && value.propertyName.equals(property.getPropertyName()))
+                .filter(value -> value.groupName.equals(property.getGroupName())
+                        && value.propertyName.equals(property.getPropertyName()))
                 .findFirst()
                 .orElse(null);
     }
@@ -154,5 +187,8 @@ public enum ConfigPropertyConstants {
     public ConfigPropertyAccessMode getAccessMode() {
         return accessMode;
     }
-}
 
+    public Boolean getIsPublic() {
+        return isPublic;
+    }
+}

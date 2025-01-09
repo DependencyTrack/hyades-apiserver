@@ -19,12 +19,26 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.auth.PermissionRequired;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
-import io.swagger.annotations.Authorization;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
@@ -32,16 +46,6 @@ import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 
-import javax.validation.Validator;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,25 +53,32 @@ import java.util.UUID;
  * @since 4.11.0
  */
 @Path("/v1/component/{uuid}/property")
-@Api(value = "componentProperty", authorizations = @Authorization(value = "X-Api-Key"))
+@Tag(name = "componentProperty")
+@SecurityRequirements({
+        @SecurityRequirement(name = "ApiKeyAuth"),
+        @SecurityRequirement(name = "BearerAuth")
+})
 public class ComponentPropertyResource extends AbstractConfigPropertyResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Returns a list of all ComponentProperties for the specified component",
-            response = ComponentProperty.class,
-            responseContainer = "List",
-            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    @Operation(
+            summary = "Returns a list of all properties for the specified component",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
-            @ApiResponse(code = 404, message = "The project could not be found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all properties for the specified component",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ComponentProperty.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProperties(
-            @ApiParam(value = "The UUID of the component to retrieve properties for", format = "uuid", required = true)
+            @Parameter(description = "The UUID of the component to retrieve properties for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
@@ -97,21 +108,24 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Creates a new component property",
-            response = ComponentProperty.class,
-            code = 201,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+    @Operation(
+            summary = "Creates a new component property",
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 403, message = "Access to the specified component is forbidden"),
-            @ApiResponse(code = 404, message = "The component could not be found"),
-            @ApiResponse(code = 409, message = "A property with the specified component/group/name combination already exists")
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created component",
+                    content = @Content(schema = @Schema(implementation = ComponentProperty.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The component could not be found"),
+            @ApiResponse(responseCode = "409", description = "A property with the specified component/group/name combination already exists")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
     public Response createProperty(
-            @ApiParam(value = "The UUID of the component to create a property for", format = "uuid", required = true)
+            @Parameter(description = "The UUID of the component to create a property for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             ComponentProperty json) {
         final Validator validator = super.getValidator();
@@ -156,21 +170,21 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
     @Path("/{propertyUuid}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Deletes a config property",
-            response = ComponentProperty.class,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+    @Operation(
+            summary = "Deletes a config property",
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 403, message = "Access to the specified component is forbidden"),
-            @ApiResponse(code = 404, message = "The component or component property could not be found"),
+            @ApiResponse(responseCode = "204", description = "Property removed successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The component or component property could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
     public Response deleteProperty(
-            @ApiParam(value = "The UUID of the component to delete a property from", format = "uuid", required = true)
+            @Parameter(description = "The UUID of the component to delete a property from", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid final String componentUuid,
-            @ApiParam(value = "The UUID of the component property to delete", format = "uuid", required = true)
+            @Parameter(description = "The UUID of the component property to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("propertyUuid") @ValidUuid final String propertyUuid) {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, componentUuid);

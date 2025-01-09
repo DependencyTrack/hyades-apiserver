@@ -1,0 +1,156 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        objectQuotingStrategy="QUOTE_ALL_OBJECTS"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="v5.6.0-1" author="sahibamittal">
+        <modifyDataType tableName="AFFECTEDVERSIONATTRIBUTION" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="BOM" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="COMPONENT" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="COMPONENT_PROPERTY" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="FINDINGATTRIBUTION" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="LICENSE" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="LICENSEGROUP" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="NOTIFICATIONPUBLISHER" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="NOTIFICATIONRULE" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="POLICY" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="POLICYCONDITION" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="POLICYVIOLATION" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="PROJECT" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="REPOSITORY" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="SERVICECOMPONENT" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="VEX" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABILITYALIAS" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABILITYSCAN" columnName="TARGET_IDENTIFIER" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABILITYSCAN" columnName="TOKEN" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABLESOFTWARE" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="WORKFLOW_STATE" columnName="TOKEN" newDataType="UUID"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-2" author="nscuro">
+        <modifyDataType tableName="TEAM" columnName="NAME" newDataType="VARCHAR(255)"/>
+    </changeSet>
+  
+    <changeSet id="v5.6.0-3" author="rossmurphy974@gmail.com">
+        <addColumn tableName="PROJECT">
+            <column name="AUTHORS" type="TEXT"/>
+        </addColumn>
+        <addColumn tableName="COMPONENT">
+            <column name="AUTHORS" type="TEXT"/>
+        </addColumn>
+        
+        <sql>
+            UPDATE "PROJECT"
+            SET "AUTHORS" = JSON_BUILD_ARRAY(JSON_BUILD_OBJECT('name', "AUTHOR"))::TEXT
+            WHERE "AUTHOR" IS NOT NULL;
+        </sql>
+        <sql>
+            UPDATE "COMPONENT"
+            SET "AUTHORS" = JSON_BUILD_ARRAY(JSON_BUILD_OBJECT('name', "AUTHOR"))::TEXT
+            WHERE "AUTHOR" IS NOT NULL;
+        </sql>
+
+        <dropColumn tableName="PROJECT">
+            <column name="AUTHOR"/>
+        </dropColumn>
+        <dropColumn tableName="COMPONENT">
+            <column name="AUTHOR"/>
+        </dropColumn>
+    </changeSet>
+    
+    <changeSet id="v5.6.0-4" author="nscuro">
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_DIRECT_DEPENDENCIES_GIN_IDX"/>
+        <modifyDataType tableName="COMPONENT" columnName="DIRECT_DEPENDENCIES" newDataType="JSONB"/>
+        <modifyDataType tableName="PROJECT" columnName="DIRECT_DEPENDENCIES" newDataType="JSONB"/>
+        <sql splitStatements="true">
+            CREATE
+             INDEX "COMPONENT_DIRECT_DEPENDENCIES_JSONB_IDX"
+                ON "COMPONENT"
+             USING GIN("DIRECT_DEPENDENCIES" JSONB_PATH_OPS);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-5" author="sahibamittal">
+        <sql>
+            DELETE FROM "CONFIGPROPERTY"
+            WHERE "GROUPNAME" = 'artifact'
+            AND "PROPERTYNAME" = 'bom.validation.enabled';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-6" author="sahibamittal">
+        <createTable tableName="NOTIFICATIONRULE_TAGS">
+            <column name="NOTIFICATIONRULE_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TAG_ID" type="BIGINT"/>
+        </createTable>
+
+        <createIndex indexName="NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_TAGS">
+            <column name="NOTIFICATIONRULE_ID"/>
+        </createIndex>
+        <createIndex indexName="NOTIFICATIONRULE_TAGS_TAG_ID_IDX" tableName="NOTIFICATIONRULE_TAGS">
+            <column name="TAG_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_TAGS"
+                                 constraintName="NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="NOTIFICATIONRULE" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="NOTIFICATIONRULE_TAGS"
+                                 constraintName="NOTIFICATIONRULE_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TAG" validate="true"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-7" author="sahibamittal">
+        <addColumn tableName="PROJECT">
+            <column name="IS_LATEST" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="POLICY">
+            <column name="ONLY_LATEST_PROJECT_VERSION" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <createIndex indexName="PROJECT_IS_LATEST_IDX" tableName="PROJECT">
+            <column name="IS_LATEST"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.6.0-8" author="nscuro">
+        <sql>
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'vuln-source'
+               AND "PROPERTYNAME" = 'nvd.feeds.url';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-9" author="nscuro">
+        <sql>
+            CREATE INDEX "COMPONENT_PROPERTY_COMPONENT_ID_IDX"
+                ON "COMPONENT_PROPERTY" ("COMPONENT_ID");
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-9" author="sahibamittal">
+        <addColumn tableName="PROJECT">
+            <column name="INACTIVE_SINCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    
+        <sql>UPDATE "PROJECT" SET "INACTIVE_SINCE" = NOW() WHERE "ACTIVE" IS FALSE</sql>
+
+        <dropColumn tableName="PROJECT">
+            <column name="ACTIVE" type="BOOLEAN"/>
+        </dropColumn>
+    </changeSet>
+</databaseChangeLog>

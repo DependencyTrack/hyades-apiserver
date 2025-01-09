@@ -11,6 +11,9 @@
     <changeSet id="function_calc-risk-score" author="nscuro@protonmail.com" runOnChange="true">
         <createProcedure path="procedures/function_calc-risk-score.sql" relativeToChangelogFile="true"/>
     </changeSet>
+    <changeSet id="function_jsonb-vuln-aliases" author="nscuro" runOnChange="true">
+        <createProcedure path="procedures/function_jsonb-vuln-aliases.sql" relativeToChangelogFile="true"/>
+    </changeSet>
     <changeSet id="procedure_update-component-metrics" author="nscuro@protonmail.com" runOnChange="true">
         <createProcedure path="procedures/procedure_update-component-metrics.sql" relativeToChangelogFile="true"/>
     </changeSet>

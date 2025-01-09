@@ -28,9 +28,10 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.validation.ValidSpdxExpression;
+import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
 import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
 
@@ -38,6 +39,7 @@ import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Convert;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.Extensions;
 import javax.jdo.annotations.FetchGroup;
 import javax.jdo.annotations.FetchGroups;
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -49,10 +51,10 @@ import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Serialized;
 import javax.jdo.annotations.Unique;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -77,6 +79,9 @@ import java.util.UUID;
                 @Persistent(name = "properties"),
                 @Persistent(name = "vulnerabilities"),
         }),
+        @FetchGroup(name = "BOM_UPLOAD_PROCESSING", members = {
+                @Persistent(name = "properties")
+        }),
         @FetchGroup(name = "IDENTITY", members = {
                 @Persistent(name = "id"),
                 @Persistent(name = "uuid")
@@ -92,6 +97,7 @@ public class Component implements Serializable {
      */
     public enum FetchGroup {
         ALL,
+        BOM_UPLOAD_PROCESSING,
         IDENTITY
     }
 
@@ -100,11 +106,11 @@ public class Component implements Serializable {
     @JsonIgnore
     private long id;
 
-    @Persistent
-    @Column(name = "AUTHOR", jdbcType = "CLOB")
-    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The author may only contain printable characters")
+    @Persistent(defaultFetchGroup = "true")
+    @Convert(OrganizationalContactsJsonConverter.class)
+    @Column(name = "AUTHORS", jdbcType = "CLOB", allowsNull = "true")
     @JsonView(JsonViews.MetadataTools.class)
-    private String author;
+    private List<OrganizationalContact> authors;
 
     @Persistent
     @Column(name = "PUBLISHER", jdbcType = "VARCHAR")
@@ -266,7 +272,7 @@ public class Component implements Serializable {
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @JsonView(JsonViews.MetadataTools.class)
-    @ApiModelProperty(dataType = "string")
+    @Schema(type = "string")
     private String purl;
 
     @Persistent(defaultFetchGroup = "true")
@@ -329,6 +335,10 @@ public class Component implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "DIRECT_DEPENDENCIES", jdbcType = "CLOB")
+    @Extensions(value = {
+            @Extension(vendorName = "datanucleus", key = "insert-function", value = "CAST(? AS JSONB)"),
+            @Extension(vendorName = "datanucleus", key = "update-function", value = "CAST(? AS JSONB)")
+    })
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String directDependencies; // This will be a JSON string
 
@@ -380,7 +390,7 @@ public class Component implements Serializable {
 
     @Persistent(customValueStrategy = "uuid")
     @Unique(name = "COMPONENT_UUID_IDX")
-    @Column(name = "UUID", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
+    @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
     @NotNull
     private UUID uuid;
 
@@ -394,6 +404,13 @@ public class Component implements Serializable {
     private transient int usedBy;
     private transient Set<String> dependencyGraph;
     private transient boolean expandDependencyGraph;
+    private transient String author;
+
+    public Component(){}
+
+    public Component(final long id) {
+        this.id = id;
+    }
 
     public long getId() {
         return id;
@@ -403,12 +420,12 @@ public class Component implements Serializable {
         this.id = id;
     }
 
-    public String getAuthor() {
-        return author;
+    public List<OrganizationalContact> getAuthors() {
+        return authors;
     }
 
-    public void setAuthor(String author) {
-        this.author = author;
+    public void setAuthors(List<OrganizationalContact> authors) {
+        this.authors = authors;
     }
 
     public String getPublisher() {
@@ -604,7 +621,7 @@ public class Component implements Serializable {
     }
 
     @JsonSerialize(using = CustomPackageURLSerializer.class)
-    @ApiModelProperty(dataType = "string", accessMode = ApiModelProperty.AccessMode.READ_ONLY)
+    @Schema(type = "string", accessMode = Schema.AccessMode.READ_ONLY)
     public PackageURL getPurlCoordinates() {
         if (purlCoordinates == null) {
             return null;
@@ -810,7 +827,7 @@ public class Component implements Serializable {
     }
 
     @JsonIgnore
-    @ApiModelProperty(hidden = true)
+    @Schema(hidden = true)
     public boolean isNew() {
         return isNew;
     }
@@ -829,7 +846,7 @@ public class Component implements Serializable {
     }
 
     @JsonIgnore
-    @ApiModelProperty(hidden = true)
+    @Schema(hidden = true)
     public String getBomRef() {
         return bomRef;
     }
@@ -840,7 +857,7 @@ public class Component implements Serializable {
     }
 
     @JsonIgnore
-    @ApiModelProperty(hidden = true)
+    @Schema(hidden = true)
     public List<org.cyclonedx.model.License> getLicenseCandidates() {
         return licenseCandidates;
     }
@@ -864,6 +881,14 @@ public class Component implements Serializable {
 
     public void setExpandDependencyGraph(boolean expandDependencyGraph) {
         this.expandDependencyGraph = expandDependencyGraph;
+    }
+
+    public String getAuthor(){
+        return author;
+    }
+
+    public void setAuthor(String author){
+        this.author=author;
     }
 
     @Override

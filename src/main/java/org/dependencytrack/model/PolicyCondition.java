@@ -29,10 +29,10 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -79,7 +79,8 @@ public class PolicyCondition implements Serializable {
         COMPONENT_HASH(PolicyViolation.Type.OPERATIONAL),
         CWE(PolicyViolation.Type.SECURITY),
         VULNERABILITY_ID(PolicyViolation.Type.SECURITY),
-        VERSION_DISTANCE(PolicyViolation.Type.OPERATIONAL);
+        VERSION_DISTANCE(PolicyViolation.Type.OPERATIONAL),
+        EPSS(PolicyViolation.Type.SECURITY);
 
         private final PolicyViolation.Type violationType;
 
@@ -129,7 +130,7 @@ public class PolicyCondition implements Serializable {
      */
     @Persistent(customValueStrategy = "uuid")
     @Unique(name = "POLICYCONDITION_UUID_IDX")
-    @Column(name = "UUID", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
+    @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
     @NotNull
     private UUID uuid;
 

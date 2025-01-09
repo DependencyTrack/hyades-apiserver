@@ -25,12 +25,11 @@ import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.jdo.JDOHelper;
@@ -39,9 +38,6 @@ import java.sql.Statement;
 import java.util.Properties;
 
 public abstract class PersistenceCapableTest {
-
-    @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     protected static PostgresTestContainer postgresContainer;
     protected MockProducer<byte[], byte[]> kafkaMockProducer;
@@ -62,12 +58,15 @@ public abstract class PersistenceCapableTest {
 
         qm = new QueryManager();
 
-        environmentVariables.set("TASK_PORTFOLIO_REPOMETAANALYSIS_LOCKATLEASTFORINMILLIS", "2000");
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
+
+        PluginManagerTestUtil.loadPlugins();
     }
 
     @After
     public void after() {
+        PluginManagerTestUtil.unloadPlugins();
+
         // PersistenceManager will refuse to close when there's an active transaction
         // that was neither committed nor rolled back. Unfortunately some areas of the
         // code base can leave such a broken state behind if they run into unexpected
@@ -95,12 +94,14 @@ public abstract class PersistenceCapableTest {
         dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_TABLES, "false");
         dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_COLUMNS, "false");
         dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_CONSTRAINTS, "false");
-        dnProps.put("datanucleus.schema.generatedatabase.mode", "none");
-        dnProps.put("datanucleus.query.jdoql.allowall", "true");
+        dnProps.put(PropertyNames.PROPERTY_SCHEMA_GENERATE_DATABASE_MODE, "none");
+        dnProps.put(PropertyNames.PROPERTY_QUERY_JDOQL_ALLOWALL, "true");
+        dnProps.put(PropertyNames.PROPERTY_RETAIN_VALUES, "true");
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_URL, postgresContainer.getJdbcUrl());
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_DRIVER_NAME, postgresContainer.getDriverClassName());
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_USER_NAME, postgresContainer.getUsername());
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_PASSWORD, postgresContainer.getPassword());
+        dnProps.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
 
         final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");
         PersistenceManagerFactory.setJdoPersistenceManagerFactory(pmf);

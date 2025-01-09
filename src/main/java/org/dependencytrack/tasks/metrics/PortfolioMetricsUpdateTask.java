@@ -25,26 +25,26 @@ import alpine.event.framework.Subscriber;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockExtender;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
-import org.apache.commons.collections4.ListUtils;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.metrics.Metrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.LockProvider;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.dependencytrack.tasks.LockName.PORTFOLIO_METRICS_TASK_LOCK;
-import static org.dependencytrack.util.LockProvider.isLockToBeExtended;
-
+import static org.dependencytrack.util.LockProvider.executeWithLock;
+import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
+import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
 /**
  * A {@link Subscriber} task that updates portfolio metrics.
@@ -61,7 +61,9 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
     public void inform(final Event e) {
         if (e instanceof final PortfolioMetricsUpdateEvent event) {
             try {
-                LockProvider.executeWithLock(PORTFOLIO_METRICS_TASK_LOCK, (LockingTaskExecutor.Task)() -> updateMetrics(event.isForceRefresh()));
+                executeWithLock(
+                        getLockConfigForTask(PortfolioMetricsUpdateTask.class),
+                        (LockingTaskExecutor.Task)() -> updateMetrics(event.isForceRefresh()));
             } catch (Throwable ex) {
                 LOGGER.error("Error in acquiring lock and executing portfolio metrics task", ex);
             }
@@ -85,11 +87,11 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
     }
 
     private static void refreshProjectMetrics() throws Exception {
-        try (final var qm = new QueryManager().withL2CacheDisabled()) {
+        try (final var qm = new QueryManager()) {
             final PersistenceManager pm = qm.getPersistenceManager();
 
             LOGGER.debug("Fetching first " + BATCH_SIZE + " projects");
-            LockConfiguration portfolioMetricsTaskConfig = LockProvider.getLockConfigurationByLockName(PORTFOLIO_METRICS_TASK_LOCK);
+            LockConfiguration portfolioMetricsTaskConfig = getLockConfigForTask(PortfolioMetricsUpdateTask.class);
             List<ProjectProjection> activeProjects = fetchNextActiveProjectsPage(pm, null);
             long processStartTime = System.currentTimeMillis();
             while (!activeProjects.isEmpty()) {
@@ -98,7 +100,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 final long lastId = activeProjects.get(activeProjects.size() - 1).id();
 
                 // Distribute the batch across at most MAX_CONCURRENCY events, and process them asynchronously.
-                final List<List<ProjectProjection>> partitions = ListUtils.partition(activeProjects, MAX_CONCURRENCY);
+                final List<List<ProjectProjection>> partitions = partition(activeProjects, MAX_CONCURRENCY);
                 final var countDownLatch = new CountDownLatch(partitions.size());
 
                 for (final List<ProjectProjection> partition : partitions) {
@@ -133,7 +135,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 //initial duration of portfolio metrics can be set to 20min.
                 //No thread calculating metrics would be executing for more than 15min.
                 //lock can only be extended if lock until is held for time after current db time
-                if(isLockToBeExtended(cumulativeDurationInMillis, PORTFOLIO_METRICS_TASK_LOCK)) {
+                if(isTaskLockToBeExtended(cumulativeDurationInMillis, PortfolioMetricsUpdateTask.class)) {
                     Duration extendLockByDuration = Duration.ofMillis(processDurationInMillis).plus(portfolioMetricsTaskConfig.getLockAtLeastFor());
                     LOGGER.debug("Extending lock duration by ms: " + extendLockByDuration);
                     LockExtender.extendActiveLock(extendLockByDuration, portfolioMetricsTaskConfig.getLockAtLeastFor());
@@ -143,12 +145,15 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
         }
     }
 
+    public record ProjectProjection(long id, UUID uuid) {
+    }
+
     private static List<ProjectProjection> fetchNextActiveProjectsPage(final PersistenceManager pm, final Long lastId) throws Exception {
         try (final Query<Project> query = pm.newQuery(Project.class)) {
             if (lastId == null) {
-                query.setFilter("(active == null || active == true)");
+                query.setFilter("inactiveSince == null");
             } else {
-                query.setFilter("(active == null || active == true) && id < :lastId");
+                query.setFilter("inactiveSince == null && id < :lastId");
                 query.setParameters(lastId);
             }
             query.setOrdering("id DESC");
@@ -158,7 +163,24 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
         }
     }
 
-    public record ProjectProjection(long id, UUID uuid) {
+    static <T> List<List<T>> partition(final List<T> list, int numPartitions) {
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        final int listSize = list.size();
+        final var partitions = new ArrayList<List<T>>(numPartitions);
+        int partitionSize = (int) Math.ceil((double) listSize / numPartitions);
+
+        int i = 0, elementsLeft = listSize;
+        while (i < listSize && numPartitions != 0) {
+            partitions.add(list.subList(i, i + partitionSize));
+            i = i + partitionSize;
+            elementsLeft = elementsLeft - partitionSize;
+            partitionSize = (int) Math.ceil((double) elementsLeft / --numPartitions);
+        }
+
+        return partitions;
     }
 
 }

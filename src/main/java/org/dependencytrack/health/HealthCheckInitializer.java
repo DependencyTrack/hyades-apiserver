@@ -18,16 +18,15 @@
  */
 package org.dependencytrack.health;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
 import alpine.server.health.HealthCheckRegistry;
 import alpine.server.health.checks.DatabaseHealthCheck;
-import io.github.mweirauch.micrometer.jvm.extras.ProcessMemoryMetrics;
-import io.github.mweirauch.micrometer.jvm.extras.ProcessThreadMetrics;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.processor.ProcessorsHealthCheck;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 
 public class HealthCheckInitializer implements ServletContextListener {
 
@@ -35,14 +34,15 @@ public class HealthCheckInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
+        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+            LOGGER.debug("Not registering health checks because %s is enabled"
+                    .formatted(ConfigKey.INIT_AND_EXIT.getPropertyName()));
+            return;
+        }
+
         LOGGER.info("Registering health checks");
         HealthCheckRegistry.getInstance().register("database", new DatabaseHealthCheck());
         HealthCheckRegistry.getInstance().register("kafka-processors", new ProcessorsHealthCheck());
-
-        // TODO: Move this to its own initializer if it turns out to be useful
-        LOGGER.info("Registering extra process metrics");
-        new ProcessMemoryMetrics().bindTo(Metrics.getRegistry());
-        new ProcessThreadMetrics().bindTo(Metrics.getRegistry());
     }
 
 }

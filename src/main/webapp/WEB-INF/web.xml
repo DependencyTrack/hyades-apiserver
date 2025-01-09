@@ -21,19 +21,25 @@
 <web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+         metadata-complete="true"
          version="3.1">
-    
+    <listener>
+        <listener-class>org.dependencytrack.dev.DevServicesInitializer</listener-class>
+    </listener>
     <listener>
         <listener-class>alpine.server.metrics.MetricsInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>alpine.server.persistence.PersistenceInitializer</listener-class>
+        <listener-class>org.dependencytrack.common.KeyManagerInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.persistence.migration.MigrationInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>alpine.server.persistence.PersistenceManagerFactory</listener-class>
+    </listener>
+    <listener>
+        <listener-class>org.dependencytrack.plugin.PluginInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.health.HealthCheckInitializer</listener-class>
@@ -110,7 +116,7 @@
         <servlet-class>alpine.server.AlpineServlet</servlet-class>
         <init-param>
             <param-name>jersey.config.server.provider.packages</param-name>
-            <param-value>io.swagger.jaxrs.listing,alpine.server.filters,alpine.server.resources,org.dependencytrack.resources,org.dependencytrack.filters</param-value>
+            <param-value>alpine.server.filters,alpine.server.resources,org.dependencytrack.resources,org.dependencytrack.filters</param-value>
         </init-param>
         <init-param>
             <param-name>jersey.config.server.provider.classnames</param-name>
@@ -118,10 +124,6 @@
         </init-param>
         <init-param>
             <param-name>jersey.config.beanValidation.enableOutputValidationErrorEntity.server</param-name>
-            <param-value>true</param-value>
-        </init-param>
-        <init-param>
-            <param-name>swagger.pretty.print</param-name>
             <param-value>true</param-value>
         </init-param>
         <load-on-startup>1</load-on-startup>

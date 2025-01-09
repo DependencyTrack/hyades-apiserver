@@ -26,6 +26,7 @@ import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -33,16 +34,18 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonReader;
-import javax.ws.rs.core.Response;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.ws.rs.core.Response;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class ComponentResourcePostgresTest extends ResourceTest {
 
@@ -65,6 +68,38 @@ public class ComponentResourcePostgresTest extends ResourceTest {
 
         final JsonArray json = parseJsonArray(response);
         assertThat(json).hasSize(100); // Default page size is 100
+        assertThatJson(json.getFirst().toString())
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo("""
+                        {
+                          "authors": [
+                            {
+                              "name": "author-0"
+                            }
+                          ],
+                          "group": "component-group",
+                          "name": "component-name-0",
+                          "version": "0.0",
+                          "purl": "pkg:maven/component-group/component-name-0@0.0",
+                          "project": {
+                            "name": "Acme Application",
+                            "directDependencies": "${json-unit.any-string}",
+                            "uuid": "${json-unit.matches:projectUuid}",
+                            "isLatest": false,
+                            "active": true
+                          },
+                          "uuid": "${json-unit.any-string}",
+                          "repositoryMeta": {
+                            "repositoryType": "MAVEN",
+                            "namespace": "component-group",
+                            "name": "component-name-0",
+                            "latestVersion": "0.0",
+                            "lastCheck": "${json-unit.any-number}"
+                          },
+                          "expandDependencyGraph": false,
+                          "isInternal": false
+                        }
+                        """);
     }
 
     @Test
@@ -151,13 +186,49 @@ public class ComponentResourcePostgresTest extends ResourceTest {
         );
     }
 
+    @Test
+    public void getComponentsByNameTest() throws MalformedPackageURLException {
+        final Project project = prepareProject();
+
+        final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
+                .queryParam("searchText", "name-1")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("111"); // 75 outdated direct dependencies
+
+        final JsonArray json = parseJsonArray(response);
+        assertThat(json).hasSize(100);
+    }
+
+    @Test
+    public void getComponentsByGroupTest() throws MalformedPackageURLException {
+        final Project project = prepareProject();
+
+        final Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid())
+                .queryParam("searchText", "group")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1000"); // 75 outdated direct dependencies
+
+        final JsonArray json = parseJsonArray(response);
+        assertThat(json).hasSize(100);
+    }
+
     private Project prepareProject() throws MalformedPackageURLException {
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         final List<String> directDepencencies = new ArrayList<>();
         // Generate 1000 dependencies
         for (int i = 0; i < 1000; i++) {
+            final var author = new OrganizationalContact();
+            author.setName("author-" + i);
+
             Component component = new Component();
             component.setProject(project);
+            component.setAuthors(List.of(author));
             component.setGroup("component-group");
             component.setName("component-name-" + i);
             component.setVersion(String.valueOf(i) + ".0");

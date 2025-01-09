@@ -51,7 +51,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
-        
+
         // Create risk score configproperties
         createTestConfigProperties();
 
@@ -94,18 +94,17 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testWorkflowStateOnMetricsUpdateFailure() {
-
         var componentMetricsUpdateEvent = new ComponentMetricsUpdateEvent(UUID.randomUUID());
         qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
         new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);
-
+        qm.getPersistenceManager().refresh(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE));
         assertThat(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
                 workflowState -> {
                     assertThat(workflowState.getStatus()).isEqualTo(FAILED);
                     assertThat(workflowState.getStartedAt()).isNotNull();
                     assertThat(workflowState.getParent()).isNotNull();
                     assertThat(workflowState.getUpdatedAt()).isBefore(Date.from(Instant.now()));
-                    assertThat(workflowState.getFailureReason()).isEqualTo("Error encountered when extracting results for SQL query \"\"UPDATE_COMPONENT_METRICS\"\"");
+                    assertThat(workflowState.getFailureReason()).contains("Component with UUID %s does not exist".formatted(componentMetricsUpdateEvent.getUuid()));
                 }
         );
     }
@@ -210,7 +209,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         assertThat(metrics.getPolicyViolationsOperationalTotal()).isZero();
         assertThat(metrics.getPolicyViolationsOperationalAudited()).isZero();
         assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
-
+        qm.getPersistenceManager().refresh(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE));
         qm.getPersistenceManager().refresh(component);
         assertThat(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
                 state -> {
@@ -301,6 +300,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         assertThat(metrics.getPolicyViolationsOperationalUnaudited()).isZero();
 
         qm.getPersistenceManager().refresh(component);
+        qm.getPersistenceManager().refresh(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE));
         assertThat(qm.getWorkflowStateByTokenAndStep(componentMetricsUpdateEvent.getChainIdentifier(), METRICS_UPDATE)).satisfies(
                 state -> {
                     assertThat(state.getStartedAt()).isNotNull();
@@ -377,7 +377,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
         // Create risk score configproperties
         createTestConfigProperties();
-        
+
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");

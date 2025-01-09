@@ -88,7 +88,7 @@ public class Finding implements Serializable {
                 ON "COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID"
              INNER JOIN "VULNERABILITY"
                 ON "COMPONENTS_VULNERABILITIES"."VULNERABILITY_ID" = "VULNERABILITY"."ID"
-             LEFT JOIN "EPSS"
+              LEFT JOIN "EPSS"
                 ON "VULNERABILITY"."VULNID" = "EPSS"."CVE"
              INNER JOIN "FINDINGATTRIBUTION"
                 ON "COMPONENT"."ID" = "FINDINGATTRIBUTION"."COMPONENT_ID"
@@ -97,7 +97,8 @@ public class Finding implements Serializable {
                 ON "COMPONENT"."ID" = "ANALYSIS"."COMPONENT_ID"
                AND "VULNERABILITY"."ID" = "ANALYSIS"."VULNERABILITY_ID"
                AND "COMPONENT"."PROJECT_ID" = "ANALYSIS"."PROJECT_ID"
-             WHERE "COMPONENT"."PROJECT_ID" = ?
+             WHERE "COMPONENT"."PROJECT_ID" = :projectId
+               AND (:includeSuppressed OR "ANALYSIS"."SUPPRESSED" IS NULL OR NOT "ANALYSIS"."SUPPRESSED")
             """;
 
     // language=SQL
@@ -179,8 +180,8 @@ public class Finding implements Serializable {
         optValue(vulnerability, "vulnId", o[8]);
         optValue(vulnerability, "title", o[9]);
         optValue(vulnerability, "subtitle", o[10]);
-        //optValue(vulnerability, "description", o[11]); // CLOB - handle this in QueryManager
-        //optValue(vulnerability, "recommendation", o[12]); // CLOB - handle this in QueryManager
+        optValue(vulnerability, "description", o[11]);
+        optValue(vulnerability, "recommendation", o[12]);
         final Severity severity = VulnerabilityUtil.getSeverity(o[13], (BigDecimal) o[14], (BigDecimal) o[15], (BigDecimal) o[16], (BigDecimal) o[17], (BigDecimal) o[18]);
         optValue(vulnerability, "cvssV2BaseScore", o[14]);
         optValue(vulnerability, "cvssV3BaseScore", o[15]);
@@ -295,4 +296,5 @@ public class Finding implements Serializable {
         }
         vulnerability.put("aliases",uniqueAliases);
     }
+
 }

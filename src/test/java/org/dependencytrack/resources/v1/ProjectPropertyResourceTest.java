@@ -21,6 +21,11 @@ package org.dependencytrack.resources.v1;
 import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Project;
@@ -31,11 +36,6 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.util.UUID;
 
 public class ProjectPropertyResourceTest extends ResourceTest {
@@ -48,7 +48,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void getPropertiesTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         qm.createProjectProperty(project, "mygroup", "prop1", "value1", IConfigProperty.PropertyType.STRING, "Test Property 1");
         qm.createProjectProperty(project, "mygroup", "prop2", "value2", IConfigProperty.PropertyType.ENCRYPTEDSTRING, "Test Property 2");
         Response response = jersey.target(V1_PROJECT + "/" + project.getUuid().toString() + "/property").request()
@@ -73,7 +73,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void getPropertiesInvalidTest() {
-       Response response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID().toString() + "/property").request()
+        Response response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID().toString() + "/property").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         Assert.assertEquals(404, response.getStatus(), 0);
@@ -84,7 +84,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         ProjectProperty property = new ProjectProperty();
         property.setProject(project);
         property.setGroupName("mygroup");
@@ -107,7 +107,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyEncryptedTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         ProjectProperty property = new ProjectProperty();
         property.setProject(project);
         property.setGroupName("mygroup");
@@ -130,7 +130,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyDuplicateTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         qm.createProjectProperty(project, "mygroup", "prop1", "value1", IConfigProperty.PropertyType.STRING, null);
         String uuid = project.getUuid().toString();
         qm.close();
@@ -152,7 +152,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void createPropertyInvalidTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         ProjectProperty property = new ProjectProperty();
         property.setProject(project);
         property.setGroupName("mygroup");
@@ -171,7 +171,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updatePropertyTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         String uuid = project.getUuid().toString();
         ProjectProperty property = qm.createProjectProperty(project, "mygroup", "prop1", "value1", IConfigProperty.PropertyType.STRING, null);
         qm.getPersistenceManager().detachCopy(property);
@@ -191,7 +191,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void updatePropertyInvalidTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         ProjectProperty property = new ProjectProperty();
         property.setProject(project);
         property.setGroupName("mygroup");
@@ -210,7 +210,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
 
     @Test
     public void deletePropertyTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         ProjectProperty property = qm.createProjectProperty(project, "mygroup", "prop1", "value1", IConfigProperty.PropertyType.STRING, null);
         String uuid = project.getUuid().toString();
         qm.getPersistenceManager().detachCopy(property);

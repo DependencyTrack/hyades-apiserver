@@ -205,7 +205,7 @@ public class ProjectQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testCloneProjectPreservesVulnerabilityAttributionDate() throws Exception {
-        Project project = qm.createProject("Example Project 1", "Description 1", "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Example Project 1", "Description 1", "1.0", null, null, null, null, false);
         Component comp = new Component();
         comp.setId(111L);
         comp.setName("name");
@@ -219,7 +219,7 @@ public class ProjectQueryManagerTest extends PersistenceCapableTest {
         vuln.setSeverity(Severity.HIGH);
         qm.persist(vuln);
         qm.addVulnerability(vuln, comp, AnalyzerIdentity.INTERNAL_ANALYZER, "Vuln1", "http://vuln.com/vuln1", new Date());
-        Project clonedProject = qm.clone(project.getUuid(), "1.1.0", false, false, true, false, false, false, false);
+        Project clonedProject = qm.clone(project.getUuid(), "1.1.0", false, false, true, false, false, false, false, false);
         List<Finding> findings = qm.getFindings(clonedProject);
         assertThat(findings.size()).isEqualTo(1);
         Finding finding = findings.get(0);

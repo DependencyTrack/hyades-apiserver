@@ -43,7 +43,7 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
     @SuppressWarnings("unchecked")
     public void wrapperTest() {
         Project project = qm.createProject(
-                "Test", "Sample project", "1.0", null, null, null, true, false);
+                "Test", "Sample project", "1.0", null, null, null, null, false);
         FindingPackagingFormat fpf = new FindingPackagingFormat(
                 project.getUuid(),
                 Collections.EMPTY_LIST
@@ -65,7 +65,7 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
     @Test
     public void testFindingsVulnerabilityAndAliases() {
         Project project = qm.createProject(
-                "Test", "Sample project", "1.0", null, null, null, true, false);
+                "Test", "Sample project", "1.0", null, null, null, null, false);
 
         Finding findingWithoutAlias = new Finding(project.getUuid(), "component-uuid-1", "component-name-1", "component-group",
                 "component-version", "component-purl", "component-cpe", "vuln-uuid", Vulnerability.Source.GITHUB, "vuln-vulnId-1", "vuln-title",

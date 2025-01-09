@@ -132,7 +132,7 @@ public interface NotificationSubjectDao extends SqlObject {
               END                              AS "vulnOwaspRrVector",
               COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity",
               STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
-              "vulnAliasesJson",
+              JSONB_VULN_ALIASES("V"."SOURCE", "V"."VULNID") AS "vulnAliasesJson",
               :vulnAnalysisLevel               AS "vulnAnalysisLevel",
               '/api/v1/vulnerability/source/' || "V"."SOURCE" || '/vuln/' || "V"."VULNID" || '/projects' AS "affectedProjectsApiUrl",
               '/vulnerabilities/' || "V"."SOURCE" || '/' || "V"."VULNID" || '/affectedProjects'          AS "affectedProjectsFrontendUrl"
@@ -146,32 +146,8 @@ public interface NotificationSubjectDao extends SqlObject {
               "VULNERABILITY" AS "V" ON "V"."ID" = "CV"."VULNERABILITY_ID"
             LEFT JOIN
               "ANALYSIS" AS "A" ON "A"."COMPONENT_ID" = "C"."ID" AND "A"."VULNERABILITY_ID" = "V"."ID"
-            LEFT JOIN LATERAL (
-              SELECT
-                CAST(JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
-                  'cveId',      "VA"."CVE_ID",
-                  'ghsaId',     "VA"."GHSA_ID",
-                  'gsdId',      "VA"."GSD_ID",
-                  'internalId', "VA"."INTERNAL_ID",
-                  'osvId',      "VA"."OSV_ID",
-                  'sonatypeId', "VA"."SONATYPE_ID",
-                  'snykId',     "VA"."SNYK_ID",
-                  'vulnDbId',   "VA"."VULNDB_ID"
-                ))) AS TEXT) AS "vulnAliasesJson"
-              FROM
-                "VULNERABILITYALIAS" AS "VA"
-              WHERE
-                ("V"."SOURCE" = 'NVD' AND "VA"."CVE_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'GITHUB' AND "VA"."GHSA_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'GSD' AND "VA"."GSD_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'INTERNAL' AND "VA"."INTERNAL_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'OSV' AND "VA"."OSV_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'SONATYPE' AND "VA"."SONATYPE_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'SNYK' AND "VA"."SNYK_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
-            ) AS "vulnAliases" ON TRUE
             WHERE
-              "C"."UUID" = (:componentUuid)::TEXT AND "V"."UUID" = ANY((:vulnUuids)::TEXT[])
+              "C"."UUID" = :componentUuid AND "V"."UUID" = ANY(:vulnUuids)
               AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
             """)
     @RegisterRowMapper(NotificationSubjectNewVulnerabilityRowMapper.class)
@@ -246,7 +222,7 @@ public interface NotificationSubjectDao extends SqlObject {
               END                              AS "vulnOwaspRrVector",
               COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity",
               STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
-              "vulnAliasesJson"
+              JSONB_VULN_ALIASES("V"."SOURCE", "V"."VULNID") AS "vulnAliasesJson"
             FROM
               "COMPONENT" AS "C"
             INNER JOIN
@@ -257,32 +233,8 @@ public interface NotificationSubjectDao extends SqlObject {
               "VULNERABILITY" AS "V" ON "V"."ID" = "CV"."VULNERABILITY_ID"
             LEFT JOIN
               "ANALYSIS" AS "A" ON "A"."COMPONENT_ID" = "C"."ID" AND "A"."VULNERABILITY_ID" = "V"."ID"
-            LEFT JOIN LATERAL (
-              SELECT
-                CAST(JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
-                  'cveId',      "VA"."CVE_ID",
-                  'ghsaId',     "VA"."GHSA_ID",
-                  'gsdId',      "VA"."GSD_ID",
-                  'internalId', "VA"."INTERNAL_ID",
-                  'osvId',      "VA"."OSV_ID",
-                  'sonatypeId', "VA"."SONATYPE_ID",
-                  'snykId',     "VA"."SNYK_ID",
-                  'vulnDbId',   "VA"."VULNDB_ID"
-                ))) AS TEXT) AS "vulnAliasesJson"
-              FROM
-                "VULNERABILITYALIAS" AS "VA"
-              WHERE
-                ("V"."SOURCE" = 'NVD' AND "VA"."CVE_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'GITHUB' AND "VA"."GHSA_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'GSD' AND "VA"."GSD_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'INTERNAL' AND "VA"."INTERNAL_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'OSV' AND "VA"."OSV_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'SONATYPE' AND "VA"."SONATYPE_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'SNYK' AND "VA"."SNYK_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
-            ) AS "vulnAliases" ON TRUE
             WHERE
-              "C"."UUID" = (:componentUuid)::TEXT
+              "C"."UUID" = :componentUuid
               AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
             """)
     @UseRowReducer(NotificationSubjectNewVulnerableDependencyRowReducer.class)
@@ -356,7 +308,7 @@ public interface NotificationSubjectDao extends SqlObject {
               END                              AS "vulnOwaspRrVector",
               COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity",
               STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes",
-              "vulnAliasesJson",
+              JSONB_VULN_ALIASES("V"."SOURCE", "V"."VULNID") AS "vulnAliasesJson",
               :isSuppressed              AS "isVulnAnalysisSuppressed",
               :analysisState             AS "vulnAnalysisState",
               '/api/v1/vulnerability/source/' || "V"."SOURCE" || '/vuln/' || "V"."VULNID" || '/projects' AS "affectedProjectsApiUrl",
@@ -371,32 +323,8 @@ public interface NotificationSubjectDao extends SqlObject {
               "VULNERABILITY" AS "V" ON "V"."ID" = "CV"."VULNERABILITY_ID"
             LEFT JOIN
               "ANALYSIS" AS "A" ON "A"."COMPONENT_ID" = "C"."ID" AND "A"."VULNERABILITY_ID" = "V"."ID"
-            LEFT JOIN LATERAL (
-              SELECT
-                CAST(JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
-                  'cveId',      "VA"."CVE_ID",
-                  'ghsaId',     "VA"."GHSA_ID",
-                  'gsdId',      "VA"."GSD_ID",
-                  'internalId', "VA"."INTERNAL_ID",
-                  'osvId',      "VA"."OSV_ID",
-                  'sonatypeId', "VA"."SONATYPE_ID",
-                  'snykId',     "VA"."SNYK_ID",
-                  'vulnDbId',   "VA"."VULNDB_ID"
-                ))) AS TEXT) AS "vulnAliasesJson"
-              FROM
-                "VULNERABILITYALIAS" AS "VA"
-              WHERE
-                ("V"."SOURCE" = 'NVD' AND "VA"."CVE_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'GITHUB' AND "VA"."GHSA_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'GSD' AND "VA"."GSD_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'INTERNAL' AND "VA"."INTERNAL_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'OSV' AND "VA"."OSV_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'SONATYPE' AND "VA"."SONATYPE_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'SNYK' AND "VA"."SNYK_ID" = "V"."VULNID")
-                  OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
-            ) AS "vulnAliases" ON TRUE
             WHERE
-              "C"."UUID" = (:componentUuid)::TEXT AND "V"."UUID" = (:vulnUuid)::TEXT
+              "C"."UUID" = :componentUuid AND "V"."UUID" = :vulnUuid
             """)
     @RegisterRowMapper(NotificationSubjectProjectAuditChangeRowMapper.class)
     Optional<VulnerabilityAnalysisDecisionChangeSubject> getForProjectAuditChange(final UUID componentUuid, final UUID vulnUuid, AnalysisState analysisState, boolean isSuppressed);
@@ -427,7 +355,7 @@ public interface NotificationSubjectDao extends SqlObject {
              WHERE "VS"."TOKEN" = ANY(:workflowTokens)
             """)
     @RegisterRowMapper(NotificationSubjectBomConsumedOrProcessedRowMapper.class)
-    List<BomConsumedOrProcessedSubject> getForDelayedBomProcessed(Collection<String> workflowTokens);
+    List<BomConsumedOrProcessedSubject> getForDelayedBomProcessed(Collection<UUID> workflowTokens);
 
     @SqlQuery("""
             SELECT "P"."UUID" AS "projectUuid"
@@ -442,7 +370,7 @@ public interface NotificationSubjectDao extends SqlObject {
                      WHERE "PT"."PROJECT_ID" = "P"."ID"
                    ) AS "projectTags"
               FROM "PROJECT" AS "P"
-             WHERE "P"."UUID" = (:projectUuid)::TEXT
+             WHERE "P"."UUID" = :projectUuid
             """)
     Optional<Project> getProject(UUID projectUuid);
 
@@ -506,36 +434,15 @@ public interface NotificationSubjectDao extends SqlObject {
                                END AS "vulnOwaspRrVector"
                              , COALESCE("A"."SEVERITY", "V"."SEVERITY") AS "vulnSeverity"
                              , STRING_TO_ARRAY("V"."CWES", ',') AS "vulnCwes"
-                             , "vulnAliasesJson"
+                             , JSONB_VULN_ALIASES("V"."SOURCE", "V"."VULNID") AS "vulnAliasesJson"
                          FROM "COMPONENT" AS "C"
                         INNER JOIN "COMPONENTS_VULNERABILITIES" AS "CV" ON "CV"."COMPONENT_ID" = "C"."ID"
                         INNER JOIN "VULNERABILITY" AS "V" ON "V"."ID" = "CV"."VULNERABILITY_ID"
                          LEFT JOIN "ANALYSIS" AS "A" ON "A"."COMPONENT_ID" = "C"."ID" AND "A"."VULNERABILITY_ID" = "V"."ID"
-                         LEFT JOIN LATERAL (
-                           SELECT CAST(JSONB_AGG(DISTINCT JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT(
-                                                 'cveId',      "VA"."CVE_ID",
-                                                 'ghsaId',     "VA"."GHSA_ID",
-                                                 'gsdId',      "VA"."GSD_ID",
-                                                 'internalId', "VA"."INTERNAL_ID",
-                                                 'osvId',      "VA"."OSV_ID",
-                                                 'sonatypeId', "VA"."SONATYPE_ID",
-                                                 'snykId',     "VA"."SNYK_ID",
-                                                 'vulnDbId',   "VA"."VULNDB_ID"
-                                      ))) AS TEXT) AS "vulnAliasesJson"
-                             FROM "VULNERABILITYALIAS" AS "VA"
-                            WHERE ("V"."SOURCE" = 'NVD' AND "VA"."CVE_ID" = "V"."VULNID")
-                               OR ("V"."SOURCE" = 'GITHUB' AND "VA"."GHSA_ID" = "V"."VULNID")
-                               OR ("V"."SOURCE" = 'GSD' AND "VA"."GSD_ID" = "V"."VULNID")
-                               OR ("V"."SOURCE" = 'INTERNAL' AND "VA"."INTERNAL_ID" = "V"."VULNID")
-                               OR ("V"."SOURCE" = 'OSV' AND "VA"."OSV_ID" = "V"."VULNID")
-                               OR ("V"."SOURCE" = 'SONATYPE' AND "VA"."SONATYPE_ID" = "V"."VULNID")
-                               OR ("V"."SOURCE" = 'SNYK' AND "VA"."SNYK_ID" = "V"."VULNID")
-                               OR ("V"."SOURCE" = 'VULNDB' AND "VA"."VULNDB_ID" = "V"."VULNID")
-                         ) AS "vulnAliases" ON TRUE
                         WHERE "C"."PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
                           AND ("A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
                         """)
-                .bind("projectUuid", optionalProject.get().getUuid())
+                .bind("projectUuid", UUID.fromString(optionalProject.get().getUuid()))
                 .registerRowMapper(Component.class, new NotificationComponentRowMapper())
                 .registerRowMapper(Vulnerability.class, new NotificationVulnerabilityRowMapper())
                 .map(JoinRowMapper.forTypes(Component.class, Vulnerability.class))
@@ -554,7 +461,7 @@ public interface NotificationSubjectDao extends SqlObject {
         }
 
         final var subject = ProjectVulnAnalysisCompleteSubject.newBuilder()
-                .setToken(vulnScan.getToken())
+                .setToken(String.valueOf(vulnScan.getToken()))
                 .setStatus(switch (vulnScan.getStatus()) {
                     case COMPLETED -> PROJECT_VULN_ANALYSIS_STATUS_COMPLETED;
                     case FAILED -> PROJECT_VULN_ANALYSIS_STATUS_FAILED;

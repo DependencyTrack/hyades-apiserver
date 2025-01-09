@@ -29,10 +29,16 @@ public final class MdcKeys {
     public static final String MDC_BOM_UPLOAD_TOKEN = "bomUploadToken";
     public static final String MDC_BOM_VERSION = "bomVersion";
     public static final String MDC_COMPONENT_UUID = "componentUuid";
+    public static final String MDC_EVENT_TOKEN = "eventToken";
+    public static final String MDC_EXTENSION = "extension";
+    public static final String MDC_EXTENSION_NAME = "extensionName";
+    public static final String MDC_EXTENSION_POINT = "extensionPoint";
+    public static final String MDC_EXTENSION_POINT_NAME = "extensionPointName";
     public static final String MDC_KAFKA_RECORD_TOPIC = "kafkaRecordTopic";
     public static final String MDC_KAFKA_RECORD_PARTITION = "kafkaRecordPartition";
     public static final String MDC_KAFKA_RECORD_OFFSET = "kafkaRecordOffset";
     public static final String MDC_KAFKA_RECORD_KEY = "kafkaRecordKey";
+    public static final String MDC_PLUGIN = "plugin";
     public static final String MDC_PROJECT_NAME = "projectName";
     public static final String MDC_PROJECT_UUID = "projectUuid";
     public static final String MDC_PROJECT_VERSION = "projectVersion";

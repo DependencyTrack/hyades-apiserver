@@ -25,6 +25,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import liquibase.Liquibase;
 import liquibase.Scope;
 import liquibase.UpdateSummaryOutputEnum;
+import liquibase.analytics.configuration.AnalyticsArgs;
 import liquibase.command.CommandScope;
 import liquibase.command.core.UpdateCommandStep;
 import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
@@ -36,8 +37,8 @@ import liquibase.resource.ClassLoaderResourceAccessor;
 import liquibase.ui.LoggerUIService;
 import org.dependencytrack.common.ConfigKey;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Optional;
@@ -59,8 +60,14 @@ public class MigrationInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
+        if (!config.getPropertyAsBoolean(ConfigKey.INIT_TASKS_ENABLED)) {
+            LOGGER.debug("Not running migrations because %s is disabled"
+                    .formatted(ConfigKey.INIT_TASKS_ENABLED.getPropertyName()));
+            return;
+        }
         if (!config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS)) {
-            LOGGER.info("Migrations are disabled; Skipping");
+            LOGGER.debug("Not running migrations because %s is disabled"
+                    .formatted(ConfigKey.DATABASE_RUN_MIGRATIONS.getPropertyName()));
             return;
         }
 
@@ -68,7 +75,20 @@ public class MigrationInitializer implements ServletContextListener {
         try (final HikariDataSource dataSource = createDataSource()) {
             runMigration(dataSource);
         } catch (Exception e) {
+            if (config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS_ONLY)
+                || config.getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+                // Make absolutely sure that we exit with non-zero code so
+                // the container orchestrator knows to restart the container.
+                LOGGER.error("Failed to execute migrations", e);
+                System.exit(1);
+            }
+
             throw new RuntimeException("Failed to execute migrations", e);
+        }
+
+        if (config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS_ONLY)) {
+            LOGGER.info("Exiting because %s is enabled".formatted(ConfigKey.DATABASE_RUN_MIGRATIONS.getPropertyName()));
+            System.exit(0);
         }
     }
 
@@ -78,6 +98,7 @@ public class MigrationInitializer implements ServletContextListener {
 
     public static void runMigration(final DataSource dataSource, final String changelogResourcePath) throws Exception {
         final var scopeAttributes = new HashMap<String, Object>();
+        scopeAttributes.put(AnalyticsArgs.ENABLED.getKey(), false);
         scopeAttributes.put(Scope.Attr.logService.name(), new LiquibaseLogger.LogService());
         scopeAttributes.put(Scope.Attr.ui.name(), new LoggerUIService());
 

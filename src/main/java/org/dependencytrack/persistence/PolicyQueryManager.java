@@ -27,17 +27,22 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisComment;
 import org.dependencytrack.model.ViolationAnalysisState;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-import java.util.ArrayList;
+
+import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
+import static org.dependencytrack.util.PersistenceUtil.assertPersistentAll;
 
 final class PolicyQueryManager extends QueryManager implements IQueryManager {
 
@@ -171,11 +176,13 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
      * @param violationState the violation state
      * @return the created Policy
      */
-    public Policy createPolicy(String name, Policy.Operator operator, Policy.ViolationState violationState) {
+    public Policy createPolicy(String name, Policy.Operator operator, Policy.ViolationState violationState,
+                               boolean onlyLatestProjectVersion) {
         final Policy policy = new Policy();
         policy.setName(name);
         policy.setOperator(operator);
         policy.setViolationState(violationState);
+        policy.setOnlyLatestProjectVersion(onlyLatestProjectVersion);
         return persist(policy);
     }
 
@@ -398,7 +405,7 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
         }
         final PaginatedResult result = execute(query);
         for (final PolicyViolation violation: result.getList(PolicyViolation.class)) {
-            violation.getPolicyCondition().getPolicy(); // force policy to ne included since its not the default
+            violation.getPolicyCondition().getPolicy(); // force policy to be included since its not the default
             violation.getComponent().getResolvedLicense(); // force resolved license to ne included since its not the default
             violation.setAnalysis(getViolationAnalysis(violation.getComponent(), violation)); // Include the violation analysis by default
         }
@@ -670,4 +677,36 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
         return getCount(query, component, type, ViolationAnalysisState.NOT_SET);
     }
 
+    /**
+     * @since 4.12.0
+     */
+    @Override
+    public boolean bind(final Policy policy, final Collection<Tag> tags) {
+        assertPersistent(policy, "policy must be persistent");
+        assertPersistentAll(tags, "tags must be persistent");
+        return callInTransaction(() -> {
+            boolean modified = false;
+
+            for (final Tag existingTag : policy.getTags()) {
+                if (!tags.contains(existingTag)) {
+                    policy.getTags().remove(existingTag);
+                    existingTag.getPolicies().remove(policy);
+                    modified = true;
+                }
+            }
+
+            for (final Tag tag : tags) {
+                if (!policy.getTags().contains(tag)) {
+                    policy.getTags().add(tag);
+                    if (tag.getPolicies() == null) {
+                        tag.setPolicies(new ArrayList<>(List.of(policy)));
+                    } else if (!tag.getPolicies().contains(policy)) {
+                        tag.getPolicies().add(policy);
+                    }
+                    modified = true;
+                }
+            }
+            return modified;
+        });
+    }
 }

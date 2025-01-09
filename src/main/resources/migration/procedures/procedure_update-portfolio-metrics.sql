@@ -70,8 +70,7 @@ BEGIN
   FROM (SELECT DISTINCT ON ("PM"."PROJECT_ID") *
         FROM "PROJECTMETRICS" AS "PM"
                INNER JOIN "PROJECT" AS "P" ON "P"."ID" = "PM"."PROJECT_ID"
-        WHERE "P"."ACTIVE" = TRUE  -- Only consider active projects
-          OR "P"."ACTIVE" IS NULL -- ACTIVE is nullable, assume TRUE per default
+        WHERE "P"."INACTIVE_SINCE" IS NULL  -- Only consider active projects
         ORDER BY "PM"."PROJECT_ID", "PM"."LAST_OCCURRENCE" DESC) AS "LATEST_PROJECT_METRICS"
   INTO
     "v_projects",
@@ -106,8 +105,13 @@ BEGIN
 
   "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
 
+  WITH "CTE_LATEST_METRICS" AS (
+    SELECT *
+      FROM "PORTFOLIOMETRICS"
+     ORDER BY "LAST_OCCURRENCE" DESC
+     LIMIT 1)
   SELECT "ID"
-  FROM "PORTFOLIOMETRICS"
+  FROM "CTE_LATEST_METRICS"
   WHERE "PROJECTS" = "v_projects"
     AND "VULNERABLEPROJECTS" = "v_vulnerable_projects"
     AND "COMPONENTS" = "v_components"
@@ -138,7 +142,6 @@ BEGIN
     AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
     AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
     AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
-  ORDER BY "LAST_OCCURRENCE" DESC
   LIMIT 1
   INTO "v_existing_id";
 

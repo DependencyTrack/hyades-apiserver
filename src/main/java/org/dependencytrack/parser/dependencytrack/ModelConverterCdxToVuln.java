@@ -19,11 +19,11 @@
 package org.dependencytrack.parser.dependencytrack;
 
 import org.apache.commons.lang3.StringUtils;
-import org.cyclonedx.proto.v1_4.Bom;
-import org.cyclonedx.proto.v1_4.ScoreMethod;
-import org.cyclonedx.proto.v1_4.Source;
-import org.cyclonedx.proto.v1_4.VulnerabilityRating;
-import org.cyclonedx.proto.v1_4.VulnerabilityReference;
+import org.cyclonedx.proto.v1_6.Bom;
+import org.cyclonedx.proto.v1_6.ScoreMethod;
+import org.cyclonedx.proto.v1_6.Source;
+import org.cyclonedx.proto.v1_6.VulnerabilityRating;
+import org.cyclonedx.proto.v1_6.VulnerabilityReference;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
@@ -46,17 +46,17 @@ import java.util.List;
 import java.util.Objects;
 
 import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV2;
-import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV3;
-import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_CVSSV31;
-import static org.cyclonedx.proto.v1_4.ScoreMethod.SCORE_METHOD_OWASP;
+import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV2;
+import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
+import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
+import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OWASP;
 
 public final class ModelConverterCdxToVuln {
 
     static final String TITLE_PROPERTY_NAME = "dependency-track:vuln:title";
 
     public static Vulnerability convert(final QueryManager qm, final Bom bom,
-                                        final org.cyclonedx.proto.v1_4.Vulnerability cycloneVuln,
+                                        final org.cyclonedx.proto.v1_6.Vulnerability cycloneVuln,
                                         boolean isAliasSyncEnabled) {
         if (cycloneVuln == null) {
             return null;
@@ -209,7 +209,7 @@ public final class ModelConverterCdxToVuln {
         return vuln;
     }
 
-    private static VulnerabilityAlias convert(final org.cyclonedx.proto.v1_4.Vulnerability cycloneVuln,
+    private static VulnerabilityAlias convert(final org.cyclonedx.proto.v1_6.Vulnerability cycloneVuln,
                                               final VulnerabilityReference cycloneAlias) {
         final var alias = new VulnerabilityAlias();
         switch (cycloneVuln.getSource().getName()) {
@@ -244,7 +244,7 @@ public final class ModelConverterCdxToVuln {
     public static Severity calculateSeverity(Bom bom) {
         if (bom.getVulnerabilitiesCount() > 0
                 && bom.getVulnerabilities(0).getRatingsCount() > 0) {
-            org.cyclonedx.proto.v1_4.Severity severity =
+            org.cyclonedx.proto.v1_6.Severity severity =
                     bom.getVulnerabilities(0).getRatings(0).getSeverity();
             final VulnerabilityRating rating = bom.getVulnerabilities(0).getRatings(0);
             if (rating.hasSeverity()) {

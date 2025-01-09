@@ -18,13 +18,18 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import alpine.resources.AlpineRequest;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
 import org.datanucleus.store.connection.ConnectionManagerImpl;
 import org.datanucleus.store.rdbms.ConnectionFactoryImpl;
 import org.datanucleus.store.rdbms.RDBMSStoreManager;
 import org.dependencytrack.persistence.QueryManager;
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.HandleCallback;
+import org.jdbi.v3.core.HandleConsumer;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.freemarker.FreemarkerEngine;
 import org.jdbi.v3.jackson2.Jackson2Config;
@@ -44,28 +49,76 @@ public class JdbiFactory {
 
     private static final AtomicReference<GlobalInstanceHolder> GLOBAL_INSTANCE_HOLDER = new AtomicReference<>();
 
+    public static Handle openJdbiHandle() {
+        return createJdbi().open();
+    }
+
+    public static Handle openJdbiHandle(final AlpineRequest alpineRequest) {
+        return forApiRequest(createJdbi().open(), alpineRequest);
+    }
+
+    public static <X extends Exception> void useJdbiHandle(final HandleConsumer<X> handleConsumer) throws X {
+        createJdbi().useHandle(handleConsumer);
+    }
+
+    public static <X extends Exception> void useJdbiHandle(final AlpineRequest apiRequest, final HandleConsumer<X> handleConsumer) throws X {
+        createJdbi().useHandle(handle -> handleConsumer.useHandle(forApiRequest(handle, apiRequest)));
+    }
+
+    public static <T, X extends Exception> T withJdbiHandle(final HandleCallback<T, X> handleCallback) throws X {
+        return createJdbi().withHandle(handleCallback);
+    }
+
+    public static <T, X extends Exception> T withJdbiHandle(final AlpineRequest apiRequest, final HandleCallback<T, X> handleCallback) throws X {
+        return createJdbi().withHandle(handle -> handleCallback.withHandle(forApiRequest(handle, apiRequest)));
+    }
+
+    public static <X extends Exception> void useJdbiTransaction(final HandleConsumer<X> handleConsumer) throws X {
+        createJdbi().useTransaction(handleConsumer);
+    }
+
+    public static <X extends Exception> void useJdbiTransaction(final AlpineRequest apiRequest, final HandleConsumer<X> handleConsumer) throws X {
+        createJdbi().useTransaction(handle -> handleConsumer.useHandle(forApiRequest(handle, apiRequest)));
+    }
+
+    public static <T, X extends Exception> T inJdbiTransaction(final HandleCallback<T, X> handleCallback) throws X {
+        return createJdbi().inTransaction(handleCallback);
+    }
+
+    public static <T, X extends Exception> T inJdbiTransaction(final AlpineRequest apiRequest, final HandleCallback<T, X> handleCallback) throws X {
+        return createJdbi().inTransaction(handle -> handleCallback.withHandle(forApiRequest(handle, apiRequest)));
+    }
+
+    private static Handle forApiRequest(final Handle handle, final AlpineRequest apiRequest) {
+        return handle.addCustomizer(new ApiRequestStatementCustomizer(apiRequest));
+    }
+
     /**
      * Get a global {@link Jdbi} instance, initializing it if it hasn't been initialized before.
      * <p>
      * The global instance will use {@link Connection}s from the primary {@link DataSource}
-     * of the given {@link QueryManager}'s {@link PersistenceManagerFactory}.
+     * of a {@link PersistenceManager}'s {@link PersistenceManagerFactory}.
      * <p>
      * Usage of the global instance should be preferred to make the best possible use of JDBI's
      * internal caching mechanisms. However, this instance can't participate in transactions
      * initiated by JDO (via {@link QueryManager} or {@link PersistenceManager}).
      * <p>
      * If {@link Jdbi} usage in an active JDO {@link javax.jdo.Transaction} is desired,
-     * use {@link #localJdbi(QueryManager)} instead, which will use the same {@link Connection}
+     * use {@link #createLocalJdbi(QueryManager)} instead, which will use the same {@link Connection}
      * as the provided {@link QueryManager}.
      *
-     * @param qm The {@link QueryManager} to determine the {@link DataSource} from
      * @return The global {@link Jdbi} instance
      */
-    public static Jdbi jdbi(final QueryManager qm) {
-        return jdbi(qm.getPersistenceManager());
+    static Jdbi createJdbi() {
+        // NB: The PersistenceManager is only required to gain access to the underlying
+        // datasource. It must be closed to avoid resource leakage, but the JDBI instance
+        // will continue to work.
+        try (final PersistenceManager pm = alpine.server.persistence.PersistenceManagerFactory.createPersistenceManager()) {
+            return createJdbi(pm);
+        }
     }
 
-    private static Jdbi jdbi(final PersistenceManager pm) {
+    private static Jdbi createJdbi(final PersistenceManager pm) {
         return GLOBAL_INSTANCE_HOLDER
                 .updateAndGet(previous -> {
                     if (previous == null || previous.pmf != pm.getPersistenceManagerFactory()) {
@@ -100,18 +153,18 @@ public class JdbiFactory {
      * @throws IllegalStateException When the given {@link QueryManager} is not participating
      *                               in an active {@link javax.jdo.Transaction}
      */
-    public static Jdbi localJdbi(final QueryManager qm) {
-        return localJdbi(qm.getPersistenceManager());
+    static Jdbi createLocalJdbi(final QueryManager qm) {
+        return createLocalJdbi(qm.getPersistenceManager());
     }
 
-    private static Jdbi localJdbi(final PersistenceManager pm) {
+    private static Jdbi createLocalJdbi(final PersistenceManager pm) {
         if (!pm.currentTransaction().isActive()) {
             throw new IllegalStateException("""
                     Local JDBI instances must not be used outside of an active JDO transaction. \
                     Use the global instance instead if combining JDBI with JDO transactions is not needed.""");
         }
 
-        return prepare(Jdbi.create(new JdoConnectionFactory(pm)));
+        return customizeJdbi(Jdbi.create(new JdoConnectionFactory(pm)));
     }
 
     private record GlobalInstanceHolder(Jdbi jdbi, PersistenceManagerFactory pmf) {
@@ -124,7 +177,7 @@ public class JdbiFactory {
                 && storeManager.getConnectionManager() instanceof final ConnectionManagerImpl connectionManager
                 && readField(connectionManager, "primaryConnectionFactory", true) instanceof ConnectionFactoryImpl connectionFactory
                 && readField(connectionFactory, "dataSource", true) instanceof final DataSource dataSource) {
-                return prepare(Jdbi.create(dataSource));
+                return customizeJdbi(Jdbi.create(dataSource));
             }
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Failed to access datasource of PMF via reflection", e);
@@ -133,20 +186,24 @@ public class JdbiFactory {
         throw new IllegalStateException("Failed to access primary datasource of PMF");
     }
 
-    private static Jdbi prepare(final Jdbi jdbi) {
+    private static Jdbi customizeJdbi(final Jdbi jdbi) {
         final Jdbi preparedJdbi = jdbi
                 .installPlugin(new SqlObjectPlugin())
                 .installPlugin(new PostgresPlugin())
                 .installPlugin(new Jackson2Plugin())
                 .setTemplateEngine(FreemarkerEngine.instance());
 
-        preparedJdbi.getConfig(Jackson2Config.class).setMapper(createObjectMapper());
+        preparedJdbi.getConfig(Jackson2Config.class).setMapper(createJsonMapper());
         return preparedJdbi;
     }
 
-    private static ObjectMapper createObjectMapper() {
-        return new ObjectMapper()
-                .registerModule(new JavaTimeModule());
+    private static JsonMapper createJsonMapper() {
+        return JsonMapper.builder()
+                // Avoid unnecessary @JsonAlias or "SELECT ... AS ..." statements
+                // for mapping upper-cased columns to camel-cased Java fields.
+                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
+                .addModule(new JavaTimeModule())
+                .build();
     }
 
 }

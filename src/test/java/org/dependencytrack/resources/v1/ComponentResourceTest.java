@@ -23,6 +23,11 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -33,6 +38,7 @@ import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -43,11 +49,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.jdo.JDOObjectNotFoundException;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
@@ -86,7 +87,7 @@ public class ComponentResourceTest extends ResourceTest {
      * @throws MalformedPackageURLException
      */
     private Project prepareProject() throws MalformedPackageURLException {
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         final List<String> directDepencencies = new ArrayList<>();
         // Generate 1000 dependencies
         for (int i = 0; i < 1000; i++) {
@@ -132,7 +133,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByUuidTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -158,7 +159,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByUuidWithRepositoryMetaDataTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -189,7 +190,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByUuidWithPublishedMetaDataTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -242,7 +243,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void integrityCheckStatusPassTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -273,7 +274,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void integrityCheckStatusFailTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -304,7 +305,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void integrityMetaDataFoundTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -336,7 +337,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void integrityMetaDataNotFoundTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -351,7 +352,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void integrityMetaDataInvalidPurlTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -366,7 +367,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByIdentityWithCoordinatesTest() {
-        final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, true, false);
+        final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, null, false);
         var componentA = new Component();
         componentA.setProject(projectA);
         componentA.setGroup("groupA");
@@ -376,7 +377,7 @@ public class ComponentResourceTest extends ResourceTest {
         componentA.setPurl("pkg:maven/groupA/nameA@versionA?foo=bar");
         qm.createComponent(componentA, false);
 
-        final Project projectB = qm.createProject("projectB", null, "1.0", null, null, null, true, false);
+        final Project projectB = qm.createProject("projectB", null, "1.0", null, null, null, null, false);
         var componentB = new Component();
         componentB.setProject(projectB);
         componentB.setGroup("groupB");
@@ -406,7 +407,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentTestWithRepositoryMetaData() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         Component component1 = new Component();
         component1.setProject(project);
@@ -470,7 +471,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByIdentityWithPurlTest() {
-        final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, true, false);
+        final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, null, false);
         var componentA = new Component();
         componentA.setProject(projectA);
         componentA.setGroup("groupA");
@@ -480,7 +481,7 @@ public class ComponentResourceTest extends ResourceTest {
         componentA.setPurl("pkg:maven/groupA/nameA@versionA?foo=bar");
         qm.createComponent(componentA, false);
 
-        final Project projectB = qm.createProject("projectB", null, "1.0", null, null, null, true, false);
+        final Project projectB = qm.createProject("projectB", null, "1.0", null, null, null, null, false);
         var componentB = new Component();
         componentB.setProject(projectB);
         componentB.setGroup("groupB");
@@ -508,7 +509,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByIdentityWithCpeTest() {
-        final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, true, false);
+        final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, null, false);
         var componentA = new Component();
         componentA.setProject(projectA);
         componentA.setGroup("groupA");
@@ -518,7 +519,7 @@ public class ComponentResourceTest extends ResourceTest {
         componentA.setPurl("pkg:maven/groupA/nameA@versionA?foo=bar");
         qm.createComponent(componentA, false);
 
-        final Project projectB = qm.createProject("projectB", null, "1.0", null, null, null, true, false);
+        final Project projectB = qm.createProject("projectB", null, "1.0", null, null, null, null, false);
         var componentB = new Component();
         componentB.setProject(projectB);
         componentB.setGroup("groupB");
@@ -546,7 +547,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByIdentityWithProjectTest() {
-        final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, true, false);
+        final Project projectA = qm.createProject("projectA", null, "1.0", null, null, null, null, false);
         var componentA = new Component();
         componentA.setProject(projectA);
         componentA.setGroup("group");
@@ -555,7 +556,7 @@ public class ComponentResourceTest extends ResourceTest {
         componentA.setPurl("pkg:maven/group/name@version?foo=bar");
         qm.createComponent(componentA, false);
 
-        final Project projectB = qm.createProject("projectB", null, "1.0", null, null, null, true, false);
+        final Project projectB = qm.createProject("projectB", null, "1.0", null, null, null, null, false);
         var componentB = new Component();
         componentB.setProject(projectB);
         componentB.setGroup("group");
@@ -596,7 +597,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getComponentByHashTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -621,11 +622,16 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void createComponentTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("My Component");
         component.setVersion("1.0");
+        List<OrganizationalContact> authors = new ArrayList<>();
+        authors.add(new OrganizationalContact(){{
+            setName("SampleAuthor");
+        }});
+        component.setAuthors(authors);
         component.setPurl("pkg:maven/org.acme/abc");
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
@@ -635,6 +641,7 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("My Component", json.getString("name"));
         Assert.assertEquals("1.0", json.getString("version"));
+        Assert.assertEquals("SampleAuthor" ,json.getJsonArray("authors").getJsonObject(0).getString("name"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
                 record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
@@ -653,7 +660,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void createComponentUpperCaseHashTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("My Component");
@@ -688,7 +695,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void updateComponentTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setPurl("pkg:maven/org.acme/abc");
@@ -734,7 +741,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void updateComponentEmptyNameTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("My Component");
@@ -791,7 +798,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void deleteComponentTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setUuid(UUID.randomUUID());
@@ -816,7 +823,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void deleteComponentInvalidUuidTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("My Component");
@@ -836,7 +843,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         Component component1 = new Component();
         component1.setProject(project);
@@ -897,7 +904,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentInvalidProjectUuidTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("My Component");
@@ -910,7 +917,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentInvalidComponentUuidTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Response response = jersey.target(V1_COMPONENT + "/project/" + project.getUuid() + "/dependencyGraph/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).get();
         Assert.assertEquals(404, response.getStatus(), 0);
@@ -918,7 +925,7 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentNoDependencyGraphTest() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("My Component");
@@ -933,14 +940,14 @@ public class ComponentResourceTest extends ResourceTest {
 
     @Test
     public void getDependencyGraphForComponentIsNotComponentOfProject() {
-        Project projectWithComponent = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project projectWithComponent = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(projectWithComponent);
         component.setName("My Component");
         component.setVersion("1.0");
         component = qm.createComponent(component, false);
         projectWithComponent.setDirectDependencies("[{\"uuid\":\"" + component.getUuid() + "\"}]");
-        Project projectWithoutComponent = qm.createProject("Acme Library", null, null, null, null, null, true, false);
+        Project projectWithoutComponent = qm.createProject("Acme Library", null, null, null, null, null, null, false);
         Response responseWithComponent = jersey.target(V1_COMPONENT + "/project/" + projectWithComponent.getUuid() + "/dependencyGraph/" + component.getUuid())
                 .request().header(X_API_KEY, apiKey).get();
         JsonObject jsonWithComponent = parseJsonObject(responseWithComponent);

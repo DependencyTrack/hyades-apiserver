@@ -46,7 +46,7 @@ class ProjectQueryFilterBuilder {
 
     ProjectQueryFilterBuilder excludeInactive(boolean excludeInactive) {
         if (excludeInactive) {
-            filterCriteria.add("(active == true || active == null)");
+            filterCriteria.add("(inactiveSince == null)");
         }
         return this;
     }
@@ -118,6 +118,11 @@ class ProjectQueryFilterBuilder {
         params.put("parentUuid", uuid);
 
         filterCriteria.add("parent.uuid == :parentUuid");
+        return this;
+    }
+
+    public ProjectQueryFilterBuilder onlyLatestVersion() {
+        filterCriteria.add("(isLatest == true)");
         return this;
     }
 

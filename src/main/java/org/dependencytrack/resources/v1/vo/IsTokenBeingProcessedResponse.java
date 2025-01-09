@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.resources.v1.vo;
 
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.io.Serializable;
 
@@ -26,7 +26,7 @@ public class IsTokenBeingProcessedResponse implements Serializable {
 
     private static final long serialVersionUID = -7592468766586686855L;
 
-    @ApiModelProperty(required = true)
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean processing;
 
     public void setProcessing(Boolean processing) {

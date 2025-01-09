@@ -42,11 +42,11 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.Response;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -70,8 +70,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectTest() {
-        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
         Component c3 = createComponent(p1, "Component C", "1.0");
@@ -137,8 +137,31 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getFindingsByProjectEmptyTest() {
+        final var metaComponent = new RepositoryMetaComponent();
+        metaComponent.setRepositoryType(RepositoryType.MAVEN);
+        metaComponent.setNamespace("com.acme");
+        metaComponent.setName("acme-lib");
+        metaComponent.setLatestVersion("1.2.3");
+        metaComponent.setLastCheck(new Date());
+        qm.persist(metaComponent);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_FINDING + "/project/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+    }
+
+    @Test
     public void getFindingsByProjectInvalidTest() {
-        Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID().toString()).request()
+        Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(404, response.getStatus(), 0);
@@ -149,8 +172,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void exportFindingsByProjectTest() {
-        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
         Component c3 = createComponent(p1, "Component C", "1.0");
@@ -225,7 +248,7 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void exportFindingsByProjectInvalidTest() {
-        Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID().toString() + "/export").request()
+        Response response = jersey.target(V1_FINDING + "/project/" + UUID.randomUUID() + "/export").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         assertEquals(404, response.getStatus(), 0);
@@ -236,8 +259,8 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectWithComponentLatestVersionTest() {
-        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         c1.setPurl("pkg:/maven/org.acme/component-a@1.0.0");
         RepositoryMetaComponent r1 = new RepositoryMetaComponent();
@@ -338,7 +361,7 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getFindingsByProjectWithComponentLatestVersionWithoutRepositoryMetaComponent() {
-        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         c1.setPurl("pkg:/maven/org.acme/component-a@1.0.0");
 
@@ -367,7 +390,7 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void testWorkflowStepsShouldBeCreatedOnReanalyze() {
-        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString() +  "/analyze").request()
                 .header(X_API_KEY, apiKey)
@@ -399,9 +422,9 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getAllFindings() {
-        Project p1 = qm.createProject("Acme Example 1", null, "1.0", null, null, null, true, false);
-        Project p1_child = qm.createProject("Acme Example 2", null, "1.0", null, p1, null, true, false);
-        Project p2 = qm.createProject("Acme Example 3", null, "1.0", null, null, null, true, false);
+        Project p1 = qm.createProject("Acme Example 1", null, "1.0", null, null, null, null, false);
+        Project p1_child = qm.createProject("Acme Example 2", null, "1.0", null, p1, null, null, false);
+        Project p2 = qm.createProject("Acme Example 3", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
         Component c3 = createComponent(p1_child, "Component C", "1.0");
@@ -457,9 +480,9 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getAllFindingsWithAclEnabled() {
-        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Team team = qm.createTeam("Team Acme", true);
         p1.addAccessTeam(team);
         Component c1 = createComponent(p1, "Component A", "1.0");
@@ -513,9 +536,9 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getAllFindingsGroupedByVulnerability() {
-        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
         Component c3 = createComponent(p1_child, "Component C", "1.0");
@@ -589,9 +612,9 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getAllFindingsGroupedByVulnerabilityWithAclEnabled() {
-        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, true, false);
-        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, true, false);
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
+        Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Team team = qm.createTeam("Team Acme", true);
         p1.addAccessTeam(team);
         Component c1 = createComponent(p1, "Component A", "1.0");
@@ -664,7 +687,7 @@ public class FindingResourceTest extends ResourceTest {
 
     @Test
     public void getSARIFFindingsByProjectTest() {
-        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(project, "Component 1", "1.1.4");
         Component c2 = createComponent(project, "Component 2", "2.78.123");
         c1.setGroup("org.acme");

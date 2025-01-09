@@ -7,8 +7,6 @@
           <option name="delegateBuildToMaven" value="false" />
           <option name="environmentProperties">
             <map>
-              <entry key="ALPINE_DATABASE_DRIVER" value="org.postgresql.Driver" />
-              <entry key="ALPINE_DATABASE_MODE" value="external" />
               <entry key="ALPINE_DATABASE_PASSWORD" value="dtrack" />
               <entry key="ALPINE_DATABASE_URL" value="jdbc:postgresql://localhost:5432/dtrack" />
               <entry key="ALPINE_DATABASE_USERNAME" value="dtrack" />

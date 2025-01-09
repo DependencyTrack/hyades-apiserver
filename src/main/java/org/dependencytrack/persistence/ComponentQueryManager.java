@@ -18,10 +18,7 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.model.ApiKey;
 import alpine.model.IConfigProperty.PropertyType;
-import alpine.model.Team;
-import alpine.model.UserPrincipal;
 import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
@@ -31,7 +28,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentProperty;
-import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -39,12 +35,12 @@ import org.dependencytrack.model.sqlmapping.ComponentProjection;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonValue;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonValue;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -169,7 +165,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         String queryString = """
                         SELECT "A0"."ID" AS "id",
                         "A0"."NAME" AS "name",
-                        "A0"."AUTHOR" AS "author",
+                        "A0"."AUTHORS" AS "authors",
                         "A0"."BLAKE2B_256" AS "blake2b_256",
                         "A0"."BLAKE2B_384" AS "blake2b_384",
                         "A0"."BLAKE2B_512" AS "blake2b_512",
@@ -203,8 +199,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "A0"."SWIDTAGID" AS "swidTagId",
                         "A0"."UUID" AS "uuid",
                         "A0"."VERSION" AS "version",
-                        "B0"."ACTIVE" AS "projectActive",
-                        "B0"."AUTHOR" AS "projectAuthor",
+                        "B0"."INACTIVE_SINCE" AS "projectInactiveSince",
+                        "B0"."AUTHORS" AS "projectAuthors",
                         "B0"."CLASSIFIER" AS "projectClassifier",
                         "B0"."CPE" AS "projectCpe",
                         "B0"."DESCRIPTION" AS "projectDescription",
@@ -244,7 +240,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         queryParams.put("projectId", project.getId());
         if (filter != null) {
             queryString += """
-                    AND LOWER("A0"."NAME") LIKE ('%' || LOWER(:nameFilter) || '%')
+                    AND (LOWER("A0"."NAME") LIKE ('%' || LOWER(:nameFilter) || '%')
+                    OR LOWER("A0"."GROUP") LIKE ('%' || LOWER(:nameFilter) || '%'))
                     """;
             queryParams.put("nameFilter", filter);
         }
@@ -266,7 +263,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         if (onlyDirect) {
             queryString +=
                     """
-                       AND "B0"."DIRECT_DEPENDENCIES" LIKE (('%' || "A0"."UUID") || '%') ESCAPE E'\\\\'
+                       AND "B0"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "A0"."UUID"))
                     """;
         }
         if (orderBy == null) {
@@ -552,8 +549,9 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setLicenseExpression(sourceComponent.getLicenseExpression());
         component.setLicenseUrl(sourceComponent.getLicenseUrl());
         component.setResolvedLicense(sourceComponent.getResolvedLicense());
-        component.setAuthor(sourceComponent.getAuthor());
+        component.setAuthors(sourceComponent.getAuthors());
         component.setSupplier(sourceComponent.getSupplier());
+        component.setDirectDependencies(sourceComponent.getDirectDependencies());
         // TODO Add support for parent component and children components
         component.setProject(destinationProject);
         return createComponent(component, commitIndex);
@@ -589,7 +587,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         component.setPurl(transientComponent.getPurl());
         component.setPurlCoordinates(component.getPurl());
         component.setInternal(transientComponent.isInternal());
-        component.setAuthor(transientComponent.getAuthor());
+        component.setAuthors(transientComponent.getAuthors());
         component.setSupplier(transientComponent.getSupplier());
         component.setExternalReferences(transientComponent.getExternalReferences());
         final Component result = persist(component);
@@ -656,55 +654,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             if (!isJoiningExistingTrx && trx.isActive()) {
                 trx.rollback();
             }
-        }
-    }
-
-    /**
-     * Returns a component by matching its identity information.
-     * <p>
-     * Note that this method employs a stricter matching logic than {@link #matchIdentity(Project, ComponentIdentity)}.
-     * For example, if {@code purl} of the given {@link ComponentIdentity} is {@code null}, this method will use a
-     * query that explicitly checks for the {@code purl} column to be {@code null}.
-     * Whereas other methods will simply not include {@code purl} in the query in such cases.
-     *
-     * @param project the Project the component is a dependency of
-     * @param cid     the identity values of the component
-     * @return a Component object, or null if not found
-     * @since 4.11.0
-     */
-    public Component matchSingleIdentityExact(final Project project, final ComponentIdentity cid) {
-        final Pair<String, Map<String, Object>> queryFilterParamsPair = buildExactComponentIdentityQuery(project, cid);
-        final Query<Component> query = pm.newQuery(Component.class, queryFilterParamsPair.getKey());
-        query.setNamedParameters(queryFilterParamsPair.getRight());
-        try {
-            return query.executeUnique();
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    /**
-     * Returns the first component matching a given {@link ComponentIdentity} in a {@link Project}.
-     *
-     * @param project the Project the component is a dependency of
-     * @param cid     the identity values of the component
-     * @return a Component object, or null if not found
-     * @since 4.11.0
-     */
-    public Component matchFirstIdentityExact(final Project project, final ComponentIdentity cid) {
-        final Pair<String, Map<String, Object>> queryFilterParamsPair = buildExactComponentIdentityQuery(project, cid);
-        final Query<Component> query = pm.newQuery(Component.class, queryFilterParamsPair.getKey());
-        query.setNamedParameters(queryFilterParamsPair.getRight());
-        query.setRange(0, 1);
-        try {
-            final List<Component> result = query.executeList();
-            if (result.isEmpty()) {
-                return null;
-            }
-
-            return result.getFirst();
-        } finally {
-            query.closeAll();
         }
     }
 
@@ -798,130 +747,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         return Pair.of(filter, params);
     }
 
-    private static Pair<String, Map<String, Object>> buildExactComponentIdentityQuery(final Project project, final ComponentIdentity cid) {
-        var filterParts = new ArrayList<String>();
-        final var params = new HashMap<String, Object>();
-
-        if (cid.getPurl() != null) {
-            filterParts.add("(purl != null && purl == :purl)");
-            params.put("purl", cid.getPurl().canonicalize());
-        } else {
-            filterParts.add("purl == null");
-        }
-
-        if (cid.getCpe() != null) {
-            filterParts.add("(cpe != null && cpe == :cpe)");
-            params.put("cpe", cid.getCpe());
-        } else {
-            filterParts.add("cpe == null");
-        }
-
-        if (cid.getSwidTagId() != null) {
-            filterParts.add("(swidTagId != null && swidTagId == :swidTagId)");
-            params.put("swidTagId", cid.getSwidTagId());
-        } else {
-            filterParts.add("swidTagId == null");
-        }
-
-        var coordinatesFilter = "(";
-        if (cid.getGroup() != null) {
-            coordinatesFilter += "group == :group";
-            params.put("group", cid.getGroup());
-        } else {
-            coordinatesFilter += "group == null";
-        }
-        coordinatesFilter += " && name == :name";
-        params.put("name", cid.getName());
-        if (cid.getVersion() != null) {
-            coordinatesFilter += " && version == :version";
-            params.put("version", cid.getVersion());
-        } else {
-            coordinatesFilter += " && version == null";
-        }
-        coordinatesFilter += ")";
-        filterParts.add(coordinatesFilter);
-
-        final var filter = "project == :project && (" + String.join(" && ", filterParts) + ")";
-        params.put("project", project);
-
-        return Pair.of(filter, params);
-    }
-
-    /**
-     * Intelligently adds dependencies for components that are not already a dependency
-     * of the specified project and removes the dependency relationship for components
-     * that are not in the list of specified components.
-     *
-     * @param project                   the project to bind components to
-     * @param existingProjectComponents the complete list of existing dependent components
-     * @param components                the complete list of components that should be dependencies of the project
-     */
-    public void reconcileComponents(Project project, List<Component> existingProjectComponents, List<Component> components) {
-        // Removes components as dependencies to the project for all
-        // components not included in the list provided
-        List<Component> markedForDeletion = new ArrayList<>();
-        for (final Component existingComponent : existingProjectComponents) {
-            boolean keep = false;
-            for (final Component component : components) {
-                if (component.getId() == existingComponent.getId()) {
-                    keep = true;
-                    break;
-                }
-            }
-            if (!keep) {
-                markedForDeletion.add(existingComponent);
-            }
-        }
-        if (!markedForDeletion.isEmpty()) {
-            for (Component c : markedForDeletion) {
-                this.recursivelyDelete(c, false);
-            }
-            //this.delete(markedForDeletion);
-        }
-    }
-
-    /**
-     * A similar method exists in ProjectQueryManager
-     */
-    private void preprocessACLs(final Query<Component> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
-        if (super.principal != null && isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED) && !bypass) {
-            final List<Team> teams;
-            if (super.principal instanceof UserPrincipal) {
-                final UserPrincipal userPrincipal = ((UserPrincipal) super.principal);
-                teams = userPrincipal.getTeams();
-                if (super.hasAccessManagementPermission(userPrincipal)) {
-                    query.setFilter(inputFilter);
-                    return;
-                }
-            } else {
-                final ApiKey apiKey = ((ApiKey) super.principal);
-                teams = apiKey.getTeams();
-                if (super.hasAccessManagementPermission(apiKey)) {
-                    query.setFilter(inputFilter);
-                    return;
-                }
-            }
-            if (teams != null && teams.size() > 0) {
-                final StringBuilder sb = new StringBuilder();
-                for (int i = 0, teamsSize = teams.size(); i < teamsSize; i++) {
-                    final Team team = super.getObjectById(Team.class, teams.get(i).getId());
-                    sb.append(" project.accessTeams.contains(:team").append(i).append(") ");
-                    params.put("team" + i, team);
-                    if (i < teamsSize - 1) {
-                        sb.append(" || ");
-                    }
-                }
-                if (inputFilter != null) {
-                    query.setFilter(inputFilter + " && (" + sb.toString() + ")");
-                } else {
-                    query.setFilter(sb.toString());
-                }
-            }
-        } else {
-            query.setFilter(inputFilter);
-        }
-    }
-
     public Map<String, Component> getDependencyGraphForComponents(Project project, List<Component> components) {
         Map<String, Component> dependencyGraph = new HashMap<>();
         if (project.getDirectDependencies() == null || project.getDirectDependencies().isBlank()) {
@@ -976,9 +801,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     }
 
     private void getParentDependenciesOfComponent(Project project, Component childComponent, Map<String, Component> dependencyGraph) {
-        String queryUuid = ".*" + childComponent.getUuid().toString() + ".*";
-        final Query<Component> query = pm.newQuery(Component.class, "directDependencies.matches(:queryUuid) && project == :project");
-        List<Component> parentComponents = (List<Component>) query.executeWithArray(queryUuid, project);
+        final Query<Component> query = pm.newQuery(Component.class, "directDependencies.jsonbContains(:child) && project == :project");
+        List<Component> parentComponents = (List<Component>) query.executeWithArray("[{\"uuid\":\"%s\"}]".formatted(childComponent.getUuid()), project);
         for (Component parentComponent : parentComponents) {
             parentComponent.setExpandDependencyGraph(true);
             if(parentComponent.getDependencyGraph() == null) {
@@ -1098,7 +922,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             //   counter-intuitive to some users, who might expect their manual changes to persist.
             //   If we want to support that, we need a way to track which properties were added and / or
             //   modified manually.
-            if (component.getProperties() != null) {
+            if (component.getProperties() != null && !component.getProperties().isEmpty()) {
                 pm.deletePersistentAll(component.getProperties());
             }
 
@@ -1118,10 +942,30 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
         // Group properties by group, name, and value. Because CycloneDX supports duplicate
         // property names, uniqueness can only be determined by also considering the value.
+        final var existingPropertyIdentitiesSeen = new HashSet<ComponentProperty.Identity>();
+        final var existingDuplicateProperties = new HashSet<ComponentProperty>();
         final var existingPropertiesByIdentity = component.getProperties().stream()
+                // The legacy BOM processing in <= 4.11.x allowed duplicates to be persisted.
+                // Collectors#toMap fails upon encounter of duplicate keys.
+                // Prevent existing duplicates from breaking this.
+                // https://github.com/DependencyTrack/dependency-track/issues/4027
+                .filter(property -> {
+                    final var identity = new ComponentProperty.Identity(property);
+                    final boolean isUnique = existingPropertyIdentitiesSeen.add(identity);
+                    if (!isUnique) {
+                        existingDuplicateProperties.add(property);
+                    }
+                    return isUnique;
+                })
                 .collect(Collectors.toMap(ComponentProperty.Identity::new, Function.identity()));
+        final var incomingPropertyIdentitiesSeen = new HashSet<ComponentProperty.Identity>();
         final var incomingPropertiesByIdentity = properties.stream()
+                .filter(property -> incomingPropertyIdentitiesSeen.add(new ComponentProperty.Identity(property)))
                 .collect(Collectors.toMap(ComponentProperty.Identity::new, Function.identity()));
+
+        if (!existingDuplicateProperties.isEmpty()) {
+            pm.deletePersistentAll(existingDuplicateProperties);
+        }
 
         final var propertyIdentities = new HashSet<ComponentProperty.Identity>();
         propertyIdentities.addAll(existingPropertiesByIdentity.keySet());

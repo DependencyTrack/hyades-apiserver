@@ -31,9 +31,9 @@ jobs:
     timeout-minutes: 5
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # tag=v4.1.7
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
     - name: Setup buf
-      uses: bufbuild/buf-setup-action@59e8ac0671772e5ffef08a41b3aec11d39fc1165 # tag=v1.33.0
+      uses: bufbuild/buf-setup-action@1115d0acd3d2a120b30023fac52abc46807c8fd6 # tag=v1.48.0
       with:
         github_token: ${{ github.token }}
     - name: Lint Protobuf

@@ -21,6 +21,11 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Component;
@@ -28,16 +33,10 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Tag;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.util.Date;
 
 import static java.util.Collections.singletonList;
@@ -194,7 +193,7 @@ public class PolicyResourceTest extends ResourceTest {
      */
     @Test
     public void deletePolicyCascadingTest() {
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         Component component = new Component();
         component.setProject(project);
@@ -224,7 +223,7 @@ public class PolicyResourceTest extends ResourceTest {
     @Test
     public void addProjectToPolicyTest() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid() + "/project/" + project.getUuid())
                 .request()
@@ -241,7 +240,7 @@ public class PolicyResourceTest extends ResourceTest {
     @Test
     public void addProjectToPolicyProjectAlreadyAddedTest() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         policy.setProjects(singletonList(project));
         qm.persist(policy);
@@ -257,7 +256,7 @@ public class PolicyResourceTest extends ResourceTest {
     @Test
     public void removeProjectFromPolicyTest() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         policy.setProjects(singletonList(project));
         qm.persist(policy);
@@ -273,72 +272,9 @@ public class PolicyResourceTest extends ResourceTest {
     @Test
     public void removeProjectFromPolicyProjectAlreadyRemovedTest() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
 
         final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid() + "/project/" + project.getUuid())
-                .request()
-                .header(X_API_KEY, apiKey)
-                .delete();
-
-        assertThat(response.getStatus()).isEqualTo(304);
-    }
-
-    @Test
-    public void addTagToPolicyTest() {
-        final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Tag tag = qm.createTag("Policy Tag");
-        System.out.println("Tag being created is "+qm.getTagByName("Policy Tag"));
-
-        final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid() + "/tag/" + tag.getName())
-                .request()
-                .header(X_API_KEY, apiKey)
-                .post(null);
-
-        assertThat(response.getStatus()).isEqualTo(200);
-
-        final JsonObject json = parseJsonObject(response);
-        assertThat(json.getJsonArray("tags")).hasSize(1);
-        assertThat(json.getJsonArray("tags").get(0).asJsonObject().getString("name")).isEqualTo(tag.getName());
-    }
-
-    @Test
-    public void addTagToPolicyTagAlreadyAddedTest() {
-        final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Tag tag = qm.createTag("Policy Tag");
-
-        policy.setTags(singletonList(tag));
-        qm.persist(policy);
-
-        final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid() + "/tag/" + tag.getName())
-                .request()
-                .header(X_API_KEY, apiKey)
-                .post(null);
-
-        assertThat(response.getStatus()).isEqualTo(304);
-    }
-
-    @Test
-    public void removeTagFromPolicyTest() {
-        final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Tag tag = qm.createTag("Policy Tag");
-
-        policy.setTags(singletonList(tag));
-        qm.persist(policy);
-
-        final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid() + "/tag/" + tag.getName())
-                .request()
-                .header(X_API_KEY, apiKey)
-                .delete();
-
-        assertThat(response.getStatus()).isEqualTo(200);
-    }
-
-    @Test
-    public void removeTagFromPolicyTagDoesNotExistTest() {
-        final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        final Tag tag = qm.createTag("Policy Tag");
-
-        final Response response = jersey.target(V1_POLICY + "/" + policy.getUuid() + "/tag/" + tag.getName())
                 .request()
                 .header(X_API_KEY, apiKey)
                 .delete();

@@ -24,6 +24,9 @@ import alpine.server.json.TrimmedStringDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -31,7 +34,12 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConverter;
 import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
 
@@ -39,6 +47,7 @@ import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Convert;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.Extensions;
 import javax.jdo.annotations.FetchGroup;
 import javax.jdo.annotations.FetchGroups;
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -50,10 +59,6 @@ import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Serialized;
 import javax.jdo.annotations.Unique;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -74,7 +79,7 @@ import java.util.UUID;
 @FetchGroups({
         @FetchGroup(name = "ALL", members = {
                 @Persistent(name = "name"),
-                @Persistent(name = "author"),
+                @Persistent(name = "authors"),
                 @Persistent(name = "publisher"),
                 @Persistent(name = "group"),
                 @Persistent(name = "name"),
@@ -90,7 +95,8 @@ import java.util.UUID;
                 @Persistent(name = "properties"),
                 @Persistent(name = "tags"),
                 @Persistent(name = "accessTeams"),
-                @Persistent(name = "metadata")
+                @Persistent(name = "metadata"),
+                @Persistent(name = "isLatest")
         }),
         @FetchGroup(name = "METADATA", members = {
                 @Persistent(name = "metadata")
@@ -141,12 +147,11 @@ public class Project implements Serializable {
     @JsonIgnore
     private long id;
 
-    @Persistent
-    @Column(name = "AUTHOR", jdbcType = "VARCHAR")
-    @Size(max = 255)
-    @JsonDeserialize(using = TrimmedStringDeserializer.class)
-    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The author may only contain printable characters")
-    private String author;
+    @Persistent(defaultFetchGroup = "true")
+    @Convert(OrganizationalContactsJsonConverter.class)
+    @Column(name = "AUTHORS", jdbcType = "CLOB", allowsNull = "true")
+    @JsonView(JsonViews.MetadataTools.class)
+    private List<OrganizationalContact> authors;
 
     @Persistent
     @Column(name = "PUBLISHER", jdbcType = "VARCHAR")
@@ -216,7 +221,7 @@ public class Project implements Serializable {
     @Size(max = 255)
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
-    @ApiModelProperty(dataType = "string")
+    @Schema(type = "string")
     private String purl;
 
     @Persistent
@@ -229,12 +234,16 @@ public class Project implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "DIRECT_DEPENDENCIES", jdbcType = "CLOB")
+    @Extensions(value = {
+            @Extension(vendorName = "datanucleus", key = "insert-function", value = "CAST(? AS JSONB)"),
+            @Extension(vendorName = "datanucleus", key = "update-function", value = "CAST(? AS JSONB)")
+    })
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     private String directDependencies; // This will be a JSON string
 
     @Persistent(customValueStrategy = "uuid")
     @Unique(name = "PROJECT_UUID_IDX")
-    @Column(name = "UUID", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
+    @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
     @NotNull
     private UUID uuid;
 
@@ -262,6 +271,7 @@ public class Project implements Serializable {
     @Persistent
     @Index(name = "PROJECT_LASTBOMIMPORT_IDX")
     @Column(name = "LAST_BOM_IMPORTED")
+    @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.REQUIRED, description = "UNIX epoch timestamp in milliseconds")
     private Date lastBomImport;
 
     /**
@@ -281,15 +291,15 @@ public class Project implements Serializable {
     private Double lastInheritedRiskScore;
 
     @Persistent
-    @Column(name = "ACTIVE")
-    @JsonSerialize(nullsUsing = BooleanDefaultTrueSerializer.class)
-    private Boolean active; // Added in v3.6. Existing records need to be nullable on upgrade.
+    @Column(name = "INACTIVE_SINCE")
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY,
+            type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
+    private Date inactiveSince;
 
     @Persistent(table = "PROJECT_ACCESS_TEAMS", defaultFetchGroup = "true")
     @Join(column = "PROJECT_ID")
     @Element(column = "TEAM_ID")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    @JsonIgnore
     private List<Team> accessTeams;
 
     @Persistent(defaultFetchGroup = "true")
@@ -298,8 +308,13 @@ public class Project implements Serializable {
     private List<ExternalReference> externalReferences;
 
     @Persistent(mappedBy = "project")
-    @ApiModelProperty(accessMode = ApiModelProperty.AccessMode.READ_ONLY)
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private ProjectMetadata metadata;
+
+    @Persistent
+    @Index(name = "PROJECT_IS_LATEST_IDX")
+    @Column(name = "IS_LATEST", defaultValue = "false")
+    private boolean isLatest = false;
 
     private transient String bomRef;
 
@@ -309,6 +324,8 @@ public class Project implements Serializable {
 
     private transient List<Component> dependencyGraph;
 
+    private transient String author;
+
     public long getId() {
         return id;
     }
@@ -317,12 +334,12 @@ public class Project implements Serializable {
         this.id = id;
     }
 
-    public String getAuthor() {
-        return author;
+    public List<OrganizationalContact> getAuthors() {
+        return authors;
     }
 
-    public void setAuthor(String author) {
-        this.author = author;
+    public void setAuthors(List<OrganizationalContact> authors) {
+        this.authors = authors;
     }
 
     public String getPublisher() {
@@ -506,12 +523,25 @@ public class Project implements Serializable {
         this.externalReferences = externalReferences;
     }
 
-    public Boolean isActive() {
-        return active;
+    public Date getInactiveSince() {
+        return inactiveSince;
     }
 
-    public void setActive(Boolean active) {
-        this.active = active;
+    public void setInactiveSince(Date inactiveSince) {
+        this.inactiveSince = inactiveSince;
+    }
+
+    public boolean isActive() {
+        return inactiveSince == null;
+    }
+
+    public void setActive(boolean active) {
+        if (!active && this.inactiveSince == null) {
+            this.inactiveSince = new Date();
+        }
+        if (active && this.inactiveSince != null) {
+            this.inactiveSince = null;
+        }
     }
 
     public String getBomRef() {
@@ -538,10 +568,12 @@ public class Project implements Serializable {
         this.versions = versions;
     }
 
+    @JsonIgnore
     public List<Team> getAccessTeams() {
         return accessTeams;
     }
 
+    @JsonSetter
     public void setAccessTeams(List<Team> accessTeams) {
         this.accessTeams = accessTeams;
     }
@@ -569,6 +601,23 @@ public class Project implements Serializable {
     @JsonIgnore
     public void setDependencyGraph(List<Component> dependencyGraph) {
         this.dependencyGraph = dependencyGraph;
+    }
+
+    public String getAuthor(){
+        return author;
+    }
+
+    public String setAuthor(String author){
+        return this.author=author;
+    }
+
+    @JsonProperty("isLatest")
+    public boolean isLatest() {
+        return isLatest;
+    }
+
+    public void setIsLatest(Boolean latest) {
+        isLatest = latest != null ? latest : false;
     }
 
     @Override

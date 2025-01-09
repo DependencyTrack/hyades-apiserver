@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.observability;
 
+import io.github.mweirauch.micrometer.jvm.extras.ProcessMemoryMetrics;
+import io.github.mweirauch.micrometer.jvm.extras.ProcessThreadMetrics;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.config.MeterFilter;
@@ -28,6 +30,9 @@ public class MeterRegistryCustomizer implements alpine.common.metrics.MeterRegis
 
     @Override
     public void accept(final MeterRegistry meterRegistry) {
+        new ProcessMemoryMetrics().bindTo(meterRegistry);
+        new ProcessThreadMetrics().bindTo(meterRegistry);
+
         meterRegistry.config().meterFilter(new PercentilesHistogramMeterFilter());
     }
 

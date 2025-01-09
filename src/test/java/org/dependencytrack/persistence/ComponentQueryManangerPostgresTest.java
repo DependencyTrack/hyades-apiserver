@@ -28,6 +28,7 @@ import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
+import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -75,7 +76,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
     }
 
     private Project prepareProject() throws MalformedPackageURLException {
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         final List<String> directDepencencies = new ArrayList<>();
         // Generate 1000 dependencies
         for (int i = 0; i < 1000; i++) {
@@ -83,7 +84,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
             component.setProject(project);
             component.setGroup("component-group");
             component.setName("component-name-" + i);
-            component.setVersion(String.valueOf(i) + ".0");
+            component.setVersion(i + ".0");
             if (i == 0) {
                 var er = new ExternalReference();
                 er.setUrl("https://github.com/thinkcmf/thinkcmf/issues/736");
@@ -135,13 +136,17 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
         project.setName("projectName");
         project.setVersion("projectVersion");
         project.setClassifier(Classifier.APPLICATION);
-        project.setActive(true);
+        project.setInactiveSince(null);
         project.setCpe("projectCpe");
         project.setPurl("projectPurl");
         project.setSwidTagId("projectSwidTagId");
-        project.setAuthor("projectAuthor");
+        List<OrganizationalContact> authors = new ArrayList<>();
+        authors.add(new OrganizationalContact() {{
+            setName("projectAuthor");
+        }});
+        project.setAuthors(authors);
         project.setDescription("projectDescription");
-        project.setDirectDependencies("{7e5f6465-d2f2-424f-b1a4-68d186fa2b46}");
+        project.setDirectDependencies("[{\"uuid\":\"7e5f6465-d2f2-424f-b1a4-68d186fa2b46\"}]");
         project.setExternalReferences(List.of(new ExternalReference()));
         project.setLastBomImport(new java.util.Date());
         project.setLastBomImportFormat("projectBomFormat");
@@ -163,7 +168,11 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
         component.setUuid(UUID.fromString("7e5f6465-d2f2-424f-b1a4-68d186fa2b46"));
         component.setGroup("componentGroup");
         component.setName("componentName");
-        component.setAuthor("componentAuthor");
+        List<OrganizationalContact> componentAuthors = new ArrayList<>();
+        componentAuthors.add(new OrganizationalContact() {{
+            setName("componentAuthor");
+        }});
+        component.setAuthors(componentAuthors);
         component.setVersion("1.0");
         component.setDescription("componentDescription");
         component.setClassifier(Classifier.LIBRARY);
@@ -172,7 +181,7 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
         component.setPurl("pkg:maven/a/b@1.0");
         component.setPublisher("componentPublisher");
         component.setPurlCoordinates("componentPurlCoordinates");
-        component.setDirectDependencies("componentDirectDependencies");
+        component.setDirectDependencies("[]");
         component.setExtension("componentExtension");
         component.setExternalReferences(List.of(new ExternalReference()));
         component.setFilename("componentFilename");

@@ -27,9 +27,13 @@ import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.packageurl.PackageURL;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
@@ -52,14 +56,19 @@ import org.dependencytrack.notification.NotificationScope;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import javax.jdo.Transaction;
+import javax.jdo.metadata.MemberMetadata;
+import javax.jdo.metadata.TypeMetadata;
+import java.io.IOException;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
@@ -177,7 +186,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     public List<Project> getAllProjects(boolean excludeInactive) {
         final Query<Project> query = pm.newQuery(Project.class);
         if (excludeInactive) {
-            query.setFilter("active == true || active == null");
+            query.setFilter("inactiveSince == null");
         }
         query.setOrdering("id asc");
         return query.executeList();
@@ -254,6 +263,37 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         preprocessACLs(query, queryFilter, params, false);
         query.setFilter(queryFilter);
         query.setRange(0, 1);
+        final Project project = singleResult(query.executeWithMap(params));
+        if (project != null) {
+            // set Metrics to prevent extra round trip
+            project.setMetrics(getMostRecentProjectMetrics(project));
+            // set ProjectVersions to prevent extra round trip
+            project.setVersions(getProjectVersions(project));
+        }
+        return project;
+    }
+
+    /**
+     * Returns the latest version of a project by its name.
+     *
+     * @param name the name of the Project (required)
+     * @return a Project object representing the latest version, or null if not found
+     */
+    @Override
+    public Project getLatestProjectVersion(final String name) {
+        final Query<Project> query = pm.newQuery(Project.class);
+
+        final var filterBuilder = new ProjectQueryFilterBuilder()
+                .withName(name)
+                .onlyLatestVersion();
+
+        final String queryFilter = filterBuilder.buildFilter();
+        final Map<String, Object> params = filterBuilder.getParams();
+
+        preprocessACLs(query, queryFilter, params, false);
+        query.setFilter(queryFilter);
+        query.setRange(0, 1);
+
         final Project project = singleResult(query.executeWithMap(params));
         if (project != null) {
             // set Metrics to prevent extra round trip
@@ -385,6 +425,11 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         return getProjects(tag, false, false, false);
     }
 
+    @Override
+    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
+                                 PackageURL purl, Date inactiveSince, boolean commitIndex) {
+        return createProject(name, description, version, tags, parent, purl, inactiveSince, false, commitIndex);
+    }
 
     /**
      * Creates a new Project.
@@ -395,37 +440,23 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @param tags        a List of Tags - these will be resolved if necessary
      * @param parent      an optional parent Project
      * @param purl        an optional Package URL
-     * @param active      specified if the project is active
+     * @param inactiveSince      date when the project is deactivated
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
+     * @param isLatest    specified if the project version is latest
      * @return the created Project
      */
     @Override
-    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent, PackageURL purl, boolean active, boolean commitIndex) {
+    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
+                                 PackageURL purl, Date inactiveSince, boolean isLatest, boolean commitIndex) {
         final Project project = new Project();
         project.setName(name);
         project.setDescription(description);
         project.setVersion(version);
-        if (parent != null) {
-            if (!Boolean.TRUE.equals(parent.isActive())) {
-                throw new IllegalArgumentException("An inactive Parent cannot be selected as parent");
-            }
-            project.setParent(parent);
-        }
+        project.setParent(parent);
         project.setPurl(purl);
-        project.setActive(active);
-        final Project result = persist(project);
-
-        final List<Tag> resolvedTags = resolveTags(tags);
-        bind(project, resolvedTags);
-
-        new KafkaEventDispatcher().dispatchNotification(new Notification()
-                .scope(NotificationScope.PORTFOLIO)
-                .group(NotificationGroup.PROJECT_CREATED)
-                .level(NotificationLevel.INFORMATIONAL)
-                .title(NotificationConstants.Title.PROJECT_CREATED)
-                .content(result.getName() + " was created")
-                .subject(pm.detachCopy(result)));
-        return result;
+        project.setInactiveSince(inactiveSince);
+        project.setIsLatest(isLatest);
+        return createProject(project, tags, commitIndex);
     }
 
     /**
@@ -438,16 +469,21 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     @Override
     public Project createProject(final Project project, List<Tag> tags, boolean commitIndex) {
-        if (project.getParent() != null && !Boolean.TRUE.equals(project.getParent().isActive())) {
+        if (project.getParent() != null && project.getParent().getInactiveSince() != null) {
             throw new IllegalArgumentException("An inactive Parent cannot be selected as parent");
         }
-        if (project.isActive() == null) {
-            project.setActive(Boolean.TRUE);
-        }
-        final Project result = persist(project);
-        final List<Tag> resolvedTags = resolveTags(tags);
-        bind(project, resolvedTags);
-
+        final Project oldLatestProject = project.isLatest() ? getLatestProjectVersion(project.getName()) : null;
+        final Project result = callInTransaction(() -> {
+            // Remove isLatest flag from current latest project version, if the new project will be the latest
+            if(oldLatestProject != null) {
+                oldLatestProject.setIsLatest(false);
+                persist(oldLatestProject);
+            }
+            final Project newProject = persist(project);
+            final List<Tag> resolvedTags = resolveTags(tags);
+            bind(project, resolvedTags);
+            return newProject;
+        });
         new KafkaEventDispatcher().dispatchNotification(new Notification()
                 .scope(NotificationScope.PORTFOLIO)
                 .group(NotificationGroup.PROJECT_CREATED)
@@ -468,7 +504,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     @Override
     public Project updateProject(Project transientProject, boolean commitIndex) {
         final Project project = getObjectByUuid(Project.class, transientProject.getUuid());
-        project.setAuthor(transientProject.getAuthor());
+        project.setAuthors(transientProject.getAuthors());
         project.setPublisher(transientProject.getPublisher());
         project.setManufacturer(transientProject.getManufacturer());
         project.setSupplier(transientProject.getSupplier());
@@ -482,17 +518,25 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project.setSwidTagId(transientProject.getSwidTagId());
         project.setExternalReferences(transientProject.getExternalReferences());
 
-        if (Boolean.TRUE.equals(project.isActive()) && !Boolean.TRUE.equals(transientProject.isActive()) && hasActiveChild(project)) {
+        if (project.isActive() && !transientProject.isActive() && hasActiveChild(project)) {
             throw new IllegalArgumentException("Project cannot be set to inactive if active children are present.");
         }
         project.setActive(transientProject.isActive());
+
+        final Project oldLatestProject;
+        if(Boolean.TRUE.equals(transientProject.isLatest()) && Boolean.FALSE.equals(project.isLatest())) {
+            oldLatestProject = getLatestProjectVersion(project.getName());
+        } else {
+            oldLatestProject = null;
+        }
+        project.setIsLatest(transientProject.isLatest());
 
         if (transientProject.getParent() != null && transientProject.getParent().getUuid() != null) {
             if (project.getUuid().equals(transientProject.getParent().getUuid())) {
                 throw new IllegalArgumentException("A project cannot select itself as a parent");
             }
             Project parent = getObjectByUuid(Project.class, transientProject.getParent().getUuid());
-            if (!Boolean.TRUE.equals(parent.isActive())) {
+            if (parent.getInactiveSince() != null) {
                 throw new IllegalArgumentException("An inactive project cannot be selected as a parent");
             } else if (isChildOf(parent, transientProject.getUuid())) {
                 throw new IllegalArgumentException("The new parent project cannot be a child of the current project.");
@@ -504,171 +548,264 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             project.setParent(null);
         }
 
-        final List<Tag> resolvedTags = resolveTags(transientProject.getTags());
-        bind(project, resolvedTags);
+        final Project result = callInTransaction(() -> {
+            // Remove isLatest flag from current latest project version, if this project will be the latest now
+            if(oldLatestProject != null) {
+                oldLatestProject.setIsLatest(false);
+                persist(oldLatestProject);
+            }
 
-        final Project result = persist(project);
+            final List<Tag> resolvedTags = resolveTags(transientProject.getTags());
+            bind(project, resolvedTags);
+            return persist(project);
+        });
         return result;
     }
 
     @Override
-    public Project clone(UUID from, String newVersion, boolean includeTags, boolean includeProperties,
-                         boolean includeComponents, boolean includeServices, boolean includeAuditHistory,
-                         boolean includeACL, boolean includePolicyViolations) {
-        final Project source = getObjectByUuid(Project.class, from, Project.FetchGroup.ALL.name());
-        if (source == null) {
-            throw new IllegalStateException("Project with UUID %s was supposed to be cloned, but it does not exist anymore".formatted(from));
-        }
-        if (doesProjectExist(source.getName(), newVersion)) {
-            // Project cloning is an asynchronous process. When receiving the clone request, we already perform
-            // this check. It is possible though that a project with the new version is created synchronously
-            // between the clone event being dispatched, and it being processed.
-            throw new IllegalStateException("Project %s was supposed to be cloned to version %s, but that version already exists"
-                    .formatted(source, newVersion));
-        }
-        Project project = new Project();
-        project.setAuthor(source.getAuthor());
-        project.setManufacturer(source.getManufacturer());
-        project.setSupplier(source.getSupplier());
-        project.setPublisher(source.getPublisher());
-        project.setGroup(source.getGroup());
-        project.setName(source.getName());
-        project.setDescription(source.getDescription());
-        project.setVersion(newVersion);
-        project.setClassifier(source.getClassifier());
-        project.setActive(source.isActive());
-        project.setCpe(source.getCpe());
-        project.setPurl(source.getPurl());
-        project.setSwidTagId(source.getSwidTagId());
-        if (includeComponents && includeServices) {
-            project.setDirectDependencies(source.getDirectDependencies());
-        }
-        project.setParent(source.getParent());
-        project = persist(project);
-
-        if (source.getMetadata() != null) {
-            final var metadata = new ProjectMetadata();
-            metadata.setProject(project);
-            metadata.setAuthors(source.getMetadata().getAuthors());
-            metadata.setSupplier(source.getMetadata().getSupplier());
-            persist(metadata);
-        }
-
-        if (includeTags) {
-            for (final Tag tag : source.getTags()) {
-                tag.getProjects().add(project);
-                persist(tag);
+    public Project clone(
+            final UUID from,
+            final String newVersion,
+            final boolean includeTags,
+            final boolean includeProperties,
+            final boolean includeComponents,
+            final boolean includeServices,
+            final boolean includeAuditHistory,
+            final boolean includeACL,
+            final boolean includePolicyViolations,
+            final boolean makeCloneLatest
+    ) {
+        final AtomicReference<Project> oldLatestProject = new AtomicReference<>();
+        final var jsonMapper = new JsonMapper();
+        return callInTransaction(() -> {
+            final Project source = getObjectByUuid(Project.class, from, Project.FetchGroup.ALL.name());
+            if (source == null) {
+                throw new IllegalStateException("Project was supposed to be cloned, but it does not exist anymore");
             }
-        }
-
-        if (includeProperties && source.getProperties() != null) {
-            for (final ProjectProperty sourceProperty : source.getProperties()) {
-                final ProjectProperty property = new ProjectProperty();
-                property.setProject(project);
-                property.setPropertyType(sourceProperty.getPropertyType());
-                property.setGroupName(sourceProperty.getGroupName());
-                property.setPropertyName(sourceProperty.getPropertyName());
-                property.setPropertyValue(sourceProperty.getPropertyValue());
-                property.setDescription(sourceProperty.getDescription());
-                persist(property);
+            if (doesProjectExist(source.getName(), newVersion)) {
+                // Project cloning is an asynchronous process. When receiving the clone request, we already perform
+                // this check. It is possible though that a project with the new version is created synchronously
+                // between the clone event being dispatched, and it being processed.
+                throw new IllegalStateException("""
+                        Project was supposed to be cloned to version %s, \
+                        but that version already exists""".formatted(newVersion));
             }
-        }
+            if(makeCloneLatest) {
+                oldLatestProject.set(source.isLatest() ? source : getLatestProjectVersion(source.getName()));
+            } else {
+                oldLatestProject.set(null);
+            }
+            Project project = new Project();
+            project.setAuthors(source.getAuthors());
+            project.setManufacturer(source.getManufacturer());
+            project.setSupplier(source.getSupplier());
+            project.setPublisher(source.getPublisher());
+            project.setGroup(source.getGroup());
+            project.setName(source.getName());
+            project.setDescription(source.getDescription());
+            project.setVersion(newVersion);
+            project.setClassifier(source.getClassifier());
+            project.setInactiveSince(source.getInactiveSince());
+            project.setIsLatest(makeCloneLatest);
+            project.setCpe(source.getCpe());
+            project.setPurl(source.getPurl());
+            project.setSwidTagId(source.getSwidTagId());
+            if (source.getDirectDependencies() != null && includeComponents && includeServices) {
+                project.setDirectDependencies(source.getDirectDependencies());
+            }
+            project.setParent(source.getParent());
+            // Remove isLatest flag from current latest project version, if this project will be the latest now
+            if(oldLatestProject.get() != null) {
+                oldLatestProject.get().setIsLatest(false);
+                persist(oldLatestProject.get());
+            }
+            project = persist(project);
 
-        final Map<Long, Component> clonedComponents = new HashMap<>();
-        if (includeComponents) {
-            final List<Component> sourceComponents = getAllComponents(source);
-            if (sourceComponents != null) {
-                for (final Component sourceComponent : sourceComponents) {
-                    final Component clonedComponent = cloneComponent(sourceComponent, project, false);
-                    // Add vulnerabilties and finding attribution from the source component to the cloned component
-                    for (Vulnerability vuln : sourceComponent.getVulnerabilities()) {
-                        final FindingAttribution sourceAttribution = this.getFindingAttribution(vuln, sourceComponent);
-                        this.addVulnerability(vuln, clonedComponent, sourceAttribution.getAnalyzerIdentity(), sourceAttribution.getAlternateIdentifier(),
-                                sourceAttribution.getReferenceUrl(), sourceAttribution.getAttributedOn());
-                    }
-                    clonedComponents.put(sourceComponent.getId(), clonedComponent);
+            if (source.getMetadata() != null) {
+                final var metadata = new ProjectMetadata();
+                metadata.setProject(project);
+                metadata.setAuthors(source.getMetadata().getAuthors());
+                metadata.setSupplier(source.getMetadata().getSupplier());
+                persist(metadata);
+            }
+
+            if (includeTags) {
+                for (final Tag tag : source.getTags()) {
+                    tag.getProjects().add(project);
+                    persist(tag);
                 }
             }
-        }
 
-        if (includeServices) {
-            final List<ServiceComponent> sourceServices = getAllServiceComponents(source);
-            if (sourceServices != null) {
-                for (final ServiceComponent sourceService : sourceServices) {
-                    cloneServiceComponent(sourceService, project, false);
+            if (includeProperties && source.getProperties() != null) {
+                for (final ProjectProperty sourceProperty : source.getProperties()) {
+                    final ProjectProperty property = new ProjectProperty();
+                    property.setProject(project);
+                    property.setPropertyType(sourceProperty.getPropertyType());
+                    property.setGroupName(sourceProperty.getGroupName());
+                    property.setPropertyName(sourceProperty.getPropertyName());
+                    property.setPropertyValue(sourceProperty.getPropertyValue());
+                    property.setDescription(sourceProperty.getDescription());
+                    persist(property);
                 }
             }
-        }
 
-        if (includeAuditHistory && includeComponents) {
-            final List<Analysis> analyses = super.getAnalyses(source);
-            if (analyses != null) {
-                for (final Analysis sourceAnalysis : analyses) {
-                    Analysis analysis = new Analysis();
-                    analysis.setAnalysisState(sourceAnalysis.getAnalysisState());
-                    final Component clonedComponent = clonedComponents.get(sourceAnalysis.getComponent().getId());
-                    if (clonedComponent == null) {
-                        break;
-                    }
-                    analysis.setComponent(clonedComponent);
-                    analysis.setVulnerability(sourceAnalysis.getVulnerability());
-                    analysis.setSuppressed(sourceAnalysis.isSuppressed());
-                    analysis.setAnalysisResponse(sourceAnalysis.getAnalysisResponse());
-                    analysis.setAnalysisJustification(sourceAnalysis.getAnalysisJustification());
-                    analysis.setAnalysisState(sourceAnalysis.getAnalysisState());
-                    analysis.setAnalysisDetails(sourceAnalysis.getAnalysisDetails());
-                    analysis = persist(analysis);
-                    if (sourceAnalysis.getAnalysisComments() != null) {
-                        for (final AnalysisComment sourceComment : sourceAnalysis.getAnalysisComments()) {
-                            final AnalysisComment analysisComment = new AnalysisComment();
-                            analysisComment.setAnalysis(analysis);
-                            analysisComment.setTimestamp(sourceComment.getTimestamp());
-                            analysisComment.setComment(sourceComment.getComment());
-                            analysisComment.setCommenter(sourceComment.getCommenter());
-                            persist(analysisComment);
+            final var projectDirectDepsSourceComponentUuids = new HashSet<UUID>();
+            if (project.getDirectDependencies() != null) {
+                projectDirectDepsSourceComponentUuids.addAll(
+                        parseDirectDependenciesUuids(jsonMapper, project.getDirectDependencies()));
+            }
+
+            final var clonedComponentById = new HashMap<Long, Component>();
+            final var clonedComponentBySourceComponentId = new HashMap<Long, Component>();
+            final var directDepsSourceComponentUuidsByClonedComponentId = new HashMap<Long, Set<UUID>>();
+            final var clonedComponentUuidBySourceComponentUuid = new HashMap<UUID, UUID>();
+
+            if (includeComponents) {
+                final List<Component> sourceComponents = getAllComponents(source);
+                if (sourceComponents != null) {
+                    for (final Component sourceComponent : sourceComponents) {
+                        final Component clonedComponent = cloneComponent(sourceComponent, project, false);
+                        // Add vulnerabilties and finding attribution from the source component to the cloned component
+                        for (Vulnerability vuln : sourceComponent.getVulnerabilities()) {
+                            final FindingAttribution sourceAttribution = this.getFindingAttribution(vuln, sourceComponent);
+                            this.addVulnerability(vuln, clonedComponent, sourceAttribution.getAnalyzerIdentity(), sourceAttribution.getAlternateIdentifier(),
+                                    sourceAttribution.getReferenceUrl(), sourceAttribution.getAttributedOn());
+                        }
+
+                        clonedComponentById.put(clonedComponent.getId(), clonedComponent);
+                        clonedComponentBySourceComponentId.put(sourceComponent.getId(), clonedComponent);
+                        clonedComponentUuidBySourceComponentUuid.put(sourceComponent.getUuid(), clonedComponent.getUuid());
+
+                        if (clonedComponent.getDirectDependencies() != null) {
+                            final Set<UUID> directDepsUuids = parseDirectDependenciesUuids(jsonMapper, clonedComponent.getDirectDependencies());
+                            if (!directDepsUuids.isEmpty()) {
+                                directDepsSourceComponentUuidsByClonedComponentId.put(clonedComponent.getId(), directDepsUuids);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if (includeACL) {
-            List<Team> accessTeams = source.getAccessTeams();
-            if (!CollectionUtils.isEmpty(accessTeams)) {
-                project.setAccessTeams(new ArrayList<>(accessTeams));
+            if (!projectDirectDepsSourceComponentUuids.isEmpty()) {
+                String directDependencies = project.getDirectDependencies();
+                for (final UUID sourceComponentUuid : projectDirectDepsSourceComponentUuids) {
+                    final UUID clonedComponentUuid = clonedComponentUuidBySourceComponentUuid.get(sourceComponentUuid);
+                    directDependencies = directDependencies.replace(sourceComponentUuid.toString(), clonedComponentUuid.toString());
+                }
+
+                project.setDirectDependencies(directDependencies);
+            }
+
+            for (final long componentId : directDepsSourceComponentUuidsByClonedComponentId.keySet()) {
+                final Component component = clonedComponentById.get(componentId);
+                final Set<UUID> sourceComponentUuids = directDepsSourceComponentUuidsByClonedComponentId.get(componentId);
+
+                String directDependencies = component.getDirectDependencies();
+                for (final UUID sourceComponentUuid : sourceComponentUuids) {
+                    final UUID clonedComponentUuid = clonedComponentUuidBySourceComponentUuid.get(sourceComponentUuid);
+                    directDependencies = directDependencies.replace(sourceComponentUuid.toString(), clonedComponentUuid.toString());
+                }
+
+                component.setDirectDependencies(directDependencies);
+            }
+
+            if (includeServices) {
+                final List<ServiceComponent> sourceServices = getAllServiceComponents(source);
+                if (sourceServices != null) {
+                    for (final ServiceComponent sourceService : sourceServices) {
+                        cloneServiceComponent(sourceService, project, false);
+                    }
+                }
+            }
+
+            if (includeAuditHistory && includeComponents) {
+                final List<Analysis> analyses = super.getAnalyses(source);
+                if (analyses != null) {
+                    for (final Analysis sourceAnalysis : analyses) {
+                        Analysis analysis = new Analysis();
+                        analysis.setAnalysisState(sourceAnalysis.getAnalysisState());
+                        final Component clonedComponent = clonedComponentBySourceComponentId.get(sourceAnalysis.getComponent().getId());
+                        if (clonedComponent == null) {
+                            break;
+                        }
+                        analysis.setComponent(clonedComponent);
+                        analysis.setVulnerability(sourceAnalysis.getVulnerability());
+                        analysis.setSuppressed(sourceAnalysis.isSuppressed());
+                        analysis.setAnalysisResponse(sourceAnalysis.getAnalysisResponse());
+                        analysis.setAnalysisJustification(sourceAnalysis.getAnalysisJustification());
+                        analysis.setAnalysisState(sourceAnalysis.getAnalysisState());
+                        analysis.setAnalysisDetails(sourceAnalysis.getAnalysisDetails());
+                        analysis.setVulnerabilityPolicyId(sourceAnalysis.getVulnerabilityPolicyId());
+                        analysis = persist(analysis);
+                        if (sourceAnalysis.getAnalysisComments() != null) {
+                            for (final AnalysisComment sourceComment : sourceAnalysis.getAnalysisComments()) {
+                                final AnalysisComment analysisComment = new AnalysisComment();
+                                analysisComment.setAnalysis(analysis);
+                                analysisComment.setTimestamp(sourceComment.getTimestamp());
+                                analysisComment.setComment(sourceComment.getComment());
+                                analysisComment.setCommenter(sourceComment.getCommenter());
+                                persist(analysisComment);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (includeACL) {
+                List<Team> accessTeams = source.getAccessTeams();
+                if (!CollectionUtils.isEmpty(accessTeams)) {
+                    project.setAccessTeams(new ArrayList<>(accessTeams));
+                }
+            }
+
+            if (includeComponents && includePolicyViolations) {
+                final List<PolicyViolation> sourcePolicyViolations = getAllPolicyViolations(source);
+                if (sourcePolicyViolations != null) {
+                    for (final PolicyViolation policyViolation : sourcePolicyViolations) {
+                        final Component destinationComponent = clonedComponentBySourceComponentId.get(policyViolation.getComponent().getId());
+                        final PolicyViolation clonedPolicyViolation = clonePolicyViolation(policyViolation, destinationComponent);
+                        persist(clonedPolicyViolation);
+                    }
+                }
+            }
+
+            return project;
+        });
+    }
+
+    private static Set<UUID> parseDirectDependenciesUuids(
+            final JsonMapper jsonMapper,
+            final String directDependencies) throws IOException {
+        final var uuids = new HashSet<UUID>();
+        try (final JsonParser jsonParser = jsonMapper.createParser(directDependencies)) {
+            JsonToken currentToken = jsonParser.nextToken();
+            if (currentToken != JsonToken.START_ARRAY) {
+                throw new IllegalArgumentException("""
+                        Expected directDependencies to be a JSON array, \
+                        but encountered token: %s""".formatted(currentToken));
+            }
+
+            while (jsonParser.nextToken() != null) {
+                if (jsonParser.currentToken() == JsonToken.FIELD_NAME
+                    && "uuid".equals(jsonParser.currentName())
+                    && jsonParser.nextToken() == JsonToken.VALUE_STRING) {
+                    uuids.add(UUID.fromString(jsonParser.getValueAsString()));
+                }
             }
         }
 
-        if(includeComponents && includePolicyViolations){
-            final List<PolicyViolation> sourcePolicyViolations = getAllPolicyViolations(source);
-            if(sourcePolicyViolations != null){
-                for(final PolicyViolation policyViolation: sourcePolicyViolations){
-                final Component destinationComponent = clonedComponents.get(policyViolation.getComponent().getId());
-                final PolicyViolation clonedPolicyViolation = clonePolicyViolation(policyViolation, destinationComponent);
-                persist(clonedPolicyViolation);
-                }   
-            }
-       }
-
-        project = getObjectById(Project.class, project.getId());
-        return project;
+        return uuids;
     }
 
     /**
-     * Deletes a Project and all objects dependant on the project.
+     * Deletes a Project and all objects dependent on the project.
      *
      * @param project     the Project to delete
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      */
     @Override
     public void recursivelyDelete(final Project project, final boolean commitIndex) {
-        final Transaction trx = pm.currentTransaction();
-        final boolean isJoiningExistingTrx = trx.isActive();
-        try {
-            if (!isJoiningExistingTrx) {
-                trx.begin();
-            }
-
+        runInTransaction(() -> {
             for (final Project child : project.getChildren()) {
                 // Note: This could be refactored such that each project is deleted
                 //   in its own transaction. That would break semantics when it comes
@@ -705,16 +842,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             } finally {
                 projectQuery.closeAll();
             }
-
-            if (!isJoiningExistingTrx) {
-                trx.commit();
-            }
-
-        } finally {
-            if (!isJoiningExistingTrx && trx.isActive()) {
-                trx.rollback();
-            }
-        }
+        });
     }
 
     /**
@@ -777,25 +905,26 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @param project a Project object
      * @param tags    a List of Tag objects
      */
-    @SuppressWarnings("unchecked")
     @Override
     public void bind(Project project, List<Tag> tags) {
-        final Query<Tag> query = pm.newQuery(Tag.class, "projects.contains(:project)");
-        final List<Tag> currentProjectTags = (List<Tag>) query.execute(project);
-        pm.currentTransaction().begin();
-        for (final Tag tag : currentProjectTags) {
-            if (!tags.contains(tag)) {
-                tag.getProjects().remove(project);
+        runInTransaction(() -> {
+            final Query<Tag> query = pm.newQuery(Tag.class, "projects.contains(:project)");
+            query.setParameters(project);
+            final List<Tag> currentProjectTags = executeAndCloseList(query);
+
+            for (final Tag tag : currentProjectTags) {
+                if (!tags.contains(tag)) {
+                    tag.getProjects().remove(project);
+                }
             }
-        }
-        project.setTags(tags);
-        for (final Tag tag : tags) {
-            final List<Project> projects = tag.getProjects();
-            if (!projects.contains(project)) {
-                projects.add(project);
+            project.setTags(tags);
+            for (final Tag tag : tags) {
+                final List<Project> projects = tag.getProjects();
+                if (!projects.contains(project)) {
+                    projects.add(project);
+                }
             }
-        }
-        pm.currentTransaction().commit();
+        });
     }
 
     /**
@@ -852,10 +981,35 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         }
     }
 
-    /**
-     * A similar method exists in ComponentQueryManager
-     */
-    private void preprocessACLs(final Query<Project> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
+    @Override
+    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
+        String projectMemberFieldName = null;
+        final org.datanucleus.store.query.Query<?> internalQuery = ((JDOQuery<?>)query).getInternalQuery();
+        if (!Project.class.equals(internalQuery.getCandidateClass())) {
+            // NB: The query does not directly target Project, but if it has a relationship
+            // with Project we can still make the ACL check work. If the query candidate
+            // has EXACTLY one persistent field of type Project, we'll use that.
+            // If there are more than one, or none at all, we fail to avoid unintentional behavior.
+            final TypeMetadata candidateTypeMetadata = pm.getPersistenceManagerFactory().getMetadata(internalQuery.getCandidateClassName());
+
+            for (final MemberMetadata memberMetadata : candidateTypeMetadata.getMembers()) {
+                if (!Project.class.getName().equals(memberMetadata.getFieldType())) {
+                    continue;
+                }
+
+                if (projectMemberFieldName != null) {
+                    throw new IllegalArgumentException("Query candidate class %s has multiple members of type %s"
+                            .formatted(internalQuery.getCandidateClassName(), Project.class.getName()));
+                }
+
+                projectMemberFieldName = memberMetadata.getName();
+            }
+
+            if (projectMemberFieldName == null) {
+                throw new IllegalArgumentException("Query candidate class %s has no member of type %s"
+                        .formatted(internalQuery.getCandidateClassName(), Project.class.getName()));
+            }
+        }
         if (super.principal != null && isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED) && !bypass) {
             final List<Team> teams;
             if (super.principal instanceof UserPrincipal userPrincipal) {
@@ -872,10 +1026,14 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                     return;
                 }
             }
-            if (teams != null && teams.size() > 0) {
+            if (teams != null && !teams.isEmpty()) {
                 final StringBuilder sb = new StringBuilder();
                 for (int i = 0, teamsSize = teams.size(); i < teamsSize; i++) {
                     final Team team = super.getObjectById(Team.class, teams.get(i).getId());
+                    sb.append(" ");
+                    if (projectMemberFieldName != null) {
+                        sb.append(projectMemberFieldName).append(".");
+                    }
                     sb.append(" accessTeams.contains(:team").append(i).append(") ");
                     params.put("team" + i, team);
                     if (i < teamsSize - 1) {
@@ -883,7 +1041,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                     }
                 }
                 if (inputFilter != null && !inputFilter.isBlank()) {
-                    query.setFilter(inputFilter + " && (" + sb.toString() + ")");
+                    query.setFilter(inputFilter + " && (" + sb + ")");
                 } else {
                     query.setFilter(sb.toString());
                 }
@@ -1189,7 +1347,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         boolean hasActiveChild = false;
         if (project.getChildren() != null) {
             for (Project child : project.getChildren()) {
-                if (Boolean.TRUE.equals(child.isActive()) || hasActiveChild) {
+                if (child.isActive() || hasActiveChild) {
                     return true;
                 } else {
                     hasActiveChild = hasActiveChild(child);
@@ -1203,7 +1361,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Query<Project> query = pm.newQuery(Project.class);
         query.setFilter("name == :name");
         query.setParameters(project.getName());
-        query.setResult("uuid, version");
+        query.setResult("uuid, version, inactiveSince");
         query.setOrdering("id asc"); // Ensure consistent ordering
         return query.executeResultList(ProjectVersion.class);
     }

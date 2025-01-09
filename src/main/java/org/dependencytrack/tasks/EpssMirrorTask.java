@@ -21,7 +21,6 @@ package org.dependencytrack.tasks;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
-import alpine.model.ConfigProperty;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.persistence.QueryManager;
@@ -29,13 +28,13 @@ import org.dependencytrack.persistence.QueryManager;
 import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_EPSS_ENABLED;
 
 public class EpssMirrorTask implements LoggableSubscriber {
+
     private static final Logger LOGGER = Logger.getLogger(EpssMirrorTask.class);
     private final boolean isEnabled;
 
     public EpssMirrorTask() {
         try (final QueryManager qm = new QueryManager()) {
-            final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_EPSS_ENABLED.getGroupName(), VULNERABILITY_SOURCE_EPSS_ENABLED.getPropertyName());
-            this.isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
+            this.isEnabled = qm.isEnabled(VULNERABILITY_SOURCE_EPSS_ENABLED);
         }
     }
 

@@ -28,7 +28,7 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.UUID;
@@ -49,7 +49,7 @@ public class WorkflowState implements Serializable {
     private WorkflowState parent;
 
     @Persistent
-    @Column(name = "TOKEN", jdbcType = "VARCHAR", length = 36, allowsNull = "false")
+    @Column(name = "TOKEN", sqlType = "UUID", allowsNull = "false")
     @NotNull
     private UUID token;
 

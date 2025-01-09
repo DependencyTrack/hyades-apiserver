@@ -480,7 +480,7 @@ class CelPolicyQueryManager implements AutoCloseable {
                         RETURNING "ID"
                         """, Statement.RETURN_GENERATED_KEYS)) {
                     for (final Map.Entry<Long, PolicyViolation> entry : violationsToCreate.entries()) {
-                        ps.setString(1, UUID.randomUUID().toString());
+                        ps.setObject(1, UUID.randomUUID());
                         ps.setTimestamp(2, new Timestamp(entry.getValue().getTimestamp().getTime()));
                         ps.setLong(3, entry.getKey());
                         ps.setLong(4, projectId);
@@ -649,14 +649,16 @@ class CelPolicyQueryManager implements AutoCloseable {
     }
 
     boolean isDirectDependency(final org.dependencytrack.proto.policy.v1.Component component) {
-        String queryString = """
-                SELECT COUNT(*) FROM "COMPONENT" "C" 
-                INNER JOIN "PROJECT" "P" ON "P"."ID"="C"."PROJECT_ID" 
-                AND "P"."DIRECT_DEPENDENCIES" LIKE :wildcard WHERE "C"."UUID"= :uuid;
+        String queryString = /* language=SQL */ """
+                SELECT COUNT(*)
+                  FROM "COMPONENT" "C"
+                 INNER JOIN "PROJECT" "P"
+                    ON "P"."ID" = "C"."PROJECT_ID"
+                   AND "P"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :uuid))
+                 WHERE "C"."UUID" = :uuid
                 """;
         final Query<?> query = pm.newQuery(Query.SQL, queryString);
-        query.setNamedParameters(Map.of("uuid", component.getUuid(),
-                "wildcard", "%" + component.getUuid() + "%"));
+        query.setNamedParameters(Map.of("uuid", UUID.fromString(component.getUuid())));
         long result;
         try {
             result = query.executeResultUnique(Long.class);

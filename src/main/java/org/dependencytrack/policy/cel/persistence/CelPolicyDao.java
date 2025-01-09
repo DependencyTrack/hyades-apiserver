@@ -91,7 +91,7 @@ public interface CelPolicyDao {
               ) AS "tags" ON TRUE
             </#if>
             WHERE
-              "P"."UUID" = (:uuid)::TEXT
+              "P"."UUID" = :uuid
             """)
     @RegisterRowMapper(CelPolicyProjectRowMapper.class)
     Project getProject(@Define List<String> fetchColumns, @Define List<String> fetchPropertyColumns, UUID uuid);
@@ -122,7 +122,7 @@ public interface CelPolicyDao {
               ) AS "repoMeta" ON TRUE
             </#if>
             WHERE
-              "C"."UUID" = (:uuid)::TEXT
+              "C"."UUID" = :uuid
             """)
     @RegisterRowMapper(CelPolicyComponentRowMapper.class)
     Component getComponent(@Define List<String> fetchColumns, UUID uuid);
@@ -162,7 +162,7 @@ public interface CelPolicyDao {
                 LEFT JOIN "EPSS" AS "EP" ON "V"."VULNID" = "EP"."CVE"
             </#if>
             WHERE
-              "V"."UUID" = (:uuid)::TEXT
+              "V"."UUID" = :uuid
             """)
     @RegisterRowMapper(CelPolicyVulnerabilityRowMapper.class)
     Vulnerability getVulnerability(@Define List<String> fetchColumns, UUID uuid);
@@ -193,6 +193,10 @@ public interface CelPolicyDao {
             if (requirements.get(TYPE_PROJECT_METADATA).contains("bom_generated")) {
                 sqlSelectColumns.add("\"BM\".\"GENERATED\" AS \"bom_generated\"");
             }
+        }
+
+        if (fieldsToLoad.contains("is_active")) {
+            sqlSelectColumns.add("\"P\".\"INACTIVE_SINCE\" AS \"inactive_since\"");
         }
 
         final var sqlPropertySelectColumns = new ArrayList<String>();

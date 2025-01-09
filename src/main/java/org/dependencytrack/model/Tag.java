@@ -31,9 +31,9 @@ import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
@@ -49,6 +49,13 @@ import java.util.Objects;
 public class Tag implements Serializable {
 
     private static final long serialVersionUID = -7798359808664731988L;
+
+    public Tag() {
+    }
+
+    public Tag(final String name) {
+        this.name = name;
+    }
 
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
@@ -66,12 +73,22 @@ public class Tag implements Serializable {
     @Persistent
     @JsonIgnore
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
+    private List<Policy> policies;
+
+    @Persistent
+    @JsonIgnore
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Project> projects;
 
     @Persistent
     @JsonIgnore
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "vulnId ASC"))
     private List<Vulnerability> vulnerabilities;
+
+    @Persistent
+    @JsonIgnore
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
+    private List<NotificationRule> notificationRules;
 
     public long getId() {
         return id;
@@ -89,6 +106,14 @@ public class Tag implements Serializable {
         this.name = name;
     }
 
+    public List<Policy> getPolicies() {
+        return policies;
+    }
+
+    public void setPolicies(List<Policy> policies) {
+        this.policies = policies;
+    }
+
     public List<Project> getProjects() {
         return projects;
     }
@@ -103,6 +128,14 @@ public class Tag implements Serializable {
 
     public void setVulnerabilities(List<Vulnerability> vulnerabilities) {
         this.vulnerabilities = vulnerabilities;
+    }
+
+    public List<NotificationRule> getNotificationRules() {
+        return notificationRules;
+    }
+
+    public void setNotificationRules(final List<NotificationRule> notificationRules) {
+        this.notificationRules = notificationRules;
     }
 
     @Override

@@ -23,6 +23,7 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
+import jakarta.annotation.Nullable;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
@@ -44,7 +45,6 @@ import org.projectnessie.cel.common.types.Types;
 import org.projectnessie.cel.common.types.ref.Val;
 import org.projectnessie.cel.interpreter.functions.Overload;
 
-import javax.annotation.Nullable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
@@ -58,11 +58,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.substringAfter;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.jdbi;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_VERSION_DISTANCE;
@@ -399,8 +400,7 @@ public class CelCommonPolicyLibrary implements Library {
 
         // TODO: Result can / should likely be cached based on filter and params.
 
-        try (final var qm = new QueryManager();
-             final Handle jdbiHandle = jdbi(qm).open()) {
+        try (final Handle jdbiHandle = openJdbiHandle()) {
             if (!compositeNodeFilter.hasInMemoryFilters()) {
                 final Query query = jdbiHandle.createQuery("""                     
                         WITH
@@ -417,7 +417,7 @@ public class CelCommonPolicyLibrary implements Library {
                         """);
                 return query
                         .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
-                        .bind("projectUuid", project.getUuid())
+                        .bind("projectUuid", UUID.fromString(project.getUuid()))
                         .bindMap(compositeNodeFilter.sqlFilterParams())
                         .mapTo(Long.class)
                         .map(count -> count > 0)
@@ -440,7 +440,7 @@ public class CelCommonPolicyLibrary implements Library {
             return query
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                     .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
-                    .bind("projectUuid", project.getUuid())
+                    .bind("projectUuid", UUID.fromString(project.getUuid()))
                     .bindMap(compositeNodeFilter.sqlFilterParams())
                     .map(ConstructorMapper.of(DependencyNode.class))
                     .stream()
@@ -471,8 +471,7 @@ public class CelCommonPolicyLibrary implements Library {
 
         // TODO: Result can / should likely be cached based on filter and params.
 
-        try (final var qm = new QueryManager();
-             final Handle jdbiHandle = jdbi(qm).open()) {
+        try (final Handle jdbiHandle = openJdbiHandle()) {
             if (!compositeNodeFilter.hasInMemoryFilters()) {
                 final Query query = jdbiHandle.createQuery("""
                         -- Determine the project the given leaf component is part of.
@@ -511,7 +510,7 @@ public class CelCommonPolicyLibrary implements Library {
                             -- Short-circuit the recursive query if we don't have any matches at all.
                             EXISTS(SELECT 1 FROM "CTE_MATCHES")
                             -- Otherwise, find components of which the given leaf component is a direct dependency.
-                            AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                            AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                           UNION ALL
                           SELECT
                             "C"."UUID"                                       AS "UUID",
@@ -528,14 +527,14 @@ public class CelCommonPolicyLibrary implements Library {
                             -- Also, ensure we haven't seen this component before, to prevent cycles.
                             AND NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
                             -- Otherwise, the previous component must appear in the current direct dependencies.
-                            AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                            AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "PREVIOUS"."UUID"))
                         )
                         SELECT BOOL_OR("FOUND") FROM "CTE_DEPENDENCIES";
                         """);
 
                 return query
                         .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
-                        .bind("leafComponentUuid", leafComponent.getUuid())
+                        .bind("leafComponentUuid", UUID.fromString(leafComponent.getUuid()))
                         .bindMap(compositeNodeFilter.sqlFilterParams())
                         .mapTo(Boolean.class)
                         .findOne()
@@ -587,7 +586,7 @@ public class CelCommonPolicyLibrary implements Library {
                         -- Short-circuit the recursive query if we don't have any matches at all.
                         EXISTS(SELECT 1 FROM "CTE_MATCHES")
                         -- Otherwise, find components of which the given leaf component is a direct dependency.
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                        AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                       UNION ALL
                       SELECT
                         "C"."UUID"                                       AS "UUID",
@@ -613,7 +612,7 @@ public class CelCommonPolicyLibrary implements Library {
                         -- Ensure we haven't seen this component before, to prevent cycles.
                         NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
                         -- Otherwise, the previous component must appear in the current direct dependencies.
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                        AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "PREVIOUS"."UUID"))
                     )
                     SELECT ${selectColumnNames?join(", ")} FROM "CTE_DEPENDENCIES" WHERE "FOUND";
                     """);
@@ -621,7 +620,7 @@ public class CelCommonPolicyLibrary implements Library {
             return query
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                     .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
-                    .bind("leafComponentUuid", leafComponent.getUuid())
+                    .bind("leafComponentUuid", UUID.fromString(leafComponent.getUuid()))
                     .bindMap(compositeNodeFilter.sqlFilterParams())
                     .map(ConstructorMapper.of(DependencyNode.class))
                     .stream()
@@ -647,8 +646,7 @@ public class CelCommonPolicyLibrary implements Library {
 
         // TODO: Result can / should likely be cached based on filter and params.
 
-        try (final var qm = new QueryManager();
-             final Handle jdbiHandle = jdbi(qm).open()) {
+        try (final Handle jdbiHandle = openJdbiHandle()) {
             // If the component is a direct dependency of the project,
             // it can no longer be a dependency exclusively introduced
             // through another component.
@@ -702,7 +700,7 @@ public class CelCommonPolicyLibrary implements Library {
                         -- Short-circuit the recursive query if we don't have any matches at all.
                         EXISTS(SELECT 1 FROM "CTE_MATCHES")
                         -- Otherwise, find components of which the given leaf component is a direct dependency.
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                        AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                       UNION ALL
                       SELECT
                         "C"."ID"                                         AS "ID",
@@ -729,7 +727,7 @@ public class CelCommonPolicyLibrary implements Library {
                         -- Ensure we haven't seen this component before, to prevent cycles.
                         NOT ("C"."ID" = ANY("PREVIOUS"."PATH"))
                         -- Otherwise, the previous component must appear in the current direct dependencies.
-                        AND "C"."DIRECT_DEPENDENCIES" LIKE ('%' || "PREVIOUS"."UUID" || '%')
+                        AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "PREVIOUS"."UUID"))
                     )
                     SELECT "ID", ${selectColumnNames?join(", ", "", ", ")} "FOUND", "PATH" FROM "CTE_DEPENDENCIES";
                      """);
@@ -737,7 +735,7 @@ public class CelCommonPolicyLibrary implements Library {
             final List<DependencyNode> nodes = query
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                     .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
-                    .bind("leafComponentUuid", leafComponent.getUuid())
+                    .bind("leafComponentUuid", UUID.fromString(leafComponent.getUuid()))
                     .bindMap(compositeNodeFilter.sqlFilterParams())
                     .map(ConstructorMapper.of(DependencyNode.class))
                     .list();
@@ -971,11 +969,11 @@ public class CelCommonPolicyLibrary implements Library {
                   "PROJECT" AS "P" ON "P"."ID" = "C"."PROJECT_ID"
                 WHERE
                   "C"."UUID" = :leafComponentUuid
-                  AND "P"."DIRECT_DEPENDENCIES" LIKE ('%' || :leafComponentUuid || '%')
+                  AND "P"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                 """);
 
         return query
-                .bind("leafComponentUuid", component.getUuid())
+                .bind("leafComponentUuid", UUID.fromString(component.getUuid()))
                 .mapTo(Boolean.class)
                 .findOne()
                 .orElse(false);

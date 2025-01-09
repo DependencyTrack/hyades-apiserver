@@ -1,12 +1,12 @@
 CREATE OR REPLACE PROCEDURE "UPDATE_PROJECT_METRICS"(
-  "project_uuid" VARCHAR(36)
+  "project_uuid" UUID
 )
   LANGUAGE "plpgsql"
 AS
 $$
 DECLARE
   "v_project_id"                              BIGINT;
-  "v_component_uuid"                          TEXT;
+  "v_component_uuid"                          UUID;
   "v_components"                              INT; -- Total number of components in the project
   "v_vulnerable_components"                   INT; -- Number of vulnerable components in the project
   "v_vulnerabilities"                         INT; -- Total number of vulnerabilities
@@ -112,10 +112,15 @@ BEGIN
 
   "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
 
+  WITH "CTE_LATEST_METRICS" AS (
+    SELECT *
+      FROM "PROJECTMETRICS"
+     WHERE "PROJECT_ID" = "v_project_id"
+     ORDER BY "LAST_OCCURRENCE" DESC
+     LIMIT 1)
   SELECT "ID"
-  FROM "PROJECTMETRICS"
-  WHERE "PROJECT_ID" = "v_project_id"
-    AND "COMPONENTS" = "v_components"
+  FROM "CTE_LATEST_METRICS"
+  WHERE "COMPONENTS" = "v_components"
     AND "VULNERABLECOMPONENTS" = "v_vulnerable_components"
     AND "VULNERABILITIES" = "v_vulnerabilities"
     AND "CRITICAL" = "v_critical"
@@ -143,7 +148,6 @@ BEGIN
     AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
     AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
     AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
-  ORDER BY "LAST_OCCURRENCE" DESC
   LIMIT 1
   INTO "v_existing_id";
 

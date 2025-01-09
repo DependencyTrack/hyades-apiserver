@@ -20,18 +20,38 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
+import alpine.model.ApiKey;
 import alpine.model.Team;
+import alpine.model.UserPrincipal;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.jsonwebtoken.lang.Collections;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
-import io.swagger.annotations.Authorization;
-import io.swagger.annotations.ResponseHeader;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.ServerErrorException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
@@ -43,33 +63,29 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
+import org.dependencytrack.resources.v1.vo.ConciseProject;
 
 import javax.jdo.FetchGroup;
-import javax.validation.Validator;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.PATCH;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static alpine.event.framework.Event.isEventBeingProcessed;
+import static java.util.Objects.requireNonNullElseGet;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.util.PersistenceUtil.isPersistent;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 /**
@@ -79,32 +95,39 @@ import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolati
  * @since 3.0.0
  */
 @Path("/v1/project")
-@Api(value = "project", authorizations = @Authorization(value = "X-Api-Key"))
+@io.swagger.v3.oas.annotations.tags.Tag(name = "project")
+@SecurityRequirements({
+        @SecurityRequirement(name = "ApiKeyAuth"),
+        @SecurityRequirement(name = "BearerAuth")
+})
 public class ProjectResource extends AlpineResource {
 
     private static final Logger LOGGER = Logger.getLogger(ProjectResource.class);
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Returns a list of all projects",
-            response = Project.class,
-            responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects"),
-            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    @Operation(
+            summary = "Returns a list of all projects",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all projects",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, schema = @Schema(format = "integer"), description = "The total number of projects"),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getProjects(@ApiParam(value = "The optional name of the project to query on", required = false)
+    public Response getProjects(@Parameter(description = "The optional name of the project to query on", required = false)
                                 @QueryParam("name") String name,
-                                @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
+                                @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
                                 @QueryParam("excludeInactive") boolean excludeInactive,
-                                @ApiParam(value = "Optionally excludes children projects from being returned", required = false)
+                                @Parameter(description = "Optionally excludes children projects from being returned", required = false)
                                 @QueryParam("onlyRoot") boolean onlyRoot,
-                                @ApiParam(value = "The UUID of the team which projects shall be excluded", format = "uuid", required = false)
+                                @Parameter(description = "The UUID of the team which projects shall be excluded", schema = @Schema(format = "uuid", type = "string"))
                                 @QueryParam("notAssignedToTeamWithUuid") @ValidUuid String notAssignedToTeamWithUuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             Team notAssignedToTeam = null;
@@ -121,21 +144,110 @@ public class ProjectResource extends AlpineResource {
     }
 
     @GET
-    @Path("/{uuid}")
+    @Path("/concise")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Returns a specific project",
-            response = Project.class,
-            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    @Operation(
+            summary = "Returns a list of all projects, in a concise representation.",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
+    @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
-            @ApiResponse(code = 404, message = "The project could not be found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all projects in concise representation",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, schema = @Schema(format = "integer"), description = "The total number of projects"),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ConciseProject.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getProjectsConcise(
+            @Parameter(description = "Name to filter on. Must be exact match.")
+            @QueryParam("name") final String nameFilter,
+            @Parameter(description = "Classifier to filter on. Must be exact match.")
+            @QueryParam("classifier") final String classifierFilter,
+            @Parameter(description = "Tag to filter on. Must be exact match.")
+            @QueryParam("tag") final String tagFilter,
+            @Parameter(description = "Team to filter on. Must be exact match.")
+            @QueryParam("team") final String teamFilter,
+            @Parameter(description = "Whether to show only active, or only inactive projects.")
+            @QueryParam("active") final Boolean activeFilter,
+            @Parameter(description = "Whether to show only root projects, i.e. those without a parent.")
+            @QueryParam("onlyRoot") final Boolean onlyRootFilter,
+            @Parameter(description = "Whether to include metrics in the response.")
+            @QueryParam("includeMetrics") final boolean includeMetrics
+    ) {
+        final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
+                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
+
+        final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
+        final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
+        return Response.ok(projects).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @GET
+    @Path("/concise/{uuid}/children")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a list of a given project's children, in a concise representation.",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @PaginatedApi
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all child projects in a concise representation",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of child projects", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ConciseProject.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getProjectChildrenConcise(
+            @Parameter(description = "UUID of the project", required = true)
+            @PathParam("uuid") final String parentUuid,
+            @Parameter(description = "Name to filter on. Must be exact match.")
+            @QueryParam("name") final String nameFilter,
+            @Parameter(description = "Classifier to filter on. Must be exact match.")
+            @QueryParam("classifier") final String classifierFilter,
+            @Parameter(description = "Tag to filter on. Must be exact match.")
+            @QueryParam("tag") final String tagFilter,
+            @Parameter(description = "Team to filter on. Must be exact match.")
+            @QueryParam("team") final String teamFilter,
+            @Parameter(description = "Whether to show only active, or only inactive projects. Omitting the filter will show both.")
+            @QueryParam("active") final Boolean activeFilter,
+            @Parameter(description = "Whether to include metrics in the response.")
+            @QueryParam("includeMetrics") final boolean includeMetrics
+    ) {
+        final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
+                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
+
+        final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
+        final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
+        return Response.ok(projects).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
+    @GET
+    @Path("/{uuid}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a specific project",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A specific project",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The project could not be found")
+    })
+
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProject(
-            @ApiParam(value = "The UUID of the project to retrieve", format = "uuid", required = true)
+            @Parameter(description = "The UUID of the project to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getProject(uuid);
@@ -152,24 +264,63 @@ public class ProjectResource extends AlpineResource {
     }
 
     @GET
-    @Path("/lookup")
+    @Path("/latest/{name}")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Returns a specific project by its name and version",
-            response = Project.class,
-            nickname = "getProjectByNameAndVersion",
-            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    @Operation(
+            summary = "Returns the latest version of a project by its name",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
-            @ApiResponse(code = 404, message = "The project could not be found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The latest version of the specified project",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The project could not be found")
+    })
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getLatestProjectByName(
+            @Parameter(description = "The name of the project to retrieve the latest version of", required = true)
+            @PathParam("name") String name) {
+        try (QueryManager qm = new QueryManager()) {
+            final Project project = qm.getLatestProjectVersion(name);
+            if (project != null) {
+                if (qm.hasAccess(super.getPrincipal(), project)) {
+                    return Response.ok(project).build();
+                } else {
+                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                }
+            } else {
+                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+            }
+        }
+    }
+
+    @GET
+    @Path("/lookup")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a specific project by its name and version",
+            operationId = "getProjectByNameAndVersion",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A specific project by its name and version",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProject(
-            @ApiParam(value = "The name of the project to query on", required = true)
+            @Parameter(description = "The name of the project to query on", required = true)
             @QueryParam("name") String name,
-            @ApiParam(value = "The version of the project to query on", required = true)
+            @Parameter(description = "The version of the project to query on", required = true)
             @QueryParam("version") String version) {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getProject(name, version);
@@ -188,24 +339,27 @@ public class ProjectResource extends AlpineResource {
     @GET
     @Path("/tag/{tag}")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Returns a list of all projects by tag",
-            response = Project.class,
-            responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects with the tag"),
-            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    @Operation(
+            summary = "Returns a list of all projects by tag",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all projects by tag",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProjectsByTag(
-            @ApiParam(value = "The tag to query on", required = true)
+            @Parameter(description = "The tag to query on", required = true)
             @PathParam("tag") String tagString,
-            @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
+            @Parameter(description = "Optionally excludes inactive projects from being returned")
             @QueryParam("excludeInactive") boolean excludeInactive,
-            @ApiParam(value = "Optionally excludes children projects from being returned", required = false)
+            @Parameter(description = "Optionally excludes children projects from being returned")
             @QueryParam("onlyRoot") boolean onlyRoot) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Tag tag = qm.getTagByName(tagString);
@@ -217,24 +371,27 @@ public class ProjectResource extends AlpineResource {
     @GET
     @Path("/classifier/{classifier}")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Returns a list of all projects by classifier",
-            response = Project.class,
-            responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects of the specified classifier"),
-            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    @Operation(
+            summary = "Returns a list of all projects by classifier",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all projects by classifier",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProjectsByClassifier(
-            @ApiParam(value = "The classifier to query on", required = true)
+            @Parameter(description = "The classifier to query on", required = true)
             @PathParam("classifier") String classifierString,
-            @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
+            @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
             @QueryParam("excludeInactive") boolean excludeInactive,
-            @ApiParam(value = "Optionally excludes children projects from being returned", required = false)
+            @Parameter(description = "Optionally excludes children projects from being returned", required = false)
             @QueryParam("onlyRoot") boolean onlyRoot) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Classifier classifier = Classifier.valueOf(classifierString);
@@ -248,27 +405,39 @@ public class ProjectResource extends AlpineResource {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Creates a new project",
-            notes = """
+    @Operation(
+            summary = "Creates a new project",
+            description = """
                     <p>If a parent project exists, <code>parent.uuid</code> is required</p>
-                    <p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>""",
-            response = Project.class,
-            code = 201
+                    <p>
+                      When portfolio access control is enabled, one or more teams to grant access
+                      to can be provided via <code>accessTeams</code>. Either <code>uuid</code> or
+                      <code>name</code> of a team must be specified. Only teams which the authenticated
+                      principal is a member of can be assigned. Principals with <strong>ACCESS_MANAGEMENT</strong>
+                      permission can assign <em>any</em> team.
+                    </p>
+                    <p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"""
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 409, message = """
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "The created project",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
+            @ApiResponse(responseCode = "400", description = "Bad Request"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "The project version cannot be created as latest version because access to current latest version is forbidden."),
+            @ApiResponse(responseCode = "409", description = """
                     <ul>
                       <li>An inactive Parent cannot be selected as parent, or</li>
                       <li>A project with the specified name already exists</li>
-                    </ul>"""),
+                    </ul>""")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
-    public Response createProject(Project jsonProject) {
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
+    public Response createProject(final Project jsonProject) {
         final Validator validator = super.getValidator();
         failOnValidationError(
-                validator.validateProperty(jsonProject, "author"),
+                validator.validateProperty(jsonProject, "authors"),
                 validator.validateProperty(jsonProject, "publisher"),
                 validator.validateProperty(jsonProject, "group"),
                 validator.validateProperty(jsonProject, "name"),
@@ -277,49 +446,136 @@ public class ProjectResource extends AlpineResource {
                 validator.validateProperty(jsonProject, "classifier"),
                 validator.validateProperty(jsonProject, "cpe"),
                 validator.validateProperty(jsonProject, "purl"),
-                validator.validateProperty(jsonProject, "swidTagId")
+                validator.validateProperty(jsonProject, "swidTagId"),
+                validator.validateProperty(jsonProject, "accessTeams")
         );
         if (jsonProject.getClassifier() == null) {
             jsonProject.setClassifier(Classifier.APPLICATION);
         }
-        try (QueryManager qm = new QueryManager()) {
-            if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
-                Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
-                jsonProject.setParent(parent);
+        try (final var qm = new QueryManager()) {
+            if(jsonProject.isLatest()) {
+                final Project oldLatest = qm.getLatestProjectVersion(jsonProject.getName());
+                if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
+                    return Response.status(Response.Status.FORBIDDEN)
+                            .entity("Cannot create latest version for project with this name. Access to current latest " +
+                                    "version is forbidden!")
+                            .build();
+                }
             }
-            final Project project;
-            try {
-                project = qm.createProject(jsonProject, jsonProject.getTags(), true);
-            } catch (IllegalArgumentException e) {
-                LOGGER.debug("Failed to create project %s".formatted(jsonProject), e);
-                return Response.status(Response.Status.CONFLICT).entity("An inactive Parent cannot be selected as parent").build();
-            } catch (RuntimeException e) {
-                if (isUniqueConstraintViolation(e)) {
-                    return Response.status(Response.Status.CONFLICT).entity("A project with the specified name already exists.").build();
+            final Project createdProject = qm.callInTransaction(() -> {
+                if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
+                    Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
+                    jsonProject.setParent(parent);
                 }
 
-                LOGGER.error("Failed to create project %s".formatted(jsonProject), e);
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-            }
-            Principal principal = getPrincipal();
-            qm.updateNewProjectACL(project, principal);
-            LOGGER.info("Project " + project.toString() + " created by " + super.getPrincipal().getName());
-            return Response.status(Response.Status.CREATED).entity(project).build();
+                Principal principal = getPrincipal();
+
+                final List<Team> chosenTeams = requireNonNullElseGet(
+                        jsonProject.getAccessTeams(), Collections::emptyList);
+                jsonProject.setAccessTeams(null);
+
+                for (final Team chosenTeam : chosenTeams) {
+                    if (chosenTeam.getUuid() == null && chosenTeam.getName() == null) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.BAD_REQUEST)
+                                .entity("""
+                                        accessTeams must either specify a UUID or a name,\
+                                        but the team at index %d has neither.\
+                                        """.formatted(chosenTeams.indexOf(chosenTeam)))
+                                .build());
+                    }
+                }
+
+                if (!chosenTeams.isEmpty()) {
+                    List<Team> userTeams;
+                    if (principal instanceof final UserPrincipal userPrincipal) {
+                        userTeams = userPrincipal.getTeams();
+                    } else if (principal instanceof final ApiKey apiKey) {
+                        userTeams = apiKey.getTeams();
+                    } else {
+                        userTeams = Collections.emptyList();
+                    }
+
+                    boolean isAdmin = qm.hasAccessManagementPermission(principal);
+                    List<Team> visibleTeams = isAdmin ? qm.getTeams() : userTeams;
+                    final var visibleTeamByUuid = new HashMap<UUID, Team>(visibleTeams.size());
+                    final var visibleTeamByName = new HashMap<String, Team>(visibleTeams.size());
+                    for (final Team visibleTeam : visibleTeams) {
+                        visibleTeamByUuid.put(visibleTeam.getUuid(), visibleTeam);
+                        visibleTeamByName.put(visibleTeam.getName(), visibleTeam);
+                    }
+
+                    for (Team chosenTeam : chosenTeams) {
+                        Team visibleTeam = visibleTeamByUuid.getOrDefault(
+                                chosenTeam.getUuid(),
+                                visibleTeamByName.get(chosenTeam.getName()));
+                        if (visibleTeam == null) {
+                            throw new ClientErrorException(Response
+                                    .status(Response.Status.BAD_REQUEST)
+                                    .entity("""
+                                        The team with %s can not be assigned because it does not exist, \
+                                        or is not accessible to the authenticated principal.\
+                                        """.formatted(chosenTeam.getUuid() != null
+                                            ? "UUID " + chosenTeam.getUuid()
+                                            : "name " + chosenTeam.getName()))
+                                    .build());
+                        }
+                        if (!isPersistent(visibleTeam)) {
+                            // Teams sourced from the principal will not be in persistent state
+                            // and need to be attached to the persistence context.
+                            visibleTeam = qm.getObjectById(Team.class, visibleTeam.getId());
+                        }
+                        jsonProject.addAccessTeam(visibleTeam);
+                    }
+                }
+
+                final Project project;
+                try {
+                    project = qm.createProject(jsonProject, jsonProject.getTags(), true);
+                } catch (IllegalArgumentException e) {
+                    LOGGER.debug("Failed to create project %s".formatted(jsonProject), e);
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.CONFLICT)
+                            .entity("An inactive Parent cannot be selected as parent")
+                            .build());
+                } catch (RuntimeException e) {
+                    if (isUniqueConstraintViolation(e)) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.CONFLICT)
+                                .entity("A project with the specified name already exists.")
+                                .build());
+                    }
+
+                    LOGGER.error("Failed to create project %s".formatted(jsonProject), e);
+                    throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
+                }
+                qm.updateNewProjectACL(project, principal);
+                return project;
+            });
+
+            LOGGER.info("Project " + createdProject + " created by " + super.getPrincipal().getName());
+            return Response.status(Response.Status.CREATED).entity(createdProject).build();
         }
     }
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Updates a project",
-            response = Project.class,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+    @Operation(
+            summary = "Updates a project",
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 404, message = "The UUID of the project could not be found"),
-            @ApiResponse(code = 409, message = """
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated project",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "The project version cannot be set as latest version " +
+                    "because access to current latest version is forbidden."),
+            @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found"),
+            @ApiResponse(responseCode = "409", description = """
                     <ul>
                       <li>An inactive Parent cannot be selected as parent, or</li>
                       <li>Project cannot be set to inactive if active children are present, or</li>
@@ -327,11 +583,11 @@ public class ProjectResource extends AlpineResource {
                       <li>A project cannot select itself as a parent</li>
                     </ul>""")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
     public Response updateProject(Project jsonProject) {
         final Validator validator = super.getValidator();
         failOnValidationError(
-                validator.validateProperty(jsonProject, "author"),
+                validator.validateProperty(jsonProject, "authors"),
                 validator.validateProperty(jsonProject, "publisher"),
                 validator.validateProperty(jsonProject, "group"),
                 validator.validateProperty(jsonProject, "name"),
@@ -345,35 +601,61 @@ public class ProjectResource extends AlpineResource {
         if (jsonProject.getClassifier() == null) {
             jsonProject.setClassifier(Classifier.APPLICATION);
         }
-        try (QueryManager qm = new QueryManager()) {
-            Project project = qm.getObjectByUuid(Project.class, jsonProject.getUuid());
-            if (project != null) {
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+        try (final var qm = new QueryManager()) {
+            final Project updatedProject = qm.callInTransaction(() -> {
+                Project project = qm.getObjectByUuid(Project.class, jsonProject.getUuid());
+                if (project == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the project could not be found.")
+                            .build());
                 }
+                if (!qm.hasAccess(super.getPrincipal(), project)) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity("Access to the specified project is forbidden")
+                            .build());
+                }
+
                 final String name = StringUtils.trimToNull(jsonProject.getName());
                 // Name cannot be empty or null - prevent it
                 if (name == null) {
                     jsonProject.setName(project.getName());
                 }
+                // if project is newly set to latest, ensure user has access to current latest version to modify it
+                if (jsonProject.isLatest() && !project.isLatest()) {
+                    final Project oldLatest = qm.getLatestProjectVersion(name);
+                    if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.FORBIDDEN)
+                                .entity("Cannot set this project version to latest. Access to current latest version is forbidden.")
+                                .build());
+                    }
+                }
+
                 try {
-                    project = qm.updateProject(jsonProject, true);
+                    return qm.updateProject(jsonProject, true);
                 } catch (IllegalArgumentException e) {
                     LOGGER.debug("Failed to update project %s".formatted(jsonProject.getUuid()), e);
-                    return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.CONFLICT)
+                            .entity(e.getMessage())
+                            .build());
                 } catch (RuntimeException e) {
                     if (isUniqueConstraintViolation(e)) {
-                        return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.CONFLICT)
+                                .entity("A project with the specified name and version already exists.")
+                                .build());
                     }
 
                     LOGGER.error("Failed to update project %s".formatted(jsonProject.getUuid()), e);
-                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+                    throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
                 }
-                LOGGER.info("Project " + project.toString() + " updated by " + super.getPrincipal().getName());
-                return Response.ok(project).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
-            }
+            });
+
+            LOGGER.info("Project " + updatedProject + " updated by " + super.getPrincipal().getName());
+            return Response.ok(updatedProject).build();
         }
     }
 
@@ -381,15 +663,19 @@ public class ProjectResource extends AlpineResource {
     @Path("/{uuid}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Partially updates a project",
-            response = Project.class,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+    @Operation(
+            summary = "Partially updates a project",
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 404, message = "The UUID of the project could not be found"),
-            @ApiResponse(code = 409, message = """
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated project",
+                    content = @Content(schema = @Schema(implementation = Project.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found"),
+            @ApiResponse(responseCode = "409", description = """
                     <ul>
                       <li>An inactive Parent cannot be selected as parent, or</li>
                       <li>Project cannot be set to inactive if active children are present, or</li>
@@ -397,14 +683,14 @@ public class ProjectResource extends AlpineResource {
                       <li>A project cannot select itself as a parent</li>
                     </ul>""")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
     public Response patchProject(
-            @ApiParam(value = "The UUID of the project to modify", format = "uuid", required = true)
+            @Parameter(description = "The UUID of the project to modify", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             Project jsonProject) {
         final Validator validator = getValidator();
         failOnValidationError(
-                validator.validateProperty(jsonProject, "author"),
+                validator.validateProperty(jsonProject, "authors"),
                 validator.validateProperty(jsonProject, "publisher"),
                 validator.validateProperty(jsonProject, "group"),
                 jsonProject.getName() != null ? validator.validateProperty(jsonProject, "name") : Set.of(),
@@ -416,17 +702,38 @@ public class ProjectResource extends AlpineResource {
                 validator.validateProperty(jsonProject, "swidTagId")
         );
 
-        try (QueryManager qm = new QueryManager()) {
-            Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project != null) {
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+        try (final var qm = new QueryManager()) {
+            final Project updatedProject = qm.callInTransaction(() -> {
+                Project project = qm.getObjectByUuid(Project.class, uuid);
+                if (project == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the project could not be found.")
+                            .build());
                 }
+                if (!qm.hasAccess(super.getPrincipal(), project)) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity("Access to the specified project is forbidden")
+                            .build());
+                }
+                // if project is newly set to latest, ensure user has access to current latest version to modify it
+                if (jsonProject.isLatest() && !project.isLatest()) {
+                    final var oldName = jsonProject.getName() != null ? jsonProject.getName() : project.getName();
+                    final Project oldLatest = qm.getLatestProjectVersion(oldName);
+                    if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.FORBIDDEN)
+                                .entity("Cannot set this project version to latest. Access to current latest version is forbidden.")
+                                .build());
+                    }
+                }
+
                 var modified = false;
                 project = qm.detachWithGroups(project, List.of(FetchGroup.DEFAULT, Project.FetchGroup.PARENT.name()));
                 modified |= setIfDifferent(jsonProject, project, Project::getName, Project::setName);
                 modified |= setIfDifferent(jsonProject, project, Project::getVersion, Project::setVersion);
-                modified |= setIfDifferent(jsonProject, project, Project::getAuthor, Project::setAuthor);
+                modified |= setIfDifferent(jsonProject, project, Project::getAuthors, Project::setAuthors);
                 modified |= setIfDifferent(jsonProject, project, Project::getPublisher, Project::setPublisher);
                 modified |= setIfDifferent(jsonProject, project, Project::getGroup, Project::setGroup);
                 modified |= setIfDifferent(jsonProject, project, Project::getDescription, Project::setDescription);
@@ -434,16 +741,23 @@ public class ProjectResource extends AlpineResource {
                 modified |= setIfDifferent(jsonProject, project, Project::getCpe, Project::setCpe);
                 modified |= setIfDifferent(jsonProject, project, Project::getPurl, Project::setPurl);
                 modified |= setIfDifferent(jsonProject, project, Project::getSwidTagId, Project::setSwidTagId);
-                modified |= setIfDifferent(jsonProject, project, Project::isActive, Project::setActive);
                 modified |= setIfDifferent(jsonProject, project, Project::getManufacturer, Project::setManufacturer);
                 modified |= setIfDifferent(jsonProject, project, Project::getSupplier, Project::setSupplier);
+                modified |= setIfDifferent(jsonProject, project, Project::isLatest, Project::setIsLatest);
+                modified |= setIfDifferent(jsonProject, project, Project::isActive, Project::setActive);
                 if (jsonProject.getParent() != null && jsonProject.getParent().getUuid() != null) {
                     final Project parent = qm.getObjectByUuid(Project.class, jsonProject.getParent().getUuid());
                     if (parent == null) {
-                        return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the parent project could not be found.").build();
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.NOT_FOUND)
+                                .entity("The UUID of the parent project could not be found.")
+                                .build());
                     }
                     if (!qm.hasAccess(getPrincipal(), parent)) {
-                        return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified parent project is forbidden").build();
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.FORBIDDEN)
+                                .entity("Access to the specified parent project is forbidden")
+                                .build());
                     }
                     modified |= project.getParent() == null || !parent.getUuid().equals(project.getParent().getUuid());
                     project.setParent(parent);
@@ -456,28 +770,38 @@ public class ProjectResource extends AlpineResource {
                     modified = true;
                     project.setExternalReferences(jsonProject.getExternalReferences());
                 }
-                if (modified) {
-                    try {
-                        project = qm.updateProject(project, true);
-                    } catch (IllegalArgumentException e) {
-                        LOGGER.debug("Failed to patch project %s".formatted(uuid));
-                        return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
-                    } catch (RuntimeException e) {
-                        if (isUniqueConstraintViolation(e)) {
-                            return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
-                        }
 
-                        LOGGER.error("Failed to patch project %s".formatted(uuid), e);
-                        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-                    }
-                    LOGGER.info("Project " + project.toString() + " updated by " + super.getPrincipal().getName());
-                    return Response.ok(project).build();
-                } else {
-                    return Response.notModified().build();
+                if (!modified) {
+                    return null;
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
+
+                try {
+                    return qm.updateProject(project, true);
+                } catch (IllegalArgumentException e) {
+                    LOGGER.debug("Failed to patch project %s".formatted(uuid));
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.CONFLICT)
+                            .entity(e.getMessage())
+                            .build());
+                } catch (RuntimeException e) {
+                    if (isUniqueConstraintViolation(e)) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.CONFLICT)
+                                .entity("A project with the specified name and version already exists.")
+                                .build());
+                    }
+
+                    LOGGER.error("Failed to patch project %s".formatted(uuid), e);
+                    throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
+                }
+            });
+
+            if (updatedProject == null) {
+                return Response.notModified().build();
             }
+
+            LOGGER.info("Project " + updatedProject + " updated by " + super.getPrincipal().getName());
+            return Response.ok(updatedProject).build();
         }
     }
 
@@ -517,98 +841,135 @@ public class ProjectResource extends AlpineResource {
     @Path("/{uuid}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Deletes a project",
-            code = 204,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+    @Operation(
+            summary = "Deletes a project",
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
-            @ApiResponse(code = 404, message = "The UUID of the project could not be found"),
-            @ApiResponse(code = 500, message = "Unable to delete components of the project")
+            @ApiResponse(responseCode = "204", description = "Project removed successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found"),
+            @ApiResponse(responseCode = "500", description = "Unable to delete components of the project")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
     public Response deleteProject(
-            @ApiParam(value = "The UUID of the project to delete", format = "uuid", required = true)
+            @Parameter(description = "The UUID of the project to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid, Project.FetchGroup.ALL.name());
-            if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
-                    qm.recursivelyDelete(project, true);
-                    return Response.status(Response.Status.NO_CONTENT).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+        try (final var qm = new QueryManager()) {
+            qm.runInTransaction(() -> {
+                final Project project = qm.getObjectByUuid(Project.class, uuid, Project.FetchGroup.ALL.name());
+                if (project == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the project could not be found.")
+                            .build());
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
-            }
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Unable to delete components of the project").build();
+                if (!qm.hasAccess(super.getPrincipal(), project)) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity("Access to the specified project is forbidden")
+                            .build());
+                }
+
+                LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
+                try {
+                    qm.recursivelyDelete(project, true);
+                } catch (RuntimeException e) {
+                    LOGGER.error("Failed to delete project", e);
+                    throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
+                }
+            });
         }
+
+        return Response.status(Response.Status.NO_CONTENT).build();
     }
 
     @PUT
     @Path("/clone")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Clones a project",
-            response = Project.class,
-            notes = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+    @Operation(
+            summary = "Clones a project",
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 404, message = "The UUID of the project could not be found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Token to be used for checking cloning progress",
+                    content = @Content(schema = @Schema(implementation = BomUploadResponse.class))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "The project clone cannot be set to latest version " +
+                    "because access to current latest version is forbidden."),
+            @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
     public Response cloneProject(CloneProjectRequest jsonRequest) {
         final Validator validator = super.getValidator();
         failOnValidationError(
                 validator.validateProperty(jsonRequest, "project"),
                 validator.validateProperty(jsonRequest, "version")
         );
-        try (QueryManager qm = new QueryManager()) {
-            final Project sourceProject = qm.getObjectByUuid(Project.class, jsonRequest.getProject(), Project.FetchGroup.ALL.name());
-            if (sourceProject != null) {
+        try (final var qm = new QueryManager()) {
+            final CloneProjectEvent cloneEvent = qm.callInTransaction(() -> {
+                final Project sourceProject = qm.getObjectByUuid(Project.class, jsonRequest.getProject(), Project.FetchGroup.ALL.name());
+                if (sourceProject == null) {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the project could not be found.")
+                            .build());
+                }
                 if (!qm.hasAccess(super.getPrincipal(), sourceProject)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity("Access to the specified project is forbidden")
+                            .build());
                 }
                 if (qm.doesProjectExist(sourceProject.getName(), StringUtils.trimToNull(jsonRequest.getVersion()))) {
-                    return Response.status(Response.Status.CONFLICT).entity("A project with the specified name and version already exists.").build();
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.CONFLICT)
+                            .entity("A project with the specified name and version already exists.")
+                            .build());
                 }
-                LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
-                CloneProjectEvent event = new CloneProjectEvent(jsonRequest);
-                final Response response = qm.runInTransaction(() -> {
-                    WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(event.getChainIdentifier(), WorkflowStep.PROJECT_CLONE);
-                    if (workflowState != null) {
-                        if (isEventBeingProcessed(event.getChainIdentifier()) || !workflowState.getStatus().isTerminal()) {
-                            return Response
-                                    .status(Response.Status.CONFLICT)
-                                    .entity(Map.of("message", "Project cloning is already in progress"))
-                                    .build();
-                        }
-                        workflowState.setStatus(WorkflowStatus.PENDING);
-                        workflowState.setStartedAt(null);
-                        workflowState.setUpdatedAt(new Date());
-                    } else {
-                        workflowState = new WorkflowState();
-                        workflowState.setStep(WorkflowStep.PROJECT_CLONE);
-                        workflowState.setStatus(WorkflowStatus.PENDING);
-                        workflowState.setToken(event.getChainIdentifier());
-                        workflowState.setUpdatedAt(new Date());
-                        qm.getPersistenceManager().makePersistent(workflowState);
+                // if project is newly set to latest, ensure user has access to current latest version to modify it
+                if (jsonRequest.makeCloneLatest() && !sourceProject.isLatest()) {
+                    final Project oldLatest = qm.getLatestProjectVersion(sourceProject.getName());
+                    if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.CONFLICT)
+                                .entity("Cannot set cloned project version to latest. Access to current latest version is forbidden.")
+                                .build());
                     }
+                }
 
-                    return Response.accepted(Map.of("token", event.getChainIdentifier())).build();
-                });
-                Event.dispatch(event);
-                return response;
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
-            }
+                LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
+                final var event = new CloneProjectEvent(jsonRequest);
+                WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(event.getChainIdentifier(), WorkflowStep.PROJECT_CLONE);
+                if (workflowState != null) {
+                    if (isEventBeingProcessed(event.getChainIdentifier()) || !workflowState.getStatus().isTerminal()) {
+                        throw new ClientErrorException(Response
+                                .status(Response.Status.CONFLICT)
+                                .entity(Map.of("message", "Project cloning is already in progress"))
+                                .build());
+                    }
+                    workflowState.setStatus(WorkflowStatus.PENDING);
+                    workflowState.setStartedAt(null);
+                    workflowState.setUpdatedAt(new Date());
+                } else {
+                    workflowState = new WorkflowState();
+                    workflowState.setStep(WorkflowStep.PROJECT_CLONE);
+                    workflowState.setStatus(WorkflowStatus.PENDING);
+                    workflowState.setToken(event.getChainIdentifier());
+                    workflowState.setUpdatedAt(new Date());
+                    qm.persist(workflowState);
+                }
+
+                return new CloneProjectEvent(jsonRequest);
+            });
+
+            Event.dispatch(cloneEvent);
+            return Response.accepted(Map.of("token", cloneEvent.getChainIdentifier())).build();
         }
     }
 
@@ -616,23 +977,26 @@ public class ProjectResource extends AlpineResource {
     @GET
     @Path("/{uuid}/children")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Returns a list of all children for a project",
-            response = Project.class,
-            responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects"),
-            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    @Operation(
+            summary = "Returns a list of all children for a project",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
-            @ApiResponse(code = 404, message = "The UUID of the project could not be found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all children for a project",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getChildrenProjects(@ApiParam(value = "The UUID of the project to get the children from", format = "uuid", required = true)
+    public Response getChildrenProjects(@Parameter(description = "The UUID of the project to get the children from", schema = @Schema(type = "string", format = "uuid"), required = true)
                                         @PathParam("uuid") @ValidUuid String uuid,
-                                        @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
+                                        @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
                                         @QueryParam("excludeInactive") boolean excludeInactive) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
@@ -652,26 +1016,29 @@ public class ProjectResource extends AlpineResource {
     @GET
     @Path("/{uuid}/children/classifier/{classifier}")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Returns a list of all children for a project by classifier",
-            response = Project.class,
-            responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects"),
-            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    @Operation(
+            summary = "Returns a list of all children for a project by classifier",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
-            @ApiResponse(code = 404, message = "The UUID of the project could not be found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all children for a project by classifier",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getChildrenProjectsByClassifier(
-            @ApiParam(value = "The classifier to query on", required = true)
+            @Parameter(description = "The classifier to query on", required = true)
             @PathParam("classifier") String classifierString,
-            @ApiParam(value = "The UUID of the project to get the children from", format = "uuid", required = true)
+            @Parameter(description = "The UUID of the project to get the children from", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
-            @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
+            @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
             @QueryParam("excludeInactive") boolean excludeInactive) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
@@ -692,26 +1059,29 @@ public class ProjectResource extends AlpineResource {
     @GET
     @Path("/{uuid}/children/tag/{tag}")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Returns a list of all children for a project by tag",
-            response = Project.class,
-            responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects"),
-            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    @Operation(
+            summary = "Returns a list of all children for a project by tag",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
-            @ApiResponse(code = 404, message = "The UUID of the project could not be found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all children for a project by tag",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getChildrenProjectsByTag(
-            @ApiParam(value = "The tag to query on", required = true)
+            @Parameter(description = "The tag to query on", required = true)
             @PathParam("tag") String tagString,
-            @ApiParam(value = "The UUID of the project to get the children from", format = "uuid", required = true)
+            @Parameter(description = "The UUID of the project to get the children from", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
-            @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
+            @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
             @QueryParam("excludeInactive") boolean excludeInactive) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
@@ -732,26 +1102,29 @@ public class ProjectResource extends AlpineResource {
     @GET
     @Path("/withoutDescendantsOf/{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
-    @ApiOperation(
-            value = "Returns a list of all projects without the descendants of the selected project",
-            response = Project.class,
-            responseContainer = "List",
-            responseHeaders = @ResponseHeader(name = TOTAL_COUNT_HEADER, response = Long.class, description = "The total number of projects"),
-            notes = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+    @Operation(
+            summary = "Returns a list of all projects without the descendants of the selected project",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(code = 401, message = "Unauthorized"),
-            @ApiResponse(code = 403, message = "Access to the specified project is forbidden"),
-            @ApiResponse(code = 404, message = "The UUID of the project could not be found")
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of all projects without the descendants of the selected project",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects", schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProjectsWithoutDescendantsOf(
-            @ApiParam(value = "The UUID of the project which descendants will be excluded", format = "uuid", required = true)
+            @Parameter(description = "The UUID of the project which descendants will be excluded", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
-            @ApiParam(value = "The optional name of the project to query on", required = false)
+            @Parameter(description = "The optional name of the project to query on", required = false)
             @QueryParam("name") String name,
-            @ApiParam(value = "Optionally excludes inactive projects from being returned", required = false)
+            @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
             @QueryParam("excludeInactive") boolean excludeInactive) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);

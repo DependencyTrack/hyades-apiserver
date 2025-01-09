@@ -66,7 +66,7 @@ public abstract class BaseTaskScheduler {
                 long timeToExecuteTask = schedule.nextDuration(TimeUnit.MILLISECONDS);
                 LOGGER.debug("Time in milliseconds to execute " + event + "is: " + timeToExecuteTask);
                 if (timeToExecuteTask <= pollingIntervalInMillis) {
-                    EventService.getInstance().publish(event);
+                    Event.dispatch(event);
                 }
             });
         }

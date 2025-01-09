@@ -21,6 +21,9 @@ package org.dependencytrack.resources.v1;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.fasterxml.jackson.core.StreamReadConstraints;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -28,6 +31,7 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
+import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
@@ -41,15 +45,16 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_ENABLED;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 public class VexResourceTest extends ResourceTest {
@@ -66,14 +71,6 @@ public class VexResourceTest extends ResourceTest {
     @Override
     public void before() throws Exception {
         super.before();
-
-        qm.createConfigProperty(
-                BOM_VALIDATION_ENABLED.getGroupName(),
-                BOM_VALIDATION_ENABLED.getPropertyName(),
-                "true",
-                BOM_VALIDATION_ENABLED.getPropertyType(),
-                null
-        );
     }
 
     @Test
@@ -271,7 +268,7 @@ public class VexResourceTest extends ResourceTest {
                   "title": "The uploaded BOM is invalid",
                   "detail": "Schema validation failed",
                   "errors": [
-                    "$.components[0].type: does not have a value in the enumeration [application, framework, library, container, operating-system, device, firmware, file]"
+                    "$.components[0].type: does not have a value in the enumeration [\\"application\\", \\"framework\\", \\"library\\", \\"container\\", \\"operating-system\\", \\"device\\", \\"firmware\\", \\"file\\"]"
                   ]
                 }
                 """);
@@ -351,4 +348,405 @@ public class VexResourceTest extends ResourceTest {
                 """);
     }
 
+    @Test
+    public void exportVexWithSameVulnAnalysisValidJsonTest() {
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setClassifier(Classifier.APPLICATION);
+        qm.persist(project);
+
+        var componentAWithVuln = new Component();
+        componentAWithVuln.setProject(project);
+        componentAWithVuln.setName("acme-lib-a");
+        componentAWithVuln.setVersion("1.0.0");
+        componentAWithVuln = qm.createComponent(componentAWithVuln, false);
+
+        var componentBWithVuln = new Component();
+        componentBWithVuln.setProject(project);
+        componentBWithVuln.setName("acme-lib-b");
+        componentBWithVuln.setVersion("1.0.0");
+        componentBWithVuln = qm.createComponent(componentBWithVuln, false);
+
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-001");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.HIGH);
+        vuln = qm.createVulnerability(vuln, false);
+        qm.addVulnerability(vuln, componentAWithVuln, AnalyzerIdentity.NONE);
+        qm.makeAnalysis(componentAWithVuln, vuln, AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true);
+        qm.addVulnerability(vuln, componentBWithVuln, AnalyzerIdentity.NONE);
+        qm.makeAnalysis(componentBWithVuln, vuln, AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true);
+
+        qm.persist(project);
+
+        final Response response = jersey.target("%s/cyclonedx/project/%s".formatted(V1_VEX, project.getUuid()))
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        final String jsonResponse = getPlainTextBody(response);
+        assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(jsonResponse.getBytes()));
+        assertThatJson(jsonResponse)
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
+                .withMatcher("vulnUuid", equalTo(vuln.getUuid().toString()))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo("""
+                        {
+                          "bomFormat": "CycloneDX",
+                          "specVersion": "1.5",
+                          "serialNumber": "${json-unit.any-string}",
+                          "version": 1,
+                          "metadata": {
+                            "timestamp": "${json-unit.any-string}",
+                            "component": {
+                              "type": "application",
+                              "bom-ref": "${json-unit.matches:projectUuid}",
+                              "name": "acme-app",
+                              "version": "1.0.0"
+                            },
+                            "tools": [
+                              {
+                                "vendor": "OWASP",
+                                "name": "Dependency-Track",
+                                "version": "${json-unit.any-string}"
+                              }
+                            ]
+                          },
+                          "vulnerabilities": [
+                            {
+                              "bom-ref": "${json-unit.matches:vulnUuid}",
+                              "id": "INT-001",
+                              "source": {
+                                "name": "INTERNAL"
+                              },
+                              "ratings": [
+                                {
+                                  "source": {
+                                    "name": "INTERNAL"
+                                  },
+                                  "severity": "high",
+                                  "method": "other"
+                                }
+                              ],
+                              "analysis":{
+                                "state": "resolved",
+                                "response": [
+                                  "update"
+                                ]
+                              },
+                              "affects": [
+                                {
+                                  "ref": "${json-unit.matches:projectUuid}"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                        """);
+    }
+
+    @Test
+    public void exportVexWithDifferentVulnAnalysisValidJsonTest() {
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setClassifier(Classifier.APPLICATION);
+        qm.persist(project);
+
+        var componentAWithVuln = new Component();
+        componentAWithVuln.setProject(project);
+        componentAWithVuln.setName("acme-lib-a");
+        componentAWithVuln.setVersion("1.0.0");
+        componentAWithVuln = qm.createComponent(componentAWithVuln, false);
+
+        var componentBWithVuln = new Component();
+        componentBWithVuln.setProject(project);
+        componentBWithVuln.setName("acme-lib-b");
+        componentBWithVuln.setVersion("1.0.0");
+        componentBWithVuln = qm.createComponent(componentBWithVuln, false);
+
+        var vuln = new Vulnerability();
+        vuln.setVulnId("INT-001");
+        vuln.setSource(Vulnerability.Source.INTERNAL);
+        vuln.setSeverity(Severity.HIGH);
+        vuln = qm.createVulnerability(vuln, false);
+        qm.addVulnerability(vuln, componentAWithVuln, AnalyzerIdentity.NONE);
+        qm.makeAnalysis(componentAWithVuln, vuln, AnalysisState.IN_TRIAGE, null, AnalysisResponse.UPDATE, null, true);
+        qm.addVulnerability(vuln, componentBWithVuln, AnalyzerIdentity.NONE);
+        qm.makeAnalysis(componentBWithVuln, vuln, AnalysisState.EXPLOITABLE, null, AnalysisResponse.UPDATE, null, true);
+
+        qm.persist(project);
+
+        final Response response = jersey.target("%s/cyclonedx/project/%s".formatted(V1_VEX, project.getUuid()))
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        final String jsonResponse = getPlainTextBody(response);
+        assertThatNoException().isThrownBy(() -> CycloneDxValidator.getInstance().validate(jsonResponse.getBytes()));
+        assertThatJson(jsonResponse)
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
+                .withMatcher("vulnUuid", equalTo(vuln.getUuid().toString()))
+                .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
+                .isEqualTo("""
+                        {
+                          "bomFormat": "CycloneDX",
+                          "specVersion": "1.5",
+                          "serialNumber": "${json-unit.any-string}",
+                          "version": 1,
+                          "metadata": {
+                            "timestamp": "${json-unit.any-string}",
+                            "component": {
+                              "type": "application",
+                              "bom-ref": "${json-unit.matches:projectUuid}",
+                              "name": "acme-app",
+                              "version": "1.0.0"
+                            },
+                            "tools": [
+                              {
+                                "vendor": "OWASP",
+                                "name": "Dependency-Track",
+                                "version": "${json-unit.any-string}"
+                              }
+                            ]
+                          },
+                          "vulnerabilities": [
+                            {
+                              "bom-ref": "${json-unit.matches:vulnUuid}",
+                              "id": "INT-001",
+                              "source": {
+                                "name": "INTERNAL"
+                              },
+                              "ratings": [
+                                {
+                                  "source": {
+                                    "name": "INTERNAL"
+                                  },
+                                  "severity": "high",
+                                  "method": "other"
+                                }
+                              ],
+                              "analysis":{
+                                "state": "in_triage",
+                                "response": [
+                                  "update"
+                                ]
+                              },
+                              "affects": [
+                                {
+                                  "ref": "${json-unit.matches:projectUuid}"
+                                }
+                              ]
+                            },
+                            {
+                              "bom-ref": "${json-unit.matches:vulnUuid}",
+                              "id": "INT-001",
+                              "source": {
+                                "name": "INTERNAL"
+                              },
+                              "ratings": [
+                                {
+                                  "source": {
+                                    "name": "INTERNAL"
+                                  },
+                                  "severity": "high",
+                                  "method": "other"
+                                }
+                              ],
+                              "analysis":{
+                                "state": "exploitable",
+                                "response": [
+                                  "update"
+                                ]
+                              },
+                              "affects": [
+                                {
+                                  "ref": "${json-unit.matches:projectUuid}"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                        """);
+    }
+
+    @Test
+    public void uploadVexWithValidationModeDisabledTest() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
+        qm.createConfigProperty(
+                BOM_VALIDATION_MODE.getGroupName(),
+                BOM_VALIDATION_MODE.getPropertyName(),
+                BomValidationMode.DISABLED.name(),
+                BOM_VALIDATION_MODE.getPropertyType(),
+                BOM_VALIDATION_MODE.getDescription()
+        );
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        final String encodedBom = Base64.getEncoder().encodeToString("""
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.2",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "foo",
+                      "name": "acme-library",
+                      "version": "1.0.0"
+                    }
+                  ]
+                }
+                """.getBytes());
+
+        final Response response = jersey.target(V1_VEX).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity("""
+                        {
+                          "projectName": "acme-app",
+                          "projectVersion": "1.0.0",
+                          "vex": "%s"
+                        }
+                        """.formatted(encodedBom), MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    public void uploadVexWithValidationModeEnabledForTagsTest() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
+        qm.createConfigProperty(
+                BOM_VALIDATION_MODE.getGroupName(),
+                BOM_VALIDATION_MODE.getPropertyName(),
+                BomValidationMode.ENABLED_FOR_TAGS.name(),
+                BOM_VALIDATION_MODE.getPropertyType(),
+                BOM_VALIDATION_MODE.getDescription()
+        );
+        qm.createConfigProperty(
+                BOM_VALIDATION_TAGS_INCLUSIVE.getGroupName(),
+                BOM_VALIDATION_TAGS_INCLUSIVE.getPropertyName(),
+                "[\"foo\"]",
+                BOM_VALIDATION_TAGS_INCLUSIVE.getPropertyType(),
+                BOM_VALIDATION_TAGS_INCLUSIVE.getDescription()
+        );
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        qm.bind(project, List.of(qm.createTag("foo")));
+
+        final String encodedBom = Base64.getEncoder().encodeToString("""
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.2",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "foo",
+                      "name": "acme-library",
+                      "version": "1.0.0"
+                    }
+                  ]
+                }
+                """.getBytes());
+
+        Response response = jersey.target(V1_VEX).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity("""
+                        {
+                          "projectName": "acme-app",
+                          "projectVersion": "1.0.0",
+                          "vex": "%s"
+                        }
+                        """.formatted(encodedBom), MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(400);
+
+        qm.bind(project, Collections.emptyList());
+
+        response = jersey.target(V1_VEX).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity("""
+                        {
+                          "projectName": "acme-app",
+                          "projectVersion": "1.0.0",
+                          "vex": "%s"
+                        }
+                        """.formatted(encodedBom), MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    public void uploadVexWithValidationModeDisabledForTagsTest() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
+        qm.createConfigProperty(
+                BOM_VALIDATION_MODE.getGroupName(),
+                BOM_VALIDATION_MODE.getPropertyName(),
+                BomValidationMode.DISABLED_FOR_TAGS.name(),
+                BOM_VALIDATION_MODE.getPropertyType(),
+                BOM_VALIDATION_MODE.getDescription()
+        );
+        qm.createConfigProperty(
+                BOM_VALIDATION_TAGS_EXCLUSIVE.getGroupName(),
+                BOM_VALIDATION_TAGS_EXCLUSIVE.getPropertyName(),
+                "[\"foo\"]",
+                BOM_VALIDATION_TAGS_EXCLUSIVE.getPropertyType(),
+                BOM_VALIDATION_TAGS_EXCLUSIVE.getDescription()
+        );
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        qm.bind(project, List.of(qm.createTag("foo")));
+
+        final String encodedBom = Base64.getEncoder().encodeToString("""
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.2",
+                  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "foo",
+                      "name": "acme-library",
+                      "version": "1.0.0"
+                    }
+                  ]
+                }
+                """.getBytes());
+
+        Response response = jersey.target(V1_VEX).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity("""
+                        {
+                          "projectName": "acme-app",
+                          "projectVersion": "1.0.0",
+                          "vex": "%s"
+                        }
+                        """.formatted(encodedBom), MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        qm.bind(project, Collections.emptyList());
+
+        response = jersey.target(V1_VEX).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity("""
+                        {
+                          "projectName": "acme-app",
+                          "projectVersion": "1.0.0",
+                          "vex": "%s"
+                        }
+                        """.formatted(encodedBom), MediaType.APPLICATION_JSON));
+        assertThat(response.getStatus()).isEqualTo(400);
+    }
 }

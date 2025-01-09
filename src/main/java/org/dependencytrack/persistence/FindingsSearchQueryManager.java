@@ -25,7 +25,6 @@ import alpine.server.util.DbUtil;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.GroupedFinding;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -104,8 +103,7 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
         StringBuilder queryFilter = new StringBuilder();
         Map<String, Object> params = new HashMap<>();
         if (!showInactive) {
-            queryFilter.append(" WHERE (\"PROJECT\".\"ACTIVE\" = :active OR \"PROJECT\".\"ACTIVE\" IS NULL)");
-            params.put("active", true);
+            queryFilter.append(" WHERE (\"PROJECT\".\"INACTIVE_SINCE\" IS NULL)");
         }
         if (!showSuppressed) {
             if (queryFilter.isEmpty()) {
@@ -125,9 +123,9 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
         final List<Object[]> list = totalList.subList(this.pagination.getOffset(), Math.min(this.pagination.getOffset() + this.pagination.getLimit(), totalList.size()));
         final List<Finding> findings = new ArrayList<>();
         for (final Object[] o : list) {
-            final Finding finding = new Finding(UUID.fromString((String) o[29]), o);
-            final Component component = getObjectByUuid(Component.class, (String) finding.getComponent().get("uuid"));
-            final Vulnerability vulnerability = getObjectByUuid(Vulnerability.class, (String) finding.getVulnerability().get("uuid"));
+            final Finding finding = new Finding((UUID) o[29], o);
+            final Component component = getObjectByUuid(Component.class, finding.getComponent().get("uuid").toString());
+            final Vulnerability vulnerability = getObjectByUuid(Vulnerability.class, finding.getVulnerability().get("uuid").toString());
             final Analysis analysis = getAnalysis(component, vulnerability);
             final List<VulnerabilityAlias> aliases = detach(getVulnerabilityAliases(vulnerability));
             aliases.forEach(alias -> alias.setUuid(null));
@@ -162,8 +160,7 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
         StringBuilder queryFilter = new StringBuilder();
         Map<String, Object> params = new HashMap<>();
         if (!showInactive) {
-            queryFilter.append(" WHERE (\"PROJECT\".\"ACTIVE\" = :active OR \"PROJECT\".\"ACTIVE\" IS NULL)");
-            params.put("active", true);
+            queryFilter.append(" WHERE (\"PROJECT\".\"INACTIVE_SINCE\" IS NULL)");
         }
         processFilters(filters, queryFilter, params, true);
         final Query<Object[]> query = pm.newQuery(Query.SQL, GroupedFinding.QUERY + queryFilter + (this.orderBy != null ? " ORDER BY " + sortingAttributes.get(this.orderBy) + " " + (this.orderDirection == OrderDirection.DESCENDING ? " DESC" : "ASC") : ""));
@@ -343,31 +340,13 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
     }
 
     private void preprocessACLs(StringBuilder queryFilter, final Map<String, Object> params) {
-        if (!isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)
-                || hasAccessManagementPermission(this.principal)) {
-            return;
-        }
-
         if (queryFilter.isEmpty()) {
             queryFilter.append(" WHERE ");
         } else {
             queryFilter.append(" AND ");
         }
-
-        final var teamIds = new ArrayList<>(getTeamIds(principal));
-        if (teamIds.isEmpty()) {
-            queryFilter.append(":false");
-            params.put("false", false);
-            return;
-        }
-
-        queryFilter.append("""
-                EXISTS (
-                  SELECT 1
-                    FROM "PROJECT_ACCESS_TEAMS"
-                   WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
-                     AND "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ANY(:teamIds)
-                )""");
-        params.put("teamIds", teamIds.toArray(new Long[0]));
+        final Map.Entry<String, Map<String, Object>> projectAclConditionAndParams = getProjectAclSqlCondition();
+        queryFilter.append(projectAclConditionAndParams.getKey()).append(" ");
+        params.putAll(projectAclConditionAndParams.getValue());
     }
 }

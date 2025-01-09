@@ -24,15 +24,23 @@ import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
 import alpine.security.crypto.DataEncryption;
 import alpine.server.resources.AlpineResource;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
+import jakarta.ws.rs.core.Response;
+import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.ConfigPropertyAccessMode;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 import org.owasp.security.logging.SecurityMarkers;
 
-import javax.ws.rs.core.Response;
+import java.io.StringReader;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 abstract class AbstractConfigPropertyResource extends AlpineResource {
 
@@ -67,28 +75,28 @@ abstract class AbstractConfigPropertyResource extends AlpineResource {
 
         if (property.getPropertyType() == IConfigProperty.PropertyType.BOOLEAN) {
             boolean propertyValue = BooleanUtil.valueOf(json.getPropertyValue());
-            if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_HISTORY_ENABLED.getPropertyName().equals(json.getPropertyName())){
+            if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_HISTORY_ENABLED.getPropertyName().equals(json.getPropertyName())) {
                 super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Attribute \"" + json.getPropertyName() + "\" was changed to value: " + String.valueOf(propertyValue) + " by user " + super.getPrincipal().getName());
             }
             property.setPropertyValue(String.valueOf(BooleanUtil.valueOf(json.getPropertyValue())));
         } else if (property.getPropertyType() == IConfigProperty.PropertyType.INTEGER) {
             try {
                 int propertyValue = Integer.parseInt(json.getPropertyValue());
-                if(ConfigPropertyConstants.TASK_SCHEDULER_LDAP_SYNC_CADENCE.getGroupName().equals(json.getGroupName()) && propertyValue <= 0) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("A Task scheduler cadence ("+json.getPropertyName()+") cannot be inferior to one hour.A value of "+propertyValue+" was provided.").build();
+                if (ConfigPropertyConstants.TASK_SCHEDULER_LDAP_SYNC_CADENCE.getGroupName().equals(json.getGroupName()) && propertyValue <= 0) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("A Task scheduler cadence (" + json.getPropertyName() + ") cannot be inferior to one hour.A value of " + propertyValue + " was provided.").build();
                 }
-                if(ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD.getPropertyName().equals(json.getPropertyName()) && (propertyValue < 1 || propertyValue > 100)) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("Lucene index delta threshold ("+json.getPropertyName()+") cannot be inferior to 1 or superior to 100.A value of "+propertyValue+" was provided.").build();
+                if (ConfigPropertyConstants.SEARCH_INDEXES_CONSISTENCY_CHECK_DELTA_THRESHOLD.getPropertyName().equals(json.getPropertyName()) && (propertyValue < 1 || propertyValue > 100)) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Lucene index delta threshold (" + json.getPropertyName() + ") cannot be inferior to 1 or superior to 100.A value of " + propertyValue + " was provided.").build();
                 }
 
-                if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL.getPropertyName().equals(json.getPropertyName()) || 
-                    ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH.getPropertyName().equals(json.getPropertyName()) || 
-                    ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM.getPropertyName().equals(json.getPropertyName()) || 
-                    ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW.getPropertyName().equals(json.getPropertyName()) || 
-                    ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName().equals(json.getPropertyName())
-                ){
-                    if (propertyValue < 1 || propertyValue > 10){
-                        return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \""+json.getPropertyName()+"\" must be between 1 and 10. An invalid value of " + propertyValue + " was provided.").build();
+                if (ConfigPropertyConstants.CUSTOM_RISK_SCORE_CRITICAL.getPropertyName().equals(json.getPropertyName()) ||
+                        ConfigPropertyConstants.CUSTOM_RISK_SCORE_HIGH.getPropertyName().equals(json.getPropertyName()) ||
+                        ConfigPropertyConstants.CUSTOM_RISK_SCORE_MEDIUM.getPropertyName().equals(json.getPropertyName()) ||
+                        ConfigPropertyConstants.CUSTOM_RISK_SCORE_LOW.getPropertyName().equals(json.getPropertyName()) ||
+                        ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName().equals(json.getPropertyName())
+                ) {
+                    if (propertyValue < 1 || propertyValue > 10) {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("Risk score \"" + json.getPropertyName() + "\" must be between 1 and 10. An invalid value of " + propertyValue + " was provided.").build();
                     }
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Risk score \"" + json.getPropertyName() + "\" changed to value: " + propertyValue + " by user " + super.getPrincipal().getName());
                 }
@@ -134,6 +142,32 @@ abstract class AbstractConfigPropertyResource extends AlpineResource {
                     LOGGER.error("An error occurred while encrypting config property value", e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An error occurred while encrypting property value. Check log for details.").build();
                 }
+            }
+        } else if (ConfigPropertyConstants.BOM_VALIDATION_MODE.getPropertyName().equals(json.getPropertyName())) {
+            try {
+                BomValidationMode.valueOf(json.getPropertyValue());
+                property.setPropertyValue(json.getPropertyValue());
+            } catch (IllegalArgumentException e) {
+                return Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("Value must be any of: %s".formatted(Arrays.stream(BomValidationMode.values()).map(Enum::name).collect(Collectors.joining(", "))))
+                        .build();
+            }
+        } else if (ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE.getPropertyName().equals(json.getPropertyName())
+                || ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE.getPropertyName().equals(json.getPropertyName())) {
+            try {
+                final JsonReader jsonReader = Json.createReader(new StringReader(json.getPropertyValue()));
+                final JsonArray jsonArray = jsonReader.readArray();
+                jsonArray.getValuesAs(JsonString::getString);
+
+                // NB: Storing the string representation of the parsed array instead of the original value,
+                // since this removes any unnecessary whitespace.
+                property.setPropertyValue(jsonArray.toString());
+            } catch (RuntimeException e) {
+                return Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("Value must be a valid JSON array of strings")
+                        .build();
             }
         } else {
             property.setPropertyValue(json.getPropertyValue());

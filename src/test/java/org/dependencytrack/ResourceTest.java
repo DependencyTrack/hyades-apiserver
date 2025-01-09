@@ -26,17 +26,19 @@ import alpine.server.persistence.PersistenceManagerFactory;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
+import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.ws.rs.core.Response;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
+import jakarta.ws.rs.core.Response;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +57,7 @@ public abstract class ResourceTest {
     protected final String V1_CONFIG_PROPERTY = "/v1/configProperty";
     protected final String V1_CWE = "/v1/cwe";
     protected final String V1_DEPENDENCY = "/v1/dependency";
+    protected final String V1_EVENT = "/v1/event";
     protected final String V1_FINDING = "/v1/finding";
     protected final String V1_LDAP = "/v1/ldap";
     protected final String V1_LICENSE = "/v1/license";
@@ -67,6 +70,7 @@ public abstract class ResourceTest {
     protected final String V1_POLICY = "/v1/policy";
     protected final String V1_POLICY_VIOLATION = "/v1/violation";
     protected final String V1_PROJECT = "/v1/project";
+    protected final String V1_PROJECT_LATEST = "/v1/project/latest/";
     protected final String V1_REPOSITORY = "/v1/repository";
     protected final String V1_SCAN = "/v1/scan";
     protected final String V1_SEARCH = "/v1/search";
@@ -87,6 +91,7 @@ public abstract class ResourceTest {
     protected final String SIZE = "size";
     protected final String TOTAL_COUNT_HEADER = "X-Total-Count";
     protected final String X_API_KEY = "X-Api-Key";
+    protected final String API_KEY = "apiKey";
     protected final String V1_TAG = "/v1/tag";
 
     // Hashing is expensive. Do it once and re-use across tests as much as possible.
@@ -114,6 +119,7 @@ public abstract class ResourceTest {
 
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
+        PluginManagerTestUtil.loadPlugins();
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
         team = qm.createTeam("Test Users", true);
         this.apiKey = team.getApiKeys().get(0).getKey();
@@ -121,6 +127,8 @@ public abstract class ResourceTest {
 
     @After
     public void after() {
+        PluginManagerTestUtil.unloadPlugins();
+
         // PersistenceManager will refuse to close when there's an active transaction
         // that was neither committed nor rolled back. Unfortunately some areas of the
         // code base can leave such a broken state behind if they run into unexpected
@@ -148,6 +156,16 @@ public abstract class ResourceTest {
         }
         team.setPermissions(permissionList);
         qm.persist(team);
+    }
+
+    protected void enablePortfolioAccessControl() {
+        qm.createConfigProperty(
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                null
+        );
     }
 
     protected String getPlainTextBody(Response response) {

@@ -21,7 +21,7 @@ package org.dependencytrack.event.kafka;
 import alpine.Config;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.cyclonedx.proto.v1_4.Bom;
+import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
 import org.dependencytrack.proto.mirror.v1.EpssItem;
@@ -90,7 +90,7 @@ public final class KafkaTopics {
 
         @Override
         public String name() {
-            return Config.getInstance().getProperty(ConfigKey.KAFKA_TOPIC_PREFIX) + name;
+            return Config.getInstance().getProperty(ConfigKey.DT_KAFKA_TOPIC_PREFIX) + name;
         }
 
     }

@@ -40,6 +40,7 @@ import java.util.Optional;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.hamcrest.Matchers.equalTo;
 
 public class NotificationSubjectDaoTest extends PersistenceCapableTest {
@@ -104,8 +105,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         // Suppress vulnB, it should not appear in the query results.
         qm.makeAnalysis(component, vulnB, AnalysisState.FALSE_POSITIVE, null, null, null, true);
 
-        final List<NewVulnerabilitySubject> subjects = JdbiFactory.jdbi(qm).withExtension(NotificationSubjectDao.class,
-                dao -> dao.getForNewVulnerabilities(component.getUuid(), List.of(vulnA.getUuid(), vulnB.getUuid()),
+        final List<NewVulnerabilitySubject> subjects = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
+                .getForNewVulnerabilities(component.getUuid(), List.of(vulnA.getUuid(), vulnB.getUuid()),
                         VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
 
         assertThat(subjects).satisfiesExactly(subject ->
@@ -230,12 +231,12 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         analysis.setCvssV3Score(BigDecimal.valueOf(10.0));
         qm.persist(analysis);
 
-        final List<NewVulnerabilitySubject> subjects = JdbiFactory.jdbi(qm).withExtension(NotificationSubjectDao.class,
-                dao -> dao.getForNewVulnerabilities(component.getUuid(), List.of(vuln.getUuid()),
+        final List<NewVulnerabilitySubject> subjects = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
+                .getForNewVulnerabilities(component.getUuid(), List.of(vuln.getUuid()),
                         VulnerabilityAnalysisLevel.BOM_UPLOAD_ANALYSIS));
 
         assertThat(subjects).hasSize(1);
-        assertThatJson(JsonFormat.printer().print(subjects.get(0)))
+        assertThatJson(JsonFormat.printer().print(subjects.getFirst()))
                 .withMatcher("projectUuid", equalTo(project.getUuid().toString()))
                 .withMatcher("componentUuid", equalTo(component.getUuid().toString()))
                 .withMatcher("vulnUuid", equalTo(vuln.getUuid().toString()))
@@ -332,8 +333,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         // Suppress vulnB, it should not appear in the query results.
         qm.makeAnalysis(component, vulnB, AnalysisState.FALSE_POSITIVE, null, null, null, true);
 
-        final Optional<NewVulnerableDependencySubject> optionalSubject = JdbiFactory.jdbi(qm).withExtension(NotificationSubjectDao.class,
-                dao -> dao.getForNewVulnerableDependency(component.getUuid()));
+        final Optional<NewVulnerableDependencySubject> optionalSubject = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
+                .getForNewVulnerableDependency(component.getUuid()));
 
         assertThat(optionalSubject).isPresent();
         assertThatJson(JsonFormat.printer().print(optionalSubject.get()))
@@ -441,8 +442,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         analysis.setCvssV3Score(BigDecimal.valueOf(10.0));
         qm.persist(analysis);
 
-        final Optional<NewVulnerableDependencySubject> optionalSubject = JdbiFactory.jdbi(qm).withExtension(NotificationSubjectDao.class,
-                dao -> dao.getForNewVulnerableDependency(component.getUuid()));
+        final Optional<NewVulnerableDependencySubject> optionalSubject = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
+                .getForNewVulnerableDependency(component.getUuid()));
 
         assertThat(optionalSubject).isPresent();
         assertThatJson(JsonFormat.printer().print(optionalSubject.get()))
@@ -527,8 +528,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         // Suppress vulnB, it should not appear in the query results.
         var policyAnalysis = qm.makeAnalysis(component, vulnA, AnalysisState.NOT_AFFECTED, null, null, null, false);
 
-        final Optional<VulnerabilityAnalysisDecisionChangeSubject> optionalSubject = JdbiFactory.jdbi(qm).withExtension(NotificationSubjectDao.class,
-                dao -> dao.getForProjectAuditChange(component.getUuid(), vulnA.getUuid(), policyAnalysis.getAnalysisState(), policyAnalysis.isSuppressed()));
+        final Optional<VulnerabilityAnalysisDecisionChangeSubject> optionalSubject = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
+                .getForProjectAuditChange(component.getUuid(), vulnA.getUuid(), policyAnalysis.getAnalysisState(), policyAnalysis.isSuppressed()));
 
         assertThat(optionalSubject.get()).satisfies(subject ->
                 assertThatJson(JsonFormat.printer().print(subject))

@@ -33,11 +33,11 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.UUID;
 
 public class PermissionResourceTest extends ResourceTest {
@@ -64,7 +64,7 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
-        Assert.assertEquals(12, json.size());
+        Assert.assertEquals(38, json.size());
         Assert.assertEquals("ACCESS_MANAGEMENT", json.getJsonObject(0).getString("name"));
         Assert.assertEquals("Allows the management of users, teams, and API keys", json.getJsonObject(0).getString("description"));
     }

@@ -1,5 +1,5 @@
 CREATE OR REPLACE PROCEDURE "UPDATE_COMPONENT_METRICS"(
-  "component_uuid" VARCHAR
+  "component_uuid" UUID
 )
   LANGUAGE "plpgsql"
 AS
@@ -202,10 +202,15 @@ BEGIN
     + "v_policy_violations_security_audited";
   "v_policy_violations_unaudited" = "v_policy_violations_total" - "v_policy_violations_audited";
 
+  WITH "CTE_LATEST_METRICS" AS (
+    SELECT *
+      FROM "DEPENDENCYMETRICS"
+     WHERE "COMPONENT_ID" = "v_component"."ID"
+     ORDER BY "LAST_OCCURRENCE" DESC
+     LIMIT 1)
   SELECT "ID"
-  FROM "DEPENDENCYMETRICS"
-  WHERE "COMPONENT_ID" = "v_component"."ID"
-    AND "VULNERABILITIES" = "v_vulnerabilities"
+  FROM "CTE_LATEST_METRICS"
+  WHERE "VULNERABILITIES" = "v_vulnerabilities"
     AND "CRITICAL" = "v_critical"
     AND "HIGH" = "v_high"
     AND "MEDIUM" = "v_medium"
@@ -231,7 +236,6 @@ BEGIN
     AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
     AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
     AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
-  ORDER BY "LAST_OCCURRENCE" DESC
   LIMIT 1
   INTO "v_existing_id";
 

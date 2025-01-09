@@ -20,22 +20,43 @@ package org.dependencytrack.common;
 
 import alpine.Config;
 import alpine.model.ConfigProperty;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 
 import javax.jdo.Query;
 import java.util.UUID;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static java.util.Objects.requireNonNull;
 
 public final class ClusterInfo {
 
-    private static final Supplier<String> CLUSTER_ID_SUPPLIER = Suppliers.memoize(ClusterInfo::loadClusterId);
+    private static final ReadWriteLock LOCK = new ReentrantReadWriteLock();
+    private static String clusterId;
 
     public static String getClusterId() {
-        return CLUSTER_ID_SUPPLIER.get();
+        LOCK.readLock().lock();
+        try {
+            if (clusterId == null) {
+                LOCK.readLock().unlock();
+
+                LOCK.writeLock().lock();
+                try {
+                    if (clusterId == null) {
+                        clusterId = loadClusterId();
+                    }
+
+                    LOCK.readLock().lock();
+                } finally {
+                    LOCK.writeLock().unlock();
+                }
+            }
+
+            return clusterId;
+        } finally {
+            LOCK.readLock().unlock();
+        }
     }
 
     private static String loadClusterId() {
