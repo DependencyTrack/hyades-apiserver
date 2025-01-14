@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.framework;
 
-public class NonDeterministicWorkflowException extends WorkflowException {
+public final class NonDeterministicWorkflowException extends WorkflowException {
 
     NonDeterministicWorkflowException(final String message) {
         super(message);

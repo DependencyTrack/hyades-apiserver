@@ -24,10 +24,10 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWo
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.Awaitable;
 import org.dependencytrack.workflow.framework.RetryPolicy;
-import org.dependencytrack.workflow.framework.WorkflowRunBlockedException;
 import org.dependencytrack.workflow.framework.WorkflowRunContext;
 import org.dependencytrack.workflow.framework.WorkflowRunner;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
+import org.dependencytrack.workflow.framework.failure.WorkflowFailureException;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -70,12 +70,7 @@ public class PublishNotificationWorkflow implements WorkflowRunner<PublishNotifi
 
             try {
                 awaitable.await();
-            } catch (RuntimeException e) {
-                // TODO: Remove this check once proper activity failure handling is in place.
-                if (e instanceof WorkflowRunBlockedException) {
-                    throw e;
-                }
-
+            } catch (WorkflowFailureException e) {
                 ctx.logger().warn("Failed to publish notification for rule {}", ruleName, e);
             }
         }

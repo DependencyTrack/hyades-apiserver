@@ -16,16 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.framework;
+package org.dependencytrack.workflow.framework.failure;
 
-public class TerminalActivityException extends WorkflowException {
+public sealed class WorkflowFailureException extends RuntimeException permits
+        ActivityFailureException,
+        ApplicationFailureException,
+        CancellationFailureException,
+        SideEffectFailureException,
+        SubWorkflowFailureException {
 
-    public TerminalActivityException(final String message, Throwable cause) {
+    private final String originalMessage;
+
+    WorkflowFailureException(final String message, final String originalMessage, final Throwable cause) {
         super(message, cause);
+        this.originalMessage = originalMessage != null ? originalMessage : message;
     }
 
-    public TerminalActivityException(final String message) {
-        super(message);
+    String getOriginalMessage() {
+        return originalMessage;
     }
 
 }

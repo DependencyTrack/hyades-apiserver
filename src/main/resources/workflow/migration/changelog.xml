@@ -134,6 +134,10 @@
                    , activity_name
                    , locked_until);
 
+            <!--
+              TODO: Reduce fillfactor?
+              https://www.cybertec-postgresql.com/en/what-is-fillfactor-and-how-does-it-affect-postgresql-performance/
+            -->
             alter table workflow_run set (autovacuum_vacuum_scale_factor = 0.02);
             alter table workflow_concurrency_group set (autovacuum_vacuum_scale_factor = 0.02);
             alter table workflow_run_inbox set (autovacuum_vacuum_scale_factor = 0.02);

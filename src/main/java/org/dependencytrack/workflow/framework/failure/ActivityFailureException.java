@@ -16,12 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.framework;
+package org.dependencytrack.workflow.framework.failure;
 
-public final class WorkflowRunBlockedException extends WorkflowException {
+public final class ActivityFailureException extends WorkflowFailureException {
 
-    WorkflowRunBlockedException() {
-        super();
+    private final String activityName;
+    private final int activityVersion;
+
+    public ActivityFailureException(final String activityName, final int activityVersion, final Throwable cause) {
+        super("Activity %s v%d failed".formatted(activityName, activityVersion), null, cause);
+        this.activityName = activityName;
+        this.activityVersion = activityVersion;
+    }
+
+    public String getActivityName() {
+        return activityName;
+    }
+
+    public int getActivityVersion() {
+        return activityVersion;
     }
 
 }

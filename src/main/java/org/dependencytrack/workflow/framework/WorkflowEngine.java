@@ -25,7 +25,6 @@ import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskFailed;
@@ -43,6 +42,7 @@ import org.dependencytrack.workflow.framework.TaskAction.CompleteWorkflowTaskAct
 import org.dependencytrack.workflow.framework.TaskAction.FailActivityTaskAction;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
+import org.dependencytrack.workflow.framework.failure.FailureConverter;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
 import org.dependencytrack.workflow.framework.persistence.WorkflowDao;
 import org.dependencytrack.workflow.framework.persistence.mapping.PolledActivityTaskRowMapper;
@@ -963,7 +963,7 @@ public class WorkflowEngine implements Closeable {
                             .setTimestamp(toTimestamp(action.timestamp()))
                             .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
                                     .setTaskScheduledEventId(action.task().scheduledEventId())
-                                    .setFailureDetails(ExceptionUtils.getMessage(action.exception()))
+                                    .setFailure(FailureConverter.toFailure(action.exception()))
                                     .build())
                             .build()));
         }

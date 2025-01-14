@@ -18,11 +18,12 @@
  */
 package org.dependencytrack.workflow.framework;
 
+import com.google.protobuf.DebugFormat;
 import com.google.protobuf.Timestamp;
 import io.github.resilience4j.core.IntervalFunction;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskFailed;
+import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.RunCancelled;
 import org.dependencytrack.proto.workflow.v1alpha1.RunResumed;
 import org.dependencytrack.proto.workflow.v1alpha1.RunScheduled;
@@ -31,6 +32,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.RunSuspended;
 import org.dependencytrack.proto.workflow.v1alpha1.SideEffectExecuted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunFailed;
+import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.TimerElapsed;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
@@ -41,6 +43,12 @@ import org.dependencytrack.workflow.framework.WorkflowCommand.ScheduleSubWorkflo
 import org.dependencytrack.workflow.framework.WorkflowCommand.ScheduleTimerCommand;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
+import org.dependencytrack.workflow.framework.failure.ActivityFailureException;
+import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
+import org.dependencytrack.workflow.framework.failure.CancellationFailureException;
+import org.dependencytrack.workflow.framework.failure.FailureConverter;
+import org.dependencytrack.workflow.framework.failure.SideEffectFailureException;
+import org.dependencytrack.workflow.framework.failure.SubWorkflowFailureException;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
 import org.dependencytrack.workflow.framework.payload.VoidPayloadConverter;
 import org.slf4j.Logger;
@@ -77,6 +85,7 @@ public final class WorkflowRunContext<A, R> {
     private final List<WorkflowEvent> journal;
     private final List<WorkflowEvent> inbox;
     private final List<WorkflowEvent> suspendedEvents;
+    private final Map<Integer, WorkflowEvent> eventByEventId;
     private final Map<Integer, WorkflowCommand> pendingCommandByEventId;
     private final Map<Integer, Awaitable<?>> pendingAwaitableByEventId;
     private final Map<String, Queue<Awaitable<?>>> pendingAwaitablesByExternalEventId;
@@ -112,6 +121,7 @@ public final class WorkflowRunContext<A, R> {
         this.journal = journal;
         this.inbox = inbox;
         this.suspendedEvents = new ArrayList<>();
+        this.eventByEventId = new HashMap<>();
         this.pendingCommandByEventId = new HashMap<>();
         this.pendingAwaitableByEventId = new HashMap<>();
         this.pendingAwaitablesByExternalEventId = new HashMap<>();
@@ -208,7 +218,9 @@ public final class WorkflowRunContext<A, R> {
                 resultConverter,
                 initialAwaitable,
                 exception -> {
-                    if (exception instanceof TerminalActivityException) {
+                    if (exception instanceof final ActivityFailureException activityException
+                        && activityException.getCause() instanceof final ApplicationFailureException applicationException
+                        && applicationException.isTerminal()) {
                         throw exception;
                     } else if (retryPolicy.maxAttempts() > 0 && attempt + 1 > retryPolicy.maxAttempts()) {
                         logger().warn("Max retry attempts ({}) exceeded", retryPolicy.maxAttempts());
@@ -332,7 +344,7 @@ public final class WorkflowRunContext<A, R> {
                         name, eventId, resultPayload));
                 awaitable.complete(resultPayload);
             } catch (RuntimeException e) {
-                awaitable.completeExceptionally(e);
+                awaitable.completeExceptionally(new SideEffectFailureException(name, e));
             } finally {
                 isInSideEffect = false;
             }
@@ -359,7 +371,7 @@ public final class WorkflowRunContext<A, R> {
         }
 
         if (timeout.equals(Duration.ZERO)) {
-            awaitable.cancel();
+            awaitable.cancel("Timed out while waiting for external event");
             return awaitable;
         }
 
@@ -373,7 +385,7 @@ public final class WorkflowRunContext<A, R> {
         });
 
         scheduleTimer("External event %s wait timeout".formatted(externalEventId), timeout).onComplete(ignored -> {
-            awaitable.cancel();
+            awaitable.cancel("Timed out while waiting for external event");
 
             pendingAwaitablesByExternalEventId.computeIfPresent(externalEventId, (ignoredKey, awaitables) -> {
                 awaitables.remove(awaitable);
@@ -422,6 +434,10 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void processEvent(final WorkflowEvent event) {
+        if (event.getId() >= 0) {
+            eventByEventId.put(event.getId(), event);
+        }
+
         if (isSuspended && !event.hasRunResumed() && !event.hasRunCancelled()) {
             if (event.hasRunSuspended()) {
                 logger().warn("""
@@ -557,19 +573,34 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void onActivityTaskFailed(final ActivityTaskFailed subject) {
-        final int eventId = subject.getTaskScheduledEventId();
-        logger().debug("Activity task failed for event ID {}", eventId);
+        final int scheduledEventId = subject.getTaskScheduledEventId();
+        logger().debug("Activity task failed for event ID {}", scheduledEventId);
 
-        final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
+        final WorkflowEvent scheduledEvent = eventByEventId.get(scheduledEventId);
+        if (scheduledEvent == null || !scheduledEvent.hasActivityTaskScheduled()) {
+            throw new NonDeterministicWorkflowException(
+                    "Expected event with ID %d to be of type %s, but got: %s".formatted(
+                            scheduledEventId,
+                            ActivityTaskScheduled.class.getSimpleName(),
+                            scheduledEvent != null ?
+                                    DebugFormat.singleLine().toString(scheduledEvent)
+                                    : null));
+        }
+
+        final Awaitable<?> awaitable = pendingAwaitableByEventId.get(scheduledEventId);
         if (awaitable == null) {
             throw new NonDeterministicWorkflowException("""
                     Encountered ActivityTaskFailed event for event ID %d, \
-                    but no pending awaitable exists for it""".formatted(eventId));
+                    but no pending awaitable exists for it""".formatted(scheduledEventId));
         }
 
-        // TODO: Reconstruct exception
-        awaitable.completeExceptionally(new RuntimeException(subject.getFailureDetails()));
-        pendingAwaitableByEventId.remove(eventId);
+        final var exception = new ActivityFailureException(
+                scheduledEvent.getActivityTaskScheduled().getName(),
+                /* TODO: activityVersion */ -1,
+                FailureConverter.toException(subject.getFailure()));
+
+        awaitable.completeExceptionally(exception);
+        pendingAwaitableByEventId.remove(scheduledEventId);
     }
 
     private void onSubWorkflowRunScheduled(final int eventId) {
@@ -606,19 +637,35 @@ public final class WorkflowRunContext<A, R> {
     }
 
     private void onSubWorkflowRunFailed(final SubWorkflowRunFailed subject) {
-        final int eventId = subject.getRunScheduledEventId();
-        logger().debug("Sub workflow run failed for event ID {}", eventId);
+        final int scheduledEventId = subject.getRunScheduledEventId();
+        logger().debug("Sub workflow run failed for event ID {}", scheduledEventId);
 
-        final Awaitable<?> awaitable = pendingAwaitableByEventId.get(eventId);
-        if (awaitable == null) {
-            throw new NonDeterministicWorkflowException("""
-                    Encountered SubWorkflowRunFailed event for event ID %d, \
-                    but no pending awaitable exists for it""".formatted(eventId));
+        final WorkflowEvent scheduledEvent = eventByEventId.get(scheduledEventId);
+        if (scheduledEvent == null || !scheduledEvent.hasSubWorkflowRunScheduled()) {
+            throw new NonDeterministicWorkflowException(
+                    "Expected event with ID %d to be of type %s, but got: %s".formatted(
+                            scheduledEventId,
+                            SubWorkflowRunScheduled.class.getSimpleName(),
+                            scheduledEvent != null ?
+                                    DebugFormat.singleLine().toString(scheduledEvent)
+                                    : null));
         }
 
-        // TODO: Reconstruct exception
-        awaitable.completeExceptionally(new RuntimeException(subject.getFailureDetails()));
-        pendingAwaitableByEventId.remove(eventId);
+        final Awaitable<?> awaitable = pendingAwaitableByEventId.get(scheduledEventId);
+        if (awaitable == null) {
+            throw new NonDeterministicWorkflowException(
+                    "Encountered %s event for event ID %d, but no pending awaitable exists for it".formatted(
+                            SubWorkflowRunFailed.class.getSimpleName(), scheduledEventId));
+        }
+
+        final var exception = new SubWorkflowFailureException(
+                UUID.fromString(scheduledEvent.getSubWorkflowRunScheduled().getRunId()),
+                scheduledEvent.getSubWorkflowRunScheduled().getWorkflowName(),
+                scheduledEvent.getSubWorkflowRunScheduled().getWorkflowVersion(),
+                FailureConverter.toException(subject.getFailure()));
+
+        awaitable.completeExceptionally(exception);
+        pendingAwaitableByEventId.remove(scheduledEventId);
     }
 
     private void onTimerScheduled(final int eventId) {
@@ -713,7 +760,7 @@ public final class WorkflowRunContext<A, R> {
                         eventId,
                         WorkflowRunStatus.CANCELLED,
                         /* result */ null,
-                        reason));
+                        FailureConverter.toFailure(new CancellationFailureException(reason))));
 
         isSuspended = false;
     }
@@ -729,7 +776,7 @@ public final class WorkflowRunContext<A, R> {
                         eventId,
                         WorkflowRunStatus.COMPLETED,
                         resultConverter.convertToPayload(result),
-                        /* failureDetails */ null));
+                        /* failure */ null));
     }
 
     private void fail(final Throwable exception) {
@@ -743,7 +790,7 @@ public final class WorkflowRunContext<A, R> {
                         eventId,
                         WorkflowRunStatus.FAILED,
                         /* result */ null,
-                        ExceptionUtils.getMessage(exception)));
+                        FailureConverter.toFailure(exception)));
     }
 
     private void assertNotInSideEffect(final String message) {

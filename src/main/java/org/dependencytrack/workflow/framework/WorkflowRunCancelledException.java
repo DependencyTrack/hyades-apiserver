@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.framework;
 
-public class WorkflowRunCancelledException extends WorkflowException {
+final class WorkflowRunCancelledException extends WorkflowException {
 
     WorkflowRunCancelledException(final String message) {
         super(message);

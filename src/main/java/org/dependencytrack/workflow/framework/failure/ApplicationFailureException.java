@@ -16,12 +16,19 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.framework;
+package org.dependencytrack.workflow.framework.failure;
 
-public final class WorkflowRunBlockedException extends WorkflowException {
+public final class ApplicationFailureException extends WorkflowFailureException {
 
-    WorkflowRunBlockedException() {
-        super();
+    private final boolean isTerminal;
+
+    public ApplicationFailureException(final String message, final Throwable cause, final boolean isTerminal) {
+        super(message, null, cause);
+        this.isTerminal = isTerminal;
+    }
+
+    public boolean isTerminal() {
+        return isTerminal;
     }
 
 }

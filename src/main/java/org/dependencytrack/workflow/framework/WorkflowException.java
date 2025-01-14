@@ -28,8 +28,4 @@ public class WorkflowException extends RuntimeException {
         super(message);
     }
 
-    WorkflowException(final String message, final Throwable cause) {
-        super(message, cause);
-    }
-
 }

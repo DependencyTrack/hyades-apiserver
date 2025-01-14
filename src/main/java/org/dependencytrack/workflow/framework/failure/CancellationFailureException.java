@@ -16,12 +16,19 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.framework;
+package org.dependencytrack.workflow.framework.failure;
 
-public final class WorkflowRunBlockedException extends WorkflowException {
+public final class CancellationFailureException extends WorkflowFailureException {
 
-    WorkflowRunBlockedException() {
-        super();
+    private final String reason;
+
+    public CancellationFailureException(final String reason) {
+        super("Cancelled with reason: %s".formatted(reason), reason, null);
+        this.reason = reason;
+    }
+
+    public String getReason() {
+        return reason;
     }
 
 }

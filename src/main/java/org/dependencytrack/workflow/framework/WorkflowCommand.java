@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.framework;
 
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowFailure;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
 import java.time.Instant;
@@ -40,7 +41,7 @@ sealed interface WorkflowCommand permits
             int eventId,
             WorkflowRunStatus status,
             WorkflowPayload result,
-            String failureDetails) implements WorkflowCommand {
+            WorkflowFailure failure) implements WorkflowCommand {
     }
 
     record RecordSideEffectResultCommand(

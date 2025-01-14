@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.framework;
 
+import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
+
 import java.security.SecureRandom;
 import java.util.Optional;
 
@@ -37,7 +39,7 @@ public class FaultInjectingActivityRunner<A, R> implements ActivityRunner<A, R> 
             Thread.sleep(random.nextInt(10, 1000));
 
             if (random.nextDouble() < 0.3) {
-                throw new TerminalActivityException("Oh no, this looks permanently broken!");
+                throw new ApplicationFailureException("Oh no, this looks permanently broken!", null, true);
             }
 
             throw new IllegalStateException("I have the feeling this might resolve soon!");

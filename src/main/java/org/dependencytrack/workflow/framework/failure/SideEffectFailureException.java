@@ -16,12 +16,19 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.framework;
+package org.dependencytrack.workflow.framework.failure;
 
-public final class WorkflowRunBlockedException extends WorkflowException {
+public final class SideEffectFailureException extends WorkflowFailureException {
 
-    WorkflowRunBlockedException() {
-        super();
+    private final String sideEffectName;
+
+    public SideEffectFailureException(final String sideEffectName, final Throwable cause) {
+        super("Side effect %s failed".formatted(sideEffectName), null, cause);
+        this.sideEffectName = sideEffectName;
+    }
+
+    public String getSideEffectName() {
+        return sideEffectName;
     }
 
 }

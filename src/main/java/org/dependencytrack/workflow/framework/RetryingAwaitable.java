@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.framework;
 
+import org.dependencytrack.workflow.framework.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
 
 import java.util.Optional;
@@ -28,13 +29,13 @@ import static java.util.Objects.requireNonNull;
 final class RetryingAwaitable<T> extends Awaitable<T> {
 
     private final Awaitable<T> initialAwaitable;
-    private final Function<RuntimeException, Awaitable<T>> retryAwaitableFunction;
+    private final Function<WorkflowFailureException, Awaitable<T>> retryAwaitableFunction;
 
     RetryingAwaitable(
             final WorkflowRunContext<?, ?> executionContext,
             final PayloadConverter<T> resultConverter,
             final Awaitable<T> initialAwaitable,
-            final Function<RuntimeException, Awaitable<T>> retryAwaitableFunction) {
+            final Function<WorkflowFailureException, Awaitable<T>> retryAwaitableFunction) {
         super(executionContext, resultConverter);
         this.initialAwaitable = requireNonNull(initialAwaitable, "initialAwaitable must not be null");
         this.retryAwaitableFunction = requireNonNull(retryAwaitableFunction, "retryAwaitableFunction must not be null");
@@ -44,11 +45,7 @@ final class RetryingAwaitable<T> extends Awaitable<T> {
     public Optional<T> await() {
         try {
             return initialAwaitable.await();
-        } catch (RuntimeException e) {
-            if (e instanceof WorkflowRunBlockedException) {
-                throw e;
-            }
-
+        } catch (WorkflowFailureException e) {
             return retryAwaitableFunction.apply(e).await();
         }
     }

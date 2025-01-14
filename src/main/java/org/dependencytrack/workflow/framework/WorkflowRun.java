@@ -31,6 +31,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowRunScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.TimerElapsed;
 import org.dependencytrack.proto.workflow.v1alpha1.TimerScheduled;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowFailure;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.framework.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.workflow.framework.WorkflowCommand.RecordSideEffectResultCommand;
@@ -64,7 +65,7 @@ public class WorkflowRun {
     private WorkflowEvent completedEvent;
     private WorkflowPayload argument;
     private WorkflowPayload result;
-    private String failureDetails;
+    private WorkflowFailure failure;
     private WorkflowRunStatus status = WorkflowRunStatus.PENDING;
     private String customStatus;
     private Instant createdAt;
@@ -141,8 +142,8 @@ public class WorkflowRun {
         return Optional.ofNullable(result);
     }
 
-    Optional<String> failureDetails() {
-        return Optional.ofNullable(failureDetails);
+    Optional<WorkflowFailure> failure() {
+        return Optional.ofNullable(failure);
     }
 
     Optional<Instant> createdAt() {
@@ -209,8 +210,8 @@ public class WorkflowRun {
                 result = event.getRunCompleted().hasResult()
                         ? event.getRunCompleted().getResult()
                         : null;
-                failureDetails = event.getRunCompleted().hasFailureDetails()
-                        ? event.getRunCompleted().getFailureDetails()
+                failure = event.getRunCompleted().hasFailure()
+                        ? event.getRunCompleted().getFailure()
                         : null;
                 completedAt = WorkflowEngine.toInstant(event.getTimestamp());
             }
@@ -264,8 +265,8 @@ public class WorkflowRun {
             } else if (command.status() == WorkflowRunStatus.CANCELLED || command.status() == WorkflowRunStatus.FAILED) {
                 final var subWorkflowFailedBuilder = SubWorkflowRunFailed.newBuilder()
                         .setRunScheduledEventId(parentRun.getSubWorkflowRunScheduledEventId());
-                if (command.failureDetails() != null) {
-                    subWorkflowFailedBuilder.setFailureDetails(command.failureDetails());
+                if (command.failure() != null) {
+                    subWorkflowFailedBuilder.setFailure(command.failure());
                 }
                 subWorkflowEventBuilder.setSubWorkflowRunFailed(
                         subWorkflowFailedBuilder.build());
@@ -281,8 +282,8 @@ public class WorkflowRun {
         if (command.result() != null) {
             subjectBuilder.setResult(command.result());
         }
-        if (command.failureDetails() != null) {
-            subjectBuilder.setFailureDetails(command.failureDetails());
+        if (command.failure() != null) {
+            subjectBuilder.setFailure(command.failure());
         }
 
         onEvent(WorkflowEvent.newBuilder()

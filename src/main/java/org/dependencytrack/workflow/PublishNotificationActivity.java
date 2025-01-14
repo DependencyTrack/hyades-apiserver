@@ -26,8 +26,8 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationAc
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.ActivityRunContext;
 import org.dependencytrack.workflow.framework.ActivityRunner;
-import org.dependencytrack.workflow.framework.TerminalActivityException;
 import org.dependencytrack.workflow.framework.annotation.Activity;
+import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -57,14 +57,14 @@ public class PublishNotificationActivity implements ActivityRunner<PublishNotifi
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             notificationBytes = fileStorage.get(args.getNotificationFileMetadata());
         } catch (FileNotFoundException e) {
-            throw new TerminalActivityException("Notification file does not exist", e);
+            throw new ApplicationFailureException("Notification file does not exist", e, true);
         }
 
         final Notification notification;
         try {
             notification = Notification.parseFrom(notificationBytes);
         } catch (InvalidProtocolBufferException e) {
-            throw new TerminalActivityException("Failed to parse notification", e);
+            throw new ApplicationFailureException("Failed to parse notification", e, true);
         }
 
         final PublishContext publishContext = getPublishContext(args.getNotificationRuleName());

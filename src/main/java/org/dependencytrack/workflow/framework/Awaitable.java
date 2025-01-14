@@ -19,11 +19,14 @@
 package org.dependencytrack.workflow.framework;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.framework.failure.CancellationFailureException;
+import org.dependencytrack.workflow.framework.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
 
 import java.util.Optional;
-import java.util.concurrent.CancellationException;
 import java.util.function.Consumer;
+
+import static java.util.Objects.requireNonNull;
 
 public class Awaitable<T> {
 
@@ -31,10 +34,11 @@ public class Awaitable<T> {
     private final PayloadConverter<T> resultConverter;
     private boolean completed;
     private boolean cancelled;
+    private String cancelReason;
     private Consumer<T> completeCallback;
-    private Consumer<RuntimeException> errorCallback;
+    private Consumer<WorkflowFailureException> errorCallback;
     private T result;
-    private RuntimeException exception;
+    private WorkflowFailureException exception;
 
     Awaitable(
             final WorkflowRunContext<?, ?> executionContext,
@@ -43,13 +47,19 @@ public class Awaitable<T> {
         this.resultConverter = resultConverter;
     }
 
+    /**
+     * @return An {@link Optional} wrapping the {@link Awaitable}'s result, if any.
+     * @throws WorkflowRunBlockedException If the {@link Awaitable} can not yet be resolved.
+     *                                     This exception should <strong>never</strong> be caught!
+     * @throws WorkflowFailureException    If the {@link Awaitable} was completed exceptionally.
+     */
     public Optional<T> await() {
         do {
             if (completed) {
                 if (exception != null) {
                     throw exception;
                 } else if (cancelled) {
-                    throw new CancellationException();
+                    throw new CancellationFailureException(cancelReason);
                 }
 
                 return Optional.ofNullable(result);
@@ -69,10 +79,11 @@ public class Awaitable<T> {
         if (completeCallback != null) {
             completeCallback.accept(this.result);
         }
+
         return true;
     }
 
-    boolean completeExceptionally(final RuntimeException exception) {
+    boolean completeExceptionally(final WorkflowFailureException exception) {
         if (completed) {
             return false;
         }
@@ -82,16 +93,21 @@ public class Awaitable<T> {
         if (errorCallback != null) {
             errorCallback.accept(this.exception);
         }
+
         return true;
     }
 
-    boolean cancel() {
+    boolean cancel(final String reason) {
+        requireNonNull(reason, "reason must not be null");
+
         if (completed) {
             return false;
         }
 
         this.completed = true;
         this.cancelled = true;
+        this.cancelReason = reason;
+
         return true;
     }
 
@@ -99,7 +115,7 @@ public class Awaitable<T> {
         this.completeCallback = callback;
     }
 
-    void onError(final Consumer<RuntimeException> callback) {
+    void onError(final Consumer<WorkflowFailureException> callback) {
         this.errorCallback = callback;
     }
 
