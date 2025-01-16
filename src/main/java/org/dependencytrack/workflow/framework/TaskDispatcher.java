@@ -216,7 +216,7 @@ final class TaskDispatcher<T extends Task> implements Runnable {
         final List<Tag> commonTags = List.of(
                 Tag.of("taskType", switch (taskProcessor) {
                     case ActivityTaskProcessor<?, ?> ignored -> "activity";
-                    case WorkflowTaskProcessor<?, ?> ignored -> "workflow";
+                    case WorkflowRunTaskProcessor<?, ?> ignored -> "workflow";
                 }),
                 Tag.of("taskName", taskProcessor.taskName()));
 

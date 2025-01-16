@@ -113,12 +113,12 @@ public class WorkflowEngineInitializer implements ServletContextListener {
             config.taskActionBuffer().setMaxBatchSize(taskActionBufferMaxBatchSize);
         }
 
-        final int workflowTaskDispatcherMinPollIntervalMillis = Config.getInstance().getPropertyAsInt(
+        final int workflowRunTaskDispatcherMinPollIntervalMillis = Config.getInstance().getPropertyAsInt(
                 ConfigKey.WORKFLOW_ENGINE_WORKFLOW_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS);
         final int activityTaskDispatcherMinPollIntervalMillis = Config.getInstance().getPropertyAsInt(
                 ConfigKey.WORKFLOW_ENGINE_ACTIVITY_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS);
-        if (workflowTaskDispatcherMinPollIntervalMillis >= 0) {
-            config.workflowTaskDispatcher().setMinPollInterval(Duration.ofMillis(workflowTaskDispatcherMinPollIntervalMillis));
+        if (workflowRunTaskDispatcherMinPollIntervalMillis >= 0) {
+            config.workflowRunTaskDispatcher().setMinPollInterval(Duration.ofMillis(workflowRunTaskDispatcherMinPollIntervalMillis));
         }
         if (activityTaskDispatcherMinPollIntervalMillis >= 0) {
             config.activityTaskDispatcher().setMinPollInterval(Duration.ofMillis(activityTaskDispatcherMinPollIntervalMillis));

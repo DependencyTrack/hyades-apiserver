@@ -27,14 +27,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -53,6 +52,7 @@ final class Buffer<T> implements Closeable {
     private final Consumer<List<T>> batchConsumer;
     private final int maxBatchSize;
     private final BlockingQueue<BufferedItem<T>> bufferedItems;
+    private final List<BufferedItem<T>> currentBatch;
     private final ScheduledExecutorService flushExecutor;
     private final Duration flushInterval;
     private final ReentrantLock flushLock;
@@ -69,7 +69,8 @@ final class Buffer<T> implements Closeable {
         this.name = name;
         this.batchConsumer = batchConsumer;
         this.maxBatchSize = maxBatchSize;
-        this.bufferedItems = new LinkedBlockingQueue<>();
+        this.bufferedItems = new ArrayBlockingQueue<>(maxBatchSize);
+        this.currentBatch = new ArrayList<>(maxBatchSize);
         this.flushExecutor = Executors.newSingleThreadScheduledExecutor();
         this.flushInterval = flushInterval;
         this.flushLock = new ReentrantLock();
@@ -79,13 +80,16 @@ final class Buffer<T> implements Closeable {
     public void start() {
         maybeInitializeMeters();
 
-        flushExecutor.scheduleAtFixedRate(this::maybeFlush, flushInterval.toMillis(),
-                flushInterval.toMillis(), TimeUnit.MILLISECONDS);
+        flushExecutor.scheduleAtFixedRate(
+                this::maybeFlush,
+                flushInterval.toMillis(),
+                flushInterval.toMillis(),
+                TimeUnit.MILLISECONDS);
     }
 
     @Override
-    public void close() throws IOException {
-        LOGGER.debug("{}: Closing buffer", name);
+    public void close() {
+        LOGGER.debug("{}: Closing", name);
 
         LOGGER.debug("{}: Waiting for flush executor to stop", name);
         flushExecutor.close();
@@ -100,7 +104,7 @@ final class Buffer<T> implements Closeable {
         final boolean added = bufferedItems.offer(
                 new BufferedItem<>(item, future), 5, TimeUnit.SECONDS);
         if (!added) {
-            throw new TimeoutException("Timed out while waiting for buffer to accept the item");
+            throw new TimeoutException("Timed out while waiting for buffer queue to accept the item");
         }
 
         // TODO: Flush NOW when capacity is reached?
@@ -116,36 +120,37 @@ final class Buffer<T> implements Closeable {
                 return;
             }
 
-            final var batch = new ArrayList<BufferedItem<T>>(maxBatchSize);
-            bufferedItems.drainTo(batch, maxBatchSize);
+            bufferedItems.drainTo(currentBatch, maxBatchSize);
 
             if (batchSizeDistribution != null) {
-                batchSizeDistribution.record(batch.size());
+                batchSizeDistribution.record(currentBatch.size());
             }
 
-            LOGGER.debug("{}: Flushing batch of {} items", name, batch.size());
+            LOGGER.debug("{}: Flushing batch of {} items", name, currentBatch.size());
             final Timer.Sample flushLatencySample = Timer.start();
             try {
-                batchConsumer.accept(batch.stream().map(BufferedItem::item).collect(Collectors.toList()));
-                for (final BufferedItem<T> bufferedItem : batch) {
-                    bufferedItem.future.complete(null);
+                batchConsumer.accept(currentBatch.stream().map(BufferedItem::item).collect(Collectors.toList()));
+                for (final BufferedItem<T> bufferedItem : currentBatch) {
+                    bufferedItem.future().complete(null);
                 }
             } catch (Throwable e) {
                 if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("{}: Flush of {} items failed", name, batch.size(), e);
+                    LOGGER.trace("{}: Flush of {} items failed", name, currentBatch.size(), e);
                 }
 
-                for (final BufferedItem<T> item : batch) {
-                    item.future.completeExceptionally(e);
+                for (final BufferedItem<T> item : currentBatch) {
+                    item.future().completeExceptionally(e);
                 }
             } finally {
                 if (flushLatencyTimer != null) {
                     final long latencyNanos = flushLatencySample.stop(flushLatencyTimer);
                     if (LOGGER.isDebugEnabled()) {
                         LOGGER.debug("{}: Flush of {} items completed in {}",
-                                name, batch.size(), Duration.ofNanos(latencyNanos));
+                                name, currentBatch.size(), Duration.ofNanos(latencyNanos));
                     }
                 }
+
+                currentBatch.clear();
             }
         } finally {
             flushLock.unlock();

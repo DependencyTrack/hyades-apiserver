@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.framework.failure;
 
+import com.google.protobuf.DebugFormat;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityFailureDetails;
 import org.dependencytrack.proto.workflow.v1alpha1.ApplicationFailureDetails;
 import org.dependencytrack.proto.workflow.v1alpha1.CancellationFailureDetails;
@@ -65,8 +66,10 @@ public final class FailureConverter {
                         details.getWorkflowVersion(),
                         cause);
             }
-            // TODO
-            default -> new ApplicationFailureException(null, null, false);
+            default -> throw new IllegalArgumentException(
+                    "Unknown details type %s for failure: %s".formatted(
+                            failure.getFailureDetailsCase(),
+                            DebugFormat.singleLine().toString(failure)));
         };
 
         if (failure.getStackTraceCount() > 0) {
@@ -144,7 +147,7 @@ public final class FailureConverter {
             // Cut the stack trace off before it enters engine internals.
             // These are not necessary for communicating failures in user code.
             if (element.getClassName().equals("org.dependencytrack.workflow.framework.ActivityTaskProcessor")
-                || element.getClassName().equals("org.dependencytrack.workflow.framework.WorkflowTaskProcessor")) {
+                || element.getClassName().equals("org.dependencytrack.workflow.framework.WorkflowRunTaskProcessor")) {
                 break;
             }
 

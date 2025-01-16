@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.workflow.framework;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.Timestamp;
-import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskScheduled;
@@ -70,6 +70,12 @@ import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Context available to {@link WorkflowRunner}s.
+ *
+ * @param <A> Type of the workflow's argument.
+ * @param <R> Type of the workflow's result.
+ */
 public final class WorkflowRunContext<A, R> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowRunContext.class);
@@ -156,6 +162,22 @@ public final class WorkflowRunContext<A, R> {
         return new ReplayAwareLogger(this, LoggerFactory.getLogger(workflowRunner.getClass()));
     }
 
+    /**
+     * Durably invokes an activity.
+     * <p>
+     * Calling {@link Awaitable#await()} on the {@link Awaitable} returned by this method
+     * will throw an {@link ActivityFailureException} if the activity failed.
+     *
+     * @param activityClass     Class of the {@link ActivityRunner} to invoke.
+     *                          The class must be annotated with {@link Activity}.
+     * @param argument          Argument to pass to the activity. May be {@code null}.
+     * @param argumentConverter {@link PayloadConverter} to use for {@code argument}.
+     * @param resultConverter   {@link PayloadConverter} to use for the activity's result.
+     * @param retryPolicy       The {@link RetryPolicy} to use in case of transient failures.
+     * @param <AA>              Type of the activity's argument
+     * @param <AR>              Type of the activity's result
+     * @return An {@link Awaitable} wrapping the activity's result, if any.
+     */
     public <AA, AR> Awaitable<AR> callActivity(
             final Class<? extends ActivityRunner<AA, AR>> activityClass,
             final AA argument,
@@ -180,6 +202,7 @@ public final class WorkflowRunContext<A, R> {
                 /* delay */ null);
     }
 
+    @VisibleForTesting
     <AA, AR> Awaitable<AR> callActivity(
             final String name,
             final AA argument,
@@ -206,11 +229,6 @@ public final class WorkflowRunContext<A, R> {
             final RetryPolicy retryPolicy,
             final int attempt,
             final Duration delay) {
-        final IntervalFunction retryIntervalFunction = IntervalFunction.ofExponentialRandomBackoff(
-                retryPolicy.initialDelay(),
-                retryPolicy.multiplier(),
-                retryPolicy.randomizationFactor(),
-                retryPolicy.maxDelay());
         final Awaitable<AR> initialAwaitable = callActivityInternalWithNoRetries(
                 name, argument, argumentConverter, resultConverter, delay);
         return new RetryingAwaitable<>(
@@ -227,7 +245,7 @@ public final class WorkflowRunContext<A, R> {
                         throw exception;
                     }
 
-                    final Duration nextDelay = Duration.ofMillis(retryIntervalFunction.apply(attempt + 1));
+                    final Duration nextDelay = Duration.ofMillis(retryPolicy.asIntervalFunction().apply(attempt + 1));
                     logger().info("Scheduling retry attempt #{} in {}", attempt, nextDelay);
 
                     return callActivityInternal(
@@ -262,6 +280,22 @@ public final class WorkflowRunContext<A, R> {
         return awaitable;
     }
 
+    /**
+     * Durably invokes a workflow.
+     * <p>
+     * Calling {@link Awaitable#await()} on the {@link Awaitable} returned by this method
+     * will throw an {@link SubWorkflowFailureException} if the workflow failed.
+     *
+     * @param workflowClass      Class of the {@link WorkflowRunner} to invoke.
+     *                           The class must be annotated with {@link Workflow}.
+     * @param concurrencyGroupId The concurrency group ID to use. May be {@code null}.
+     * @param argument           Argument to pass to the workflow. May be {@code null}.
+     * @param argumentConverter  {@link PayloadConverter} to use for the workflow's argument.
+     * @param resultConverter    {@link PayloadConverter} to use for the workflow's result.
+     * @param <WA>               Type of the workflow's argument.
+     * @param <WR>               Type of the workflow's result.
+     * @return An {@link Awaitable} wrapping the workflow's result, if any.
+     */
     public <WA, WR> Awaitable<WR> callSubWorkflow(
             final Class<? extends WorkflowRunner<WA, WR>> workflowClass,
             final String concurrencyGroupId,
@@ -270,7 +304,6 @@ public final class WorkflowRunContext<A, R> {
             final PayloadConverter<WR> resultConverter) {
         assertNotInSideEffect("Sub workflows can not be called from within a side effect");
         requireNonNull(workflowClass, "workflowClass must not be null");
-
 
         final Workflow workflowAnnotation = workflowClass.getAnnotation(Workflow.class);
         if (workflowAnnotation == null) {
@@ -286,6 +319,7 @@ public final class WorkflowRunContext<A, R> {
                 resultConverter);
     }
 
+    @VisibleForTesting
     <WA, WR> Awaitable<WR> callSubWorkflow(
             final String name,
             final int version,
@@ -306,6 +340,13 @@ public final class WorkflowRunContext<A, R> {
         return awaitable;
     }
 
+    /**
+     * Schedules a durable timer.
+     *
+     * @param name  Name of the timer. Purely descriptive to make it recognizable in the journal.
+     * @param delay {@link Duration} for how far in the future the timer shall elapse.
+     * @return An {@link Awaitable} for when the timer elapses.
+     */
     public Awaitable<Void> scheduleTimer(final String name, final Duration delay) {
         assertNotInSideEffect("Timers can not be scheduled from within a side effect");
 
@@ -317,10 +358,34 @@ public final class WorkflowRunContext<A, R> {
         return awaitable;
     }
 
+    /**
+     * Sets a custom status for the workflow run.
+     * <p>
+     * Does not overwrite the runtime status of the workflow run ({@link WorkflowRunStatus}).
+     * <p>
+     * May be useful for workflows that are observed by end users, requiring more descriptive
+     * and more granular statuses.
+     *
+     * @param status The status to set. May be {@code null} to reset the custom status.
+     */
     public void setStatus(final String status) {
         this.customStatus = status;
     }
 
+    /**
+     * Execute a side effect and record its result in the journal.
+     * <p>
+     * Calling {@link Awaitable#await()} on the {@link Awaitable} returned by this method
+     * will throw an {@link SideEffectFailureException} if the side effect failed.
+     *
+     * @param name               Name of the side effect. Purely descriptive to make it recognizable in the journal.
+     * @param argument           Argument to pass to {@code sideEffectFunction}.
+     * @param resultConverter    {@link PayloadConverter} to use for the side effect's result.
+     * @param sideEffectFunction The side effect to execute.
+     * @param <SA>               Type of the side effect's argument.
+     * @param <SR>               Type of the side effect's result.
+     * @return An {@link Awaitable} wrapping the side effect's result, if any.
+     */
     public <SA, SR> Awaitable<SR> sideEffect(
             final String name,
             final SA argument,
@@ -353,6 +418,20 @@ public final class WorkflowRunContext<A, R> {
         return awaitable;
     }
 
+    /**
+     * Wait for an external event.
+     * <p>
+     * Calling {@link Awaitable#await()} on the {@link Awaitable} returned by this method
+     * will throw a {@link CancellationFailureException} if the event is not received before
+     * {@code timeout} elapses.
+     *
+     * @param externalEventId ID of the external event.
+     * @param resultConverter {@link PayloadConverter} for the external event's content.
+     * @param timeout         {@link Duration} to wait at most for the external event to arrive.
+     * @param <ER>            Type of the external event's content.
+     * @return An {@link Awaitable} wrapping the external event's content, if any.
+     * @see WorkflowEngine#sendExternalEvent(UUID, String, WorkflowPayload)
+     */
     public <ER> Awaitable<ER> waitForExternalEvent(
             final String externalEventId,
             final PayloadConverter<ER> resultConverter,
@@ -405,11 +484,13 @@ public final class WorkflowRunContext<A, R> {
             WorkflowEvent currentEvent;
             while ((currentEvent = processNextEvent()) != null) {
                 if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Processed {}", currentEvent);
+                    LOGGER.debug("Processed {}", DebugFormat.singleLine().toString(currentEvent));
                 }
             }
         } catch (WorkflowRunBlockedException e) {
-            LOGGER.debug("Blocked", e);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Blocked", e);
+            }
         } catch (WorkflowRunCancelledException e) {
             cancel(e.getMessage());
         } catch (Exception e) {

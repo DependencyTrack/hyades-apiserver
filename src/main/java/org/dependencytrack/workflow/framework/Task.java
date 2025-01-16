@@ -18,5 +18,5 @@
  */
 package org.dependencytrack.workflow.framework;
 
-sealed interface Task permits ActivityTask, WorkflowTask {
+sealed interface Task permits ActivityTask, WorkflowRunTask {
 }

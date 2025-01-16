@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.framework;
 
 import java.util.List;
 
-sealed interface TaskProcessor<T extends Task> permits ActivityTaskProcessor, WorkflowTaskProcessor {
+sealed interface TaskProcessor<T extends Task> permits ActivityTaskProcessor, WorkflowRunTaskProcessor {
 
     String taskName();
 

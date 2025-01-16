@@ -30,6 +30,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Context available to {@link ActivityRunner}s.
+ *
+ * @param <T> Type of the activity's argument.
+ */
 public final class ActivityRunContext<T> implements Closeable {
 
     private final WorkflowEngine engine;

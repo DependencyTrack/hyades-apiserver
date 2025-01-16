@@ -39,7 +39,10 @@ public class FaultInjectingActivityRunner<A, R> implements ActivityRunner<A, R> 
             Thread.sleep(random.nextInt(10, 1000));
 
             if (random.nextDouble() < 0.3) {
-                throw new ApplicationFailureException("Oh no, this looks permanently broken!", null, true);
+                throw new ApplicationFailureException(
+                        "Oh no, this looks permanently broken!",
+                        /* cause */ null,
+                        /* isTerminal */ true);
             }
 
             throw new IllegalStateException("I have the feeling this might resolve soon!");

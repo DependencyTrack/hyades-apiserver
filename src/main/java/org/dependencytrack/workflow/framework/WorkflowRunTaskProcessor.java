@@ -32,9 +32,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
+final class WorkflowRunTaskProcessor<A, R> implements TaskProcessor<WorkflowRunTask> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowTaskProcessor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowRunTaskProcessor.class);
 
     private final WorkflowEngine engine;
     private final String workflowName;
@@ -43,7 +43,7 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
     private final PayloadConverter<R> resultConverter;
     private final Duration taskLockTimeout;
 
-    WorkflowTaskProcessor(
+    WorkflowRunTaskProcessor(
             final WorkflowEngine engine,
             final String workflowName,
             final WorkflowRunner<A, R> workflowRunner,
@@ -64,12 +64,12 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
     }
 
     @Override
-    public List<WorkflowTask> poll(final int limit) {
-        return engine.pollWorkflowTasks(workflowName, limit, taskLockTimeout);
+    public List<WorkflowRunTask> poll(final int limit) {
+        return engine.pollWorkflowRunTasks(workflowName, limit, taskLockTimeout);
     }
 
     @Override
-    public void process(final WorkflowTask task) {
+    public void process(final WorkflowRunTask task) {
         try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString());
              var ignoredMdcWorkflowName = MDC.putCloseable("workflowName", task.workflowName());
              var ignoredMdcWorkflowVersion = MDC.putCloseable("workflowVersion", String.valueOf(task.workflowVersion()));
@@ -83,10 +83,10 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
     }
 
     @Override
-    public void abandon(final WorkflowTask task) {
+    public void abandon(final WorkflowRunTask task) {
         try {
             // TODO: Retry on TimeoutException
-            engine.abandonWorkflowTask(task).join();
+            engine.abandonWorkflowRunTask(task).join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
@@ -95,17 +95,18 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
         }
     }
 
-    private void processInternal(final WorkflowTask task) {
-        final var workflowRun = new WorkflowRun(
+    private void processInternal(final WorkflowRunTask task) {
+        // Hydrate workflow run state from the journal.
+        final var workflowRunState = new WorkflowRunState(
                 task.workflowRunId(),
                 task.workflowName(),
                 task.workflowVersion(),
                 task.concurrencyGroupId(),
                 task.journal());
-        if (workflowRun.status().isTerminal()) {
+        if (workflowRunState.status().isTerminal()) {
             LOGGER.warn("""
                     Task was scheduled despite the workflow run already being in terminal state {}. \
-                    Discarding {} events in the run's inbox.""", workflowRun.status(), task.inbox().size());
+                    Discarding {} events in the run's inbox.""", workflowRunState.status(), task.inbox().size());
 
             // TODO: Discard the inbox events without modifying the workflow run.
             // TODO: Consider logging discarded events.
@@ -115,7 +116,7 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
 
         // Inject a RunnerStarted event.
         // Its timestamp will be used as deterministic "now" timestamp while processing new events.
-        workflowRun.onEvent(WorkflowEvent.newBuilder()
+        workflowRunState.onEvent(WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setRunnerStarted(RunnerStarted.newBuilder().build())
@@ -123,7 +124,7 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
 
         int eventsAdded = 0;
         for (final WorkflowEvent newEvent : task.inbox()) {
-            workflowRun.onEvent(newEvent);
+            workflowRunState.onEvent(newEvent);
             eventsAdded++;
 
             // Inject a RunStarted event when encountering a RunScheduled event.
@@ -131,7 +132,7 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
             // so we can differentiate between when a run was scheduled vs.
             // when it was eventually picked up.
             if (newEvent.hasRunScheduled()) {
-                workflowRun.onEvent(WorkflowEvent.newBuilder()
+                workflowRunState.onEvent(WorkflowEvent.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
                         .setRunStarted(RunStarted.newBuilder().build())
@@ -154,13 +155,13 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
                 workflowRunner,
                 argumentConverter,
                 resultConverter,
-                workflowRun.journal(),
-                workflowRun.inbox());
+                workflowRunState.journal(),
+                workflowRunState.inbox());
         final WorkflowRunResult runResult = ctx.runWorkflow();
 
-        workflowRun.setCustomStatus(runResult.customStatus());
-        workflowRun.executeCommands(runResult.commands());
-        workflowRun.onEvent(WorkflowEvent.newBuilder()
+        workflowRunState.setCustomStatus(runResult.customStatus());
+        workflowRunState.executeCommands(runResult.commands());
+        workflowRunState.onEvent(WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setRunnerCompleted(RunnerCompleted.newBuilder().build())
@@ -168,7 +169,7 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
 
         try {
             // TODO: Retry on TimeoutException.
-            engine.completeWorkflowTask(workflowRun).join();
+            engine.completeWorkflowRunTask(workflowRunState).join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while waiting for task completion to be acknowledged", e);

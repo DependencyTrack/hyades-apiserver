@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.framework;
 
+import io.github.resilience4j.core.IntervalFunction;
+
 import java.time.Duration;
 
 public record RetryPolicy(
@@ -49,6 +51,10 @@ public record RetryPolicy(
 
     public RetryPolicy withMaxAttempts(final int maxAttempts) {
         return new RetryPolicy(this.initialDelay, this.multiplier, this.randomizationFactor, this.maxDelay, maxAttempts);
+    }
+
+    IntervalFunction asIntervalFunction() {
+        return IntervalFunction.ofExponentialRandomBackoff(initialDelay, multiplier, randomizationFactor, maxDelay);
     }
 
 }

@@ -18,20 +18,17 @@
  */
 package org.dependencytrack.workflow.framework;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+public sealed class WorkflowEngineException extends RuntimeException permits
+        NonDeterministicWorkflowException,
+        WorkflowRunBlockedException,
+        WorkflowRunCancelledException {
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+    WorkflowEngineException() {
+        super();
+    }
 
-record WorkflowTask(
-        UUID workflowRunId,
-        String workflowName,
-        int workflowVersion,
-        String concurrencyGroupId,
-        Integer priority,
-        Set<String> tags,
-        int attempt,
-        List<WorkflowEvent> journal,
-        List<WorkflowEvent> inbox) implements Task {
+    WorkflowEngineException(final String message) {
+        super(message);
+    }
+
 }

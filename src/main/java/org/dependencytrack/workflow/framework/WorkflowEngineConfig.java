@@ -85,7 +85,7 @@ public class WorkflowEngineConfig {
     private final DataSource dataSource;
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskActionBufferConfig = new BufferConfig();
-    private final TaskDispatcherConfig workflowTaskDispatcherConfig = new TaskDispatcherConfig();
+    private final TaskDispatcherConfig workflowRunTaskDispatcherConfig = new TaskDispatcherConfig();
     private final TaskDispatcherConfig activityTaskDispatcherConfig = new TaskDispatcherConfig();
     private MeterRegistry meterRegistry;
 
@@ -110,8 +110,8 @@ public class WorkflowEngineConfig {
         return taskActionBufferConfig;
     }
 
-    public TaskDispatcherConfig workflowTaskDispatcher() {
-        return workflowTaskDispatcherConfig;
+    public TaskDispatcherConfig workflowRunTaskDispatcher() {
+        return workflowRunTaskDispatcherConfig;
     }
 
     public TaskDispatcherConfig activityTaskDispatcher() {

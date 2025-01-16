@@ -49,7 +49,13 @@ import java.util.UUID;
 import static org.dependencytrack.workflow.framework.WorkflowEngine.randomUUIDv7;
 import static org.dependencytrack.workflow.framework.WorkflowEngine.toTimestamp;
 
-public class WorkflowRun {
+/**
+ * Runtime state of a workflow run.
+ * <p>
+ * The state is event-sourced by consuming {@link WorkflowEvent}s,
+ * and modified via execution of {@link WorkflowCommand}s.
+ */
+final class WorkflowRunState {
 
     private final UUID id;
     private final String workflowName;
@@ -73,7 +79,7 @@ public class WorkflowRun {
     private Instant startedAt;
     private Instant completedAt;
 
-    WorkflowRun(
+    WorkflowRunState(
             final UUID id,
             final String workflowName,
             final int workflowVersion,
