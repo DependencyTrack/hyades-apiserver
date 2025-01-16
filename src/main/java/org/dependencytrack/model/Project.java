@@ -291,9 +291,10 @@ public class Project implements Serializable {
     private Double lastInheritedRiskScore;
 
     @Persistent
-    @Column(name = "ACTIVE")
-    @JsonSerialize(nullsUsing = BooleanDefaultTrueSerializer.class)
-    private boolean active = true;
+    @Column(name = "INACTIVE_SINCE")
+    @Schema(accessMode = Schema.AccessMode.READ_ONLY,
+            type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
+    private Date inactiveSince;
 
     @Persistent(table = "PROJECT_ACCESS_TEAMS", defaultFetchGroup = "true")
     @Join(column = "PROJECT_ID")
@@ -522,12 +523,25 @@ public class Project implements Serializable {
         this.externalReferences = externalReferences;
     }
 
+    public Date getInactiveSince() {
+        return inactiveSince;
+    }
+
+    public void setInactiveSince(Date inactiveSince) {
+        this.inactiveSince = inactiveSince;
+    }
+
     public boolean isActive() {
-        return active;
+        return inactiveSince == null;
     }
 
     public void setActive(boolean active) {
-        this.active = active;
+        if (!active && this.inactiveSince == null) {
+            this.inactiveSince = new Date();
+        }
+        if (active && this.inactiveSince != null) {
+            this.inactiveSince = null;
+        }
     }
 
     public String getBomRef() {

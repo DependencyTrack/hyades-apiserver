@@ -51,7 +51,6 @@ public class CelPolicyProjectRowMapper implements RowMapper<Project> {
         maybeSet(rs, "name", ResultSet::getString, builder::setName);
         maybeSet(rs, "version", ResultSet::getString, builder::setVersion);
         maybeSet(rs, "classifier", ResultSet::getString, builder::setClassifier);
-        maybeSet(rs, "is_active", ResultSet::getBoolean, builder::setIsActive);
         maybeSet(rs, "cpe", ResultSet::getString, builder::setCpe);
         maybeSet(rs, "purl", ResultSet::getString, builder::setPurl);
         maybeSet(rs, "swid_tag_id", ResultSet::getString, builder::setSwidTagId);
@@ -63,10 +62,21 @@ public class CelPolicyProjectRowMapper implements RowMapper<Project> {
         if (hasColumn(rs, "metadata_tools")) {
             metadataBuilder.setTools(convertMetadataTools(rs));
         }
+        if (hasColumn(rs, "inactive_since")) {
+            builder.setIsActive(convertInactiveSince(rs));
+        }
         maybeSet(rs, "bom_generated", RowMapperUtil::nullableTimestamp, metadataBuilder::setBomGenerated);
         builder.setMetadata(metadataBuilder.build());
 
         return builder.build();
+    }
+
+    private static boolean convertInactiveSince(final ResultSet rs) throws SQLException {
+        final var jsonInactiveSince = rs.getTimestamp("inactive_since");
+        if (jsonInactiveSince == null) {
+            return true;
+        }
+        return false;
     }
 
     private static Tools convertMetadataTools(final ResultSet rs) throws SQLException {

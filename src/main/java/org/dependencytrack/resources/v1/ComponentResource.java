@@ -122,9 +122,9 @@ public class ComponentResource extends AlpineResource {
     public Response getAllComponents(
             @Parameter(description = "The UUID of the project to retrieve components for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
-            @Parameter(description = "Optionally exclude recent components so only outdated components are returned", required = false)
+            @Parameter(description = "Optionally exclude recent components so only outdated components are returned")
             @QueryParam("onlyOutdated") boolean onlyOutdated,
-            @Parameter(description = "Optionally exclude transitive dependencies so only direct dependencies are returned", required = false)
+            @Parameter(description = "Optionally exclude transitive dependencies so only direct dependencies are returned")
             @QueryParam("onlyDirect") boolean onlyDirect) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);

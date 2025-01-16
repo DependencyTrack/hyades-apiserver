@@ -186,7 +186,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     public List<Project> getAllProjects(boolean excludeInactive) {
         final Query<Project> query = pm.newQuery(Project.class);
         if (excludeInactive) {
-            query.setFilter("active == true || active == null");
+            query.setFilter("inactiveSince == null");
         }
         query.setOrdering("id asc");
         return query.executeList();
@@ -427,8 +427,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
-                                 PackageURL purl, boolean active, boolean commitIndex) {
-        return createProject(name, description, version, tags, parent, purl, active, false, commitIndex);
+                                 PackageURL purl, Date inactiveSince, boolean commitIndex) {
+        return createProject(name, description, version, tags, parent, purl, inactiveSince, false, commitIndex);
     }
 
     /**
@@ -440,21 +440,21 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @param tags        a List of Tags - these will be resolved if necessary
      * @param parent      an optional parent Project
      * @param purl        an optional Package URL
-     * @param active      specified if the project is active
+     * @param inactiveSince      date when the project is deactivated
      * @param commitIndex specifies if the search index should be committed (an expensive operation)
      * @param isLatest    specified if the project version is latest
      * @return the created Project
      */
     @Override
     public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
-                                 PackageURL purl, boolean active, boolean isLatest, boolean commitIndex) {
+                                 PackageURL purl, Date inactiveSince, boolean isLatest, boolean commitIndex) {
         final Project project = new Project();
         project.setName(name);
         project.setDescription(description);
         project.setVersion(version);
         project.setParent(parent);
         project.setPurl(purl);
-        project.setActive(active);
+        project.setInactiveSince(inactiveSince);
         project.setIsLatest(isLatest);
         return createProject(project, tags, commitIndex);
     }
@@ -469,7 +469,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     @Override
     public Project createProject(final Project project, List<Tag> tags, boolean commitIndex) {
-        if (project.getParent() != null && !Boolean.TRUE.equals(project.getParent().isActive())) {
+        if (project.getParent() != null && project.getParent().getInactiveSince() != null) {
             throw new IllegalArgumentException("An inactive Parent cannot be selected as parent");
         }
         final Project oldLatestProject = project.isLatest() ? getLatestProjectVersion(project.getName()) : null;
@@ -518,7 +518,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         project.setSwidTagId(transientProject.getSwidTagId());
         project.setExternalReferences(transientProject.getExternalReferences());
 
-        if (Boolean.TRUE.equals(project.isActive()) && !Boolean.TRUE.equals(transientProject.isActive()) && hasActiveChild(project)) {
+        if (project.isActive() && !transientProject.isActive() && hasActiveChild(project)) {
             throw new IllegalArgumentException("Project cannot be set to inactive if active children are present.");
         }
         project.setActive(transientProject.isActive());
@@ -536,7 +536,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 throw new IllegalArgumentException("A project cannot select itself as a parent");
             }
             Project parent = getObjectByUuid(Project.class, transientProject.getParent().getUuid());
-            if (!Boolean.TRUE.equals(parent.isActive())) {
+            if (parent.getInactiveSince() != null) {
                 throw new IllegalArgumentException("An inactive project cannot be selected as a parent");
             } else if (isChildOf(parent, transientProject.getUuid())) {
                 throw new IllegalArgumentException("The new parent project cannot be a child of the current project.");
@@ -605,7 +605,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             project.setDescription(source.getDescription());
             project.setVersion(newVersion);
             project.setClassifier(source.getClassifier());
-            project.setActive(source.isActive());
+            project.setInactiveSince(source.getInactiveSince());
             project.setIsLatest(makeCloneLatest);
             project.setCpe(source.getCpe());
             project.setPurl(source.getPurl());
@@ -1347,7 +1347,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         boolean hasActiveChild = false;
         if (project.getChildren() != null) {
             for (Project child : project.getChildren()) {
-                if (Boolean.TRUE.equals(child.isActive()) || hasActiveChild) {
+                if (child.isActive() || hasActiveChild) {
                     return true;
                 } else {
                     hasActiveChild = hasActiveChild(child);
@@ -1361,7 +1361,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Query<Project> query = pm.newQuery(Project.class);
         query.setFilter("name == :name");
         query.setParameters(project.getName());
-        query.setResult("uuid, version, active");
+        query.setResult("uuid, version, inactiveSince");
         query.setOrdering("id asc"); // Ensure consistent ordering
         return query.executeResultList(ProjectVersion.class);
     }

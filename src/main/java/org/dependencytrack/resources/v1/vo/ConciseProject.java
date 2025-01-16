@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.resources.v1.vo;
 
+import alpine.model.Team;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Tag;
-import alpine.model.Team;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
 
 import java.util.Collection;
@@ -55,7 +55,7 @@ public record ConciseProject(
     public ConciseProject(final ConciseProjectListRow row) {
         this(row.uuid(), row.group(), row.name(), row.version(),
                 row.classifier() != null ? Classifier.valueOf(row.classifier()) : null,
-                row.active(),
+                row.inactiveSince() == null,
                 row.isLatest(),
                 convertTags(row.tags()),
                 convertTeams(row.teams()),

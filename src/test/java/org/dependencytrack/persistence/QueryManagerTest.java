@@ -38,7 +38,7 @@ import static org.junit.Assert.assertNull;
 public class QueryManagerTest extends PersistenceCapableTest {
     @Test
     public void testGetMetaInformation() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -77,7 +77,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetMetaInformationWhenPublishedAtIsMissing() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");
@@ -105,7 +105,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetMetaInformationWhenIntregrityAnalysisIsMissing() {
-        Project project = qm.createProject("Acme Application", null, null, null, null, null, true, false);
+        Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
         component.setProject(project);
         component.setName("ABC");

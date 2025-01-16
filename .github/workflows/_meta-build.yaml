@@ -69,7 +69,7 @@ jobs:
           mvn -B --no-transfer-progress cyclonedx:makeBom -Dservices.bom.merge.skip=false org.codehaus.mojo:exec-maven-plugin:exec@merge-services-bom
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4.5.0
+        uses: actions/upload-artifact@v4.6.0
         with:
           name: assembled-wars
           path: |-
@@ -94,7 +94,7 @@ jobs:
           path: target
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3.2.0
+        uses: docker/setup-qemu-action@v3.3.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3.8.0
@@ -128,7 +128,7 @@ jobs:
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
       - name: Build multi-arch Container Image
-        uses: docker/build-push-action@v6.10.0
+        uses: docker/build-push-action@v6.11.0
         with:
           tags: ${{ steps.tags.outputs.tags }}
           build-args: |-

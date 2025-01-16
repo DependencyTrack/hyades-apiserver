@@ -57,7 +57,7 @@ public interface ProjectDao {
                  , "NAME" AS "name"
                  , "VERSION" AS "version"
                  , "PROJECT"."CLASSIFIER" AS "classifier"
-                 , "PROJECT"."ACTIVE" AS "active"
+                 , "PROJECT"."INACTIVE_SINCE" AS "inactiveSince"
                  , "PROJECT"."IS_LATEST" AS "isLatest"
                  , (SELECT ARRAY_AGG("TAG"."NAME")
                       FROM "TAG"
@@ -128,8 +128,8 @@ public interface ProjectDao {
                   WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
                     AND "TEAM"."NAME" = :teamFilter)
             </#if>
-            <#if activeFilter>
-               AND "PROJECT"."ACTIVE" = :activeFilter
+            <#if activeFilter && activeFilter == true>
+                AND "PROJECT"."INACTIVE_SINCE" IS NULL
             </#if>
             <#if onlyRootFilter>
                AND (NOT :onlyRootFilter OR "PROJECT"."PARENT_PROJECT_ID" IS NULL)
@@ -163,7 +163,7 @@ public interface ProjectDao {
             @AllowApiOrdering.Column(name = "name"),
             @AllowApiOrdering.Column(name = "version"),
             @AllowApiOrdering.Column(name = "classifier"),
-            @AllowApiOrdering.Column(name = "active"),
+            @AllowApiOrdering.Column(name = "inactiveSince"),
             @AllowApiOrdering.Column(name = "isLatest"),
             @AllowApiOrdering.Column(name = "lastBomImport"),
             @AllowApiOrdering.Column(name = "lastBomImportFormat"),
@@ -196,7 +196,7 @@ public interface ProjectDao {
             String name,
             String version,
             String classifier,
-            boolean active,
+            @Nullable Instant inactiveSince,
             boolean isLatest,
             List<String> tags,
             List<String> teams,

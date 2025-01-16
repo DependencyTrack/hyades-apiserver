@@ -621,8 +621,8 @@ public class QueryManager extends AlpineQueryManager {
         return getTagQueryManager().createTags(names);
     }
 
-    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent, PackageURL purl, boolean active, boolean commitIndex) {
-        return getProjectQueryManager().createProject(name, description, version, tags, parent, purl, active, commitIndex);
+    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent, PackageURL purl, Date inactiveSince, boolean commitIndex) {
+        return getProjectQueryManager().createProject(name, description, version, tags, parent, purl, inactiveSince, commitIndex);
     }
 
     public Project createProject(final Project project, List<Tag> tags, boolean commitIndex) {
@@ -630,8 +630,8 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
-                                 PackageURL purl, boolean active, boolean isLatest, boolean commitIndex) {
-        return getProjectQueryManager().createProject(name, description, version, tags, parent, purl, active, isLatest, commitIndex);
+                                 PackageURL purl, Date inactiveSince, boolean isLatest, boolean commitIndex) {
+        return getProjectQueryManager().createProject(name, description, version, tags, parent, purl, inactiveSince, isLatest, commitIndex);
     }
 
     public Project updateProject(Project transientProject, boolean commitIndex) {

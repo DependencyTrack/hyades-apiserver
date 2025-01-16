@@ -22,6 +22,9 @@ import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import java.util.UUID;
 
+/**
+ * @since 5.6.0
+ */
 public class ValidUuidValidator implements ConstraintValidator<ValidUuid, String> {
 
     @Override

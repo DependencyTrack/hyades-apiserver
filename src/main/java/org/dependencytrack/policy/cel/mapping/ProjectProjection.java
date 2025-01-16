@@ -41,9 +41,6 @@ public class ProjectProjection {
     @MappedField(sqlColumnName = "CLASSIFIER")
     public String classifier;
 
-    @MappedField(protoFieldName = "is_active", sqlColumnName = "ACTIVE")
-    public Boolean isActive;
-
     @MappedField(sqlColumnName = "CPE")
     public String cpe;
 
