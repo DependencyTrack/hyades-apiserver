@@ -57,7 +57,7 @@ public class NotificationRouterTest extends PersistenceCapableTest {
 
         NotificationDispatcher.dispatch(qm, notification);
 
-        qm.createProject("foo", "bar", "1.2.3", null, null, null, true, false);
+        qm.createProject("foo", "bar", "1.2.3", null, null, null, null, false);
 
         Thread.sleep(1000);
 
