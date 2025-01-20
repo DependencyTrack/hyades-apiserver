@@ -24,6 +24,7 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsRe
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
 import org.dependencytrack.storage.FileStorage;
+import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityRunContext;
 import org.dependencytrack.workflow.framework.ActivityRunner;
 import org.dependencytrack.workflow.framework.annotation.Activity;
@@ -34,8 +35,16 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
 
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
+
 @Activity(name = "process-project-analysis-results")
 public class ProcessProjectAnalysisResultsActivity implements ActivityRunner<ProcessProjectAnalysisResultsArgs, Void> {
+
+    public static final ActivityClient<ProcessProjectAnalysisResultsArgs, Void> CLIENT = ActivityClient.of(
+            ProcessProjectAnalysisResultsActivity.class,
+            protoConverter(ProcessProjectAnalysisResultsArgs.class),
+            voidConverter());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProcessProjectAnalysisResultsActivity.class);
 

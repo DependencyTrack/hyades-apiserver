@@ -36,9 +36,9 @@ import org.dependencytrack.proto.workflow.v1alpha1.RunSuspended;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.framework.TaskAction.AbandonActivityTaskAction;
-import org.dependencytrack.workflow.framework.TaskAction.AbandonWorkflowRunTaskAction;
+import org.dependencytrack.workflow.framework.TaskAction.AbandonWorkflowTaskAction;
 import org.dependencytrack.workflow.framework.TaskAction.CompleteActivityTaskAction;
-import org.dependencytrack.workflow.framework.TaskAction.CompleteWorkflowRunTaskAction;
+import org.dependencytrack.workflow.framework.TaskAction.CompleteWorkflowTaskAction;
 import org.dependencytrack.workflow.framework.TaskAction.FailActivityTaskAction;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
@@ -312,7 +312,7 @@ public class WorkflowEngine implements Closeable {
         }
         executorServiceByName.put(executorName, executorService);
 
-        final var taskProcessor = new WorkflowRunTaskProcessor<>(
+        final var taskProcessor = new WorkflowTaskProcessor<>(
                 this, workflowName, workflowRunner, argumentConverter, resultConverter, taskLockTimeout);
 
         final var taskDispatcher = new TaskDispatcher<>(
@@ -320,8 +320,8 @@ public class WorkflowEngine implements Closeable {
                 executorService,
                 taskProcessor,
                 maxConcurrency,
-                config.workflowRunTaskDispatcher().minPollInterval(),
-                config.workflowRunTaskDispatcher().pollBackoffIntervalFunction(),
+                config.workflowTaskDispatcher().minPollInterval(),
+                config.workflowTaskDispatcher().pollBackoffIntervalFunction(),
                 config.meterRegistry());
 
         taskDispatcherExecutor.execute(taskDispatcher);
@@ -618,7 +618,7 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
-    List<WorkflowRunTask> pollWorkflowRunTasks(final String workflowName, final int limit, final Duration taskLockTimeout) {
+    List<WorkflowTask> pollWorkflowTasks(final String workflowName, final int limit, final Duration taskLockTimeout) {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
@@ -639,7 +639,7 @@ public class WorkflowEngine implements Closeable {
                     .map(polledRun -> {
                         final PolledWorkflowEvents polledEvents = polledEventsByRunId.get(polledRun.id());
 
-                        return new WorkflowRunTask(
+                        return new WorkflowTask(
                                 polledRun.id(),
                                 polledRun.workflowName(),
                                 polledRun.workflowVersion(),
@@ -654,13 +654,13 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
-    CompletableFuture<Void> abandonWorkflowRunTask(
-            final WorkflowRunTask task) throws InterruptedException, TimeoutException {
-        return taskActionBuffer.add(new AbandonWorkflowRunTaskAction(task));
+    CompletableFuture<Void> abandonWorkflowTask(
+            final WorkflowTask task) throws InterruptedException, TimeoutException {
+        return taskActionBuffer.add(new AbandonWorkflowTaskAction(task));
     }
 
     // TODO: Make this a batch operation.
-    private void abandonWorkflowRunTask(final WorkflowDao dao, final WorkflowRunTask task) {
+    private void abandonWorkflowTask(final WorkflowDao dao, final WorkflowTask task) {
         // TODO: Make this configurable.
         final IntervalFunction abandonDelayIntervalFunction = IntervalFunction.ofExponentialBackoff(
                 Duration.ofSeconds(5), 1.5, Duration.ofMinutes(30));
@@ -673,16 +673,16 @@ public class WorkflowEngine implements Closeable {
         assert unlockedWorkflowRuns == 1;
     }
 
-    CompletableFuture<Void> completeWorkflowRunTask(
+    CompletableFuture<Void> completeWorkflowTask(
             final WorkflowRunState workflowRunState) throws InterruptedException, TimeoutException {
-        return taskActionBuffer.add(new CompleteWorkflowRunTaskAction(workflowRunState));
+        return taskActionBuffer.add(new CompleteWorkflowTaskAction(workflowRunState));
     }
 
-    private void completeWorkflowRunTasksInternal(
+    private void completeWorkflowTasksInternal(
             final WorkflowDao dao,
-            final Collection<CompleteWorkflowRunTaskAction> actions) {
+            final Collection<CompleteWorkflowTaskAction> actions) {
         final List<WorkflowRunState> actionableRuns = actions.stream()
-                .map(CompleteWorkflowRunTaskAction::workflowRunState)
+                .map(CompleteWorkflowTaskAction::workflowRunState)
                 .collect(Collectors.toList());
 
         final List<UUID> updatedRunIds = dao.updateRuns(
@@ -700,7 +700,7 @@ public class WorkflowEngine implements Closeable {
 
         if (updatedRunIds.size() != actions.size()) {
             final Set<UUID> notUpdatedRunIds = actions.stream()
-                    .map(CompleteWorkflowRunTaskAction::workflowRunState)
+                    .map(CompleteWorkflowTaskAction::workflowRunState)
                     .map(WorkflowRunState::id)
                     .filter(runId -> !updatedRunIds.contains(runId))
                     .collect(Collectors.toSet());
@@ -998,15 +998,15 @@ public class WorkflowEngine implements Closeable {
             // TODO: Group by action and process them using batch queries.
             final var completeActivityTaskActions = new ArrayList<CompleteActivityTaskAction>();
             final var failActivityTaskActions = new ArrayList<FailActivityTaskAction>();
-            final var completeWorkflowRunTaskActions = new ArrayList<CompleteWorkflowRunTaskAction>();
+            final var completeWorkflowTaskActions = new ArrayList<CompleteWorkflowTaskAction>();
 
             for (final TaskAction action : actions) {
                 switch (action) {
                     case AbandonActivityTaskAction a -> abandonActivityTask(dao, a.task());
                     case CompleteActivityTaskAction c -> completeActivityTaskActions.add(c);
                     case FailActivityTaskAction f -> failActivityTaskActions.add(f);
-                    case AbandonWorkflowRunTaskAction a -> abandonWorkflowRunTask(dao, a.task());
-                    case CompleteWorkflowRunTaskAction c -> completeWorkflowRunTaskActions.add(c);
+                    case AbandonWorkflowTaskAction a -> abandonWorkflowTask(dao, a.task());
+                    case CompleteWorkflowTaskAction c -> completeWorkflowTaskActions.add(c);
                 }
             }
 
@@ -1016,8 +1016,8 @@ public class WorkflowEngine implements Closeable {
             if (!failActivityTaskActions.isEmpty()) {
                 failActivityTasksInternal(dao, failActivityTaskActions);
             }
-            if (!completeWorkflowRunTaskActions.isEmpty()) {
-                completeWorkflowRunTasksInternal(dao, completeWorkflowRunTaskActions);
+            if (!completeWorkflowTaskActions.isEmpty()) {
+                completeWorkflowTasksInternal(dao, completeWorkflowTaskActions);
             }
         });
     }

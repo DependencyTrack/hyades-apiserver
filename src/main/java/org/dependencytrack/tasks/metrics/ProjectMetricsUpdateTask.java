@@ -28,6 +28,7 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
+import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityRunContext;
 import org.dependencytrack.workflow.framework.ActivityRunner;
 import org.dependencytrack.workflow.framework.annotation.Activity;
@@ -41,6 +42,8 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 /**
  * A {@link Subscriber} task that updates {@link Project} metrics.
@@ -49,6 +52,11 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
  */
 @Activity(name = "update-project-metrics")
 public class ProjectMetricsUpdateTask implements ActivityRunner<UpdateProjectMetricsArgs, Void>, Subscriber {
+
+    public static final ActivityClient<UpdateProjectMetricsArgs, Void> ACTIVITY_CLIENT = ActivityClient.of(
+            ProjectMetricsUpdateTask.class,
+            protoConverter(UpdateProjectMetricsArgs.class),
+            voidConverter());
 
     private static final Logger LOGGER = Logger.getLogger(ProjectMetricsUpdateTask.class);
 

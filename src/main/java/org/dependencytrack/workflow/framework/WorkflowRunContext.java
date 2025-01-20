@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.workflow.framework;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.Timestamp;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
@@ -41,8 +40,6 @@ import org.dependencytrack.workflow.framework.WorkflowCommand.RecordSideEffectRe
 import org.dependencytrack.workflow.framework.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.framework.WorkflowCommand.ScheduleSubWorkflowCommand;
 import org.dependencytrack.workflow.framework.WorkflowCommand.ScheduleTimerCommand;
-import org.dependencytrack.workflow.framework.annotation.Activity;
-import org.dependencytrack.workflow.framework.annotation.Workflow;
 import org.dependencytrack.workflow.framework.failure.ActivityFailureException;
 import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.framework.failure.CancellationFailureException;
@@ -162,47 +159,6 @@ public final class WorkflowRunContext<A, R> {
         return new ReplayAwareLogger(this, LoggerFactory.getLogger(workflowRunner.getClass()));
     }
 
-    /**
-     * Durably invokes an activity.
-     * <p>
-     * Calling {@link Awaitable#await()} on the {@link Awaitable} returned by this method
-     * will throw an {@link ActivityFailureException} if the activity failed.
-     *
-     * @param activityClass     Class of the {@link ActivityRunner} to invoke.
-     *                          The class must be annotated with {@link Activity}.
-     * @param argument          Argument to pass to the activity. May be {@code null}.
-     * @param argumentConverter {@link PayloadConverter} to use for {@code argument}.
-     * @param resultConverter   {@link PayloadConverter} to use for the activity's result.
-     * @param retryPolicy       The {@link RetryPolicy} to use in case of transient failures.
-     * @param <AA>              Type of the activity's argument
-     * @param <AR>              Type of the activity's result
-     * @return An {@link Awaitable} wrapping the activity's result, if any.
-     */
-    public <AA, AR> Awaitable<AR> callActivity(
-            final Class<? extends ActivityRunner<AA, AR>> activityClass,
-            final AA argument,
-            final PayloadConverter<AA> argumentConverter,
-            final PayloadConverter<AR> resultConverter,
-            final RetryPolicy retryPolicy) {
-        assertNotInSideEffect("Activities can not be called from within a side effect");
-        requireNonNull(activityClass, "activityClass must not be null");
-
-        final Activity activityAnnotation = activityClass.getAnnotation(Activity.class);
-        if (activityAnnotation == null) {
-            throw new IllegalArgumentException();
-        }
-
-        return callActivityInternal(
-                activityAnnotation.name(),
-                argument,
-                argumentConverter,
-                resultConverter,
-                retryPolicy,
-                /* attempt */ 1,
-                /* delay */ null);
-    }
-
-    @VisibleForTesting
     <AA, AR> Awaitable<AR> callActivity(
             final String name,
             final AA argument,
@@ -280,46 +236,6 @@ public final class WorkflowRunContext<A, R> {
         return awaitable;
     }
 
-    /**
-     * Durably invokes a workflow.
-     * <p>
-     * Calling {@link Awaitable#await()} on the {@link Awaitable} returned by this method
-     * will throw an {@link SubWorkflowFailureException} if the workflow failed.
-     *
-     * @param workflowClass      Class of the {@link WorkflowRunner} to invoke.
-     *                           The class must be annotated with {@link Workflow}.
-     * @param concurrencyGroupId The concurrency group ID to use. May be {@code null}.
-     * @param argument           Argument to pass to the workflow. May be {@code null}.
-     * @param argumentConverter  {@link PayloadConverter} to use for the workflow's argument.
-     * @param resultConverter    {@link PayloadConverter} to use for the workflow's result.
-     * @param <WA>               Type of the workflow's argument.
-     * @param <WR>               Type of the workflow's result.
-     * @return An {@link Awaitable} wrapping the workflow's result, if any.
-     */
-    public <WA, WR> Awaitable<WR> callSubWorkflow(
-            final Class<? extends WorkflowRunner<WA, WR>> workflowClass,
-            final String concurrencyGroupId,
-            final WA argument,
-            final PayloadConverter<WA> argumentConverter,
-            final PayloadConverter<WR> resultConverter) {
-        assertNotInSideEffect("Sub workflows can not be called from within a side effect");
-        requireNonNull(workflowClass, "workflowClass must not be null");
-
-        final Workflow workflowAnnotation = workflowClass.getAnnotation(Workflow.class);
-        if (workflowAnnotation == null) {
-            throw new IllegalArgumentException();
-        }
-
-        return callSubWorkflow(
-                workflowAnnotation.name(),
-                workflowAnnotation.version(),
-                concurrencyGroupId,
-                argument,
-                argumentConverter,
-                resultConverter);
-    }
-
-    @VisibleForTesting
     <WA, WR> Awaitable<WR> callSubWorkflow(
             final String name,
             final int version,
@@ -479,7 +395,7 @@ public final class WorkflowRunContext<A, R> {
         return awaitable;
     }
 
-    WorkflowRunResult runWorkflow() {
+    WorkflowRunExecutionResult execute() {
         try {
             WorkflowEvent currentEvent;
             while ((currentEvent = processNextEvent()) != null) {
@@ -501,7 +417,7 @@ public final class WorkflowRunContext<A, R> {
                 ? List.copyOf(pendingCommandByEventId.values())
                 : Collections.emptyList();
 
-        return new WorkflowRunResult(commands, customStatus);
+        return new WorkflowRunExecutionResult(commands, customStatus);
     }
 
     WorkflowEvent processNextEvent() {

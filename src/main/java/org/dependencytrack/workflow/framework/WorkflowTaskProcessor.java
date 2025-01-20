@@ -32,9 +32,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-final class WorkflowRunTaskProcessor<A, R> implements TaskProcessor<WorkflowRunTask> {
+final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowRunTaskProcessor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowTaskProcessor.class);
 
     private final WorkflowEngine engine;
     private final String workflowName;
@@ -43,7 +43,7 @@ final class WorkflowRunTaskProcessor<A, R> implements TaskProcessor<WorkflowRunT
     private final PayloadConverter<R> resultConverter;
     private final Duration taskLockTimeout;
 
-    WorkflowRunTaskProcessor(
+    WorkflowTaskProcessor(
             final WorkflowEngine engine,
             final String workflowName,
             final WorkflowRunner<A, R> workflowRunner,
@@ -64,12 +64,12 @@ final class WorkflowRunTaskProcessor<A, R> implements TaskProcessor<WorkflowRunT
     }
 
     @Override
-    public List<WorkflowRunTask> poll(final int limit) {
-        return engine.pollWorkflowRunTasks(workflowName, limit, taskLockTimeout);
+    public List<WorkflowTask> poll(final int limit) {
+        return engine.pollWorkflowTasks(workflowName, limit, taskLockTimeout);
     }
 
     @Override
-    public void process(final WorkflowRunTask task) {
+    public void process(final WorkflowTask task) {
         try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString());
              var ignoredMdcWorkflowName = MDC.putCloseable("workflowName", task.workflowName());
              var ignoredMdcWorkflowVersion = MDC.putCloseable("workflowVersion", String.valueOf(task.workflowVersion()));
@@ -83,10 +83,10 @@ final class WorkflowRunTaskProcessor<A, R> implements TaskProcessor<WorkflowRunT
     }
 
     @Override
-    public void abandon(final WorkflowRunTask task) {
+    public void abandon(final WorkflowTask task) {
         try {
             // TODO: Retry on TimeoutException
-            engine.abandonWorkflowRunTask(task).join();
+            engine.abandonWorkflowTask(task).join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while waiting for task abandonment to be acknowledged", e);
@@ -95,7 +95,7 @@ final class WorkflowRunTaskProcessor<A, R> implements TaskProcessor<WorkflowRunT
         }
     }
 
-    private void processInternal(final WorkflowRunTask task) {
+    private void processInternal(final WorkflowTask task) {
         // Hydrate workflow run state from the journal.
         final var workflowRunState = new WorkflowRunState(
                 task.workflowRunId(),
@@ -157,10 +157,10 @@ final class WorkflowRunTaskProcessor<A, R> implements TaskProcessor<WorkflowRunT
                 resultConverter,
                 workflowRunState.journal(),
                 workflowRunState.inbox());
-        final WorkflowRunResult runResult = ctx.runWorkflow();
+        final WorkflowRunExecutionResult executionResult = ctx.execute();
 
-        workflowRunState.setCustomStatus(runResult.customStatus());
-        workflowRunState.executeCommands(runResult.commands());
+        workflowRunState.setCustomStatus(executionResult.customStatus());
+        workflowRunState.executeCommands(executionResult.commands());
         workflowRunState.onEvent(WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
@@ -169,7 +169,7 @@ final class WorkflowRunTaskProcessor<A, R> implements TaskProcessor<WorkflowRunT
 
         try {
             // TODO: Retry on TimeoutException.
-            engine.completeWorkflowRunTask(workflowRunState).join();
+            engine.completeWorkflowTask(workflowRunState).join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while waiting for task completion to be acknowledged", e);

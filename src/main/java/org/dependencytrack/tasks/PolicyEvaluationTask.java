@@ -29,6 +29,7 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
+import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityRunContext;
 import org.dependencytrack.workflow.framework.ActivityRunner;
 import org.dependencytrack.workflow.framework.annotation.Activity;
@@ -37,6 +38,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 /**
  * A {@link Subscriber} task that executes policy evaluations for {@link Project}s or {@link Component}s.
@@ -45,6 +48,11 @@ import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
  */
 @Activity(name = "eval-project-policies")
 public class PolicyEvaluationTask implements ActivityRunner<EvalProjectPoliciesArgs, Void>, Subscriber {
+
+    public static final ActivityClient<EvalProjectPoliciesArgs, Void> ACTIVITY_CLIENT = ActivityClient.of(
+            PolicyEvaluationTask.class,
+            protoConverter(EvalProjectPoliciesArgs.class),
+            voidConverter());
 
     private static final Logger LOGGER = Logger.getLogger(PolicyEvaluationTask.class);
 

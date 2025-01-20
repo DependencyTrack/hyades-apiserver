@@ -24,6 +24,7 @@ import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationActivityArgs;
 import org.dependencytrack.storage.FileStorage;
+import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityRunContext;
 import org.dependencytrack.workflow.framework.ActivityRunner;
 import org.dependencytrack.workflow.framework.annotation.Activity;
@@ -43,9 +44,16 @@ import java.sql.SQLException;
 import java.util.Optional;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Activity(name = "publish-notification")
 public class PublishNotificationActivity implements ActivityRunner<PublishNotificationActivityArgs, Void> {
+
+    public static final ActivityClient<PublishNotificationActivityArgs, Void> CLIENT = ActivityClient.of(
+            PublishNotificationActivity.class,
+            protoConverter(PublishNotificationActivityArgs.class),
+            voidConverter());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PublishNotificationActivity.class);
 

@@ -20,5 +20,11 @@ package org.dependencytrack.workflow.framework;
 
 import java.util.List;
 
-record WorkflowRunResult(List<WorkflowCommand> commands, String customStatus) {
+/**
+ * Outcome of a workflow run execution.
+ *
+ * @param commands     Commands to be applied to the {@link WorkflowRunState}.
+ * @param customStatus Custom status to be applied to the {@link WorkflowRunState}.
+ */
+record WorkflowRunExecutionResult(List<WorkflowCommand> commands, String customStatus) {
 }

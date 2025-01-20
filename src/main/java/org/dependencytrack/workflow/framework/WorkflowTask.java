@@ -39,7 +39,7 @@ import java.util.UUID;
  * @param journal            Journal of processed {@link WorkflowEvent}.
  * @param inbox              {@link WorkflowEvent}s in the run's inbox.
  */
-record WorkflowRunTask(
+record WorkflowTask(
         UUID workflowRunId,
         String workflowName,
         int workflowVersion,

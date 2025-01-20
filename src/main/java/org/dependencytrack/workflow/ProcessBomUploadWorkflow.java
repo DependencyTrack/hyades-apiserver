@@ -29,8 +29,6 @@ import org.dependencytrack.workflow.framework.annotation.Workflow;
 import java.util.Optional;
 
 import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "process-bom-upload")
 public class ProcessBomUploadWorkflow implements WorkflowRunner<ProcessBomUploadArgs, Void> {
@@ -46,27 +44,23 @@ public class ProcessBomUploadWorkflow implements WorkflowRunner<ProcessBomUpload
 
         ctx.logger().info("Scheduling BOM ingestion");
         ctx.setStatus(STATUS_INGESTING_BOM);
-        ctx.callActivity(
-                BomUploadProcessingTask.class,
+        BomUploadProcessingTask.ACTIVITY_CLIENT.call(
+                ctx,
                 IngestBomArgs.newBuilder()
                         .setProject(args.getProject())
                         .setBomFileMetadata(args.getBomFileMetadata())
                         .build(),
-                protoConverter(IngestBomArgs.class),
-                voidConverter(),
                 defaultRetryPolicy()
                         .withMaxAttempts(6)).await();
 
         ctx.logger().info("Triggering project analysis");
         ctx.setStatus(STATUS_ANALYZING);
-        ctx.callSubWorkflow(
-                AnalyzeProjectWorkflow.class,
-                /* concurrencyGroupId */ "analyze-project-" + args.getProject().getUuid(),
+        AnalyzeProjectWorkflow.CLIENT.callWithConcurrencyGroupId(
+                ctx,
+                "analyze-project-" + args.getProject().getUuid(),
                 AnalyzeProjectArgs.newBuilder()
                         .setProject(args.getProject())
-                        .build(),
-                protoConverter(AnalyzeProjectArgs.class),
-                voidConverter()).await();
+                        .build()).await();
 
         ctx.logger().info("BOM upload processed successfully");
         ctx.setStatus(STATUS_PROCESSED);

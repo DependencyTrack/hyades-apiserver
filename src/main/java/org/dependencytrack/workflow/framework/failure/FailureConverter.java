@@ -147,7 +147,7 @@ public final class FailureConverter {
             // Cut the stack trace off before it enters engine internals.
             // These are not necessary for communicating failures in user code.
             if (element.getClassName().equals("org.dependencytrack.workflow.framework.ActivityTaskProcessor")
-                || element.getClassName().equals("org.dependencytrack.workflow.framework.WorkflowRunTaskProcessor")) {
+                || element.getClassName().equals("org.dependencytrack.workflow.framework.WorkflowTaskProcessor")) {
                 break;
             }
 

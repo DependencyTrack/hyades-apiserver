@@ -26,8 +26,8 @@ sealed interface TaskAction permits
         TaskAction.AbandonActivityTaskAction,
         TaskAction.CompleteActivityTaskAction,
         TaskAction.FailActivityTaskAction,
-        TaskAction.AbandonWorkflowRunTaskAction,
-        TaskAction.CompleteWorkflowRunTaskAction {
+        TaskAction.AbandonWorkflowTaskAction,
+        TaskAction.CompleteWorkflowTaskAction {
 
     record AbandonActivityTaskAction(ActivityTask task) implements TaskAction {
     }
@@ -44,10 +44,10 @@ sealed interface TaskAction permits
             Instant timestamp) implements TaskAction {
     }
 
-    record AbandonWorkflowRunTaskAction(WorkflowRunTask task) implements TaskAction {
+    record AbandonWorkflowTaskAction(WorkflowTask task) implements TaskAction {
     }
 
-    record CompleteWorkflowRunTaskAction(WorkflowRunState workflowRunState) implements TaskAction {
+    record CompleteWorkflowTaskAction(WorkflowRunState workflowRunState) implements TaskAction {
     }
 
 }

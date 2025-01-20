@@ -78,8 +78,8 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                 PersistenceUtil.getDataSource(qm.getPersistenceManager()));
         engineConfig.taskActionBuffer().setFlushInterval(Duration.ofMillis(3));
         engineConfig.taskActionBuffer().setMaxBatchSize(250);
-        engineConfig.workflowRunTaskDispatcher().setMinPollInterval(Duration.ofMillis(5));
-        engineConfig.workflowRunTaskDispatcher().setPollBackoffIntervalFunction(
+        engineConfig.workflowTaskDispatcher().setMinPollInterval(Duration.ofMillis(5));
+        engineConfig.workflowTaskDispatcher().setPollBackoffIntervalFunction(
                 IntervalFunction.of(Duration.ofMillis(50)));
         engineConfig.setMeterRegistry(Metrics.getRegistry());
 

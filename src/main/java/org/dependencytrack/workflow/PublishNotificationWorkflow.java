@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "publish-notification")
@@ -51,14 +50,12 @@ public class PublishNotificationWorkflow implements WorkflowRunner<PublishNotifi
         final var awaitableByRuleName = new HashMap<String, Awaitable<Void>>(args.getNotificationRuleNamesCount());
         for (final String ruleName : args.getNotificationRuleNamesList()) {
             ctx.logger().debug("Scheduling notification publish for rule {}", ruleName);
-            final Awaitable<Void> awaitable = ctx.callActivity(
-                    PublishNotificationActivity.class,
+            final Awaitable<Void> awaitable = PublishNotificationActivity.CLIENT.call(
+                    ctx,
                     PublishNotificationActivityArgs.newBuilder()
                             .setNotificationFileMetadata(args.getNotificationFileMetadata())
                             .setNotificationRuleName(ruleName)
                             .build(),
-                    protoConverter(PublishNotificationActivityArgs.class),
-                    voidConverter(),
                     RetryPolicy.defaultRetryPolicy()
                             .withMaxAttempts(6));
             awaitableByRuleName.put(ruleName, awaitable);

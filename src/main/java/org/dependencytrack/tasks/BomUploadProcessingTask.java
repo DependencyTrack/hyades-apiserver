@@ -67,6 +67,7 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
+import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityRunContext;
 import org.dependencytrack.workflow.framework.ActivityRunner;
 import org.dependencytrack.workflow.framework.annotation.Activity;
@@ -127,6 +128,8 @@ import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META
 import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 /**
  * Subscriber task that performs processing of bill-of-material (bom)
@@ -157,6 +160,11 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
         }
 
     }
+
+    public static final ActivityClient<IngestBomArgs, Void> ACTIVITY_CLIENT = ActivityClient.of(
+            BomUploadProcessingTask.class,
+            protoConverter(IngestBomArgs.class),
+            voidConverter());
 
     private static final Logger LOGGER = Logger.getLogger(BomUploadProcessingTask.class);
 

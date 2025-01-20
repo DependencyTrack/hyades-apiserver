@@ -30,6 +30,7 @@ import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.workflow.framework.Awaitable;
 import org.dependencytrack.workflow.framework.RetryPolicy;
+import org.dependencytrack.workflow.framework.WorkflowClient;
 import org.dependencytrack.workflow.framework.WorkflowRunContext;
 import org.dependencytrack.workflow.framework.WorkflowRunner;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
@@ -48,6 +49,9 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.v
 
 @Workflow(name = "analyze-project")
 public class AnalyzeProjectWorkflow implements WorkflowRunner<AnalyzeProjectArgs, Void> {
+
+    public static final WorkflowClient<AnalyzeProjectArgs, Void> CLIENT =
+            WorkflowClient.of(AnalyzeProjectWorkflow.class, protoConverter(AnalyzeProjectArgs.class), voidConverter());
 
     private static final String STATUS_ANALYZING_VULNS = "ANALYZING_VULNS";
     private static final String STATUS_PROCESSING_VULN_ANALYSIS_RESULTS = "PROCESSING_VULN_ANALYSIS_RESULTS";
@@ -73,23 +77,11 @@ public class AnalyzeProjectWorkflow implements WorkflowRunner<AnalyzeProjectArgs
         final var pendingScannerResults = new ArrayList<Awaitable<AnalyzeProjectVulnsResultX>>();
         if (analyzerStatuses.getEnabledAnalyzersOrDefault(AnalyzerIdentity.INTERNAL_ANALYZER.name(), false)) {
             ctx.logger().info("Scheduling internal analysis");
-            pendingScannerResults.add(
-                    ctx.callActivity(
-                            InternalVulnerabilityAnalysisActivity.class,
-                            args,
-                            protoConverter(AnalyzeProjectArgs.class),
-                            protoConverter(AnalyzeProjectVulnsResultX.class),
-                            scannerRetryPolicy));
+            pendingScannerResults.add(InternalVulnerabilityAnalysisActivity.CLIENT.call(ctx, args, scannerRetryPolicy));
         }
         if (analyzerStatuses.getEnabledAnalyzersOrDefault(AnalyzerIdentity.OSSINDEX_ANALYZER.name(), false)) {
             ctx.logger().info("Scheduling OSS Index analysis");
-            pendingScannerResults.add(
-                    ctx.callActivity(
-                            OssIndexVulnerabilityAnalysisActivity.class,
-                            args,
-                            protoConverter(AnalyzeProjectArgs.class),
-                            protoConverter(AnalyzeProjectVulnsResultX.class),
-                            scannerRetryPolicy));
+            pendingScannerResults.add(OssIndexVulnerabilityAnalysisActivity.CLIENT.call(ctx, args, scannerRetryPolicy));
         }
 
         // TODO: Trigger more analyzers.
@@ -106,36 +98,30 @@ public class AnalyzeProjectWorkflow implements WorkflowRunner<AnalyzeProjectArgs
 
         ctx.setStatus(STATUS_PROCESSING_VULN_ANALYSIS_RESULTS);
         ctx.logger().info("Scheduling processing of vulnerability analysis results");
-        ctx.callActivity(
-                ProcessProjectAnalysisResultsActivity.class,
+        ProcessProjectAnalysisResultsActivity.CLIENT.call(
+                ctx,
                 ProcessProjectAnalysisResultsArgs.newBuilder()
                         .addAllResults(scannerResults)
                         .build(),
-                protoConverter(ProcessProjectAnalysisResultsArgs.class),
-                voidConverter(),
                 defaultRetryPolicy()).await();
 
         ctx.logger().info("Scheduling policy evaluation");
         ctx.setStatus(STATUS_EVALUATING_POLICIES);
-        ctx.callActivity(
-                PolicyEvaluationTask.class,
+        PolicyEvaluationTask.ACTIVITY_CLIENT.call(
+                ctx,
                 EvalProjectPoliciesArgs.newBuilder()
                         .setProject(args.getProject())
                         .build(),
-                protoConverter(EvalProjectPoliciesArgs.class),
-                voidConverter(),
                 defaultRetryPolicy()
                         .withMaxAttempts(6)).await();
 
         ctx.logger().info("Scheduling metrics update");
         ctx.setStatus(STATUS_UPDATING_METRICS);
-        ctx.callActivity(
-                ProjectMetricsUpdateTask.class,
+        ProjectMetricsUpdateTask.ACTIVITY_CLIENT.call(
+                ctx,
                 UpdateProjectMetricsArgs.newBuilder()
                         .setProject(args.getProject())
                         .build(),
-                protoConverter(UpdateProjectMetricsArgs.class),
-                voidConverter(),
                 defaultRetryPolicy()
                         .withMaxAttempts(6)).await();
 
