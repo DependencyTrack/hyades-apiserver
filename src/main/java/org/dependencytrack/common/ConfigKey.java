@@ -70,6 +70,8 @@ public enum ConfigKey implements Config.Key {
     WORKFLOW_ENGINE_BUFFER_TASK_ACTION_MAX_BATCH_SIZE("workflow.engine.buffer.task.action.max.batch.size", null),
     WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_FLUSH_INTERVAL_MS("workflow.engine.buffer.external.event.flush.interval.ms", null),
     WORKFLOW_ENGINE_BUFFER_EXTERNAL_EVENT_MAX_BATCH_SIZE("workflow.engine.buffer.external.event.max.batch.size", null),
+    WORKFLOW_ENGINE_SCHEDULER_INITIAL_DELAY_MS("workflow.engine.scheduler.initial.delay.ms", null),
+    WORKFLOW_ENGINE_SCHEDULER_POLL_INTERVAL_MS("workflow.engine.scheduler.poll.interval.ms", null),
     WORKFLOW_ENGINE_INJECT_ACTIVITY_FAULTS("workflow.engine.inject.activity.faults", false),
 
     DEV_SERVICES_ENABLED("dev.services.enabled", false),

@@ -28,6 +28,7 @@ import org.dependencytrack.workflow.framework.persistence.model.NewActivityTaskR
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunInboxRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunJournalRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunRow;
+import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowScheduleRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledActivityTaskRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEventRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEvents;
@@ -37,6 +38,7 @@ import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunCount
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRowUpdate;
+import org.dependencytrack.workflow.framework.persistence.model.WorkflowScheduleRow;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -829,6 +831,142 @@ public final class WorkflowDao {
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("workflowRunIds", UUID.class, workflowRunIds)
                 .bindArray("scheduledEventIds", Integer.class, scheduledEventIds)
+                .execute();
+    }
+
+    public List<WorkflowScheduleRow> createSchedules(final Collection<NewWorkflowScheduleRow> newSchedules) {
+        final Update update = jdbiHandle.createUpdate("""
+                insert into workflow_schedule (
+                  name
+                , cron
+                , workflow_name
+                , workflow_version
+                , concurrency_group_id
+                , priority
+                , tags
+                , argument
+                , next_fire_at
+                )
+                select name
+                     , cron
+                     , workflow_name
+                     , workflow_version
+                     , concurrency_group_id
+                     , priority
+                     , (select array_agg(tag)
+                          from json_array_elements_text(tags) as tag) as tags
+                     , argument
+                     , next_fire_at
+                  from unnest (
+                         :names
+                       , :crons
+                       , :workflowNames
+                       , :workflowVersions
+                       , :concurrencyGroupIds
+                       , :priorities
+                       , cast(:tagsJsons as json[])
+                       , :arguments
+                       , :nextFireAts
+                       ) as new_schedule (
+                         name
+                       , cron
+                       , workflow_name
+                       , workflow_version
+                       , concurrency_group_id
+                       , priority
+                       , tags
+                       , argument
+                       , next_fire_at
+                       )
+                on conflict (name) do nothing
+                returning *
+                """);
+
+        final var names = new ArrayList<String>(newSchedules.size());
+        final var crons = new ArrayList<String>(newSchedules.size());
+        final var workflowNames = new ArrayList<String>(newSchedules.size());
+        final var workflowVersions = new ArrayList<Integer>(newSchedules.size());
+        final var concurrencyGroupIds = new ArrayList<String>(newSchedules.size());
+        final var priorities = new ArrayList<Integer>(newSchedules.size());
+        final var tagsJsons = new ArrayList<String>(newSchedules.size());
+        final var arguments = new ArrayList<WorkflowPayload>(newSchedules.size());
+        final var nextFireAts = new ArrayList<Instant>(newSchedules.size());
+
+        for (final NewWorkflowScheduleRow newSchedule : newSchedules) {
+            // Workaround for JDBC getting confused with nested arrays.
+            // Transmit tags as JSON array instead, and convert it to
+            // a native TEXT[] array before inserting it.
+            final String tagsJson;
+            if (newSchedule.tags() == null || newSchedule.tags().isEmpty()) {
+                tagsJson = null;
+            } else {
+                final var tagsJsonArray = Json.createArrayBuilder();
+                newSchedule.tags().forEach(tagsJsonArray::add);
+                tagsJson = tagsJsonArray.build().toString();
+            }
+
+            names.add(newSchedule.name());
+            crons.add(newSchedule.cron());
+            workflowNames.add(newSchedule.workflowName());
+            workflowVersions.add(newSchedule.workflowVersion());
+            concurrencyGroupIds.add(newSchedule.concurrencyGroupId());
+            priorities.add(newSchedule.priority());
+            tagsJsons.add(tagsJson);
+            arguments.add(newSchedule.argument());
+            nextFireAts.add(newSchedule.nextFireAt());
+        }
+
+        return update
+                .bindArray("names", String.class, names)
+                .bindArray("crons", String.class, crons)
+                .bindArray("workflowNames", String.class, workflowNames)
+                .bindArray("workflowVersions", Integer.class, workflowVersions)
+                .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
+                .bindArray("priorities", Integer.class, priorities)
+                .bindArray("tagsJsons", String.class, tagsJsons)
+                .bindArray("arguments", WorkflowPayload.class, arguments)
+                .bindArray("nextFireAts", Instant.class, nextFireAts)
+                .executeAndReturnGeneratedKeys("*")
+                .mapTo(WorkflowScheduleRow.class)
+                .list();
+    }
+
+    public List<WorkflowScheduleRow> getDueSchedulesForUpdate() {
+        final Query query = jdbiHandle.createQuery("""
+                select *
+                  from workflow_schedule
+                 where next_fire_at <= now()
+                 order by name
+                   for no key update
+                  skip locked
+                """);
+
+        return query
+                .mapTo(WorkflowScheduleRow.class)
+                .list();
+    }
+
+    public int updateScheduleNextFireAt(final Map<String, Instant> nextFireAtByName) {
+        final var names = new ArrayList<String>(nextFireAtByName.size());
+        final var nextFireAts = new ArrayList<Instant>(nextFireAtByName.size());
+
+        for (final Map.Entry<String, Instant> entry : nextFireAtByName.entrySet()) {
+            names.add(entry.getKey());
+            nextFireAts.add(entry.getValue());
+        }
+
+        final Update update = jdbiHandle.createUpdate("""
+                with params as (select * from unnest(:names, :nextFireAts) as t(name, next_fire_at))
+                update workflow_schedule
+                   set next_fire_at = params.next_fire_at
+                     , updated_at = now()
+                  from params
+                 where params.name = workflow_schedule.name
+                """);
+
+        return update
+                .bindArray("names", String.class, names)
+                .bindArray("nextFireAts", Instant.class, nextFireAts)
                 .execute();
     }
 

@@ -18,7 +18,8 @@
  */
 package org.dependencytrack.workflow.framework.persistence.mapping;
 
-import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowRunRow;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.framework.persistence.model.WorkflowScheduleRow;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -26,21 +27,27 @@ import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
-import java.util.UUID;
 
-public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRunRow> {
+public class WorkflowScheduleRowMapper implements RowMapper<WorkflowScheduleRow> {
 
     @Override
-    public PolledWorkflowRunRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
-        return new PolledWorkflowRunRow(
-                rs.getObject("id", UUID.class),
+    public WorkflowScheduleRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        return new WorkflowScheduleRow(
+                rs.getString("name"),
+                rs.getString("cron"),
                 rs.getString("workflow_name"),
                 rs.getInt("workflow_version"),
                 rs.getString("concurrency_group_id"),
                 getPriority(rs),
-                getTags(rs));
+                getTags(rs),
+                ctx.findColumnMapperFor(WorkflowPayload.class).orElseThrow().map(rs, "argument", ctx),
+                ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "created_at", ctx),
+                ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "updated_at", ctx),
+                ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "last_fired_at", ctx),
+                ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "next_fire_at", ctx));
     }
 
     private static Integer getPriority(final ResultSet rs) throws SQLException {

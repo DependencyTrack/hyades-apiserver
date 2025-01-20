@@ -101,6 +101,17 @@ public class WorkflowEngineInitializer implements ServletContextListener {
             config.externalEventBuffer().setMaxBatchSize(externalEventBufferMaxBatchSize);
         }
 
+        final int schedulerInitialDelayMillis = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_SCHEDULER_INITIAL_DELAY_MS);
+        final int schedulerPollIntervalMillis = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_SCHEDULER_POLL_INTERVAL_MS);
+        if (schedulerInitialDelayMillis >= 0) {
+            config.scheduler().setInitialDelay(Duration.ofMillis(schedulerInitialDelayMillis));
+        }
+        if (schedulerPollIntervalMillis >= 0) {
+            config.scheduler().setPollInterval(Duration.ofMillis(schedulerPollIntervalMillis));
+        }
+
         final int taskActionBufferFlushIntervalMillis = Config.getInstance().getPropertyAsInt(
                 ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_ACTION_FLUSH_INTERVAL_MS);
         final int taskActionBufferMaxBatchSize = Config.getInstance().getPropertyAsInt(

@@ -26,10 +26,12 @@ import org.dependencytrack.workflow.framework.failure.ApplicationFailureExceptio
 import org.dependencytrack.workflow.framework.failure.SubWorkflowFailureException;
 import org.dependencytrack.workflow.framework.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRow;
+import org.dependencytrack.workflow.framework.persistence.model.WorkflowScheduleRow;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.sql.DataSource;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -60,9 +62,13 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void before() throws Exception {
         super.before();
 
-        engine = new WorkflowEngine(new WorkflowEngineConfig(
-                UUID.randomUUID(),
-                PersistenceUtil.getDataSource(qm.getPersistenceManager())));
+        final DataSource dataSource = PersistenceUtil.getDataSource(qm.getPersistenceManager());
+
+        final var config = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
+        config.scheduler().setInitialDelay(Duration.ofMillis(250));
+        config.scheduler().setPollInterval(Duration.ofMillis(250));
+
+        engine = new WorkflowEngine(config);
         engine.start();
     }
 
@@ -893,6 +899,44 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldSupportWorkflowVersioning() {
         // TODO
+    }
+
+    @Test
+    public void shouldScheduleWorkflowRuns() {
+        final List<WorkflowScheduleRow> createdSchedules = engine.createSchedules(List.of(
+                new NewWorkflowSchedule("foo-schedule", "* * * * *", "foo", 1, "concurrencyGroupId", 666, Set.of("tag"), null, Duration.ZERO)));
+        assertThat(createdSchedules).satisfiesExactly(schedule -> {
+            assertThat(schedule.name()).isEqualTo("foo-schedule");
+            assertThat(schedule.cron()).isEqualTo("* * * * *");
+            assertThat(schedule.workflowName()).isEqualTo("foo");
+            assertThat(schedule.workflowVersion()).isEqualTo(1);
+            assertThat(schedule.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
+            assertThat(schedule.priority()).isEqualTo(666);
+            assertThat(schedule.tags()).containsOnly("tag");
+            assertThat(schedule.argument()).isNull();
+            assertThat(schedule.createdAt()).isNotNull();
+            assertThat(schedule.updatedAt()).isNull();
+            assertThat(schedule.lastFiredAt()).isNull();
+            assertThat(schedule.nextFireAt()).isNotNull();
+        });
+
+        await("Workflow Run to be scheduled")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> assertThat(engine.getRunStats()).isNotEmpty());
+    }
+
+    @Test
+    public void shouldNotCreateSchedulesWhenAlreadyExist() {
+        engine.createSchedules(List.of(
+                new NewWorkflowSchedule("foo-schedule", "* * * * *", "foo", 1, null, null, null, null, null)));
+
+        final List<WorkflowScheduleRow> createdSchedules = engine.createSchedules(List.of(
+                new NewWorkflowSchedule("foo-schedule", "1 1 1 1 1", "oof", 9, null, null, null, null, null),
+                new NewWorkflowSchedule("bar-schedule", "* * * * *", "bar", 1, null, null, null, null, null)));
+
+        assertThat(createdSchedules).satisfiesExactly(schedule -> {
+            assertThat(schedule.name()).isEqualTo("bar-schedule");
+        });
     }
 
     private WorkflowRunRow awaitRunStatus(

@@ -54,6 +54,29 @@ public class WorkflowEngineConfig {
 
     }
 
+    public static class SchedulerConfig {
+
+        private Duration initialDelay = Duration.ofSeconds(15);
+        private Duration pollInterval = Duration.ofSeconds(15);
+
+        public Duration initialDelay() {
+            return initialDelay;
+        }
+
+        public void setInitialDelay(final Duration initialDelay) {
+            this.initialDelay = initialDelay;
+        }
+
+        public Duration pollInterval() {
+            return pollInterval;
+        }
+
+        public void setPollInterval(final Duration pollInterval) {
+            this.pollInterval = pollInterval;
+        }
+
+    }
+
     public static class TaskDispatcherConfig {
 
         private Duration minPollInterval = Duration.ofMillis(5);
@@ -85,6 +108,7 @@ public class WorkflowEngineConfig {
     private final DataSource dataSource;
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskActionBufferConfig = new BufferConfig();
+    private final SchedulerConfig schedulerConfig = new SchedulerConfig();
     private final TaskDispatcherConfig workflowTaskDispatcherConfig = new TaskDispatcherConfig();
     private final TaskDispatcherConfig activityTaskDispatcherConfig = new TaskDispatcherConfig();
     private MeterRegistry meterRegistry;
@@ -108,6 +132,10 @@ public class WorkflowEngineConfig {
 
     public BufferConfig taskActionBuffer() {
         return taskActionBufferConfig;
+    }
+
+    public SchedulerConfig scheduler() {
+        return schedulerConfig;
     }
 
     public TaskDispatcherConfig workflowTaskDispatcher() {

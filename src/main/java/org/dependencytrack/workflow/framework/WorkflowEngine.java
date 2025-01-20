@@ -20,12 +20,13 @@ package org.dependencytrack.workflow.framework;
 
 import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import alpine.persistence.OrderDirection;
+import com.asahaf.javacron.InvalidExpressionException;
+import com.asahaf.javacron.Schedule;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
-import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskFailed;
 import org.dependencytrack.proto.workflow.v1alpha1.ExternalEventReceived;
@@ -52,12 +53,14 @@ import org.dependencytrack.workflow.framework.persistence.mapping.ProtobufColumn
 import org.dependencytrack.workflow.framework.persistence.mapping.WorkflowEventArgumentFactory;
 import org.dependencytrack.workflow.framework.persistence.mapping.WorkflowEventSqlArrayType;
 import org.dependencytrack.workflow.framework.persistence.mapping.WorkflowPayloadSqlArrayType;
+import org.dependencytrack.workflow.framework.persistence.mapping.WorkflowScheduleRowMapper;
 import org.dependencytrack.workflow.framework.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.framework.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.framework.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunInboxRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunJournalRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunRow;
+import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowScheduleRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledActivityTaskRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEventRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEvents;
@@ -67,6 +70,7 @@ import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunCount
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRowUpdate;
+import org.dependencytrack.workflow.framework.persistence.model.WorkflowScheduleRow;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.postgres.PostgresPlugin;
@@ -80,6 +84,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -90,6 +95,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
@@ -152,6 +159,7 @@ public class WorkflowEngine implements Closeable {
     private State state = State.CREATED;
     private ExecutorService taskDispatcherExecutor;
     private Map<String, ExecutorService> executorServiceByName;
+    private ScheduledExecutorService schedulerExecutor;
     private Buffer<NewExternalEvent> externalEventBuffer;
     private Buffer<TaskAction> taskActionBuffer;
 
@@ -193,7 +201,10 @@ public class WorkflowEngine implements Closeable {
                         new PolledWorkflowEventRowMapper())
                 .registerRowMapper(
                         PolledWorkflowRunRow.class,
-                        new PolledWorkflowRunRowMapper());
+                        new PolledWorkflowRunRowMapper())
+                .registerRowMapper(
+                        WorkflowScheduleRow.class,
+                        new WorkflowScheduleRowMapper());
     }
 
     public void start() {
@@ -234,6 +245,21 @@ public class WorkflowEngine implements Closeable {
                     .bindTo(config.meterRegistry());
         }
 
+        schedulerExecutor = Executors.newSingleThreadScheduledExecutor(
+                new BasicThreadFactory.Builder()
+                        .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                        .namingPattern("WorkflowEngine-Scheduler-%d")
+                        .build());
+        if (config.meterRegistry() != null) {
+            new ExecutorServiceMetrics(schedulerExecutor, "WorkflowEngine-Scheduler", null)
+                    .bindTo(config.meterRegistry());
+        }
+        schedulerExecutor.scheduleAtFixedRate(
+                new WorkflowScheduler(this, jdbi),
+                config.scheduler().initialDelay().toMillis(),
+                config.scheduler().pollInterval().toMillis(),
+                TimeUnit.MILLISECONDS);
+
         setState(State.RUNNING);
         LOGGER.debug("Started");
     }
@@ -242,6 +268,10 @@ public class WorkflowEngine implements Closeable {
     public void close() throws IOException {
         setState(State.STOPPING);
         LOGGER.debug("Stopping");
+
+        LOGGER.info("Waiting for scheduler to stop");
+        schedulerExecutor.close();
+        schedulerExecutor = null;
 
         LOGGER.debug("Waiting for task dispatcher to stop");
         taskDispatcherExecutor.close();
@@ -595,6 +625,45 @@ public class WorkflowEngine implements Closeable {
         } catch (InterruptedException | TimeoutException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public List<WorkflowScheduleRow> createSchedules(final Collection<NewWorkflowSchedule> newSchedules) {
+        return jdbi.inTransaction(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            final var now = Instant.now();
+            final var schedulesToCreate = new ArrayList<NewWorkflowScheduleRow>(newSchedules.size());
+
+            for (final NewWorkflowSchedule newSchedule : newSchedules) {
+                final Schedule cronSchedule;
+                try {
+                    cronSchedule = Schedule.create(newSchedule.cron());
+                } catch (InvalidExpressionException e) {
+                    throw new IllegalArgumentException("Cron expression %s of schedule %s is invalid".formatted(
+                            newSchedule.cron(), newSchedule.name()), e);
+                }
+
+                final Instant nextFireAt;
+                if (newSchedule.initialDelay() == null) {
+                    nextFireAt = cronSchedule.next(Date.from(now)).toInstant();
+                } else {
+                    nextFireAt = now.plus(newSchedule.initialDelay());
+                }
+
+                schedulesToCreate.add(new NewWorkflowScheduleRow(
+                        newSchedule.name(),
+                        newSchedule.cron(),
+                        newSchedule.workflowName(),
+                        newSchedule.workflowVersion(),
+                        newSchedule.concurrencyGroupId(),
+                        newSchedule.priority(),
+                        newSchedule.tags(),
+                        newSchedule.argument(),
+                        nextFireAt));
+            }
+
+            return dao.createSchedules(schedulesToCreate);
+        });
     }
 
     private void flushExternalEvents(final List<NewExternalEvent> externalEvents) {
