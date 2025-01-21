@@ -30,8 +30,10 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 final class WorkflowScheduler implements Runnable {
@@ -77,12 +79,19 @@ final class WorkflowScheduler implements Runnable {
                     continue;
                 }
 
+                final Set<String> tags = new HashSet<>();
+                if (schedule.tags() != null) {
+                    tags.addAll(schedule.tags());
+                }
+                tags.add("scheduled");
+                tags.add("schedule=" + schedule.name());
+
                 scheduleRunOptions.add(new ScheduleWorkflowRunOptions(
                         schedule.workflowName(),
                         schedule.workflowVersion(),
                         schedule.concurrencyGroupId(),
                         schedule.priority(),
-                        schedule.tags(),
+                        tags,
                         schedule.argument()));
             }
 

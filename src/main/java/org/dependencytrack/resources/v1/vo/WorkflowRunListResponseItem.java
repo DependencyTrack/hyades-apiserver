@@ -29,6 +29,7 @@ import java.util.UUID;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record WorkflowRunListResponseItem(
         UUID id,
+        UUID parentId,
         String workflowName,
         int workflowVersion,
         String status,

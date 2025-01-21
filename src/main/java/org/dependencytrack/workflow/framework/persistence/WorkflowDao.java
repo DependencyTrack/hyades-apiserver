@@ -229,15 +229,17 @@ public final class WorkflowDao {
             final int limit) {
         // TODO: Use a more JDBI-native and more safe way to do this.
         final String orderDirectionStr = orderDirection == OrderDirection.DESCENDING ? "desc nulls last" : "";
-        final String orderByClause = switch (orderBy) {
+        final String orderByColumn = orderBy != null ? switch (orderBy) {
             case "createdAt" -> "created_at";
             case "startedAt" -> "started_at";
             case "completedAt" -> "completed_at";
             default -> "updated_at";
-        } + " " + orderDirectionStr;
+        } : "updated_at";
+        final String orderByClause = orderByColumn + " " + orderDirectionStr;
 
         final Query query = jdbiHandle.createQuery(/* language=SQL */ """
                 select id
+                     , parent_id
                      , workflow_name
                      , workflow_version
                      , status

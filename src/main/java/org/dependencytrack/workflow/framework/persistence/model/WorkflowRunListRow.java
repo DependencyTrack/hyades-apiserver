@@ -27,6 +27,7 @@ import java.util.UUID;
 
 public record WorkflowRunListRow(
         UUID id,
+        UUID parentId,
         String workflowName,
         int workflowVersion,
         WorkflowRunStatus status,

@@ -269,7 +269,7 @@ public class WorkflowEngine implements Closeable {
         setState(State.STOPPING);
         LOGGER.debug("Stopping");
 
-        LOGGER.info("Waiting for scheduler to stop");
+        LOGGER.debug("Waiting for scheduler to stop");
         schedulerExecutor.close();
         schedulerExecutor = null;
 

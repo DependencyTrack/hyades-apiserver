@@ -25,6 +25,7 @@ import org.dependencytrack.workflow.framework.failure.ActivityFailureException;
 import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.framework.failure.SubWorkflowFailureException;
 import org.dependencytrack.workflow.framework.failure.WorkflowFailureException;
+import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowScheduleRow;
 import org.junit.After;
@@ -905,6 +906,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldScheduleWorkflowRuns() {
         final List<WorkflowScheduleRow> createdSchedules = engine.createSchedules(List.of(
                 new NewWorkflowSchedule("foo-schedule", "* * * * *", "foo", 1, "concurrencyGroupId", 666, Set.of("tag"), null, Duration.ZERO)));
+
         assertThat(createdSchedules).satisfiesExactly(schedule -> {
             assertThat(schedule.name()).isEqualTo("foo-schedule");
             assertThat(schedule.cron()).isEqualTo("* * * * *");
@@ -920,9 +922,18 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             assertThat(schedule.nextFireAt()).isNotNull();
         });
 
-        await("Workflow Run to be scheduled")
+        final List<WorkflowRunListRow> runs = await("Workflow Run to be scheduled")
                 .atMost(Duration.ofSeconds(5))
-                .untilAsserted(() -> assertThat(engine.getRunStats()).isNotEmpty());
+                .until(() -> engine.getRunListPage(null, null, null, null, null, null, 0, 1), runsPage -> !runsPage.isEmpty());
+
+        assertThat(runs).satisfiesExactly(run -> {
+            assertThat(run.workflowName()).isEqualTo("foo");
+            assertThat(run.workflowVersion()).isEqualTo(1);
+            assertThat(run.status()).isEqualTo(WorkflowRunStatus.PENDING);
+            assertThat(run.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
+            assertThat(run.priority()).isEqualTo(666);
+            assertThat(run.tags()).containsOnly("tag", "scheduled", "schedule=foo-schedule");
+        });
     }
 
     @Test

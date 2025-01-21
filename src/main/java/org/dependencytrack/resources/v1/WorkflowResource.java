@@ -188,6 +188,7 @@ public class WorkflowResource extends AlpineResource {
         final List<WorkflowRunListResponseItem> responseItems = runRows.stream()
                 .map(runRow -> new WorkflowRunListResponseItem(
                         runRow.id(),
+                        runRow.parentId(),
                         runRow.workflowName(),
                         runRow.workflowVersion(),
                         runRow.customStatus(),
