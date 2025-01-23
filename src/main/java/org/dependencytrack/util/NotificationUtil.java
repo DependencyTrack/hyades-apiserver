@@ -83,31 +83,37 @@ public final class NotificationUtil {
 
     public static void analyzeNotificationCriteria(final QueryManager qm, Analysis analysis,
                                                    final boolean analysisStateChange, final boolean suppressionChange) {
+        if (analysisStateChange || suppressionChange) {
+            var notification = generateAnalysisNotification(qm, analysis, analysisStateChange, suppressionChange);
+            new KafkaEventDispatcher().dispatchNotification(notification);
+        }
+    }
+
+    public static Notification generateAnalysisNotification(final QueryManager qm, Analysis analysis,
+                                                    final boolean analysisStateChange, final boolean suppressionChange) {
         // TODO: Convert data loading to raw SQL to avoid loading unneeded data and excessive queries.
         //   See #analyzeNotificationCriteria(QueryManager, PolicyViolation) for an example.
-        if (analysisStateChange || suppressionChange) {
-            final NotificationGroup notificationGroup;
-            notificationGroup = NotificationGroup.PROJECT_AUDIT_CHANGE;
+        final NotificationGroup notificationGroup;
+        notificationGroup = NotificationGroup.PROJECT_AUDIT_CHANGE;
 
-            String title = generateTitle(analysis.getAnalysisState(), analysis.isSuppressed(), analysisStateChange, suppressionChange);
+        String title = generateTitle(analysis.getAnalysisState(), analysis.isSuppressed(), analysisStateChange, suppressionChange);
 
-            Project project = analysis.getComponent().getProject();
+        Project project = analysis.getComponent().getProject();
 
-            analysis = qm.detach(Analysis.class, analysis.getId());
+        analysis = qm.detach(Analysis.class, analysis.getId());
 
-            analysis.getComponent().setProject(project); // Project of component is lost after the detach above
+        analysis.getComponent().setProject(project); // Project of component is lost after the detach above
 
-            // Aliases are lost during the detach above
-            analysis.getVulnerability().setAliases(qm.detach(qm.getVulnerabilityAliases(analysis.getVulnerability())));
+        // Aliases are lost during the detach above
+        analysis.getVulnerability().setAliases(qm.detach(qm.getVulnerabilityAliases(analysis.getVulnerability())));
 
-            new KafkaEventDispatcher().dispatchNotification(new Notification()
-                    .scope(NotificationScope.PORTFOLIO)
-                    .group(notificationGroup)
-                    .title(generateNotificationTitle(title, analysis.getComponent().getProject()))
-                    .level(NotificationLevel.INFORMATIONAL)
-                    .content(generateNotificationContent(analysis))
-                    .subject(new AnalysisDecisionChange(analysis.getVulnerability(), analysis.getComponent(), analysis.getProject(), analysis)));
-        }
+        return new Notification()
+                .scope(NotificationScope.PORTFOLIO)
+                .group(notificationGroup)
+                .title(generateNotificationTitle(title, analysis.getComponent().getProject()))
+                .level(NotificationLevel.INFORMATIONAL)
+                .content(generateNotificationContent(analysis))
+                .subject(new AnalysisDecisionChange(analysis.getVulnerability(), analysis.getComponent(), analysis.getProject(), analysis));
     }
 
     public static String generateTitle(AnalysisState analysisState, boolean isSuppressed, boolean analysisStateChange, boolean suppressionChange) {
