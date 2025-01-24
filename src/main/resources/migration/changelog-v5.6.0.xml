@@ -153,4 +153,10 @@
             <column name="ACTIVE" type="BOOLEAN"/>
         </dropColumn>
     </changeSet>
+
+    <changeSet id="v5.6.0-10" author="nscuro">
+        <createIndex tableName="PROJECT_METADATA" indexName="PROJECT_METADATA_PROJECT_ID_IDX" unique="true">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
