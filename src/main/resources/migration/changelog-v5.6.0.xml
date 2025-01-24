@@ -159,4 +159,34 @@
             <column name="PROJECT_ID"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-11" author="nscuro">
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_BLAKE2B_256_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_BLAKE2B_384_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_BLAKE2B_512_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_BLAKE3_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_MD5_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA1_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA3_256_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA3_384_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA3_512_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA256_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA384_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA512_IDX"/>
+
+        <sql splitStatements="true">
+            CREATE INDEX "COMPONENT_BLAKE2B_256_IDX" ON "COMPONENT" ("BLAKE2B_256") WHERE "BLAKE2B_256" IS NOT NULL;
+            CREATE INDEX "COMPONENT_BLAKE2B_384_IDX" ON "COMPONENT" ("BLAKE2B_384") WHERE "BLAKE2B_384" IS NOT NULL;
+            CREATE INDEX "COMPONENT_BLAKE2B_512_IDX" ON "COMPONENT" ("BLAKE2B_512") WHERE "BLAKE2B_512" IS NOT NULL;
+            CREATE INDEX "COMPONENT_BLAKE3_IDX" ON "COMPONENT" ("BLAKE3") WHERE "BLAKE3" IS NOT NULL;
+            CREATE INDEX "COMPONENT_MD5_IDX" ON "COMPONENT" ("MD5") WHERE "MD5" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA1_IDX" ON "COMPONENT" ("SHA1") WHERE "SHA1" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA_256_IDX" ON "COMPONENT" ("SHA_256") WHERE "SHA_256" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA_384_IDX" ON "COMPONENT" ("SHA_384") WHERE "SHA_384" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA_512_IDX" ON "COMPONENT" ("SHA_512") WHERE "SHA_512" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA3_256_IDX" ON "COMPONENT" ("SHA3_256") WHERE "SHA3_256" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA3_384_IDX" ON "COMPONENT" ("SHA3_384") WHERE "SHA3_384" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA3_512_IDX" ON "COMPONENT" ("SHA3_512") WHERE "SHA3_512" IS NOT NULL;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
