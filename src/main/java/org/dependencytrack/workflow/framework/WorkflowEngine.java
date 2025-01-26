@@ -293,36 +293,36 @@ public class WorkflowEngine implements Closeable {
         LOGGER.debug("Stopped");
     }
 
-    public <A, R> void registerWorkflowRunner(
-            final WorkflowRunner<A, R> workflowRunner,
+    public <A, R> void registerWorkflowExecutor(
+            final WorkflowExecutor<A, R> workflowExecutor,
             final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration taskLockTimeout) {
-        requireNonNull(workflowRunner, "workflowRunner must not be null");
+        requireNonNull(workflowExecutor, "workflowExecutor must not be null");
 
-        final var workflowAnnotation = workflowRunner.getClass().getAnnotation(Workflow.class);
+        final var workflowAnnotation = workflowExecutor.getClass().getAnnotation(Workflow.class);
         if (workflowAnnotation == null) {
-            throw new IllegalArgumentException("workflowRunner must be annotated with @Workflow");
+            throw new IllegalArgumentException("workflowExecutor must be annotated with @Workflow");
         }
 
-        registerWorkflowRunner(workflowAnnotation.name(), maxConcurrency,
-                argumentConverter, resultConverter, taskLockTimeout, workflowRunner);
+        registerWorkflowExecutor(workflowAnnotation.name(), maxConcurrency,
+                argumentConverter, resultConverter, taskLockTimeout, workflowExecutor);
     }
 
-    <A, R> void registerWorkflowRunner(
+    <A, R> void registerWorkflowExecutor(
             final String workflowName,
             final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration taskLockTimeout,
-            final WorkflowRunner<A, R> workflowRunner) {
+            final WorkflowExecutor<A, R> workflowExecutor) {
         state.assertRunning();
         requireNonNull(workflowName, "workflowName must not be null");
         requireValidWorkflowName(workflowName);
         requireNonNull(argumentConverter, "argumentConverter must not be null");
         requireNonNull(resultConverter, "resultConverter must not be null");
-        requireNonNull(workflowRunner, "workflowRunner must not be null");
+        requireNonNull(workflowExecutor, "workflowExecutor must not be null");
 
         final String executorName = "workflow:%s".formatted(workflowName);
         if (executorServiceByName.containsKey(executorName)) {
@@ -334,16 +334,16 @@ public class WorkflowEngine implements Closeable {
         final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                        .name("WorkflowEngine-WorkflowRunner-" + workflowName + "-", 0)
+                        .name("WorkflowEngine-WorkflowExecutor-" + workflowName + "-", 0)
                         .factory());
         if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(executorService, "WorkflowEngine-WorkflowRunner-" + workflowName, null)
+            new ExecutorServiceMetrics(executorService, "WorkflowEngine-WorkflowExecutor-" + workflowName, null)
                     .bindTo(config.meterRegistry());
         }
         executorServiceByName.put(executorName, executorService);
 
         final var taskProcessor = new WorkflowTaskProcessor<>(
-                this, workflowName, workflowRunner, argumentConverter, resultConverter, taskLockTimeout);
+                this, workflowName, workflowExecutor, argumentConverter, resultConverter, taskLockTimeout);
 
         final var taskDispatcher = new TaskDispatcher<>(
                 this,
@@ -357,45 +357,45 @@ public class WorkflowEngine implements Closeable {
         taskDispatcherExecutor.execute(taskDispatcher);
     }
 
-    public <A, R> void registerActivityRunner(
-            final ActivityRunner<A, R> activityRunner,
+    public <A, R> void registerActivityExecutor(
+            final ActivityExecutor<A, R> activityExecutor,
             final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration taskLockTimeout) {
-        requireNonNull(activityRunner, "activityRunner must not be null");
+        requireNonNull(activityExecutor, "activityExecutor must not be null");
 
         // TODO: Find a better way to do this.
         //  It's only temporary to make testing easier.
-        final Class<? extends ActivityRunner> activityRunnerClass;
-        if (activityRunner instanceof final FaultInjectingActivityRunner<A, R> runner) {
-            activityRunnerClass = runner.delegate().getClass();
+        final Class<? extends ActivityExecutor> activityExecutorClass;
+        if (activityExecutor instanceof final FaultInjectingActivityExecutor<A, R> executor) {
+            activityExecutorClass = executor.delegate().getClass();
         } else {
-            activityRunnerClass = activityRunner.getClass();
+            activityExecutorClass = activityExecutor.getClass();
         }
 
-        final var activityAnnotation = activityRunnerClass.getAnnotation(Activity.class);
+        final var activityAnnotation = activityExecutorClass.getAnnotation(Activity.class);
         if (activityAnnotation == null) {
-            throw new IllegalArgumentException("activityRunner class must be annotated with @Activity");
+            throw new IllegalArgumentException("activityExecutor class must be annotated with @Activity");
         }
 
-        registerActivityRunner(activityAnnotation.name(), maxConcurrency,
-                argumentConverter, resultConverter, taskLockTimeout, activityRunner);
+        registerActivityExecutor(activityAnnotation.name(), maxConcurrency,
+                argumentConverter, resultConverter, taskLockTimeout, activityExecutor);
     }
 
-    <A, R> void registerActivityRunner(
+    <A, R> void registerActivityExecutor(
             final String activityName,
             final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration taskLockTimeout,
-            final ActivityRunner<A, R> activityRunner) {
+            final ActivityExecutor<A, R> activityExecutor) {
         state.assertRunning();
         requireNonNull(activityName, "activityName must not be null");
         requireValidActivityName(activityName);
         requireNonNull(argumentConverter, "argumentConverter must not be null");
         requireNonNull(resultConverter, "resultConverter must not be null");
-        requireNonNull(activityRunner, "activityRunner must not be null");
+        requireNonNull(activityExecutor, "activityExecutor must not be null");
 
         final String executorName = "activity:%s".formatted(activityName);
         if (executorServiceByName.containsKey(executorName)) {
@@ -407,16 +407,16 @@ public class WorkflowEngine implements Closeable {
         final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                        .name("WorkflowEngine-ActivityRunner-" + activityName + "-", 0)
+                        .name("WorkflowEngine-ActivityExecutor-" + activityName + "-", 0)
                         .factory());
         if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(executorService, "WorkflowEngine-ActivityRunner-" + activityName, null)
+            new ExecutorServiceMetrics(executorService, "WorkflowEngine-ActivityExecutor-" + activityName, null)
                     .bindTo(config.meterRegistry());
         }
         executorServiceByName.put(executorName, executorService);
 
         final var taskProcessor = new ActivityTaskProcessor<>(
-                this, activityName, activityRunner, argumentConverter, resultConverter, taskLockTimeout);
+                this, activityName, activityExecutor, argumentConverter, resultConverter, taskLockTimeout);
 
         final var taskDispatcher = new TaskDispatcher<>(
                 this,

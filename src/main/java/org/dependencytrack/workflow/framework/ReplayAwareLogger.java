@@ -23,11 +23,11 @@ import org.slf4j.Marker;
 
 final class ReplayAwareLogger implements Logger {
 
-    private final WorkflowRunContext<?, ?> executionContext;
+    private final WorkflowContext<?, ?> executionContext;
     private final Logger delegate;
 
     ReplayAwareLogger(
-            final WorkflowRunContext<?, ?> executionContext,
+            final WorkflowContext<?, ?> executionContext,
             final Logger delegate) {
         this.executionContext = executionContext;
         this.delegate = delegate;

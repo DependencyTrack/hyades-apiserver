@@ -68,8 +68,8 @@ import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
 import org.dependencytrack.workflow.framework.ActivityClient;
-import org.dependencytrack.workflow.framework.ActivityRunContext;
-import org.dependencytrack.workflow.framework.ActivityRunner;
+import org.dependencytrack.workflow.framework.ActivityContext;
+import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.json.JSONArray;
 import org.slf4j.MDC;
@@ -139,7 +139,7 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.v
  * @since 3.0.0
  */
 @Activity(name = "ingest-bom")
-public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Void>, Subscriber {
+public class BomUploadProcessingTask implements ActivityExecutor<IngestBomArgs, Void>, Subscriber {
 
     private static final class Context {
 
@@ -183,7 +183,7 @@ public class BomUploadProcessingTask implements ActivityRunner<IngestBomArgs, Vo
     }
 
     @Override
-    public Optional<Void> run(final ActivityRunContext<IngestBomArgs> ctx) throws Exception {
+    public Optional<Void> execute(final ActivityContext<IngestBomArgs> ctx) throws Exception {
         final IngestBomArgs args = ctx.argument().orElseThrow();
 
         final var project = new Project();

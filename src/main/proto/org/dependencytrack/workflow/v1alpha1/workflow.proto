@@ -76,8 +76,8 @@ message WorkflowEvent {
   google.protobuf.Timestamp timestamp = 2;
 
   oneof subject {
-    RunnerStarted runner_started = 25;
-    RunnerCompleted Runner_completed = 26;
+    ExecutionStarted execution_started = 25;
+    ExecutionCompleted execution_completed = 26;
 
     RunScheduled run_scheduled = 50;
     RunStarted run_started = 51;
@@ -110,10 +110,10 @@ message ParentWorkflowRun {
   int32 workflow_version = 4;
 }
 
-message RunnerStarted {
+message ExecutionStarted {
 }
 
-message RunnerCompleted {
+message ExecutionCompleted {
 }
 
 message RunScheduled {

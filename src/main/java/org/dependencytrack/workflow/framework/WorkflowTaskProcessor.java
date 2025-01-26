@@ -19,9 +19,9 @@
 package org.dependencytrack.workflow.framework;
 
 import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.proto.workflow.v1alpha1.ExecutionCompleted;
+import org.dependencytrack.proto.workflow.v1alpha1.ExecutionStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
-import org.dependencytrack.proto.workflow.v1alpha1.RunnerCompleted;
-import org.dependencytrack.proto.workflow.v1alpha1.RunnerStarted;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
 import org.slf4j.Logger;
@@ -38,7 +38,7 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
 
     private final WorkflowEngine engine;
     private final String workflowName;
-    private final WorkflowRunner<A, R> workflowRunner;
+    private final WorkflowExecutor<A, R> workflowExecutor;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
     private final Duration taskLockTimeout;
@@ -46,13 +46,13 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
     WorkflowTaskProcessor(
             final WorkflowEngine engine,
             final String workflowName,
-            final WorkflowRunner<A, R> workflowRunner,
+            final WorkflowExecutor<A, R> workflowExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration taskLockTimeout) {
         this.engine = engine;
         this.workflowName = workflowName;
-        this.workflowRunner = workflowRunner;
+        this.workflowExecutor = workflowExecutor;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
         this.taskLockTimeout = taskLockTimeout;
@@ -114,12 +114,12 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
             return;
         }
 
-        // Inject a RunnerStarted event.
+        // Inject an ExecutionStarted event.
         // Its timestamp will be used as deterministic "now" timestamp while processing new events.
         workflowRunState.onEvent(WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
-                .setRunnerStarted(RunnerStarted.newBuilder().build())
+                .setExecutionStarted(ExecutionStarted.newBuilder().build())
                 .build());
 
         int eventsAdded = 0;
@@ -146,13 +146,13 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
             return;
         }
 
-        final var ctx = new WorkflowRunContext<>(
+        final var ctx = new WorkflowContext<>(
                 task.workflowRunId(),
                 task.workflowName(),
                 task.workflowVersion(),
                 task.priority(),
                 task.tags(),
-                workflowRunner,
+                workflowExecutor,
                 argumentConverter,
                 resultConverter,
                 workflowRunState.journal(),
@@ -164,7 +164,7 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
         workflowRunState.onEvent(WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
-                .setRunnerCompleted(RunnerCompleted.newBuilder().build())
+                .setExecutionCompleted(ExecutionCompleted.newBuilder().build())
                 .build());
 
         try {

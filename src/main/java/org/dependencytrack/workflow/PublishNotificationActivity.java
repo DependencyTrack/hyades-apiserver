@@ -25,8 +25,8 @@ import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationActivityArgs;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.ActivityClient;
-import org.dependencytrack.workflow.framework.ActivityRunContext;
-import org.dependencytrack.workflow.framework.ActivityRunner;
+import org.dependencytrack.workflow.framework.ActivityContext;
+import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
 import org.jdbi.v3.core.mapper.RowMapper;
@@ -48,7 +48,7 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.p
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Activity(name = "publish-notification")
-public class PublishNotificationActivity implements ActivityRunner<PublishNotificationActivityArgs, Void> {
+public class PublishNotificationActivity implements ActivityExecutor<PublishNotificationActivityArgs, Void> {
 
     public static final ActivityClient<PublishNotificationActivityArgs, Void> CLIENT = ActivityClient.of(
             PublishNotificationActivity.class,
@@ -58,7 +58,7 @@ public class PublishNotificationActivity implements ActivityRunner<PublishNotifi
     private static final Logger LOGGER = LoggerFactory.getLogger(PublishNotificationActivity.class);
 
     @Override
-    public Optional<Void> run(final ActivityRunContext<PublishNotificationActivityArgs> ctx) throws Exception {
+    public Optional<Void> execute(final ActivityContext<PublishNotificationActivityArgs> ctx) throws Exception {
         final PublishNotificationActivityArgs args = ctx.argument().orElseThrow();
 
         final byte[] notificationBytes;

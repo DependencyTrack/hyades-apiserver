@@ -25,8 +25,8 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsRe
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.ActivityClient;
-import org.dependencytrack.workflow.framework.ActivityRunContext;
-import org.dependencytrack.workflow.framework.ActivityRunner;
+import org.dependencytrack.workflow.framework.ActivityContext;
+import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +39,7 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.p
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Activity(name = "process-project-analysis-results")
-public class ProcessProjectAnalysisResultsActivity implements ActivityRunner<ProcessProjectAnalysisResultsArgs, Void> {
+public class ProcessProjectAnalysisResultsActivity implements ActivityExecutor<ProcessProjectAnalysisResultsArgs, Void> {
 
     public static final ActivityClient<ProcessProjectAnalysisResultsArgs, Void> CLIENT = ActivityClient.of(
             ProcessProjectAnalysisResultsActivity.class,
@@ -49,7 +49,7 @@ public class ProcessProjectAnalysisResultsActivity implements ActivityRunner<Pro
     private static final Logger LOGGER = LoggerFactory.getLogger(ProcessProjectAnalysisResultsActivity.class);
 
     @Override
-    public Optional<Void> run(final ActivityRunContext<ProcessProjectAnalysisResultsArgs> ctx) throws Exception {
+    public Optional<Void> execute(final ActivityContext<ProcessProjectAnalysisResultsArgs> ctx) throws Exception {
         final ProcessProjectAnalysisResultsArgs args = ctx.argument().orElseThrow();
 
         final var resultsFileMetadataSet = new HashSet<FileMetadata>(args.getResultsCount());

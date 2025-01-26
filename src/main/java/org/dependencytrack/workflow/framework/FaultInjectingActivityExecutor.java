@@ -23,18 +23,18 @@ import org.dependencytrack.workflow.framework.failure.ApplicationFailureExceptio
 import java.security.SecureRandom;
 import java.util.Optional;
 
-public class FaultInjectingActivityRunner<A, R> implements ActivityRunner<A, R> {
+public class FaultInjectingActivityExecutor<A, R> implements ActivityExecutor<A, R> {
 
-    private final ActivityRunner<A, R> delegate;
+    private final ActivityExecutor<A, R> delegate;
     private final SecureRandom random;
 
-    public FaultInjectingActivityRunner(final ActivityRunner<A, R> delegate, final SecureRandom random) {
+    public FaultInjectingActivityExecutor(final ActivityExecutor<A, R> delegate, final SecureRandom random) {
         this.delegate = delegate;
         this.random = random;
     }
 
     @Override
-    public Optional<R> run(final ActivityRunContext<A> ctx) throws Exception {
+    public Optional<R> execute(final ActivityContext<A> ctx) throws Exception {
         if (random.nextDouble() < 0.1) {
             Thread.sleep(random.nextInt(10, 1000));
 
@@ -48,10 +48,10 @@ public class FaultInjectingActivityRunner<A, R> implements ActivityRunner<A, R> 
             throw new IllegalStateException("I have the feeling this might resolve soon!");
         }
 
-        return delegate.run(ctx);
+        return delegate.execute(ctx);
     }
 
-    ActivityRunner<A, R> delegate() {
+    ActivityExecutor<A, R> delegate() {
         return delegate;
     }
 

@@ -29,8 +29,8 @@ import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
 import org.dependencytrack.workflow.framework.ActivityClient;
-import org.dependencytrack.workflow.framework.ActivityRunContext;
-import org.dependencytrack.workflow.framework.ActivityRunner;
+import org.dependencytrack.workflow.framework.ActivityContext;
+import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.slf4j.MDC;
 
@@ -51,7 +51,7 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.v
  * @since 4.6.0
  */
 @Activity(name = "update-project-metrics")
-public class ProjectMetricsUpdateTask implements ActivityRunner<UpdateProjectMetricsArgs, Void>, Subscriber {
+public class ProjectMetricsUpdateTask implements ActivityExecutor<UpdateProjectMetricsArgs, Void>, Subscriber {
 
     public static final ActivityClient<UpdateProjectMetricsArgs, Void> ACTIVITY_CLIENT = ActivityClient.of(
             ProjectMetricsUpdateTask.class,
@@ -61,7 +61,7 @@ public class ProjectMetricsUpdateTask implements ActivityRunner<UpdateProjectMet
     private static final Logger LOGGER = Logger.getLogger(ProjectMetricsUpdateTask.class);
 
     @Override
-    public Optional<Void> run(final ActivityRunContext<UpdateProjectMetricsArgs> ctx) throws Exception {
+    public Optional<Void> execute(final ActivityContext<UpdateProjectMetricsArgs> ctx) throws Exception {
         final UpdateProjectMetricsArgs args = ctx.argument().orElseThrow();
 
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, args.getProject().getUuid());

@@ -31,34 +31,34 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Context available to {@link ActivityRunner}s.
+ * Context available to {@link ActivityExecutor}s.
  *
  * @param <T> Type of the activity's argument.
  */
-public final class ActivityRunContext<T> implements Closeable {
+public final class ActivityContext<T> implements Closeable {
 
     private final WorkflowEngine engine;
     private final UUID workflowRunId;
     private final int scheduledEventId;
     private final T argument;
-    private final ActivityRunner<T, ?> activityRunner;
+    private final ActivityExecutor<T, ?> activityExecutor;
     private final Duration lockTimeout;
     private final ScheduledExecutorService heartbeatExecutor;
     private volatile Instant lockedUntil;
 
-    ActivityRunContext(
+    ActivityContext(
             final WorkflowEngine engine,
             final UUID workflowRunId,
             final int scheduledEventId,
             final T argument,
-            final ActivityRunner<T, ?> activityRunner,
+            final ActivityExecutor<T, ?> activityExecutor,
             final Duration lockTimeout,
             final Instant lockedUntil) {
         this.engine = engine;
         this.workflowRunId = workflowRunId;
         this.scheduledEventId = scheduledEventId;
         this.argument = argument;
-        this.activityRunner = activityRunner;
+        this.activityExecutor = activityExecutor;
         this.lockTimeout = lockTimeout;
         this.lockedUntil = lockedUntil;
 
@@ -88,7 +88,7 @@ public final class ActivityRunContext<T> implements Closeable {
         //  detect when run was cancelled or failed.
         this.lockedUntil = engine.heartbeatActivityTask(
                 new ActivityTaskId(workflowRunId, scheduledEventId), lockTimeout);
-        LoggerFactory.getLogger(activityRunner.getClass()).debug(
+        LoggerFactory.getLogger(activityExecutor.getClass()).debug(
                 "Lock extended to {}", this.lockedUntil);
     }
 

@@ -20,8 +20,8 @@ package org.dependencytrack.workflow.framework;
 
 import java.util.Optional;
 
-public interface WorkflowRunner<A, R> {
+public interface ActivityExecutor<A, R> {
 
-    Optional<R> run(final WorkflowRunContext<A, R> ctx) throws Exception;
+    Optional<R> execute(final ActivityContext<A> ctx) throws Exception;
 
 }

@@ -22,8 +22,8 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
-import org.dependencytrack.workflow.framework.WorkflowRunContext;
-import org.dependencytrack.workflow.framework.WorkflowRunner;
+import org.dependencytrack.workflow.framework.WorkflowContext;
+import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
 
 import java.util.Optional;
@@ -31,14 +31,14 @@ import java.util.Optional;
 import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
 
 @Workflow(name = "process-bom-upload")
-public class ProcessBomUploadWorkflow implements WorkflowRunner<ProcessBomUploadArgs, Void> {
+public class ProcessBomUploadWorkflow implements WorkflowExecutor<ProcessBomUploadArgs, Void> {
 
     private static final String STATUS_INGESTING_BOM = "INGESTING_BOM";
     private static final String STATUS_ANALYZING = "ANALYZING";
     private static final String STATUS_PROCESSED = "PROCESSED";
 
     @Override
-    public Optional<Void> run(final WorkflowRunContext<ProcessBomUploadArgs, Void> ctx) throws Exception {
+    public Optional<Void> execute(final WorkflowContext<ProcessBomUploadArgs, Void> ctx) throws Exception {
         final ProcessBomUploadArgs args = ctx.argument().orElseThrow();
         ctx.logger().info("Processing BOM upload");
 

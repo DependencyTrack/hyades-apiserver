@@ -41,25 +41,25 @@ public final class WorkflowClient<A, R> {
         this.resultConverter = resultConverter;
     }
 
-    public static <A, R, T extends WorkflowRunner<A, R>> WorkflowClient<A, R> of(
-            final Class<T> runnerClass,
+    public static <A, R, T extends WorkflowExecutor<A, R>> WorkflowClient<A, R> of(
+            final Class<T> executorClass,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter) {
-        requireNonNull(runnerClass, "runnerClass must not be null");
+        requireNonNull(executorClass, "executorClass must not be null");
         requireNonNull(argumentConverter, "argumentConverter must not be null");
         requireNonNull(resultConverter, "resultConverter must not be null");
 
-        final Workflow annotation = runnerClass.getAnnotation(Workflow.class);
+        final Workflow annotation = executorClass.getAnnotation(Workflow.class);
         if (annotation == null) {
-            throw new IllegalArgumentException("Runner class %s is not annotated with %s".formatted(
-                    runnerClass.getName(), Workflow.class.getName()));
+            throw new IllegalArgumentException("Executor class %s is not annotated with %s".formatted(
+                    executorClass.getName(), Workflow.class.getName()));
         }
 
         return new WorkflowClient<>(annotation.name(), annotation.version(), argumentConverter, resultConverter);
     }
 
     public Awaitable<R> callWithConcurrencyGroupId(
-            final WorkflowRunContext<?, ?> ctx,
+            final WorkflowContext<?, ?> ctx,
             final String concurrencyGroupId,
             final A argument) {
         return ctx.callSubWorkflow(

@@ -31,8 +31,8 @@ import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.workflow.framework.Awaitable;
 import org.dependencytrack.workflow.framework.RetryPolicy;
 import org.dependencytrack.workflow.framework.WorkflowClient;
-import org.dependencytrack.workflow.framework.WorkflowRunContext;
-import org.dependencytrack.workflow.framework.WorkflowRunner;
+import org.dependencytrack.workflow.framework.WorkflowContext;
+import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
 
 import java.util.ArrayList;
@@ -48,7 +48,7 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.p
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "analyze-project")
-public class AnalyzeProjectWorkflow implements WorkflowRunner<AnalyzeProjectArgs, Void> {
+public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectArgs, Void> {
 
     public static final WorkflowClient<AnalyzeProjectArgs, Void> CLIENT =
             WorkflowClient.of(AnalyzeProjectWorkflow.class, protoConverter(AnalyzeProjectArgs.class), voidConverter());
@@ -60,7 +60,7 @@ public class AnalyzeProjectWorkflow implements WorkflowRunner<AnalyzeProjectArgs
     private static final String STATUS_COMPLETED = "COMPLETED";
 
     @Override
-    public Optional<Void> run(final WorkflowRunContext<AnalyzeProjectArgs, Void> ctx) throws Exception {
+    public Optional<Void> execute(final WorkflowContext<AnalyzeProjectArgs, Void> ctx) throws Exception {
         final AnalyzeProjectArgs args = ctx.argument().orElseThrow();
 
         ctx.setStatus(STATUS_ANALYZING_VULNS);

@@ -24,8 +24,8 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWo
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.Awaitable;
 import org.dependencytrack.workflow.framework.RetryPolicy;
-import org.dependencytrack.workflow.framework.WorkflowRunContext;
-import org.dependencytrack.workflow.framework.WorkflowRunner;
+import org.dependencytrack.workflow.framework.WorkflowContext;
+import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
 import org.dependencytrack.workflow.framework.failure.ActivityFailureException;
 
@@ -37,10 +37,10 @@ import java.util.Optional;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "publish-notification")
-public class PublishNotificationWorkflow implements WorkflowRunner<PublishNotificationWorkflowArgs, Void> {
+public class PublishNotificationWorkflow implements WorkflowExecutor<PublishNotificationWorkflowArgs, Void> {
 
     @Override
-    public Optional<Void> run(final WorkflowRunContext<PublishNotificationWorkflowArgs, Void> ctx) throws Exception {
+    public Optional<Void> execute(final WorkflowContext<PublishNotificationWorkflowArgs, Void> ctx) throws Exception {
         final PublishNotificationWorkflowArgs args = ctx.argument().orElseThrow();
         if (args.getNotificationRuleNamesCount() == 0) {
             ctx.logger().warn("No rules provided");

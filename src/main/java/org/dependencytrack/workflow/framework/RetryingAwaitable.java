@@ -32,7 +32,7 @@ final class RetryingAwaitable<T> extends Awaitable<T> {
     private final Function<WorkflowFailureException, Awaitable<T>> retryAwaitableFunction;
 
     RetryingAwaitable(
-            final WorkflowRunContext<?, ?> executionContext,
+            final WorkflowContext<?, ?> executionContext,
             final PayloadConverter<T> resultConverter,
             final Awaitable<T> initialAwaitable,
             final Function<WorkflowFailureException, Awaitable<T>> retryAwaitableFunction) {

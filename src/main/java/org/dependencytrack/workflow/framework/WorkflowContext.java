@@ -68,21 +68,21 @@ import java.util.function.Function;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Context available to {@link WorkflowRunner}s.
+ * Context available to {@link WorkflowExecutor}s.
  *
  * @param <A> Type of the workflow's argument.
  * @param <R> Type of the workflow's result.
  */
-public final class WorkflowRunContext<A, R> {
+public final class WorkflowContext<A, R> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowRunContext.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowContext.class);
 
-    private final UUID workflowRunId;
+    private final UUID runId;
     private final String workflowName;
     private final int workflowVersion;
     private final Integer priority;
     private final Set<String> tags;
-    private final WorkflowRunner<A, R> workflowRunner;
+    private final WorkflowExecutor<A, R> workflowExecutor;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
     private final List<WorkflowEvent> journal;
@@ -102,23 +102,23 @@ public final class WorkflowRunContext<A, R> {
     private boolean isSuspended;
     private String customStatus;
 
-    WorkflowRunContext(
-            final UUID workflowRunId,
+    WorkflowContext(
+            final UUID runId,
             final String workflowName,
             final int workflowVersion,
             final Integer priority,
             final Set<String> tags,
-            final WorkflowRunner<A, R> workflowRunner,
+            final WorkflowExecutor<A, R> workflowExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final List<WorkflowEvent> journal,
             final List<WorkflowEvent> inbox) {
-        this.workflowRunId = workflowRunId;
+        this.runId = runId;
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
         this.priority = priority;
         this.tags = tags;
-        this.workflowRunner = workflowRunner;
+        this.workflowExecutor = workflowExecutor;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
         this.journal = journal;
@@ -131,8 +131,8 @@ public final class WorkflowRunContext<A, R> {
         this.bufferedExternalEvents = new HashMap<>();
     }
 
-    public UUID workflowRunId() {
-        return workflowRunId;
+    public UUID runId() {
+        return runId;
     }
 
     public String workflowName() {
@@ -151,12 +151,28 @@ public final class WorkflowRunContext<A, R> {
         return Optional.ofNullable(argument);
     }
 
+    /**
+     * @return The current, deterministic time within the workflow execution.
+     */
+    public Instant currentTime() {
+        return currentTime;
+    }
+
+    /**
+     * @return Whether the workflow is currently replaying past events.
+     */
     public boolean isReplaying() {
         return isReplaying;
     }
 
+    /**
+     * @return A {@link Logger} to be used for logging within the workflow execution.
+     * The {@link Logger} omits log events if the workflow is currently replaying past events,
+     * avoiding redundant log emission.
+     * @see #isReplaying()
+     */
     public Logger logger() {
-        return new ReplayAwareLogger(this, LoggerFactory.getLogger(workflowRunner.getClass()));
+        return new ReplayAwareLogger(this, LoggerFactory.getLogger(workflowExecutor.getClass()));
     }
 
     <AA, AR> Awaitable<AR> callActivity(
@@ -448,7 +464,7 @@ public final class WorkflowRunContext<A, R> {
         }
 
         switch (event.getSubjectCase()) {
-            case RUNNER_STARTED -> onRunnerStarted(event.getTimestamp());
+            case EXECUTION_STARTED -> onExecutionStarted(event.getTimestamp());
             case RUN_SCHEDULED -> onRunScheduled(event.getRunScheduled());
             case RUN_STARTED -> onRunStarted(event.getRunStarted());
             case RUN_CANCELLED -> onRunCancelled(event.getRunCancelled());
@@ -479,7 +495,7 @@ public final class WorkflowRunContext<A, R> {
         return null;
     }
 
-    private void onRunnerStarted(final Timestamp timestamp) {
+    private void onExecutionStarted(final Timestamp timestamp) {
         currentTime = WorkflowEngine.toInstant(timestamp);
     }
 
@@ -496,7 +512,7 @@ public final class WorkflowRunContext<A, R> {
 
         final Optional<R> result;
         try {
-            result = workflowRunner.run(this);
+            result = workflowExecutor.execute(this);
         } catch (Exception e) {
             if (e instanceof RuntimeException) {
                 throw (RuntimeException) e;
@@ -748,7 +764,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void cancel(final String reason) {
         if (logger().isDebugEnabled()) {
-            logger().debug("Workflow run {}/{} cancelled", workflowName, workflowRunId);
+            logger().debug("Workflow run {}/{} cancelled", workflowName, runId);
         }
 
         final int eventId = currentEventId++;
@@ -764,7 +780,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void complete(final R result) {
         if (logger().isDebugEnabled()) {
-            logger().debug("Workflow run {}/{} completed with result {}", workflowName, workflowRunId, result);
+            logger().debug("Workflow run {}/{} completed with result {}", workflowName, runId, result);
         }
 
         final int eventId = currentEventId++;
@@ -778,7 +794,7 @@ public final class WorkflowRunContext<A, R> {
 
     private void fail(final Throwable exception) {
         if (logger().isDebugEnabled()) {
-            logger().debug("Workflow run {}/{} failed", workflowName, workflowRunId, exception);
+            logger().debug("Workflow run {}/{} failed", workflowName, runId, exception);
         }
 
         final int eventId = currentEventId++;

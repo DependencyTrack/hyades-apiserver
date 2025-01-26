@@ -38,24 +38,24 @@ public final class ActivityClient<A, R> {
         this.resultConverter = resultConverter;
     }
 
-    public static <A, R, T extends ActivityRunner<A, R>> ActivityClient<A, R> of(
-            final Class<T> runnerClass,
+    public static <A, R, T extends ActivityExecutor<A, R>> ActivityClient<A, R> of(
+            final Class<T> executorClass,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter) {
-        requireNonNull(runnerClass, "runnerClass must not be null");
+        requireNonNull(executorClass, "executorClass must not be null");
         requireNonNull(argumentConverter, "argumentConverter must not be null");
         requireNonNull(resultConverter, "resultConverter must not be null");
 
-        final Activity annotation = runnerClass.getAnnotation(Activity.class);
+        final Activity annotation = executorClass.getAnnotation(Activity.class);
         if (annotation == null) {
-            throw new IllegalArgumentException("Runner class %s is not annotated with %s".formatted(
-                    runnerClass.getName(), Activity.class.getName()));
+            throw new IllegalArgumentException("Executor class %s is not annotated with %s".formatted(
+                    executorClass.getName(), Activity.class.getName()));
         }
 
         return new ActivityClient<>(annotation.name(), argumentConverter, resultConverter);
     }
 
-    public Awaitable<R> call(final WorkflowRunContext<?, ?> ctx, final A argument, final RetryPolicy retryPolicy) {
+    public Awaitable<R> call(final WorkflowContext<?, ?> ctx, final A argument, final RetryPolicy retryPolicy) {
         return ctx.callActivity(
                 this.activityName,
                 argument,

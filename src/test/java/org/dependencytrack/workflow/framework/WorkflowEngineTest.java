@@ -89,7 +89,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldRunWorkflowWithArgumentAndResult() {
-        engine.registerWorkflowRunner("foo", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.setStatus("someCustomStatus");
             return Optional.of("someResult");
         });
@@ -119,7 +119,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(event.getId()).isEqualTo(-1);
                     assertThat(event.hasTimestamp()).isTrue();
 
-                    assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED);
+                    assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED);
                 },
                 event -> {
                     assertThat(event.getId()).isEqualTo(-1);
@@ -154,7 +154,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(event.getId()).isEqualTo(-1);
                     assertThat(event.hasTimestamp()).isTrue();
 
-                    assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED);
+                    assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED);
                 });
 
         assertThat(engine.getRunInbox(runId)).isEmpty();
@@ -162,7 +162,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldFailWorkflowRunWhenRunnerThrows() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             throw new IllegalStateException("Ouch!");
         });
 
@@ -182,7 +182,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         assertThat(failedRun.completedAt()).isNotNull();
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 event -> {
@@ -191,14 +191,14 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(event.getRunCompleted().hasResult()).isFalse();
                     assertThat(event.getRunCompleted().getFailure().getMessage()).isEqualTo("Ouch!");
                 },
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
 
         assertThat(engine.getRunInbox(runId)).isEmpty();
     }
 
     @Test
     public void shouldFailWorkflowRunWhenCancelled() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             // Sleep for a moment so we get an opportunity to cancel the run.
             ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
             return Optional.empty();
@@ -224,12 +224,12 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         assertThat(cancelledRun.completedAt()).isNotNull();
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_CANCELLED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
@@ -237,14 +237,14 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(entry.getRunCompleted().hasResult()).isFalse();
                     assertThat(entry.getRunCompleted().getFailure().getMessage()).isEqualTo("Stop it!");
                 },
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
 
         assertThat(engine.getRunInbox(runId)).isEmpty();
     }
 
     @Test
     public void shouldWaitForScheduledTimerToElapse() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.scheduleTimer("Sleep for 3 seconds", Duration.ofSeconds(3)).await();
             return Optional.empty();
         });
@@ -254,25 +254,25 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(10));
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED);
                     assertThat(entry.getTimerScheduled().getName()).isEqualTo("Sleep for 3 seconds");
                 },
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_ELAPSED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
 
         assertThat(engine.getRunInbox(runId)).isEmpty();
     }
 
     @Test
     public void shouldWaitForMultipleScheduledTimersToElapse() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             final var timers = new ArrayList<Awaitable<Void>>(3);
             for (int i = 0; i < 3; i++) {
                 timers.add(ctx.scheduleTimer("sleep" + i, Duration.ofSeconds(3)));
@@ -290,33 +290,33 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(10));
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_ELAPSED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_ELAPSED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_ELAPSED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
 
         assertThat(engine.getRunInbox(runId)).isEmpty();
     }
 
     @Test
     public void shouldWaitForSubWorkflowRun() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             final Optional<String> subWorkflowResult = ctx.callSubWorkflow(
                     "bar", 1, null, "inputValue", stringConverter(), stringConverter()).await();
             assertThat(subWorkflowResult).contains("inputValue-outputValue");
             return Optional.empty();
         });
 
-        engine.registerWorkflowRunner("bar", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5),
+        engine.registerWorkflowExecutor("bar", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5),
                 ctx -> ctx.argument().map(argument -> argument + "-outputValue"));
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
@@ -324,25 +324,25 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SUB_WORKFLOW_RUN_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SUB_WORKFLOW_RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test
     public void shouldFailWhenSubWorkflowRunFails() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callSubWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             return Optional.empty();
         });
 
-        engine.registerWorkflowRunner("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             throw new IllegalStateException("Oh no!");
         });
 
@@ -351,12 +351,12 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SUB_WORKFLOW_RUN_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SUB_WORKFLOW_RUN_FAILED);
                     assertThat(entry.getSubWorkflowRunFailed().getFailure().getMessage()).isEqualTo("Oh no!");
@@ -367,7 +367,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(entry.getRunCompleted().getFailure().hasMessage()).isFalse();
                     assertThat(entry.getRunCompleted().getFailure().getCause().getMessage()).isEqualTo("Oh no!");
                 },
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test
@@ -375,19 +375,19 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         final var childRunIdReference = new AtomicReference<UUID>();
         final var grandChildRunIdReference = new AtomicReference<UUID>();
 
-        engine.registerWorkflowRunner("parent", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("parent", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callSubWorkflow("child", 1, null, null, voidConverter(), voidConverter()).await();
             return Optional.empty();
         });
 
-        engine.registerWorkflowRunner("child", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            childRunIdReference.set(ctx.workflowRunId());
+        engine.registerWorkflowExecutor("child", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+            childRunIdReference.set(ctx.runId());
             ctx.callSubWorkflow("grand-child", 1, null, null, voidConverter(), voidConverter()).await();
             return Optional.empty();
         });
 
-        engine.registerWorkflowRunner("grand-child", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            grandChildRunIdReference.set(ctx.workflowRunId());
+        engine.registerWorkflowExecutor("grand-child", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+            grandChildRunIdReference.set(ctx.runId());
             ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
             return Optional.empty();
         });
@@ -407,7 +407,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldThrowWhenCancellingRunInTerminalState() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
@@ -420,7 +420,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldSuspendAndResumeRunWhenRequested() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             // Sleep for a moment so we get an opportunity to suspend the run.
             ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
             return Optional.empty();
@@ -439,7 +439,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldCancelSuspendedRunWhenRequested() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             // Sleep for a moment so we get an opportunity to suspend the run.
             ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
             return Optional.empty();
@@ -458,7 +458,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldThrowWhenSuspendingRunInTerminalState() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
@@ -471,7 +471,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldThrowWhenSuspendingRunInSuspendedState() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             // Sleep for a moment so we get an opportunity to suspend the run.
             ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
             return Optional.empty();
@@ -490,7 +490,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldThrowWhenResumingRunInNonSuspendedState() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             // Sleep for a moment so we get an opportunity to act on the running run.
             ctx.scheduleTimer("sleep", Duration.ofSeconds(3)).await();
             return Optional.empty();
@@ -507,7 +507,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldThrowWhenResumingRunInTerminalState() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
@@ -520,7 +520,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldWaitForExternalEvent() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.waitForExternalEvent("foo-123", voidConverter(), Duration.ofSeconds(30)).await();
             return Optional.empty();
         });
@@ -539,20 +539,20 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXTERNAL_EVENT_RECEIVED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test
     public void shouldFailWhenWaitingForExternalEventTimesOut() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.waitForExternalEvent("foo-123", voidConverter(), Duration.ofMillis(5)).await();
             return Optional.empty();
         });
@@ -562,26 +562,26 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_ELAPSED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
                     assertThat(entry.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_FAILED);
                     assertThat(entry.getRunCompleted().getFailure().getMessage()).isEqualTo("Timed out while waiting for external event");
                 },
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test
     public void shouldRecordSideEffectResult() {
         final var sideEffectInvocationCounter = new AtomicInteger();
 
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.sideEffect("sideEffect", null, voidConverter(), ignored -> {
                 sideEffectInvocationCounter.incrementAndGet();
                 return null;
@@ -598,7 +598,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         assertThat(sideEffectInvocationCounter.get()).isEqualTo(1);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> {
@@ -606,16 +606,16 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(entry.getSideEffectExecuted().getName()).isEqualTo("sideEffect");
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_ELAPSED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test
     public void shouldNotAllowNestedSideEffects() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.sideEffect("outerSideEffect", null, voidConverter(), ignored -> {
                 ctx.sideEffect("nestedSideEffect", null, voidConverter(), ignored2 -> null).await();
                 return null;
@@ -629,7 +629,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> {
@@ -638,38 +638,38 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(entry.getRunCompleted().getFailure().getCause().hasSideEffectFailureDetails());
                     assertThat(entry.getRunCompleted().getFailure().getCause().getMessage()).isEqualTo("Nested side effects are not allowed");
                 },
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test
     public void shouldCallActivity() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callActivity(
                     "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await().orElseThrow();
             return Optional.empty();
         });
 
-        engine.registerActivityRunner("abc", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> Optional.of("123"));
+        engine.registerActivityExecutor("abc", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> Optional.of("123"));
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test
     public void shouldScheduleMultipleActivitiesConcurrently() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
             final List<Awaitable<String>> awaitables = List.of(
                     ctx.callActivity("abc", "first", stringConverter(), stringConverter(), defaultRetryPolicy()),
                     ctx.callActivity("abc", "second", stringConverter(), stringConverter(), defaultRetryPolicy()));
@@ -682,7 +682,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             return Optional.of(joinedResult);
         });
 
-        engine.registerActivityRunner("abc", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5),
+        engine.registerActivityExecutor("abc", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5),
                 ctx -> Optional.of(ctx.argument().orElseThrow()));
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
@@ -690,17 +690,17 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test
@@ -709,13 +709,13 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 .withMaxDelay(Duration.ofMillis(10))
                 .withMaxAttempts(3);
 
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callActivity(
                     "abc", null, voidConverter(), stringConverter(), retryPolicy).await().orElseThrow();
             return Optional.empty();
         });
 
-        engine.registerActivityRunner("abc", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerActivityExecutor("abc", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
             throw new IllegalStateException();
         });
 
@@ -724,34 +724,34 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_FAILED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_FAILED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_FAILED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test
     public void shouldNotRetryActivityFailingWithTerminalException() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callActivity(
                     "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await().orElseThrow();
             return Optional.empty();
         });
 
-        engine.registerActivityRunner("abc", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerActivityExecutor("abc", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
             throw new ApplicationFailureException("Ouch!", null, true);
         });
 
@@ -760,12 +760,12 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_SCHEDULED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.ACTIVITY_TASK_FAILED);
                 },
@@ -773,14 +773,14 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
                     assertThat(entry.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_FAILED);
                 },
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test
     public void shouldPropagateExceptions() {
         final AtomicReference<WorkflowFailureException> exceptionReference = new AtomicReference<>();
 
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             try {
                 ctx.callSubWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             } catch (WorkflowFailureException e) {
@@ -791,17 +791,17 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             return Optional.empty();
         });
 
-        engine.registerWorkflowRunner("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callSubWorkflow("baz", 1, null, null, voidConverter(), voidConverter()).await();
             return Optional.empty();
         });
 
-        engine.registerWorkflowRunner("baz", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("baz", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callActivity("qux", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             return Optional.empty();
         });
 
-        engine.registerActivityRunner("qux", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerActivityExecutor("qux", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             throw new ApplicationFailureException("Ouch!", null, true);
         });
 
@@ -863,13 +863,13 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldPropagateTags() {
-        engine.registerWorkflowRunner("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             assertThat(ctx.tags()).containsExactlyInAnyOrder("oof", "rab");
             ctx.callSubWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             return Optional.empty();
         });
 
-        engine.registerWorkflowRunner("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             assertThat(ctx.tags()).containsExactlyInAnyOrder("oof", "rab");
             return Optional.empty();
         });
@@ -880,7 +880,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThat(engine.getRunJournal(runId)).satisfiesExactly(
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED);
                     assertThat(entry.getRunScheduled().getTagsList()).containsExactlyInAnyOrder("oof", "rab");
@@ -890,11 +890,11 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SUB_WORKFLOW_RUN_SCHEDULED);
                     assertThat(entry.getSubWorkflowRunScheduled().getTagsList()).containsExactlyInAnyOrder("oof", "rab");
                 },
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SUB_WORKFLOW_RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUNNER_COMPLETED));
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 
     @Test

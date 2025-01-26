@@ -30,8 +30,8 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.CelPolicyEngine;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
 import org.dependencytrack.workflow.framework.ActivityClient;
-import org.dependencytrack.workflow.framework.ActivityRunContext;
-import org.dependencytrack.workflow.framework.ActivityRunner;
+import org.dependencytrack.workflow.framework.ActivityContext;
+import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 
 import java.util.Optional;
@@ -47,7 +47,7 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.v
  * @since 5.0.0
  */
 @Activity(name = "eval-project-policies")
-public class PolicyEvaluationTask implements ActivityRunner<EvalProjectPoliciesArgs, Void>, Subscriber {
+public class PolicyEvaluationTask implements ActivityExecutor<EvalProjectPoliciesArgs, Void>, Subscriber {
 
     public static final ActivityClient<EvalProjectPoliciesArgs, Void> ACTIVITY_CLIENT = ActivityClient.of(
             PolicyEvaluationTask.class,
@@ -57,7 +57,7 @@ public class PolicyEvaluationTask implements ActivityRunner<EvalProjectPoliciesA
     private static final Logger LOGGER = Logger.getLogger(PolicyEvaluationTask.class);
 
     @Override
-    public Optional<Void> run(final ActivityRunContext<EvalProjectPoliciesArgs> ctx) throws Exception {
+    public Optional<Void> execute(final ActivityContext<EvalProjectPoliciesArgs> ctx) throws Exception {
         final EvalProjectPoliciesArgs args = ctx.argument().orElseThrow();
         evaluateProject(UUID.fromString(args.getProject().getUuid()));
 

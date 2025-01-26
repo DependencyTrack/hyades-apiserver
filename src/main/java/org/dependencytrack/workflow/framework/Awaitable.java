@@ -30,7 +30,7 @@ import static java.util.Objects.requireNonNull;
 
 public class Awaitable<T> {
 
-    private final WorkflowRunContext<?, ?> executionContext;
+    private final WorkflowContext<?, ?> executionContext;
     private final PayloadConverter<T> resultConverter;
     private boolean completed;
     private boolean cancelled;
@@ -41,7 +41,7 @@ public class Awaitable<T> {
     private WorkflowFailureException exception;
 
     Awaitable(
-            final WorkflowRunContext<?, ?> executionContext,
+            final WorkflowContext<?, ?> executionContext,
             final PayloadConverter<T> resultConverter) {
         this.executionContext = executionContext;
         this.resultConverter = resultConverter;

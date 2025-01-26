@@ -35,7 +35,7 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
 
     private final WorkflowEngine engine;
     private final String activityName;
-    private final ActivityRunner<A, R> activityRunner;
+    private final ActivityExecutor<A, R> activityExecutor;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
     private final Duration taskLockTimeout;
@@ -43,13 +43,13 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
     ActivityTaskProcessor(
             final WorkflowEngine engine,
             final String activityName,
-            final ActivityRunner<A, R> activityRunner,
+            final ActivityExecutor<A, R> activityExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration taskLockTimeout) {
         this.engine = engine;
         this.activityName = activityName;
-        this.activityRunner = activityRunner;
+        this.activityExecutor = activityExecutor;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
         this.taskLockTimeout = taskLockTimeout;
@@ -90,19 +90,19 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
     }
 
     private void processInternal(final ActivityTask task) {
-        final var ctx = new ActivityRunContext<>(
+        final var ctx = new ActivityContext<>(
                 engine,
                 task.workflowRunId(),
                 task.scheduledEventId(),
                 argumentConverter.convertFromPayload(task.argument()),
-                activityRunner,
+                activityExecutor,
                 taskLockTimeout,
                 task.lockedUntil());
 
         try {
             final Optional<R> result;
             try (ctx) {
-                result = activityRunner.run(ctx);
+                result = activityExecutor.execute(ctx);
             }
 
             try {
