@@ -78,7 +78,7 @@ public final class KafkaEventConverter {
         };
     }
 
-    static KafkaEvent<?, ?> convert(final alpine.notification.Notification notification) {
+    public static KafkaEvent<?, ?> convert(final alpine.notification.Notification notification) {
         final Notification protoNotification = NotificationModelConverter.convert(notification);
         return convert(protoNotification);
     }
