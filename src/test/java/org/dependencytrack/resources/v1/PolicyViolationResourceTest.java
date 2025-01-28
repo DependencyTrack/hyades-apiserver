@@ -315,9 +315,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
     public void getViolationsWithAclEnabledTest() {
         initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
 
-        final Project projectA = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
-        final Project projectA_child = qm.createProject("Acme Example - Child", null, "1.0", null, projectA, null, true, false);
-        final Project projectB = qm.createProject("Acme Example - Grandchild", null, "1.0", null, null, null, true, false);
+        final Project projectA = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final Project projectA_child = qm.createProject("Acme Example - Child", null, "1.0", null, projectA, null, null, false);
+        final Project projectB = qm.createProject("Acme Example - Grandchild", null, "1.0", null, null, null, null, false);
 
         projectA.addAccessTeam(team);
 
@@ -425,7 +425,7 @@ public class PolicyViolationResourceTest extends ResourceTest {
     public void getViolationsWithArrayFilter() {
         initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
 
-        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, true, false);
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
         component.setProject(project);
@@ -530,10 +530,10 @@ public class PolicyViolationResourceTest extends ResourceTest {
     public void getViolationsWithInputFilter() {
         initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
 
-        final Project projectA = qm.createProject("Project A", null, "1.0", null, null, null, true, false);
-        final Project projectB = qm.createProject("Project B", null, "1.0", null, null, null, true, false);
-        final Project projectC = qm.createProject("Project C", null, "1.0", null, null, null, true, false);
-        final Project projectD = qm.createProject("Project D", null, "1.0", null, null, null, true, false);
+        final Project projectA = qm.createProject("Project A", null, "1.0", null, null, null, null, false);
+        final Project projectB = qm.createProject("Project B", null, "1.0", null, null, null, null, false);
+        final Project projectC = qm.createProject("Project C", null, "1.0", null, null, null, null, false);
+        final Project projectD = qm.createProject("Project D", null, "1.0", null, null, null, null, false);
 
         var componentA = new Component();
         componentA.setProject(projectA);
