@@ -218,7 +218,7 @@ public final class WorkflowContext<A, R> {
                     }
 
                     final Duration nextDelay = Duration.ofMillis(retryPolicy.asIntervalFunction().apply(attempt + 1));
-                    logger().info("Scheduling retry attempt #{} in {}", attempt, nextDelay);
+                    logger().warn("Activity {} failed; Scheduling retry attempt #{} in {}", name, attempt, nextDelay, exception);
 
                     return callActivityInternal(
                             name,

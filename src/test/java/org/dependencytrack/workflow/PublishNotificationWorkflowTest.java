@@ -1,0 +1,138 @@
+package org.dependencytrack.workflow;
+
+import alpine.notification.NotificationLevel;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.model.NotificationPublisher;
+import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.publisher.KafkaNotificationPublisher;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationActivityArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs;
+import org.dependencytrack.storage.FileStorage;
+import org.dependencytrack.util.PersistenceUtil;
+import org.dependencytrack.workflow.framework.ScheduleWorkflowRunOptions;
+import org.dependencytrack.workflow.framework.WorkflowEngine;
+import org.dependencytrack.workflow.framework.WorkflowEngineConfig;
+import org.dependencytrack.workflow.framework.WorkflowRunStatus;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.testcontainers.kafka.KafkaContainer;
+
+import javax.sql.DataSource;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
+import static org.awaitility.Awaitility.await;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
+
+public class PublishNotificationWorkflowTest extends PersistenceCapableTest {
+
+    @Rule
+    public KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:3.8.0");
+
+    private WorkflowEngine engine;
+
+    @Before
+    @Override
+    public void before() throws Exception {
+        super.before();
+
+        final DataSource dataSource = PersistenceUtil.getDataSource(qm.getPersistenceManager());
+
+        final var config = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
+        config.scheduler().setInitialDelay(Duration.ofMillis(250));
+        config.scheduler().setPollInterval(Duration.ofMillis(250));
+
+        engine = new WorkflowEngine(config);
+        engine.start();
+
+        engine.registerWorkflowExecutor(
+                new PublishNotificationWorkflow(),
+                1,
+                protoConverter(PublishNotificationWorkflowArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(5));
+
+        engine.registerActivityExecutor(
+                new PublishNotificationActivity(),
+                1,
+                protoConverter(PublishNotificationActivityArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(5));
+    }
+
+    @After
+    @Override
+    public void after() {
+        if (engine != null) {
+            try {
+                engine.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        super.after();
+    }
+
+    @Test
+    public void shouldPublishKafkaNotification() throws Exception {
+        try (final var adminClient = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()))) {
+            adminClient.createTopics(List.of(new NewTopic("dtrack-notifications", 1, (short) 1))).all().get();
+        }
+
+        final var notificationPublisher = new NotificationPublisher();
+        notificationPublisher.setName("Kafka");
+        notificationPublisher.setPublisherClass(KafkaNotificationPublisher.class.getName());
+        notificationPublisher.setTemplateMimeType("application/protobuf");
+        notificationPublisher.setTemplate("n/a");
+        qm.persist(notificationPublisher);
+
+        final var notificationRule = new NotificationRule();
+        notificationRule.setName("Test");
+        notificationRule.setPublisher(notificationPublisher);
+        notificationRule.setNotificationLevel(NotificationLevel.INFORMATIONAL);
+        notificationRule.setScope(NotificationScope.PORTFOLIO);
+        notificationRule.setEnabled(true);
+        notificationRule.setPublisherConfig(/* language=JSON */ """
+                {
+                  "destination": "dtrack-notifications",
+                  "kafka.producer.bootstrap.servers": "%s"
+                }
+                """.formatted(kafkaContainer.getBootstrapServers()));
+        qm.persist(notificationRule);
+
+        final var notification = Notification.newBuilder()
+                .build();
+
+        final FileMetadata notificationFileMetadata;
+        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            notificationFileMetadata = fileStorage.store("notification", notification.toByteArray());
+        }
+
+        final UUID workflowRunId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("publish-notification", 1)
+                .withArgument(
+                        PublishNotificationWorkflowArgs.newBuilder()
+                                .addNotificationRuleNames("Test")
+                                .setNotificationFileMetadata(notificationFileMetadata)
+                                .build(),
+                        protoConverter(PublishNotificationWorkflowArgs.class)));
+
+        await()
+                .atMost(Duration.ofSeconds(5))
+                .until(() -> engine.getRun(workflowRunId), run -> run.status() == WorkflowRunStatus.COMPLETED);
+    }
+
+}

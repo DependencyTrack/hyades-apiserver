@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow;
 
-import com.google.protobuf.DebugFormat;
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.dependencytrack.notification.publisher.NotificationPublisher;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationActivityArgs;
@@ -42,6 +42,7 @@ import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
+import java.util.ServiceLoader;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
@@ -56,6 +57,8 @@ public class PublishNotificationActivity implements ActivityExecutor<PublishNoti
             voidConverter());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PublishNotificationActivity.class);
+
+    private final ServiceLoader<NotificationPublisher> publisherLoader = ServiceLoader.load(NotificationPublisher.class);
 
     @Override
     public Optional<Void> execute(final ActivityContext<PublishNotificationActivityArgs> ctx) throws Exception {
@@ -77,11 +80,20 @@ public class PublishNotificationActivity implements ActivityExecutor<PublishNoti
 
         final PublishContext publishContext = getPublishContext(args.getNotificationRuleName());
 
-        // TODO: Lookup and invoke publisher class.
-        LOGGER.info(
-                "Published notification with context {}: {}",
-                publishContext,
-                DebugFormat.singleLine().toString(notification));
+        final NotificationPublisher publisher = publisherLoader.stream()
+                .filter(provider -> provider.type().getName().equals(publishContext.publisherClass()))
+                .map(ServiceLoader.Provider::get)
+                .findAny()
+                .orElseThrow(() -> new ApplicationFailureException(
+                        "No publisher of type %s found".formatted(publishContext.publisherClass()), null, true));
+
+        final var publisherContext = new NotificationPublisher.Context(
+                publishContext.ruleName(),
+                publishContext.publisherName(),
+                publishContext.template(),
+                publishContext.templateMimeType(),
+                publishContext.publisherConfig());
+        publisher.publish(publisherContext, notification);
 
         return Optional.empty();
     }
