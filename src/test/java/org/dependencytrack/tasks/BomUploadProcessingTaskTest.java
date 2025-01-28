@@ -20,6 +20,10 @@ package org.dependencytrack.tasks;
 
 import alpine.model.IConfigProperty.PropertyType;
 import com.github.packageurl.PackageURL;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.BomUploadEvent;
@@ -45,6 +49,7 @@ import org.junit.Test;
 
 import javax.jdo.JDOObjectNotFoundException;
 import java.io.File;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,6 +60,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -1537,13 +1543,13 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void informIssue3936Test() throws Exception{
+    public void informIssue3936Test() throws Exception {
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         qm.persist(project);
         List<String> boms = new ArrayList<>(Arrays.asList("bom-issue3936-authors.json", "bom-issue3936-author.json", "bom-issue3936-both.json"));
         int i=0;
-        for(String bom : boms){
+        for (String bom : boms) {
             final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bom));
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             new BomUploadProcessingTask().inform(bomUploadEvent);
@@ -1559,6 +1565,57 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 i++;
             }
         }
+    }
+
+    @Test
+    public void informIssue4455Test() throws Exception {
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.2.3");
+        qm.persist(project);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue4455.json"));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+        qm.getPersistenceManager().refresh(project);
+
+        assertThat(project.getDirectDependencies()).satisfies(directDependenciesJson -> {
+            final var jsonReader = Json.createReader(
+                    new StringReader(directDependenciesJson));
+            final var directDependenciesArray = jsonReader.readArray();
+
+            final var uuidsSeen = new HashSet<String>();
+            for (int i = 0; i < directDependenciesArray.size(); i++) {
+                final var directDependencyObject = directDependenciesArray.getJsonObject(i);
+                final String directDependencyUuid = directDependencyObject.getString("uuid");
+                if (!uuidsSeen.add(directDependencyUuid)) {
+                    fail("Duplicate UUID %s in project's directDependencies: %s".formatted(
+                            directDependencyUuid, directDependenciesJson));
+                }
+            }
+        });
+
+        final List<Component> components = qm.getAllComponents(project);
+        assertThat(components).allSatisfy(component -> {
+            if (component.getDirectDependencies() == null) {
+                return;
+            }
+
+            final JsonReader jsonReader = Json.createReader(
+                    new StringReader(component.getDirectDependencies()));
+            final JsonArray directDependenciesArray = jsonReader.readArray();
+
+            final var uuidsSeen = new HashSet<String>();
+            for (int i = 0; i < directDependenciesArray.size(); i++) {
+                final JsonObject directDependencyObject = directDependenciesArray.getJsonObject(i);
+                final String directDependencyUuid = directDependencyObject.getString("uuid");
+                if (!uuidsSeen.add(directDependencyUuid)) {
+                    fail("Duplicate UUID %s in component's directDependencies: %s".formatted(
+                            directDependencyUuid, component.getDirectDependencies()));
+                }
+            }
+        });
     }
 
     @Test
