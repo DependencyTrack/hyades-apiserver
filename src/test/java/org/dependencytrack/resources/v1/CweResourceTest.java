@@ -22,6 +22,7 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.parser.common.resolver.CweDictionary;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -30,6 +31,10 @@ import org.junit.Test;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.core.Response;
+
+import java.util.HashSet;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class CweResourceTest extends ResourceTest {
 
@@ -51,6 +56,31 @@ public class CweResourceTest extends ResourceTest {
         Assert.assertEquals(100, json.size());
         Assert.assertEquals(1, json.getJsonObject(0).getInt("cweId"));
         Assert.assertEquals("DEPRECATED: Location", json.getJsonObject(0).getString("name"));
+    }
+
+    @Test
+    public void getCwesPaginationTest() {
+        int pageNumber = 1;
+        final var cwesSeen = new HashSet<Integer>();
+        while (cwesSeen.size() < CweDictionary.DICTIONARY.size()) {
+            final Response response = jersey.target(V1_CWE)
+                    .queryParam("pageSize", "100")
+                    .queryParam("pageNumber", String.valueOf(pageNumber++))
+                    .request()
+                    .header(X_API_KEY, apiKey)
+                    .get();
+            assertThat(response.getStatus()).isEqualTo(200);
+            assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1426");
+
+            final JsonArray cwesPage = parseJsonArray(response);
+            assertThat(cwesPage).hasSizeLessThanOrEqualTo(100);
+
+            for (final JsonObject value : cwesPage.getValuesAs(JsonObject.class)) {
+                final int cweId = value.getInt("cweId");
+                assertThat(cwesSeen).doesNotContain(cweId);
+                cwesSeen.add(cweId);
+            }
+        }
     }
 
     @Test
