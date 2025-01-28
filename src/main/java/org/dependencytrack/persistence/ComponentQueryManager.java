@@ -255,7 +255,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         AND NOT (NOT EXISTS (
                         SELECT "M"."ID"
                         FROM "REPOSITORY_META_COMPONENT" "M" WHERE "M"."NAME" = "A0"."NAME"
-                        AND "M"."NAMESPACE" = "A0"."GROUP"
+                        AND ("M"."NAMESPACE" = "A0"."GROUP" OR "M"."NAMESPACE" IS NULL OR "A0"."GROUP" IS NULL)
                         AND "M"."LATEST_VERSION" <> "A0"."VERSION"
                         AND "A0"."PURL" LIKE (('pkg:' || LOWER("M"."REPOSITORY_TYPE")) || '/%') ESCAPE E'\\\\'))
                     """;
