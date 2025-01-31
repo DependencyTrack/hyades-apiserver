@@ -153,7 +153,7 @@ public class JdbiFactory {
      * @throws IllegalStateException When the given {@link QueryManager} is not participating
      *                               in an active {@link javax.jdo.Transaction}
      */
-    static Jdbi createLocalJdbi(final QueryManager qm) {
+    public static Jdbi createLocalJdbi(final QueryManager qm) {
         return createLocalJdbi(qm.getPersistenceManager());
     }
 

@@ -206,7 +206,7 @@
         <dropForeignKeyConstraint baseTableName="ANALYSISCOMMENT" constraintName="ANALYSISCOMMENT_ANALYSIS_FK"/>
         <addForeignKeyConstraint baseColumnNames="ANALYSIS_ID" baseTableName="ANALYSISCOMMENT"
                                  constraintName="ANALYSISCOMMENT_ANALYSIS_FK" deferrable="true" initiallyDeferred="true"
-                                 onDelete="CASCADE" onUpdate="CASCADE" referencedColumnNames="ID"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="ANALYSIS" validate="true"/>
 
         <dropForeignKeyConstraint baseTableName="ANALYSIS" constraintName="ANALYSIS_COMPONENT_FK"/>
@@ -224,11 +224,6 @@
                                  constraintName="ANALYSIS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="VULNERABILITY" validate="true"/>
-
-        <dropForeignKeyConstraint baseTableName="ANALYSIS" constraintName="ANALYSIS_VULNERABILITY_POLICY_ID_FK"/>
-        <addForeignKeyConstraint baseTableName="ANALYSIS" baseColumnNames="VULNERABILITY_POLICY_ID"
-                                 constraintName="ANALYSIS_VULNERABILITY_POLICY_ID_FK" referencedTableName="VULNERABILITY_POLICY"
-                                 onDelete="CASCADE" referencedColumnNames="ID"/>
         
         <dropForeignKeyConstraint baseTableName="APIKEYS_TEAMS" constraintName="APIKEYS_TEAMS_TEAM_FK"/>
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="APIKEYS_TEAMS"
@@ -269,11 +264,6 @@
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="COMPONENT" constraintName="COMPONENT_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
-
-        <dropForeignKeyConstraint baseTableName="COMPONENT" constraintName="COMPONENT_LICENSE_FK"/>
-        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="COMPONENT" constraintName="COMPONENT_LICENSE_FK"
-                                 deferrable="true" initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
-                                 referencedColumnNames="ID" referencedTableName="LICENSE" validate="true"/>
 
         <dropForeignKeyConstraint baseTableName="DEPENDENCYMETRICS" constraintName="DEPENDENCYMETRICS_COMPONENT_FK"/>
         <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="DEPENDENCYMETRICS"
