@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.storage;
 
+import io.minio.GetObjectArgs;
+import io.minio.GetObjectResponse;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import org.dependencytrack.plugin.MockConfigRegistry;
@@ -26,16 +28,18 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.testcontainers.containers.MinIOContainer;
+import org.testcontainers.shaded.org.bouncycastle.jcajce.provider.digest.Blake3;
 import org.testcontainers.utility.DockerImageName;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.nio.file.NoSuchFileException;
+import java.util.HexFormat;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.dependencytrack.storage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
 import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_ACCESS_KEY;
 import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_BUCKET;
 import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_ENDPOINT;
@@ -79,9 +83,9 @@ public class S3FileStorageTest {
     }
 
     @Test
-    public void shouldHavePriority130() {
+    public void shouldHavePriority120() {
         try (final var storageFactory = new S3FileStorageFactory()) {
-            assertThat(storageFactory.priority()).isEqualTo(130);
+            assertThat(storageFactory.priority()).isEqualTo(120);
         }
     }
 
@@ -130,10 +134,49 @@ public class S3FileStorageTest {
 
             final FileStorage storage = storageFactory.create();
 
-            final FileMetadata fileMetadata = storage.store("foo", "bar".getBytes());
-            assertThat(storage.get(fileMetadata)).asString().isEqualTo("bar");
+            final FileMetadata fileMetadata = storage.store("foo/bar", "baz".getBytes());
+            assertThat(storage.get(fileMetadata)).asString().isEqualTo("baz");
             assertThat(storage.delete(fileMetadata)).isTrue();
-            assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() -> storage.get(fileMetadata));
+            assertThatExceptionOfType(NoSuchFileException.class).isThrownBy(() -> storage.get(fileMetadata));
+        }
+    }
+
+    @Test
+    public void storeShouldCompressFileWithSizeAboveCompressionThreshold() throws Exception {
+        final var configRegistry = new MockConfigRegistry(Map.ofEntries(
+                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
+                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
+                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
+                Map.entry(CONFIG_BUCKET.name(), "test"),
+                Map.entry(CONFIG_COMPRESSION_THRESHOLD_BYTES.name(), "64")));
+
+        try (final var storageFactory = new S3FileStorageFactory()) {
+            storageFactory.init(configRegistry);
+
+            final FileStorage storage = storageFactory.create();
+
+            final byte[] fileContent = "a".repeat(256).getBytes();
+            final byte[] fileContentDigest = new Blake3.Blake3_256().digest(fileContent);
+            final String fileContentDigestHex = HexFormat.of().formatHex(fileContentDigest);
+
+            final FileMetadata fileMetadata = storage.store("foo/bar", fileContent);
+            assertThat(fileMetadata).isNotNull();
+
+            // Digest must be calculated on the compressed file content.
+            assertThat(fileMetadata.getStorageMetadataMap()).hasEntrySatisfying(
+                    "sha256_digest", value -> assertThat(value).isNotEqualTo(fileContentDigestHex));
+
+            // File on disk must in fact be smaller as a result of compression.
+            final GetObjectResponse response = s3Client.getObject(
+                    GetObjectArgs.builder()
+                            .bucket("test")
+                            .object("foo/bar")
+                            .build());
+            assertThat(response.readAllBytes()).hasSizeLessThan(32);
+
+            // File must be transparently decompressed during retrieval.
+            final byte[] retrievedFileContent = storage.get(fileMetadata);
+            assertThat(retrievedFileContent).isEqualTo(fileContent);
         }
     }
 

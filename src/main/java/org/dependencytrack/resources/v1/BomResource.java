@@ -531,7 +531,7 @@ public class BomResource extends AlpineResource {
         validate(bomBytes, project);
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            return fileStorage.store("bom-upload/%s/%s".formatted(project.getUuid(), UUID.randomUUID()), bomBytes);
+            return fileStorage.store("bom-upload/%s_%s".formatted(project.getUuid(), UUID.randomUUID()), bomBytes);
         }
     }
 

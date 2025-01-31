@@ -1,1 +1,1 @@
-org.dependencytrack.storage.DefaultFileStoragePlugin
+org.dependencytrack.storage.FileStoragePlugin

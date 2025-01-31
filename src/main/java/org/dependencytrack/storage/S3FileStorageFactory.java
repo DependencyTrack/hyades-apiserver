@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.storage;
 
+import alpine.Config;
 import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
 import org.dependencytrack.plugin.api.ConfigDefinition;
@@ -61,9 +62,21 @@ public final class S3FileStorageFactory implements ExtensionFactory<FileStorage>
             ConfigSource.DEPLOYMENT,
             /* isRequired */ false,
             /* isSecret */ false);
+    static final ConfigDefinition CONFIG_COMPRESSION_THRESHOLD_BYTES = new ConfigDefinition(
+            "compression.threshold.bytes",
+            ConfigSource.DEPLOYMENT,
+            /* isRequired */ false,
+            /* isSecret */ false);
+    static final ConfigDefinition CONFIG_COMPRESSION_LEVEL = new ConfigDefinition(
+            "compression.level",
+            ConfigSource.DEPLOYMENT,
+            /* isRequired */ false,
+            /* isSecret */ false);
 
     private MinioClient s3Client;
     private String bucketName;
+    private int compressionThresholdBytes;
+    private int compressionLevel;
 
     @Override
     public String extensionName() {
@@ -77,7 +90,7 @@ public final class S3FileStorageFactory implements ExtensionFactory<FileStorage>
 
     @Override
     public int priority() {
-        return 130;
+        return 120;
     }
 
     @Override
@@ -95,13 +108,24 @@ public final class S3FileStorageFactory implements ExtensionFactory<FileStorage>
         optionalRegion.ifPresent(clientBuilder::region);
         s3Client = clientBuilder.build();
 
+        s3Client.setAppInfo(
+                Config.getInstance().getApplicationName(),
+                Config.getInstance().getApplicationVersion());
+
+        compressionThresholdBytes = configRegistry.getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES)
+                .map(Integer::parseInt)
+                .orElse(1024);
+        compressionLevel = configRegistry.getOptionalValue(CONFIG_COMPRESSION_LEVEL)
+                .map(Integer::parseInt)
+                .orElse(5);
+
         LOGGER.debug("Verifying existence of bucket {}", bucketName);
         requireBucketExists(s3Client, bucketName);
     }
 
     @Override
     public FileStorage create() {
-        return new S3FileStorage(s3Client, bucketName);
+        return new S3FileStorage(s3Client, bucketName, compressionThresholdBytes, compressionLevel);
     }
 
     @Override

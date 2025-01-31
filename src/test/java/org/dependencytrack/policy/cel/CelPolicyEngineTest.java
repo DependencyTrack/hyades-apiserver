@@ -1971,7 +1971,8 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         final byte[] bomBytes = Files.readAllBytes(bomFilePath);
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            return fileStorage.store("bom", bomBytes);
+            return fileStorage.store(
+                    "test/%s-%s".formatted(CelPolicyEngineTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
         }
     }
 

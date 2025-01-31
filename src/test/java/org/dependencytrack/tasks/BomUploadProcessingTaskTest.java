@@ -1755,14 +1755,14 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             return fileStorage.store(
-                    "%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
+                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
         }
     }
 
     private static FileMetadata storeBomFile(final byte[] bomBytes) throws Exception {
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             return fileStorage.store(
-                    "%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
+                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
         }
     }
 

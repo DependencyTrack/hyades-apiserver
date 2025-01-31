@@ -25,6 +25,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.Collections;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -42,7 +43,7 @@ public class MemoryFileStorageTest {
     @SuppressWarnings("resource")
     public void shouldHavePriority110() {
         final var storageFactory = new MemoryFileStorageFactory();
-        assertThat(storageFactory.priority()).isEqualTo(100);
+        assertThat(storageFactory.priority()).isEqualTo(110);
     }
 
     @Test
@@ -53,14 +54,15 @@ public class MemoryFileStorageTest {
 
         final FileStorage storage = storageFactory.create();
 
-        final FileMetadata fileMetadata = storage.store("foo", "bar".getBytes());
+        final FileMetadata fileMetadata = storage.store("foo/bar", "baz".getBytes());
         assertThat(fileMetadata).isNotNull();
-        assertThat(fileMetadata.getLocation()).isEqualTo("memory:///foo");
-        assertThat(fileMetadata.getStorageMetadataMap()).isEmpty();
+        assertThat(fileMetadata.getLocation()).isEqualTo("memory:///foo/bar");
+        assertThat(fileMetadata.getStorageMetadataMap()).containsExactly(
+                Map.entry("sha256_digest", "baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096"));
 
         final byte[] fileContent = storage.get(fileMetadata);
         assertThat(fileContent).isNotNull();
-        assertThat(fileContent).asString().isEqualTo("bar");
+        assertThat(fileContent).asString().isEqualTo("baz");
 
         final boolean deleted = storage.delete(fileMetadata);
         assertThat(deleted).isTrue();

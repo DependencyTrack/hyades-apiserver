@@ -70,7 +70,7 @@ public final class LocalFileStorageFactory implements ExtensionFactory<FileStora
 
     @Override
     public int priority() {
-        return 110;
+        return 100;
     }
 
     @Override

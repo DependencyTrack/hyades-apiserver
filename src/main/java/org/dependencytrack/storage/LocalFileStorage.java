@@ -32,7 +32,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HexFormat;
 
@@ -142,16 +141,9 @@ final class LocalFileStorage implements FileStorage {
     }
 
     private Path resolveFilePath(final String filePath) {
-        Path resolvedFilePath = Paths.get(filePath).normalize();
-        if (resolvedFilePath.isAbsolute()) {
-            // Ensure that paths are relative such that they can be resolved
-            // using the configured base directory: /foo/bar -> foo/bar
-            resolvedFilePath = resolvedFilePath.subpath(0, resolvedFilePath.getNameCount());
-        }
-
-        resolvedFilePath = baseDirPath.resolve(resolvedFilePath).normalize().toAbsolutePath();
+        final Path resolvedFilePath = baseDirPath.resolve(filePath).normalize().toAbsolutePath();
         if (!resolvedFilePath.startsWith(baseDirPath)) {
-            throw new IllegalStateException("""
+            throw new IllegalArgumentException("""
                     The provided filePath %s does not resolve to a path within the \
                     configured base directory (%s)""".formatted(filePath, baseDirPath));
         }
@@ -170,12 +162,14 @@ final class LocalFileStorage implements FileStorage {
             throw new IllegalArgumentException(
                     "%s: Host portion is not allowed for scheme %s".formatted(locationUri, EXTENSION_NAME));
         }
-        if (locationUri.getPath() == null) {
+        if (locationUri.getPath() == null || locationUri.getPath().equals("/")) {
             throw new IllegalArgumentException(
                     "%s: Path portion not set; Unable to determine file name".formatted(locationUri));
         }
 
-        return resolveFilePath(locationUri.getPath());
+        // The value returned by URI#getPath always has a leading slash.
+        // Remove it to prevent the path from erroneously be interpreted as absolute.
+        return resolveFilePath(locationUri.getPath().replaceFirst("^/", ""));
     }
 
 }

@@ -43,7 +43,7 @@ public final class MemoryFileStorageFactory implements ExtensionFactory<FileStor
 
     @Override
     public int priority() {
-        return 100;
+        return 110;
     }
 
     @Override

@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.HexFormat;
 import java.util.Map;
 
@@ -56,9 +55,9 @@ public class LocalFileStorageTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldHavePriority110() {
+    public void shouldHavePriority100() {
         final var storageFactory = new LocalFileStorageFactory();
-        assertThat(storageFactory.priority()).isEqualTo(110);
+        assertThat(storageFactory.priority()).isEqualTo(100);
     }
 
     @Test
@@ -70,15 +69,17 @@ public class LocalFileStorageTest {
 
         final FileStorage storage = storageFactory.create();
 
-        final FileMetadata fileMetadata = storage.store("foo", "bar".getBytes());
+        final FileMetadata fileMetadata = storage.store("foo/bar", "baz".getBytes());
         assertThat(fileMetadata).isNotNull();
-        assertThat(fileMetadata.getLocation()).isEqualTo("local:///foo");
+        assertThat(fileMetadata.getLocation()).isEqualTo("local:///foo/bar");
         assertThat(fileMetadata.getStorageMetadataMap()).containsExactly(
-                Map.entry("sha256_digest", "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"));
+                Map.entry("sha256_digest", "baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096"));
+
+        assertThat(tempDirPath.resolve("foo/bar")).exists();
 
         final byte[] fileContent = storage.get(fileMetadata);
         assertThat(fileContent).isNotNull();
-        assertThat(fileContent).asString().isEqualTo("bar");
+        assertThat(fileContent).asString().isEqualTo("baz");
 
         final boolean deleted = storage.delete(fileMetadata);
         assertThat(deleted).isTrue();
@@ -138,6 +139,22 @@ public class LocalFileStorageTest {
 
     @Test
     @SuppressWarnings("resource")
+    public void storeShouldThrowWhenFileNameAttemptsTraversal() {
+        final var storageFactory = new LocalFileStorageFactory();
+        storageFactory.init(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+
+        final FileStorage storage = storageFactory.create();
+
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> storage.store("foo/../../../bar", "bar".getBytes()))
+                .withMessage("""
+                        The provided filePath foo/../../../bar does not resolve to a path \
+                        within the configured base directory (%s)""", tempDirPath);
+    }
+
+    @Test
+    @SuppressWarnings("resource")
     public void storeShouldThrowWhenFileHasInvalidName() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new MockConfigRegistry(Map.of(
@@ -165,6 +182,26 @@ public class LocalFileStorageTest {
                                 .setLocation("foo:///bar")
                                 .build()))
                 .withMessage("foo:///bar: Unexpected scheme foo, expected local");
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    public void getShouldThrowWhenFileNameAttemptsTraversal() {
+        final var storageFactory = new LocalFileStorageFactory();
+        storageFactory.init(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+
+        final FileStorage storage = storageFactory.create();
+
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> storage.get(
+                        FileMetadata.newBuilder()
+                                .setLocation("local:///foo/../../../bar")
+                                .putStorageMetadata("sha256_digest", "some-digest")
+                                .build()))
+                .withMessage("""
+                        The provided filePath foo/../../../bar does not resolve to a path \
+                        within the configured base directory (%s)""", tempDirPath);
     }
 
     @Test

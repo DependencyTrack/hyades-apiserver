@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HexFormat;
@@ -113,12 +112,7 @@ final class MemoryFileStorage implements FileStorage {
     }
 
     private static String normalizeFileName(final String fileName) {
-        Path filePath = Paths.get(fileName).normalize();
-        if (filePath.isAbsolute()) {
-            filePath = filePath.subpath(0, filePath.getNameCount());
-        }
-
-        return filePath.toString();
+        return Paths.get(fileName).normalize().toString();
     }
 
     private static String resolveFileName(final FileMetadata fileMetadata) {
@@ -136,7 +130,9 @@ final class MemoryFileStorage implements FileStorage {
                     "%s: Path portion not set; Unable to determine file name".formatted(locationUri));
         }
 
-        return normalizeFileName(locationUri.getPath());
+        // The value returned by URI#getPath always has a leading slash.
+        // Remove it to prevent the path from erroneously be interpreted as absolute.
+        return normalizeFileName(locationUri.getPath().replaceFirst("^/", ""));
     }
 
 }
