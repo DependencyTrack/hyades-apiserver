@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package org.dependencytrack.storage.v1alpha1;
+
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.storage.v1alpha1";
+
+// Metadata of a stored file.
+message FileMetadata {
+  // Location of the file in URI format.
+  // The URI's scheme is the name of the storage provider.
+  // Examples: "memory:///foo/bar", "s3://bucket/foo/bar".
+  string location = 1;
+
+  // Additional metadata of the storage provider,
+  // i.e. values used for integrity verification.
+  map<string, string> storage_metadata = 2;
+}
