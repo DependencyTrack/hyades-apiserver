@@ -653,10 +653,6 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().updateLastBomImport(p, date, bomFormat);
     }
 
-    public void recursivelyDelete(final Project project, final boolean commitIndex) {
-        getProjectQueryManager().recursivelyDelete(project, commitIndex);
-    }
-
     public ProjectProperty createProjectProperty(final Project project, final String groupName, final String propertyName,
                                                  final String propertyValue, final ProjectProperty.PropertyType propertyType,
                                                  final String description) {

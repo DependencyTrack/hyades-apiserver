@@ -26,6 +26,7 @@ import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.time.Instant;
 import java.util.List;
@@ -220,4 +221,10 @@ public interface ProjectDao {
     ) {
     }
 
+    @SqlUpdate("""
+            DELETE
+              FROM "PROJECT"
+             WHERE "UUID" = :projectUuid
+            """)
+    int deleteProject(@Bind final UUID projectUuid);
 }
