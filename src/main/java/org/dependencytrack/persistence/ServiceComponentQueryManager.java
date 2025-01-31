@@ -27,7 +27,6 @@ import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import javax.jdo.Transaction;
 import java.util.List;
 import java.util.UUID;
 
@@ -192,63 +191,6 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
         service.setDescription(transientServiceComponent.getDescription());
         final ServiceComponent result = persist(service);
         return result;
-    }
-
-    /**
-     * Deletes all services for the specified Project.
-     * @param project the Project to delete services of
-     */
-    public void deleteServiceComponents(Project project) {
-        final Query<ServiceComponent> query = pm.newQuery(ServiceComponent.class, "project == :project");
-        try {
-            query.deletePersistentAll(project);
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    /**
-     * Deletes a ServiceComponent and all objects dependant on the service.
-     * @param service the ServiceComponent to delete
-     * @param commitIndex specifies if the search index should be committed (an expensive operation)
-     */
-    public void recursivelyDelete(ServiceComponent service, boolean commitIndex) {
-        final Transaction trx = pm.currentTransaction();
-        final boolean isJoiningExistingTrx = trx.isActive();
-        try {
-            if (!isJoiningExistingTrx) {
-                trx.begin();
-            }
-
-            for (final ServiceComponent child : service.getChildren()) {
-                recursivelyDelete(child, false);
-                pm.flush();
-            }
-
-            // TODO: Add these in when these features are supported by service components
-            //deleteAnalysisTrail(service);
-            //deleteViolationAnalysisTrail(service);
-            //deleteMetrics(service);
-            //deleteFindingAttributions(service);
-            //deletePolicyViolations(service);
-
-            final Query<ServiceComponent> query = pm.newQuery(ServiceComponent.class);
-            query.setFilter("this == :service");
-            try {
-                query.deletePersistentAll(service);
-            } finally {
-                query.closeAll();
-            }
-
-            if (!isJoiningExistingTrx) {
-                trx.commit();
-            }
-
-        } finally {
-            if (!isJoiningExistingTrx && trx.isActive()) {
-                trx.rollback();
-            }
-        }
     }
 
     /**

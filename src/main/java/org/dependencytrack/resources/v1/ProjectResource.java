@@ -875,11 +875,10 @@ public class ProjectResource extends AlpineResource {
                 }
 
                 LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
-                try {
-                    try (final Handle jdbiHandle = openJdbiHandle()) {
-                        final var projectDao = jdbiHandle.attach(ProjectDao.class);
-                        projectDao.deleteProject(project.getUuid());
-                    }
+
+                try (final Handle jdbiHandle = openJdbiHandle()) {
+                    final var projectDao = jdbiHandle.attach(ProjectDao.class);
+                    projectDao.deleteProject(project.getUuid());
                 } catch (RuntimeException e) {
                     LOGGER.error("Failed to delete project", e);
                     throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);

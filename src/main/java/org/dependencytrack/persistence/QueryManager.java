@@ -1005,10 +1005,6 @@ public class QueryManager extends AlpineQueryManager {
         getVulnerabilityQueryManager().deleteAffectedVersionAttribution(vulnerability, vulnerableSoftware, source);
     }
 
-    public void deleteAffectedVersionAttributions(final Vulnerability vulnerability) {
-        getVulnerabilityQueryManager().deleteAffectedVersionAttributions(vulnerability);
-    }
-
     public boolean contains(Vulnerability vulnerability, Component component) {
         return getVulnerabilityQueryManager().contains(vulnerability, component);
     }
@@ -1107,14 +1103,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public ServiceComponent updateServiceComponent(ServiceComponent transientServiceComponent, boolean commitIndex) {
         return getServiceComponentQueryManager().updateServiceComponent(transientServiceComponent, commitIndex);
-    }
-
-    public void deleteServiceComponents(final Project project) {
-        getServiceComponentQueryManager().deleteServiceComponents(project);
-    }
-
-    public void recursivelyDelete(ServiceComponent service, boolean commitIndex) {
-        getServiceComponentQueryManager().recursivelyDelete(service, commitIndex);
     }
 
     public PaginatedResult getVulnerabilities() {

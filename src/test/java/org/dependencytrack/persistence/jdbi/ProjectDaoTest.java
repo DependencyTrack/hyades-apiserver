@@ -39,6 +39,7 @@ import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Vex;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
@@ -193,6 +194,11 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         notificationRule.getProjects().add(projectChild);
         qm.persist(notificationRule);
 
+        final var serviceComponent = new ServiceComponent();
+        serviceComponent.setName("service-component");
+        serviceComponent.setProject(project);
+        qm.persist(serviceComponent);
+
         projectDao.deleteProject(project.getUuid());
 
         // Ensure everything has been deleted as expected.
@@ -207,6 +213,7 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(IntegrityAnalysis.class, integrityAnalysis.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(Bom.class, bom.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(Vex.class, vex.getId()));
+        assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(ServiceComponent.class, serviceComponent.getId()));
 
         // Ensure associated objects were NOT deleted.
         assertThatNoException().isThrownBy(() -> qm.getObjectById(Vulnerability.class, vuln.getId()));
