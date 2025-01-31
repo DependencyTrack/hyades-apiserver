@@ -24,6 +24,9 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonValue;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -35,12 +38,8 @@ import org.dependencytrack.model.sqlmapping.ComponentProjection;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonValue;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import javax.jdo.Transaction;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -606,55 +605,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             query.deletePersistentAll(project);
         } finally {
             query.closeAll();
-        }
-    }
-
-    /**
-     * Deletes a Component and all objects dependant on the component.
-     *
-     * @param component   the Component to delete
-     * @param commitIndex specifies if the search index should be committed (an expensive operation)
-     */
-    public void recursivelyDelete(Component component, boolean commitIndex) {
-        final Transaction trx = pm.currentTransaction();
-        final boolean isJoiningExistingTrx = trx.isActive();
-        try {
-            if (!isJoiningExistingTrx) {
-                trx.begin();
-            }
-
-            for (final Component child : component.getChildren()) {
-                recursivelyDelete(child, false);
-                pm.flush();
-            }
-
-            // Use bulk DELETE queries to avoid having to fetch every single object from the database first.
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.AnalysisComment WHERE analysis.component == :component"), component);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Analysis WHERE component == :component"), component);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysisComment WHERE violationAnalysis.component == :component"), component);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysis WHERE component == :component"), component);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE component == :component"), component);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE component == :component"), component);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE component == :component"), component);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component == :component"), component);
-
-
-            // The component itself must be deleted via deletePersistentAll, otherwise relationships
-            // (e.g. with Vulnerability via COMPONENTS_VULNERABILITIES table) will not be cleaned up properly.
-            final Query<Component> componentQuery = pm.newQuery(Component.class, "this == :component");
-            try {
-                componentQuery.deletePersistentAll(component);
-            } finally {
-                componentQuery.closeAll();
-            }
-
-            if (!isJoiningExistingTrx) {
-                trx.commit();
-            }
-        } finally {
-            if (!isJoiningExistingTrx && trx.isActive()) {
-                trx.rollback();
-            }
         }
     }
 
