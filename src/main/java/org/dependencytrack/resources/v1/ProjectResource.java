@@ -876,8 +876,7 @@ public class ProjectResource extends AlpineResource {
 
                 LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
 
-                try {
-                    final Handle jdbiHandle = createLocalJdbi(qm).open();
+                try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
                     final var projectDao = jdbiHandle.attach(ProjectDao.class);
                     projectDao.deleteProject(project.getUuid());
                 } catch (RuntimeException e) {
