@@ -18,53 +18,16 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.model.IConfigProperty.PropertyType;
-import com.github.packageurl.PackageURL;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.cyclonedx.proto.v1_6.Classification;
-import org.cyclonedx.proto.v1_6.Dependency;
-import org.cyclonedx.proto.v1_6.ExternalReference;
-import org.cyclonedx.proto.v1_6.ExternalReferenceType;
-import org.cyclonedx.proto.v1_6.Metadata;
-import org.cyclonedx.proto.v1_6.OrganizationalContact;
-import org.cyclonedx.proto.v1_6.OrganizationalEntity;
-import org.cyclonedx.proto.v1_6.Service;
-import org.cyclonedx.proto.v1_6.Tool;
-import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.BomUploadEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.model.Bom;
-import org.dependencytrack.model.Classifier;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentProperty;
-import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
-import org.dependencytrack.model.License;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
-import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
-import org.dependencytrack.proto.notification.v1.Group;
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.junit.Before;
-import org.junit.Test;
-
 import javax.jdo.JDOObjectNotFoundException;
-import java.io.File;
-import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -103,6 +66,43 @@ import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
+import alpine.model.IConfigProperty.PropertyType;
+import com.github.packageurl.PackageURL;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.cyclonedx.proto.v1_6.Classification;
+import org.cyclonedx.proto.v1_6.Dependency;
+import org.cyclonedx.proto.v1_6.ExternalReference;
+import org.cyclonedx.proto.v1_6.ExternalReferenceType;
+import org.cyclonedx.proto.v1_6.Metadata;
+import org.cyclonedx.proto.v1_6.OrganizationalContact;
+import org.cyclonedx.proto.v1_6.OrganizationalEntity;
+import org.cyclonedx.proto.v1_6.Service;
+import org.cyclonedx.proto.v1_6.Tool;
+import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.model.Bom;
+import org.dependencytrack.model.Classifier;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentProperty;
+import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.model.License;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.Group;
+import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.storage.FileStorage;
+import org.junit.Before;
+import org.junit.Test;
+
 public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
     @Before
@@ -123,7 +123,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-1.xml"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
         new BomUploadProcessingTask().inform(bomUploadEvent);
@@ -279,7 +279,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-1.xml"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         PackageURL packageUrl = new PackageURL("pkg:maven/com.example/xmlutil@1.0.0?download_url=https%3A%2F%2Fon-premises.url%2Frepository%2Fnpm%2F%40babel%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration%2Fhelper-split-export-declaration-7.18.6.tgz");
         var integrityMeta = new IntegrityMetaComponent();
@@ -368,7 +368,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithEmptyBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-empty.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-empty.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -426,7 +426,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     @Test
     public void informWithInvalidBomTest() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
-        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-invalid.json"));
+        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-invalid.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
 
@@ -504,7 +504,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         project.setUuid(UUID.randomUUID());
         project.setName("test-project");
         project.setId(1);
-        var bomUploadEvent = new BomUploadEvent(project, createTempBomFile("bom-1.xml"));
+        var bomUploadEvent = new BomUploadEvent(project, storeBomFile("bom-1.xml"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
@@ -549,7 +549,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithBloatedBomTest() throws Exception {
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-bloated.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-bloated.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -644,7 +644,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         // Upload the same BOM again a few times.
         // Ensure processing does not fail, and the number of components ingested doesn't change.
         for (int i = 0; i < 3; i++) {
-            var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2519.xml"));
+            var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-issue2519.xml"));
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             new BomUploadProcessingTask().inform(bomUploadEvent);
             assertBomProcessedNotification();
@@ -660,7 +660,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         assertThatNoException().isThrownBy(() -> {
-            final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue2859.xml"));
+            final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-issue2859.xml"));
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             new BomUploadProcessingTask().inform(bomUploadEvent);
         });
@@ -699,7 +699,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(bomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -715,7 +715,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         for (int i = 0; i < 3; i++) {
-            var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue1905.json"));
+            var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-issue1905.json"));
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             new BomUploadProcessingTask().inform(bomUploadEvent);
 
@@ -758,7 +758,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
             });
         };
 
-        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue3309.json"));
+        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-issue3309.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -766,7 +766,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         kafkaMockProducer.clear();
 
-        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue3309.json"));
+        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-issue3309.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -777,7 +777,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithComponentsUnderMetadataBomTest() throws Exception {
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-metadata-components.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-metadata-components.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
 
@@ -826,7 +826,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithDelayedBomProcessedNotification() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-1.xml"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-1.xml"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
         new BomUploadProcessingTask(new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
@@ -847,7 +847,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithDelayedBomProcessedNotificationAndNoComponents() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-empty.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-empty.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
 
         new BomUploadProcessingTask(new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
@@ -871,7 +871,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithComponentWithoutPurl() throws Exception {
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-no-purl.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-no-purl.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -896,7 +896,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-custom-license.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-custom-license.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -934,7 +934,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithBomContainingLicenseExpressionTest() throws Exception {
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-license-expression.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-license-expression.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -962,7 +962,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-license-expression-single-license.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-license-expression-single-license.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -986,7 +986,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithBomContainingInvalidLicenseExpressionTest() throws Exception {
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-invalid-license-expression.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-invalid-license-expression.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1038,7 +1038,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(bomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1090,7 +1090,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(existingBomBytes));
+        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(existingBomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1126,7 +1126,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(updatedBomBytes));
+        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(updatedBomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1175,7 +1175,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(existingBomBytes));
+        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(existingBomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1205,7 +1205,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(updatedBomBytes));
+        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(updatedBomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1223,7 +1223,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithBomContainingServiceTest() throws Exception {
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-service.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-service.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1243,7 +1243,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithBomContainingMetadataToolsDeprecatedTest() throws Exception {
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-metadata-tool-deprecated.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-metadata-tool-deprecated.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1266,7 +1266,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     public void informWithBomContainingMetadataToolsTest() throws Exception {
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-metadata-tool.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-metadata-tool.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1299,7 +1299,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     @Test
     public void informWithBomContainingTimestampTest() throws Exception {
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-metadata-timestamp.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-metadata-timestamp.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1318,7 +1318,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         final var events = new ArrayList<BomUploadEvent>(25);
         for (int i = 0; i < 25; i++) {
-            final var bomUploadEvent = new BomUploadEvent(detachedProject, createTempBomFile("bom-1.xml"));
+            final var bomUploadEvent = new BomUploadEvent(detachedProject, storeBomFile("bom-1.xml"));
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             events.add(bomUploadEvent);
         }
@@ -1368,7 +1368,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         componentProperty.setPropertyType(PropertyType.STRING);
         qm.persist(componentProperty);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("""
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("""
                 {
                   "$schema": "http://cyclonedx.org/schema/bom-1.4.schema.json",
                   "bomFormat": "CycloneDX",
@@ -1410,7 +1410,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         componentProperty.setPropertyType(PropertyType.STRING);
         qm.persist(componentProperty);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-component-property.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-component-property.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1462,7 +1462,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(bomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1504,7 +1504,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(bomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1534,7 +1534,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, clonedProject.getId()), createTempBomFile(bomBytes));
+        bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, clonedProject.getId()), storeBomFile(bomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1560,7 +1560,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         List<String> boms = new ArrayList<>(Arrays.asList("bom-issue3936-authors.json", "bom-issue3936-author.json", "bom-issue3936-both.json"));
         int i=0;
         for (String bom : boms) {
-            final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bom));
+            final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(bom));
             qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
             new BomUploadProcessingTask().inform(bomUploadEvent);
             assertBomProcessedNotification();
@@ -1584,7 +1584,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         project.setVersion("1.2.3");
         qm.persist(project);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-issue4455.json"));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-issue4455.json"));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1678,7 +1678,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                   ]
                 }
                 """.getBytes(StandardCharsets.UTF_8);
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(bomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1722,7 +1722,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(bomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1852,23 +1852,24 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         }
     }
 
-    private static File createTempBomFile(final String testFileName) throws Exception {
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(resourceToURL("/unit/" + testFileName).toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
-        return bomFilePath.toFile();
+    private static FileMetadata storeBomFile(final String testFileName) throws Exception {
+        final Path bomFilePath = Paths.get(resourceToURL("/unit/" + testFileName).toURI());
+        final byte[] bomBytes = Files.readAllBytes(bomFilePath);
+
+        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            return fileStorage.store(
+                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
+        }
     }
 
-    private static File createTempBomFile(final byte[] bomBytes) throws Exception {
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.write(bomFilePath, bomBytes);
-        return bomFilePath.toFile();
+    private static FileMetadata storeBomFile(final byte[] bomBytes) throws Exception {
+        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            return fileStorage.store(
+                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
+        }
     }
 
-    private File createTempBomProtoFile() throws IOException {
+    private FileMetadata createTempBomProtoFile() throws Exception {
         // The task will delete the input file after processing it,
         // so create a temporary copy to not impact other tests.{
         final var cdxContact = OrganizationalContact.newBuilder()
@@ -1906,8 +1907,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                                 .build())
                         .setSupplier(OrganizationalEntity.newBuilder().addContact(cdxContact).build()))
                 .build();
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.write(bomFilePath, bomTest.toByteArray());
-        return bomFilePath.toFile();
+        return storeBomFile(bomTest.toByteArray());
     }
 }
