@@ -80,7 +80,7 @@ public class ProjectDaoTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void recursivelyDeleteTest() {
+    public void testCascadeDeleteProject() {
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");

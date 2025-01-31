@@ -32,7 +32,6 @@ import alpine.persistence.AlpineQueryManager;
 import alpine.persistence.NotSortableException;
 import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
-import alpine.persistence.ScopedCustomization;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
 import com.github.packageurl.PackageURL;
@@ -128,7 +127,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
 
-import static org.datanucleus.PropertyNames.PROPERTY_QUERY_SQL_ALLOWALL;
 import static org.dependencytrack.model.ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED;
 import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
 
@@ -1608,20 +1606,6 @@ public class QueryManager extends AlpineQueryManager {
 
         return Retry.of("runInRetryableTransaction", retryConfig)
                 .executeSupplier(() -> callInTransaction(supplier));
-    }
-
-    public void recursivelyDeleteTeam(Team team) {
-        runInTransaction(() -> {
-            pm.deletePersistentAll(team.getApiKeys());
-
-            try (var ignored = new ScopedCustomization(pm).withProperty(PROPERTY_QUERY_SQL_ALLOWALL, "true")) {
-                final Query<?> aclDeleteQuery = pm.newQuery(JDOQuery.SQL_QUERY_LANGUAGE, """
-                        DELETE FROM "PROJECT_ACCESS_TEAMS" WHERE "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ?""");
-                executeAndCloseWithArray(aclDeleteQuery, team.getId());
-            }
-
-            pm.deletePersistent(team);
-        });
     }
 
     /**
