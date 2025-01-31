@@ -16,21 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.plugin;
 
-import org.dependencytrack.model.Project;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
-import org.junit.Assert;
-import org.junit.Test;
+import org.dependencytrack.plugin.api.ConfigDefinition;
+import org.dependencytrack.plugin.api.ConfigRegistry;
 
-public class BomUploadEventTest {
+import java.util.Map;
+import java.util.Optional;
 
-    @Test
-    public void testFileConstructor() {
-        Project project = new Project();
-        FileMetadata fileMetadata = FileMetadata.getDefaultInstance();
-        BomUploadEvent event = new BomUploadEvent(project, FileMetadata.getDefaultInstance());
-        Assert.assertEquals(project, event.getProject());
-        Assert.assertEquals(fileMetadata, event.getFileMetadata());
+public class MockConfigRegistry implements ConfigRegistry {
+
+    private final Map<String, String> properties;
+
+    public MockConfigRegistry(final Map<String, String> properties) {
+        this.properties = properties;
     }
+
+    @Override
+    public Optional<String> getOptionalValue(final ConfigDefinition config) {
+        return Optional.ofNullable(properties.get(config.name()));
+    }
+
 }
