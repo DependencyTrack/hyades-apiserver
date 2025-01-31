@@ -743,10 +743,6 @@ public class QueryManager extends AlpineQueryManager {
         getComponentQueryManager().deleteComponents(project);
     }
 
-    public void recursivelyDelete(Component component, boolean commitIndex) {
-        getComponentQueryManager().recursivelyDelete(component, commitIndex);
-    }
-
     public Map<String, Component> getDependencyGraphForComponents(Project project, List<Component> components) {
         return getComponentQueryManager().getDependencyGraphForComponents(project, components);
     }
