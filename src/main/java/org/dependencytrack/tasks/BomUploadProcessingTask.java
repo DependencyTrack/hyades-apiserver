@@ -203,6 +203,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
             consumedBom = consumeBom(cdxBom);
         } catch (IOException | ParseException | RuntimeException e) {
+            LOGGER.error("Failed to consume BOM", e);
             failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
             dispatchBomProcessingFailedNotification(ctx, e);
             return;
@@ -226,6 +227,7 @@ public class BomUploadProcessingTask implements Subscriber {
             final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
             processedBom = executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, consumedBom));
         } catch (Throwable e) {
+            LOGGER.error("Failed to process BOM", e);
             failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
             dispatchBomProcessingFailedNotification(ctx, e);
             return;
