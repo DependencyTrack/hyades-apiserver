@@ -151,12 +151,17 @@ public final class FailureConverter {
                 break;
             }
 
-            convertedStackTrace.add(WorkflowFailure.StackTraceElement.newBuilder()
+            final var elementBuilder = WorkflowFailure.StackTraceElement.newBuilder()
                     .setClassName(element.getClassName())
-                    .setMethodName(element.getMethodName())
-                    .setFileName(element.getFileName())
-                    .setLineNumber(element.getLineNumber())
-                    .build());
+                    .setMethodName(element.getMethodName());
+            if (element.getFileName() != null) {
+                elementBuilder.setFileName(element.getFileName());
+            }
+            if (element.getLineNumber() > 0) {
+                elementBuilder.setLineNumber(element.getLineNumber());
+            }
+
+            convertedStackTrace.add(elementBuilder.build());
         }
 
         return convertedStackTrace;
@@ -171,8 +176,8 @@ public final class FailureConverter {
                 .map(element -> new StackTraceElement(
                         element.getClassName(),
                         element.getMethodName(),
-                        element.getFileName(),
-                        element.getLineNumber()))
+                        element.hasFileName() ? element.getFileName() : null,
+                        element.hasLineNumber() ? element.getLineNumber() : -1))
                 .toArray(StackTraceElement[]::new);
     }
 
