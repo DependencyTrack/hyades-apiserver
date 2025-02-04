@@ -819,54 +819,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Deletes a Project and all objects dependent on the project.
-     *
-     * @param project     the Project to delete
-     * @param commitIndex specifies if the search index should be committed (an expensive operation)
-     */
-    @Override
-    public void recursivelyDelete(final Project project, final boolean commitIndex) {
-        runInTransaction(() -> {
-            for (final Project child : project.getChildren()) {
-                // Note: This could be refactored such that each project is deleted
-                //   in its own transaction. That would break semantics when it comes
-                //   to joining an existing transaction though, so needs a bit more thought.
-                recursivelyDelete(child, false);
-                pm.flush();
-            }
-
-            // Use bulk DELETE queries to avoid having to fetch every single object from the database first.
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.AnalysisComment WHERE analysis.project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Analysis WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysisComment WHERE violationAnalysis.project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysis WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ProjectMetrics WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component.project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Bom WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Vex WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ProjectMetadata WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ProjectProperty WHERE project == :project"), project);
-
-            // Projects, Components, and ServiceComponents must be deleted via deletePersistentAll, otherwise relationships
-            // (e.g. with Vulnerability via COMPONENTS_VULNERABILITIES table) will not be cleaned up properly.
-            deleteComponents(project);
-            deleteServiceComponents(project);
-            removeProjectFromNotificationRules(project);
-            removeProjectFromPolicies(project);
-
-            final Query<Project> projectQuery = pm.newQuery(Project.class, "this == :project");
-            try {
-                projectQuery.deletePersistentAll(project);
-            } finally {
-                projectQuery.closeAll();
-            }
-        });
-    }
-
-    /**
      * Creates a key/value pair (ProjectProperty) for the specified Project.
      *
      * @param project       the Project to create the property for

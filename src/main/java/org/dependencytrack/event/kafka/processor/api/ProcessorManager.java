@@ -239,7 +239,8 @@ public class ProcessorManager implements AutoCloseable {
 
     private ParallelStreamProcessor<byte[], byte[]> createParallelConsumer(final String processorName, final Topic<?, ?> topic, final boolean isBatch) {
         final var optionsBuilder = ParallelConsumerOptions.<byte[], byte[]>builder()
-                .consumer(createConsumer(processorName));
+                .consumer(createConsumer(processorName))
+                .ignoreReflectiveAccessExceptionsForAutoCommitDisabledCheck(true);
 
         final Map<String, String> properties = getPassThroughProperties(processorName.toLowerCase());
 
