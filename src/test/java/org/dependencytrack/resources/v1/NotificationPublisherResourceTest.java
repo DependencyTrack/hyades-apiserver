@@ -344,4 +344,12 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         Assert.assertEquals(200, response.getStatus());
         assertThat(kafkaMockProducer.history().size()).isEqualTo(11);
     }
+
+    @Test
+    public void testNotificationRuleNotFoundTest() {
+        final Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/test/" + UUID.randomUUID()).request()
+                .header(X_API_KEY, apiKey)
+                .post(null);
+        assertThat(response.getStatus()).isEqualTo(404);
+    }
 }

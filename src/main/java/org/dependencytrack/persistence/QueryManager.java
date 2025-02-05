@@ -32,7 +32,6 @@ import alpine.persistence.AlpineQueryManager;
 import alpine.persistence.NotSortableException;
 import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
-import alpine.persistence.ScopedCustomization;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
 import com.github.packageurl.PackageURL;
@@ -128,7 +127,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
 
-import static org.datanucleus.PropertyNames.PROPERTY_QUERY_SQL_ALLOWALL;
 import static org.dependencytrack.model.ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED;
 import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
 
@@ -653,10 +651,6 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().updateLastBomImport(p, date, bomFormat);
     }
 
-    public void recursivelyDelete(final Project project, final boolean commitIndex) {
-        getProjectQueryManager().recursivelyDelete(project, commitIndex);
-    }
-
     public ProjectProperty createProjectProperty(final Project project, final String groupName, final String propertyName,
                                                  final String propertyValue, final ProjectProperty.PropertyType propertyType,
                                                  final String description) {
@@ -741,10 +735,6 @@ public class QueryManager extends AlpineQueryManager {
 
     void deleteComponents(Project project) {
         getComponentQueryManager().deleteComponents(project);
-    }
-
-    public void recursivelyDelete(Component component, boolean commitIndex) {
-        getComponentQueryManager().recursivelyDelete(component, commitIndex);
     }
 
     public Map<String, Component> getDependencyGraphForComponents(Project project, List<Component> components) {
@@ -1015,10 +1005,6 @@ public class QueryManager extends AlpineQueryManager {
         getVulnerabilityQueryManager().deleteAffectedVersionAttribution(vulnerability, vulnerableSoftware, source);
     }
 
-    public void deleteAffectedVersionAttributions(final Vulnerability vulnerability) {
-        getVulnerabilityQueryManager().deleteAffectedVersionAttributions(vulnerability);
-    }
-
     public boolean contains(Vulnerability vulnerability, Component component) {
         return getVulnerabilityQueryManager().contains(vulnerability, component);
     }
@@ -1117,14 +1103,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public ServiceComponent updateServiceComponent(ServiceComponent transientServiceComponent, boolean commitIndex) {
         return getServiceComponentQueryManager().updateServiceComponent(transientServiceComponent, commitIndex);
-    }
-
-    public void deleteServiceComponents(final Project project) {
-        getServiceComponentQueryManager().deleteServiceComponents(project);
-    }
-
-    public void recursivelyDelete(ServiceComponent service, boolean commitIndex) {
-        getServiceComponentQueryManager().recursivelyDelete(service, commitIndex);
     }
 
     public PaginatedResult getVulnerabilities() {
@@ -1628,20 +1606,6 @@ public class QueryManager extends AlpineQueryManager {
 
         return Retry.of("runInRetryableTransaction", retryConfig)
                 .executeSupplier(() -> callInTransaction(supplier));
-    }
-
-    public void recursivelyDeleteTeam(Team team) {
-        runInTransaction(() -> {
-            pm.deletePersistentAll(team.getApiKeys());
-
-            try (var ignored = new ScopedCustomization(pm).withProperty(PROPERTY_QUERY_SQL_ALLOWALL, "true")) {
-                final Query<?> aclDeleteQuery = pm.newQuery(JDOQuery.SQL_QUERY_LANGUAGE, """
-                        DELETE FROM "PROJECT_ACCESS_TEAMS" WHERE "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ?""");
-                executeAndCloseWithArray(aclDeleteQuery, team.getId());
-            }
-
-            pm.deletePersistent(team);
-        });
     }
 
     /**

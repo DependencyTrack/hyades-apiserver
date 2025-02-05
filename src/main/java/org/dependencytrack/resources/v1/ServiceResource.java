@@ -49,7 +49,11 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ServiceComponentDao;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.jdbi.v3.core.Handle;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 /**
  * JAX-RS resources for processing services.
@@ -276,7 +280,10 @@ class ServiceResource extends AlpineResource {
                 if (!qm.hasAccess(super.getPrincipal(), service.getProject())) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified service is forbidden").build();
                 }
-                qm.recursivelyDelete(service, false);
+                try (final Handle jdbiHandle = openJdbiHandle()) {
+                    final var serviceComponentDao = jdbiHandle.attach(ServiceComponentDao.class);
+                    serviceComponentDao.deleteServiceComponent(service.getUuid());
+                }
                 return Response.status(Response.Status.NO_CONTENT).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the service could not be found.").build();

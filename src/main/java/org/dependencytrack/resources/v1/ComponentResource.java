@@ -68,10 +68,12 @@ import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
+import org.jdbi.v3.core.Handle;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +83,7 @@ import java.util.UUID;
 import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
 import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
 import static org.dependencytrack.model.FetchStatus.PROCESSED;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 /**
  * JAX-RS resources for processing components.
@@ -632,7 +635,10 @@ public class ComponentResource extends AlpineResource {
                 if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
                     return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
                 }
-                qm.recursivelyDelete(component, false);
+                try (final Handle jdbiHandle = openJdbiHandle()) {
+                    final var componentDao = jdbiHandle.attach(ComponentDao.class);
+                    componentDao.deleteComponent(component.getUuid());
+                }
                 return Response.status(Response.Status.NO_CONTENT).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();

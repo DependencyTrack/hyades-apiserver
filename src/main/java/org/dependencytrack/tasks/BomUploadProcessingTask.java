@@ -203,6 +203,7 @@ public class BomUploadProcessingTask implements Subscriber {
 
             consumedBom = consumeBom(cdxBom);
         } catch (IOException | ParseException | RuntimeException e) {
+            LOGGER.error("Failed to consume BOM", e);
             failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
             dispatchBomProcessingFailedNotification(ctx, e);
             return;
@@ -226,6 +227,7 @@ public class BomUploadProcessingTask implements Subscriber {
             final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
             processedBom = executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, consumedBom));
         } catch (Throwable e) {
+            LOGGER.error("Failed to process BOM", e);
             failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
             dispatchBomProcessingFailedNotification(ctx, e);
             return;
@@ -733,9 +735,18 @@ public class BomUploadProcessingTask implements Subscriber {
         }
 
         final var jsonDependencies = new JSONArray();
+        final var directDependencyIdentitiesSeen = new HashSet<ComponentIdentity>();
         for (final String directDependencyBomRef : directDependencyBomRefs) {
             final ComponentIdentity directDependencyIdentity = identitiesByBomRef.get(directDependencyBomRef);
             if (directDependencyIdentity != null) {
+                if (!directDependencyIdentitiesSeen.add(directDependencyIdentity)) {
+                    // It's possible that multiple direct dependencies of a project or component
+                    // fall victim to de-duplication. In that case, we can ironically end up with
+                    // duplicate component identities (i.e. duplicate BOM refs).
+                    LOGGER.debug("Omitting duplicate direct dependency %s for BOM ref %s"
+                            .formatted(directDependencyBomRef, dependencyBomRef));
+                    continue;
+                }
                 jsonDependencies.put(directDependencyIdentity.toJSON());
             } else {
                 LOGGER.warn("""
