@@ -690,7 +690,19 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 String directDependencies = project.getDirectDependencies();
                 for (final UUID sourceComponentUuid : projectDirectDepsSourceComponentUuids) {
                     final UUID clonedComponentUuid = clonedComponentUuidBySourceComponentUuid.get(sourceComponentUuid);
-                    directDependencies = directDependencies.replace(sourceComponentUuid.toString(), clonedComponentUuid.toString());
+                    if (clonedComponentUuid != null) {
+                        directDependencies = directDependencies.replace(
+                                sourceComponentUuid.toString(), clonedComponentUuid.toString());
+                    } else {
+                        // NB: This may happen when the source project itself is a clone,
+                        // and it was cloned before DT v4.12.0.
+                        // https://github.com/DependencyTrack/dependency-track/pull/4171
+                        LOGGER.warn("""
+                                The source project's directDependencies refer to a component with UUID \
+                                %s, which does not exist in the project. The cloned project's dependency graph \
+                                may be broken as a result. A BOM upload will resolve the issue.\
+                                """.formatted(sourceComponentUuid));
+                    }
                 }
 
                 project.setDirectDependencies(directDependencies);
@@ -703,7 +715,16 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 String directDependencies = component.getDirectDependencies();
                 for (final UUID sourceComponentUuid : sourceComponentUuids) {
                     final UUID clonedComponentUuid = clonedComponentUuidBySourceComponentUuid.get(sourceComponentUuid);
-                    directDependencies = directDependencies.replace(sourceComponentUuid.toString(), clonedComponentUuid.toString());
+                    if (clonedComponentUuid != null) {
+                        directDependencies = directDependencies.replace(
+                                sourceComponentUuid.toString(), clonedComponentUuid.toString());
+                    } else {
+                        LOGGER.warn("""
+                                The directDependencies of component %s refer to a component with UUID \
+                                %s, which does not exist in the source project. The cloned project's dependency graph \
+                                may be broken as a result. A BOM upload will resolve the issue.\
+                                """.formatted(component, sourceComponentUuid));
+                    }
                 }
 
                 component.setDirectDependencies(directDependencies);
@@ -795,54 +816,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         }
 
         return uuids;
-    }
-
-    /**
-     * Deletes a Project and all objects dependent on the project.
-     *
-     * @param project     the Project to delete
-     * @param commitIndex specifies if the search index should be committed (an expensive operation)
-     */
-    @Override
-    public void recursivelyDelete(final Project project, final boolean commitIndex) {
-        runInTransaction(() -> {
-            for (final Project child : project.getChildren()) {
-                // Note: This could be refactored such that each project is deleted
-                //   in its own transaction. That would break semantics when it comes
-                //   to joining an existing transaction though, so needs a bit more thought.
-                recursivelyDelete(child, false);
-                pm.flush();
-            }
-
-            // Use bulk DELETE queries to avoid having to fetch every single object from the database first.
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.AnalysisComment WHERE analysis.project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Analysis WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysisComment WHERE violationAnalysis.project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysis WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ProjectMetrics WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE component.project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Bom WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Vex WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ProjectMetadata WHERE project == :project"), project);
-            executeAndClose(pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ProjectProperty WHERE project == :project"), project);
-
-            // Projects, Components, and ServiceComponents must be deleted via deletePersistentAll, otherwise relationships
-            // (e.g. with Vulnerability via COMPONENTS_VULNERABILITIES table) will not be cleaned up properly.
-            deleteComponents(project);
-            deleteServiceComponents(project);
-            removeProjectFromNotificationRules(project);
-            removeProjectFromPolicies(project);
-
-            final Query<Project> projectQuery = pm.newQuery(Project.class, "this == :project");
-            try {
-                projectQuery.deletePersistentAll(project);
-            } finally {
-                projectQuery.closeAll();
-            }
-        });
     }
 
     /**

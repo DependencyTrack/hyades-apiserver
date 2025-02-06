@@ -283,14 +283,18 @@ public class NotificationPublisherResource extends AlpineResource {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Test notification dispatched successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "Notification rule not found")
     })
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
-    public Response testSlackPublisherConfig(
+    public Response testNotificationRule(
             @Parameter(description = "The UUID of the rule to test", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String ruleUuid) {
         try (QueryManager qm = new QueryManager()) {
             NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
+            if (rule == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
             final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
             for(NotificationGroup group : rule.getNotifyOn()){
                 eventDispatcher.dispatchNotification(new Notification()

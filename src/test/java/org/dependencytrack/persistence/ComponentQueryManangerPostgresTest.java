@@ -68,11 +68,26 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void getUngroupedOutdatedComponentsTest() throws MalformedPackageURLException {
+
+        final Project project = prepareProjectUngroupedComponents();
+        var components = qm.getComponents(project, false, true, false);
+        assertThat(components.getTotal()).isEqualTo(7);
+    }
+
+    @Test
     public void testGetOutdatedDirectComponents() throws MalformedPackageURLException {
 
         final Project project = prepareProject();
         var components = qm.getComponents(project, true, true, true);
         assertThat(components.getTotal()).isEqualTo(75);
+    }
+
+    @Test
+    public void getUngroupedOutdatedDirectComponentsTest() throws MalformedPackageURLException {
+        final Project project = prepareProjectUngroupedComponents();
+        var components = qm.getComponents(project, true, true, true);
+        assertThat(components.getTotal()).isEqualTo(4);
     }
 
     private Project prepareProject() throws MalformedPackageURLException {
@@ -234,5 +249,49 @@ public class ComponentQueryManangerPostgresTest extends PersistenceCapableTest {
 
         var components = qm.getComponents(project, false, true, false);
         assertThat(components.getTotal()).isEqualTo(1);
+    }
+
+    /**
+     * Generate a project with ungrouped dependencies
+     * @return A project with 10 dependencies: <ul>
+     * <li>7 outdated dependencies</li>
+     * <li>3 recent dependencies</li></ul>
+     * @throws MalformedPackageURLException
+     */
+    private Project prepareProjectUngroupedComponents() throws MalformedPackageURLException {
+        final Project project = qm.createProject("Ungrouped Application", null, null, null, null, null, null, false);
+        final List<String> directDepencencies = new ArrayList<>();
+        // Generate 10 dependencies
+        for (int i = 0; i < 10; i++) {
+            Component component = new Component();
+            component.setProject(project);
+            component.setName("component-name-"+i);
+            component.setVersion(String.valueOf(i)+".0");
+            component.setPurl(new PackageURL(RepositoryType.PYPI.toString(), null, "component-name-"+i , String.valueOf(i)+".0", null, null));
+            component = qm.createComponent(component, false);
+            // direct depencencies
+            if (i < 4) {
+                // 4 direct depencencies, 6 transitive depencencies
+                directDepencencies.add("{\"uuid\":\"" + component.getUuid() + "\"}");
+            }
+            // Recent & Outdated
+            if ((i < 7)) {
+                final var metaComponent = new RepositoryMetaComponent();
+                metaComponent.setRepositoryType(RepositoryType.PYPI);
+                metaComponent.setName("component-name-"+i);
+                metaComponent.setLatestVersion(String.valueOf(i+1)+".0");
+                metaComponent.setLastCheck(new Date());
+                qm.persist(metaComponent);
+            } else {
+                final var metaComponent = new RepositoryMetaComponent();
+                metaComponent.setRepositoryType(RepositoryType.PYPI);
+                metaComponent.setName("component-name-"+i);
+                metaComponent.setLatestVersion(String.valueOf(i)+".0");
+                metaComponent.setLastCheck(new Date());
+                qm.persist(metaComponent);
+            }
+        }
+        project.setDirectDependencies("[" + String.join(",", directDepencencies.toArray(new String[0])) + "]");
+        return project;
     }
 }

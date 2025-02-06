@@ -69,6 +69,7 @@ import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.dependencytrack.resources.v1.vo.ConciseProject;
+import org.jdbi.v3.core.Handle;
 
 import javax.jdo.FetchGroup;
 import java.security.Principal;
@@ -84,6 +85,7 @@ import java.util.function.Function;
 
 import static alpine.event.framework.Event.isEventBeingProcessed;
 import static java.util.Objects.requireNonNullElseGet;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.PersistenceUtil.isPersistent;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
@@ -873,8 +875,10 @@ public class ProjectResource extends AlpineResource {
                 }
 
                 LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
-                try {
-                    qm.recursivelyDelete(project, true);
+
+                try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
+                    final var projectDao = jdbiHandle.attach(ProjectDao.class);
+                    projectDao.deleteProject(project.getUuid());
                 } catch (RuntimeException e) {
                     LOGGER.error("Failed to delete project", e);
                     throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);

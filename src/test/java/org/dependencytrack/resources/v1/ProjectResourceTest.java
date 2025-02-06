@@ -2128,6 +2128,7 @@ public class ProjectResourceTest extends ResourceTest {
         componentA.setProject(project);
         componentA.setName("acme-lib-a");
         componentA.setVersion("2.0.0");
+        componentA.setSwidTagId("swidTagId");
         componentA.setSupplier(componentSupplier);
         qm.persist(componentA);
 
@@ -2233,7 +2234,8 @@ public class ProjectResourceTest extends ResourceTest {
                                         "objectType": "COMPONENT",
                                         "uuid": "${json-unit.matches:notSourceComponentUuid}",
                                         "name": "acme-lib-a",
-                                        "version": "2.0.0"
+                                        "version": "2.0.0",
+                                        "swidTagId":"swidTagId"
                                       }
                                     ]
                                     """);
@@ -2263,6 +2265,7 @@ public class ProjectResourceTest extends ResourceTest {
                                 assertThat(clonedComponent.getUuid()).isNotEqualTo(componentA.getUuid());
                                 assertThat(clonedComponent.getName()).isEqualTo("acme-lib-a");
                                 assertThat(clonedComponent.getVersion()).isEqualTo("2.0.0");
+                                assertThat(clonedComponent.getSwidTagId()).isEqualTo("swidTagId");
                                 assertThat(clonedComponent.getSupplier()).isNotNull();
                                 assertThat(clonedComponent.getSupplier().getName()).isEqualTo("componentSupplier");
 
@@ -2453,6 +2456,51 @@ public class ProjectResourceTest extends ResourceTest {
                     .withFailMessage("Parent missing on level: " + levelByChildUuid.get(uuid))
                     .isNotEmpty();
         }
+    }
+
+    @Test // https://github.com/DependencyTrack/dependency-track/issues/4413
+    public void cloneProjectWithBrokenDependencyGraphTest() {
+        EventService.getInstance().subscribe(CloneProjectEvent.class, CloneProjectTask.class);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setDirectDependencies("[{\"uuid\":\"d6b6f140-f547-4fe2-a98c-f4942ad51f86\"}]");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        component.setVersion("2.0.0");
+        component.setDirectDependencies("[{\"uuid\":\"61503628-d2a2-447b-b99c-701b9d492cbd\"}]");
+        qm.persist(component);
+
+        final Response response = jersey.target("%s/clone".formatted(V1_PROJECT)).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "project": "%s",
+                          "version": "1.1.0",
+                          "includeComponents": true,
+                          "includeServices": true
+                        }
+                        """.formatted(project.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(202);
+
+        await("Cloning completion")
+                .atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(50))
+                .untilAsserted(() -> {
+                    final Project clonedProject = qm.getProject("acme-app", "1.1.0");
+                    assertThat(clonedProject).isNotNull();
+                });
+
+        final Project clonedProject = qm.getProject("acme-app", "1.1.0");
+        assertThat(clonedProject.getDirectDependencies()).isEqualTo(
+                "[{\"uuid\": \"d6b6f140-f547-4fe2-a98c-f4942ad51f86\"}]");
+
+        assertThat(qm.getAllComponents(clonedProject).getFirst().getDirectDependencies()).isEqualTo(
+                "[{\"uuid\": \"61503628-d2a2-447b-b99c-701b9d492cbd\"}]");
     }
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/3883

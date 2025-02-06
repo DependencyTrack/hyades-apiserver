@@ -225,8 +225,7 @@ public interface ProjectDao {
     @SqlUpdate("""
             DELETE
               FROM "PROJECT"
-              WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
-              AND NOW() - "PROJECT"."INACTIVE_SINCE" > :duration
+             WHERE "UUID" = :projectUuid
             """)
-    int deleteInactiveProjectsForRetentionDuration(@Bind Duration duration);
+    int deleteProject(@Bind final UUID projectUuid);
 }
