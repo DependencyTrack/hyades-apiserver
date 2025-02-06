@@ -228,4 +228,34 @@ public interface ProjectDao {
              WHERE "UUID" = :projectUuid
             """)
     int deleteProject(@Bind final UUID projectUuid);
+
+    @SqlUpdate("""
+           DELETE
+            FROM "PROJECT"
+            WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
+            AND NOW() - "PROJECT"."INACTIVE_SINCE" > :duration
+            """)
+    int deleteInactiveProjectsForRetentionDuration(@Bind final Duration duration);
+
+    @SqlUpdate("""
+           DELETE
+            FROM "PROJECT"
+            WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
+            AND "PROJECT"."NAME" = :projectName
+            AND "PROJECT"."ID" NOT IN (
+                SELECT "PROJECT"."ID" 
+                 FROM "PROJECT"
+                 WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
+                 AND "PROJECT"."NAME" = :projectName
+                 ORDER BY "PROJECT"."INACTIVE_SINCE" DESC
+                 LIMIT :retentionCadence
+                )
+            """)
+    int retainLastXInactiveProjects(@Bind final String projectName, @Bind final int retentionCadence);
+
+    @SqlQuery("""
+            SELECT DISTINCT "PROJECT"."NAME"
+              FROM "PROJECT";
+            """)
+    List<String> getDistinctProjects();
 }

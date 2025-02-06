@@ -21,6 +21,7 @@ package org.dependencytrack.tasks.maintenance;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.util.DateUtil;
 import org.junit.Test;
 
 import java.time.Duration;
@@ -29,6 +30,7 @@ import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE;
 
@@ -68,42 +70,124 @@ public class ProjectMaintenanceTaskTest extends PersistenceCapableTest {
         );
     }
 
-//    @Test
-//    public void testWithRetentionTypeCadence() {
-//        qm.createConfigProperty(
-//                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getGroupName(),
-//                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyName(),
-//                "CADENCE",
-//                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyType(),
-//                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getDescription());
-//
-//        qm.createConfigProperty(
-//                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getGroupName(),
-//                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getPropertyName(),
-//                "1",
-//                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getPropertyType(),
-//                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getDescription());
-//
-//        final var project = new Project();
-//        project.setName("acme-app-A");
-//        project.setVersion("1.0.0");
-//        project.setInactiveSince(new Date());
-//        qm.persist(project);
-//
-//        project.setVersion("2.0.0");
-//        project.setInactiveSince(new Date());
-//        qm.persist(project);
-//
-//        project.setVersion("3.0.0");
-//        qm.persist(project);
-//
-//        // Retain all active and last 1 inactive projects and delete rest
-//        final var task = new ProjectMaintenanceTask();
-//        assertThatNoException().isThrownBy(() -> task.inform(new ProjectMaintenanceEvent()));
-//
-//        assertThat(qm.getProjects().getList(Project.class)).satisfiesExactly(
-//                retainedProject -> assertThat(retainedProject.getVersion()).isEqualTo("2.0.0"),
-//                retainedProject -> assertThat(retainedProject.getVersion()).isEqualTo("3.0.0")
-//        );
-//    }
+    @Test
+    public void testWithRetentionTypeCadenceForSameProjectVersions() {
+        qm.createConfigProperty(
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getGroupName(),
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyName(),
+                "CADENCE",
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyType(),
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getDescription());
+
+        qm.createConfigProperty(
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getGroupName(),
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getPropertyName(),
+                "2",
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getPropertyType(),
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getDescription());
+
+        var project = new Project();
+        project.setName("acme-app-A");
+        project.setVersion("1.0.0");
+        project.setInactiveSince(DateUtil.parseShortDate("20250105"));
+        qm.persist(project);
+
+        project = new Project();
+        project.setName("acme-app-A");
+        project.setVersion("2.0.0");
+        project.setInactiveSince(DateUtil.parseShortDate("20250106"));
+        qm.persist(project);
+
+        project = new Project();
+        project.setName("acme-app-A");
+        project.setVersion("3.0.0");
+        project.setInactiveSince(DateUtil.parseShortDate("20250107"));
+        qm.persist(project);
+
+        project = new Project();
+        project.setName("acme-app-A");
+        project.setVersion("4.0.0");
+        project.setInactiveSince(DateUtil.parseShortDate("20250108"));
+        qm.persist(project);
+
+        project = new Project();
+        project.setName("acme-app-A");
+        project.setVersion("5.0.0");
+        qm.persist(project);
+
+        // Retain all active and last 2 inactive versions of a project and delete rest
+        final var task = new ProjectMaintenanceTask();
+        assertThatNoException().isThrownBy(() -> task.inform(new ProjectMaintenanceEvent()));
+
+        assertThat(qm.getProjects().getList(Project.class)).satisfiesExactly(
+                retainedProject -> assertThat(retainedProject.getVersion()).isEqualTo("5.0.0"),
+                retainedProject -> assertThat(retainedProject.getVersion()).isEqualTo("4.0.0"),
+                retainedProject -> assertThat(retainedProject.getVersion()).isEqualTo("3.0.0")
+        );
+    }
+
+    @Test
+    public void testWithRetentionTypeCadenceForDiffProjectVersions() {
+        qm.createConfigProperty(
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getGroupName(),
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyName(),
+                "CADENCE",
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyType(),
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getDescription());
+
+        qm.createConfigProperty(
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getGroupName(),
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getPropertyName(),
+                "1",
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getPropertyType(),
+                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getDescription());
+
+        var project = new Project();
+        project.setName("acme-app-A");
+        project.setVersion("1.0.0");
+        project.setInactiveSince(DateUtil.parseShortDate("20250105"));
+        qm.persist(project);
+
+        project = new Project();
+        project.setName("acme-app-A");
+        project.setVersion("2.0.0");
+        project.setInactiveSince(DateUtil.parseShortDate("20250107"));
+        qm.persist(project);
+
+        project = new Project();
+        project.setName("acme-app-B");
+        project.setVersion("1.0.0");
+        project.setInactiveSince(DateUtil.parseShortDate("20250108"));
+        qm.persist(project);
+
+        project = new Project();
+        project.setName("acme-app-B");
+        project.setVersion("2.0.0");
+        project.setInactiveSince(DateUtil.parseShortDate("20250109"));
+        qm.persist(project);
+
+        project = new Project();
+        project.setName("acme-app-B");
+        project.setVersion("3.0.0");
+        qm.persist(project);
+
+        // Retain all active and last 2 inactive versions of all projects and delete rest
+        final var task = new ProjectMaintenanceTask();
+        assertThatNoException().isThrownBy(() -> task.inform(new ProjectMaintenanceEvent()));
+
+        assertThat(qm.getProjects().getList(Project.class)).satisfiesExactlyInAnyOrder(
+                retainedProject -> {
+                    assertThat(retainedProject.getName()).isEqualTo("acme-app-A");
+                    assertThat(retainedProject.getVersion()).isEqualTo("2.0.0");
+                },
+                retainedProject -> {
+                    assertThat(retainedProject.getName()).isEqualTo("acme-app-B");
+                    assertThat(retainedProject.getVersion()).isEqualTo("2.0.0");
+                },
+                retainedProject -> {
+                    assertThat(retainedProject.getName()).isEqualTo("acme-app-B");
+                    assertThat(retainedProject.getVersion()).isEqualTo("3.0.0");
+                }
+        );
+    }
 }

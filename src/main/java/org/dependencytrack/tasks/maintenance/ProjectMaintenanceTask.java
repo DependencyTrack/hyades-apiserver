@@ -27,6 +27,7 @@ import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.jdbi.v3.core.Handle;
 
 import java.time.Duration;
+import java.util.List;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE;
@@ -76,15 +77,17 @@ public class ProjectMaintenanceTask implements Subscriber {
 
         var retentionType = configPropertyDao.getValue(MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE, String.class);
 
-        int numDeleted = 0;
+        Integer numDeleted = 0;
         if (retentionType.equals("AGE")) {
             int retentionDays = configPropertyDao.getValue(MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS, Integer.class);
             final Duration retentionDuration = Duration.ofDays(retentionDays);
-            // TODO delete recursively?
             numDeleted = projectDao.deleteInactiveProjectsForRetentionDuration(retentionDuration);
         } else {
             int retentionCadence = configPropertyDao.getValue(MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE, Integer.class);
-//            numDeleted = projectDao.deleteLastXInactiveProjects(retentionCadence);
+            List<String> distinctProjectNames = projectDao.getDistinctProjects();
+            for (var projectName : distinctProjectNames) {
+                numDeleted += projectDao.retainLastXInactiveProjects(projectName, retentionCadence);
+            }
         }
         return new Statistics(numDeleted);
     }
