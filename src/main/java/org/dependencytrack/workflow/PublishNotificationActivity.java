@@ -41,6 +41,8 @@ import java.io.FileNotFoundException;
 import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
 
@@ -58,7 +60,18 @@ public class PublishNotificationActivity implements ActivityExecutor<PublishNoti
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PublishNotificationActivity.class);
 
-    private final ServiceLoader<NotificationPublisher> publisherLoader = ServiceLoader.load(NotificationPublisher.class);
+    private final List<NotificationPublisher> publishers;
+
+    PublishNotificationActivity(final List<NotificationPublisher> publishers) {
+        this.publishers = publishers;
+    }
+
+    public PublishNotificationActivity() {
+        this(ServiceLoader.load(NotificationPublisher.class).stream()
+                .map(ServiceLoader.Provider::get)
+                .sorted(Comparator.comparing(publisher -> publisher.getClass().getName()))
+                .toList());
+    }
 
     @Override
     public Optional<Void> execute(final ActivityContext<PublishNotificationActivityArgs> ctx) throws Exception {
@@ -80,9 +93,8 @@ public class PublishNotificationActivity implements ActivityExecutor<PublishNoti
 
         final PublishContext publishContext = getPublishContext(args.getNotificationRuleName());
 
-        final NotificationPublisher publisher = publisherLoader.stream()
-                .filter(provider -> provider.type().getName().equals(publishContext.publisherClass()))
-                .map(ServiceLoader.Provider::get)
+        final NotificationPublisher publisher = publishers.stream()
+                .filter(candidate -> candidate.getClass().getName().equals(publishContext.publisherClass()))
                 .findAny()
                 .orElseThrow(() -> new ApplicationFailureException(
                         "No publisher of type %s found".formatted(publishContext.publisherClass()), null, true));
