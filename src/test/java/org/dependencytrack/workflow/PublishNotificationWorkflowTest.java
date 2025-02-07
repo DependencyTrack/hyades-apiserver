@@ -19,15 +19,26 @@
 package org.dependencytrack.workflow;
 
 import alpine.notification.NotificationLevel;
+import com.google.protobuf.Any;
+import com.google.protobuf.util.Timestamps;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.KafkaNotificationPublisher;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.notification.v1.Group;
+import org.dependencytrack.proto.notification.v1.Level;
 import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.notification.v1.Project;
+import org.dependencytrack.proto.notification.v1.Scope;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs;
@@ -51,6 +62,11 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
@@ -127,12 +143,22 @@ public class PublishNotificationWorkflowTest extends PersistenceCapableTest {
         notificationRule.setPublisherConfig(/* language=JSON */ """
                 {
                   "destination": "dtrack-notifications",
-                  "kafka.producer.bootstrap.servers": "%s"
+                  "kafka.producer.bootstrap.servers": "%s",
+                  "blocking": "true"
                 }
                 """.formatted(kafkaContainer.getBootstrapServers()));
         qm.persist(notificationRule);
 
         final var notification = Notification.newBuilder()
+                .setGroup(Group.GROUP_PROJECT_CREATED)
+                .setLevel(Level.LEVEL_INFORMATIONAL)
+                .setScope(Scope.SCOPE_PORTFOLIO)
+                .setTimestamp(Timestamps.now())
+                .setSubject(Any.pack(Project.newBuilder()
+                        .setUuid("0edf2863-480b-41c7-9cee-1a8129c92a68")
+                        .setName("foo")
+                        .setVersion("1.0.0")
+                        .build()))
                 .build();
 
         final FileMetadata notificationFileMetadata;
@@ -148,9 +174,25 @@ public class PublishNotificationWorkflowTest extends PersistenceCapableTest {
                                 .build(),
                         protoConverter(PublishNotificationWorkflowArgs.class)));
 
-        await()
+        await("Workflow run completion")
                 .atMost(Duration.ofSeconds(5))
                 .until(() -> engine.getRun(workflowRunId), run -> run.status() == WorkflowRunStatus.COMPLETED);
+
+        try (final var consumer = new KafkaConsumer<String, byte[]>(Map.ofEntries(
+                Map.entry(BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers()),
+                Map.entry(KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()),
+                Map.entry(VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName()),
+                Map.entry(GROUP_ID_CONFIG, UUID.randomUUID().toString()),
+                Map.entry(AUTO_OFFSET_RESET_CONFIG, "earliest")))) {
+            consumer.subscribe(List.of("dtrack-notifications"));
+
+            final ConsumerRecords<String, byte[]> records = consumer.poll(Duration.ofSeconds(1));
+            assertThat(records).hasSize(1);
+
+            final ConsumerRecord<String, byte[]> record = records.iterator().next();
+            assertThat(record.key()).isEqualTo("0edf2863-480b-41c7-9cee-1a8129c92a68");
+            assertThat(record.value()).isEqualTo(notification.toByteArray());
+        }
     }
 
 }
