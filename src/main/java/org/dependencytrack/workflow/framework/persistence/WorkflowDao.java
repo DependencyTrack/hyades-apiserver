@@ -451,6 +451,26 @@ public final class WorkflowDao {
                 .execute();
     }
 
+    public int deleteExpiredRuns(final Instant cutoff, final int limit) {
+        final Update update = jdbiHandle.createUpdate("""
+                with cte_candidates as (
+                  select id
+                    from workflow_run
+                   where completed_at < :cutoff
+                   order by completed_at
+                   limit :limit
+                )
+                delete
+                  from workflow_run
+                 where id in (select id from cte_candidates)
+                """);
+
+        return update
+                .bind("cutoff", cutoff)
+                .bind("limit", limit)
+                .execute();
+    }
+
     public int createRunInboxEvents(final SequencedCollection<NewWorkflowRunInboxRow> newEvents) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into workflow_run_inbox (
@@ -970,6 +990,21 @@ public final class WorkflowDao {
                 .bindArray("names", String.class, names)
                 .bindArray("nextFireAts", Instant.class, nextFireAts)
                 .execute();
+    }
+
+    public boolean tryAcquireAdvisoryLock(final String lockName) {
+        if (!jdbiHandle.isInTransaction()) {
+            throw new IllegalStateException("Must be in transaction to acquire advisory lock");
+        }
+
+        final Query query = jdbiHandle.createQuery("""
+                select pg_try_advisory_xact_lock(:lockId)
+                """);
+
+        return query
+                .bind("lockId", lockName.hashCode())
+                .mapTo(Boolean.class)
+                .one();
     }
 
 }

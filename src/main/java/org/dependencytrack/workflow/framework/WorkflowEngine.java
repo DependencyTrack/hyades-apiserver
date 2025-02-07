@@ -160,6 +160,7 @@ public class WorkflowEngine implements Closeable {
     private ExecutorService taskDispatcherExecutor;
     private Map<String, ExecutorService> executorServiceByName;
     private ScheduledExecutorService schedulerExecutor;
+    private ScheduledExecutorService retentionExecutor;
     private Buffer<NewExternalEvent> externalEventBuffer;
     private Buffer<TaskAction> taskActionBuffer;
 
@@ -260,6 +261,21 @@ public class WorkflowEngine implements Closeable {
                 config.scheduler().pollInterval().toMillis(),
                 TimeUnit.MILLISECONDS);
 
+        retentionExecutor = Executors.newSingleThreadScheduledExecutor(
+                new BasicThreadFactory.Builder()
+                        .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
+                        .namingPattern("WorkflowEngine-RetentionWorker-%d")
+                        .build());
+        if (config.meterRegistry() != null) {
+            new ExecutorServiceMetrics(retentionExecutor, "WorkflowEngine-RetentionWorker", null)
+                    .bindTo(config.meterRegistry());
+        }
+        retentionExecutor.scheduleAtFixedRate(
+                new WorkflowRetentionWorker(jdbi, config.retention().deletionLimit(), config.retention().duration()),
+                config.retention().workerInitialDelay().toMillis(),
+                config.retention().workerInterval().toMillis(),
+                TimeUnit.MILLISECONDS);
+
         setState(State.RUNNING);
         LOGGER.debug("Started");
     }
@@ -268,6 +284,10 @@ public class WorkflowEngine implements Closeable {
     public void close() throws IOException {
         setState(State.STOPPING);
         LOGGER.debug("Stopping");
+
+        LOGGER.debug("Waiting for retention worker to stop");
+        retentionExecutor.close();
+        retentionExecutor = null;
 
         LOGGER.debug("Waiting for scheduler to stop");
         schedulerExecutor.close();

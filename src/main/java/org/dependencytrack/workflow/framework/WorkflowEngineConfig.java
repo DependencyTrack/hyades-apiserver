@@ -54,6 +54,47 @@ public class WorkflowEngineConfig {
 
     }
 
+    public static class RetentionConfig {
+
+        private int deletionLimit = 100;
+        private Duration duration = Duration.ofDays(1);
+        private Duration workerInitialDelay = Duration.ofMinutes(3);
+        private Duration workerInterval = Duration.ofMinutes(5);
+
+        public int deletionLimit() {
+            return deletionLimit;
+        }
+
+        public void setDeletionLimit(final int deletionLimit) {
+            this.deletionLimit = deletionLimit;
+        }
+
+        public Duration duration() {
+            return duration;
+        }
+
+        public void setDuration(final Duration duration) {
+            this.duration = duration;
+        }
+
+        public Duration workerInitialDelay() {
+            return workerInitialDelay;
+        }
+
+        public void setWorkerInitialDelay(final Duration workerInitialDelay) {
+            this.workerInitialDelay = workerInitialDelay;
+        }
+
+        public Duration workerInterval() {
+            return workerInterval;
+        }
+
+        public void setWorkerInterval(final Duration workerInterval) {
+            this.workerInterval = workerInterval;
+        }
+
+    }
+
     public static class SchedulerConfig {
 
         private Duration initialDelay = Duration.ofSeconds(15);
@@ -108,6 +149,7 @@ public class WorkflowEngineConfig {
     private final DataSource dataSource;
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskActionBufferConfig = new BufferConfig();
+    private final RetentionConfig retentionConfig = new RetentionConfig();
     private final SchedulerConfig schedulerConfig = new SchedulerConfig();
     private final TaskDispatcherConfig workflowTaskDispatcherConfig = new TaskDispatcherConfig();
     private final TaskDispatcherConfig activityTaskDispatcherConfig = new TaskDispatcherConfig();
@@ -132,6 +174,10 @@ public class WorkflowEngineConfig {
 
     public BufferConfig taskActionBuffer() {
         return taskActionBufferConfig;
+    }
+
+    public RetentionConfig retention() {
+        return retentionConfig;
     }
 
     public SchedulerConfig scheduler() {
