@@ -25,6 +25,8 @@ import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
+import org.jdbi.v3.sqlobject.statement.BatchChunkSize;
+import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
@@ -234,8 +236,9 @@ public interface ProjectDao {
             FROM "PROJECT"
             WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
             AND NOW() - "PROJECT"."INACTIVE_SINCE" > :duration
-            """)
-    int deleteInactiveProjectsForRetentionDuration(@Bind final Duration duration);
+            AND "PROJECT"."ID" = any( array( SELECT "ID" FROM "PROJECT" LIMIT :batchSize));
+           """)
+    int deleteInactiveProjectsForRetentionDuration(@Bind final Duration duration, @Bind final int batchSize);
 
     @SqlUpdate("""
            DELETE
@@ -254,8 +257,12 @@ public interface ProjectDao {
     int retainLastXInactiveProjects(@Bind final String projectName, @Bind final int retentionCadence);
 
     @SqlQuery("""
-            SELECT DISTINCT "PROJECT"."NAME"
-              FROM "PROJECT";
+            SELECT "PROJECT"."NAME"
+              FROM "PROJECT"
+              WHERE "INACTIVE_SINCE" IS NOT NULL
+              GROUP BY "NAME"
+              HAVING COUNT(*) > :versionCountThreshold
+              LIMIT :batchSize
             """)
-    List<String> getDistinctProjects();
+    List<String> getDistinctProjects(@Bind final int versionCountThreshold, @Bind final int batchSize);
 }

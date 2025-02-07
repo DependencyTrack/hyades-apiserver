@@ -28,12 +28,14 @@ import org.jdbi.v3.core.Handle;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
@@ -73,23 +75,40 @@ public class ProjectMaintenanceTask implements Subscriber {
         assertLocked();
 
         final var configPropertyDao = jdbiHandle.attach(ConfigPropertyDao.class);
-        final var projectDao = jdbiHandle.attach(ProjectDao.class);
 
         var retentionType = configPropertyDao.getValue(MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE, String.class);
 
-        Integer numDeleted = 0;
+        int batchSize = 100;
+        AtomicInteger numDeletedTotal = new AtomicInteger(0);
+
         if (retentionType.equals("AGE")) {
             int retentionDays = configPropertyDao.getValue(MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS, Integer.class);
             final Duration retentionDuration = Duration.ofDays(retentionDays);
-            numDeleted = projectDao.deleteInactiveProjectsForRetentionDuration(retentionDuration);
+            Integer numDeletedLastBatch = null;
+            while (numDeletedLastBatch == null || numDeletedLastBatch > 0) {
+                numDeletedLastBatch = withJdbiHandle(
+                        batchHandle -> {
+                            final var projectDao = jdbiHandle.attach(ProjectDao.class);
+                            return projectDao.deleteInactiveProjectsForRetentionDuration(retentionDuration, batchSize);
+                        });
+                numDeletedTotal.addAndGet(numDeletedLastBatch);
+            }
         } else {
             int retentionCadence = configPropertyDao.getValue(MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE, Integer.class);
-            List<String> distinctProjectNames = projectDao.getDistinctProjects();
-            for (var projectName : distinctProjectNames) {
-                numDeleted += projectDao.retainLastXInactiveProjects(projectName, retentionCadence);
+            Integer projectLastBatch = null;
+            while (projectLastBatch == null || projectLastBatch > 0) {
+                projectLastBatch = withJdbiHandle(
+                        batchHandle -> {
+                            final var projectDao = jdbiHandle.attach(ProjectDao.class);
+                            List<String> projectBatch = projectDao.getDistinctProjects(retentionCadence, batchSize);
+                            for (var projectName : projectBatch) {
+                                numDeletedTotal.addAndGet(projectDao.retainLastXInactiveProjects(projectName, retentionCadence));
+                            }
+                            return projectBatch.size();
+                        });
             }
         }
-        return new Statistics(numDeleted);
+        return new Statistics(numDeletedTotal.get());
     }
 
 }
