@@ -61,6 +61,7 @@ import javax.jdo.metadata.TypeMetadata;
 import java.io.IOException;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -69,6 +70,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
+import static org.dependencytrack.util.PersistenceUtil.assertPersistentAll;
 
 final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
@@ -873,31 +877,50 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Binds the two objects together in a corresponding join table.
-     *
-     * @param project a Project object
-     * @param tags    a List of Tag objects
+     * @since 4.12.3
      */
     @Override
-    public void bind(Project project, List<Tag> tags) {
-        runInTransaction(() -> {
-            final Query<Tag> query = pm.newQuery(Tag.class, "projects.contains(:project)");
-            query.setParameters(project);
-            final List<Tag> currentProjectTags = executeAndCloseList(query);
+    public boolean bind(final Project project, final Collection<Tag> tags, final boolean keepExisting) {
+        assertPersistent(project, "project must be persistent");
+        assertPersistentAll(tags, "tags must be persistent");
 
-            for (final Tag tag : currentProjectTags) {
-                if (!tags.contains(tag)) {
-                    tag.getProjects().remove(project);
+        return callInTransaction(() -> {
+            boolean modified = false;
+
+            if (!keepExisting) {
+                for (final Tag existingTag : project.getTags()) {
+                    if (!tags.contains(existingTag)) {
+                        project.getTags().remove(existingTag);
+                        existingTag.getProjects().remove(project);
+                        modified = true;
+                    }
                 }
             }
-            project.setTags(tags);
             for (final Tag tag : tags) {
-                final List<Project> projects = tag.getProjects();
-                if (!projects.contains(project)) {
-                    projects.add(project);
+                if (!project.getTags().contains(tag)) {
+                    project.getTags().add(tag);
+
+                    if (tag.getProjects() == null) {
+                        tag.setProjects(new ArrayList<>(List.of(project)));
+                    } else if (!tag.getProjects().contains(project)) {
+                        tag.getProjects().add(project);
+                    }
+
+                    modified = true;
                 }
             }
+            return modified;
         });
+    }
+
+    /**
+     * Binds the two objects together in a corresponding join table.
+     * @param project a Project object
+     * @param tags a List of Tag objects
+     */
+    @Override
+    public void bind(final Project project, final List<Tag> tags) {
+        bind(project, tags, /* keepExisting */ false);
     }
 
     /**
