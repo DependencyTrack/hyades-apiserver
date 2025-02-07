@@ -29,6 +29,7 @@ import java.time.Instant;
 final class WorkflowRetentionWorker implements Runnable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowRetentionWorker.class);
+    private static final String LOCK_NAME = "workflow-retention";
 
     private final Jdbi jdbi;
     private final int deletionLimit;
@@ -48,14 +49,14 @@ final class WorkflowRetentionWorker implements Runnable {
         int numRunsDeletedTotal = 0;
         int numRunsDeletedLast = -1;
 
-        // TODO: Handle interrupts.
-        while (numRunsDeletedLast == -1 || numRunsDeletedLast > 0) {
+        while ((numRunsDeletedLast == -1 || numRunsDeletedLast > 0)
+               && !Thread.currentThread().isInterrupted()) {
             numRunsDeletedLast = jdbi.inTransaction(handle -> {
                 final var dao = new WorkflowDao(handle);
 
-                final boolean lockAcquired = dao.tryAcquireAdvisoryLock("workflow-retention");
+                final boolean lockAcquired = dao.tryAcquireAdvisoryLock(LOCK_NAME);
                 if (!lockAcquired) {
-                    LOGGER.info("Retention lock already held by another instance");
+                    LOGGER.debug("Lock {} already held by another instance", LOCK_NAME);
                     return 0;
                 }
 
