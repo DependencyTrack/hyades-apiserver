@@ -30,27 +30,27 @@ import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS;
-import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_DAYS;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_TYPE;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_VERSIONS;
 
 public class ProjectMaintenanceTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testWithRetentionTypeAge() {
         qm.createConfigProperty(
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getGroupName(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyName(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getDefaultPropertyValue(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyType(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getDescription());
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyName(),
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getDefaultPropertyValue(),
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getDescription());
 
         qm.createConfigProperty(
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS.getGroupName(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS.getPropertyName(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS.getDefaultPropertyValue(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS.getPropertyType(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS.getDescription());
+                MAINTENANCE_PROJECTS_RETENTION_DAYS.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_DAYS.getPropertyName(),
+                MAINTENANCE_PROJECTS_RETENTION_DAYS.getDefaultPropertyValue(),
+                MAINTENANCE_PROJECTS_RETENTION_DAYS.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_DAYS.getDescription());
 
         final var projectA = new Project();
         projectA.setName("acme-app-A");
@@ -71,20 +71,20 @@ public class ProjectMaintenanceTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testWithRetentionTypeCadenceForSameProjectVersions() {
+    public void testWithRetentionTypeVersionsForSameProject() {
         qm.createConfigProperty(
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getGroupName(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyName(),
-                "CADENCE",
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyType(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getDescription());
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyName(),
+                "VERSIONS",
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getDescription());
 
         qm.createConfigProperty(
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getGroupName(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getPropertyName(),
+                MAINTENANCE_PROJECTS_RETENTION_VERSIONS.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_VERSIONS.getPropertyName(),
                 "2",
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getPropertyType(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getDescription());
+                MAINTENANCE_PROJECTS_RETENTION_VERSIONS.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_VERSIONS.getDescription());
 
         var project = new Project();
         project.setName("acme-app-A");
@@ -127,20 +127,20 @@ public class ProjectMaintenanceTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testWithRetentionTypeCadenceForDiffProjectVersions() {
+    public void testWithRetentionTypeVersionsForDifferentProjects() {
         qm.createConfigProperty(
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getGroupName(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyName(),
-                "CADENCE",
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getPropertyType(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE.getDescription());
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyName(),
+                "VERSIONS",
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getDescription());
 
         qm.createConfigProperty(
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getGroupName(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getPropertyName(),
+                MAINTENANCE_PROJECTS_RETENTION_VERSIONS.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_VERSIONS.getPropertyName(),
                 "1",
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getPropertyType(),
-                MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE.getDescription());
+                MAINTENANCE_PROJECTS_RETENTION_VERSIONS.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_VERSIONS.getDescription());
 
         var project = new Project();
         project.setName("acme-app-A");

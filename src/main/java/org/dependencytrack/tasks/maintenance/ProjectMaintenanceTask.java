@@ -31,9 +31,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
-import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE;
-import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS;
-import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_DAYS;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_TYPE;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_VERSIONS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
@@ -75,13 +75,13 @@ public class ProjectMaintenanceTask implements Subscriber {
         assertLocked();
 
         final String retentionType = withJdbiHandle(handle ->
-                handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_INACTIVE_PROJECTS_RETENTION_TYPE, String.class));
+                handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_TYPE, String.class));
         int batchSize = 100;
         AtomicInteger numDeletedTotal = new AtomicInteger(0);
 
         if (retentionType.equals("AGE")) {
             final int retentionDays = withJdbiHandle(handle ->
-                    handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_INACTIVE_PROJECTS_RETENTION_DAYS, Integer.class));
+                    handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_DAYS, Integer.class));
             final Duration retentionDuration = Duration.ofDays(retentionDays);
             Instant retentionCutOff = Instant.now().minus(retentionDuration);
             Integer numDeletedLastBatch = null;
@@ -94,16 +94,16 @@ public class ProjectMaintenanceTask implements Subscriber {
                 numDeletedTotal.addAndGet(numDeletedLastBatch);
             }
         } else {
-            final int retentionCadence = withJdbiHandle(handle ->
-                    handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_INACTIVE_PROJECTS_RETENTION_CADENCE, Integer.class));
+            final int versionCountThreshold = withJdbiHandle(handle ->
+                    handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_VERSIONS, Integer.class));
             Integer projectLastBatch = null;
             while (projectLastBatch == null || projectLastBatch > 0) {
                 projectLastBatch = inJdbiTransaction(
                         batchHandle -> {
                             final var projectDao = batchHandle.attach(ProjectDao.class);
-                            List<String> projectBatch = projectDao.getDistinctProjects(retentionCadence, batchSize);
+                            List<String> projectBatch = projectDao.getDistinctProjects(versionCountThreshold, batchSize);
                             for (var projectName : projectBatch) {
-                                numDeletedTotal.addAndGet(projectDao.retainLastXInactiveProjects(projectName, retentionCadence));
+                                numDeletedTotal.addAndGet(projectDao.retainLastXInactiveProjects(projectName, versionCountThreshold));
                             }
                             return projectBatch.size();
                         });

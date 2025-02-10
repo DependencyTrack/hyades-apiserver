@@ -253,10 +253,10 @@ public interface ProjectDao {
                  WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
                  AND "PROJECT"."NAME" = :projectName
                  ORDER BY "PROJECT"."INACTIVE_SINCE" DESC
-                 LIMIT :retentionCadence
+                 LIMIT :versionCountThreshold
                 )
             """)
-    int retainLastXInactiveProjects(@Bind final String projectName, @Bind final int retentionCadence);
+    int retainLastXInactiveProjects(@Bind final String projectName, @Bind final int versionCountThreshold);
 
     @SqlQuery("""
             SELECT "PROJECT"."NAME"
