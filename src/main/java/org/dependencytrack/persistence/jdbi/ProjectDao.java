@@ -28,7 +28,6 @@ import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -230,13 +229,18 @@ public interface ProjectDao {
     int deleteProject(@Bind final UUID projectUuid);
 
     @SqlUpdate("""
-           DELETE
-            FROM "PROJECT"
-            WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
-            AND NOW() - "PROJECT"."INACTIVE_SINCE" > :duration
-            AND "PROJECT"."ID" = any( array( SELECT "ID" FROM "PROJECT" LIMIT :batchSize));
+            WITH "CTE" AS (
+              SELECT "ID"
+                FROM "PROJECT"
+               WHERE "INACTIVE_SINCE" < :retentionCutOff
+               ORDER BY "INACTIVE_SINCE"
+               LIMIT :batchSize
+            )
+            DELETE
+              FROM "PROJECT"
+             WHERE "ID" IN (SELECT "ID" FROM "CTE")
            """)
-    int deleteInactiveProjectsForRetentionDuration(@Bind final Duration duration, @Bind final int batchSize);
+    int deleteInactiveProjectsForRetentionDuration(@Bind final Instant retentionCutOff, @Bind final int batchSize);
 
     @SqlUpdate("""
            DELETE
