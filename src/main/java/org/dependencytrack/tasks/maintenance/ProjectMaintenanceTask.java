@@ -24,7 +24,6 @@ import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.maintenance.ProjectMaintenanceEvent;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
-import org.jdbi.v3.core.Handle;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -37,7 +36,6 @@ import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJ
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_TYPE;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_VERSIONS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
@@ -78,17 +76,18 @@ public class ProjectMaintenanceTask implements Subscriber {
         assertLocked();
         AtomicInteger numDeletedTotal = new AtomicInteger(0);
 
-        final Handle jdbiHandle = openJdbiHandle();
-        final var configPropertyDao = jdbiHandle.attach(ConfigPropertyDao.class);
-        if (configPropertyDao.getValue(MAINTENANCE_PROJECTS_RETENTION_ENABLE, Boolean.class)) {
+        var isRetentionEnabled = withJdbiHandle(handle ->
+                handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_ENABLE, Boolean.class));
 
-            final String retentionType = configPropertyDao.getValue(MAINTENANCE_PROJECTS_RETENTION_TYPE, String.class);
+        if (isRetentionEnabled) {
 
+            final String retentionType = withJdbiHandle(handle ->
+                    handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_TYPE, String.class));
             int batchSize = 100;
             if (retentionType.equals("AGE")) {
 
-                final int retentionDays = configPropertyDao.getValue(MAINTENANCE_PROJECTS_RETENTION_DAYS, Integer.class);
-                jdbiHandle.close();
+                final int retentionDays = withJdbiHandle(handle ->
+                        handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_DAYS, Integer.class));
                 final Duration retentionDuration = Duration.ofDays(retentionDays);
                 Instant retentionCutOff = Instant.now().minus(retentionDuration);
                 Integer numDeletedLastBatch = null;
@@ -101,8 +100,8 @@ public class ProjectMaintenanceTask implements Subscriber {
                     numDeletedTotal.addAndGet(numDeletedLastBatch);
                 }
             } else {
-                final int versionCountThreshold = configPropertyDao.getValue(MAINTENANCE_PROJECTS_RETENTION_VERSIONS, Integer.class);
-                jdbiHandle.close();
+                final int versionCountThreshold = withJdbiHandle(handle ->
+                        handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_VERSIONS, Integer.class));
                 Integer projectLastBatch = null;
                 while (projectLastBatch == null || projectLastBatch > 0) {
                     projectLastBatch = inJdbiTransaction(
