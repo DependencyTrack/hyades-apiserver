@@ -31,6 +31,7 @@ import java.util.Date;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_DAYS;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_ENABLE;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_TYPE;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_VERSIONS;
 
@@ -38,6 +39,13 @@ public class ProjectMaintenanceTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testWithRetentionTypeAge() {
+        qm.createConfigProperty(
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getPropertyName(),
+                "true",
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getDescription());
+
         qm.createConfigProperty(
                 MAINTENANCE_PROJECTS_RETENTION_TYPE.getGroupName(),
                 MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyName(),
@@ -72,6 +80,13 @@ public class ProjectMaintenanceTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testWithRetentionTypeVersionsForSameProject() {
+        qm.createConfigProperty(
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getPropertyName(),
+                "true",
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getDescription());
+
         qm.createConfigProperty(
                 MAINTENANCE_PROJECTS_RETENTION_TYPE.getGroupName(),
                 MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyName(),
@@ -128,6 +143,13 @@ public class ProjectMaintenanceTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testWithRetentionTypeVersionsForDifferentProjects() {
+        qm.createConfigProperty(
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getPropertyName(),
+                "true",
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getDescription());
+
         qm.createConfigProperty(
                 MAINTENANCE_PROJECTS_RETENTION_TYPE.getGroupName(),
                 MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyName(),
@@ -189,5 +211,25 @@ public class ProjectMaintenanceTaskTest extends PersistenceCapableTest {
                     assertThat(retainedProject.getVersion()).isEqualTo("3.0.0");
                 }
         );
+    }
+
+    @Test
+    public void testWithProjectRetentionDisabled() {
+        qm.createConfigProperty(
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getPropertyName(),
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getDefaultPropertyValue(),
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_ENABLE.getDescription());
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setInactiveSince(DateUtil.parseShortDate("20100109"));
+        qm.persist(project);
+
+        final var task = new ProjectMaintenanceTask();
+        assertThatNoException().isThrownBy(() -> task.inform(new ProjectMaintenanceEvent()));
+        assertThat(qm.getProjects()).isNotNull();
     }
 }
