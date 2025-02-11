@@ -661,15 +661,26 @@ public class TagResourceTest extends ResourceTest {
 
         qm.createTag("foo");
 
+        final var projectC = new Project();
+        projectC.setName("acme-app-c");
+        qm.persist(projectC);
+
+        qm.bind(projectC, List.of(qm.createTag("bar")));
+
         final Response response = jersey.target(V1_TAG + "/foo/project")
                 .request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.json(List.of(projectA.getUuid(), projectB.getUuid())));
+                .post(Entity.json(List.of(projectA.getUuid(), projectB.getUuid(), projectC.getUuid())));
         assertThat(response.getStatus()).isEqualTo(204);
 
         qm.getPersistenceManager().evictAll();
-        assertThat(projectA.getTags()).satisfiesExactly(projectTag -> assertThat(projectTag.getName()).isEqualTo("foo"));
-        assertThat(projectB.getTags()).satisfiesExactly(projectTag -> assertThat(projectTag.getName()).isEqualTo("foo"));
+        assertThat(projectA.getTags()).satisfiesExactly(
+                projectTag -> assertThat(projectTag.getName()).isEqualTo("foo"));
+        assertThat(projectB.getTags()).satisfiesExactly(
+                projectTag -> assertThat(projectTag.getName()).isEqualTo("foo"));
+        assertThat(projectC.getTags()).satisfiesExactlyInAnyOrder(
+                projectTag -> assertThat(projectTag.getName()).isEqualTo("foo"),
+                projectTag -> assertThat(projectTag.getName()).isEqualTo("bar"));
     }
 
     @Test
@@ -1071,15 +1082,28 @@ public class TagResourceTest extends ResourceTest {
 
         qm.createTag("foo");
 
+        final var policyC = new Policy();
+        policyC.setName("policy-c");
+        policyC.setOperator(Policy.Operator.ALL);
+        policyC.setViolationState(Policy.ViolationState.INFO);
+        qm.persist(policyC);
+
+        qm.bind(policyC, List.of(qm.createTag("bar")));
+
         final Response response = jersey.target(V1_TAG + "/foo/policy")
                 .request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.json(List.of(policyA.getUuid(), policyB.getUuid())));
+                .post(Entity.json(List.of(policyA.getUuid(), policyB.getUuid(), policyC.getUuid())));
         assertThat(response.getStatus()).isEqualTo(204);
 
         qm.getPersistenceManager().evictAll();
-        assertThat(policyA.getTags()).satisfiesExactly(policyTag -> assertThat(policyTag.getName()).isEqualTo("foo"));
-        assertThat(policyB.getTags()).satisfiesExactly(policyTag -> assertThat(policyTag.getName()).isEqualTo("foo"));
+        assertThat(policyA.getTags()).satisfiesExactly(
+                policyTag -> assertThat(policyTag.getName()).isEqualTo("foo"));
+        assertThat(policyB.getTags()).satisfiesExactly(
+                policyTag -> assertThat(policyTag.getName()).isEqualTo("foo"));
+        assertThat(policyC.getTags()).satisfiesExactlyInAnyOrder(
+                policyTag -> assertThat(policyTag.getName()).isEqualTo("foo"),
+                policyTag -> assertThat(policyTag.getName()).isEqualTo("bar"));
     }
 
     @Test
@@ -1536,15 +1560,27 @@ public class TagResourceTest extends ResourceTest {
 
         qm.createTag("foo");
 
+        final var notificationRuleC = new NotificationRule();
+        notificationRuleC.setName("rule-c");
+        notificationRuleC.setScope(NotificationScope.PORTFOLIO);
+        qm.persist(notificationRuleC);
+
+        qm.bind(notificationRuleC, List.of(qm.createTag("bar")));
+
         final Response response = jersey.target(V1_TAG + "/foo/notificationRule")
                 .request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.json(List.of(notificationRuleA.getUuid(), notificationRuleB.getUuid())));
+                .post(Entity.json(List.of(notificationRuleA.getUuid(), notificationRuleB.getUuid(), notificationRuleC.getUuid())));
         assertThat(response.getStatus()).isEqualTo(204);
 
         qm.getPersistenceManager().evictAll();
-        assertThat(notificationRuleA.getTags()).satisfiesExactly(ruleTag -> assertThat(ruleTag.getName()).isEqualTo("foo"));
-        assertThat(notificationRuleB.getTags()).satisfiesExactly(ruleTag -> assertThat(ruleTag.getName()).isEqualTo("foo"));
+        assertThat(notificationRuleA.getTags()).satisfiesExactly(
+                ruleTag -> assertThat(ruleTag.getName()).isEqualTo("foo"));
+        assertThat(notificationRuleB.getTags()).satisfiesExactly(
+                ruleTag -> assertThat(ruleTag.getName()).isEqualTo("foo"));
+        assertThat(notificationRuleC.getTags()).satisfiesExactlyInAnyOrder(
+                ruleTag -> assertThat(ruleTag.getName()).isEqualTo("foo"),
+                ruleTag -> assertThat(ruleTag.getName()).isEqualTo("bar"));
     }
 
     @Test

@@ -644,13 +644,6 @@ public class ProjectResource extends AlpineResource {
                             .entity(e.getMessage())
                             .build());
                 } catch (RuntimeException e) {
-                    if (isUniqueConstraintViolation(e)) {
-                        throw new ClientErrorException(Response
-                                .status(Response.Status.CONFLICT)
-                                .entity("A project with the specified name and version already exists.")
-                                .build());
-                    }
-
                     LOGGER.error("Failed to update project %s".formatted(jsonProject.getUuid()), e);
                     throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
                 }
@@ -658,6 +651,15 @@ public class ProjectResource extends AlpineResource {
 
             LOGGER.info("Project " + updatedProject + " updated by " + super.getPrincipal().getName());
             return Response.ok(updatedProject).build();
+        }
+        catch (RuntimeException e) {
+            if (isUniqueConstraintViolation(e)) {
+                throw new ClientErrorException(Response
+                        .status(Response.Status.CONFLICT)
+                        .entity("A project with the specified name and version already exists.")
+                        .build());
+            }
+            throw e;
         }
     }
 
