@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_DAYS;
-import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_ENABLE;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_TYPE;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_PROJECTS_RETENTION_VERSIONS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
@@ -76,13 +75,10 @@ public class ProjectMaintenanceTask implements Subscriber {
         assertLocked();
         AtomicInteger numDeletedTotal = new AtomicInteger(0);
 
-        var isRetentionEnabled = withJdbiHandle(handle ->
-                handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_ENABLE, Boolean.class));
+        final String retentionType = withJdbiHandle(handle ->
+                handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_TYPE, String.class));
 
-        if (isRetentionEnabled) {
-
-            final String retentionType = withJdbiHandle(handle ->
-                    handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_TYPE, String.class));
+        if (retentionType != null) {
             int batchSize = 100;
             if (retentionType.equals("AGE")) {
 
@@ -116,9 +112,7 @@ public class ProjectMaintenanceTask implements Subscriber {
                 }
             }
         } else {
-            LOGGER.info("Not deleting inactive projects because %s:%s is disabled".formatted(
-                    MAINTENANCE_PROJECTS_RETENTION_ENABLE.getGroupName(),
-                    MAINTENANCE_PROJECTS_RETENTION_ENABLE.getPropertyName()));
+            LOGGER.info("Not deleting inactive projects because it is disabled");
         }
         return new Statistics(numDeletedTotal.get());
     }
