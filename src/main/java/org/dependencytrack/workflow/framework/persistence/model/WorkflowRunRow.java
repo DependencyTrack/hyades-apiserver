@@ -19,10 +19,11 @@
 package org.dependencytrack.workflow.framework.persistence.model;
 
 import org.dependencytrack.workflow.framework.WorkflowRunStatus;
+import org.jdbi.v3.json.Json;
 
 import jakarta.annotation.Nullable;
 import java.time.Instant;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 public record WorkflowRunRow(
@@ -33,7 +34,7 @@ public record WorkflowRunRow(
         @Nullable String customStatus,
         @Nullable String concurrencyGroupId,
         @Nullable Integer priority,
-        @Nullable Set<String> tags,
+        @Nullable @Json Map<String, String> labels,
         @Nullable String lockedBy,
         @Nullable Instant lockedUntil,
         Instant createdAt,

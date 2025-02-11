@@ -43,8 +43,9 @@ import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
+import org.jdbi.v3.json.JsonConfig;
+import org.jdbi.v3.json.JsonMapper.TypedJsonMapper;
 
-import jakarta.json.Json;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -54,7 +55,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SequencedCollection;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -75,16 +75,9 @@ public final class WorkflowDao {
                 , workflow_version
                 , concurrency_group_id
                 , priority
-                , tags
+                , labels
                 )
-                select id
-                     , parent_id
-                     , workflow_name
-                     , workflow_version
-                     , concurrency_group_id
-                     , priority
-                     , (select array_agg(tag)
-                          from json_array_elements_text(tags) as tag) as tags
+                select *
                   from unnest (
                          :ids
                        , :parentIds
@@ -92,15 +85,8 @@ public final class WorkflowDao {
                        , :workflowVersions
                        , :concurrencyGroupIds
                        , :priorities
-                       , cast(:tagsJsons as json[])
-                       ) as new_run (
-                         id
-                       , parent_id
-                       , workflow_name
-                       , workflow_version
-                       , concurrency_group_id
-                       , priority
-                       , tags)
+                       , cast(:labelsJsons as jsonb[])
+                       )
                 returning id
                 """);
 
@@ -110,19 +96,18 @@ public final class WorkflowDao {
         final var workflowVersions = new ArrayList<Integer>(newRuns.size());
         final var concurrencyGroupIds = new ArrayList<String>(newRuns.size());
         final var priorities = new ArrayList<Integer>(newRuns.size());
-        final var tagsJsons = new ArrayList<String>(newRuns.size());
+        final var labelsJsons = new ArrayList<String>(newRuns.size());
+
+        final TypedJsonMapper jsonMapper = jdbiHandle
+                .getConfig(JsonConfig.class).getJsonMapper()
+                .forType(new GenericType<Map<String, String>>() {}.getType(), jdbiHandle.getConfig());
 
         for (final NewWorkflowRunRow newRun : newRuns) {
-            // Workaround for JDBC getting confused with nested arrays.
-            // Transmit tags as JSON array instead, and convert it to
-            // a native TEXT[] array before inserting it.
-            final String tagsJson;
-            if (newRun.tags() == null || newRun.tags().isEmpty()) {
-                tagsJson = null;
+            final String labelsJson;
+            if (newRun.labels() == null || newRun.labels().isEmpty()) {
+                labelsJson = null;
             } else {
-                final var tagsJsonArray = Json.createArrayBuilder();
-                newRun.tags().forEach(tagsJsonArray::add);
-                tagsJson = tagsJsonArray.build().toString();
+                labelsJson = jsonMapper.toJson(newRun.labels(), jdbiHandle.getConfig());
             }
 
             ids.add(newRun.id());
@@ -131,7 +116,7 @@ public final class WorkflowDao {
             workflowVersions.add(newRun.workflowVersion());
             concurrencyGroupIds.add(newRun.concurrencyGroupId());
             priorities.add(newRun.priority());
-            tagsJsons.add(tagsJson);
+            labelsJsons.add(labelsJson);
         }
 
         return update
@@ -141,7 +126,7 @@ public final class WorkflowDao {
                 .bindArray("workflowVersions", Integer.class, workflowVersions)
                 .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
                 .bindArray("priorities", Integer.class, priorities)
-                .bindArray("tagsJsons", String.class, tagsJsons)
+                .bindArray("labelsJsons", String.class, labelsJsons)
                 .executeAndReturnGeneratedKeys("id")
                 .mapTo(UUID.class)
                 .list();
@@ -222,7 +207,7 @@ public final class WorkflowDao {
             final String workflowNameFilter,
             final WorkflowRunStatus statusFilter,
             final String concurrencyGroupIdFilter,
-            final Set<String> tagsFilter,
+            final Map<String, String> labelsFilter,
             final String orderBy,
             final OrderDirection orderDirection,
             final int offset,
@@ -246,7 +231,7 @@ public final class WorkflowDao {
                      , custom_status
                      , concurrency_group_id
                      , priority
-                     , tags
+                     , labels
                      , created_at
                      , updated_at
                      , started_at
@@ -256,16 +241,26 @@ public final class WorkflowDao {
                  where (:workflowNameFilter is null or workflow_name = :workflowNameFilter)
                    and (cast(:statusFilter as workflow_run_status) is null or status = cast(:statusFilter as workflow_run_status))
                    and (:concurrencyGroupIdFilter is null or concurrency_group_id = :concurrencyGroupIdFilter)
-                   and (cast(:tagsFilter as text[]) is null or tags @> cast(:tagsFilter as text[]))
+                   and (cast(:labelsFilterJson as jsonb) is null or labels @> cast(:labelsFilterJson as jsonb))
                  order by %s
                 offset :offset fetch next :limit rows only
                 """.formatted(orderByClause));
+
+        final String labelsFilterJson;
+        if (labelsFilter != null) {
+            final TypedJsonMapper jsonMapper = jdbiHandle
+                    .getConfig(JsonConfig.class).getJsonMapper()
+                    .forType(new GenericType<Map<String, String>>() {}.getType(), jdbiHandle.getConfig());
+            labelsFilterJson = jsonMapper.toJson(labelsFilter, jdbiHandle.getConfig());
+        } else {
+            labelsFilterJson = null;
+        }
 
         return query
                 .bind("workflowNameFilter", workflowNameFilter)
                 .bind("statusFilter", statusFilter)
                 .bind("concurrencyGroupIdFilter", concurrencyGroupIdFilter)
-                .bindArray("tagsFilter", String.class, tagsFilter)
+                .bind("labelsFilterJson", labelsFilterJson)
                 .bind("offset", offset)
                 .bind("limit", limit)
                 .mapTo(WorkflowRunListRow.class)
@@ -417,7 +412,7 @@ public final class WorkflowDao {
                         , workflow_run.workflow_version
                         , workflow_run.concurrency_group_id
                         , workflow_run.priority
-                        , workflow_run.tags
+                        , workflow_run.labels
                 """);
 
         return update
@@ -431,7 +426,7 @@ public final class WorkflowDao {
                         "workflow_version",
                         "concurrency_group_id",
                         "priority",
-                        "tags")
+                        "labels")
                 .mapTo(PolledWorkflowRunRow.class)
                 .collectToMap(PolledWorkflowRunRow::id, Function.identity());
     }
@@ -865,20 +860,11 @@ public final class WorkflowDao {
                 , workflow_version
                 , concurrency_group_id
                 , priority
-                , tags
+                , labels
                 , argument
                 , next_fire_at
                 )
-                select name
-                     , cron
-                     , workflow_name
-                     , workflow_version
-                     , concurrency_group_id
-                     , priority
-                     , (select array_agg(tag)
-                          from json_array_elements_text(tags) as tag) as tags
-                     , argument
-                     , next_fire_at
+                select *
                   from unnest (
                          :names
                        , :crons
@@ -886,19 +872,9 @@ public final class WorkflowDao {
                        , :workflowVersions
                        , :concurrencyGroupIds
                        , :priorities
-                       , cast(:tagsJsons as json[])
+                       , cast(:labelsJsons as jsonb[])
                        , :arguments
                        , :nextFireAts
-                       ) as new_schedule (
-                         name
-                       , cron
-                       , workflow_name
-                       , workflow_version
-                       , concurrency_group_id
-                       , priority
-                       , tags
-                       , argument
-                       , next_fire_at
                        )
                 on conflict (name) do nothing
                 returning *
@@ -910,21 +886,20 @@ public final class WorkflowDao {
         final var workflowVersions = new ArrayList<Integer>(newSchedules.size());
         final var concurrencyGroupIds = new ArrayList<String>(newSchedules.size());
         final var priorities = new ArrayList<Integer>(newSchedules.size());
-        final var tagsJsons = new ArrayList<String>(newSchedules.size());
+        final var labelsJsons = new ArrayList<String>(newSchedules.size());
         final var arguments = new ArrayList<WorkflowPayload>(newSchedules.size());
         final var nextFireAts = new ArrayList<Instant>(newSchedules.size());
 
+        final TypedJsonMapper jsonMapper = jdbiHandle
+                .getConfig(JsonConfig.class).getJsonMapper()
+                .forType(new GenericType<Map<String, String>>() {}.getType(), jdbiHandle.getConfig());
+
         for (final NewWorkflowScheduleRow newSchedule : newSchedules) {
-            // Workaround for JDBC getting confused with nested arrays.
-            // Transmit tags as JSON array instead, and convert it to
-            // a native TEXT[] array before inserting it.
-            final String tagsJson;
-            if (newSchedule.tags() == null || newSchedule.tags().isEmpty()) {
-                tagsJson = null;
+            final String labelsJson;
+            if (newSchedule.labels() == null || newSchedule.labels().isEmpty()) {
+                labelsJson = null;
             } else {
-                final var tagsJsonArray = Json.createArrayBuilder();
-                newSchedule.tags().forEach(tagsJsonArray::add);
-                tagsJson = tagsJsonArray.build().toString();
+                labelsJson = jsonMapper.toJson(newSchedule.labels(), jdbiHandle.getConfig());
             }
 
             names.add(newSchedule.name());
@@ -933,7 +908,7 @@ public final class WorkflowDao {
             workflowVersions.add(newSchedule.workflowVersion());
             concurrencyGroupIds.add(newSchedule.concurrencyGroupId());
             priorities.add(newSchedule.priority());
-            tagsJsons.add(tagsJson);
+            labelsJsons.add(labelsJson);
             arguments.add(newSchedule.argument());
             nextFireAts.add(newSchedule.nextFireAt());
         }
@@ -945,7 +920,7 @@ public final class WorkflowDao {
                 .bindArray("workflowVersions", Integer.class, workflowVersions)
                 .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
                 .bindArray("priorities", Integer.class, priorities)
-                .bindArray("tagsJsons", String.class, tagsJsons)
+                .bindArray("labelsJsons", String.class, labelsJsons)
                 .bindArray("arguments", WorkflowPayload.class, arguments)
                 .bindArray("nextFireAts", Instant.class, nextFireAts)
                 .executeAndReturnGeneratedKeys("*")

@@ -73,6 +73,7 @@ import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRowUp
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowScheduleRow;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.jackson2.Jackson2Plugin;
 import org.jdbi.v3.postgres.PostgresPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -168,6 +169,7 @@ public class WorkflowEngine implements Closeable {
         this.config = requireNonNull(config);
         this.jdbi = Jdbi
                 .create(config.dataSource())
+                .installPlugin(new Jackson2Plugin())
                 .installPlugin(new PostgresPlugin())
                 // Ensure all required mappings are registered *once*
                 // on startup. Defining these on a per-query basis imposes
@@ -466,7 +468,7 @@ public class WorkflowEngine implements Closeable {
                     option.workflowVersion(),
                     option.concurrencyGroupId(),
                     option.priority(),
-                    option.tags()));
+                    option.labels()));
 
             final var runScheduledBuilder = RunScheduled.newBuilder()
                     .setWorkflowName(option.workflowName())
@@ -477,8 +479,8 @@ public class WorkflowEngine implements Closeable {
             if (option.priority() != null) {
                 runScheduledBuilder.setPriority(option.priority());
             }
-            if (option.tags() != null) {
-                runScheduledBuilder.addAllTags(option.tags());
+            if (option.labels() != null) {
+                runScheduledBuilder.putAllLabels(option.labels());
             }
             if (option.argument() != null) {
                 runScheduledBuilder.setArgument(option.argument());
@@ -677,7 +679,7 @@ public class WorkflowEngine implements Closeable {
                         newSchedule.workflowVersion(),
                         newSchedule.concurrencyGroupId(),
                         newSchedule.priority(),
-                        newSchedule.tags(),
+                        newSchedule.labels(),
                         newSchedule.argument(),
                         nextFireAt));
             }
@@ -734,7 +736,7 @@ public class WorkflowEngine implements Closeable {
                                 polledRun.workflowVersion(),
                                 polledRun.concurrencyGroupId(),
                                 polledRun.priority(),
-                                polledRun.tags(),
+                                polledRun.labels(),
                                 polledEvents.maxInboxEventDequeueCount(),
                                 polledEvents.journal(),
                                 polledEvents.inbox());
@@ -839,8 +841,8 @@ public class WorkflowEngine implements Closeable {
                             message.event().getRunScheduled().hasPriority()
                                     ? message.event().getRunScheduled().getPriority()
                                     : null,
-                            message.event().getRunScheduled().getTagsCount() > 0
-                                    ? Set.copyOf(message.event().getRunScheduled().getTagsList())
+                            message.event().getRunScheduled().getLabelsCount() > 0
+                                    ? Map.copyOf(message.event().getRunScheduled().getLabelsMap())
                                     : null));
 
                     if (message.event().getRunScheduled().hasConcurrencyGroupId()) {
@@ -1125,13 +1127,13 @@ public class WorkflowEngine implements Closeable {
             final String workflowNameFilter,
             final WorkflowRunStatus statusFilter,
             final String concurrencyGroupIdFilter,
-            final Set<String> tagsFilter,
+            final Map<String, String> labelsFilter,
             final String orderBy,
             final OrderDirection orderDirection,
             final int offset,
             final int limit) {
         return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunListPage(
-                workflowNameFilter, statusFilter, concurrencyGroupIdFilter, tagsFilter, orderBy, orderDirection, offset, limit));
+                workflowNameFilter, statusFilter, concurrencyGroupIdFilter, labelsFilter, orderBy, orderDirection, offset, limit));
     }
 
     public List<WorkflowEvent> getRunJournal(final UUID runId) {

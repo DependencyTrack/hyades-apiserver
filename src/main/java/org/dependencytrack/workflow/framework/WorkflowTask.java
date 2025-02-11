@@ -21,7 +21,7 @@ package org.dependencytrack.workflow.framework;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -32,7 +32,7 @@ import java.util.UUID;
  * @param workflowVersion    Version of the workflow.
  * @param concurrencyGroupId ID of the workflow's concurrency group. May be {@code null}.
  * @param priority           Priority of the workflow run. May be {@code null}.
- * @param tags               Tags assigned to the workflow run.
+ * @param labels             Labels assigned to the workflow run.
  * @param attempt            Number of attempts for execution of this workflow run.
  *                           Equal to the highest number of dequeue attempts across all messages
  *                           in the run's inbox.
@@ -45,7 +45,7 @@ record WorkflowTask(
         int workflowVersion,
         String concurrencyGroupId,
         Integer priority,
-        Set<String> tags,
+        Map<String, String> labels,
         int attempt,
         List<WorkflowEvent> journal,
         List<WorkflowEvent> inbox) implements Task {

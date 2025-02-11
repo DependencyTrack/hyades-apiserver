@@ -95,6 +95,7 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -490,9 +491,9 @@ public class BomResource extends AlpineResource {
                         new ScheduleWorkflowRunOptions("process-bom-upload", 1)
                                 .withConcurrencyGroupId("process-bom-upload-" + project.getUuid())
                                 .withPriority(5)
-                                .withTags(Set.of(
-                                        "project=" + project.getUuid(),
-                                        "initiator=" + getPrincipal().getName()))
+                                .withLabels(Map.ofEntries(
+                                        Map.entry("project", project.getUuid().toString()),
+                                        Map.entry("initiator", getPrincipal().getName())))
                                 .withArgument(ProcessBomUploadArgs.newBuilder()
                                                 .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
                                                         .setUuid(project.getUuid().toString())
@@ -545,9 +546,9 @@ public class BomResource extends AlpineResource {
                             new ScheduleWorkflowRunOptions("process-bom-upload", 1)
                                     .withConcurrencyGroupId("process-bom-upload-" + project.getUuid())
                                     .withPriority(5)
-                                    .withTags(Set.of(
-                                            "project=" + project.getUuid(),
-                                            "initiator=" + getPrincipal().getName()))
+                                    .withLabels(Map.ofEntries(
+                                            Map.entry("project", project.getUuid().toString()),
+                                            Map.entry("initiator", getPrincipal().getName())))
                                     .withArgument(ProcessBomUploadArgs.newBuilder()
                                                     .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
                                                             .setUuid(project.getUuid().toString())

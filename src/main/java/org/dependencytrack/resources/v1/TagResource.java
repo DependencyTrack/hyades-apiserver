@@ -31,17 +31,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.validation.ValidUuid;
@@ -56,6 +45,17 @@ import org.dependencytrack.resources.v1.vo.TaggedPolicyListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedProjectListResponseItem;
 import org.dependencytrack.resources.v1.vo.TaggedVulnerabilityListResponseItem;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.List;
 import java.util.Set;
 
@@ -134,7 +134,7 @@ public class TagResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.TAG_MANAGEMENT, Permissions.Constants.TAG_MANAGEMENT_DELETE})
     public Response deleteTags(
-            @Parameter(description = "Names of the tags to delete")
+            @Parameter(description = "Names of the labels to delete")
             @Size(min = 1, max = 100) final Set<@NotBlank String> tagNames
     ) {
         try (final var qm = new QueryManager(getAlpineRequest())) {

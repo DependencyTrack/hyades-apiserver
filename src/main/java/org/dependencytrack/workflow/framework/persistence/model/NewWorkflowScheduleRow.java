@@ -21,7 +21,7 @@ package org.dependencytrack.workflow.framework.persistence.model;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
 import java.time.Instant;
-import java.util.Set;
+import java.util.Map;
 
 public record NewWorkflowScheduleRow(
         String name,
@@ -30,7 +30,7 @@ public record NewWorkflowScheduleRow(
         int workflowVersion,
         String concurrencyGroupId,
         Integer priority,
-        Set<String> tags,
+        Map<String, String> labels,
         WorkflowPayload argument,
         Instant nextFireAt) {
 }

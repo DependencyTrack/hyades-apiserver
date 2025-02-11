@@ -20,16 +20,17 @@ package org.dependencytrack.workflow.framework.persistence.mapping;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowScheduleRow;
+import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
+import org.jdbi.v3.json.JsonConfig;
+import org.jdbi.v3.json.JsonMapper;
 
-import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Set;
+import java.util.Map;
 
 public class WorkflowScheduleRowMapper implements RowMapper<WorkflowScheduleRow> {
 
@@ -42,7 +43,7 @@ public class WorkflowScheduleRowMapper implements RowMapper<WorkflowScheduleRow>
                 rs.getInt("workflow_version"),
                 rs.getString("concurrency_group_id"),
                 getPriority(rs),
-                getTags(rs),
+                getLabels(rs, ctx),
                 ctx.findColumnMapperFor(WorkflowPayload.class).orElseThrow().map(rs, "argument", ctx),
                 ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "created_at", ctx),
                 ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "updated_at", ctx),
@@ -59,18 +60,17 @@ public class WorkflowScheduleRowMapper implements RowMapper<WorkflowScheduleRow>
         return priority;
     }
 
-    private static Set<String> getTags(final ResultSet rs) throws SQLException {
-        final Array array = rs.getArray("tags");
+    private static Map<String, String> getLabels(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        final String labelsJson = rs.getString("labels");
         if (rs.wasNull()) {
-            return Collections.emptySet();
+            return Collections.emptyMap();
         }
 
-        if (array.getBaseType() != Types.VARCHAR) {
-            throw new IllegalArgumentException("Expected array with base type VARCHAR, but got %s".formatted(
-                    array.getBaseTypeName()));
-        }
+        final JsonMapper.TypedJsonMapper jsonMapper = ctx
+                .getConfig(JsonConfig.class).getJsonMapper()
+                .forType(new GenericType<Map<String, String>>() {}.getType(), ctx.getConfig());
 
-        return Set.of((String[]) array.getArray());
+        return (Map<String, String>) jsonMapper.fromJson(labelsJson, ctx.getConfig());
     }
 
 }

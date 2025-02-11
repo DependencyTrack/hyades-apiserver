@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.framework.persistence.model;
 
 import jakarta.annotation.Nullable;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 public record PolledWorkflowRunRow(
@@ -28,5 +28,5 @@ public record PolledWorkflowRunRow(
         int workflowVersion,
         @Nullable String concurrencyGroupId,
         @Nullable Integer priority,
-        @Nullable Set<String> tags) {
+        @Nullable Map<String, String> labels) {
 }

@@ -27,7 +27,7 @@ import org.dependencytrack.workflow.framework.WorkflowRunStatus;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -38,7 +38,7 @@ public record WorkflowRunResponse(
         String status,
         WorkflowRunStatus runtimeStatus,
         Integer priority,
-        Set<String> tags,
+        Map<String, String> labels,
         String lockedBy,
         Instant lockedUntil,
         @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,

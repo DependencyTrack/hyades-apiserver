@@ -22,7 +22,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowFailure;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
 import java.time.Instant;
-import java.util.Set;
+import java.util.Map;
 
 sealed interface WorkflowCommand permits
         WorkflowCommand.CancelRunCommand,
@@ -65,7 +65,7 @@ sealed interface WorkflowCommand permits
             int workflowVersion,
             String concurrencyGroupId,
             Integer priority,
-            Set<String> tags,
+            Map<String, String> labels,
             WorkflowPayload argument) implements WorkflowCommand {
     }
 

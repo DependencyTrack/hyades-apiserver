@@ -361,9 +361,9 @@ final class WorkflowRunState {
             subWorkflowScheduledBuilder.setPriority(command.priority());
             runScheduledBuilder.setPriority(command.priority());
         }
-        if (command.tags() != null && !command.tags().isEmpty()) {
-            subWorkflowScheduledBuilder.addAllTags(command.tags());
-            runScheduledBuilder.addAllTags(command.tags());
+        if (command.labels() != null && !command.labels().isEmpty()) {
+            subWorkflowScheduledBuilder.putAllLabels(command.labels());
+            runScheduledBuilder.putAllLabels(command.labels());
         }
         if (command.argument() != null) {
             subWorkflowScheduledBuilder.setArgument(command.argument());

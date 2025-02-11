@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.framework.persistence.model;
 
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 public record NewWorkflowRunRow(
@@ -28,5 +28,5 @@ public record NewWorkflowRunRow(
         int workflowVersion,
         String concurrencyGroupId,
         Integer priority,
-        Set<String> tags) {
+        Map<String, String> labels) {
 }

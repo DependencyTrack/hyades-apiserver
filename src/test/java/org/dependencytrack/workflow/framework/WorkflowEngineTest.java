@@ -37,8 +37,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -98,7 +98,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 new ScheduleWorkflowRunOptions("foo", 1)
                         .withConcurrencyGroupId("someConcurrencyGroupId")
                         .withPriority(6)
-                        .withTags(Set.of("tag-a", "tag-b"))
+                        .withLabels(Map.of("label-a", "123", "label-b", "321"))
                         .withArgument("someArgument", stringConverter()));
 
         final WorkflowRunRow completedRun = awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
@@ -106,7 +106,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         assertThat(completedRun.customStatus()).isEqualTo("someCustomStatus");
         assertThat(completedRun.concurrencyGroupId()).isEqualTo("someConcurrencyGroupId");
         assertThat(completedRun.priority()).isEqualTo(6);
-        assertThat(completedRun.tags()).containsExactlyInAnyOrder("tag-a", "tag-b");
+        assertThat(completedRun.labels()).containsOnlyKeys("label-a", "label-b");
         assertThat(completedRun.lockedBy()).isNull();
         assertThat(completedRun.lockedUntil()).isNull();
         assertThat(completedRun.createdAt()).isNotNull();
@@ -130,7 +130,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(event.getRunScheduled().getWorkflowVersion()).isEqualTo(1);
                     assertThat(event.getRunScheduled().getConcurrencyGroupId()).isEqualTo("someConcurrencyGroupId");
                     assertThat(event.getRunScheduled().getPriority()).isEqualTo(6);
-                    assertThat(event.getRunScheduled().getTagsList()).containsExactlyInAnyOrder("tag-a", "tag-b");
+                    assertThat(event.getRunScheduled().getLabelsMap()).containsOnlyKeys("label-a", "label-b");
                     assertThat(event.getRunScheduled().getArgument().hasBinaryContent()).isTrue();
                     assertThat(event.getRunScheduled().getArgument().getBinaryContent().toStringUtf8()).isEqualTo("someArgument");
                 },
@@ -173,7 +173,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         assertThat(failedRun.customStatus()).isNull();
         assertThat(failedRun.concurrencyGroupId()).isNull();
         assertThat(failedRun.priority()).isNull();
-        assertThat(failedRun.tags()).isNull();
+        assertThat(failedRun.labels()).isNull();
         assertThat(failedRun.lockedBy()).isNull();
         assertThat(failedRun.lockedUntil()).isNull();
         assertThat(failedRun.createdAt()).isNotNull();
@@ -215,7 +215,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         assertThat(cancelledRun.customStatus()).isNull();
         assertThat(cancelledRun.concurrencyGroupId()).isNull();
         assertThat(cancelledRun.priority()).isNull();
-        assertThat(cancelledRun.tags()).isNull();
+        assertThat(cancelledRun.labels()).isNull();
         assertThat(cancelledRun.lockedBy()).isNull();
         assertThat(cancelledRun.lockedUntil()).isNull();
         assertThat(cancelledRun.createdAt()).isNotNull();
@@ -806,7 +806,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         });
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1)
-                .withTags(Set.of("oof", "rab")));
+                .withLabels(Map.of("oof", "rab")));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED, Duration.ofSeconds(15));
 
@@ -862,20 +862,20 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void shouldPropagateTags() {
+    public void shouldPropagateLabels() {
         engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            assertThat(ctx.tags()).containsExactlyInAnyOrder("oof", "rab");
+            assertThat(ctx.labels()).containsOnlyKeys("oof", "rab");
             ctx.callSubWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             return Optional.empty();
         });
 
         engine.registerWorkflowExecutor("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            assertThat(ctx.tags()).containsExactlyInAnyOrder("oof", "rab");
+            assertThat(ctx.labels()).containsOnlyKeys("oof", "rab");
             return Optional.empty();
         });
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1)
-                .withTags(Set.of("oof", "rab")));
+                .withLabels(Map.of("oof", "123", "rab", "321")));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -883,12 +883,12 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED);
-                    assertThat(entry.getRunScheduled().getTagsList()).containsExactlyInAnyOrder("oof", "rab");
+                    assertThat(entry.getRunScheduled().getLabelsMap()).containsOnlyKeys("oof", "rab");
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SUB_WORKFLOW_RUN_SCHEDULED);
-                    assertThat(entry.getSubWorkflowRunScheduled().getTagsList()).containsExactlyInAnyOrder("oof", "rab");
+                    assertThat(entry.getSubWorkflowRunScheduled().getLabelsMap()).containsOnlyKeys("oof", "rab");
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
@@ -905,7 +905,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     @Test
     public void shouldScheduleWorkflowRuns() {
         final List<WorkflowScheduleRow> createdSchedules = engine.createSchedules(List.of(
-                new NewWorkflowSchedule("foo-schedule", "* * * * *", "foo", 1, "concurrencyGroupId", 666, Set.of("tag"), null, Duration.ZERO)));
+                new NewWorkflowSchedule("foo-schedule", "* * * * *", "foo", 1, "concurrencyGroupId", 666, Map.of("label", "123"), null, Duration.ZERO)));
 
         assertThat(createdSchedules).satisfiesExactly(schedule -> {
             assertThat(schedule.name()).isEqualTo("foo-schedule");
@@ -914,7 +914,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             assertThat(schedule.workflowVersion()).isEqualTo(1);
             assertThat(schedule.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
             assertThat(schedule.priority()).isEqualTo(666);
-            assertThat(schedule.tags()).containsOnly("tag");
+            assertThat(schedule.labels()).containsOnlyKeys("label");
             assertThat(schedule.argument()).isNull();
             assertThat(schedule.createdAt()).isNotNull();
             assertThat(schedule.updatedAt()).isNull();
@@ -932,7 +932,9 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             assertThat(run.status()).isEqualTo(WorkflowRunStatus.PENDING);
             assertThat(run.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
             assertThat(run.priority()).isEqualTo(666);
-            assertThat(run.tags()).containsOnly("tag", "scheduled", "schedule=foo-schedule");
+            assertThat(run.labels()).containsExactlyEntriesOf(Map.ofEntries(
+                    Map.entry("label", "123"),
+                    Map.entry("schedule", "foo-schedule")));
         });
     }
 

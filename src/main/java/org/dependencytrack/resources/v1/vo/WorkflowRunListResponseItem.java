@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import org.dependencytrack.workflow.framework.WorkflowRunStatus;
 
 import java.time.Instant;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -36,7 +36,7 @@ public record WorkflowRunListResponseItem(
         WorkflowRunStatus runtimeStatus,
         String concurrencyGroupId,
         Integer priority,
-        Set<String> tags,
+        Map<String, String> labels,
         @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
         @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant updatedAt,
         @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant startedAt,

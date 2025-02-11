@@ -59,7 +59,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -140,7 +139,7 @@ public class WorkflowResource extends AlpineResource {
                 workflowNameFilter,
                 statusFilter,
                 concurrencyGroupIdFilter,
-                /* tagsFilter */ null);
+                /* labelsFilter */ null);
     }
 
     @GET
@@ -168,19 +167,19 @@ public class WorkflowResource extends AlpineResource {
                 workflowNameFilter,
                 statusFilter,
                 concurrencyGroupIdFilter,
-                Set.of("project=" + projectUuid));
+                Map.of("project", projectUuid));
     }
 
     private Response getWorkflowRunsInternal(
             final String workflowNameFilter,
             final WorkflowRunStatus statusFilter,
             final String concurrencyGroupIdFilter,
-            final Set<String> tagsFilter) {
+            final Map<String, String> labelsFilter) {
         final List<WorkflowRunListRow> runRows = workflowEngine().getRunListPage(
                 workflowNameFilter,
                 statusFilter,
                 concurrencyGroupIdFilter,
-                tagsFilter,
+                labelsFilter,
                 getAlpineRequest().getOrderBy(),
                 getAlpineRequest().getOrderDirection(),
                 getAlpineRequest().getPagination().getOffset(),
@@ -195,7 +194,7 @@ public class WorkflowResource extends AlpineResource {
                         runRow.status(),
                         runRow.concurrencyGroupId(),
                         runRow.priority(),
-                        runRow.tags(),
+                        runRow.labels(),
                         runRow.createdAt(),
                         runRow.updatedAt(),
                         runRow.startedAt(),
@@ -230,7 +229,7 @@ public class WorkflowResource extends AlpineResource {
                 runRow.customStatus(),
                 runRow.status(),
                 runRow.priority(),
-                runRow.tags(),
+                runRow.labels(),
                 runRow.lockedBy(),
                 runRow.lockedUntil(),
                 runRow.createdAt(),

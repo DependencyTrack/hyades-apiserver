@@ -22,7 +22,7 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
 import jakarta.annotation.Nullable;
 import java.time.Duration;
-import java.util.Set;
+import java.util.Map;
 
 public record NewWorkflowSchedule(
         String name,
@@ -31,7 +31,7 @@ public record NewWorkflowSchedule(
         int workflowVersion,
         @Nullable String concurrencyGroupId,
         @Nullable Integer priority,
-        @Nullable Set<String> tags,
+        @Nullable Map<String, String> labels,
         @Nullable WorkflowPayload argument,
         @Nullable Duration initialDelay) {
 }

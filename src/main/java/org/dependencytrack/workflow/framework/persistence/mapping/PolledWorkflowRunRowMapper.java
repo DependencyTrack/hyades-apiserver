@@ -19,15 +19,16 @@
 package org.dependencytrack.workflow.framework.persistence.mapping;
 
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowRunRow;
+import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
+import org.jdbi.v3.json.JsonConfig;
+import org.jdbi.v3.json.JsonMapper.TypedJsonMapper;
 
-import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.Collections;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRunRow> {
@@ -40,7 +41,7 @@ public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRunRo
                 rs.getInt("workflow_version"),
                 rs.getString("concurrency_group_id"),
                 getPriority(rs),
-                getTags(rs));
+                getLabels(rs, ctx));
     }
 
     private static Integer getPriority(final ResultSet rs) throws SQLException {
@@ -52,18 +53,17 @@ public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRunRo
         return priority;
     }
 
-    private static Set<String> getTags(final ResultSet rs) throws SQLException {
-        final Array array = rs.getArray("tags");
+    private static Map<String, String> getLabels(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        final String labelsJson = rs.getString("labels");
         if (rs.wasNull()) {
-            return Collections.emptySet();
+            return Collections.emptyMap();
         }
 
-        if (array.getBaseType() != Types.VARCHAR) {
-            throw new IllegalArgumentException("Expected array with base type VARCHAR, but got %s".formatted(
-                    array.getBaseTypeName()));
-        }
+        final TypedJsonMapper jsonMapper = ctx
+                .getConfig(JsonConfig.class).getJsonMapper()
+                .forType(new GenericType<Map<String, String>>() {}.getType(), ctx.getConfig());
 
-        return Set.of((String[]) array.getArray());
+        return (Map<String, String>) jsonMapper.fromJson(labelsJson, ctx.getConfig());
     }
 
 }

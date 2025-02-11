@@ -72,7 +72,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -254,9 +253,9 @@ public class FindingResource extends AlpineResource {
                                 new ScheduleWorkflowRunOptions("analyze-project", 1)
                                         .withConcurrencyGroupId("analyze-project-" + project.getUuid())
                                         .withPriority(100) // TODO: Something higher than the scheduled analysis.
-                                        .withTags(Set.of(
-                                                "project=" + project.getUuid(),
-                                                "initiator=" + getPrincipal().getName()))
+                                        .withLabels(Map.ofEntries(
+                                                Map.entry("project", project.getUuid().toString()),
+                                                Map.entry("initiator", getPrincipal().getName())))
                                         .withArgument(
                                                 AnalyzeProjectArgs.newBuilder()
                                                         .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()

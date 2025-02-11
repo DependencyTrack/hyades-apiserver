@@ -21,14 +21,14 @@ package org.dependencytrack.workflow.framework;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
 
-import java.util.Set;
+import java.util.Map;
 
 public record ScheduleWorkflowRunOptions(
         String workflowName,
         int workflowVersion,
         String concurrencyGroupId,
         Integer priority,
-        Set<String> tags,
+        Map<String, String> labels,
         WorkflowPayload argument) {
 
     public ScheduleWorkflowRunOptions(final String workflowName, final int workflowVersion) {
@@ -37,22 +37,22 @@ public record ScheduleWorkflowRunOptions(
 
     public ScheduleWorkflowRunOptions withConcurrencyGroupId(final String concurrencyGroupId) {
         return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
-                concurrencyGroupId, this.priority, this.tags, this.argument);
+                concurrencyGroupId, this.priority, this.labels, this.argument);
     }
 
     public ScheduleWorkflowRunOptions withPriority(final Integer priority) {
         return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
-                this.concurrencyGroupId, priority, this.tags, this.argument);
+                this.concurrencyGroupId, priority, this.labels, this.argument);
     }
 
-    public ScheduleWorkflowRunOptions withTags(final Set<String> tags) {
+    public ScheduleWorkflowRunOptions withLabels(final Map<String, String> labels) {
         return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
-                this.concurrencyGroupId, this.priority, tags, this.argument);
+                this.concurrencyGroupId, this.priority, labels, this.argument);
     }
 
     public <T> ScheduleWorkflowRunOptions withArgument(final T argument, final PayloadConverter<T> converter) {
         return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
-                this.concurrencyGroupId, this.priority, this.tags, converter.convertToPayload(argument));
+                this.concurrencyGroupId, this.priority, this.labels, converter.convertToPayload(argument));
     }
 
 }

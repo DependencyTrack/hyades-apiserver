@@ -36,7 +36,7 @@
             , custom_status text
             , concurrency_group_id text
             , priority smallint
-            , tags text[]
+            , labels jsonb
             , locked_by text
             , locked_until timestamptz(3)
             , created_at timestamptz(3) not null default now()
@@ -113,7 +113,7 @@
             , workflow_version smallint not null
             , concurrency_group_id text
             , priority smallint
-            , tags text[]
+            , labels jsonb
             , argument bytea
             , created_at timestamptz(3) not null default now()
             , updated_at timestamptz(3)
@@ -136,9 +136,9 @@
                     , locked_until)
               where status = any('{PENDING, RUNNING, SUSPENDED}'::workflow_run_status[]);
 
-            create index workflow_run_tags_idx
-                on workflow_run using gin (tags)
-                where tags is not null;
+            create index workflow_run_labels_idx
+                on workflow_run using gin (labels jsonb_path_ops)
+                where labels is not null;
 
             create index workflow_run_inbox_workflow_run_id_idx
                 on workflow_run_inbox (workflow_run_id);

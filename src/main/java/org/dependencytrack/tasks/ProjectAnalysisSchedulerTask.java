@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -52,10 +52,9 @@ public class ProjectAnalysisSchedulerTask implements Subscriber {
             final var scheduleOptions = new ArrayList<ScheduleWorkflowRunOptions>(projects.size());
             for (final Project project : projects) {
                 scheduleOptions.add(new ScheduleWorkflowRunOptions("analyze-project", 1)
-                        .withTags(Set.of(
-                                "project=" + project.uuid(),
-                                "initiator=" + initiator
-                        ))
+                        .withLabels(Map.ofEntries(
+                                Map.entry("project", project.uuid().toString()),
+                                Map.entry("initiator", initiator)))
                         .withConcurrencyGroupId("analyze-project-" + project.uuid())
                         .withArgument(
                                 AnalyzeProjectArgs.newBuilder()
