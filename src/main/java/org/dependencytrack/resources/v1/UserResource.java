@@ -33,7 +33,6 @@ import alpine.server.auth.AlpineAuthenticationException;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.Authenticator;
 import alpine.server.auth.JsonWebToken;
-import alpine.server.auth.OidcAuthenticationService;
 import alpine.server.auth.PasswordService;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
@@ -60,6 +59,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.GitlabAuthenticationService;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.IdentifiableObject;
@@ -154,7 +154,7 @@ public class UserResource extends AlpineResource {
     public Response validateOidcAccessToken(@Parameter(description = "An OAuth2 access token", required = true)
                                             @FormParam("idToken") final String idToken,
                                             @FormParam("accessToken") final String accessToken) {
-        final OidcAuthenticationService authService = new OidcAuthenticationService(idToken, accessToken);
+        final GitlabAuthenticationService authService = new GitlabAuthenticationService(idToken, accessToken);
 
         if (!authService.isSpecified()) {
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "An OpenID Connect login attempt was made, but OIDC is disabled or not properly configured");

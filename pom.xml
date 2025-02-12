@@ -24,7 +24,11 @@
     <parent>
         <groupId>us.springett</groupId>
         <artifactId>alpine-parent</artifactId>
+<<<<<<< Updated upstream
         <version>3.1.2</version>
+=======
+        <version>3.1.1-SNAPSHOT</version>
+>>>>>>> Stashed changes
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -157,7 +161,12 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
-    </repositories>
+        
+	  <repository>
+	    <id>jitpack.io</id>
+	    <url>https://jitpack.io</url>
+  	  </repository>
+</repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -555,6 +564,11 @@
             <version>${lib.awaitility.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+	    <groupId>com.github.gitlab4j.gitlab4j-api</groupId>
+		    <artifactId>gitlab4j-api</artifactId>
+		    <version>main-SNAPSHOT</version>
+  		</dependency>
     </dependencies>
 
     <build>
