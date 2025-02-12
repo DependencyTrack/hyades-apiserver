@@ -78,7 +78,7 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     @Override
     public void synchronize() {
         GitLabClient gitLabClient = new GitLabClient(this, baseURL, this.accessToken);
-    
+
         List<GitLabProject> projects = gitLabClient.getGitLabProjects();
 
         createProjectStructure(projects);
@@ -98,8 +98,7 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
      *
      * @param projects the list of GitLab project names available to the user
      */
-    public void createProjectStructure(List<GitLabProject> projects) {
-
+    private void createProjectStructure(List<GitLabProject> projects) {
         for (GitLabProject project : projects) {
             Project parent = null;
             List<String> toCreate = getProjectNames(project.getFullPath());
@@ -137,7 +136,7 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
      * @param project Dependency-Track project representing a GitLab project
      * @return the Dependency-Track teams for the project
      */
-    public List<Team> createProjectTeams(Project project) {
+    private List<Team> createProjectTeams(Project project) {
         List<Team> teams = new ArrayList<>();
 
         for (GitLabRole role : GitLabRole.values()) {
@@ -178,7 +177,7 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
      * @param project the GitLab project name
      * @return the project names to be created
      */
-    public List<String> getProjectNames(String project) {
+    private List<String> getProjectNames(String project) {
         List<String> projects = new ArrayList<>();
         List<String> parts = Arrays.asList(project.split("/"));
 
