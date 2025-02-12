@@ -1,0 +1,15 @@
+query {
+  projects(membership: true, search: "", first: 10) {
+    nodes {
+      name
+      fullPath
+      maxAccessLevel {
+        stringValue
+      }
+    }
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+  }
+}

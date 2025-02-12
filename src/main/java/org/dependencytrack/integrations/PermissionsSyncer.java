@@ -18,13 +18,16 @@
  */
 package org.dependencytrack.integrations;
 
-import org.dependencytrack.model.Project;
+import alpine.model.OidcUser;
+
 import org.dependencytrack.persistence.QueryManager;
 
 public interface PermissionsSyncer extends IntegrationPoint {
+
     boolean isEnabled();
 
     void setQueryManager(QueryManager qm);
 
-    void synchronize(Project project);
+    void synchronize(OidcUser user);
+
 }
