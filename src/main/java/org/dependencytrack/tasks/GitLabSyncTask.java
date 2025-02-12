@@ -70,8 +70,7 @@ public class GitLabSyncTask implements LoggableSubscriber {
 
         LOGGER.info("Starting GitLab sync task");
 
-        GitLabSyncer syncer = new GitLabSyncer(accessToken);
-        syncer.synchronize(user);
+        new GitLabSyncer(accessToken, user).synchronize();
 
         // TODO:
         // - [X] Assign authenticated OIDC user the VIEW_PORTFOLIO permission
