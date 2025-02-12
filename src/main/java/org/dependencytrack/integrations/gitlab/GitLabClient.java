@@ -19,7 +19,6 @@
 package org.dependencytrack.integrations.gitlab;
 
 import java.net.URL;
-import java.security.Permissions;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.dependencytrack.auth.Permissions;
 import org.json.JSONArray;
 
 import alpine.common.logging.Logger;
