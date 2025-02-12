@@ -1,5 +1,5 @@
-query {
-  projects(membership: true, search: "", first: 10) {
+query ($cursor: String) {
+  projects(membership: true, first: 10, after: $cursor) {
     nodes {
       name
       fullPath

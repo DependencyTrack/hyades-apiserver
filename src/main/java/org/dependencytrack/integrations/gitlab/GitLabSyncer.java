@@ -21,9 +21,11 @@ package org.dependencytrack.integrations.gitlab;
 import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BASE_URL;
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
 
+import alpine.Config;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.net.URI;
 
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
@@ -42,11 +44,7 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     private static final String INTEGRATIONS_GROUP = GITLAB_ENABLED.getGroupName();
     private static final String GENERAL_GROUP = GENERAL_BASE_URL.getGroupName();
     private static final String ROLE_CLAIM_PREFIX = "https://gitlab.org/claims/groups/";
-    private static final String ROLE_DEVELOPER = "DEVELOPER";
-    private static final String ROLE_GUEST = "GUEST";
-    private static final String ROLE_MAINTAINER = "MAINTAINER";
-    private static final String ROLE_OWNER = "OWNER";
-    private static final String ROLE_REPORTER = "REPORTER";
+    private static final URI baseURL = URI.create(Config.getInstance().getProperty(Config.AlpineKey.OIDC_ISSUER));
 
     private final String accessToken;
     private final OidcUser user;
@@ -79,8 +77,9 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
 
     @Override
     public void synchronize() {
-        // TODO: GitLab API call to get user projects
-        List<String> projects = new ArrayList<>();
+        GitLabClient gitLabClient = new GitLabClient(this, baseURL, this.accessToken);
+    
+        List<GitLabProject> projects = gitLabClient.getGitLabProjects();
 
         createProjectStructure(projects);
     }
@@ -99,10 +98,11 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
      *
      * @param projects the list of GitLab project names available to the user
      */
-    private void createProjectStructure(List<String> projects) {
-        for (String project : projects) {
+    public void createProjectStructure(List<GitLabProject> projects) {
+
+        for (GitLabProject project : projects) {
             Project parent = null;
-            List<String> toCreate = getProjectNames(project);
+            List<String> toCreate = getProjectNames(project.getFullPath());
 
             for (String group : toCreate) {
                 LOGGER.debug("Creating project " + group);
@@ -137,11 +137,11 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
      * @param project Dependency-Track project representing a GitLab project
      * @return the Dependency-Track teams for the project
      */
-    private List<Team> createProjectTeams(Project project) {
+    public List<Team> createProjectTeams(Project project) {
         List<Team> teams = new ArrayList<>();
 
-        for (String role : new String[]{ROLE_DEVELOPER, ROLE_GUEST, ROLE_MAINTAINER, ROLE_OWNER, ROLE_REPORTER}) {
-            final String teamName = "%s_%s".formatted(project.getName(), role);
+        for (GitLabRole role : GitLabRole.values()) {
+            final String teamName = "%s_%s".formatted(project.getName(), role.name());
 
             Team team = qm.getTeam(teamName);
             team = team != null ? team : qm.createTeam(teamName);
@@ -178,7 +178,7 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
      * @param project the GitLab project name
      * @return the project names to be created
      */
-    private List<String> getProjectNames(String project) {
+    public List<String> getProjectNames(String project) {
         List<String> projects = new ArrayList<>();
         List<String> parts = Arrays.asList(project.split("/"));
 
