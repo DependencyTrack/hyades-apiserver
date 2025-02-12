@@ -44,10 +44,10 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     private static final String INTEGRATIONS_GROUP = GITLAB_ENABLED.getGroupName();
     private static final String GENERAL_GROUP = GENERAL_BASE_URL.getGroupName();
     private static final String ROLE_CLAIM_PREFIX = "https://gitlab.org/claims/groups/";
-    private static final URI baseURL = URI.create(Config.getInstance().getProperty(Config.AlpineKey.OIDC_ISSUER));
 
     private final String accessToken;
     private final OidcUser user;
+    private GitLabClient gitLabClient;
 
     public GitLabSyncer(final String accessToken, final OidcUser user) {
         this.accessToken = accessToken;
@@ -77,7 +77,8 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
 
     @Override
     public void synchronize() {
-        GitLabClient gitLabClient = new GitLabClient(this, baseURL, this.accessToken);
+        final URI gitLabUrl = URI.create(Config.getInstance().getProperty(Config.AlpineKey.OIDC_ISSUER));
+        gitLabClient = new GitLabClient(this, gitLabUrl, accessToken);
 
         List<GitLabProject> projects = gitLabClient.getGitLabProjects();
 
