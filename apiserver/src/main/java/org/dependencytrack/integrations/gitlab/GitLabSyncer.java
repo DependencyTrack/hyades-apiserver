@@ -21,17 +21,17 @@ package org.dependencytrack.integrations.gitlab;
 import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BASE_URL;
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
 
-import alpine.Config;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.net.URI;
 
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.integrations.PermissionsSyncer;
 import org.dependencytrack.model.Project;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import alpine.model.OidcUser;
@@ -80,54 +80,42 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
         final URI gitLabUrl = URI.create(Config.getInstance().getProperty(Config.AlpineKey.OIDC_ISSUER));
         gitLabClient = new GitLabClient(this, gitLabUrl, accessToken);
 
-        List<GitLabProject> projects = gitLabClient.getGitLabProjects();
+        List<GitLabProject> gitLabProjects = gitLabClient.getGitLabProjects();
+        List<Project> projects = createProjects(gitLabProjects);
 
-        createProjectStructure(projects);
+        for (Project project : projects) {
+            List<Team> teams = createProjectTeams(project);
+
+            for (Team team : teams) {
+                List<OidcUser> teamUsers = team.getOidcUsers();
+                if (!teamUsers.contains(user)) {
+                    teamUsers.add(user);
+                    team.setOidcUsers(teamUsers);
+                }
+
+                qm.updateTeam(team);
+            }
+        }
     }
 
-    /**
-     * Create hierarchical project structure for user's GitLab projects.
-     *
-     * For example, if a GitLab project path is org/group/subgroup/project, then
-     * the following Dependency-Track projects will be created:
-     * <ul>
-     * <li>org
-     * <li>org/group
-     * <li>org/group/subgroup
-     * <li>org/group/subgroup/project
-     * </ul>
-     *
-     * @param projects the list of GitLab project names available to the user
-     */
-    private void createProjectStructure(List<GitLabProject> projects) {
-        for (GitLabProject project : projects) {
-            Project parent = null;
-            List<String> toCreate = getProjectNames(project.getFullPath());
+    private List<Project> createProjects(List<GitLabProject> gitLabProjects) {
+        List<Project> projects = new ArrayList<>();
 
-            for (String group : toCreate) {
-                LOGGER.debug("Creating project " + group);
+        for (GitLabProject gitLabProject : gitLabProjects) {
+            Project project = qm.getProject(gitLabProject.getFullPath(), null);
 
-                Project existingProject = qm.getProject(group, null);
-                if (existingProject != null) {
-                    parent = existingProject;
-                    continue;
-                }
+            if (project == null) {
+                LOGGER.debug("Creating project " + gitLabProject.getFullPath());
 
-                parent = qm.createProject(group, null, null, null, parent, null, null, false);
+                project = new Project();
+                project.setName(gitLabProject.getFullPath());
+                project = qm.persist(project);
             }
 
-            // Set access teams for last project created (the full path of the GitLab project)
-            List<Team> teams = createProjectTeams(parent);
-
-            List<Team> userTeams = user.getTeams();
-            for (Team team : userTeams) {
-                if (!teams.contains(team)) {
-                    userTeams.add(team);
-                }
-            }
-
-            user.setTeams(userTeams);
+            projects.add(project);
         }
+
+        return projects;
     }
 
     /**
@@ -146,47 +134,23 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
             Team team = qm.getTeam(teamName);
             team = team != null ? team : qm.createTeam(teamName);
 
-            List<Permission> permissions = team.getPermissions();
-            Permission viewPermission = qm.getPermission(Permissions.Constants.VIEW_PORTFOLIO);
+            List<Permissions> rolePermissions = gitLabClient.getRolePermissions(role);
+            List<Permission> permissions = new ArrayList<>(team.getPermissions());
 
-            if (!permissions.contains(viewPermission)) {
-                permissions.add(viewPermission);
+            for (Permissions rolePermission : rolePermissions) {
+                Permission permission = qm.getPermission(rolePermission.name());
+                if (permission != null && !permissions.contains(permission))
+                    permissions.add(permission);
             }
 
             team.setPermissions(permissions);
-
             project.addAccessTeam(team);
+            qm.updateProject(project, false);
+
             teams.add(team);
         }
 
         return teams;
-    }
-
-    /**
-     * Generate list of hierarchical projects to be created to represent user's
-     * GitLab projects.
-     *
-     * For example, if a GitLab project path is org/group/subgroup/project, then
-     * the following project names will be returned:
-     * <ul>
-     * <li>org
-     * <li>org/group
-     * <li>org/group/subgroup
-     * <li>org/group/subgroup/project
-     * </ul>
-     *
-     * @param project the GitLab project name
-     * @return the project names to be created
-     */
-    private List<String> getProjectNames(String project) {
-        List<String> projects = new ArrayList<>();
-        List<String> parts = Arrays.asList(project.split("/"));
-
-        for (int i = 0; i < parts.size(); i++) {
-            projects.add(String.join("/", parts.subList(0, i + 1)));
-        }
-
-        return projects;
     }
 
 }
