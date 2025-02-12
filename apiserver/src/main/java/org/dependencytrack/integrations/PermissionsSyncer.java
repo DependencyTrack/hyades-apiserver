@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.integrations;
 
-import alpine.model.OidcUser;
-
 import org.dependencytrack.persistence.QueryManager;
 
 public interface PermissionsSyncer extends IntegrationPoint {
@@ -28,6 +26,6 @@ public interface PermissionsSyncer extends IntegrationPoint {
 
     void setQueryManager(QueryManager qm);
 
-    void synchronize(OidcUser user);
+    void synchronize();
 
 }

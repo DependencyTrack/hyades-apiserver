@@ -18,24 +18,23 @@
  */
 package org.dependencytrack.integrations.gitlab;
 
-import alpine.common.logging.Logger;
-import alpine.model.ConfigProperty;
-import alpine.model.OidcUser;
-import alpine.model.Permission;
-import alpine.model.Team;
-
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.integrations.AbstractIntegrationPoint;
-import org.dependencytrack.integrations.PermissionsSyncer;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.resources.v1.UserResource;
+import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BASE_URL;
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BASE_URL;
-import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.integrations.AbstractIntegrationPoint;
+import org.dependencytrack.integrations.PermissionsSyncer;
+import org.dependencytrack.model.Project;
+
+import alpine.common.logging.Logger;
+import alpine.model.ConfigProperty;
+import alpine.model.OidcUser;
+import alpine.model.Permission;
+import alpine.model.Team;
 
 public class GitLabSyncer extends AbstractIntegrationPoint implements PermissionsSyncer {
 
@@ -50,9 +49,11 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     private static final String ROLE_REPORTER = "REPORTER";
 
     private final String accessToken;
+    private final OidcUser user;
 
-    public GitLabSyncer(final String accessToken) {
+    public GitLabSyncer(final String accessToken, final OidcUser user) {
         this.accessToken = accessToken;
+        this.user = user;
     }
 
     public String getAccessToken() {
@@ -77,7 +78,7 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     }
 
     @Override
-    public void synchronize(final OidcUser user) {
+    public void synchronize() {
         // TODO: GitLab API call to get user projects
         List<String> projects = new ArrayList<>();
 
@@ -99,7 +100,6 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
      * @param projects the list of GitLab project names available to the user
      */
     private void createProjectStructure(List<String> projects) {
-        OidcUser user = (new UserResource()).getSelf().readEntity(OidcUser.class);
 
         for (String project : projects) {
             Project parent = null;
