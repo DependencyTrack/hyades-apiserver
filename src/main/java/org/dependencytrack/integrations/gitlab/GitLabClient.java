@@ -57,6 +57,12 @@ public class GitLabClient {
                 Permissions.VIEW_VULNERABILITY,
                 Permissions.VIEW_BADGES
         ),
+        GitLabRole.PLANNER, List.of(
+                Permissions.VIEW_PORTFOLIO,
+                Permissions.VIEW_VULNERABILITY,
+                Permissions.VIEW_POLICY_VIOLATION,
+                Permissions.VIEW_BADGES
+        ),
         GitLabRole.REPORTER, List.of(
                 Permissions.VIEW_PORTFOLIO,
                 Permissions.VIEW_VULNERABILITY,
