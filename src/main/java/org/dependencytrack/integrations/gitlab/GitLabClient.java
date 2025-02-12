@@ -48,138 +48,138 @@ import static org.apache.commons.io.IOUtils.resourceToString;
 
 public class GitLabClient {
 
-        private static final Logger LOGGER = Logger.getLogger(GitLabClient.class);
-        private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
-        private static final String GRAPHQL_ENDPOINT = "/api/graphql";
+    private static final Logger LOGGER = Logger.getLogger(GitLabClient.class);
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+    private static final String GRAPHQL_ENDPOINT = "/api/graphql";
 
-        private final String accessToken;
-        private final GitLabSyncer syncer;
-        private final URI baseURL;
+    private final String accessToken;
+    private final GitLabSyncer syncer;
+    private final URI baseURL;
 
-        private final Map<GitLabRole, List<Permissions>> rolePermissions = Map.of(
-                        GitLabRole.GUEST, List.of(
-                                        Permissions.VIEW_PORTFOLIO,
-                                        Permissions.VIEW_VULNERABILITY,
-                                        Permissions.VIEW_BADGES),
-                        GitLabRole.PLANNER, List.of(
-                                        Permissions.VIEW_PORTFOLIO,
-                                        Permissions.VIEW_VULNERABILITY,
-                                        Permissions.VIEW_POLICY_VIOLATION,
-                                        Permissions.VIEW_BADGES),
-                        GitLabRole.REPORTER, List.of(
-                                        Permissions.VIEW_PORTFOLIO,
-                                        Permissions.VIEW_VULNERABILITY,
-                                        Permissions.VIEW_POLICY_VIOLATION,
-                                        Permissions.VIEW_BADGES),
-                        GitLabRole.DEVELOPER, List.of(
-                                        Permissions.BOM_UPLOAD,
-                                        Permissions.VIEW_PORTFOLIO,
-                                        Permissions.PORTFOLIO_MANAGEMENT_READ,
-                                        Permissions.VIEW_VULNERABILITY,
-                                        Permissions.VULNERABILITY_ANALYSIS_READ,
-                                        Permissions.PROJECT_CREATION_UPLOAD),
-                        GitLabRole.MAINTAINER, List.of(
-                                        Permissions.BOM_UPLOAD,
-                                        Permissions.PORTFOLIO_MANAGEMENT,
-                                        Permissions.PORTFOLIO_MANAGEMENT_CREATE,
-                                        Permissions.PORTFOLIO_MANAGEMENT_READ,
-                                        Permissions.PORTFOLIO_MANAGEMENT_UPDATE,
-                                        Permissions.PORTFOLIO_MANAGEMENT_DELETE,
-                                        Permissions.VULNERABILITY_ANALYSIS,
-                                        Permissions.VULNERABILITY_ANALYSIS_CREATE,
-                                        Permissions.VULNERABILITY_ANALYSIS_READ,
-                                        Permissions.VULNERABILITY_ANALYSIS_UPDATE,
-                                        Permissions.POLICY_MANAGEMENT,
-                                        Permissions.POLICY_MANAGEMENT_CREATE,
-                                        Permissions.POLICY_MANAGEMENT_READ,
-                                        Permissions.POLICY_MANAGEMENT_UPDATE,
-                                        Permissions.POLICY_MANAGEMENT_DELETE),
-                        GitLabRole.OWNER, List.of(
-                                        Permissions.ACCESS_MANAGEMENT,
-                                        Permissions.ACCESS_MANAGEMENT_CREATE,
-                                        Permissions.ACCESS_MANAGEMENT_READ,
-                                        Permissions.ACCESS_MANAGEMENT_UPDATE,
-                                        Permissions.ACCESS_MANAGEMENT_DELETE,
-                                        Permissions.SYSTEM_CONFIGURATION,
-                                        Permissions.SYSTEM_CONFIGURATION_CREATE,
-                                        Permissions.SYSTEM_CONFIGURATION_READ,
-                                        Permissions.SYSTEM_CONFIGURATION_UPDATE,
-                                        Permissions.SYSTEM_CONFIGURATION_DELETE,
-                                        Permissions.TAG_MANAGEMENT,
-                                        Permissions.TAG_MANAGEMENT_DELETE));
+    private final Map<GitLabRole, List<Permissions>> rolePermissions = Map.of(
+            GitLabRole.GUEST, List.of(
+                    Permissions.VIEW_PORTFOLIO,
+                    Permissions.VIEW_VULNERABILITY,
+                    Permissions.VIEW_BADGES),
+            GitLabRole.PLANNER, List.of(
+                    Permissions.VIEW_PORTFOLIO,
+                    Permissions.VIEW_VULNERABILITY,
+                    Permissions.VIEW_POLICY_VIOLATION,
+                    Permissions.VIEW_BADGES),
+            GitLabRole.REPORTER, List.of(
+                    Permissions.VIEW_PORTFOLIO,
+                    Permissions.VIEW_VULNERABILITY,
+                    Permissions.VIEW_POLICY_VIOLATION,
+                    Permissions.VIEW_BADGES),
+            GitLabRole.DEVELOPER, List.of(
+                    Permissions.BOM_UPLOAD,
+                    Permissions.VIEW_PORTFOLIO,
+                    Permissions.PORTFOLIO_MANAGEMENT_READ,
+                    Permissions.VIEW_VULNERABILITY,
+                    Permissions.VULNERABILITY_ANALYSIS_READ,
+                    Permissions.PROJECT_CREATION_UPLOAD),
+            GitLabRole.MAINTAINER, List.of(
+                    Permissions.BOM_UPLOAD,
+                    Permissions.PORTFOLIO_MANAGEMENT,
+                    Permissions.PORTFOLIO_MANAGEMENT_CREATE,
+                    Permissions.PORTFOLIO_MANAGEMENT_READ,
+                    Permissions.PORTFOLIO_MANAGEMENT_UPDATE,
+                    Permissions.PORTFOLIO_MANAGEMENT_DELETE,
+                    Permissions.VULNERABILITY_ANALYSIS,
+                    Permissions.VULNERABILITY_ANALYSIS_CREATE,
+                    Permissions.VULNERABILITY_ANALYSIS_READ,
+                    Permissions.VULNERABILITY_ANALYSIS_UPDATE,
+                    Permissions.POLICY_MANAGEMENT,
+                    Permissions.POLICY_MANAGEMENT_CREATE,
+                    Permissions.POLICY_MANAGEMENT_READ,
+                    Permissions.POLICY_MANAGEMENT_UPDATE,
+                    Permissions.POLICY_MANAGEMENT_DELETE),
+            GitLabRole.OWNER, List.of(
+                    Permissions.ACCESS_MANAGEMENT,
+                    Permissions.ACCESS_MANAGEMENT_CREATE,
+                    Permissions.ACCESS_MANAGEMENT_READ,
+                    Permissions.ACCESS_MANAGEMENT_UPDATE,
+                    Permissions.ACCESS_MANAGEMENT_DELETE,
+                    Permissions.SYSTEM_CONFIGURATION,
+                    Permissions.SYSTEM_CONFIGURATION_CREATE,
+                    Permissions.SYSTEM_CONFIGURATION_READ,
+                    Permissions.SYSTEM_CONFIGURATION_UPDATE,
+                    Permissions.SYSTEM_CONFIGURATION_DELETE,
+                    Permissions.TAG_MANAGEMENT,
+                    Permissions.TAG_MANAGEMENT_DELETE));
 
-        public GitLabClient(final GitLabSyncer syncer, final URI baseURL, final String accessToken) {
-                this.accessToken = accessToken;
-                this.baseURL = baseURL;
-                this.syncer = syncer;
-        }
+    public GitLabClient(final GitLabSyncer syncer, final URI baseURL, final String accessToken) {
+        this.accessToken = accessToken;
+        this.baseURL = baseURL;
+        this.syncer = syncer;
+    }
 
-        public List<GitLabProject> getGitLabProjects() {
-                List<GitLabProject> projects = new ArrayList<>();
+    public List<GitLabProject> getGitLabProjects() {
+        List<GitLabProject> projects = new ArrayList<>();
 
-                JSONObject variables = new JSONObject();
-                JSONObject queryObject = new JSONObject();
+        JSONObject variables = new JSONObject();
+        JSONObject queryObject = new JSONObject();
 
-                try {
-             queryObject.put("query", resourceToString("/graphql/gitlab-projects.graphql", StandardCharsets.UTF_8));
+        try {
+            queryObject.put("query", resourceToString("/graphql/gitlab-projects.graphql", StandardCharsets.UTF_8));
 
-                        URIBuilder builder = new URIBuilder(baseURL.toString()).setPath(GRAPHQL_ENDPOINT);
+            URIBuilder builder = new URIBuilder(baseURL.toString()).setPath(GRAPHQL_ENDPOINT);
 
-                        HttpPost request = new HttpPost(builder.build());
-                        request.setHeader("Authorization", "Bearer " + accessToken);
-                        request.setHeader("Content-Type", "application/json");
+            HttpPost request = new HttpPost(builder.build());
+            request.setHeader("Authorization", "Bearer " + accessToken);
+            request.setHeader("Content-Type", "application/json");
 
-                        while (true) {
-                                queryObject.put("variables", variables);
+            while (true) {
+                queryObject.put("variables", variables);
 
-                                StringEntity entity = new StringEntity(queryObject.toString(), StandardCharsets.UTF_8);
-                                request.setEntity(entity);
+                StringEntity entity = new StringEntity(queryObject.toString(), StandardCharsets.UTF_8);
+                request.setEntity(entity);
 
-                                try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-                                        HttpEntity responseEntity = response.getEntity();
+                try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
+                    HttpEntity responseEntity = response.getEntity();
 
-                                        if (responseEntity == null)
-                                                break;
+                    if (responseEntity == null)
+                        break;
 
-                                        String responseBody = EntityUtils.toString(responseEntity);
-                                        JSONObject responseData = JSONValue.parse(responseBody, JSONObject.class);
-                                        JSONObject dataObject = (JSONObject) responseData.get("data");
-                                        JSONObject projectsObject = (JSONObject) dataObject.get("projects");
-                                        JSONArray nodes = (JSONArray) projectsObject.get("nodes");
+                    String responseBody = EntityUtils.toString(responseEntity);
+                    JSONObject responseData = JSONValue.parse(responseBody, JSONObject.class);
+                    JSONObject dataObject = (JSONObject) responseData.get("data");
+                    JSONObject projectsObject = (JSONObject) dataObject.get("projects");
+                    JSONArray nodes = (JSONArray) projectsObject.get("nodes");
 
-                                        for (Object nodeObject : nodes) {
-                                                JSONObject node = (JSONObject) nodeObject;
-                                                projects.add(GitLabProject.parse(node.toJSONString()));
-                                        }
+                    for (Object nodeObject : nodes) {
+                        JSONObject node = (JSONObject) nodeObject;
+                        projects.add(GitLabProject.parse(node.toJSONString()));
+                    }
 
-                                        JSONObject pageInfo = (JSONObject) projectsObject.get("pageInfo");
+                    JSONObject pageInfo = (JSONObject) projectsObject.get("pageInfo");
 
-                                        if (!(boolean) pageInfo.get("hasNextPage"))
-                                                break;
+                    if (!(boolean) pageInfo.get("hasNextPage"))
+                        break;
 
-                                        variables.put("cursor", pageInfo.getAsString("endCursor"));
-                                }
-                        }
-                } catch (IOException | URISyntaxException ex) {
-                        LOGGER.error("An error occurred while querying GitLab GraphQL API", ex);
-                        syncer.handleException(LOGGER, ex);
+                    variables.put("cursor", pageInfo.getAsString("endCursor"));
                 }
-
-                return projects;
+            }
+        } catch (IOException | URISyntaxException ex) {
+            LOGGER.error("An error occurred while querying GitLab GraphQL API", ex);
+            syncer.handleException(LOGGER, ex);
         }
 
-        public List<Permissions> getRolePermissions(final GitLabRole role) {
-                return rolePermissions.get(role);
-        }
+        return projects;
+    }
 
-        // JSONArray to ArrayList simple converter
-        public ArrayList<String> jsonToList(final JSONArray jsonArray) {
-                ArrayList<String> list = new ArrayList<>();
+    public List<Permissions> getRolePermissions(final GitLabRole role) {
+        return rolePermissions.get(role);
+    }
 
-                for (Object o : jsonArray != null ? jsonArray : Collections.emptyList())
-                        list.add(o.toString());
+    // JSONArray to ArrayList simple converter
+    public ArrayList<String> jsonToList(final JSONArray jsonArray) {
+        ArrayList<String> list = new ArrayList<>();
 
-                return list;
-        }
+        for (Object o : jsonArray != null ? jsonArray : Collections.emptyList())
+            list.add(o.toString());
+
+        return list;
+    }
 
 }
