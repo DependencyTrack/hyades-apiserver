@@ -36,7 +36,7 @@ public class GitLabClientTest {
     public void testJsonToList() {
         GitLabClient client = null;
         try {
-            client = new GitLabClient(new GitLabSyncer(null), new URL("https://gitlab.com"));
+            client = new GitLabClient(new GitLabSyncer(null, null), new URL("https://gitlab.com"));
         } catch (MalformedURLException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -55,7 +55,7 @@ public class GitLabClientTest {
     @Test
     public void testJsonToListNull() throws Exception {
         @SuppressWarnings("deprecation")
-        GitLabClient client = new GitLabClient(new GitLabSyncer(null), new URL("https://gitlab.com"));
+        GitLabClient client = new GitLabClient(new GitLabSyncer(null, null), new URL("https://gitlab.com"));
         List<String> list = client.jsonToList(null);
         assertEquals(0, list.size());
     }
@@ -63,7 +63,7 @@ public class GitLabClientTest {
     @SuppressWarnings("deprecation")
     @Test
     public void testJsonToListEmpty() throws MalformedURLException {
-        GitLabClient client = new GitLabClient(new GitLabSyncer(null), new URL("https://gitlab.com"));
+        GitLabClient client = new GitLabClient(new GitLabSyncer(null, null), new URL("https://gitlab.com"));
         JSONArray jsonArray = new JSONArray();
         List<String> list = client.jsonToList(jsonArray);
         assertEquals(0, list.size());
@@ -72,13 +72,13 @@ public class GitLabClientTest {
     @SuppressWarnings("deprecation")
     @Test
     public void testMapPermissionsToRoles() throws MalformedURLException {
-        GitLabClient client = new GitLabClient(new GitLabSyncer(null), new URL("https://gitlab.com"));
+        GitLabClient client = new GitLabClient(new GitLabSyncer(null, null), new URL("https://gitlab.com"));
         Map<String, List<Permissions>> permissionMap = client.mapPermissionsToRoles();
         assertEquals(5, permissionMap.size());
-        assertNotNull(permissionMap.get("Guest"));
-        assertNotNull(permissionMap.get("Reporter"));
-        assertNotNull(permissionMap.get("Developer"));
-        assertNotNull(permissionMap.get("Maintainer"));
-        assertNotNull(permissionMap.get("Owner"));
+        assertNotNull(permissionMap.get("GUEST"));
+        assertNotNull(permissionMap.get("REPORTER"));
+        assertNotNull(permissionMap.get("DEVELOPER"));
+        assertNotNull(permissionMap.get("MAINTAINER"));
+        assertNotNull(permissionMap.get("OWNER"));
     }
 }
