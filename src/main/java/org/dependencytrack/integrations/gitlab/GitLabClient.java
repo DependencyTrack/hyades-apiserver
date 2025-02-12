@@ -21,11 +21,11 @@ package org.dependencytrack.integrations.gitlab;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.dependencytrack.auth.Permissions;
 import org.json.JSONArray;
@@ -53,74 +53,66 @@ public class GitLabClient {
 
         return list;
     }
-    public Map<String, List<Permissions>> mapPermissionsToRoles() {
-    Map<String, List<Permissions>> permissionMap = new HashMap<>();
+    Map<GitLabRole, List<Permissions>> rolePermissions = Map.of(
+        GitLabRole.GUEST, List.of(
+                Permissions.VIEW_PORTFOLIO,
+                Permissions.VIEW_VULNERABILITY,
+                Permissions.VIEW_BADGES
+        ),
+        GitLabRole.REPORTER, List.of(
+                Permissions.VIEW_PORTFOLIO,
+                Permissions.VIEW_VULNERABILITY,
+                Permissions.VIEW_POLICY_VIOLATION,
+                Permissions.VIEW_BADGES
+        ),
+        GitLabRole.DEVELOPER, List.of(
+                Permissions.BOM_UPLOAD,
+                Permissions.VIEW_PORTFOLIO,
+                Permissions.PORTFOLIO_MANAGEMENT_READ,
+                Permissions.VIEW_VULNERABILITY,
+                Permissions.VULNERABILITY_ANALYSIS_READ,
+                Permissions.PROJECT_CREATION_UPLOAD
+        ),
+        GitLabRole.MAINTAINER, List.of(
+                Permissions.BOM_UPLOAD,
+                Permissions.PORTFOLIO_MANAGEMENT,
+                Permissions.PORTFOLIO_MANAGEMENT_CREATE,
+                Permissions.PORTFOLIO_MANAGEMENT_READ,
+                Permissions.PORTFOLIO_MANAGEMENT_UPDATE,
+                Permissions.PORTFOLIO_MANAGEMENT_DELETE,
+                Permissions.VULNERABILITY_ANALYSIS,
+                Permissions.VULNERABILITY_ANALYSIS_CREATE,
+                Permissions.VULNERABILITY_ANALYSIS_READ,
+                Permissions.VULNERABILITY_ANALYSIS_UPDATE,
+                Permissions.POLICY_MANAGEMENT,
+                Permissions.POLICY_MANAGEMENT_CREATE,
+                Permissions.POLICY_MANAGEMENT_READ,
+                Permissions.POLICY_MANAGEMENT_UPDATE,
+                Permissions.POLICY_MANAGEMENT_DELETE
+        ),
+        GitLabRole.OWNER, List.of(
+                Permissions.ACCESS_MANAGEMENT,
+                Permissions.ACCESS_MANAGEMENT_CREATE,
+                Permissions.ACCESS_MANAGEMENT_READ,
+                Permissions.ACCESS_MANAGEMENT_UPDATE,
+                Permissions.ACCESS_MANAGEMENT_DELETE,
+                Permissions.SYSTEM_CONFIGURATION,
+                Permissions.SYSTEM_CONFIGURATION_CREATE,
+                Permissions.SYSTEM_CONFIGURATION_READ,
+                Permissions.SYSTEM_CONFIGURATION_UPDATE,
+                Permissions.SYSTEM_CONFIGURATION_DELETE,
+                Permissions.TAG_MANAGEMENT,
+                Permissions.TAG_MANAGEMENT_DELETE
+        )
+);
 
-    // Guest role
-    List<Permissions> guestPermissions = Arrays.asList(
-            Permissions.VIEW_PORTFOLIO,
-            Permissions.VIEW_VULNERABILITY,
-            Permissions.VIEW_BADGES
-    );
-    permissionMap.put("Guest", guestPermissions);
-
-    // Reporter role
-    List<Permissions> reporterPermissions = Arrays.asList(
-            Permissions.VIEW_PORTFOLIO,
-            Permissions.VIEW_VULNERABILITY,
-            Permissions.VIEW_POLICY_VIOLATION,
-            Permissions.VIEW_BADGES
-    );
-    permissionMap.put("Reporter", reporterPermissions);
-
-    // Developer role
-    List<Permissions> developerPermissions = Arrays.asList(
-            Permissions.BOM_UPLOAD,
-            Permissions.VIEW_PORTFOLIO,
-            Permissions.PORTFOLIO_MANAGEMENT_READ,
-            Permissions.VIEW_VULNERABILITY,
-            Permissions.VULNERABILITY_ANALYSIS_READ,
-            Permissions.PROJECT_CREATION_UPLOAD
-    );
-    permissionMap.put("Developer", developerPermissions);
-
-    // Maintainer role
-    List<Permissions> maintainerPermissions = Arrays.asList(
-            Permissions.BOM_UPLOAD,
-            Permissions.PORTFOLIO_MANAGEMENT,
-            Permissions.PORTFOLIO_MANAGEMENT_CREATE,
-            Permissions.PORTFOLIO_MANAGEMENT_READ,
-            Permissions.PORTFOLIO_MANAGEMENT_UPDATE,
-            Permissions.PORTFOLIO_MANAGEMENT_DELETE,
-            Permissions.VULNERABILITY_ANALYSIS,
-            Permissions.VULNERABILITY_ANALYSIS_CREATE,
-            Permissions.VULNERABILITY_ANALYSIS_READ,
-            Permissions.VULNERABILITY_ANALYSIS_UPDATE,
-            Permissions.POLICY_MANAGEMENT,
-            Permissions.POLICY_MANAGEMENT_CREATE,
-            Permissions.POLICY_MANAGEMENT_READ,
-            Permissions.POLICY_MANAGEMENT_UPDATE,
-            Permissions.POLICY_MANAGEMENT_DELETE
-    );
-    permissionMap.put("Maintainer", maintainerPermissions);
-
-    // Owner role
-    List<Permissions> ownerPermissions = Arrays.asList(
-            Permissions.ACCESS_MANAGEMENT,
-            Permissions.ACCESS_MANAGEMENT_CREATE,
-            Permissions.ACCESS_MANAGEMENT_READ,
-            Permissions.ACCESS_MANAGEMENT_UPDATE,
-            Permissions.ACCESS_MANAGEMENT_DELETE,
-            Permissions.SYSTEM_CONFIGURATION,
-            Permissions.SYSTEM_CONFIGURATION_CREATE,
-            Permissions.SYSTEM_CONFIGURATION_READ,
-            Permissions.SYSTEM_CONFIGURATION_UPDATE,
-            Permissions.SYSTEM_CONFIGURATION_DELETE,
-            Permissions.TAG_MANAGEMENT,
-            Permissions.TAG_MANAGEMENT_DELETE
-    );
-    permissionMap.put("Owner", ownerPermissions);
-
-    return permissionMap;
-  }
+        public Set<Permissions> getRolePermissions(final GitLabRole role) {
+                Set<Permissions> permissions = new HashSet<>();
+                for (GitLabRole r : GitLabRole.values()) {
+                if (r.compareTo(role) <= 0) {
+                        permissions.addAll(rolePermissions.get(r));
+                 }
+                }
+                return permissions;
+    }
 }
