@@ -21,14 +21,11 @@ package org.dependencytrack.integrations.gitlab;
 import alpine.event.framework.Event;
 import alpine.model.OidcUser;
 import alpine.server.auth.DefaultOidcAuthenticationCustomizer;
-import alpine.server.auth.OidcAuthenticationCustomizer;
 import alpine.server.auth.OidcProfile;
 
 import org.dependencytrack.event.GitLabSyncEvent;
 
-public class GitLabAuthenticationCustomizer
-        extends DefaultOidcAuthenticationCustomizer
-        implements OidcAuthenticationCustomizer {
+public class GitLabAuthenticationCustomizer extends DefaultOidcAuthenticationCustomizer {
 
     public GitLabAuthenticationCustomizer() {
 
