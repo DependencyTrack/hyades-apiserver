@@ -636,4 +636,16 @@
                                  onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="WORKFLOW_STATE" validate="true"/>
     </changeSet>
+
+    <changeSet id="v5.6.0-13" author="pkwiatkowski1">
+        <addColumn tableName="APIKEY">
+            <column name="IS_LEGACY" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PUBLIC_ID" type="VARCHAR(5)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addUniqueConstraint columnNames="PUBLIC_ID" constraintName="APIKEY_PUBLIC_IDX" tableName="APIKEY"/>
+    </changeSet>
 </databaseChangeLog>
