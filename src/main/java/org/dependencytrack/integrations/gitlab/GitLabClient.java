@@ -106,13 +106,7 @@ public class GitLabClient {
         )
 );
 
-        public Set<Permissions> getRolePermissions(final GitLabRole role) {
-                Set<Permissions> permissions = new HashSet<>();
-                for (GitLabRole r : GitLabRole.values()) {
-                if (r.compareTo(role) <= 0) {
-                        permissions.addAll(rolePermissions.get(r));
-                 }
-                }
-                return permissions;
+    public List<Permissions> getRolePermissions(final GitLabRole role) {
+        return rolePermissions.get(role);
     }
 }
