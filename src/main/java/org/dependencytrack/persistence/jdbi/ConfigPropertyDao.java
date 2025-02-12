@@ -65,6 +65,8 @@ public interface ConfigPropertyDao {
         // Add more conversions as needed.
         if (clazz.isAssignableFrom(CharSequence.class)) {
             convertedValue = clazz.cast(optionalStringValue.get());
+        } else if (clazz.isAssignableFrom(String.class)) {
+            convertedValue = clazz.cast(optionalStringValue.get());
         } else if (clazz.isAssignableFrom(Boolean.class)) {
             convertedValue = clazz.cast(Boolean.parseBoolean(optionalStringValue.get()));
         } else if (clazz.isAssignableFrom(Integer.class)) {
