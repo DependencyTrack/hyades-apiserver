@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.event;
 
-import alpine.event.framework.UnblockedEvent;
+import alpine.event.framework.Event;
 import alpine.model.OidcUser;
 
 /**
@@ -26,7 +26,7 @@ import alpine.model.OidcUser;
  *
  * @author Jonathan Howard
  */
-public class GitLabSyncEvent implements UnblockedEvent {
+public class GitLabSyncEvent implements Event {
 
     private String accessToken;
     private OidcUser user;
