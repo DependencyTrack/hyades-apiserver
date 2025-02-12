@@ -227,4 +227,44 @@ public interface ProjectDao {
              WHERE "UUID" = :projectUuid
             """)
     int deleteProject(@Bind final UUID projectUuid);
+
+    @SqlUpdate("""
+            WITH "CTE" AS (
+              SELECT "ID"
+                FROM "PROJECT"
+               WHERE "INACTIVE_SINCE" < :retentionCutOff
+               ORDER BY "INACTIVE_SINCE"
+               LIMIT :batchSize
+            )
+            DELETE
+              FROM "PROJECT"
+             WHERE "ID" IN (SELECT "ID" FROM "CTE")
+           """)
+    int deleteInactiveProjectsForRetentionDuration(@Bind final Instant retentionCutOff, @Bind final int batchSize);
+
+    @SqlUpdate("""
+           DELETE
+            FROM "PROJECT"
+            WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
+            AND "PROJECT"."NAME" = :projectName
+            AND "PROJECT"."ID" NOT IN (
+                SELECT "PROJECT"."ID" 
+                 FROM "PROJECT"
+                 WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
+                 AND "PROJECT"."NAME" = :projectName
+                 ORDER BY "PROJECT"."INACTIVE_SINCE" DESC
+                 LIMIT :versionCountThreshold
+                )
+            """)
+    int retainLastXInactiveProjects(@Bind final String projectName, @Bind final int versionCountThreshold);
+
+    @SqlQuery("""
+            SELECT "PROJECT"."NAME"
+              FROM "PROJECT"
+              WHERE "INACTIVE_SINCE" IS NOT NULL
+              GROUP BY "NAME"
+              HAVING COUNT(*) > :versionCountThreshold
+              LIMIT :batchSize
+            """)
+    List<String> getDistinctProjects(@Bind final int versionCountThreshold, @Bind final int batchSize);
 }
