@@ -23,7 +23,11 @@ import alpine.model.OidcUser;
 import alpine.server.auth.DefaultOidcAuthenticationCustomizer;
 import alpine.server.auth.OidcProfile;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.dependencytrack.event.GitLabSyncEvent;
+import org.dependencytrack.persistence.QueryManager;
 
 public class GitLabAuthenticationCustomizer extends DefaultOidcAuthenticationCustomizer {
 
@@ -32,7 +36,22 @@ public class GitLabAuthenticationCustomizer extends DefaultOidcAuthenticationCus
     }
 
     @Override
+    public boolean isProfileComplete(OidcProfile profile, boolean teamSyncEnabled) {
+        return super.isProfileComplete(profile, true);
+    }
+
+    @Override
     public OidcUser onAuthenticationSuccess(OidcUser user, OidcProfile profile, String idToken, String accessToken) {
+        try (QueryManager qm = new QueryManager()) {
+            List<String> groups = profile.getGroups();
+            groups = groups != null ? groups : new ArrayList<String>();
+
+            for (String groupName : groups) {
+                if (qm.getOidcGroup(groupName) == null)
+                    qm.createOidcGroup(groupName);
+            }
+        }
+
         Event.dispatch(new GitLabSyncEvent(accessToken, user));
 
         return user;

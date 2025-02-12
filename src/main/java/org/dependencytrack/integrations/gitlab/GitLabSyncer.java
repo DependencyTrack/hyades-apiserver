@@ -23,7 +23,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import org.dependencytrack.auth.Permissions;
@@ -82,20 +82,24 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
 
         List<GitLabProject> gitLabProjects = gitLabClient.getGitLabProjects();
         List<Project> projects = createProjects(gitLabProjects);
+        List<Team> teams = new ArrayList<>();
 
-        for (Project project : projects) {
-            List<Team> teams = createProjectTeams(project);
+        for (Project project : projects)
+            teams.addAll(createProjectTeams(project));
 
-            for (Team team : teams) {
-                List<OidcUser> teamUsers = team.getOidcUsers();
-                if (!teamUsers.contains(user)) {
-                    teamUsers.add(user);
-                    team.setOidcUsers(teamUsers);
-                }
+        List<String> teamNames = new ArrayList<>();
+        for (GitLabProject gitLabProject : gitLabProjects)
+            teamNames.add("%s_%s".formatted(
+                    gitLabProject.getFullPath(),
+                    gitLabProject.getMaxAccessLevel().getStringValue().toString()));
 
-                qm.updateTeam(team);
-            }
-        }
+        qm.addUserToTeams(qm.getOidcUser(user.getUsername()), teamNames);
+
+        for (Team team : teams)
+            qm.updateTeam(team);
+
+        for (Project project : projects)
+            qm.updateProject(project, false);
     }
 
     private List<Project> createProjects(List<GitLabProject> gitLabProjects) {
@@ -112,7 +116,11 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
                 project = qm.persist(project);
             }
 
-            projects.add(project);
+            project.setActive(project.getLastBomImport() != null);
+            if (!project.isActive() && project.getInactiveSince() == null)
+                project.setInactiveSince(new Date());
+
+            projects.add(qm.updateProject(project, false));
         }
 
         return projects;
