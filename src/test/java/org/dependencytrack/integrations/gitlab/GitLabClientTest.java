@@ -73,6 +73,7 @@ public class GitLabClientTest {
     @Test
     public void testMapPermissionsToRoles() throws MalformedURLException {
         GitLabClient client = new GitLabClient(new GitLabSyncer(null, null), new URL("https://gitlab.com"));
+        @SuppressWarnings("unchecked")
         Map<String, List<Permissions>> permissionMap = client.mapPermissionsToRoles();
         assertEquals(5, permissionMap.size());
         assertNotNull(permissionMap.get("GUEST"));
