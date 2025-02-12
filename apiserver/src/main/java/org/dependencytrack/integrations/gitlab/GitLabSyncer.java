@@ -100,7 +100,6 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
      * @param projects the list of GitLab project names available to the user
      */
     private void createProjectStructure(List<String> projects) {
-
         for (String project : projects) {
             Project parent = null;
             List<String> toCreate = getProjectNames(project);
@@ -109,7 +108,7 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
                 LOGGER.debug("Creating project " + group);
 
                 Project existingProject = qm.getProject(group, null);
-                if (qm.getProject(group, null) != null) {
+                if (existingProject != null) {
                     parent = existingProject;
                     continue;
                 }
