@@ -24,11 +24,7 @@
     <parent>
         <groupId>us.springett</groupId>
         <artifactId>alpine-parent</artifactId>
-<<<<<<< Updated upstream
-        <version>3.1.2</version>
-=======
         <version>3.1.1-SNAPSHOT</version>
->>>>>>> Stashed changes
     </parent>
 
     <modelVersion>4.0.0</modelVersion>

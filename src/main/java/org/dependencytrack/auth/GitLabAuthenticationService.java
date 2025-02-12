@@ -17,19 +17,12 @@
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 
- package org.dependencytrack.auth;
+package org.dependencytrack.auth;
 
- import java.security.Principal;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
-//import org.dependencytrack.persistence.QueryManager;
-//import org.gitlab4j.api.GitLabApi;
-//import org.gitlab4j.api.GitLabApiException;
-//import org.gitlab4j.api.Pager;
-//import org.gitlab4j.api.models.Project;
-//import org.gitlab4j.models.Constants.TokenType;
 
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 
@@ -49,52 +42,52 @@ import alpine.server.auth.OidcProfileCreator;
 import alpine.server.auth.OidcUserInfoAuthenticator;
 import alpine.server.util.OidcUtil;
 import jakarta.annotation.Nonnull;
- 
+
  /**
   * @since 1.8.0
   */
- public class GitlabAuthenticationService implements AuthenticationService {
- 
-     private static final Logger LOGGER = Logger.getLogger(GitlabAuthenticationService.class);
- 
+ public class GitLabAuthenticationService implements AuthenticationService {
+
+     private static final Logger LOGGER = Logger.getLogger(GitLabAuthenticationService.class);
+
      private final Config config;
      private final OidcConfiguration oidcConfiguration;
      private final OidcIdTokenAuthenticator idTokenAuthenticator;
      private final OidcUserInfoAuthenticator userInfoAuthenticator;
      private final String idToken;
      private final String accessToken;
- 
+
      /**
       * @param accessToken The access token acquired by authenticating with an IdP
       * @deprecated Use {@link #GitalbAuthenticationService(String, String)} instead
       */
      @Deprecated
-     public GitlabAuthenticationService(final String accessToken) {
+     public GitLabAuthenticationService(final String accessToken) {
          this(Config.getInstance(), OidcConfigurationResolver.getInstance().resolve(), null, accessToken);
      }
- 
+
      /**
       * @param idToken     The ID token acquired by authenticating with an IdP
       * @param accessToken The access token acquired by authenticating with an IdP
       * @since 1.10.0
       */
-     public GitlabAuthenticationService(final String idToken, final String accessToken) {
+     public GitLabAuthenticationService(final String idToken, final String accessToken) {
          this(Config.getInstance(), OidcConfigurationResolver.getInstance().resolve(), idToken, accessToken);
      }
- 
+
      /**
       * Constructor for unit tests
       */
-     GitlabAuthenticationService(final Config config, final OidcConfiguration oidcConfiguration, final String idToken, final String accessToken) {
+     GitLabAuthenticationService(final Config config, final OidcConfiguration oidcConfiguration, final String idToken, final String accessToken) {
     	 this(config, oidcConfiguration, new OidcIdTokenAuthenticator(oidcConfiguration, config.getProperty(Config.AlpineKey.OIDC_CLIENT_ID)), new OidcUserInfoAuthenticator(oidcConfiguration), idToken, accessToken);
      }
- 
+
      /**
       * Constructor for unit tests
       *
       * @since 1.10.0
       */
-     GitlabAuthenticationService(final Config config,
+     GitLabAuthenticationService(final Config config,
                                final OidcConfiguration oidcConfiguration,
                                final OidcIdTokenAuthenticator idTokenAuthenticator,
                                final OidcUserInfoAuthenticator userInfoAuthenticator,
@@ -107,13 +100,13 @@ import jakarta.annotation.Nonnull;
          this.idToken = idToken;
          this.accessToken = accessToken;
      }
- 
+
      @Override
      public boolean isSpecified() {
          return OidcUtil.isOidcAvailable(config, oidcConfiguration)
                  && (accessToken != null || idToken != null);
      }
- 
+
      /**
       * Authenticate a {@link Principal} using the provided credentials.
       * <p>
@@ -137,14 +130,14 @@ import jakarta.annotation.Nonnull;
              LOGGER.error("No username claim has been configured");
              throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.OTHER);
          }
- 
+
          final boolean teamSyncEnabled = config.getPropertyAsBoolean(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION);
          final String teamsClaimName = config.getProperty(Config.AlpineKey.OIDC_TEAMS_CLAIM);
          if (teamSyncEnabled && teamsClaimName == null) {
              LOGGER.error("Team synchronization is enabled, but no teams claim has been configured");
              throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.OTHER);
          }
- 
+
          final OidcProfileCreator profileCreator = claims -> {
              final var profile = new OidcProfile();
              profile.setSubject(claims.getStringClaim(UserInfo.SUB_CLAIM_NAME));
@@ -173,45 +166,45 @@ import jakarta.annotation.Nonnull;
              profile.setEmail(claims.getStringClaim(UserInfo.EMAIL_CLAIM_NAME));
              return profile;
          };
- 
+
          OidcProfile idTokenProfile = null;
          if (idToken != null) {
              idTokenProfile = idTokenAuthenticator.authenticate(idToken, profileCreator);
              LOGGER.debug("ID token profile: " + idTokenProfile);
- 
+
              if (isProfileComplete(idTokenProfile, teamSyncEnabled)) {
                  LOGGER.debug("ID token profile is complete, proceeding to authenticate");
                  return authenticateInternal(idTokenProfile);
              }
          }
- 
+
          OidcProfile userInfoProfile = null;
          if (accessToken != null) {
              userInfoProfile = userInfoAuthenticator.authenticate(accessToken, profileCreator);
              LOGGER.debug("UserInfo profile: " + userInfoProfile);
- 
+
              if (isProfileComplete(userInfoProfile, teamSyncEnabled)) {
                  LOGGER.debug("UserInfo profile is complete, proceeding to authenticate");
                  return authenticateInternal(userInfoProfile);
              }
          }
- 
+
          OidcProfile mergedProfile = null;
          if (idTokenProfile != null && userInfoProfile != null) {
              mergedProfile = mergeProfiles(idTokenProfile, userInfoProfile);
              LOGGER.debug("Merged profile: " + mergedProfile);
- 
+
              if (isProfileComplete(mergedProfile, teamSyncEnabled)) {
                  LOGGER.debug("Merged profile is complete, proceeding to authenticate");
                  return authenticateInternal(mergedProfile);
              }
          }
- 
+
          LOGGER.error("Unable to assemble complete profile (ID token: " + idTokenProfile +
                  ", UserInfo: " + userInfoProfile + ", Merged: " + mergedProfile + ")");
          throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.OTHER);
      }
- 
+
      private OidcUser authenticateInternal(final OidcProfile profile) throws AlpineAuthenticationException {
          try (final var qm = new AlpineQueryManager()) {
              OidcUser user = qm.getOidcUser(profile.getUsername());
@@ -232,10 +225,10 @@ import jakarta.annotation.Nonnull;
                      user.setEmail(profile.getEmail());
                      user = qm.updateOidcUser(user);
                  }
-                 
+
                  // sync gitlab groups
                  syncGitlabGroups(qm, user, profile.getGroups(), accessToken);
-                 
+
                  if (config.getPropertyAsBoolean(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION)) {
                      return qm.synchronizeTeamMembership(user, profile.getGroups());
                  }
@@ -249,13 +242,13 @@ import jakarta.annotation.Nonnull;
              }
          }
      }
- 
+
      private boolean isProfileComplete(final OidcProfile profile, final boolean teamSyncEnabled) {
          return profile.getSubject() != null
                  && profile.getUsername() != null
                  && (!teamSyncEnabled || (profile.getGroups() != null));
      }
- 
+
      private OidcProfile mergeProfiles(final OidcProfile left, final OidcProfile right) {
          final var profile = new OidcProfile();
          profile.setSubject(selectProfileClaim(left.getSubject(), right.getSubject()));
@@ -264,18 +257,18 @@ import jakarta.annotation.Nonnull;
          profile.setEmail(selectProfileClaim(left.getEmail(), right.getEmail()));
          return profile;
      }
- 
+
      private <T> T selectProfileClaim(final T left, final T right) {
          return (left != null) ? left : right;
      }
- 
+
      private OidcUser autoProvision(final AlpineQueryManager qm, final OidcProfile profile) {
          var user = new OidcUser();
          user.setUsername(profile.getUsername());
          user.setSubjectIdentifier(profile.getSubject());
          user.setEmail(profile.getEmail());
          user = qm.persist(user);
- 
+
          if (config.getPropertyAsBoolean(Config.AlpineKey.OIDC_TEAM_SYNCHRONIZATION)) {
              LOGGER.debug("Synchronizing teams for user " + user.getUsername());
              return qm.synchronizeTeamMembership(user, profile.getGroups());
@@ -284,7 +277,7 @@ import jakarta.annotation.Nonnull;
              return qm.addUserToTeams(user, config.getPropertyAsList(Config.AlpineKey.OIDC_TEAMS_DEFAULT));
          }
      }
-     
+
      private void syncGitlabGroups(final AlpineQueryManager qm, final OidcUser user, final List<String> groupNames, final String accessToken) {
          for (final String groupName : groupNames) {
              final OidcGroup group = qm.getOidcGroup(groupName);
@@ -293,35 +286,32 @@ import jakarta.annotation.Nonnull;
                  OidcGroup createdGroup = qm.createOidcGroup(groupName);
                  Team createdTeam = qm.createTeam(groupName, false);
                  // createdTeam.setPermissions(null);
-                 // Add team permissions 
+                 // Add team permissions
                  // create projects and add to team
                  qm.createMappedOidcGroup(createdTeam, createdGroup);
              }
          }
-         
+
 
 //         GitLabApi gitLabApi = new GitLabApi("https://gitlab.us.lmco.com", TokenType.OAUTH2_ACCESS, accessToken);
-//         
+//
 //         try (final var depTrackQueryManager = new QueryManager()) {
-//         
+//
 //         // Get the list of projects your account has access to
 //	         try {
 //	            // Create a GitLabApi instance to communicate with your GitLab server
 //				Pager<Project> projects = gitLabApi.getProjectApi().getProjects(50);
-//				
+//
 //				for(Project project : projects.all()) {
 //					depTrackQueryManager.getProject(project, null);
 //				}
-//				
-//			
+//
+//
 //			} catch (GitLabApiException e) {
 //				// TODO Auto-generated catch block
 //				e.printStackTrace();
 //			}
 //         }
       }
-     
-     
- 
+
  }
- 
