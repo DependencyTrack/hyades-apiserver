@@ -26,7 +26,6 @@ import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
 import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
-import org.dependencytrack.event.GitLabSyncEvent;
 import org.dependencytrack.event.IntegrityMetaInitializerEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
@@ -86,7 +85,6 @@ public final class TaskScheduler extends BaseTaskScheduler {
                 Map.entry(new NistMirrorEvent(), getCronScheduleForTask(NistMirrorTask.class)),
                 Map.entry(new OsvMirrorEvent(null), getCronScheduleForTask(OsvMirrorTask.class)),
                 Map.entry(new GitHubAdvisoryMirrorEvent(), getCronScheduleForTask(GitHubAdvisoryMirrorTask.class)),
-                Map.entry(new GitLabSyncEvent(), getCronScheduleForTask(GitLabSyncTask.class)),
                 Map.entry(new EpssMirrorEvent(), getCronScheduleForTask(EpssMirrorTask.class)),
                 Map.entry(new PortfolioMetricsUpdateEvent(), getCronScheduleForTask(PortfolioMetricsUpdateTask.class)),
                 Map.entry(new VulnerabilityMetricsUpdateEvent(), getCronScheduleForTask(VulnerabilityMetricsUpdateTask.class)),
