@@ -20,6 +20,7 @@ package org.dependencytrack.persistence.migration;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.server.util.DbUtil;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import liquibase.Liquibase;
@@ -40,6 +41,7 @@ import org.dependencytrack.common.ConfigKey;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import javax.sql.DataSource;
+import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Optional;
 
@@ -73,6 +75,16 @@ public class MigrationInitializer implements ServletContextListener {
 
         LOGGER.info("Running migrations");
         try (final HikariDataSource dataSource = createDataSource()) {
+            try (final Connection connection = dataSource.getConnection()) {
+                // Ensure that DbUtil#isPostgreSQL will work as expected.
+                // Some legacy code ported over from v4 still uses this.
+                //
+                // NB: This was previously done in alpine.server.upgrade.UpgradeExecutor.
+                //
+                // TODO: Remove once DbUtil#isPostgreSQL is no longer used.
+                DbUtil.initPlatformName(connection);
+            }
+
             runMigration(dataSource);
         } catch (Exception e) {
             if (config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS_ONLY)
