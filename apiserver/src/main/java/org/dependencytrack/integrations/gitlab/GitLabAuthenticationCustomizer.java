@@ -21,6 +21,7 @@ package org.dependencytrack.integrations.gitlab;
 import org.dependencytrack.event.GitLabSyncEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 
+import alpine.model.OidcUser;
 import alpine.server.auth.DefaultOidcAuthenticationCustomizer;
 import alpine.server.auth.OidcAuthenticationCustomizer;
 import alpine.server.auth.OidcProfile;
@@ -34,8 +35,10 @@ public class GitLabAuthenticationCustomizer
     }
 
     @Override
-    public void onAuthenticationSuccess(OidcProfile profile, String idToken, String accessToken) {
-        new KafkaEventDispatcher().dispatchEvent(new GitLabSyncEvent(accessToken)).join();
+    public OidcUser onAuthenticationSuccess(OidcUser user, OidcProfile profile, String idToken, String accessToken) {
+        new KafkaEventDispatcher().dispatchEvent(new GitLabSyncEvent(accessToken, user)).join();
+
+        return user;
     }
 
 }

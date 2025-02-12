@@ -22,8 +22,10 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
+import alpine.model.OidcUser;
 
 import org.dependencytrack.event.GitLabSyncEvent;
+import org.dependencytrack.integrations.gitlab.GitLabSyncer;
 import org.dependencytrack.persistence.QueryManager;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
@@ -53,23 +55,33 @@ public class GitLabSyncTask implements LoggableSubscriber {
         }
 
         GitLabSyncEvent gitLabSyncEvent = (GitLabSyncEvent) event;
-        String accessToken = gitLabSyncEvent.getAccessToken();
 
+        String accessToken = gitLabSyncEvent.getAccessToken();
         if (accessToken == null || accessToken.isEmpty()) {
             LOGGER.warn("GitLab syncing is enabled, but no access token was provided. Skipping.");
+            return;
+        }
+
+        OidcUser user = gitLabSyncEvent.getUser();
+        if (user == null) {
+            LOGGER.warn("GitLab syncing is enabled, but no authenticated user was provided. Skipping.");
             return;
         }
 
         LOGGER.info("Starting GitLab sync task");
 
         GitLabSyncer syncer = new GitLabSyncer(accessToken);
+        syncer.synchronize(user);
 
-        // TODO: Get user GitLab project memberships (use alpine.security.crypto.DataEncryption for request)
-        // TODO: Create Dependency-Track hierarchical project structure for user's GitLab projects
-        // TODO: Create Dependency-Track teams such as <GitLab project name>-maintainer
-        // TODO: Assign Dependency-Track permissions (TBD) to teams based on GitLab role
-        // TODO: Map user OIDC groups to Dependency-Track teams
-        // TODO: Configure portfolio access control
+        // TODO:
+        // - [X] Assign authenticated OIDC user the VIEW_PORTFOLIO permission
+        // - [ ] Get user GitLab project memberships (use alpine.security.crypto.DataEncryption for request)
+        // - [X] Create Dependency-Track hierarchical project structure for user's GitLab projects
+        // - [X] Create Dependency-Track teams such as <GitLab project name>-maintainer
+        // - [ ] Come up with a set of Dependency-Track project permissions per GitLab role
+        // - [ ] Assign Dependency-Track permissions (TBD) to teams based on GitLab role
+        // - [ ] Map user OIDC groups to Dependency-Track teams
+        // - [ ] Configure portfolio access control (map team to project access)
     }
 
 }
