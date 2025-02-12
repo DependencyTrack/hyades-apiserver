@@ -16,38 +16,26 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.integrations.gitlab;
 
-import alpine.event.framework.UnblockedEvent;
+import org.dependencytrack.event.GitLabSyncEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 
-/**
- * Defines an event used to start a sync task of current user's GitLab groups.
- *
- * @author Jonathan Howard
- */
-public class GitLabSyncEvent implements UnblockedEvent {
+import alpine.server.auth.DefaultOidcAuthenticationCustomizer;
+import alpine.server.auth.OidcAuthenticationCustomizer;
+import alpine.server.auth.OidcProfile;
 
-    private String accessToken;
+public class GitLabAuthenticationCustomizer
+        extends DefaultOidcAuthenticationCustomizer
+        implements OidcAuthenticationCustomizer {
 
-    public GitLabSyncEvent() {
+    public GitLabAuthenticationCustomizer() {
 
-    }
-
-    public GitLabSyncEvent(final String accessToken) {
-        this.accessToken = accessToken;
-    }
-
-    public String getAccessToken() {
-        return accessToken;
-    }
-
-    public void setAccessToken(final String accessToken) {
-        this.accessToken = accessToken;
     }
 
     @Override
-    public String toString() {
-        return "%s{accessToken=%s}".formatted(getClass().getName(), accessToken);
+    public void onAuthenticationSuccess(OidcProfile profile, String idToken, String accessToken) {
+        new KafkaEventDispatcher().dispatchEvent(new GitLabSyncEvent(accessToken)).join();
     }
 
 }

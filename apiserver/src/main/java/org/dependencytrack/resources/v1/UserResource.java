@@ -33,6 +33,7 @@ import alpine.server.auth.AlpineAuthenticationException;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.Authenticator;
 import alpine.server.auth.JsonWebToken;
+import alpine.server.auth.OidcAuthenticationService;
 import alpine.server.auth.PasswordService;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
@@ -59,7 +60,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.GitLabAuthenticationService;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.IdentifiableObject;
@@ -154,7 +154,7 @@ public class UserResource extends AlpineResource {
     public Response validateOidcAccessToken(@Parameter(description = "An OAuth2 access token", required = true)
                                             @FormParam("idToken") final String idToken,
                                             @FormParam("accessToken") final String accessToken) {
-        final GitLabAuthenticationService authService = new GitLabAuthenticationService(idToken, accessToken);
+        final OidcAuthenticationService authService = new OidcAuthenticationService(idToken, accessToken);
 
         if (!authService.isSpecified()) {
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "An OpenID Connect login attempt was made, but OIDC is disabled or not properly configured");
@@ -164,10 +164,11 @@ public class UserResource extends AlpineResource {
         try (final QueryManager qm = new QueryManager()) {
             final Principal principal = authService.authenticate();
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful OpenID Connect login / username: " + principal.getName());
+
             final List<Permission> permissions = qm.getEffectivePermissions((UserPrincipal) principal);
-            final KeyManager km = KeyManager.getInstance();
-            final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
+            final JsonWebToken jwt = new JsonWebToken();
             final String token = jwt.createToken(principal, permissions);
+
             return Response.ok(token).build();
         } catch (AlpineAuthenticationException e) {
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized OpenID Connect login attempt");
@@ -207,8 +208,8 @@ public class UserResource extends AlpineResource {
                     throw new AlpineAuthenticationException(e.getCauseType());
                 }
             }
-            if (principal instanceof ManagedUser) {
-                final ManagedUser user = qm.getManagedUser(((ManagedUser) principal).getUsername());
+            if (principal instanceof ManagedUser managedUser) {
+                final ManagedUser user = qm.getManagedUser(managedUser.getUsername());
                 if (StringUtils.isNotBlank(newPassword) && StringUtils.isNotBlank(confirmPassword) && newPassword.equals(confirmPassword)) {
                     if (PasswordService.matches(newPassword.toCharArray(), user)) {
                         super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Existing password is the same as new password. Password not changed. / username: " + username);
