@@ -94,6 +94,7 @@
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>9.1.0</lib.cyclonedx-java.version>
         <lib.datanucleus-postgresql.version>0.3.0</lib.datanucleus-postgresql.version>
+        <lib.gitlab4j-api.version>6.0.0-rc.8</lib.gitlab4j-api.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <!--
             Downgraded from 2.18.2 due to incompatibility with swagger-core.
@@ -157,11 +158,6 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
-        
-	  <repository>
-	    <id>jitpack.io</id>
-	    <url>https://jitpack.io</url>
-  	  </repository>
 </repositories>
 
     <dependencyManagement>
@@ -561,10 +557,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-	    <groupId>com.github.gitlab4j.gitlab4j-api</groupId>
-		    <artifactId>gitlab4j-api</artifactId>
-		    <version>main-SNAPSHOT</version>
-  		</dependency>
+            <groupId>org.gitlab4j</groupId>
+            <artifactId>gitlab4j-api</artifactId>
+            <version>${lib.gitlab4j-api.version}</version>
+            <type>module</type>
+        </dependency>
     </dependencies>
 
     <build>
