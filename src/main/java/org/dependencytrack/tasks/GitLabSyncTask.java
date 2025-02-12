@@ -24,44 +24,49 @@ import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
 
 import org.dependencytrack.event.GitLabSyncEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.persistence.QueryManager;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
-import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_TOKEN;
 
 public class GitLabSyncTask implements LoggableSubscriber {
 
     private static final Logger LOGGER = Logger.getLogger(GitLabSyncTask.class);
     private final boolean isEnabled;
-    private String accessToken;
+    private final String accessToken;
 
-    public GitLabSyncTask() {
+    public GitLabSyncTask(final String accessToken) {
         final String groupName = GITLAB_ENABLED.getGroupName();
 
         try (final QueryManager qm = new QueryManager()) {
             final ConfigProperty enabled = qm.getConfigProperty(groupName, GITLAB_ENABLED.getPropertyName());
-            final ConfigProperty accessToken = qm.getConfigProperty(groupName, GITLAB_TOKEN.getPropertyName());
 
-            this.isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
-            this.accessToken = accessToken != null ? accessToken.getPropertyValue() : "";
+            this.isEnabled = enabled != null && Boolean.parseBoolean(enabled.getPropertyValue());
+            this.accessToken = accessToken;
         }
     }
 
     /**
      * {@inheritDoc}
      */
-    public void inform(final Event e) {
-        if (!(e instanceof GitLabSyncEvent && this.isEnabled)) {
+    @Override
+    public void inform(final Event event) {
+        if (!(event instanceof GitLabSyncEvent && this.isEnabled)) {
             return;
         }
 
         if (this.accessToken == null) {
-            LOGGER.warn("GitLab syncing is enabled, but no personal access token is configured. Skipping.");
+            LOGGER.warn("GitLab syncing is enabled, but no access token was provided. Skipping.");
             return;
         }
 
         LOGGER.info("Starting GitLab sync task");
-        new KafkaEventDispatcher().dispatchEvent(new GitLabSyncEvent()).join();
+
+        // TODO: Get user GitLab project memberships (use alpine.security.crypto.DataEncryption for request)
+        // TODO: Create Dependency-Track hierarchical project structure for user's GitLab projects
+        // TODO: Create Dependency-Track teams such as <GitLab project name>-maintainer
+        // TODO: Assign Dependency-Track permissions (TBD) to teams based on GitLab role
+        // TODO: Map user OIDC groups to Dependency-Track teams
+        // TODO: Configure portfolio access control
     }
+
 }

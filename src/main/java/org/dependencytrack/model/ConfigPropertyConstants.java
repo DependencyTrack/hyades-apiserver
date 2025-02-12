@@ -90,7 +90,6 @@ public enum ConfigPropertyConstants {
     GITLAB_GROUPS("integrations", "gitlab.groups", "[]", PropertyType.STRING, "JSON array of GitLab group names for which to create teams/roles", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_URL("integrations", "gitlab.url", "https://gitlab.com", PropertyType.URL, "Base URL to GitLab instance", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_APP_ID("integrations", "gitlab.app.id", null, PropertyType.STRING, "ID for the configured GitLab application", ConfigPropertyAccessMode.READ_WRITE),
-    GITLAB_TOKEN("integrations", "gitlab.token", null, PropertyType.ENCRYPTEDSTRING, "The token (with API read permission) to use to authenticate to GitLab instance", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_ENABLED("integrations", "defectdojo.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable DefectDojo integration", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_REIMPORT_ENABLED("integrations", "defectdojo.reimport.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable DefectDojo reimport-scan API endpoint", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_SYNC_CADENCE("integrations", "defectdojo.sync.cadence", "60", PropertyType.INTEGER, "The cadence (in minutes) to upload to DefectDojo", ConfigPropertyAccessMode.READ_WRITE),
