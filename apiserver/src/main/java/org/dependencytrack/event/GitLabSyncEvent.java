@@ -58,7 +58,7 @@ public class GitLabSyncEvent implements UnblockedEvent {
 
     @Override
     public String toString() {
-        return "%s{accessToken=%s, user=%s}".formatted(getClass().getName(), accessToken, user);
+        return "%s{accessToken=%s, user=%s}".formatted(getClass().getSimpleName(), accessToken, user);
     }
 
 }
