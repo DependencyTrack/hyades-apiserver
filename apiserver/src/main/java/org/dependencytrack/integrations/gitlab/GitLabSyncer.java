@@ -87,13 +87,14 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     /**
      * Create hierarchical project structure for user's GitLab projects.
      *
-     * For example, if a GitLab project path is org/group/subgroup/project,
-     * then the following Dependency-Track projects will be created:
-     *
-     *   - org
-     *   - org/group
-     *   - org/group/subgroup
-     *   - org/group/subgroup/project
+     * For example, if a GitLab project path is org/group/subgroup/project, then
+     * the following Dependency-Track projects will be created:
+     * <ul>
+     * <li>org
+     * <li>org/group
+     * <li>org/group/subgroup
+     * <li>org/group/subgroup/project
+     * </ul>
      *
      * @param projects the list of GitLab project names available to the user
      */
@@ -131,7 +132,8 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     }
 
     /**
-     * Create teams for a Dependency-Track project representing a project within GitLab.
+     * Create teams for a Dependency-Track project representing a project within
+     * GitLab.
      *
      * @param project Dependency-Track project representing a GitLab project
      * @return the Dependency-Track teams for the project
@@ -167,11 +169,12 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
      *
      * For example, if a GitLab project path is org/group/subgroup/project, then
      * the following project names will be returned:
-     *
-     * - org
-     * - org/group
-     * - org/group/subgroup
-     * - org/group/subgroup/project
+     * <ul>
+     * <li>org
+     * <li>org/group
+     * <li>org/group/subgroup
+     * <li>org/group/subgroup/project
+     * </ul>
      *
      * @param project the GitLab project name
      * @return the project names to be created
