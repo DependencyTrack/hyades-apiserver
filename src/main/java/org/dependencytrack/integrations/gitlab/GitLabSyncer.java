@@ -21,7 +21,8 @@ package org.dependencytrack.integrations.gitlab;
 import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BASE_URL;
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
 
-import java.net.URI;
+import java.net.URISyntaxException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -31,7 +32,6 @@ import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.integrations.PermissionsSyncer;
 import org.dependencytrack.model.Project;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import alpine.model.OidcUser;
@@ -49,9 +49,10 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     private final OidcUser user;
     private GitLabClient gitLabClient;
 
-    public GitLabSyncer(final String accessToken, final OidcUser user) {
+    public GitLabSyncer(final String accessToken, final OidcUser user, final GitLabClient gitlabClient) {
         this.accessToken = accessToken;
         this.user = user;
+        this.gitLabClient = gitlabClient;
     }
 
     public String getAccessToken() {
@@ -77,29 +78,31 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
 
     @Override
     public void synchronize() {
-        final URI gitLabUrl = URI.create(Config.getInstance().getProperty(Config.AlpineKey.OIDC_ISSUER));
-        gitLabClient = new GitLabClient(this, gitLabUrl, accessToken);
-
-        List<GitLabProject> gitLabProjects = gitLabClient.getGitLabProjects();
-        List<Project> projects = createProjects(gitLabProjects);
-        List<Team> teams = new ArrayList<>();
-
-        for (Project project : projects)
-            teams.addAll(createProjectTeams(project));
-
-        List<String> teamNames = new ArrayList<>();
-        for (GitLabProject gitLabProject : gitLabProjects)
-            teamNames.add("%s_%s".formatted(
-                    gitLabProject.getFullPath(),
-                    gitLabProject.getMaxAccessLevel().getStringValue().toString()));
-
-        qm.addUserToTeams(qm.getOidcUser(user.getUsername()), teamNames);
-
-        for (Team team : teams)
-            qm.updateTeam(team);
-
-        for (Project project : projects)
-            qm.updateProject(project, false);
+        try {
+            List<GitLabProject> gitLabProjects = gitLabClient.getGitLabProjects();
+            List<Project> projects = createProjects(gitLabProjects);
+            List<Team> teams = new ArrayList<>();
+    
+            for (Project project : projects)
+                teams.addAll(createProjectTeams(project));
+    
+            List<String> teamNames = new ArrayList<>();
+            for (GitLabProject gitLabProject : gitLabProjects)
+                teamNames.add("%s_%s".formatted(
+                        gitLabProject.getFullPath(),
+                        gitLabProject.getMaxAccessLevel().getStringValue().toString()));
+    
+            qm.addUserToTeams(qm.getOidcUser(user.getUsername()), teamNames);
+    
+            for (Team team : teams)
+                qm.updateTeam(team);
+    
+            for (Project project : projects)
+                qm.updateProject(project, false);
+        } catch (IOException | URISyntaxException ex) {
+            LOGGER.error("An error occurred while querying GitLab GraphQL API", ex);
+            this.handleException(LOGGER, ex);
+        }
     }
 
     private List<Project> createProjects(List<GitLabProject> gitLabProjects) {
@@ -119,7 +122,6 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
             project.setActive(project.getLastBomImport() != null);
             if (!project.isActive() && project.getInactiveSince() == null)
                 project.setInactiveSince(new Date());
-
             projects.add(qm.updateProject(project, false));
         }
 
