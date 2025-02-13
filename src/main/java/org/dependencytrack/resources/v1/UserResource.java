@@ -164,10 +164,11 @@ public class UserResource extends AlpineResource {
         try (final QueryManager qm = new QueryManager()) {
             final Principal principal = authService.authenticate();
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful OpenID Connect login / username: " + principal.getName());
+
             final List<Permission> permissions = qm.getEffectivePermissions((UserPrincipal) principal);
-            final KeyManager km = KeyManager.getInstance();
-            final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
+            final JsonWebToken jwt = new JsonWebToken();
             final String token = jwt.createToken(principal, permissions);
+
             return Response.ok(token).build();
         } catch (AlpineAuthenticationException e) {
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized OpenID Connect login attempt");
@@ -207,8 +208,8 @@ public class UserResource extends AlpineResource {
                     throw new AlpineAuthenticationException(e.getCauseType());
                 }
             }
-            if (principal instanceof ManagedUser) {
-                final ManagedUser user = qm.getManagedUser(((ManagedUser) principal).getUsername());
+            if (principal instanceof ManagedUser managedUser) {
+                final ManagedUser user = qm.getManagedUser(managedUser.getUsername());
                 if (StringUtils.isNotBlank(newPassword) && StringUtils.isNotBlank(confirmPassword) && newPassword.equals(confirmPassword)) {
                     if (PasswordService.matches(newPassword.toCharArray(), user)) {
                         super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Existing password is the same as new password. Password not changed. / username: " + username);
