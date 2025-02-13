@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
@@ -31,8 +30,6 @@ import org.dependencytrack.integrations.gitlab.GitLabSyncer;
 import org.dependencytrack.persistence.QueryManager;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
-
-import java.net.URI;
 
 public class GitLabSyncTask implements LoggableSubscriber {
 
@@ -75,8 +72,7 @@ public class GitLabSyncTask implements LoggableSubscriber {
         LOGGER.info("Starting GitLab sync task");
 
         try (QueryManager qm = new QueryManager()) {
-            final URI gitLabUrl = URI.create(Config.getInstance().getProperty(Config.AlpineKey.OIDC_ISSUER));
-            GitLabClient gitLabClient = new GitLabClient(gitLabUrl, accessToken);
+            GitLabClient gitLabClient = new GitLabClient(accessToken);
             GitLabSyncer syncer = new GitLabSyncer(accessToken, user, gitLabClient);
             syncer.setQueryManager(qm);
             syncer.synchronize();
