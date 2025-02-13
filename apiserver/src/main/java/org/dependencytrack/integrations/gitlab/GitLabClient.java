@@ -38,6 +38,7 @@ import org.apache.http.util.EntityUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.HttpClientPool;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 
 import net.minidev.json.JSONArray;
@@ -107,9 +108,9 @@ public class GitLabClient {
                     Permissions.TAG_MANAGEMENT,
                     Permissions.TAG_MANAGEMENT_DELETE));
 
-    public GitLabClient(final URI baseURL, final String accessToken) {
+    public GitLabClient(final String accessToken) {
         this.accessToken = accessToken;
-        this.baseURL = baseURL;
+        this.baseURL = URI.create(Config.getInstance().getProperty(Config.AlpineKey.OIDC_ISSUER));;
     }
 
     public List<GitLabProject> getGitLabProjects() throws IOException, URISyntaxException {
