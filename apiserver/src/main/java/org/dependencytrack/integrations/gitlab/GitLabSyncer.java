@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.integrations.PermissionsSyncer;
 import org.dependencytrack.model.Project;
@@ -35,7 +34,6 @@ import org.dependencytrack.model.Project;
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import alpine.model.OidcUser;
-import alpine.model.Permission;
 import alpine.model.Team;
 
 public class GitLabSyncer extends AbstractIntegrationPoint implements PermissionsSyncer {
@@ -78,37 +76,30 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
 
     @Override
     public void synchronize() {
-        try {
-            List<GitLabProject> gitLabProjects = gitLabClient.getGitLabProjects();
-            List<Project> projects = createProjects(gitLabProjects);
-            List<Team> teams = new ArrayList<>();
-    
-            for (Project project : projects)
-                teams.addAll(createProjectTeams(project));
-    
-            List<String> teamNames = new ArrayList<>();
-            for (GitLabProject gitLabProject : gitLabProjects)
-                teamNames.add("%s_%s".formatted(
+        final URI gitLabUrl = URI.create(Config.getInstance().getProperty(Config.AlpineKey.OIDC_ISSUER));
+        gitLabClient = new GitLabClient(this, gitLabUrl, accessToken);
+
+        List<GitLabProject> gitLabProjects = gitLabClient.getGitLabProjects();
+        List<Project> projects = createProjects(gitLabProjects);
+        List<Team> teams = projects.stream()
+                .flatMap(project -> createProjectTeams(project).stream())
+                .toList();
+        List<String> teamNames = gitLabProjects.stream()
+                .map(gitLabProject -> "%s_%s".formatted(
                         gitLabProject.getFullPath(),
-                        gitLabProject.getMaxAccessLevel().getStringValue().toString()));
-    
-            qm.addUserToTeams(qm.getOidcUser(user.getUsername()), teamNames);
-    
-            for (Team team : teams)
-                qm.updateTeam(team);
-    
-            for (Project project : projects)
-                qm.updateProject(project, false);
-        } catch (IOException | URISyntaxException ex) {
-            LOGGER.error("An error occurred while querying GitLab GraphQL API", ex);
-            this.handleException(LOGGER, ex);
-        }
+                        gitLabProject.getMaxAccessLevel().getStringValue().toString()))
+                .toList();
+
+        qm.addUserToTeams(qm.getOidcUser(user.getUsername()), teamNames);
+
+        teams = teams.stream().map(team -> qm.updateTeam(team)).toList();
+        projects = projects.stream().map(project -> qm.updateProject(project, false)).toList();
     }
 
     private List<Project> createProjects(List<GitLabProject> gitLabProjects) {
         List<Project> projects = new ArrayList<>();
 
-        for (GitLabProject gitLabProject : gitLabProjects) {
+        for (var gitLabProject : gitLabProjects) {
             Project project = qm.getProject(gitLabProject.getFullPath(), null);
 
             if (project == null) {
@@ -138,20 +129,17 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     private List<Team> createProjectTeams(Project project) {
         List<Team> teams = new ArrayList<>();
 
-        for (GitLabRole role : GitLabRole.values()) {
+        for (var role : GitLabRole.values()) {
             final String teamName = "%s_%s".formatted(project.getName(), role.name());
 
             Team team = qm.getTeam(teamName);
             team = team != null ? team : qm.createTeam(teamName);
 
-            List<Permissions> rolePermissions = gitLabClient.getRolePermissions(role);
-            List<Permission> permissions = new ArrayList<>(team.getPermissions());
-
-            for (Permissions rolePermission : rolePermissions) {
-                Permission permission = qm.getPermission(rolePermission.name());
-                if (permission != null && !permissions.contains(permission))
-                    permissions.add(permission);
-            }
+            var permissions = gitLabClient.getRolePermissions(role).stream()
+                    .map(rolePermission -> qm.getPermission(rolePermission.name()))
+                    .filter(permission -> permission != null)
+                    .distinct()
+                    .toList();
 
             team.setPermissions(permissions);
             project.addAccessTeam(team);

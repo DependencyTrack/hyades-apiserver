@@ -46,10 +46,9 @@ public class GitLabAuthenticationCustomizer extends DefaultOidcAuthenticationCus
             List<String> groups = profile.getGroups();
             groups = groups != null ? groups : new ArrayList<String>();
 
-            for (String groupName : groups) {
-                if (qm.getOidcGroup(groupName) == null)
-                    qm.createOidcGroup(groupName);
-            }
+            groups.stream()
+                    .filter(groupName -> groupName == null)
+                    .map(groupName -> qm.createOidcGroup(groupName));
         }
 
         Event.dispatch(new GitLabSyncEvent(accessToken, user));
