@@ -73,7 +73,7 @@ public class GitLabSyncTask implements LoggableSubscriber {
 
         try (QueryManager qm = new QueryManager()) {
             GitLabClient gitLabClient = new GitLabClient(accessToken);
-            GitLabSyncer syncer = new GitLabSyncer(accessToken, user, gitLabClient);
+            GitLabSyncer syncer = new GitLabSyncer(user, gitLabClient);
             syncer.setQueryManager(qm);
             syncer.synchronize();
         }
