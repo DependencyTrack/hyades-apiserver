@@ -53,7 +53,6 @@ public class GitLabClient {
     private static final String GRAPHQL_ENDPOINT = "/api/graphql";
 
     private final String accessToken;
-    private final GitLabSyncer syncer;
     private final URI baseURL;
 
     private final Map<GitLabRole, List<Permissions>> rolePermissions = Map.of(
@@ -108,61 +107,55 @@ public class GitLabClient {
                     Permissions.TAG_MANAGEMENT,
                     Permissions.TAG_MANAGEMENT_DELETE));
 
-    public GitLabClient(final GitLabSyncer syncer, final URI baseURL, final String accessToken) {
+    public GitLabClient(final URI baseURL, final String accessToken) {
         this.accessToken = accessToken;
         this.baseURL = baseURL;
-        this.syncer = syncer;
     }
 
-    public List<GitLabProject> getGitLabProjects() {
+    public List<GitLabProject> getGitLabProjects() throws IOException, URISyntaxException {
         List<GitLabProject> projects = new ArrayList<>();
 
         JSONObject variables = new JSONObject();
         JSONObject queryObject = new JSONObject();
 
-        try {
-            queryObject.put("query", resourceToString("/graphql/gitlab-projects.graphql", StandardCharsets.UTF_8));
+        queryObject.put("query", resourceToString("/graphql/gitlab-projects.graphql", StandardCharsets.UTF_8));
 
-            URIBuilder builder = new URIBuilder(baseURL.toString()).setPath(GRAPHQL_ENDPOINT);
+        URIBuilder builder = new URIBuilder(baseURL.toString()).setPath(GRAPHQL_ENDPOINT);
 
-            HttpPost request = new HttpPost(builder.build());
-            request.setHeader("Authorization", "Bearer " + accessToken);
-            request.setHeader("Content-Type", "application/json");
+        HttpPost request = new HttpPost(builder.build());
+        request.setHeader("Authorization", "Bearer " + accessToken);
+        request.setHeader("Content-Type", "application/json");
 
-            while (true) {
-                queryObject.put("variables", variables);
+        while (true) {
+            queryObject.put("variables", variables);
 
-                StringEntity entity = new StringEntity(queryObject.toString(), StandardCharsets.UTF_8);
-                request.setEntity(entity);
+            StringEntity entity = new StringEntity(queryObject.toString(), StandardCharsets.UTF_8);
+            request.setEntity(entity);
 
-                try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
-                    HttpEntity responseEntity = response.getEntity();
+            try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
+                HttpEntity responseEntity = response.getEntity();
 
-                    if (responseEntity == null)
-                        break;
+                if (responseEntity == null)
+                    break;
 
-                    String responseBody = EntityUtils.toString(responseEntity);
-                    JSONObject responseData = JSONValue.parse(responseBody, JSONObject.class);
-                    JSONObject dataObject = (JSONObject) responseData.get("data");
-                    JSONObject projectsObject = (JSONObject) dataObject.get("projects");
-                    JSONArray nodes = (JSONArray) projectsObject.get("nodes");
+                String responseBody = EntityUtils.toString(responseEntity);
+                JSONObject responseData = JSONValue.parse(responseBody, JSONObject.class);
+                JSONObject dataObject = (JSONObject) responseData.get("data");
+                JSONObject projectsObject = (JSONObject) dataObject.get("projects");
+                JSONArray nodes = (JSONArray) projectsObject.get("nodes");
 
-                    for (Object nodeObject : nodes) {
-                        JSONObject node = (JSONObject) nodeObject;
-                        projects.add(GitLabProject.parse(node.toJSONString()));
-                    }
-
-                    JSONObject pageInfo = (JSONObject) projectsObject.get("pageInfo");
-
-                    if (!(boolean) pageInfo.get("hasNextPage"))
-                        break;
-
-                    variables.put("cursor", pageInfo.getAsString("endCursor"));
+                for (Object nodeObject : nodes) {
+                    JSONObject node = (JSONObject) nodeObject;
+                    projects.add(GitLabProject.parse(node.toJSONString()));
                 }
+
+                JSONObject pageInfo = (JSONObject) projectsObject.get("pageInfo");
+
+                if (!(boolean) pageInfo.get("hasNextPage"))
+                    break;
+
+                variables.put("cursor", pageInfo.getAsString("endCursor"));
             }
-        } catch (IOException | URISyntaxException ex) {
-            LOGGER.error("An error occurred while querying GitLab GraphQL API", ex);
-            syncer.handleException(LOGGER, ex);
         }
 
         return projects;
