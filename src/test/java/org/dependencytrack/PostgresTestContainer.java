@@ -18,12 +18,15 @@
  */
 package org.dependencytrack;
 
+import alpine.server.util.DbUtil;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import org.dependencytrack.persistence.migration.MigrationInitializer;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.TestcontainersConfiguration;
+
+import java.sql.Connection;
 
 public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestContainer> {
 
@@ -61,6 +64,13 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
         dataSource.setPassword(getPassword());
 
         try {
+            try (final Connection connection = dataSource.getConnection()) {
+                // Ensure that DbUtil#isPostgreSQL will work as expected.
+                // Some legacy code ported over from v4 still uses this.
+                // TODO: Remove once DbUtil#isPostgreSQL is no longer used.
+                DbUtil.initPlatformName(connection);
+            }
+
             MigrationInitializer.runMigration(dataSource);
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);
