@@ -63,7 +63,7 @@ public class GitLabSyncerTest extends PersistenceCapableTest {
      */
     @Test
     public void testIntegrationMetadata() {
-        GitLabSyncer extension = new GitLabSyncer("test_token", user, gitLabClient);
+        GitLabSyncer extension = new GitLabSyncer(user, gitLabClient);
         Assert.assertEquals("GitLab", extension.name());
         Assert.assertEquals("Synchronizes user permissions from connected GitLab instance", extension.description());
     }
@@ -81,7 +81,7 @@ public class GitLabSyncerTest extends PersistenceCapableTest {
                 IConfigProperty.PropertyType.BOOLEAN,
                 null
         );
-        GitLabSyncer extension = new GitLabSyncer("test_token", user, gitLabClient);
+        GitLabSyncer extension = new GitLabSyncer(user, gitLabClient);
         extension.setQueryManager(qm);
         Assert.assertTrue(extension.isEnabled());
     }
@@ -99,7 +99,7 @@ public class GitLabSyncerTest extends PersistenceCapableTest {
                 IConfigProperty.PropertyType.BOOLEAN,
                 null
         );
-        GitLabSyncer extension = new GitLabSyncer("test_token", user, gitLabClient);
+        GitLabSyncer extension = new GitLabSyncer(user, gitLabClient);
         extension.setQueryManager(qm);
         Assert.assertFalse(extension.isEnabled());
     }
@@ -123,7 +123,7 @@ public class GitLabSyncerTest extends PersistenceCapableTest {
         OidcUser testUser = new OidcUser();
         testUser.setUsername("test_user");
         GitLabClient mockClient = mock(GitLabClient.class);
-        GitLabSyncer extension = new GitLabSyncer("test_token", testUser, mockClient);
+        GitLabSyncer extension = new GitLabSyncer(testUser, mockClient);
         extension.setQueryManager(qm);
         try{
             when(mockClient.getGitLabProjects()).thenReturn(Arrays.asList(new GitLabProject("project1", "this/test/project1", GitLabRole.MAINTAINER),

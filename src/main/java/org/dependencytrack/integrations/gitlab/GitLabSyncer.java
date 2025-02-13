@@ -43,18 +43,12 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     private static final String GENERAL_GROUP = GENERAL_BASE_URL.getGroupName();
     private static final String ROLE_CLAIM_PREFIX = "https://gitlab.org/claims/groups/";
 
-    private final String accessToken;
     private final OidcUser user;
     private GitLabClient gitLabClient;
 
-    public GitLabSyncer(final String accessToken, final OidcUser user, final GitLabClient gitlabClient) {
-        this.accessToken = accessToken;
+    public GitLabSyncer(final OidcUser user, final GitLabClient gitlabClient) {
         this.user = user;
         this.gitLabClient = gitlabClient;
-    }
-
-    public String getAccessToken() {
-        return accessToken;
     }
 
     @Override
@@ -76,24 +70,26 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
 
     @Override
     public void synchronize() {
-        final URI gitLabUrl = URI.create(Config.getInstance().getProperty(Config.AlpineKey.OIDC_ISSUER));
-        gitLabClient = new GitLabClient(this, gitLabUrl, accessToken);
+        try {
+            List<GitLabProject> gitLabProjects = gitLabClient.getGitLabProjects();
+            List<Project> projects = createProjects(gitLabProjects);
+            List<Team> teams = projects.stream()
+                    .flatMap(project -> createProjectTeams(project).stream())
+                    .toList();
+            List<String> teamNames = gitLabProjects.stream()
+                    .map(gitLabProject -> "%s_%s".formatted(
+                            gitLabProject.getFullPath(),
+                            gitLabProject.getMaxAccessLevel().getStringValue().toString()))
+                    .toList();
 
-        List<GitLabProject> gitLabProjects = gitLabClient.getGitLabProjects();
-        List<Project> projects = createProjects(gitLabProjects);
-        List<Team> teams = projects.stream()
-                .flatMap(project -> createProjectTeams(project).stream())
-                .toList();
-        List<String> teamNames = gitLabProjects.stream()
-                .map(gitLabProject -> "%s_%s".formatted(
-                        gitLabProject.getFullPath(),
-                        gitLabProject.getMaxAccessLevel().getStringValue().toString()))
-                .toList();
+            qm.addUserToTeams(qm.getOidcUser(user.getUsername()), teamNames);
 
-        qm.addUserToTeams(qm.getOidcUser(user.getUsername()), teamNames);
-
-        teams = teams.stream().map(team -> qm.updateTeam(team)).toList();
-        projects = projects.stream().map(project -> qm.updateProject(project, false)).toList();
+            teams = teams.stream().map(team -> qm.updateTeam(team)).toList();
+            projects = projects.stream().map(project -> qm.updateProject(project, false)).toList();
+        } catch (IOException | URISyntaxException ex) {
+            LOGGER.error("An error occurred while querying GitLab GraphQL API", ex);
+            handleException(LOGGER, ex);
+        }
     }
 
     private List<Project> createProjects(List<GitLabProject> gitLabProjects) {
