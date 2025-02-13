@@ -82,6 +82,8 @@ public class GitLabSyncTask implements LoggableSubscriber {
             syncer.synchronize();
         }
 
+        LOGGER.info("GitLab sync complete");
+
         // TODO:
         // - [X] Assign authenticated OIDC user the VIEW_PORTFOLIO permission
         // - [ ] Get user GitLab project memberships (use alpine.security.crypto.DataEncryption for request)
