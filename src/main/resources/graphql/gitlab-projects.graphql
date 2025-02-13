@@ -1,5 +1,5 @@
 query ($cursor: String) {
-  projects(membership: true, first: 10, after: $cursor) {
+  projects(archived: EXCLUDE, membership: true, first: 10, after: $cursor) {
     nodes {
       name
       fullPath
