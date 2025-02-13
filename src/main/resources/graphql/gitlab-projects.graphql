@@ -1,5 +1,15 @@
-query ($cursor: String) {
-  projects(archived: EXCLUDE, membership: true, first: 10, after: $cursor) {
+query (
+  $cursor: String
+  $archived: ProjectArchived = EXCLUDE
+  $topics: [String!] = []
+) {
+  projects(
+    archived: $archived
+    topics: $topics
+    membership: true
+    first: 100
+    after: $cursor
+  ) {
     nodes {
       name
       fullPath
