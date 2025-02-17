@@ -636,4 +636,98 @@
                                  onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="WORKFLOW_STATE" validate="true"/>
     </changeSet>
+
+    <changeSet id="v5.6.0-13-dev" author="pkwiatkowski1">
+        <addColumn tableName="APIKEY">
+            <column name="IS_LEGACY" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PUBLIC_ID" type="VARCHAR(5)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addUniqueConstraint columnNames="PUBLIC_ID" constraintName="APIKEY_PUBLIC_IDX" tableName="APIKEY"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-13" author="jhoward-lm">
+        <createTable ifNotExists="true" tableName="ROLE">
+            <column name="ID" type="BIGINT">
+                <constraints primaryKeyName="ROLE_PK" primaryKey="true" />
+            </column>
+            <column name="DESCRIPTION" type="TEXT" />
+            <column name="NAME" type="TEXT" />
+        </createTable>
+
+        <createTable ifNotExists="true" tableName="ROLES_PERMISSIONS">
+            <column name="ROLE_ID" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="ROLES_PERMISSIONS_ROLE_FK"
+                    referencedTableName="ROLE"
+                    referencedColumnNames="ID" uniqueConstraintName="ROLES_PERMISSIONS_IDX" />
+            </column>
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="ROLES_PERMISSIONS_PERMISSION_FK"
+                    referencedTableName="PERMISSION" referencedColumnNames="ID"
+                    uniqueConstraintName="ROLES_PERMISSIONS_IDX" />
+            </column>
+        </createTable>
+
+        <createTable ifNotExists="true" tableName="PROJECT_ACCESS_ROLES">
+            <column name="ID" type="BIGINT">
+                <constraints primaryKey="true" />
+            </column>
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="PROJECT_ACCESS_ROLES_PROJECT_FK"
+                    referencedTableName="PROJECT" referencedColumnNames="ID"
+                    uniqueConstraintName="PROJECT_ACCESS_ROLES_IDX" />
+            </column>
+            <column name="ROLE_ID" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="PROJECT_ACCESS_ROLES_ROLE_FK"
+                    referencedTableName="ROLE" referencedColumnNames="ID"
+                    uniqueConstraintName="PROJECT_ACCESS_ROLES_IDX" />
+            </column>
+        </createTable>
+
+        <createTable ifNotExists="true" tableName="LDAPUSERS_PROJECTS_ROLES">
+            <column name="LDAPUSER_ID" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="LDAPUSERS_PROJECTS_ROLES_LDAPUSER_FK"
+                    referencedTableName="LDAPUSER" referencedColumnNames="ID"
+                    uniqueConstraintName="LDAPUSER_PROJECT_ACCESS_ROLE_IDX" />
+            </column>
+            <column name="PROJECT_ACCESS_ROLE_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="LDAPUSERS_PROJECTS_ROLES_PROJECT_ACCESS_ROLE_FK"
+                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID"
+                    uniqueConstraintName="LDAPUSER_PROJECT_ACCESS_ROLE_IDX" />
+            </column>
+        </createTable>
+
+        <createTable ifNotExists="true" tableName="MANAGEDUSERS_PROJECTS_ROLES">
+            <column name="MANAGEDUSER_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="MANAGEDUSERS_PROJECTS_ROLES_MANAGEDUSER_FK"
+                    referencedTableName="MANAGEDUSER" referencedColumnNames="ID"
+                    uniqueConstraintName="MANAGEDUSER_PROJECT_ACCESS_ROLE_IDX" />
+            </column>
+            <column name="PROJECT_ACCESS_ROLE_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="MANAGEDUSERS_PROJECTS_ROLES_PROJECT_ACCESS_ROLE_FK"
+                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID"
+                    uniqueConstraintName="MANAGEDUSER_PROJECT_ACCESS_ROLE_IDX" />
+            </column>
+        </createTable>
+
+        <createTable ifNotExists="true" tableName="OIDCUSERS_PROJECTS_ROLES">
+            <column name="OIDCUSER_ID" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="OIDCUSERS_PROJECTS_ROLES_OIDCUSER_FK"
+                    referencedTableName="OIDCUSER" referencedColumnNames="ID"
+                    uniqueConstraintName="OIDCUSER_PROJECT_ACCESS_ROLE_IDX" />
+            </column>
+            <column name="PROJECT_ACCESS_ROLE_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="OIDCUSERS_PROJECTS_ROLES_PROJECT_ACCESS_ROLE_FK"
+                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID"
+                    uniqueConstraintName="OIDCUSER_PROJECT_ACCESS_ROLE_IDX" />
+            </column>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>
