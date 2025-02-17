@@ -906,8 +906,25 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
-        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                [
+                  {
+                    "active": true,
+                    "hasChildren": false,
+                    "isLatest": false,
+                    "name": "acme-child-app-a",
+                    "uuid": "${json-unit.any-string}"
+                  },
+                  {
+                    "active": true,
+                    "hasChildren": false,
+                    "isLatest": false,
+                    "name": "acme-child-app-b",
+                    "uuid": "${json-unit.any-string}"
+                  }
+                ]
+                """);
 
         // Additionally grant access to acme-child-app-a.
         childProjectA.addAccessTeam(team);
@@ -917,8 +934,8 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 [
                   {
                     "uuid": "${json-unit.any-string}",
@@ -930,6 +947,13 @@ public class ProjectResourceTest extends ResourceTest {
                         "name": "%s"
                       }
                     ],
+                    "hasChildren": false
+                  },
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app-b",
+                    "active": true,
+                    "isLatest": false,
                     "hasChildren": false
                   }
                 ]

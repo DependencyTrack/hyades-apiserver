@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Bundle-Description: DataNucleus plugin for Dependency-Track-specific functionality
+Bundle-License: https://apache.org/licenses/LICENSE-2.0.txt
+Bundle-ManifestVersion: 2
+Bundle-Name: datanucleus-dependencytrack
+Bundle-SymbolicName: org.dependencytrack.persistence.datanucleus;singleton:=true
+Bundle-Version: ${project.version}

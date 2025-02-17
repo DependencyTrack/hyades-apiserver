@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+  TODO: This should live in a separate JAR to avoid conflicts.
+   META-INF/MANIFEST.MF is also part of this plugin.
+
+  https://www.datanucleus.org/products/accessplatform_6_0/extensions/extensions.html
+-->
+<plugin id="datanucleus-dependencytrack" name="Dependency-Track" provider-name="OWASP">
+    <extension point="org.datanucleus.store.rdbms.sql_method">
+        <sql-method
+                class="java.lang.Object"
+                method="isAccessibleBy"
+                evaluator="org.dependencytrack.persistence.datanucleus.method.ProjectIsAccessibleByMethod"/>
+    </extension>
+</plugin>
