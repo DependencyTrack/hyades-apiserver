@@ -26,6 +26,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+
+import com.google.common.util.concurrent.Striped;
 
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.integrations.PermissionsSyncer;
@@ -44,9 +47,12 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     private static final String ROLE_CLAIM_PREFIX = "https://gitlab.org/claims/groups/";
 
     private final OidcUser user;
+    private final Striped<Lock> locks;
+
     private GitLabClient gitLabClient;
 
     public GitLabSyncer(final OidcUser user, final GitLabClient gitlabClient) {
+        this.locks = Striped.lock(128);
         this.user = user;
         this.gitLabClient = gitlabClient;
     }
@@ -96,20 +102,28 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
         List<Project> projects = new ArrayList<>();
 
         for (var gitLabProject : gitLabProjects) {
-            Project project = qm.getProject(gitLabProject.getFullPath(), null);
+            final Lock lock = locks.get(gitLabProject.getFullPath());
+            lock.lock();
 
-            if (project == null) {
-                LOGGER.debug("Creating project " + gitLabProject.getFullPath());
+            try {
+                Project project = qm.getProject(gitLabProject.getFullPath(), null);
 
-                project = new Project();
-                project.setName(gitLabProject.getFullPath());
-                project = qm.persist(project);
+                if (project == null) {
+                    LOGGER.debug("Creating project " + gitLabProject.getFullPath());
+
+                    project = new Project();
+                    project.setName(gitLabProject.getFullPath());
+                    project = qm.persist(project);
+                }
+
+                project.setActive(project.getLastBomImport() != null);
+                if (!project.isActive() && project.getInactiveSince() == null)
+                    project.setInactiveSince(new Date());
+
+                projects.add(qm.updateProject(project, false));
+            } finally {
+                lock.unlock();
             }
-
-            project.setActive(project.getLastBomImport() != null);
-            if (!project.isActive() && project.getInactiveSince() == null)
-                project.setInactiveSince(new Date());
-            projects.add(qm.updateProject(project, false));
         }
 
         return projects;
@@ -127,21 +141,27 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
 
         for (var role : GitLabRole.values()) {
             final String teamName = "%s_%s".formatted(project.getName(), role.name());
+            final Lock lock = locks.get(project.getName());
+            lock.lock();
 
-            Team team = qm.getTeam(teamName);
-            team = team != null ? team : qm.createTeam(teamName);
+            try {
+                Team team = qm.getTeam(teamName);
+                team = team != null ? team : qm.createTeam(teamName);
 
-            var permissions = gitLabClient.getRolePermissions(role).stream()
-                    .map(rolePermission -> qm.getPermission(rolePermission.name()))
-                    .filter(permission -> permission != null)
-                    .distinct()
-                    .toList();
+                var permissions = gitLabClient.getRolePermissions(role).stream()
+                        .map(rolePermission -> qm.getPermission(rolePermission.name()))
+                        .filter(permission -> permission != null)
+                        .distinct()
+                        .toList();
 
-            team.setPermissions(permissions);
-            project.addAccessTeam(team);
-            qm.updateProject(project, false);
+                team.setPermissions(permissions);
+                project.addAccessTeam(team);
+                qm.updateProject(project, false);
 
-            teams.add(team);
+                teams.add(team);
+            } finally {
+                lock.unlock();
+            }
         }
 
         return teams;
