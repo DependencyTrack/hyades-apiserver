@@ -71,13 +71,7 @@ import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 class ApiRequestStatementCustomizer implements StatementCustomizer {
 
     static final String PARAMETER_PROJECT_ACL_TEAM_IDS = "projectAclTeamIds";
-    static final String TEMPLATE_PROJECT_ACL_CONDITION = """
-            EXISTS (
-              SELECT 1
-                FROM "PROJECT_ACCESS_TEAMS"
-               WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "%s"."ID"
-                 AND "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ANY(:projectAclTeamIds)
-            )""";
+    static final String TEMPLATE_PROJECT_ACL_CONDITION = "HAS_PROJECT_ACCESS(\"%s\".\"ID\", :projectAclTeamIds)";
 
     private final AlpineRequest apiRequest;
 
@@ -214,9 +208,9 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
     }
 
     private boolean hasAccessManagementPermission(final StatementContext ctx, final Principal principal) throws SQLException {
-        // NB: This could be simplified if Alpine's AuthenticationFilter would load all
-        // effective permissions of the authenticated user, and make them available in
-        // the Principal object. Then, we wouldn't need to perform any database queries here.
+        // TODO: After upgrading to Alpine >= 3.2.0, this should become:
+        //   apiRequest.getEffectivePermission().contains(Permissions.ACCESS_MANAGEMENT.name())
+        // https://github.com/stevespringett/Alpine/pull/764
 
         return switch (principal) {
             case ApiKey apiKey -> hasAccessManagementPermission(ctx, apiKey);

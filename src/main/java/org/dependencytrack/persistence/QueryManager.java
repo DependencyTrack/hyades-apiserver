@@ -2052,34 +2052,22 @@ public class QueryManager extends AlpineQueryManager {
      */
     public Map.Entry<String, Map<String, Object>> getProjectAclSqlCondition(final String projectTableAlias) {
         if (request == null) {
-            return Map.entry(/* true */ "1=1", Collections.emptyMap());
+            return Map.entry("TRUE", Collections.emptyMap());
         }
 
         if (principal == null || !isEnabled(ACCESS_MANAGEMENT_ACL_ENABLED) || hasAccessManagementPermission(principal)) {
-            return Map.entry(/* true */ "1=1", Collections.emptyMap());
+            return Map.entry("TRUE", Collections.emptyMap());
         }
 
         final var teamIds = new ArrayList<>(getTeamIds(principal));
         if (teamIds.isEmpty()) {
-            return Map.entry(/* false */ "1=2", Collections.emptyMap());
+            return Map.entry("FALSE", Collections.emptyMap());
         }
 
-
-        // NB: Need to work around the fact that the RDBMSes can't agree on how to do member checks. Oh joy! :)))
         final var params = new HashMap<String, Object>();
-        final var teamIdChecks = new ArrayList<String>();
-        for (int i = 0; i < teamIds.size(); i++) {
-            teamIdChecks.add("\"PROJECT_ACCESS_TEAMS\".\"TEAM_ID\" = :teamId" + i);
-            params.put("teamId" + i, teamIds.get(i));
-        }
+        params.put("projectAclTeamIds", teamIds.toArray(new Long[0]));
 
-        return Map.entry("""
-                EXISTS (
-                  SELECT 1
-                    FROM "PROJECT_ACCESS_TEAMS"
-                   WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "%s"."ID"
-                     AND (%s)
-                )""".formatted(projectTableAlias, String.join(" OR ", teamIdChecks)), params);
+        return Map.entry("HAS_PROJECT_ACCESS(\"%s\".\"ID\", :projectAclTeamIds)".formatted(projectTableAlias), params);
     }
 
     /**
