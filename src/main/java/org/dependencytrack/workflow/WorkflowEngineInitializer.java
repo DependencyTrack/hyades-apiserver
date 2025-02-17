@@ -135,6 +135,27 @@ public class WorkflowEngineInitializer implements ServletContextListener {
             config.activityTaskDispatcher().setMinPollInterval(Duration.ofMillis(activityTaskDispatcherMinPollIntervalMillis));
         }
 
+        final int workflowRetentionDays = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_RETENTION_DAYS);
+        final int workflowRetentionDeletionBatchSize = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_RETENTION_DELETION_BATCH_SIZE);
+        final int workflowRetentionWorkerInitialDelayMillis = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_RETENTION_WORKER_INITIAL_DELAY_MS);
+        final int workflowRetentionWorkerIntervalMillis = Config.getInstance().getPropertyAsInt(
+                ConfigKey.WORKFLOW_ENGINE_RETENTION_WORKER_INTERVAL_MS);
+        if (workflowRetentionDays > 0) {
+            config.retention().setDuration(Duration.ofDays(workflowRetentionDays));
+        }
+        if (workflowRetentionDeletionBatchSize > 0) {
+            config.retention().setDeletionBatchSize(workflowRetentionDeletionBatchSize);
+        }
+        if (workflowRetentionWorkerInitialDelayMillis > 0) {
+            config.retention().setWorkerInitialDelay(Duration.ofMillis(workflowRetentionWorkerInitialDelayMillis));
+        }
+        if (workflowRetentionWorkerIntervalMillis > 0) {
+            config.retention().setWorkerInterval(Duration.ofMillis(workflowRetentionWorkerIntervalMillis));
+        }
+
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             config.setMeterRegistry(Metrics.getRegistry());
         }

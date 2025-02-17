@@ -273,7 +273,7 @@ public class WorkflowEngine implements Closeable {
                     .bindTo(config.meterRegistry());
         }
         retentionExecutor.scheduleAtFixedRate(
-                new WorkflowRetentionWorker(jdbi, config.retention().deletionLimit(), config.retention().duration()),
+                new WorkflowRetentionWorker(jdbi, config.retention().deletionBatchSize(), config.retention().duration()),
                 config.retention().workerInitialDelay().toMillis(),
                 config.retention().workerInterval().toMillis(),
                 TimeUnit.MILLISECONDS);

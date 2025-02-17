@@ -32,12 +32,12 @@ final class WorkflowRetentionWorker implements Runnable {
     private static final String LOCK_NAME = "workflow-retention";
 
     private final Jdbi jdbi;
-    private final int deletionLimit;
+    private final int deletionBatchSize;
     private final Duration retentionDuration;
 
-    WorkflowRetentionWorker(final Jdbi jdbi, final int deletionLimit, final Duration retentionDuration) {
+    WorkflowRetentionWorker(final Jdbi jdbi, final int deletionBatchSize, final Duration retentionDuration) {
         this.jdbi = jdbi;
-        this.deletionLimit = deletionLimit;
+        this.deletionBatchSize = deletionBatchSize;
         this.retentionDuration = retentionDuration;
     }
 
@@ -60,7 +60,7 @@ final class WorkflowRetentionWorker implements Runnable {
                     return 0;
                 }
 
-                return dao.deleteExpiredRuns(cutoff, deletionLimit);
+                return dao.deleteExpiredRuns(cutoff, deletionBatchSize);
             });
 
             if (LOGGER.isDebugEnabled()) {

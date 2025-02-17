@@ -73,6 +73,10 @@ public enum ConfigKey implements Config.Key {
     WORKFLOW_ENGINE_SCHEDULER_INITIAL_DELAY_MS("workflow.engine.scheduler.initial.delay.ms", null),
     WORKFLOW_ENGINE_SCHEDULER_POLL_INTERVAL_MS("workflow.engine.scheduler.poll.interval.ms", null),
     WORKFLOW_ENGINE_INJECT_ACTIVITY_FAULTS("workflow.engine.inject.activity.faults", false),
+    WORKFLOW_ENGINE_RETENTION_DAYS("workflow.engine.retention.days", null),
+    WORKFLOW_ENGINE_RETENTION_DELETION_BATCH_SIZE("workflow.engine.retention.deletion.batch.size", null),
+    WORKFLOW_ENGINE_RETENTION_WORKER_INITIAL_DELAY_MS("workflow.engine.retention.worker.initial.delay.ms", null),
+    WORKFLOW_ENGINE_RETENTION_WORKER_INTERVAL_MS("workflow.engine.retention.worker.interval.ms", null),
 
     DEV_SERVICES_ENABLED("dev.services.enabled", false),
     DEV_SERVICES_IMAGE_FRONTEND("dev.services.image.frontend", "ghcr.io/dependencytrack/hyades-frontend:snapshot"),

@@ -56,17 +56,17 @@ public class WorkflowEngineConfig {
 
     public static class RetentionConfig {
 
-        private int deletionLimit = 100;
+        private int deletionBatchSize = 100;
         private Duration duration = Duration.ofDays(1);
         private Duration workerInitialDelay = Duration.ofMinutes(3);
         private Duration workerInterval = Duration.ofMinutes(5);
 
-        public int deletionLimit() {
-            return deletionLimit;
+        public int deletionBatchSize() {
+            return deletionBatchSize;
         }
 
-        public void setDeletionLimit(final int deletionLimit) {
-            this.deletionLimit = deletionLimit;
+        public void setDeletionBatchSize(final int deletionBatchSize) {
+            this.deletionBatchSize = deletionBatchSize;
         }
 
         public Duration duration() {
