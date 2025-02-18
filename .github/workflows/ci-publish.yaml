@@ -58,7 +58,7 @@ jobs:
       security-events: write # Required to upload trivy's SARIF output
     secrets:
       registry-0-usr: ${{ github.repository_owner }}
-      registry-0-psw: ${{ secrets.GITHUB_TOKEN }}
+      registry-0-psw: ${{ github.repository_owner == 'DependencyTrack' && secrets.BOT_IMAGE_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
   update-github-release:
     runs-on: ubuntu-latest
