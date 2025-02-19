@@ -96,7 +96,7 @@ public class ProjectMaintenanceTask implements Subscriber {
                     numDeletedLastBatch = deletedProjectsBatch.size();
                     numDeletedTotal.addAndGet(numDeletedLastBatch);
                     deletedProjectsBatch.forEach(deletedProject ->
-                            LOGGER.info("Inactive project deleted: [name:%s, version:%s, inactive since:%s]".formatted(deletedProject.name(), deletedProject.version(), deletedProject.inactiveSince())));
+                            LOGGER.info("Inactive project deleted: [name:%s, version:%s, inactive since:%s, uuid:%s]".formatted(deletedProject.name(), deletedProject.version(), deletedProject.inactiveSince(), deletedProject.uuid())));
                 }
             } else {
                 final int versionCountThreshold = withJdbiHandle(handle ->
@@ -111,7 +111,7 @@ public class ProjectMaintenanceTask implements Subscriber {
                                     final var deletedProjects = projectDao.retainLastXInactiveProjects(projectName, versionCountThreshold);
                                     numDeletedTotal.addAndGet(deletedProjects.size());
                                     deletedProjects.forEach(deletedProject ->
-                                            LOGGER.info("Inactive project deleted: [name:%s, version:%s, inactive since:%s]".formatted(deletedProject.name(), deletedProject.version(), deletedProject.inactiveSince())));
+                                            LOGGER.info("Inactive project deleted: [name:%s, version:%s, inactive since:%s, uuid:%s]".formatted(deletedProject.name(), deletedProject.version(), deletedProject.inactiveSince(), deletedProject.uuid())));
                                 }
                                 return projectBatch.size();
                             });

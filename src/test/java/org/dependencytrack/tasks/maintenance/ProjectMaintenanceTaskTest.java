@@ -210,4 +210,24 @@ public class ProjectMaintenanceTaskTest extends PersistenceCapableTest {
         assertThatNoException().isThrownBy(() -> task.inform(new ProjectMaintenanceEvent()));
         assertThat(qm.getProjects()).isNotNull();
     }
+
+    @Test
+    public void testWithProjectRetentionDisabledWithEmptyValue() {
+        qm.createConfigProperty(
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getGroupName(),
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyName(),
+                "",
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getPropertyType(),
+                MAINTENANCE_PROJECTS_RETENTION_TYPE.getDescription());
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setInactiveSince(DateUtil.parseShortDate("20100109"));
+        qm.persist(project);
+
+        final var task = new ProjectMaintenanceTask();
+        assertThatNoException().isThrownBy(() -> task.inform(new ProjectMaintenanceEvent()));
+        assertThat(qm.getProjects()).isNotNull();
+    }
 }

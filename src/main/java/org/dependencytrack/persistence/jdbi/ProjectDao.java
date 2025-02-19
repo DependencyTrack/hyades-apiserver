@@ -26,7 +26,6 @@ import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
-import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
@@ -241,13 +240,15 @@ public interface ProjectDao {
             DELETE
               FROM "PROJECT"
              WHERE "ID" IN (SELECT "ID" FROM "CTE")
-             RETURNING "NAME", "VERSION", "INACTIVE_SINCE"
+             RETURNING "NAME", "VERSION", "INACTIVE_SINCE", "UUID"
            """)
-    @GetGeneratedKeys({"NAME", "VERSION", "INACTIVE_SINCE"})
     @RegisterConstructorMapper(DeletedProject.class)
     List<DeletedProject> deleteInactiveProjectsForRetentionDuration(@Bind final Instant retentionCutOff, @Bind final int batchSize);
 
-    record DeletedProject(@ColumnName("NAME") String name, @ColumnName("VERSION") String version, @ColumnName("INACTIVE_SINCE") Instant inactiveSince) {
+    record DeletedProject(@ColumnName("NAME") String name,
+                          @ColumnName("VERSION") String version,
+                          @ColumnName("INACTIVE_SINCE") Instant inactiveSince,
+                          @ColumnName("UUID") UUID uuid) {
     }
 
     @SqlQuery("""
@@ -263,9 +264,8 @@ public interface ProjectDao {
                  ORDER BY "PROJECT"."INACTIVE_SINCE" DESC
                  LIMIT :versionCountThreshold
                 )
-            RETURNING "NAME", "VERSION", "INACTIVE_SINCE"
+            RETURNING "NAME", "VERSION", "INACTIVE_SINCE", "UUID"
             """)
-    @GetGeneratedKeys({"NAME", "VERSION", "INACTIVE_SINCE"})
     @RegisterConstructorMapper(DeletedProject.class)
     List<DeletedProject> retainLastXInactiveProjects(@Bind final String projectName, @Bind final int versionCountThreshold);
 
