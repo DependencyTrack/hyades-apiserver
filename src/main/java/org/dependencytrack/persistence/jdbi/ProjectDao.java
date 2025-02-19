@@ -20,11 +20,13 @@ package org.dependencytrack.persistence.jdbi;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.annotation.Nullable;
+import org.jdbi.v3.core.mapper.reflect.ColumnName;
 import org.jdbi.v3.json.Json;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
+import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
@@ -228,7 +230,7 @@ public interface ProjectDao {
             """)
     int deleteProject(@Bind final UUID projectUuid);
 
-    @SqlUpdate("""
+    @SqlQuery("""
             WITH "CTE" AS (
               SELECT "ID"
                 FROM "PROJECT"
@@ -239,10 +241,16 @@ public interface ProjectDao {
             DELETE
               FROM "PROJECT"
              WHERE "ID" IN (SELECT "ID" FROM "CTE")
+             RETURNING "NAME", "VERSION", "INACTIVE_SINCE"
            """)
-    int deleteInactiveProjectsForRetentionDuration(@Bind final Instant retentionCutOff, @Bind final int batchSize);
+    @GetGeneratedKeys({"NAME", "VERSION", "INACTIVE_SINCE"})
+    @RegisterConstructorMapper(DeletedProject.class)
+    List<DeletedProject> deleteInactiveProjectsForRetentionDuration(@Bind final Instant retentionCutOff, @Bind final int batchSize);
 
-    @SqlUpdate("""
+    record DeletedProject(@ColumnName("NAME") String name, @ColumnName("VERSION") String version, @ColumnName("INACTIVE_SINCE") Instant inactiveSince) {
+    }
+
+    @SqlQuery("""
            DELETE
             FROM "PROJECT"
             WHERE "PROJECT"."INACTIVE_SINCE" IS NOT NULL
@@ -255,8 +263,11 @@ public interface ProjectDao {
                  ORDER BY "PROJECT"."INACTIVE_SINCE" DESC
                  LIMIT :versionCountThreshold
                 )
+            RETURNING "NAME", "VERSION", "INACTIVE_SINCE"
             """)
-    int retainLastXInactiveProjects(@Bind final String projectName, @Bind final int versionCountThreshold);
+    @GetGeneratedKeys({"NAME", "VERSION", "INACTIVE_SINCE"})
+    @RegisterConstructorMapper(DeletedProject.class)
+    List<DeletedProject> retainLastXInactiveProjects(@Bind final String projectName, @Bind final int versionCountThreshold);
 
     @SqlQuery("""
             SELECT "PROJECT"."NAME"

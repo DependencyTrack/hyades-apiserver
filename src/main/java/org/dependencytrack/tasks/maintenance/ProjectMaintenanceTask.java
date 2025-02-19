@@ -88,12 +88,15 @@ public class ProjectMaintenanceTask implements Subscriber {
                 Instant retentionCutOff = Instant.now().minus(retentionDuration);
                 Integer numDeletedLastBatch = null;
                 while (numDeletedLastBatch == null || numDeletedLastBatch > 0) {
-                    numDeletedLastBatch = withJdbiHandle(
+                    final var deletedProjectsBatch = withJdbiHandle(
                             batchHandle -> {
                                 final var projectDao = batchHandle.attach(ProjectDao.class);
                                 return projectDao.deleteInactiveProjectsForRetentionDuration(retentionCutOff, batchSize);
                             });
+                    numDeletedLastBatch = deletedProjectsBatch.size();
                     numDeletedTotal.addAndGet(numDeletedLastBatch);
+                    deletedProjectsBatch.forEach(deletedProject ->
+                            LOGGER.info("Inactive project deleted: [name:%s, version:%s, inactive since:%s]".formatted(deletedProject.name(), deletedProject.version(), deletedProject.inactiveSince())));
                 }
             } else {
                 final int versionCountThreshold = withJdbiHandle(handle ->
@@ -105,7 +108,10 @@ public class ProjectMaintenanceTask implements Subscriber {
                                 final var projectDao = batchHandle.attach(ProjectDao.class);
                                 List<String> projectBatch = projectDao.getDistinctProjects(versionCountThreshold, batchSize);
                                 for (var projectName : projectBatch) {
-                                    numDeletedTotal.addAndGet(projectDao.retainLastXInactiveProjects(projectName, versionCountThreshold));
+                                    final var deletedProjects = projectDao.retainLastXInactiveProjects(projectName, versionCountThreshold);
+                                    numDeletedTotal.addAndGet(deletedProjects.size());
+                                    deletedProjects.forEach(deletedProject ->
+                                            LOGGER.info("Inactive project deleted: [name:%s, version:%s, inactive since:%s]".formatted(deletedProject.name(), deletedProject.version(), deletedProject.inactiveSince())));
                                 }
                                 return projectBatch.size();
                             });
