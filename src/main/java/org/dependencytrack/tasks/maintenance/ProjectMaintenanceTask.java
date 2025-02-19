@@ -75,12 +75,12 @@ public class ProjectMaintenanceTask implements Subscriber {
         assertLocked();
         AtomicInteger numDeletedTotal = new AtomicInteger(0);
 
-        final String retentionType = withJdbiHandle(handle ->
-                handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_TYPE, String.class));
+        final var retentionType = withJdbiHandle(handle ->
+                handle.attach(ConfigPropertyDao.class).getOptionalValue(MAINTENANCE_PROJECTS_RETENTION_TYPE, String.class));
 
-        if (retentionType != null) {
+        if (!retentionType.isEmpty() && !retentionType.get().isEmpty()) {
             int batchSize = 100;
-            if (retentionType.equals("AGE")) {
+            if (retentionType.get().equals("AGE")) {
 
                 final int retentionDays = withJdbiHandle(handle ->
                         handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_DAYS, Integer.class));
