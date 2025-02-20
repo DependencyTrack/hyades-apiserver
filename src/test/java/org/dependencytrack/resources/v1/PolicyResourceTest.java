@@ -21,11 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Component;
@@ -37,9 +32,17 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.Date;
+import java.util.List;
+import java.util.function.Supplier;
 
 import static java.util.Collections.singletonList;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class PolicyResourceTest extends ResourceTest {
@@ -254,6 +257,42 @@ public class PolicyResourceTest extends ResourceTest {
     }
 
     @Test
+    public void addProjectToPolicyAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var policy = new Policy();
+        policy.setName("policy");
+        policy.setOperator(Policy.Operator.ANY);
+        policy.setViolationState(Policy.ViolationState.INFO);
+        qm.persist(policy);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_POLICY + "/" + policy.getUuid() + "/project/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(null);
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
     public void removeProjectFromPolicyTest() {
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
@@ -281,4 +320,42 @@ public class PolicyResourceTest extends ResourceTest {
 
         assertThat(response.getStatus()).isEqualTo(304);
     }
+
+    @Test
+    public void removeProjectFromPolicyAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var policy = new Policy();
+        policy.setName("policy");
+        policy.setOperator(Policy.Operator.ANY);
+        policy.setViolationState(Policy.ViolationState.INFO);
+        policy.setProjects(List.of(project));
+        qm.persist(policy);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_POLICY + "/" + policy.getUuid() + "/project/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .delete();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
 }
