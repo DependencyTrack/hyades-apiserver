@@ -23,11 +23,6 @@ import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.fasterxml.jackson.core.StreamReadConstraints;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.javacrumbs.jsonunit.core.Option;
@@ -57,7 +52,6 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
-import org.dependencytrack.resources.v1.exception.JsonMappingExceptionMapper;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
@@ -70,6 +64,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -112,8 +111,7 @@ public class BomResourceTest extends ResourceTest {
             new ResourceConfig(BomResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class)
-                    .register(MultiPartFeature.class)
-                    .register(JsonMappingExceptionMapper.class));
+                    .register(MultiPartFeature.class));
 
     @Before
     @Override

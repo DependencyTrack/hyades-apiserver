@@ -39,6 +39,7 @@ public class IntegrityAnalysisQueryManager extends QueryManager implements IQuer
         final Query<IntegrityAnalysis> query = pm.newQuery(IntegrityAnalysis.class);
         query.setFilter("component.uuid == :uuid");
         query.setParameters(uuid);
+        // TODO: Preprocess ACLs
         return query.executeUnique();
     }
 }

@@ -21,9 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.fasterxml.jackson.core.StreamReadConstraints;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -38,13 +35,15 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
-import org.dependencytrack.resources.v1.exception.JsonMappingExceptionMapper;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -64,8 +63,7 @@ public class VexResourceTest extends ResourceTest {
             new ResourceConfig(VexResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class)
-                    .register(MultiPartFeature.class)
-                    .register(JsonMappingExceptionMapper.class));
+                    .register(MultiPartFeature.class));
 
     @Before
     @Override
