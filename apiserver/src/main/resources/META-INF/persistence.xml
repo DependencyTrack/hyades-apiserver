@@ -34,6 +34,7 @@
     <class>org.dependencytrack.model.FindingAttribution</class>
     <class>org.dependencytrack.model.License</class>
     <class>org.dependencytrack.model.LicenseGroup</class>
+    <class>org.dependencytrack.model.MappedRole</class>
     <class>org.dependencytrack.model.NotificationPublisher</class>
     <class>org.dependencytrack.model.NotificationRule</class>
     <class>org.dependencytrack.model.Policy</class>
@@ -46,6 +47,7 @@
     <class>org.dependencytrack.model.ProjectProperty</class>
     <class>org.dependencytrack.model.Repository</class>
     <class>org.dependencytrack.model.RepositoryMetaComponent</class>
+    <class>org.dependencytrack.model.Role</class>
     <class>org.dependencytrack.model.ServiceComponent</class>
     <class>org.dependencytrack.model.Tag</class>
     <class>org.dependencytrack.model.Vex</class>
