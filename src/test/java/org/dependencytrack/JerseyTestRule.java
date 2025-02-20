@@ -18,6 +18,7 @@
  */
 package org.dependencytrack;
 
+import org.dependencytrack.resources.v1.exception.ClientErrorExceptionMapper;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.grizzly.connector.GrizzlyConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -56,7 +57,9 @@ public class JerseyTestRule extends ExternalResource {
 
             @Override
             protected DeploymentContext configureDeployment() {
-                return ServletDeploymentContext.forServlet(new ServletContainer(resourceConfig)).build();
+                return ServletDeploymentContext.forServlet(new ServletContainer(
+                        // Ensure exception mappers are registered.
+                        resourceConfig.packages(ClientErrorExceptionMapper.class.getPackageName()))).build();
             }
 
         };

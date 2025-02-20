@@ -22,7 +22,6 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,18 +35,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
@@ -75,6 +62,18 @@ import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
 import org.jdbi.v3.core.Handle;
 
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +96,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class ComponentResource extends AlpineResource {
+public class ComponentResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(ComponentResource.class);
     private final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
@@ -132,12 +131,9 @@ public class ComponentResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final PaginatedResult result = qm.getComponents(project, true, onlyOutdated, onlyDirect);
-                    return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                final PaginatedResult result = qm.getComponents(project, true, onlyOutdated, onlyDirect);
+                return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -171,25 +167,21 @@ public class ComponentResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
-                final Project project = component.getProject();
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final Component detachedComponent = qm.detach(Component.class, component.getId()); // TODO: Force project to be loaded. It should be anyway, but JDO seems to be having issues here.
-                    if ((includeRepositoryMetaData || includeIntegrityMetaData) && detachedComponent.getPurl() != null) {
-                        final RepositoryType type = RepositoryType.resolve(detachedComponent.getPurl());
-                        if (RepositoryType.UNSUPPORTED != type) {
-                            if (includeRepositoryMetaData) {
-                                final RepositoryMetaComponent repoMetaComponent = qm.getRepositoryMetaComponent(type, detachedComponent.getPurl().getNamespace(), detachedComponent.getPurl().getName());
-                                detachedComponent.setRepositoryMeta(repoMetaComponent);
-                            }
-                            if (includeIntegrityMetaData) {
-                                detachedComponent.setComponentMetaInformation(qm.getMetaInformation(component.getUuid()));
-                            }
+                requireAccess(qm, component.getProject());
+                final Component detachedComponent = qm.detach(Component.class, component.getId()); // TODO: Force project to be loaded. It should be anyway, but JDO seems to be having issues here.
+                if ((includeRepositoryMetaData || includeIntegrityMetaData) && detachedComponent.getPurl() != null) {
+                    final RepositoryType type = RepositoryType.resolve(detachedComponent.getPurl());
+                    if (RepositoryType.UNSUPPORTED != type) {
+                        if (includeRepositoryMetaData) {
+                            final RepositoryMetaComponent repoMetaComponent = qm.getRepositoryMetaComponent(type, detachedComponent.getPurl().getNamespace(), detachedComponent.getPurl().getName());
+                            detachedComponent.setRepositoryMeta(repoMetaComponent);
+                        }
+                        if (includeIntegrityMetaData) {
+                            detachedComponent.setComponentMetaInformation(qm.getMetaInformation(component.getUuid()));
                         }
                     }
-                    return Response.ok(detachedComponent).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
                 }
+                return Response.ok(detachedComponent).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
@@ -262,7 +254,13 @@ public class ComponentResource extends AlpineResource {
             @Parameter(description = "UUID of the component for which integrity status information is needed", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final IntegrityAnalysis result = qm.getIntegrityAnalysisByComponentUuid(UUID.fromString(uuid));
+            final Component component = qm.getObjectByUuid(Component.class, uuid);
+            if (component == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
+            }
+            requireAccess(qm, component.getProject());
+
+            final IntegrityAnalysis result = qm.getIntegrityAnalysisByComponentUuid(component.getUuid());
             if (result == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The integrity status for the specified component cannot be found.").build();
             } else {
@@ -311,9 +309,7 @@ public class ComponentResource extends AlpineResource {
                 if (project == null) {
                     return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
                 }
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
             }
             PackageURL packageURL = null;
             if (purl != null) {
@@ -421,9 +417,7 @@ public class ComponentResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-            }
+            requireAccess(qm, project);
             final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
             Component component = new Component();
             component.setProject(project);
@@ -532,9 +526,7 @@ public class ComponentResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             Component component = qm.getObjectByUuid(Component.class, jsonComponent.getUuid());
             if (component != null) {
-                if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
-                }
+                requireAccess(qm, component.getProject());
                 // Name cannot be empty or null - prevent it
                 final String name = StringUtils.trimToNull(jsonComponent.getName());
                 if (name != null) {
@@ -632,9 +624,7 @@ public class ComponentResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, uuid, Component.FetchGroup.ALL.name());
             if (component != null) {
-                if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
-                }
+                requireAccess(qm, component.getProject());
                 try (final Handle jdbiHandle = openJdbiHandle()) {
                     final var componentDao = jdbiHandle.attach(ComponentDao.class);
                     componentDao.deleteComponent(component.getUuid());
@@ -691,10 +681,7 @@ public class ComponentResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }
-
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden.").build();
-            }
+            requireAccess(qm, project);
 
             final String[] componentUuidsSplit = componentUuids.split("\\|");
             final List<Component> components = new ArrayList<>();

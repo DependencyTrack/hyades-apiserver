@@ -29,6 +29,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -40,13 +47,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectProperty;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-
 import java.util.List;
 
 /**
@@ -86,22 +86,19 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final List<ProjectProperty> properties = qm.getProjectProperties(project);
-                    // Detaches the objects and closes the persistence manager so that if/when encrypted string
-                    // values are replaced by the placeholder, they are not erroneously persisted to the database.
-                    qm.getPersistenceManager().detachCopyAll(properties);
-                    qm.close();
-                    for (final ProjectProperty property : properties) {
-                        // Replace the value of encrypted strings with the pre-defined placeholder
-                        if (ProjectProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
-                            property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
-                        }
+                requireAccess(qm, project);
+                final List<ProjectProperty> properties = qm.getProjectProperties(project);
+                // Detaches the objects and closes the persistence manager so that if/when encrypted string
+                // values are replaced by the placeholder, they are not erroneously persisted to the database.
+                qm.getPersistenceManager().detachCopyAll(properties);
+                qm.close();
+                for (final ProjectProperty property : properties) {
+                    // Replace the value of encrypted strings with the pre-defined placeholder
+                    if (ProjectProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
+                        property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
                     }
-                    return Response.ok(properties).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
+                return Response.ok(properties).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -140,27 +137,24 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final ProjectProperty existing = qm.getProjectProperty(project,
-                            StringUtils.trimToNull(json.getGroupName()), StringUtils.trimToNull(json.getPropertyName()));
-                    if (existing == null) {
-                        final ProjectProperty property = qm.createProjectProperty(project,
-                                StringUtils.trimToNull(json.getGroupName()),
-                                StringUtils.trimToNull(json.getPropertyName()),
-                                null, // Set value to null - this will be taken care of by updatePropertyValue below
-                                json.getPropertyType(),
-                                StringUtils.trimToNull(json.getDescription()));
-                        updatePropertyValue(qm, json, property);
-                        qm.getPersistenceManager().detachCopy(project);
-                        if (ProjectProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
-                            property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
-                        }
-                        return Response.status(Response.Status.CREATED).entity(property).build();
-                    } else {
-                        return Response.status(Response.Status.CONFLICT).entity("A property with the specified project/group/name combination already exists.").build();
+                requireAccess(qm, project);
+                final ProjectProperty existing = qm.getProjectProperty(project,
+                        StringUtils.trimToNull(json.getGroupName()), StringUtils.trimToNull(json.getPropertyName()));
+                if (existing == null) {
+                    final ProjectProperty property = qm.createProjectProperty(project,
+                            StringUtils.trimToNull(json.getGroupName()),
+                            StringUtils.trimToNull(json.getPropertyName()),
+                            null, // Set value to null - this will be taken care of by updatePropertyValue below
+                            json.getPropertyType(),
+                            StringUtils.trimToNull(json.getDescription()));
+                    updatePropertyValue(qm, json, property);
+                    qm.getPersistenceManager().detachCopy(project);
+                    if (ProjectProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
+                        property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
                     }
+                    return Response.status(Response.Status.CREATED).entity(property).build();
                 } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                    return Response.status(Response.Status.CONFLICT).entity("A property with the specified project/group/name combination already exists.").build();
                 }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -199,15 +193,12 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final ProjectProperty property = qm.getProjectProperty(project, json.getGroupName(), json.getPropertyName());
-                    if (property != null) {
-                        return updatePropertyValue(qm, json, property);
-                    } else {
-                        return Response.status(Response.Status.NOT_FOUND).entity("A property with the specified project/group/name combination could not be found.").build();
-                    }
+                requireAccess(qm, project);
+                final ProjectProperty property = qm.getProjectProperty(project, json.getGroupName(), json.getPropertyName());
+                if (property != null) {
+                    return updatePropertyValue(qm, json, property);
                 } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("A property with the specified project/group/name combination could not be found.").build();
                 }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -241,16 +232,13 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final ProjectProperty property = qm.getProjectProperty(project, json.getGroupName(), json.getPropertyName());
-                    if (property != null) {
-                        qm.delete(property);
-                        return Response.status(Response.Status.NO_CONTENT).build();
-                    } else {
-                        return Response.status(Response.Status.NOT_FOUND).entity("The project property could not be found.").build();
-                    }
+                requireAccess(qm, project);
+                final ProjectProperty property = qm.getProjectProperty(project, json.getGroupName(), json.getPropertyName());
+                if (property != null) {
+                    qm.delete(property);
+                    return Response.status(Response.Status.NO_CONTENT).build();
                 } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project property could not be found.").build();
                 }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();

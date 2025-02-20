@@ -274,7 +274,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403, 
+                  "title": "Project access denied", 
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
     }
 
     @Test
@@ -1393,7 +1399,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
     }
 
     @Test
@@ -1623,14 +1635,20 @@ public class ProjectResourceTest extends ResourceTest {
         final Response response = jersey.target(V1_PROJECT)
                 .request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.json("""
+                .post(Entity.json(/* language=JSON */ """
                         {
                           "uuid": "%s",
                           "name": "acme-app-foo"
                         }
                         """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
     }
 
     @Test
@@ -1790,13 +1808,19 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
-                .method("PATCH", Entity.json("""
+                .method("PATCH", Entity.json(/* language=JSON */ """
                         {
                           "name": "acme-app-foo"
                         }
                         """));
         assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
     }
 
     @Test
@@ -2356,18 +2380,24 @@ public class ProjectResourceTest extends ResourceTest {
 
         Response response = jersey.target("%s/clone".formatted(V1_PROJECT)).request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.json("""
+                .put(Entity.json(/* language=JSON */ """
                         {
                           "project": "%s",
                           "version": "1.1.0"
                         }
                         """.formatted(noAccessProject.getUuid())));
         assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
 
         response = jersey.target("%s/clone".formatted(V1_PROJECT)).request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.json("""
+                .put(Entity.json(/* language=JSON */ """
                         {
                           "project": "%s",
                           "version": "1.1.0"
