@@ -45,6 +45,7 @@
     <class>org.dependencytrack.model.FindingAttribution</class>
     <class>org.dependencytrack.model.License</class>
     <class>org.dependencytrack.model.LicenseGroup</class>
+    <class>org.dependencytrack.model.MappedRole</class>
     <class>org.dependencytrack.model.NotificationPublisher</class>
     <class>org.dependencytrack.model.NotificationRule</class>
     <class>org.dependencytrack.model.Policy</class>

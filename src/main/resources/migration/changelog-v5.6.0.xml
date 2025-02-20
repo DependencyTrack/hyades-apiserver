@@ -642,64 +642,67 @@
             <column name="IS_LEGACY" type="BOOLEAN" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
-            <column name="PUBLIC_ID" type="VARCHAR(5)">
+            <column name="PUBLIC_ID" type="VARCHAR(255)">
                 <constraints nullable="true"/>
             </column>
         </addColumn>
         <addUniqueConstraint columnNames="PUBLIC_ID" constraintName="APIKEY_PUBLIC_IDX" tableName="APIKEY"/>
+
+        <modifyDataType tableName="VULNERABILITY" columnName="CVSSV2BASESCORE" newDataType="NUMERIC(1, 1)"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="CVSSV2EXPLOITSCORE" newDataType="NUMERIC(1, 1)"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="CVSSV2IMPACTSCORE" newDataType="NUMERIC(1, 1)"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="CVSSV3BASESCORE" newDataType="NUMERIC(1, 1)"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="CVSSV3EXPLOITSCORE" newDataType="NUMERIC(1, 1)"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="CVSSV3IMPACTSCORE" newDataType="NUMERIC(1, 1)"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="FRIENDLYVULNID" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="OWASPRRBUSINESSIMPACTSCORE" newDataType="NUMERIC(1, 1)"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="OWASPRRLIKELIHOODSCORE" newDataType="NUMERIC(1, 1)"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="OWASPRRTECHNICALIMPACTSCORE" newDataType="NUMERIC(1, 1)"/>
+        <modifyDataType tableName="VULNERABILITY_POLICY_BUNDLE" columnName="URL" newDataType="VARCHAR(255)"/>
+        <modifyDataType tableName="EPSS" columnName="PERCENTILE" newDataType="NUMERIC(3, 5)"/>
+        <modifyDataType tableName="EPSS" columnName="SCORE" newDataType="NUMERIC(3, 5)"/>
     </changeSet>
 
     <changeSet id="v5.6.0-13" author="jhoward-lm">
         <createTable ifNotExists="true" tableName="ROLE">
-            <column name="ID" type="BIGINT">
-                <constraints primaryKeyName="ROLE_PK" primaryKey="true" />
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="ROLE_PK" />
             </column>
-            <column name="DESCRIPTION" type="TEXT" />
-            <column name="NAME" type="TEXT" />
+
+            <column name="NAME" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="ROLE_NAME_IDX" />
+            </column>
+
+            <column name="DESCRIPTION" type="VARCHAR(255)">
+                <constraints nullable="true" />
+            </column>
         </createTable>
 
         <createTable ifNotExists="true" tableName="ROLES_PERMISSIONS">
             <column name="ROLE_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="ROLES_PERMISSIONS_COMPOSITE_IDX"
-                    foreignKeyName="ROLES_PERMISSIONS_ROLE_FK"
-                    referencedTableName="ROLE" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
+                <constraints nullable="false" foreignKeyName="ROLES_PERMISSIONS_ROLE_FK"
+                    referencedTableName="ROLE" referencedColumnNames="ID" />
             </column>
+
             <column name="PERMISSION_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="ROLES_PERMISSIONS_COMPOSITE_IDX"
-                    foreignKeyName="ROLES_PERMISSIONS_PERMISSION_FK"
-                    referencedTableName="PERMISSION" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
+                <constraints nullable="false" foreignKeyName="ROLES_PERMISSIONS_PERMISSION_FK"
+                    referencedTableName="PERMISSION" referencedColumnNames="ID" />
             </column>
         </createTable>
 
-        <createIndex indexName="ROLES_PERMISSIONS_ROLE_ID_IDX" tableName="ROLES_PERMISSIONS">
-            <column name="ROLE_ID" />
-        </createIndex>
-
-        <createIndex indexName="ROLES_PERMISSIONS_PERMISSION_ID_IDX" tableName="ROLES_PERMISSIONS">
-            <column name="PERMISSION_ID" />
-        </createIndex>
-
-        <createTable ifNotExists="true" tableName="PROJECT_ACCESS_ROLES">
-            <column name="ID" type="BIGINT">
-                <constraints primaryKey="true" />
+        <createTable ifNotExists="true" tableName="PROJECT_ACCESS_ROLES" tableType="">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECT_ACCESS_ROLE_PK" />
             </column>
+
             <column name="PROJECT_ID" type="BIGINT">
                 <constraints nullable="false" foreignKeyName="PROJECT_ACCESS_ROLES_PROJECT_FK"
-                    referencedTableName="PROJECT" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
+                    referencedTableName="PROJECT" referencedColumnNames="ID" />
             </column>
+
             <column name="ROLE_ID" type="BIGINT">
                 <constraints nullable="false" foreignKeyName="PROJECT_ACCESS_ROLES_ROLE_FK"
-                    referencedTableName="ROLE" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
+                    referencedTableName="ROLE" referencedColumnNames="ID" />
             </column>
         </createTable>
 
@@ -714,14 +717,13 @@
         <createTable ifNotExists="true" tableName="LDAPUSERS_PROJECTS_ROLES">
             <column name="LDAPUSER_ID" type="BIGINT">
                 <constraints nullable="false" foreignKeyName="LDAPUSERS_PROJECTS_ROLES_LDAPUSER_FK"
-                    referencedTableName="LDAPUSER" referencedColumnNames="ID"
-                    uniqueConstraintName="LDAPUSER_PROJECT_ACCESS_ROLE_IDX" />
+                    referencedTableName="LDAPUSER" referencedColumnNames="ID" />
             </column>
+
             <column name="PROJECT_ACCESS_ROLE_ID" type="BIGINT">
                 <constraints nullable="false"
                     foreignKeyName="LDAPUSERS_PROJECTS_ROLES_PROJECT_ACCESS_ROLE_FK"
-                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID"
-                    uniqueConstraintName="LDAPUSER_PROJECT_ACCESS_ROLE_IDX" />
+                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID" />
             </column>
         </createTable>
 
@@ -737,14 +739,13 @@
             <column name="MANAGEDUSER_ID" type="BIGINT">
                 <constraints nullable="false"
                     foreignKeyName="MANAGEDUSERS_PROJECTS_ROLES_MANAGEDUSER_FK"
-                    referencedTableName="MANAGEDUSER" referencedColumnNames="ID"
-                    uniqueConstraintName="MANAGEDUSER_PROJECT_ACCESS_ROLE_IDX" />
+                    referencedTableName="MANAGEDUSER" referencedColumnNames="ID" />
             </column>
+
             <column name="PROJECT_ACCESS_ROLE_ID" type="BIGINT">
                 <constraints nullable="false"
                     foreignKeyName="MANAGEDUSERS_PROJECTS_ROLES_PROJECT_ACCESS_ROLE_FK"
-                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID"
-                    uniqueConstraintName="MANAGEDUSER_PROJECT_ACCESS_ROLE_IDX" />
+                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID" />
             </column>
         </createTable>
 
@@ -759,24 +760,34 @@
         <createTable ifNotExists="true" tableName="OIDCUSERS_PROJECTS_ROLES">
             <column name="OIDCUSER_ID" type="BIGINT">
                 <constraints nullable="false" foreignKeyName="OIDCUSERS_PROJECTS_ROLES_OIDCUSER_FK"
-                    referencedTableName="OIDCUSER" referencedColumnNames="ID"
-                    uniqueConstraintName="OIDCUSER_PROJECT_ACCESS_ROLE_IDX" />
+                    referencedTableName="OIDCUSER" referencedColumnNames="ID" />
             </column>
+
             <column name="PROJECT_ACCESS_ROLE_ID" type="BIGINT">
                 <constraints nullable="false"
                     foreignKeyName="OIDCUSERS_PROJECTS_ROLES_PROJECT_ACCESS_ROLE_FK"
-                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID"
-                    uniqueConstraintName="OIDCUSER_PROJECT_ACCESS_ROLE_IDX" />
+                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID" />
             </column>
         </createTable>
 
-        <createIndex indexName="OIDCUSERS_PROJECTS_ROLES_OIDCUSER_ID_IDX" tableName="OIDCUSERS_PROJECTS_ROLES">
-            <column name="OIDCUSER_ID" />
-        </createIndex>
+        <addUniqueConstraint constraintName="ROLES_PERMISSIONS_IDX"
+            tableName="ROLES_PERMISSIONS"
+            columnNames="ROLE_ID, PERMISSION_ID" />
+        
+        <addUniqueConstraint constraintName="PROJECT_ACCESS_ROLES_COMPOSITE_IDX"
+            tableName="PROJECT_ACCESS_ROLES"
+            columnNames="PROJECT_ID, ROLE_ID" />
 
-        <createIndex indexName="OIDCUSERS_PROJECTS_ROLES_ROLE_ID_IDX" tableName="OIDCUSERS_PROJECTS_ROLES">
-            <column name="PROJECT_ACCESS_ROLE_ID" />
-        </createIndex>
+        <addUniqueConstraint constraintName="LDAPUSER_PROJECT_ACCESS_ROLE_IDX"
+            tableName="LDAPUSERS_PROJECTS_ROLES"
+            columnNames="LDAPUSER_ID, PROJECT_ACCESS_ROLE_ID" />
 
+        <addUniqueConstraint constraintName="MANAGEDUSER_PROJECT_ACCESS_ROLE_IDX"
+            tableName="MANAGEDUSERS_PROJECTS_ROLES"
+            columnNames="MANAGEDUSER_ID, PROJECT_ACCESS_ROLE_ID" />
+
+        <addUniqueConstraint constraintName="OIDCUSER_PROJECT_ACCESS_ROLE_IDX"
+            tableName="OIDCUSERS_PROJECTS_ROLES"
+            columnNames="OIDCUSER_ID, PROJECT_ACCESS_ROLE_ID" />
     </changeSet>
 </databaseChangeLog>
