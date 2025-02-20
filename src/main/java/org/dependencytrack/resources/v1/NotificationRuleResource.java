@@ -21,7 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.model.Team;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -33,6 +32,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.NotificationPublisher;
+import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -44,16 +54,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.NotificationPublisher;
-import org.dependencytrack.model.NotificationRule;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.openapi.PaginatedApi;
-
 import java.util.List;
 
 import static org.dependencytrack.notification.publisher.PublisherClass.SendMailPublisher;
@@ -70,7 +70,7 @@ import static org.dependencytrack.notification.publisher.PublisherClass.SendMail
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class NotificationRuleResource extends AlpineResource {
+public class NotificationRuleResource extends AbstractApiResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -209,6 +209,10 @@ public class NotificationRuleResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "304", description = "The rule already has the specified project assigned"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The notification rule or project could not be found")
     })
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
@@ -229,6 +233,7 @@ public class NotificationRuleResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
+            requireAccess(qm, project);
             final List<Project> projects = rule.getProjects();
             if (projects != null && !projects.contains(project)) {
                 rule.getProjects().add(project);
@@ -254,6 +259,10 @@ public class NotificationRuleResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "304", description = "The rule does not have the specified project assigned"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The notification rule or project could not be found")
     })
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_DELETE})
@@ -274,6 +283,7 @@ public class NotificationRuleResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
+            requireAccess(qm, project);
             final List<Project> projects = rule.getProjects();
             if (projects != null && projects.contains(project)) {
                 rule.getProjects().remove(project);

@@ -28,7 +28,6 @@ import alpine.server.auth.ApiKeyAuthenticationService;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.JwtAuthenticationService;
 import alpine.server.filters.AuthenticationFilter;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -38,21 +37,22 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.misc.Badger;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.glassfish.jersey.server.ContainerRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Response;
 import javax.naming.AuthenticationException;
 import java.security.Principal;
 
@@ -71,7 +71,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BADGE_EN
         @SecurityRequirement(name = "BearerAuth"),
         @SecurityRequirement(name = "ApiKeyQueryAuth")
 })
-public class BadgeResource extends AlpineResource {
+public class BadgeResource extends AbstractApiResource {
 
     private static final String SVG_MEDIA_TYPE = "image/svg+xml";
 
@@ -174,7 +174,10 @@ public class BadgeResource extends AlpineResource {
                     content = @Content(schema = @Schema(type = "string"))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @AuthenticationNotRequired
@@ -191,8 +194,8 @@ public class BadgeResource extends AlpineResource {
             }
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (!shouldBypassAuth && !qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                if (!shouldBypassAuth) {
+                    requireAccess(qm, project);
                 }
                 final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
                 final Badger badger = new Badger();
@@ -217,7 +220,10 @@ public class BadgeResource extends AlpineResource {
                     content = @Content(schema = @Schema(type = "string"))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @AuthenticationNotRequired
@@ -236,8 +242,8 @@ public class BadgeResource extends AlpineResource {
             }
             final Project project = qm.getProject(name, version);
             if (project != null) {
-                if (!shouldBypassAuth && !qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                if (!shouldBypassAuth) {
+                    requireAccess(qm, project);
                 }
                 final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
                 final Badger badger = new Badger();
@@ -262,7 +268,10 @@ public class BadgeResource extends AlpineResource {
                     content = @Content(schema = @Schema(type = "string"))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @AuthenticationNotRequired
@@ -279,8 +288,8 @@ public class BadgeResource extends AlpineResource {
             }
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (!shouldBypassAuth && !qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                if (!shouldBypassAuth) {
+                    requireAccess(qm, project);
                 }
                 final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
                 final Badger badger = new Badger();
@@ -305,7 +314,10 @@ public class BadgeResource extends AlpineResource {
                     content = @Content(schema = @Schema(type = "string"))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @AuthenticationNotRequired
@@ -324,8 +336,8 @@ public class BadgeResource extends AlpineResource {
             }
             final Project project = qm.getProject(name, version);
             if (project != null) {
-                if (!shouldBypassAuth && !qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                if (!shouldBypassAuth) {
+                    requireAccess(qm, project);
                 }
                 final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
                 final Badger badger = new Badger();

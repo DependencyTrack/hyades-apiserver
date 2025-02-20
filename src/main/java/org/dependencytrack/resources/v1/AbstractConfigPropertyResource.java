@@ -23,18 +23,17 @@ import alpine.common.util.BooleanUtil;
 import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
 import alpine.security.crypto.DataEncryption;
-import alpine.server.resources.AlpineResource;
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonReader;
-import jakarta.json.JsonString;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.ConfigPropertyAccessMode;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 import org.owasp.security.logging.SecurityMarkers;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
+import jakarta.ws.rs.core.Response;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
@@ -42,7 +41,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-abstract class AbstractConfigPropertyResource extends AlpineResource {
+abstract class AbstractConfigPropertyResource extends AbstractApiResource {
 
     private final Logger LOGGER = Logger.getLogger(this.getClass()); // Use the classes that extend this, not this class itself
     static final String ENCRYPTED_PLACEHOLDER = "HiddenDecryptedPropertyPlaceholder";

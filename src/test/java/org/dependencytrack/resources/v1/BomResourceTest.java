@@ -23,11 +23,6 @@ import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.fasterxml.jackson.core.StreamReadConstraints;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.javacrumbs.jsonunit.core.Option;
@@ -57,7 +52,6 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
-import org.dependencytrack.resources.v1.exception.JsonMappingExceptionMapper;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
@@ -70,6 +64,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -86,6 +85,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -112,8 +112,7 @@ public class BomResourceTest extends ResourceTest {
             new ResourceConfig(BomResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class)
-                    .register(MultiPartFeature.class)
-                    .register(JsonMappingExceptionMapper.class));
+                    .register(MultiPartFeature.class));
 
     @Before
     @Override
@@ -147,6 +146,37 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
         Assert.assertEquals("The project could not be found.", body);
+    }
+
+    @Test
+    public void exportProjectAsCycloneDxAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_BOM + "/cyclonedx/project/" + project.getUuid())
+                .queryParam("variant", "inventory")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_FORBIDDEN);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
     }
 
     @Test
@@ -851,6 +881,42 @@ public class BomResourceTest extends ResourceTest {
     }
 
     @Test
+    public void exportComponentAsCycloneDxAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_BOM + "/cyclonedx/component/" + component.getUuid())
+                .queryParam("variant", "inventory")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_FORBIDDEN);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+    }
+
+    @Test
     public void uploadBomTest() throws Exception {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -1104,7 +1170,7 @@ public class BomResourceTest extends ResourceTest {
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(404, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The parent component could not be found.", body);
+        Assert.assertEquals("The parent project could not be found.", body);
 
         request = new BomSubmitRequest(null, "Acme Example", "2.0", null, true, null, "Non-existent parent", null, false, bomString);
         response = jersey.target(V1_BOM).request()
@@ -1112,7 +1178,7 @@ public class BomResourceTest extends ResourceTest {
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(404, response.getStatus(), 0);
         body = getPlainTextBody(response);
-        Assert.assertEquals("The parent component could not be found.", body);
+        Assert.assertEquals("The parent project could not be found.", body);
     }
 
     @SuppressWarnings("unused")
