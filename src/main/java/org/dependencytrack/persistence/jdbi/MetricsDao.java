@@ -18,15 +18,58 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import org.dependencytrack.model.PortfolioMetrics;
 import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 
 /**
  * @since 5.6.0
  */
 public interface MetricsDao {
+
+    // TODO:
+    //   * Get latest PROJECTMETRICS record for each project for each day.
+    //   * Calculate metrics sums across all projects for each day.
+    //   * Find a way to fill gaps (i.e. when no metrics exist for a project for a specific day)?
+    //   * Cache result for a few min in an unlogged table?
+    @SqlQuery("""
+            with recursive
+            directly_accessible_project as(
+              select "PROJECT_ID" as id
+                from "PROJECT_ACCESS_TEAMS"
+               where "TEAM_ID" = any(:projectAclTeamIds)
+            ),
+            accessible_project_child(id) as(
+              select "ID" as id
+                from "PROJECT"
+               where "PARENT_PROJECT_ID" IN (select id from directly_accessible_project)
+               union all
+              select "PROJECT"."ID" as id
+                from "PROJECT"
+               inner join accessible_project_child
+                  on accessible_project_child.id = "PROJECT"."PARENT_PROJECT_ID"
+            ),
+            accessible_project as(
+              select id
+                from directly_accessible_project
+               union all
+              select id
+                from accessible_project_child
+            )
+            select "PROJECTMETRICS".*
+              from "PROJECT"
+             inner join "PROJECTMETRICS"
+                on "PROJECTMETRICS"."PROJECT_ID" = "PROJECT"."ID"
+             where "PROJECT"."ID" in (select id from accessible_project)
+               and "PROJECT"."INACTIVE_SINCE" IS NULL
+               and "PROJECTMETRICS"."LAST_OCCURRENCE" >= :since;
+            """)
+    List<PortfolioMetrics> getPortfolioMetricsSince(@Bind Instant since);
 
     @SqlUpdate("""
             DELETE
