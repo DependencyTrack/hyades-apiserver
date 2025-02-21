@@ -43,6 +43,7 @@ import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.DateUtil;
 
@@ -52,8 +53,11 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing metrics.
@@ -144,6 +148,40 @@ public class MetricsResource extends AbstractApiResource {
             final List<PortfolioMetrics> metrics = qm.getPortfolioMetricsSince(since);
             return Response.ok(metrics).build();
         }
+    }
+
+    @GET
+    @Path("/portfolio/since/{date}/v2")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns historical metrics for the entire portfolio from a specific date",
+            description = """
+                    <p>Date format must be <code>YYYYMMDD</code></p>
+                    <p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>""")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Historical metrics for the entire portfolio from a specific date",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = PortfolioMetrics.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getPortfolioMetricsSinceV2(
+            @Parameter(description = "The start date to retrieve metrics for", required = true)
+            @PathParam("date") String date) {
+
+        final Date since = DateUtil.parseShortDate(date);
+        if (since == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("The specified date format is incorrect.").build();
+        }
+
+        final List<PortfolioMetrics> metrics = withJdbiHandle(getAlpineRequest(), handle -> {
+            final var dao = handle.attach(MetricsDao.class);
+            return dao.getPortfolioMetricsSince(Instant.ofEpochMilli(since.getTime()));
+        });
+
+        return Response.ok(metrics).build();
     }
 
     @GET
