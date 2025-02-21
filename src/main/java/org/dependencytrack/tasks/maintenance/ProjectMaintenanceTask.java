@@ -75,12 +75,12 @@ public class ProjectMaintenanceTask implements Subscriber {
         assertLocked();
         AtomicInteger numDeletedTotal = new AtomicInteger(0);
 
-        final String retentionType = withJdbiHandle(handle ->
-                handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_TYPE, String.class));
+        final var retentionType = withJdbiHandle(handle ->
+                handle.attach(ConfigPropertyDao.class).getOptionalValue(MAINTENANCE_PROJECTS_RETENTION_TYPE, String.class));
 
-        if (retentionType != null) {
+        if (!retentionType.isEmpty() && !retentionType.get().isEmpty()) {
             int batchSize = 100;
-            if (retentionType.equals("AGE")) {
+            if (retentionType.get().equals("AGE")) {
 
                 final int retentionDays = withJdbiHandle(handle ->
                         handle.attach(ConfigPropertyDao.class).getValue(MAINTENANCE_PROJECTS_RETENTION_DAYS, Integer.class));
@@ -88,12 +88,15 @@ public class ProjectMaintenanceTask implements Subscriber {
                 Instant retentionCutOff = Instant.now().minus(retentionDuration);
                 Integer numDeletedLastBatch = null;
                 while (numDeletedLastBatch == null || numDeletedLastBatch > 0) {
-                    numDeletedLastBatch = withJdbiHandle(
+                    final var deletedProjectsBatch = withJdbiHandle(
                             batchHandle -> {
                                 final var projectDao = batchHandle.attach(ProjectDao.class);
                                 return projectDao.deleteInactiveProjectsForRetentionDuration(retentionCutOff, batchSize);
                             });
+                    numDeletedLastBatch = deletedProjectsBatch.size();
                     numDeletedTotal.addAndGet(numDeletedLastBatch);
+                    deletedProjectsBatch.forEach(deletedProject ->
+                            LOGGER.info("Inactive project deleted: [name:%s, version:%s, inactive since:%s, uuid:%s]".formatted(deletedProject.name(), deletedProject.version(), deletedProject.inactiveSince(), deletedProject.uuid())));
                 }
             } else {
                 final int versionCountThreshold = withJdbiHandle(handle ->
@@ -105,7 +108,10 @@ public class ProjectMaintenanceTask implements Subscriber {
                                 final var projectDao = batchHandle.attach(ProjectDao.class);
                                 List<String> projectBatch = projectDao.getDistinctProjects(versionCountThreshold, batchSize);
                                 for (var projectName : projectBatch) {
-                                    numDeletedTotal.addAndGet(projectDao.retainLastXInactiveProjects(projectName, versionCountThreshold));
+                                    final var deletedProjects = projectDao.retainLastXInactiveProjects(projectName, versionCountThreshold);
+                                    numDeletedTotal.addAndGet(deletedProjects.size());
+                                    deletedProjects.forEach(deletedProject ->
+                                            LOGGER.info("Inactive project deleted: [name:%s, version:%s, inactive since:%s, uuid:%s]".formatted(deletedProject.name(), deletedProject.version(), deletedProject.inactiveSince(), deletedProject.uuid())));
                                 }
                                 return projectBatch.size();
                             });

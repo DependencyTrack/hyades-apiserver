@@ -115,7 +115,7 @@
         <lib.parallel-consumer.version>0.5.3.2</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.2</lib.pebble.version>
         <lib.protobuf-java.version>4.29.3</lib.protobuf-java.version>
-        <lib.testcontainers.version>1.20.4</lib.testcontainers.version>
+        <lib.testcontainers.version>1.20.5</lib.testcontainers.version>
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
         <!--
             Downgraded from 2.2.26 due to incompatibilities with newer jackson-databind versions.
@@ -575,6 +575,7 @@
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
                 <includes>
+                    <include>META-INF/MANIFEST.MF</include>
                     <include>application.version</include>
                     <include>openapi-configuration.yaml</include>
                 </includes>
@@ -788,7 +789,7 @@
                         <plugin>
                             <groupId>org.apache.maven.plugins</groupId>
                             <artifactId>maven-clean-plugin</artifactId>
-                            <version>3.4.0</version>
+                            <version>3.4.1</version>
                             <configuration>
                                 <excludeDefaultDirectories>true</excludeDefaultDirectories>
                                 <filesets>

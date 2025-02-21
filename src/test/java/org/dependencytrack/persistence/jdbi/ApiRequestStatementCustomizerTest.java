@@ -566,11 +566,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                                  , 2 AS "valueB"
                               FROM "PROJECT"
                              WHERE TRUE
-                               AND EXISTS (SELECT 1
-                                             FROM "PROJECT_ACCESS_TEAMS"
-                                            WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
-                                              AND "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ANY(:projectAclTeamIds)
-                                           )
+                               AND HAS_PROJECT_ACCESS("PROJECT"."ID", :projectAclTeamIds)
                             """);
 
                     assertThat(ctx.getBinding()).hasToString("{named:{projectAclTeamIds:[%s]}}".formatted(team.getId()));

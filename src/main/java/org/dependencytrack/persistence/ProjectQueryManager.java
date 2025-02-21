@@ -32,7 +32,6 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.packageurl.PackageURL;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -71,6 +70,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.util.Objects.requireNonNullElse;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistentAll;
 
@@ -940,45 +940,54 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean hasAccess(final Principal principal, final Project project) {
-        if (isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)) {
-            if (principal instanceof UserPrincipal userPrincipal) {
-                if (super.hasAccessManagementPermission(userPrincipal)) {
-                    return true;
-                }
-                if (userPrincipal.getTeams() != null) {
-                    for (final Team userInTeam : userPrincipal.getTeams()) {
-                        for (final Team accessTeam : project.getAccessTeams()) {
-                            if (userInTeam.getId() == accessTeam.getId()) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            } else if (principal instanceof ApiKey apiKey) {
-                if (super.hasAccessManagementPermission(apiKey)) {
-                    return true;
-                }
-                if (apiKey.getTeams() != null) {
-                    for (final Team userInTeam : apiKey.getTeams()) {
-                        for (final Team accessTeam : project.getAccessTeams()) {
-                            if (userInTeam.getId() == accessTeam.getId()) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            } else if (principal == null) {
-                // This is a system request being made (e.g. MetricsUpdateTask, etc) where there isn't a principal
-                return true;
-            }
-            return false;
-        } else {
+        if (principal == null) {
+            // This is a system request being made (e.g. MetricsUpdateTask, etc) where there isn't a principal
             return true;
         }
+
+        if (!isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)) {
+            return true;
+        }
+
+        // TODO: After upgrading to Alpine >= 3.2.0, this should become:
+        //   request.getEffectivePermission().contains(Permissions.ACCESS_MANAGEMENT.name())
+        // https://github.com/stevespringett/Alpine/pull/764
+        if (super.hasAccessManagementPermission(principal)) {
+            return true;
+        }
+
+        final Set<Long> teamIds = getTeamIds(principal);
+        if (teamIds.isEmpty()) {
+            return false;
+        }
+
+        final Query<?> query = pm.newQuery(Query.SQL, "SELECT HAS_PROJECT_ACCESS(:projectId, :teamIds)");
+        query.setNamedParameters(Map.ofEntries(
+                Map.entry("projectId", project.getId()),
+                Map.entry("teamIds", teamIds.toArray(new Long[0]))));
+        return executeAndCloseResultUnique(query, Boolean.class);
     }
 
     @Override
     void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
+        if (bypass
+            || principal == null
+            || !isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)
+            || hasAccessManagementPermission(principal)) {
+            query.setFilter(inputFilter);
+            return;
+        }
+
+        final Set<Long> teamIds = getTeamIds(principal);
+        if (teamIds.isEmpty()) {
+            if (inputFilter != null && !inputFilter.isBlank()) {
+                query.setFilter(inputFilter + " && false");
+            } else {
+                query.setFilter("false");
+            }
+            return;
+        }
+
         String projectMemberFieldName = null;
         final org.datanucleus.store.query.Query<?> internalQuery = ((JDOQuery<?>)query).getInternalQuery();
         if (!Project.class.equals(internalQuery.getCandidateClass())) {
@@ -1006,45 +1015,16 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                         .formatted(internalQuery.getCandidateClassName(), Project.class.getName()));
             }
         }
-        if (super.principal != null && isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED) && !bypass) {
-            final List<Team> teams;
-            if (super.principal instanceof UserPrincipal userPrincipal) {
-                teams = userPrincipal.getTeams();
-                if (super.hasAccessManagementPermission(userPrincipal)) {
-                    query.setFilter(inputFilter);
-                    return;
-                }
-            } else {
-                final ApiKey apiKey = ((ApiKey) super.principal);
-                teams = apiKey.getTeams();
-                if (super.hasAccessManagementPermission(apiKey)) {
-                    query.setFilter(inputFilter);
-                    return;
-                }
-            }
-            if (teams != null && !teams.isEmpty()) {
-                final StringBuilder sb = new StringBuilder();
-                for (int i = 0, teamsSize = teams.size(); i < teamsSize; i++) {
-                    final Team team = super.getObjectById(Team.class, teams.get(i).getId());
-                    sb.append(" ");
-                    if (projectMemberFieldName != null) {
-                        sb.append(projectMemberFieldName).append(".");
-                    }
-                    sb.append(" accessTeams.contains(:team").append(i).append(") ");
-                    params.put("team" + i, team);
-                    if (i < teamsSize - 1) {
-                        sb.append(" || ");
-                    }
-                }
-                if (inputFilter != null && !inputFilter.isBlank()) {
-                    query.setFilter(inputFilter + " && (" + sb + ")");
-                } else {
-                    query.setFilter(sb.toString());
-                }
-            }
-        } else if (StringUtils.trimToNull(inputFilter) != null) {
-            query.setFilter(inputFilter);
+
+        final var aclCondition = "%s.isAccessibleBy(:projectAclTeamIds)".formatted(
+                requireNonNullElse(projectMemberFieldName, "this"));
+        if (inputFilter != null && !inputFilter.isBlank()) {
+            query.setFilter("%s && (%s)".formatted(inputFilter, aclCondition));
+        } else {
+            query.setFilter("(%s)".formatted(aclCondition));
         }
+
+        params.put("projectAclTeamIds", teamIds.toArray(new Long[0]));
     }
 
     /**
