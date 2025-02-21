@@ -670,7 +670,9 @@
             </column>
 
             <column name="NAME" type="VARCHAR(255)">
-                <constraints nullable="false" unique="true" uniqueConstraintName="ROLE_NAME_IDX" />
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="ROLE_NAME_IDX"
+                    validateNullable="true" validateUnique="true" />
             </column>
 
             <column name="DESCRIPTION" type="VARCHAR(255)">
@@ -680,90 +682,106 @@
 
         <createTable ifNotExists="true" tableName="ROLES_PERMISSIONS">
             <column name="ROLE_ID" type="BIGINT">
-                <constraints nullable="false" foreignKeyName="ROLES_PERMISSIONS_ROLE_FK"
-                    referencedTableName="ROLE" referencedColumnNames="ID" />
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="ROLES_PERMISSIONS_IDX"
+                    foreignKeyName="ROLES_PERMISSIONS_ROLE_FK"
+                    referencedTableName="ROLE" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateUnique="true" validateForeignKey="true" />
             </column>
 
             <column name="PERMISSION_ID" type="BIGINT">
-                <constraints nullable="false" foreignKeyName="ROLES_PERMISSIONS_PERMISSION_FK"
-                    referencedTableName="PERMISSION" referencedColumnNames="ID" />
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="ROLES_PERMISSIONS_IDX"
+                    foreignKeyName="ROLES_PERMISSIONS_PERMISSION_FK"
+                    referencedTableName="PERMISSION" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateUnique="true" validateForeignKey="true" />
             </column>
         </createTable>
 
-        <createTable ifNotExists="true" tableName="PROJECT_ACCESS_ROLES" tableType="">
+        <createTable ifNotExists="true" tableName="PROJECT_ACCESS_ROLES">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PROJECT_ACCESS_ROLE_PK" />
             </column>
 
             <column name="PROJECT_ID" type="BIGINT">
-                <constraints nullable="false" foreignKeyName="PROJECT_ACCESS_ROLES_PROJECT_FK"
-                    referencedTableName="PROJECT" referencedColumnNames="ID" />
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="PROJECT_ACCESS_ROLES_COMPOSITE_IDX"
+                    foreignKeyName="PROJECT_ACCESS_ROLES_PROJECT_FK"
+                    referencedTableName="PROJECT" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateUnique="true" validateForeignKey="true" />
             </column>
 
             <column name="ROLE_ID" type="BIGINT">
-                <constraints nullable="false" foreignKeyName="PROJECT_ACCESS_ROLES_ROLE_FK"
-                    referencedTableName="ROLE" referencedColumnNames="ID" />
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="PROJECT_ACCESS_ROLES_COMPOSITE_IDX"
+                    foreignKeyName="PROJECT_ACCESS_ROLES_ROLE_FK"
+                    referencedTableName="ROLE" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateUnique="true" validateForeignKey="true" />
             </column>
         </createTable>
 
         <createTable ifNotExists="true" tableName="LDAPUSERS_PROJECTS_ROLES">
             <column name="LDAPUSER_ID" type="BIGINT">
-                <constraints nullable="false" foreignKeyName="LDAPUSERS_PROJECTS_ROLES_LDAPUSER_FK"
-                    referencedTableName="LDAPUSER" referencedColumnNames="ID" />
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="LDAPUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
+                    foreignKeyName="LDAPUSERS_PROJECTS_ROLES_LDAPUSER_FK"
+                    referencedTableName="LDAPUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateUnique="true" validateForeignKey="true" />
             </column>
 
             <column name="PROJECT_ACCESS_ROLE_ID" type="BIGINT">
-                <constraints nullable="false"
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="LDAPUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
                     foreignKeyName="LDAPUSERS_PROJECTS_ROLES_PROJECT_ACCESS_ROLE_FK"
-                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID" />
+                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateUnique="true" validateForeignKey="true" />
             </column>
         </createTable>
 
         <createTable ifNotExists="true" tableName="MANAGEDUSERS_PROJECTS_ROLES">
             <column name="MANAGEDUSER_ID" type="BIGINT">
-                <constraints nullable="false"
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="MANAGEDUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
                     foreignKeyName="MANAGEDUSERS_PROJECTS_ROLES_MANAGEDUSER_FK"
-                    referencedTableName="MANAGEDUSER" referencedColumnNames="ID" />
+                    referencedTableName="MANAGEDUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateUnique="true" validateForeignKey="true" />
             </column>
 
             <column name="PROJECT_ACCESS_ROLE_ID" type="BIGINT">
-                <constraints nullable="false"
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="MANAGEDUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
                     foreignKeyName="MANAGEDUSERS_PROJECTS_ROLES_PROJECT_ACCESS_ROLE_FK"
-                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID" />
+                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false" 
+                    validateUnique="true" validateForeignKey="true" />
             </column>
         </createTable>
 
         <createTable ifNotExists="true" tableName="OIDCUSERS_PROJECTS_ROLES">
             <column name="OIDCUSER_ID" type="BIGINT">
-                <constraints nullable="false" foreignKeyName="OIDCUSERS_PROJECTS_ROLES_OIDCUSER_FK"
-                    referencedTableName="OIDCUSER" referencedColumnNames="ID" />
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="OIDCUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
+                    foreignKeyName="OIDCUSERS_PROJECTS_ROLES_OIDCUSER_FK"
+                    referencedTableName="OIDCUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false" 
+                    validateUnique="true" validateForeignKey="true" />
             </column>
 
             <column name="PROJECT_ACCESS_ROLE_ID" type="BIGINT">
-                <constraints nullable="false"
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="OIDCUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
                     foreignKeyName="OIDCUSERS_PROJECTS_ROLES_PROJECT_ACCESS_ROLE_FK"
-                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID" />
+                    referencedTableName="PROJECT_ACCESS_ROLES" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false" 
+                    validateUnique="true" validateForeignKey="true" />
             </column>
         </createTable>
-
-        <addUniqueConstraint constraintName="ROLES_PERMISSIONS_IDX"
-            tableName="ROLES_PERMISSIONS"
-            columnNames="ROLE_ID, PERMISSION_ID" />
-        
-        <addUniqueConstraint constraintName="PROJECT_ACCESS_ROLES_COMPOSITE_IDX"
-            tableName="PROJECT_ACCESS_ROLES"
-            columnNames="PROJECT_ID, ROLE_ID" />
-
-        <addUniqueConstraint constraintName="LDAPUSER_PROJECT_ACCESS_ROLE_IDX"
-            tableName="LDAPUSERS_PROJECTS_ROLES"
-            columnNames="LDAPUSER_ID, PROJECT_ACCESS_ROLE_ID" />
-
-        <addUniqueConstraint constraintName="MANAGEDUSER_PROJECT_ACCESS_ROLE_IDX"
-            tableName="MANAGEDUSERS_PROJECTS_ROLES"
-            columnNames="MANAGEDUSER_ID, PROJECT_ACCESS_ROLE_ID" />
-
-        <addUniqueConstraint constraintName="OIDCUSER_PROJECT_ACCESS_ROLE_IDX"
-            tableName="OIDCUSERS_PROJECTS_ROLES"
-            columnNames="OIDCUSER_ID, PROJECT_ACCESS_ROLE_ID" />
     </changeSet>
 </databaseChangeLog>
