@@ -23,4 +23,7 @@
     <changeSet id="procedure_update-portfolio-metrics" author="nscuro@protonmail.com" runOnChange="true">
         <createProcedure path="procedures/procedure_update-portfolio-metrics.sql" relativeToChangelogFile="true"/>
     </changeSet>
+    <changeSet id="function_has-project-access" author="nscuro" runOnChange="true">
+        <createProcedure path="procedures/function_has-project-access.sql" relativeToChangelogFile="true"/>
+    </changeSet>
 </databaseChangeLog>
