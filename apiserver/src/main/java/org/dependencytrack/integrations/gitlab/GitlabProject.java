@@ -41,18 +41,12 @@ class GitLabProject {
         }
     }
 
-    private final String name;
     private final String fullPath;
     private final MaxAccessLevel maxAccessLevel;
 
-    GitLabProject(final String name, final String fullPath, final GitLabRole maxAccessLevel) {
-        this.name = name;
+    GitLabProject(final String fullPath, final GitLabRole maxAccessLevel) {
         this.fullPath = fullPath;
         this.maxAccessLevel = new MaxAccessLevel(maxAccessLevel);
-    }
-
-    public String getName() {
-        return name;
     }
 
     public String getFullPath() {
@@ -65,20 +59,18 @@ class GitLabProject {
 
     public static GitLabProject parse(final String data) {
         JSONObject obj = JSONValue.parse(data, JSONObject.class);
-        String name = obj.getAsString("name");
         String fullPath = obj.getAsString("fullPath");
 
         JSONObject maxAccessLevel = (JSONObject) obj.get("maxAccessLevel");
         String stringValue = maxAccessLevel.getAsString("stringValue");
 
-        return new GitLabProject(name, fullPath, GitLabRole.valueOf(stringValue));
+        return new GitLabProject(fullPath, GitLabRole.valueOf(stringValue));
     }
 
     @Override
     public String toString() {
-        return "%s{name=%s, fullPath=%s, maxAccessLevel=%s}".formatted(
+        return "%s{fullPath=%s, maxAccessLevel=%s}".formatted(
                 getClass().getSimpleName(),
-                name,
                 fullPath,
                 maxAccessLevel.getStringValue().toString());
     }

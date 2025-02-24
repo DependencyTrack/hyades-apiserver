@@ -11,7 +11,6 @@ query (
     after: $cursor
   ) {
     nodes {
-      name
       fullPath
       maxAccessLevel {
         stringValue
