@@ -20,7 +20,6 @@ package org.dependencytrack.resources.v1;
 
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -32,13 +31,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.PolicyViolation;
@@ -47,6 +39,13 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import java.util.Collection;
@@ -65,7 +64,7 @@ import java.util.Map;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class PolicyViolationResource extends AlpineResource {
+public class PolicyViolationResource extends AbstractApiResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -148,14 +147,11 @@ public class PolicyViolationResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final PaginatedResult result = qm.getPolicyViolations(project, suppressed);
-                    return Response.ok(detachViolations(qm, result.getList(PolicyViolation.class)))
-                            .header(TOTAL_COUNT_HEADER, result.getTotal())
-                            .build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                final PaginatedResult result = qm.getPolicyViolations(project, suppressed);
+                return Response.ok(detachViolations(qm, result.getList(PolicyViolation.class)))
+                        .header(TOTAL_COUNT_HEADER, result.getTotal())
+                        .build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -189,14 +185,11 @@ public class PolicyViolationResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
-                if (qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    final PaginatedResult result = qm.getPolicyViolations(component, suppressed);
-                    return Response.ok(detachViolations(qm, result.getList(PolicyViolation.class)))
-                            .header(TOTAL_COUNT_HEADER, result.getTotal())
-                            .build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
-                }
+                requireAccess(qm, component.getProject());
+                final PaginatedResult result = qm.getPolicyViolations(component, suppressed);
+                return Response.ok(detachViolations(qm, result.getList(PolicyViolation.class)))
+                        .header(TOTAL_COUNT_HEADER, result.getTotal())
+                        .build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }

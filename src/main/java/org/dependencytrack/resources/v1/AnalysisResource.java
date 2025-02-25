@@ -24,7 +24,6 @@ import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,15 +33,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Analysis;
@@ -57,6 +47,15 @@ import org.dependencytrack.util.AnalysisCommentFormatter.AnalysisCommentField;
 import org.dependencytrack.util.AnalysisCommentUtil;
 import org.dependencytrack.util.NotificationUtil;
 
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -74,7 +73,7 @@ import static org.dependencytrack.util.AnalysisCommentFormatter.formatComment;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class AnalysisResource extends AlpineResource {
+public class AnalysisResource extends AbstractApiResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -89,6 +88,7 @@ public class AnalysisResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = Analysis.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
@@ -104,9 +104,8 @@ public class AnalysisResource extends AlpineResource {
                 new ValidationTask(RegexSequence.Pattern.UUID, vulnerabilityUuid, "Vulnerability is not a valid UUID")
         );
         try (QueryManager qm = new QueryManager()) {
-            final Project project;
             if (StringUtils.trimToNull(projectUuid) != null) {
-                project = qm.getObjectByUuid(Project.class, projectUuid);
+                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
                 if (project == null) {
                     return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
                 }
@@ -115,6 +114,7 @@ public class AnalysisResource extends AlpineResource {
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
+            requireAccess(qm, component.getProject());
             final Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, vulnerabilityUuid);
             if (vulnerability == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The vulnerability could not be found.").build();
@@ -141,6 +141,7 @@ public class AnalysisResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = Analysis.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden"),
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
     @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
@@ -165,6 +166,7 @@ public class AnalysisResource extends AlpineResource {
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
+            requireAccess(qm, component.getProject());
             final Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, request.getVulnerability());
             if (vulnerability == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The vulnerability could not be found.").build();

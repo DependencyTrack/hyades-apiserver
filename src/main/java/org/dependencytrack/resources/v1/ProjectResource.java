@@ -25,7 +25,6 @@ import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.jsonwebtoken.lang.Collections;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -37,21 +36,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.ClientErrorException;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.PATCH;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.ServerErrorException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
@@ -71,6 +55,21 @@ import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.dependencytrack.resources.v1.vo.ConciseProject;
 import org.jdbi.v3.core.Handle;
 
+import jakarta.validation.Validator;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.ServerErrorException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import javax.jdo.FetchGroup;
 import java.security.Principal;
 import java.util.Collection;
@@ -102,7 +101,7 @@ import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolati
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class ProjectResource extends AlpineResource {
+public class ProjectResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(ProjectResource.class);
 
@@ -254,11 +253,8 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getProject(uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.ok(project).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                return Response.ok(project).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -289,11 +285,8 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getLatestProjectVersion(name);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.ok(project).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                return Response.ok(project).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -327,11 +320,8 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getProject(name, version);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.ok(project).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                return Response.ok(project).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -457,11 +447,8 @@ public class ProjectResource extends AlpineResource {
         try (final var qm = new QueryManager()) {
             if(jsonProject.isLatest()) {
                 final Project oldLatest = qm.getLatestProjectVersion(jsonProject.getName());
-                if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
-                    return Response.status(Response.Status.FORBIDDEN)
-                            .entity("Cannot create latest version for project with this name. Access to current latest " +
-                                    "version is forbidden!")
-                            .build();
+                if(oldLatest != null) {
+                    requireAccess(qm, oldLatest);
                 }
             }
             final Project createdProject = qm.callInTransaction(() -> {
@@ -612,12 +599,7 @@ public class ProjectResource extends AlpineResource {
                             .entity("The UUID of the project could not be found.")
                             .build());
                 }
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    throw new ClientErrorException(Response
-                            .status(Response.Status.FORBIDDEN)
-                            .entity("Access to the specified project is forbidden")
-                            .build());
-                }
+                requireAccess(qm, project);
 
                 final String name = StringUtils.trimToNull(jsonProject.getName());
                 // Name cannot be empty or null - prevent it
@@ -627,11 +609,8 @@ public class ProjectResource extends AlpineResource {
                 // if project is newly set to latest, ensure user has access to current latest version to modify it
                 if (jsonProject.isLatest() && !project.isLatest()) {
                     final Project oldLatest = qm.getLatestProjectVersion(name);
-                    if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
-                        throw new ClientErrorException(Response
-                                .status(Response.Status.FORBIDDEN)
-                                .entity("Cannot set this project version to latest. Access to current latest version is forbidden.")
-                                .build());
+                    if(oldLatest != null) {
+                        requireAccess(qm, oldLatest);
                     }
                 }
 
@@ -715,21 +694,13 @@ public class ProjectResource extends AlpineResource {
                             .entity("The UUID of the project could not be found.")
                             .build());
                 }
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    throw new ClientErrorException(Response
-                            .status(Response.Status.FORBIDDEN)
-                            .entity("Access to the specified project is forbidden")
-                            .build());
-                }
+                requireAccess(qm, project);
                 // if project is newly set to latest, ensure user has access to current latest version to modify it
                 if (jsonProject.isLatest() && !project.isLatest()) {
                     final var oldName = jsonProject.getName() != null ? jsonProject.getName() : project.getName();
                     final Project oldLatest = qm.getLatestProjectVersion(oldName);
-                    if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
-                        throw new ClientErrorException(Response
-                                .status(Response.Status.FORBIDDEN)
-                                .entity("Cannot set this project version to latest. Access to current latest version is forbidden.")
-                                .build());
+                    if(oldLatest != null) {
+                        requireAccess(qm, oldLatest);
                     }
                 }
 
@@ -757,12 +728,7 @@ public class ProjectResource extends AlpineResource {
                                 .entity("The UUID of the parent project could not be found.")
                                 .build());
                     }
-                    if (!qm.hasAccess(getPrincipal(), parent)) {
-                        throw new ClientErrorException(Response
-                                .status(Response.Status.FORBIDDEN)
-                                .entity("Access to the specified parent project is forbidden")
-                                .build());
-                    }
+                    requireAccess(qm, parent);
                     modified |= project.getParent() == null || !parent.getUuid().equals(project.getParent().getUuid());
                     project.setParent(parent);
                 }
@@ -869,12 +835,7 @@ public class ProjectResource extends AlpineResource {
                             .entity("The UUID of the project could not be found.")
                             .build());
                 }
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    throw new ClientErrorException(Response
-                            .status(Response.Status.FORBIDDEN)
-                            .entity("Access to the specified project is forbidden")
-                            .build());
-                }
+                requireAccess(qm, project);
 
                 LOGGER.info("Project " + project + " deletion request by " + super.getPrincipal().getName());
 
@@ -926,12 +887,7 @@ public class ProjectResource extends AlpineResource {
                             .entity("The UUID of the project could not be found.")
                             .build());
                 }
-                if (!qm.hasAccess(super.getPrincipal(), sourceProject)) {
-                    throw new ClientErrorException(Response
-                            .status(Response.Status.FORBIDDEN)
-                            .entity("Access to the specified project is forbidden")
-                            .build());
-                }
+                requireAccess(qm, sourceProject);
                 if (qm.doesProjectExist(sourceProject.getName(), StringUtils.trimToNull(jsonRequest.getVersion()))) {
                     throw new ClientErrorException(Response
                             .status(Response.Status.CONFLICT)
@@ -941,11 +897,8 @@ public class ProjectResource extends AlpineResource {
                 // if project is newly set to latest, ensure user has access to current latest version to modify it
                 if (jsonRequest.makeCloneLatest() && !sourceProject.isLatest()) {
                     final Project oldLatest = qm.getLatestProjectVersion(sourceProject.getName());
-                    if(oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
-                        throw new ClientErrorException(Response
-                                .status(Response.Status.CONFLICT)
-                                .entity("Cannot set cloned project version to latest. Access to current latest version is forbidden.")
-                                .build());
+                    if(oldLatest != null) {
+                        requireAccess(qm, oldLatest);
                     }
                 }
 
@@ -1007,12 +960,9 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
+                requireAccess(qm, project);
                 final PaginatedResult result = qm.getChildrenProjects(project.getUuid(), true, excludeInactive);
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }
@@ -1049,13 +999,10 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
+                requireAccess(qm, project);
                 final Classifier classifier = Classifier.valueOf(classifierString);
                 final PaginatedResult result = qm.getChildrenProjects(classifier, project.getUuid(), true, excludeInactive);
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }
@@ -1092,13 +1039,10 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
+                requireAccess(qm, project);
                 final Tag tag = qm.getTagByName(tagString);
                 final PaginatedResult result = qm.getChildrenProjects(tag, project.getUuid(), true, excludeInactive);
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }
@@ -1135,12 +1079,9 @@ public class ProjectResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final PaginatedResult result = (name != null) ? qm.getProjectsWithoutDescendantsOf(name, excludeInactive, project) : qm.getProjectsWithoutDescendantsOf(excludeInactive, project);
-                    return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                final PaginatedResult result = (name != null) ? qm.getProjectsWithoutDescendantsOf(name, excludeInactive, project) : qm.getProjectsWithoutDescendantsOf(excludeInactive, project);
+                return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }

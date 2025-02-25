@@ -20,7 +20,6 @@ package org.dependencytrack.resources.v1;
 
 import alpine.event.framework.Event;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -31,12 +30,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.time.DateUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
@@ -52,6 +45,12 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.DateUtil;
 
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.Date;
 import java.util.List;
 
@@ -67,7 +66,7 @@ import java.util.List;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class MetricsResource extends AlpineResource {
+public class MetricsResource extends AbstractApiResource {
 
     @GET
     @Path("/vulnerability")
@@ -214,12 +213,9 @@ public class MetricsResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
-                    return Response.ok(metrics).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
+                return Response.ok(metrics).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -304,12 +300,9 @@ public class MetricsResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    Event.dispatch(new ProjectMetricsUpdateEvent(project.getUuid()));
-                    return Response.ok().build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                Event.dispatch(new ProjectMetricsUpdateEvent(project.getUuid()));
+                return Response.ok().build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -340,12 +333,9 @@ public class MetricsResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
-                if (qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
-                    return Response.ok(metrics).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
-                }
+                requireAccess(qm, component.getProject());
+                final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+                return Response.ok(metrics).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
@@ -433,12 +423,9 @@ public class MetricsResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
-                if (qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    Event.dispatch(new ComponentMetricsUpdateEvent(component.getUuid()));
-                    return Response.ok().build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
-                }
+                requireAccess(qm, component.getProject());
+                Event.dispatch(new ComponentMetricsUpdateEvent(component.getUuid()));
+                return Response.ok().build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
@@ -458,12 +445,9 @@ public class MetricsResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final List<ProjectMetrics> metrics = qm.getProjectMetricsSince(project, since);
-                    return Response.ok(metrics).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                final List<ProjectMetrics> metrics = qm.getProjectMetricsSince(project, since);
+                return Response.ok(metrics).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -481,12 +465,9 @@ public class MetricsResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
-                if (qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    final List<DependencyMetrics> metrics = qm.getDependencyMetricsSince(component, since);
-                    return Response.ok(metrics).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
-                }
+                requireAccess(qm, component.getProject());
+                final List<DependencyMetrics> metrics = qm.getDependencyMetricsSince(component, since);
+                return Response.ok(metrics).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
