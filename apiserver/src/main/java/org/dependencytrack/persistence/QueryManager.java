@@ -1088,6 +1088,14 @@ public class QueryManager extends AlpineQueryManager {
         return getRepositoryQueryManager().synchronizeRepositoryMetaComponent(transientRepositoryMetaComponent);
     }
 
+    public boolean addRoleToUser(UserPrincipal principal, Role role, String roleName, String projectName){
+        return getRoleQueryManager().addRoleToUser(principal, role, roleName, projectName);
+    }
+
+    public boolean removeRoleFromUser(UserPrincipal principal, Role role, String roleName, String projectName){
+        return getRoleQueryManager().removeRoleFromUser(principal, role, roleName, projectName);
+    }
+
     public NotificationRule createNotificationRule(String name, NotificationScope scope, NotificationLevel level, NotificationPublisher publisher) {
         return getNotificationQueryManager().createNotificationRule(name, scope, level, publisher);
     }
