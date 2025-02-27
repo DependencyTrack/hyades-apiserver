@@ -28,43 +28,29 @@ message AnalyzeProjectArgs {
   Project project = 1;
 }
 
+message AnalyzeProjectVulnsArgs {
+  Project project = 1;
+  string analyzer_name = 2;
+}
+
 // TODO: Find better name.
 // TODO: Move this to separate package.
 // TODO: Consider project-level findings?
 message AnalyzeProjectVulnsResult {
   string analyzer = 1;
-  repeated ComponentResult results = 2;
-
-  message ComponentResult {
-    int64 component_id = 1;
-    repeated org.cyclonedx.v1_6.Vulnerability vulns = 2;
-  }
+  org.dependencytrack.storage.v1alpha1.FileMetadata vdr_file_metadata = 2;
 }
 
 // TODO: Find better name.
 // TODO: Move this to separate package.
-message AnalyzeProjectVulnsResultX {
-  optional org.dependencytrack.storage.v1alpha1.FileMetadata results_file_metadata = 1;
-}
-
-// TODO: Find better name.
-// TODO: Move this to separate package.
-message ProcessProjectAnalysisResultsArgs {
-  repeated AnalyzeProjectVulnsResultX results = 1;
+message ProcessProjectVulnAnalysisResultsArgs {
+  repeated AnalyzeProjectVulnsResult results = 1;
 }
 
 // TODO: Find better name.
 // TODO: Move this to separate package.
 message AnalyzerStatuses {
   map<string, bool> enabled_analyzers = 1;
-}
-
-message TriggerProjectVulnAnalysisArgs {
-  Project project = 1;
-}
-
-message TriggerProjectVulnAnalysisResult {
-  string scan_token = 1;
 }
 
 message EvalProjectPoliciesArgs {

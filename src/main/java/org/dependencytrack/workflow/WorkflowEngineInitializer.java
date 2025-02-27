@@ -26,11 +26,12 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResult;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectVulnAnalysisResultsArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationActivityArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
@@ -194,21 +195,15 @@ public class WorkflowEngineInitializer implements ServletContextListener {
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityExecutor(
-                maybeFaultInjecting(new InternalVulnerabilityAnalysisActivity(), random),
+                maybeFaultInjecting(new AnalyzeProjectVulnsActivity(), random),
                 /* maxConcurrency */ 10,
-                /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
-                /* resultConverter */ protoConverter(AnalyzeProjectVulnsResultX.class),
+                /* argumentConverter */ protoConverter(AnalyzeProjectVulnsArgs.class),
+                /* resultConverter */ protoConverter(AnalyzeProjectVulnsResult.class),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityExecutor(
-                maybeFaultInjecting(new OssIndexVulnerabilityAnalysisActivity(), random),
+                maybeFaultInjecting(new ProcessProjectVulnAnalysisResultsActivity(), random),
                 /* maxConcurrency */ 10,
-                /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
-                /* resultConverter */ protoConverter(AnalyzeProjectVulnsResultX.class),
-                /* lockTimeout */ Duration.ofSeconds(30));
-        engine.registerActivityExecutor(
-                maybeFaultInjecting(new ProcessProjectAnalysisResultsActivity(), random),
-                /* maxConcurrency */ 10,
-                /* argumentConverter */ protoConverter(ProcessProjectAnalysisResultsArgs.class),
+                /* argumentConverter */ protoConverter(ProcessProjectVulnAnalysisResultsArgs.class),
                 /* resultConverter */ voidConverter(),
                 /* lockTimeout */ Duration.ofSeconds(30));
         engine.registerActivityExecutor(

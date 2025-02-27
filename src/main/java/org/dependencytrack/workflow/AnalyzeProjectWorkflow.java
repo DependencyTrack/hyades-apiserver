@@ -21,10 +21,11 @@ package org.dependencytrack.workflow;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResult;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzerStatuses;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectVulnAnalysisResultsArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
@@ -37,6 +38,7 @@ import org.dependencytrack.workflow.framework.annotation.Workflow;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_INTERNAL_ENABLED;
@@ -73,24 +75,31 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
                 protoConverter(AnalyzerStatuses.class),
                 ignored -> getAnalyzerStatuses()).await().orElseThrow();
 
-        final RetryPolicy scannerRetryPolicy = defaultRetryPolicy().withMaxAttempts(6);
-        final var pendingScannerResults = new ArrayList<Awaitable<AnalyzeProjectVulnsResultX>>();
-        if (analyzerStatuses.getEnabledAnalyzersOrDefault(AnalyzerIdentity.INTERNAL_ANALYZER.name(), false)) {
-            ctx.logger().info("Scheduling internal analysis");
-            pendingScannerResults.add(InternalVulnerabilityAnalysisActivity.CLIENT.call(ctx, args, scannerRetryPolicy));
-        }
-        if (analyzerStatuses.getEnabledAnalyzersOrDefault(AnalyzerIdentity.OSSINDEX_ANALYZER.name(), false)) {
-            ctx.logger().info("Scheduling OSS Index analysis");
-            pendingScannerResults.add(OssIndexVulnerabilityAnalysisActivity.CLIENT.call(ctx, args, scannerRetryPolicy));
-        }
+        final List<String> enabledAnalyzerNames =
+                analyzerStatuses.getEnabledAnalyzersMap().entrySet().stream()
+                        .filter(Map.Entry::getValue)
+                        .map(Map.Entry::getKey)
+                        .sorted()
+                        .toList();
 
-        // TODO: Trigger more analyzers.
+        final RetryPolicy scannerRetryPolicy = defaultRetryPolicy().withMaxAttempts(6);
+        final var pendingScannerResults = new ArrayList<Awaitable<AnalyzeProjectVulnsResult>>();
+        for (final String analyzerName : enabledAnalyzerNames) {
+            ctx.logger().info("Scheduling vulnerability analysis with {}", analyzerName);
+            pendingScannerResults.add(AnalyzeProjectVulnsActivity.CLIENT.call(
+                    ctx,
+                    AnalyzeProjectVulnsArgs.newBuilder()
+                            .setProject(args.getProject())
+                            .setAnalyzerName(analyzerName)
+                            .build(),
+                    scannerRetryPolicy));
+        }
 
         // TODO: Handle analyzer failures.
         //  We can still process partial results, but the process-project-analysis-results
         //  needs to know when something failed.
         ctx.logger().info("Waiting for results from {} scanners", pendingScannerResults.size());
-        final List<AnalyzeProjectVulnsResultX> scannerResults = pendingScannerResults.stream()
+        final List<AnalyzeProjectVulnsResult> scannerResults = pendingScannerResults.stream()
                 .map(Awaitable::await)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -98,9 +107,9 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
 
         ctx.setStatus(STATUS_PROCESSING_VULN_ANALYSIS_RESULTS);
         ctx.logger().info("Scheduling processing of vulnerability analysis results");
-        ProcessProjectAnalysisResultsActivity.CLIENT.call(
+        ProcessProjectVulnAnalysisResultsActivity.CLIENT.call(
                 ctx,
-                ProcessProjectAnalysisResultsArgs.newBuilder()
+                ProcessProjectVulnAnalysisResultsArgs.newBuilder()
                         .addAllResults(scannerResults)
                         .build(),
                 defaultRetryPolicy()).await();

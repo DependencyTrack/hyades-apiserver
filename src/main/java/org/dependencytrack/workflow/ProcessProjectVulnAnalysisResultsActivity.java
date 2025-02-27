@@ -21,8 +21,7 @@ package org.dependencytrack.workflow;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResult;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResultX;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectAnalysisResultsArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectVulnAnalysisResultsArgs;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityContext;
@@ -39,35 +38,35 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.p
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Activity(name = "process-project-analysis-results")
-public class ProcessProjectAnalysisResultsActivity implements ActivityExecutor<ProcessProjectAnalysisResultsArgs, Void> {
+public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecutor<ProcessProjectVulnAnalysisResultsArgs, Void> {
 
-    public static final ActivityClient<ProcessProjectAnalysisResultsArgs, Void> CLIENT = ActivityClient.of(
-            ProcessProjectAnalysisResultsActivity.class,
-            protoConverter(ProcessProjectAnalysisResultsArgs.class),
+    public static final ActivityClient<ProcessProjectVulnAnalysisResultsArgs, Void> CLIENT = ActivityClient.of(
+            ProcessProjectVulnAnalysisResultsActivity.class,
+            protoConverter(ProcessProjectVulnAnalysisResultsArgs.class),
             voidConverter());
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ProcessProjectAnalysisResultsActivity.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProcessProjectVulnAnalysisResultsActivity.class);
 
     @Override
-    public Optional<Void> execute(final ActivityContext<ProcessProjectAnalysisResultsArgs> ctx) throws Exception {
-        final ProcessProjectAnalysisResultsArgs args = ctx.argument().orElseThrow();
+    public Optional<Void> execute(final ActivityContext<ProcessProjectVulnAnalysisResultsArgs> ctx) throws Exception {
+        final ProcessProjectVulnAnalysisResultsArgs args = ctx.argument().orElseThrow();
 
         final var resultsFileMetadataSet = new HashSet<FileMetadata>(args.getResultsCount());
         final var results = new ArrayList<AnalyzeProjectVulnsResult>(args.getResultsCount());
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            for (final AnalyzeProjectVulnsResultX result : args.getResultsList()) {
-                if (!result.hasResultsFileMetadata()) {
+            for (final AnalyzeProjectVulnsResult result : args.getResultsList()) {
+                if (!result.hasVdrFileMetadata()) {
                     continue;
                 }
 
-                resultsFileMetadataSet.add(result.getResultsFileMetadata());
+                resultsFileMetadataSet.add(result.getVdrFileMetadata());
 
                 // TODO: Fail with a terminal exception when a file was not found?
                 //  Consider checking for all files first so we can report when more
                 //  than one file is missing.
-                LOGGER.info("Retrieving results file {}", result.getResultsFileMetadata().getKey());
-                final byte[] fileContent = fileStorage.get(result.getResultsFileMetadata());
+                LOGGER.info("Retrieving VDR file {}", result.getVdrFileMetadata().getKey());
+                final byte[] fileContent = fileStorage.get(result.getVdrFileMetadata());
                 results.add(AnalyzeProjectVulnsResult.parseFrom(fileContent));
             }
         }
@@ -95,7 +94,7 @@ public class ProcessProjectAnalysisResultsActivity implements ActivityExecutor<P
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             for (final FileMetadata fileMetadata : resultsFileMetadataSet) {
-                LOGGER.info("Deleting results file {}", fileMetadata.getKey());
+                LOGGER.info("Deleting VDR file {}", fileMetadata.getKey());
                 fileStorage.delete(fileMetadata);
             }
         }
