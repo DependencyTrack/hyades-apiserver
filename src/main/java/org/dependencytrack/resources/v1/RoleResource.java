@@ -137,7 +137,9 @@ public class RoleResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ROLE_MANAGEMENT, Permissions.Constants.ROLE_MANAGEMENT_CREATE })
     public Response createRole(Role jsonRole) {
         super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Created role: " + jsonRole.getName());
-        return Response.ok(jsonRole).build();
+        try (QueryManager qm = new QueryManager()) {
+            return Response.ok(qm.persist(jsonRole)).build();
+        }
     }
 
     @POST

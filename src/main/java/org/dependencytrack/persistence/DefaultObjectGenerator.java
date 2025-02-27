@@ -119,6 +119,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         loadDefaultLicenses();
         loadDefaultLicenseGroups();
         loadDefaultRepositories();
+        loadDefaultRoles();
         loadDefaultConfigProperties();
         loadDefaultNotificationPublishers();
 
