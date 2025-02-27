@@ -31,6 +31,7 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
@@ -301,31 +302,26 @@ public class DefaultObjectGenerator implements ServletContextListener {
             if (!qm.getRoles().isEmpty()) {
                 return;
             }
+            LOGGER.debug("Assigning default permissions to roles");
+            final List<Permission> fullList = qm.getPermissions();
+
             LOGGER.info("Adding default roles to datastore");
             LOGGER.debug("Creating role: Project Admin");
-            final Role projectAdmin = qm.createRole("Project Admin", false);
+            final Role projectAdmin = qm.createRole("Project Admin", null, getProjectAdminPermissions(fullList));
             LOGGER.debug("Creating role: Project Auditor");
-            final Role projectAuditor = qm.createRole("Project Auditor", false);
+            final Role projectAuditor = qm.createRole("Project Auditor", null, getProjectAuditorPermissions(fullList));
             LOGGER.debug("Creating role: Project Editor");
-            final Role projectEditor = qm.createRole("Project Editor", false);
+            final Role projectEditor = qm.createRole("Project Editor", null, getProjectEditorPermissions(fullList));
             LOGGER.debug("Creating role: Project Viewer");
-            final Role projectViewer = qm.createRole("Project Viewer", true);
-    
-            final List<Permission> fullList = qm.getPermissions();
-    
-            LOGGER.debug("Assigning default permissions to roles");
-            projectAdmin.setPermissions(getProjectAdminPermissions(fullList));
-            projectAuditor.setPermissions(getProjectAuditorPermissions(fullList));
-            projectEditor.setPermissions(getProjectEditorPermissions(fullList));
-            projectViewer.setPermissions(getProjectViewerPermissions(fullList));
-    
+            final Role projectViewer = qm.createRole("Project Viewer", null, getProjectViewerPermissions(fullList));
+
             qm.persist(projectAdmin);
             qm.persist(projectAuditor);
             qm.persist(projectEditor);
             qm.persist(projectViewer);
         }
     }
-    
+
     private List<Permission> getProjectAdminPermissions(final List<Permission> fullList) {
         final List<Permission> permissions = new ArrayList<>();
         for (final Permission permission : fullList) {
@@ -348,7 +344,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         }
         return permissions;
     }
-    
+
     private List<Permission> getProjectAuditorPermissions(final List<Permission> fullList) {
         final List<Permission> permissions = new ArrayList<>();
         for (final Permission permission : fullList) {
@@ -361,7 +357,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         }
         return permissions;
     }
-    
+
     private List<Permission> getProjectEditorPermissions(final List<Permission> fullList) {
         final List<Permission> permissions = new ArrayList<>();
         for (final Permission permission : fullList) {
@@ -376,7 +372,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         }
         return permissions;
     }
-    
+
     private List<Permission> getProjectViewerPermissions(final List<Permission> fullList) {
         final List<Permission> permissions = new ArrayList<>();
         for (final Permission permission : fullList) {
@@ -388,7 +384,6 @@ public class DefaultObjectGenerator implements ServletContextListener {
         }
         return permissions;
     }
-
 
     /**
      * Loads the default repositories
@@ -425,7 +420,8 @@ public class DefaultObjectGenerator implements ServletContextListener {
             for (final ConfigPropertyConstants cpc : ConfigPropertyConstants.values()) {
                 LOGGER.debug("Creating config property: " + cpc.getGroupName() + " / " + cpc.getPropertyName());
                 if (qm.getConfigProperty(cpc.getGroupName(), cpc.getPropertyName()) == null) {
-                    qm.createConfigProperty(cpc.getGroupName(), cpc.getPropertyName(), cpc.getDefaultPropertyValue(), cpc.getPropertyType(), cpc.getDescription());
+                    qm.createConfigProperty(cpc.getGroupName(), cpc.getPropertyName(), cpc.getDefaultPropertyValue(),
+                            cpc.getPropertyType(), cpc.getDescription());
                 }
             }
         }
