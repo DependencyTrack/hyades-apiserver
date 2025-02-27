@@ -51,8 +51,6 @@ import org.dependencytrack.model.Role;
 import org.dependencytrack.persistence.QueryManager;
 import org.owasp.security.logging.SecurityMarkers;
 
-import java.util.Collections;
-
 /**
  * JAX-RS resources for processing roles.
  *
@@ -86,8 +84,11 @@ public class RoleResource extends AlpineResource {
     })
     @PermissionRequired({ Permissions.Constants.ROLE_MANAGEMENT, Permissions.Constants.ROLE_MANAGEMENT_READ })
     public Response getRoles() {
-        return Response.ok(Collections.emptyList()).header(TOTAL_COUNT_HEADER, 0).build();
+        try (QueryManager qm = new QueryManager()) {
+            return Response.ok(qm.getRoles()).header(TOTAL_COUNT_HEADER, 0).build();
+        }
     }
+ 
 
     @GET
     @Path("/{uuid}")
