@@ -18,16 +18,16 @@
  */
 package org.dependencytrack.persistence;
 
-import java.nio.file.attribute.UserPrincipal;
-import java.util.Collections;
 import java.util.List;
 
 import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
 
 import org.dependencytrack.model.Role;
 
 import alpine.common.logging.Logger;
 import alpine.model.Permission;
+import alpine.model.UserPrincipal;
 import alpine.resources.AlpineRequest;
 
 final class RoleQueryManager extends QueryManager implements IQueryManager {
@@ -42,6 +42,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
         super(pm, request);
     }
 
+    @Override
     public Role createRole(final String name, final String description, final List<Permission> permissions) {
         Role role = new Role();
         role.setName(name);
@@ -51,33 +52,42 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
         return persist(role);
     }
 
+    @Override
     public List<Role> getRoles() {
-        // TODO:Implement role retrieval logic
-        return Collections.emptyList();
+        final Query<Role> query = pm.newQuery(Role.class);
+        if (orderBy == null)
+            query.setOrdering("name asc");
+
+        return query.executeList();
     }
 
+    @Override
     public Role getRole(String uuid) {
         // TODO:Implement role retrieval logic
         return null;
     }
 
+    @Override
     public Role updateRole(Role role) {
         // TODO:Implement role update logic
         return role;
     }
 
+    @Override
     public boolean deleteRole(String uuid, boolean value) {
         // TODO:Implement role deletion logic
         return false;
     }
 
-    boolean addRoleToUser(UserPrincipal principal, Role role, String roleName, String projectName) {
+    @Override
+    public boolean addRoleToUser(UserPrincipal principal, Role role, String roleName, String projectName) {
         // WARNING: This method is a stub.
         // TODO: Implement addRoleToUser
         return true;
     }
 
-    boolean removeRoleFromUser(UserPrincipal principal, Role role, String roleName, String projectName) {
+    @Override
+    public boolean removeRoleFromUser(UserPrincipal principal, Role role, String roleName, String projectName) {
         // WARNING: This method is a stub.
         // TODO: Implement removeRoleFromUser
         return true;
