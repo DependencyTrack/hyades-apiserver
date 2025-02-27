@@ -845,6 +845,26 @@ public class QueryManager extends AlpineQueryManager {
         getPolicyQueryManager().deletePolicyCondition(policyCondition);
     }
 
+    public Role createRole(Role role) {
+        return getRoleQueryManager().createRole(role);
+    }
+
+    public List getRoles() {
+        return getRoleQueryManager().getRoles();
+    }
+
+    public Role getRole(String uuid) {
+        return getRoleQueryManager().getRole(null);
+    }
+
+    public Role updateRole(Role role) {
+        return getRoleQueryManager().updateRole(role);
+    }
+
+    public boolean deleteRole(String uuid, boolean value) {
+        return getRoleQueryManager().deleteRole(uuid, value);
+    }
+
     public Vulnerability createVulnerability(Vulnerability vulnerability, boolean commitIndex) {
         return getVulnerabilityQueryManager().createVulnerability(vulnerability, commitIndex);
     }
