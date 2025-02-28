@@ -35,6 +35,10 @@ import org.dependencytrack.persistence.converter.OrganizationalContactsJsonConve
 import org.dependencytrack.persistence.converter.OrganizationalEntityJsonConverter;
 import org.dependencytrack.resources.v1.serializers.CustomPackageURLSerializer;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Convert;
 import javax.jdo.annotations.Element;
@@ -51,10 +55,6 @@ import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Serialized;
 import javax.jdo.annotations.Unique;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -80,6 +80,7 @@ import java.util.UUID;
                 @Persistent(name = "vulnerabilities"),
         }),
         @FetchGroup(name = "BOM_UPLOAD_PROCESSING", members = {
+                @Persistent(name = "occurrences"),
                 @Persistent(name = "properties")
         }),
         @FetchGroup(name = "IDENTITY", members = {
@@ -355,6 +356,11 @@ public class Component implements Serializable {
     @Persistent(mappedBy = "parent")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
     private Collection<Component> children;
+
+    @Persistent(mappedBy = "component", defaultFetchGroup = "false")
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
+    @JsonIgnore
+    private List<ComponentOccurrence> occurrences;
 
     @Persistent(mappedBy = "component", defaultFetchGroup = "false")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "groupName ASC, propertyName ASC, id ASC"))
@@ -751,12 +757,34 @@ public class Component implements Serializable {
         this.children = children;
     }
 
+    public List<ComponentOccurrence> getOccurrences() {
+        return occurrences;
+    }
+
+    public void setOccurrences(final List<ComponentOccurrence> occurrences) {
+        this.occurrences = occurrences;
+    }
+
+    public void addOccurrence(final ComponentOccurrence occurrence) {
+        if (occurrences == null) {
+            occurrences = new ArrayList<>();
+        }
+        occurrences.add(occurrence);
+    }
+
     public List<ComponentProperty> getProperties() {
         return properties;
     }
 
     public void setProperties(List<ComponentProperty> properties) {
         this.properties = properties;
+    }
+
+    public void addProperty(final ComponentProperty property) {
+        if (properties == null) {
+            properties = new ArrayList<>();
+        }
+        properties.add(property);
     }
 
     public List<Vulnerability> getVulnerabilities() {

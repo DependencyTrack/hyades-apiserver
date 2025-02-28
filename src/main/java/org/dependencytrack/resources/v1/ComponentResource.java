@@ -36,18 +36,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
@@ -58,6 +46,7 @@ import org.dependencytrack.event.kafka.componentmeta.Handler;
 import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
@@ -75,15 +64,29 @@ import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
 import org.jdbi.v3.core.Handle;
 
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
 import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
 import static org.dependencytrack.model.FetchStatus.PROCESSED;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing components.
@@ -327,7 +330,7 @@ public class ComponentResource extends AlpineResource {
                     StringUtils.trimToNull(swidTagId), StringUtils.trimToNull(group), StringUtils.trimToNull(name),
                     StringUtils.trimToNull(version));
             if (identity.getGroup() == null && identity.getName() == null && identity.getVersion() == null
-                    && identity.getPurl() == null && identity.getCpe() == null && identity.getSwidTagId() == null) {
+                && identity.getPurl() == null && identity.getCpe() == null && identity.getSwidTagId() == null) {
                 return Response.ok().header(TOTAL_COUNT_HEADER, 0).build();
             } else {
                 final PaginatedResult result = qm.getComponents(identity, project, true);
@@ -381,8 +384,8 @@ public class ComponentResource extends AlpineResource {
             @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.PORTFOLIO_MANAGEMENT,
-            Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE })
+    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT,
+            Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
     public Response createComponent(@Parameter(description = "The UUID of the project to create a component for", schema = @Schema(format = "uuid"), required = true)
                                     @PathParam("uuid") @ValidUuid String uuid, Component jsonComponent) {
         final Validator validator = super.getValidator();
@@ -709,4 +712,42 @@ public class ComponentResource extends AlpineResource {
             return Response.ok(dependencyGraph).build();
         }
     }
+
+    @GET
+    @Path("/{uuid}/occurrence")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns the occurrences of a component",
+            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The occurrences of a component",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ComponentOccurrence.class)))
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access to the requested project is forbidden"),
+            @ApiResponse(responseCode = "404", description = "Component could not be found")
+    })
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    public Response getOccurrences(@PathParam("uuid") @ValidUuid final String uuid) {
+        final UUID componentUuid = UUID.fromString(uuid);
+
+        final List<ComponentOccurrence> occurrences = withJdbiHandle(getAlpineRequest(), handle -> {
+            final var dao = handle.attach(ComponentDao.class);
+
+            final Boolean isAccessible = dao.isAccessible(componentUuid);
+            if (isAccessible == null) {
+                throw new NoSuchElementException("Component could not be found");
+            } else if (!isAccessible) {
+                throw new IllegalStateException(); // TODO: ProjectAccessDeniedException.
+            }
+
+            return dao.getOccurrences(componentUuid);
+        });
+
+        final long totalCount = occurrences.isEmpty() ? 0 : occurrences.getFirst().getTotalCount();
+        return Response.ok(occurrences).header(TOTAL_COUNT_HEADER, totalCount).build();
+    }
+
 }
