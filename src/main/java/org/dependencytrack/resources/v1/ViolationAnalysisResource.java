@@ -25,7 +25,6 @@ import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.model.UserPrincipal;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -35,6 +34,18 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.PolicyViolation;
+import org.dependencytrack.model.ViolationAnalysis;
+import org.dependencytrack.model.ViolationAnalysisState;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.ViolationAnalysisRequest;
+import org.dependencytrack.util.NotificationUtil;
+
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -44,16 +55,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.PolicyViolation;
-import org.dependencytrack.model.ViolationAnalysis;
-import org.dependencytrack.model.ViolationAnalysisState;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.vo.ViolationAnalysisRequest;
-import org.dependencytrack.util.NotificationUtil;
 
 /**
  * JAX-RS resources for processing violation analysis decisions.
@@ -67,7 +68,7 @@ import org.dependencytrack.util.NotificationUtil;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class ViolationAnalysisResource extends AlpineResource {
+public class ViolationAnalysisResource extends AbstractApiResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -82,6 +83,10 @@ public class ViolationAnalysisResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ViolationAnalysis.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component or policy violation could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
@@ -98,6 +103,7 @@ public class ViolationAnalysisResource extends AlpineResource {
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
+            requireAccess(qm, component.getProject());
             final PolicyViolation policyViolation = qm.getObjectByUuid(PolicyViolation.class, violationUuid);
             if (policyViolation == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The policy violation could not be found.").build();
@@ -121,6 +127,10 @@ public class ViolationAnalysisResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ViolationAnalysis.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component or policy violation could not be found")
     })
     @PermissionRequired(Permissions.Constants.POLICY_VIOLATION_ANALYSIS)
@@ -137,6 +147,7 @@ public class ViolationAnalysisResource extends AlpineResource {
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
+            requireAccess(qm, component.getProject());
             final PolicyViolation violation = qm.getObjectByUuid(PolicyViolation.class, request.getPolicyViolation());
             if (violation == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The policy violation could not be found.").build();

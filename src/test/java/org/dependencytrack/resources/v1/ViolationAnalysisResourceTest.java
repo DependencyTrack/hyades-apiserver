@@ -53,7 +53,9 @@ import org.junit.Test;
 import java.time.Duration;
 import java.util.Date;
 import java.util.UUID;
+import java.util.function.Supplier;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
@@ -167,6 +169,44 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(Response.Status.NOT_FOUND.getStatusCode());
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
         assertThat(getPlainTextBody(response)).contains("policy violation could not be found");
+    }
+
+    @Test
+    public void retrieveAnalysisAclTest() {
+        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Component component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_VIOLATION_ANALYSIS)
+                .queryParam("component", component.getUuid())
+                .queryParam("policyViolation", UUID.randomUUID())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(404);
     }
 
     @Test
@@ -503,6 +543,50 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(Response.Status.NOT_FOUND.getStatusCode());
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
         assertThat(getPlainTextBody(response)).contains("policy violation could not be found");
+    }
+
+    @Test
+    public void updateAnalysisAclTest() {
+        initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Component component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_VIOLATION_ANALYSIS)
+                .queryParam("component", component.getUuid())
+                .queryParam("policyViolation", UUID.randomUUID())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "component": "%s",
+                          "policyViolation": "9b0e0cec-4bef-4d6d-b767-02f280f55e76",
+                          "comment": "foo"
+                        }
+                        """.formatted(component.getUuid())));
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(404);
     }
 
 }

@@ -26,14 +26,6 @@ import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonObjectBuilder;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -74,6 +66,14 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -88,6 +88,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -274,7 +275,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
     }
 
     @Test
@@ -1393,7 +1400,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
     }
 
     @Test
@@ -1461,6 +1474,36 @@ public class ProjectResourceTest extends ResourceTest {
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
         Assert.assertEquals(0, json.size());
+    }
+
+    @Test
+    public void getProjectsByTagAclTest() {
+        enablePortfolioAccessControl();
+
+        final var accessibleProject = new Project();
+        accessibleProject.setName("acme-app-accessible");
+        accessibleProject.addAccessTeam(super.team);
+        qm.persist(accessibleProject);
+
+        final var inaccessibleProject = new Project();
+        inaccessibleProject.setName("acme-app-inaccessible");
+        qm.persist(inaccessibleProject);
+
+        final Tag tag = new Tag("foo");
+        qm.persist(tag);
+
+        qm.bind(accessibleProject, List.of(tag));
+        qm.bind(inaccessibleProject, List.of(tag));
+
+        final Response response = jersey.target(V1_PROJECT + "/tag/foo")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        final String responseJson = getPlainTextBody(response);
+        assertThatJson(responseJson).isArray().hasSize(1);
+        assertThatJson(responseJson).inPath("$[0].uuid").isEqualTo(accessibleProject.getUuid().toString());
     }
 
     @Test
@@ -1581,6 +1624,66 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    public void createProjectNonExistentParentTest() {
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "parent": {
+                            "uuid": "5e506116-8d58-4403-8631-971ec31961f6"
+                          },
+                          "name": "acme-app"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 404,
+                  "title": "Resource does not exist",
+                  "detail": "Parent project could not be found"
+                }
+                """);
+    }
+
+    @Test
+    public void createProjectInaccessibleParentTest() {
+        enablePortfolioAccessControl();
+
+        final var parentProject = new Project();
+        parentProject.setName("acme-app-parent");
+        qm.persist(parentProject);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "parent": {
+                            "uuid": "%s"
+                          },
+                          "name": "acme-app"
+                        }
+                        """.formatted(parentProject.getUuid())));
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested parent project is forbidden"
+                }
+                """);
+
+        parentProject.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(201);
+    }
+
+    @Test
     public void updateProjectTest() {
         Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         project.setDescription("Test project");
@@ -1623,14 +1726,20 @@ public class ProjectResourceTest extends ResourceTest {
         final Response response = jersey.target(V1_PROJECT)
                 .request()
                 .header(X_API_KEY, apiKey)
-                .post(Entity.json("""
+                .post(Entity.json(/* language=JSON */ """
                         {
                           "uuid": "%s",
                           "name": "acme-app-foo"
                         }
                         """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
     }
 
     @Test
@@ -1717,6 +1826,77 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    public void updateProjectInaccessibleParentTest() {
+        enablePortfolioAccessControl();
+
+        final var parentProject = new Project();
+        parentProject.setName("acme-app-parent");
+        qm.persist(parentProject);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.addAccessTeam(super.team);
+        qm.persist(project);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "parent": {
+                            "uuid": "%s"
+                          },
+                          "uuid": "%s",
+                          "name": "acme-app"
+                        }
+                        """.formatted(parentProject.getUuid(), project.getUuid())));
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested parent project is forbidden"
+                }
+                """);
+
+        parentProject.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    public void updateProjectNonExistentParentTest() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "parent": {
+                            "uuid": "b99bd9cf-d8d1-48ae-972e-615e6cc59e52"
+                          },
+                          "uuid": "%s",
+                          "name": "acme-app"
+                        }
+                        """.formatted(project.getUuid())));
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 404,
+                  "title": "Resource does not exist",
+                  "detail": "Parent project could not be found"
+                }
+                """);
+    }
+
+    @Test
     public void deleteProjectTest() {
         Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/" + project.getUuid().toString())
@@ -1734,6 +1914,36 @@ public class ProjectResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .delete();
         Assert.assertEquals(404, response.getStatus(), 0);
+    }
+
+    @Test
+    public void deleteProjectAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .delete();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(204);
     }
 
     @Test
@@ -1790,13 +2000,19 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
-                .method("PATCH", Entity.json("""
+                .method("PATCH", Entity.json(/* language=JSON */ """
                         {
                           "name": "acme-app-foo"
                         }
                         """));
         assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
     }
 
     @Test
@@ -1900,6 +2116,43 @@ public class ProjectResourceTest extends ResourceTest {
         qm.getPersistenceManager().refresh(project);
         assertThat(project.getParent()).isNotNull();
         assertThat(project.getParent().getUuid()).isEqualTo(parent.getUuid());
+    }
+
+    @Test
+    public void patchProjectParentInaccessibleTest() {
+        enablePortfolioAccessControl();
+
+        final var parentProject = new Project();
+        parentProject.setName("acme-app-parent");
+        qm.persist(parentProject);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.addAccessTeam(super.team);
+        qm.persist(project);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_PROJECT + "/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
+                .method(HttpMethod.PATCH, Entity.json(/* language=JSON */ """
+                        {
+                          "parent": {
+                            "uuid": "%s"
+                          }
+                        }
+                        """.formatted(parentProject.getUuid())));
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested parent project is forbidden"
+                }
+                """);
     }
 
     @Test
@@ -2356,18 +2609,24 @@ public class ProjectResourceTest extends ResourceTest {
 
         Response response = jersey.target("%s/clone".formatted(V1_PROJECT)).request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.json("""
+                .put(Entity.json(/* language=JSON */ """
                         {
                           "project": "%s",
                           "version": "1.1.0"
                         }
                         """.formatted(noAccessProject.getUuid())));
         assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(getPlainTextBody(response)).isEqualTo("Access to the specified project is forbidden");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
 
         response = jersey.target("%s/clone".formatted(V1_PROJECT)).request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.json("""
+                .put(Entity.json(/* language=JSON */ """
                         {
                           "project": "%s",
                           "version": "1.1.0"
@@ -3022,6 +3281,7 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals(403, response.getStatus(), 0);
     }
 
+    @Test
     public void createProjectAsUserWithAclEnabledAndExistingTeamByUuidTest() {
         qm.createConfigProperty(
                 ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
@@ -3058,7 +3318,8 @@ public class ProjectResourceTest extends ResourceTest {
                           "children": [],
                           "properties": [],
                           "tags": [],
-                          "active": true
+                          "active": true,
+                          "isLatest": false
                         }
                         """);
 

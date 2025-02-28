@@ -29,6 +29,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentProperty;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -39,13 +47,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentProperty;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-
 import java.util.List;
 import java.util.UUID;
 
@@ -73,7 +74,10 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ComponentProperty.class)))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -83,22 +87,19 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
-                if (qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    final List<ComponentProperty> properties = qm.getComponentProperties(component);
-                    // Detaches the objects and closes the persistence manager so that if/when encrypted string
-                    // values are replaced by the placeholder, they are not erroneously persisted to the database.
-                    qm.getPersistenceManager().detachCopyAll(properties);
-                    qm.close();
-                    for (final ComponentProperty property : properties) {
-                        // Replace the value of encrypted strings with the pre-defined placeholder
-                        if (ComponentProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
-                            property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
-                        }
+                requireAccess(qm, component.getProject());
+                final List<ComponentProperty> properties = qm.getComponentProperties(component);
+                // Detaches the objects and closes the persistence manager so that if/when encrypted string
+                // values are replaced by the placeholder, they are not erroneously persisted to the database.
+                qm.getPersistenceManager().detachCopyAll(properties);
+                qm.close();
+                for (final ComponentProperty property : properties) {
+                    // Replace the value of encrypted strings with the pre-defined placeholder
+                    if (ComponentProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
+                        property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
                     }
-                    return Response.ok(properties).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
                 }
+                return Response.ok(properties).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
@@ -119,7 +120,10 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
                     content = @Content(schema = @Schema(implementation = ComponentProperty.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found"),
             @ApiResponse(responseCode = "409", description = "A property with the specified component/group/name combination already exists")
     })
@@ -138,27 +142,24 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
-                if (qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    final List<ComponentProperty> existingProperties = qm.getComponentProperties(component,
-                            StringUtils.trimToNull(json.getGroupName()), StringUtils.trimToNull(json.getPropertyName()));
-                    final var jsonPropertyIdentity = new ComponentProperty.Identity(json);
-                    final boolean isDuplicate = existingProperties.stream()
-                            .map(ComponentProperty.Identity::new)
-                            .anyMatch(jsonPropertyIdentity::equals);
-                    if (existingProperties.isEmpty() || !isDuplicate) {
-                        final ComponentProperty property = qm.createComponentProperty(component,
-                                StringUtils.trimToNull(json.getGroupName()),
-                                StringUtils.trimToNull(json.getPropertyName()),
-                                null, // Set value to null - this will be taken care of by updatePropertyValue below
-                                json.getPropertyType(),
-                                StringUtils.trimToNull(json.getDescription()));
-                        updatePropertyValue(qm, json, property);
-                        return Response.status(Response.Status.CREATED).entity(property).build();
-                    } else {
-                        return Response.status(Response.Status.CONFLICT).entity("A property with the specified component/group/name/value combination already exists.").build();
-                    }
+                requireAccess(qm, component.getProject());
+                final List<ComponentProperty> existingProperties = qm.getComponentProperties(component,
+                        StringUtils.trimToNull(json.getGroupName()), StringUtils.trimToNull(json.getPropertyName()));
+                final var jsonPropertyIdentity = new ComponentProperty.Identity(json);
+                final boolean isDuplicate = existingProperties.stream()
+                        .map(ComponentProperty.Identity::new)
+                        .anyMatch(jsonPropertyIdentity::equals);
+                if (existingProperties.isEmpty() || !isDuplicate) {
+                    final ComponentProperty property = qm.createComponentProperty(component,
+                            StringUtils.trimToNull(json.getGroupName()),
+                            StringUtils.trimToNull(json.getPropertyName()),
+                            null, // Set value to null - this will be taken care of by updatePropertyValue below
+                            json.getPropertyType(),
+                            StringUtils.trimToNull(json.getDescription()));
+                    updatePropertyValue(qm, json, property);
+                    return Response.status(Response.Status.CREATED).entity(property).build();
                 } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
+                    return Response.status(Response.Status.CONFLICT).entity("A property with the specified component/group/name/value combination already exists.").build();
                 }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
@@ -177,7 +178,10 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Property removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component or component property could not be found"),
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
@@ -189,15 +193,12 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, componentUuid);
             if (component != null) {
-                if (qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    final long propertiesDeleted = qm.deleteComponentPropertyByUuid(component, UUID.fromString(propertyUuid));
-                    if (propertiesDeleted > 0) {
-                        return Response.status(Response.Status.NO_CONTENT).build();
-                    } else {
-                        return Response.status(Response.Status.NOT_FOUND).entity("The component property could not be found.").build();
-                    }
+                requireAccess(qm, component.getProject());
+                final long propertiesDeleted = qm.deleteComponentPropertyByUuid(component, UUID.fromString(propertyUuid));
+                if (propertiesDeleted > 0) {
+                    return Response.status(Response.Status.NO_CONTENT).build();
                 } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("The component property could not be found.").build();
                 }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();

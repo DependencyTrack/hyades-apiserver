@@ -21,7 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -31,17 +30,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -61,6 +49,17 @@ import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
@@ -79,7 +78,7 @@ import java.util.List;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class VexResource extends AlpineResource {
+public class VexResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(VexResource.class);
 
@@ -97,7 +96,10 @@ public class VexResource extends AlpineResource {
                     content = @Content(schema = @Schema(type = "string"))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_READ})
@@ -111,9 +113,7 @@ public class VexResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-            }
+            requireAccess(qm, project);
 
             final CycloneDXExporter exporter = new CycloneDXExporter(CycloneDXExporter.Variant.VEX, qm);
 
@@ -167,8 +167,12 @@ public class VexResource extends AlpineResource {
                             schema = @Schema(implementation = InvalidBomProblemDetails.class),
                             mediaType = ProblemDetails.MEDIA_TYPE_JSON
                     )
-            ), @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
@@ -228,7 +232,10 @@ public class VexResource extends AlpineResource {
                     )
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
@@ -256,9 +263,7 @@ public class VexResource extends AlpineResource {
      */
     private Response process(QueryManager qm, Project project, String encodedVexData) {
         if (project != null) {
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-            }
+            requireAccess(qm, project);
             final byte[] decoded = Base64.getDecoder().decode(encodedVexData);
             BomResource.validate(decoded, project);
             final VexUploadEvent vexUploadEvent = new VexUploadEvent(project.getUuid(), decoded);
@@ -276,9 +281,7 @@ public class VexResource extends AlpineResource {
         for (final FormDataBodyPart artifactPart : artifactParts) {
             final BodyPartEntity bodyPartEntity = (BodyPartEntity) artifactPart.getEntity();
             if (project != null) {
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
                 try (InputStream in = bodyPartEntity.getInputStream()) {
                     final byte[] content = IOUtils.toByteArray(new BOMInputStream((in)));
                     BomResource.validate(content, project);

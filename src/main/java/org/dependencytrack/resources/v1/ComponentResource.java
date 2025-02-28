@@ -22,7 +22,6 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,18 +35,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
@@ -71,10 +58,23 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
 import org.jdbi.v3.core.Handle;
 
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +97,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class ComponentResource extends AlpineResource {
+public class ComponentResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(ComponentResource.class);
     private final KafkaEventDispatcher kafkaEventDispatcher = new KafkaEventDispatcher();
@@ -118,7 +118,10 @@ public class ComponentResource extends AlpineResource {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Component.class)))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -132,12 +135,9 @@ public class ComponentResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final PaginatedResult result = qm.getComponents(project, true, onlyOutdated, onlyDirect);
-                    return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                final PaginatedResult result = qm.getComponents(project, true, onlyOutdated, onlyDirect);
+                return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -158,7 +158,10 @@ public class ComponentResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = Component.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -171,25 +174,21 @@ public class ComponentResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
-                final Project project = component.getProject();
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final Component detachedComponent = qm.detach(Component.class, component.getId()); // TODO: Force project to be loaded. It should be anyway, but JDO seems to be having issues here.
-                    if ((includeRepositoryMetaData || includeIntegrityMetaData) && detachedComponent.getPurl() != null) {
-                        final RepositoryType type = RepositoryType.resolve(detachedComponent.getPurl());
-                        if (RepositoryType.UNSUPPORTED != type) {
-                            if (includeRepositoryMetaData) {
-                                final RepositoryMetaComponent repoMetaComponent = qm.getRepositoryMetaComponent(type, detachedComponent.getPurl().getNamespace(), detachedComponent.getPurl().getName());
-                                detachedComponent.setRepositoryMeta(repoMetaComponent);
-                            }
-                            if (includeIntegrityMetaData) {
-                                detachedComponent.setComponentMetaInformation(qm.getMetaInformation(component.getUuid()));
-                            }
+                requireAccess(qm, component.getProject());
+                final Component detachedComponent = qm.detach(Component.class, component.getId()); // TODO: Force project to be loaded. It should be anyway, but JDO seems to be having issues here.
+                if ((includeRepositoryMetaData || includeIntegrityMetaData) && detachedComponent.getPurl() != null) {
+                    final RepositoryType type = RepositoryType.resolve(detachedComponent.getPurl());
+                    if (RepositoryType.UNSUPPORTED != type) {
+                        if (includeRepositoryMetaData) {
+                            final RepositoryMetaComponent repoMetaComponent = qm.getRepositoryMetaComponent(type, detachedComponent.getPurl().getNamespace(), detachedComponent.getPurl().getName());
+                            detachedComponent.setRepositoryMeta(repoMetaComponent);
+                        }
+                        if (includeIntegrityMetaData) {
+                            detachedComponent.setComponentMetaInformation(qm.getMetaInformation(component.getUuid()));
                         }
                     }
-                    return Response.ok(detachedComponent).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
                 }
+                return Response.ok(detachedComponent).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
@@ -255,6 +254,10 @@ public class ComponentResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = IntegrityAnalysis.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The integrity analysis information for the specified component cannot be found"),
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -262,7 +265,13 @@ public class ComponentResource extends AlpineResource {
             @Parameter(description = "UUID of the component for which integrity status information is needed", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final IntegrityAnalysis result = qm.getIntegrityAnalysisByComponentUuid(UUID.fromString(uuid));
+            final Component component = qm.getObjectByUuid(Component.class, uuid);
+            if (component == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
+            }
+            requireAccess(qm, component.getProject());
+
+            final IntegrityAnalysis result = qm.getIntegrityAnalysisByComponentUuid(component.getUuid());
             if (result == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The integrity status for the specified component cannot be found.").build();
             } else {
@@ -287,7 +296,11 @@ public class ComponentResource extends AlpineResource {
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of components", schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Component.class)))
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON))
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getComponentByIdentity(@Parameter(description = "The group of the component")
@@ -311,9 +324,7 @@ public class ComponentResource extends AlpineResource {
                 if (project == null) {
                     return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
                 }
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
             }
             PackageURL packageURL = null;
             if (purl != null) {
@@ -378,7 +389,10 @@ public class ComponentResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = Component.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired({ Permissions.Constants.PORTFOLIO_MANAGEMENT,
@@ -421,9 +435,7 @@ public class ComponentResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-            }
+            requireAccess(qm, project);
             final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
             Component component = new Component();
             component.setProject(project);
@@ -469,18 +481,22 @@ public class ComponentResource extends AlpineResource {
             component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
             component = qm.createComponent(component, true);
-            ComponentProjection componentProjection =
-                    new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
-                            component.isInternal(), component.getPurl());
-            try {
-                Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
-                IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
-                if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
-                    calculateIntegrityResult(integrityMetaComponent, component, qm);
+
+            if (component.getPurl() != null) {
+                ComponentProjection componentProjection =
+                        new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
+                                component.isInternal(), component.getPurl());
+                try {
+                    Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
+                    IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
+                    if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
+                        calculateIntegrityResult(integrityMetaComponent, component, qm);
+                    }
+                } catch (MalformedPackageURLException ex) {
+                    LOGGER.warn("Unable to process package url %s".formatted(componentProjection.purl()));
                 }
-            } catch (MalformedPackageURLException ex) {
-                LOGGER.warn("Unable to process package url %s".formatted(componentProjection.purl()));
             }
+
             final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
             qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token(), 1);
             kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
@@ -502,7 +518,10 @@ public class ComponentResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = Component.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the component could not be found"),
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
@@ -532,9 +551,7 @@ public class ComponentResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             Component component = qm.getObjectByUuid(Component.class, jsonComponent.getUuid());
             if (component != null) {
-                if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
-                }
+                requireAccess(qm, component.getProject());
                 // Name cannot be empty or null - prevent it
                 final String name = StringUtils.trimToNull(jsonComponent.getName());
                 if (name != null) {
@@ -588,19 +605,23 @@ public class ComponentResource extends AlpineResource {
                 component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
                 component = qm.updateComponent(component, true);
-                ComponentProjection componentProjection =
-                        new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
-                                component.isInternal(), component.getPurl());
-                try {
 
-                    Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
-                    IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
-                    if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
-                        calculateIntegrityResult(integrityMetaComponent, component, qm);
+                if (component.getPurl() != null) {
+                    ComponentProjection componentProjection =
+                            new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
+                                    component.isInternal(), component.getPurl());
+                    try {
+
+                        Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
+                        IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
+                        if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
+                            calculateIntegrityResult(integrityMetaComponent, component, qm);
+                        }
+                    } catch (MalformedPackageURLException ex) {
+                        LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.getPurl().getType()), ex);
                     }
-                } catch (MalformedPackageURLException ex) {
-                    LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.getPurl().getType()), ex);
                 }
+
                 final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
                 qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token(), 1);
                 kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
@@ -622,7 +643,10 @@ public class ComponentResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Component removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the component could not be found")
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
@@ -632,9 +656,7 @@ public class ComponentResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Component component = qm.getObjectByUuid(Component.class, uuid, Component.FetchGroup.ALL.name());
             if (component != null) {
-                if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
-                }
+                requireAccess(qm, component.getProject());
                 try (final Handle jdbiHandle = openJdbiHandle()) {
                     final var componentDao = jdbiHandle.attach(ComponentDao.class);
                     componentDao.deleteComponent(component.getUuid());
@@ -677,7 +699,10 @@ public class ComponentResource extends AlpineResource {
                     content = @Content(schema = @Schema(type = "object"))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "- The UUID of the project could not be found\n- The UUID of the component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -691,10 +716,7 @@ public class ComponentResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
             }
-
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden.").build();
-            }
+            requireAccess(qm, project);
 
             final String[] componentUuidsSplit = componentUuids.split("\\|");
             final List<Component> components = new ArrayList<>();

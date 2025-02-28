@@ -21,13 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
-import com.github.packageurl.MalformedPackageURLException;
-import com.github.packageurl.PackageURL;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -48,12 +41,18 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import javax.jdo.JDOObjectNotFoundException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -76,59 +75,6 @@ public class ComponentResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         Assert.assertEquals(405, response.getStatus()); // No longer prohibited in DT 4.0+
-    }
-
-    /**
-     * Generate a project with different dependencies
-     *
-     * @return A project with 1000 dpendencies: <ul>
-     * <li>200 outdated dependencies, 75 direct and 125 transitive</li>
-     * <li>800 recent dependencies, 25 direct, 775 transitive</li>
-     * @throws MalformedPackageURLException
-     */
-    private Project prepareProject() throws MalformedPackageURLException {
-        final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
-        final List<String> directDepencencies = new ArrayList<>();
-        // Generate 1000 dependencies
-        for (int i = 0; i < 1000; i++) {
-            Component component = new Component();
-            component.setProject(project);
-            component.setGroup("component-group");
-            component.setName("component-name-" + i);
-            component.setVersion(String.valueOf(i) + ".0");
-            component.setPurl(new PackageURL(RepositoryType.MAVEN.toString(), "component-group", "component-name-" + i, String.valueOf(i) + ".0", null, null));
-            component = qm.createComponent(component, false);
-            // direct depencencies
-            if (i < 100) {
-                // 100 direct depencencies, 900 transitive depencencies
-                directDepencencies.add("{\"uuid\":\"" + component.getUuid() + "\"}");
-            }
-            // Recent & Outdated
-            if ((i >= 25) && (i < 225)) {
-                // 100 outdated components, 75 of these are direct dependencies, 25 transitive
-                final var metaComponent = new RepositoryMetaComponent();
-                metaComponent.setRepositoryType(RepositoryType.MAVEN);
-                metaComponent.setNamespace("component-group");
-                metaComponent.setName("component-name-" + i);
-                metaComponent.setLatestVersion(String.valueOf(i + 1) + ".0");
-                metaComponent.setLastCheck(new Date());
-                qm.persist(metaComponent);
-            } else if (i < 500) {
-                // 300 recent components, 25 of these are direct dependencies
-                final var metaComponent = new RepositoryMetaComponent();
-                metaComponent.setRepositoryType(RepositoryType.MAVEN);
-                metaComponent.setNamespace("component-group");
-                metaComponent.setName("component-name-" + i);
-                metaComponent.setLatestVersion(String.valueOf(i) + ".0");
-                metaComponent.setLastCheck(new Date());
-                qm.persist(metaComponent);
-            } else {
-                // 500 components with no RepositoryMetaComponent containing version
-                // metadata, all transitive dependencies
-            }
-        }
-        project.setDirectDependencies("[" + String.join(",", directDepencencies.toArray(new String[0])) + "]");
-        return project;
     }
 
     @Test
@@ -155,6 +101,41 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
         Assert.assertEquals("The component could not be found.", body);
+    }
+
+    @Test
+    public void getComponentByUuidAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_COMPONENT + "/" + component.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 
     @Test
@@ -304,6 +285,52 @@ public class ComponentResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getIntegrityMetaComponentAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final var integrityAnalysis = new IntegrityAnalysis();
+        integrityAnalysis.setComponent(component);
+        integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_FAILED);
+        integrityAnalysis.setUpdatedAt(new Date());
+        integrityAnalysis.setId(component.getId());
+        integrityAnalysis.setMd5HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_FAILED);
+        integrityAnalysis.setSha1HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha256HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha512HashMatchStatus(HASH_MATCH_FAILED);
+        qm.persist(integrityAnalysis);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_COMPONENT + "/" + component.getUuid() + "/integritycheckstatus")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
     public void integrityMetaDataFoundTest() {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
@@ -403,6 +430,42 @@ public class ComponentResourceTest extends ResourceTest {
         final JsonObject jsonComponent = json.getJsonObject(0);
         assertThat(jsonComponent).isNotNull();
         assertThat(jsonComponent.getString("uuid")).isEqualTo(componentB.getUuid().toString());
+    }
+
+    @Test
+    public void getComponentByIdentityAclTest() {
+        enablePortfolioAccessControl();
+
+        final var accessibleProject = new Project();
+        accessibleProject.setName("acme-app-accessible");
+        accessibleProject.addAccessTeam(super.team);
+        qm.persist(accessibleProject);
+
+        final var accessibleComponent = new Component();
+        accessibleComponent.setProject(accessibleProject);
+        accessibleComponent.setName("acme-lib");
+        qm.persist(accessibleComponent);
+
+        final var inaccessibleProject = new Project();
+        inaccessibleProject.setName("acme-app-inaccessible");
+        qm.persist(inaccessibleProject);
+
+        final var inaccessibleComponent = new Component();
+        inaccessibleComponent.setProject(inaccessibleProject);
+        inaccessibleComponent.setName("acme-lib");
+        qm.persist(inaccessibleComponent);
+
+        Response response = jersey.target(V1_COMPONENT + "/identity")
+                .queryParam("name", "acme-lib")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+
+        final String responseJson = getPlainTextBody(response);
+        assertThatJson(responseJson).isArray().hasSize(1);
+        assertThatJson(responseJson).inPath("$[0].uuid").isEqualTo(accessibleComponent.getUuid().toString());
     }
 
     @Test
@@ -694,6 +757,39 @@ public class ComponentResourceTest extends ResourceTest {
     }
 
     @Test
+    public void createComponentAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_COMPONENT + "/project/" + project.getUuid()).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "acme-lib"
+                        }
+                        """));
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(201);
+    }
+
+    @Test
     public void updateComponentTest() {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
@@ -797,6 +893,44 @@ public class ComponentResourceTest extends ResourceTest {
     }
 
     @Test
+    public void updateComponentAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey.target(V1_COMPONENT).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "uuid": "%s",
+                          "name": "acme-lib-foobar"
+                        }
+                        """.formatted(component.getUuid())));
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
     public void deleteComponentTest() {
         Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
         Component component = new Component();
@@ -832,6 +966,40 @@ public class ComponentResourceTest extends ResourceTest {
         Response response = jersey.target(V1_COMPONENT + "/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).delete();
         Assert.assertEquals(404, response.getStatus(), 0);
+    }
+
+    @Test
+    public void deleteComponentAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_COMPONENT + "/" + component.getUuid()).request()
+                .header(X_API_KEY, apiKey)
+                .delete();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(204);
     }
 
     @Test
@@ -958,6 +1126,40 @@ public class ComponentResourceTest extends ResourceTest {
         JsonObject jsonWithoutComponent = parseJsonObject(responseWithoutComponent);
         Assert.assertEquals(200, responseWithoutComponent.getStatus(), 0);
         Assert.assertEquals(0, jsonWithoutComponent.size());
+    }
+
+    @Test
+    public void getDependencyGraphForComponentAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_COMPONENT + "/project/" + project.getUuid() + "/dependencyGraph/" + component.getUuid()).request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 
 }

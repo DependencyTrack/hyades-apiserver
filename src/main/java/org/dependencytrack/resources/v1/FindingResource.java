@@ -23,7 +23,6 @@ import alpine.event.framework.Event;
 import alpine.model.About;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.pebbletemplates.pebble.PebbleEngine;
 import io.pebbletemplates.pebble.template.PebbleTemplate;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,15 +36,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.text.WordUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
@@ -58,8 +48,18 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -82,7 +82,7 @@ import java.util.stream.Collectors;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class FindingResource extends AlpineResource {
+public class FindingResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(FindingResource.class);
     public static final String MEDIA_TYPE_SARIF_JSON = "application/sarif+json";
@@ -105,7 +105,10 @@ public class FindingResource extends AlpineResource {
                     }
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
@@ -119,26 +122,23 @@ public class FindingResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final List<Finding> findings = qm.getFindings(project, suppressed);
-                    if (acceptHeader != null && acceptHeader.contains(MEDIA_TYPE_SARIF_JSON)) {
-                        try {
-                            return Response.ok(generateSARIF(findings), MEDIA_TYPE_SARIF_JSON)
-                                    .header("content-disposition", "attachment; filename=\"findings-" + uuid + ".sarif\"")
-                                    .build();
-                        } catch (IOException ioException) {
-                            LOGGER.error(ioException.getMessage(), ioException);
-                            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An error occurred while generating SARIF file").build();
-                        }
+                requireAccess(qm, project);
+                final List<Finding> findings = qm.getFindings(project, suppressed);
+                if (acceptHeader != null && acceptHeader.contains(MEDIA_TYPE_SARIF_JSON)) {
+                    try {
+                        return Response.ok(generateSARIF(findings), MEDIA_TYPE_SARIF_JSON)
+                                .header("content-disposition", "attachment; filename=\"findings-" + uuid + ".sarif\"")
+                                .build();
+                    } catch (IOException ioException) {
+                        LOGGER.error(ioException.getMessage(), ioException);
+                        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An error occurred while generating SARIF file").build();
                     }
-                    if (source != null) {
-                        final List<Finding> filteredList = findings.stream().filter(finding -> source.name().equals(finding.getVulnerability().get("source"))).collect(Collectors.toList());
-                        return Response.ok(filteredList).header(TOTAL_COUNT_HEADER, filteredList.size()).build();
-                    } else {
-                        return Response.ok(findings).header(TOTAL_COUNT_HEADER, findings.size()).build();
-                    }
+                }
+                if (source != null) {
+                    final List<Finding> filteredList = findings.stream().filter(finding -> source.name().equals(finding.getVulnerability().get("source"))).collect(Collectors.toList());
+                    return Response.ok(filteredList).header(TOTAL_COUNT_HEADER, filteredList.size()).build();
                 } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
+                    return Response.ok(findings).header(TOTAL_COUNT_HEADER, findings.size()).build();
                 }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -160,7 +160,10 @@ public class FindingResource extends AlpineResource {
                     content = @Content(schema = @Schema(type = "string"))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
@@ -169,15 +172,12 @@ public class FindingResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final List<Finding> findings = qm.getFindings(project);
-                    final FindingPackagingFormat fpf = new FindingPackagingFormat(UUID.fromString(uuid), findings);
-                    final Response.ResponseBuilder rb = Response.ok(fpf.getDocument().toString(), "application/json");
-                    rb.header("Content-Disposition", "inline; filename=findings-" + uuid + ".fpf");
-                    return rb.build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                final List<Finding> findings = qm.getFindings(project);
+                final FindingPackagingFormat fpf = new FindingPackagingFormat(UUID.fromString(uuid), findings);
+                final Response.ResponseBuilder rb = Response.ok(fpf.getDocument().toString(), "application/json");
+                rb.header("Content-Disposition", "inline; filename=findings-" + uuid + ".fpf");
+                return rb.build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -221,7 +221,10 @@ public class FindingResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = BomUploadResponse.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
@@ -231,19 +234,16 @@ public class FindingResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    LOGGER.info("Analysis of project " + project.getUuid() + " requested by " + super.getPrincipal().getName());
+                requireAccess(qm, project);
+                LOGGER.info("Analysis of project " + project.getUuid() + " requested by " + super.getPrincipal().getName());
 
-                    final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
-                    qm.createReanalyzeSteps(vae.getChainIdentifier());
-                    Event.dispatch(vae);
-                    final ProjectRepositoryMetaAnalysisEvent projectRepositoryMetaAnalysisEvent = new ProjectRepositoryMetaAnalysisEvent(project.getUuid());
-                    Event.dispatch(projectRepositoryMetaAnalysisEvent);
+                final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
+                qm.createReanalyzeSteps(vae.getChainIdentifier());
+                Event.dispatch(vae);
+                final ProjectRepositoryMetaAnalysisEvent projectRepositoryMetaAnalysisEvent = new ProjectRepositoryMetaAnalysisEvent(project.getUuid());
+                Event.dispatch(projectRepositoryMetaAnalysisEvent);
 
-                    return Response.ok(Collections.singletonMap("token", vae.getChainIdentifier())).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                return Response.ok(Collections.singletonMap("token", vae.getChainIdentifier())).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }

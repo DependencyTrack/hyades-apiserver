@@ -20,7 +20,6 @@ package org.dependencytrack.resources.v1;
 
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -32,6 +31,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ServiceComponent;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ServiceComponentDao;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.jdbi.v3.core.Handle;
+
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -43,15 +53,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ServiceComponent;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.ServiceComponentDao;
-import org.dependencytrack.resources.v1.openapi.PaginatedApi;
-import org.jdbi.v3.core.Handle;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
@@ -68,7 +69,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
         @SecurityRequirement(name = "BearerAuth")
 })
 public
-class ServiceResource extends AlpineResource {
+class ServiceResource extends AbstractApiResource {
 
     @GET
     @Path("/project/{uuid}")
@@ -86,7 +87,10 @@ class ServiceResource extends AlpineResource {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ServiceComponent.class)))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -95,12 +99,9 @@ class ServiceResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final PaginatedResult result = qm.getServiceComponents(project, true);
-                    return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
+                final PaginatedResult result = qm.getServiceComponents(project, true);
+                return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -121,7 +122,10 @@ class ServiceResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ServiceComponent.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified service is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The service could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -131,13 +135,9 @@ class ServiceResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, uuid);
             if (service != null) {
-                final Project project = service.getProject();
-                if (qm.hasAccess(super.getPrincipal(), project)) {
-                    final ServiceComponent detachedService = qm.detach(ServiceComponent.class, service.getId()); // TODO: Force project to be loaded. It should be anyway, but JDO seems to be having issues here.
-                    return Response.ok(detachedService).build();
-                } else {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified service is forbidden").build();
-                }
+                requireAccess(qm, service.getProject());
+                final ServiceComponent detachedService = qm.detach(ServiceComponent.class, service.getId()); // TODO: Force project to be loaded. It should be anyway, but JDO seems to be having issues here.
+                return Response.ok(detachedService).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The service could not be found.").build();
             }
@@ -159,7 +159,10 @@ class ServiceResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ServiceComponent.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
@@ -182,9 +185,7 @@ class ServiceResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-            }
+            requireAccess(qm, project);
             ServiceComponent service = new ServiceComponent();
             service.setProject(project);
             service.setProvider(jsonService.getProvider());
@@ -216,7 +217,10 @@ class ServiceResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ServiceComponent.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified service is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the service could not be found"),
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
@@ -231,9 +235,7 @@ class ServiceResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, jsonService.getUuid());
             if (service != null) {
-                if (!qm.hasAccess(super.getPrincipal(), service.getProject())) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified service is forbidden").build();
-                }
+                requireAccess(qm, service.getProject());
                 // Name cannot be empty or null - prevent it
                 final String name = StringUtils.trimToNull(jsonService.getName());
                 if (name != null) {
@@ -267,7 +269,10 @@ class ServiceResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Service removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified service is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the service could not be found")
     })
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
@@ -277,9 +282,7 @@ class ServiceResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, uuid, ServiceComponent.FetchGroup.ALL.name());
             if (service != null) {
-                if (!qm.hasAccess(super.getPrincipal(), service.getProject())) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified service is forbidden").build();
-                }
+                requireAccess(qm, service.getProject());
                 try (final Handle jdbiHandle = openJdbiHandle()) {
                     final var serviceComponentDao = jdbiHandle.attach(ServiceComponentDao.class);
                     serviceComponentDao.deleteServiceComponent(service.getUuid());
