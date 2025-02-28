@@ -31,10 +31,7 @@ public class ApiRequestConfig implements JdbiConfig<ApiRequestConfig> {
 
     private Set<OrderingColumn> orderingAllowedColumns = Collections.emptySet();
     private String orderingAlwaysBy = "";
-
-    // TODO: Make this configurable via annotation when needed (similar to @AllowOrdering).
-    //   In some queries the PROJECT table may be aliased (e.g. as P).
-    private String projectTableAlias = "PROJECT";
+    private String projectIdColumn = "\"PROJECT\".\"ID\"";
 
     @SuppressWarnings("unused")
     public ApiRequestConfig() {
@@ -44,7 +41,7 @@ public class ApiRequestConfig implements JdbiConfig<ApiRequestConfig> {
     private ApiRequestConfig(final ApiRequestConfig that) {
         this.orderingAllowedColumns = Set.copyOf(that.orderingAllowedColumns);
         this.orderingAlwaysBy = that.orderingAlwaysBy;
-        this.projectTableAlias = that.projectTableAlias;
+        this.projectIdColumn = that.projectIdColumn;
     }
 
     @Override
@@ -74,8 +71,8 @@ public class ApiRequestConfig implements JdbiConfig<ApiRequestConfig> {
         this.orderingAlwaysBy = orderingAlwaysBy;
     }
 
-    String projectAclProjectTableName() {
-        return projectTableAlias;
+    String projectAclProjectIdColumn() {
+        return projectIdColumn;
     }
 
     public record OrderingColumn(String name, String queryName) {

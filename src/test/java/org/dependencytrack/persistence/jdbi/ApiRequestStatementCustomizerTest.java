@@ -55,12 +55,9 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
             SELECT 1 AS "valueA"
                  , 2 AS "valueB"
               FROM "PROJECT"
-             WHERE TRUE
+             WHERE ${apiProjectAclCondition}
             <#if apiFilterParameter??>
                AND 'foo' = ${apiFilterParameter}
-            </#if>
-            <#if apiProjectAclCondition??>
-               AND ${apiProjectAclCondition}
             </#if>
             ${apiOrderByClause!}
             ${apiOffsetLimitClause!}
@@ -372,7 +369,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
         useJdbiHandle(request, handle -> handle
                 .addCustomizer(inspectStatement(ctx -> {
                     assertThat(ctx.getRenderedSql()).isEqualToIgnoringWhitespace("""
-                            SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE AND FALSE
+                            SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE FALSE
                             """);
 
                     assertThat(ctx.getBinding()).hasToString("{}");
@@ -565,8 +562,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA"
                                  , 2 AS "valueB"
                               FROM "PROJECT"
-                             WHERE TRUE
-                               AND HAS_PROJECT_ACCESS("PROJECT"."ID", :projectAclTeamIds)
+                             WHERE HAS_PROJECT_ACCESS("PROJECT"."ID", :projectAclTeamIds)
                             """);
 
                     assertThat(ctx.getBinding()).hasToString("{named:{projectAclTeamIds:[%s]}}".formatted(team.getId()));
