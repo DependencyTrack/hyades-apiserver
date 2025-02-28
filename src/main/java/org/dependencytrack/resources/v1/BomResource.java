@@ -503,7 +503,7 @@ public class BomResource extends AlpineResource {
                 final File bomFile;
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
-                    bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                    bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project, artifactPart.getMediaType());
                 } catch (IOException e) {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -527,7 +527,11 @@ public class BomResource extends AlpineResource {
     }
 
     private File validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
-        validate(bomBytes, project);
+        return validateAndStoreBom(bomBytes, project, null);
+    }
+
+    private File validateAndStoreBom(final byte[] bomBytes, final Project project, MediaType mediaType) throws IOException {
+        validate(bomBytes, project, mediaType);
 
         // TODO: Store externally so other instances of the API server can pick it up.
         //   https://github.com/CycloneDX/cyclonedx-bom-repo-server
@@ -544,12 +548,16 @@ public class BomResource extends AlpineResource {
     }
 
     static void validate(final byte[] bomBytes, final Project project) {
+        validate(bomBytes, project, null);
+    }
+
+    static void validate(final byte[] bomBytes, final Project project, MediaType mediaType) {
         if (!shouldValidate(project)) {
             return;
         }
 
         try {
-            CycloneDxValidator.getInstance().validate(bomBytes);
+            CycloneDxValidator.getInstance().validate(bomBytes, mediaType);
         } catch (InvalidBomException e) {
             final var problemDetails = new InvalidBomProblemDetails();
             problemDetails.setStatus(400);
