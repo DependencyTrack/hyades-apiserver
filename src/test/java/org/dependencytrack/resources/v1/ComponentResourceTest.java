@@ -23,16 +23,13 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
+import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -48,6 +45,11 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import javax.jdo.JDOObjectNotFoundException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -61,6 +63,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_FAILED;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_UNKNOWN;
+import static org.hamcrest.Matchers.equalTo;
 
 public class ComponentResourceTest extends ResourceTest {
 
@@ -958,6 +961,59 @@ public class ComponentResourceTest extends ResourceTest {
         JsonObject jsonWithoutComponent = parseJsonObject(responseWithoutComponent);
         Assert.assertEquals(200, responseWithoutComponent.getStatus(), 0);
         Assert.assertEquals(0, jsonWithoutComponent.size());
+    }
+
+    @Test
+    public void getOccurrencesTest() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final var occurrenceA = new ComponentOccurrence();
+        occurrenceA.setComponent(component);
+        occurrenceA.setLocation("/foo/bar");
+        qm.persist(occurrenceA);
+
+        final var occurrenceB = new ComponentOccurrence();
+        occurrenceB.setComponent(component);
+        occurrenceB.setLocation("/foo/bar/baz");
+        occurrenceB.setLine(5);
+        occurrenceB.setOffset(666);
+        occurrenceB.setSymbol("someSymbol");
+        qm.persist(occurrenceB);
+
+        final Response response = jersey.target(V1_COMPONENT + "/" + component.getUuid() + "/occurrence")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response))
+                .withOptions(Option.IGNORING_ARRAY_ORDER)
+                .withMatcher("occurrenceIdA", equalTo(occurrenceA.getId().toString()))
+                .withMatcher("occurrenceIdB", equalTo(occurrenceB.getId().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        [
+                          {
+                            "id": "${json-unit.matches:occurrenceIdA}",
+                            "location": "/foo/bar",
+                            "createdAt": "${json-unit.any-number}"
+                          },
+                          {
+                            "id": "${json-unit.matches:occurrenceIdB}",
+                            "location": "/foo/bar/baz",
+                            "line": 5,
+                            "offset": 666,
+                            "symbol": "someSymbol",
+                            "createdAt": "${json-unit.any-number}"
+                          }
+                        ]
+                        """);
     }
 
 }

@@ -22,10 +22,6 @@ import alpine.common.logging.Logger;
 import alpine.model.IConfigProperty;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonValue;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.StringUtils;
@@ -43,6 +39,7 @@ import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.DataClassification;
@@ -63,6 +60,10 @@ import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.VulnerabilityUtil;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -284,6 +285,10 @@ public class ModelConverter {
             }
         }
         component.setLicenseCandidates(licenseCandidates);
+
+        if (cdxComponent.getEvidence() != null && cdxComponent.getEvidence().getOccurrences() != null) {
+            component.setOccurrences(convertOccurrences(cdxComponent.getEvidence().getOccurrences()));
+        }
 
         if (cdxComponent.getComponents() != null && !cdxComponent.getComponents().isEmpty()) {
             final var children = new ArrayList<Component>();
@@ -571,6 +576,24 @@ public class ModelConverter {
                     classification.setName(cdxDatum.getClassification());
                     classification.setDirection(DataClassification.Direction.valueOf(cdxDatum.getFlow().name()));
                     return classification;
+                })
+                .toList();
+    }
+
+    private static List<ComponentOccurrence> convertOccurrences(final List<org.cyclonedx.model.component.evidence.Occurrence> cdxOccurrences) {
+        if (cdxOccurrences == null || cdxOccurrences.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return cdxOccurrences.stream()
+                .map(cdxOccurrence -> {
+                    final var occurrence = new ComponentOccurrence();
+                    occurrence.setLocation(trimToNull(cdxOccurrence.getLocation()));
+                    occurrence.setLine(cdxOccurrence.getLine());
+                    occurrence.setOffset(cdxOccurrence.getOffset());
+                    occurrence.setSymbol(trimToNull(cdxOccurrence.getSymbol()));
+                    occurrence.setAdditionalContext(trimToNull(cdxOccurrence.getAdditionalContext()));
+                    return occurrence;
                 })
                 .toList();
     }
