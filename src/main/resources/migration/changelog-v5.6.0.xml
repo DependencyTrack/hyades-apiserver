@@ -678,6 +678,12 @@
             <column name="DESCRIPTION" type="VARCHAR(255)">
                 <constraints nullable="true" />
             </column>
+
+            <column name="UUID" type="UUID">
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="ROLE_UUID_IDX"
+                    validateNullable="true" validateUnique="true" />
+            </column>
         </createTable>
 
         <createTable ifNotExists="true" tableName="ROLES_PERMISSIONS">
