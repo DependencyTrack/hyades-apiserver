@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -34,6 +35,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
+
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
@@ -58,6 +61,7 @@ import javax.jdo.annotations.Unique;
         @Persistent(name = "name"),
         @Persistent(name = "description"),
         @Persistent(name = "permissions"),
+        @Persistent(name = "uuid"),
 })
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Role implements Serializable {
@@ -101,6 +105,12 @@ public class Role implements Serializable {
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Permission> permissions;
 
+    @Persistent(customValueStrategy = "uuid")
+    @Unique(name = "ROLE_UUID_IDX")
+    @Column(name = "UUID", sqlType = "UUID", allowsNull = "false")
+    @NotNull
+    private UUID uuid;
+
     public long getId() {
         return id;
     }
@@ -143,6 +153,14 @@ public class Role implements Serializable {
         for (var permission : permissions)
             if (!this.permissions.contains(permission))
                 this.permissions.add(permission);
+    }
+
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
     }
 
     @Override
