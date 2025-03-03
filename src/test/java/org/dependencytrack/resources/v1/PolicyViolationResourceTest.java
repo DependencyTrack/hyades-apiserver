@@ -22,9 +22,6 @@ import alpine.model.ConfigProperty;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -40,10 +37,15 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.UUID;
+import java.util.function.Supplier;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class PolicyViolationResourceTest extends ResourceTest {
@@ -245,6 +247,37 @@ public class PolicyViolationResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getViolationsByProjectAclTest() {
+        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_POLICY_VIOLATION + "/project/" + project.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
     public void getViolationsByComponentTest() {
         initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
 
@@ -309,6 +342,41 @@ public class PolicyViolationResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(Response.Status.NOT_FOUND.getStatusCode());
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
         assertThat(getPlainTextBody(response)).contains("component could not be found");
+    }
+
+    @Test
+    public void getViolationsByComponentAclTest() {
+        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey.target(V1_POLICY_VIOLATION + "/component/" + component.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 
     @Test
@@ -394,13 +462,13 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
         final Response responseB = jersey.target(V1_POLICY_VIOLATION)
                 .request()
-                .header(X_API_KEY, team.getApiKeys().get(0).getKey())
+                .header(X_API_KEY, team.getApiKeys().getFirst().getKey())
                 .get();
         assertThat(responseB.getStatus()).isEqualTo(Response.Status.OK.getStatusCode());
-        assertThat(responseB.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThat(responseB.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("3");
 
         final JsonArray jsonArray = parseJsonArray(responseB);
-        assertThat(jsonArray).hasSize(2);
+        assertThat(jsonArray).hasSize(3);
 
         final JsonObject jsonObjectA = jsonArray.getJsonObject(0);
         assertThat(jsonObjectA.getString("uuid")).isEqualTo(violationD.getUuid().toString());
@@ -412,13 +480,22 @@ public class PolicyViolationResourceTest extends ResourceTest {
         assertThat(jsonObjectA.getJsonObject("project").getString("uuid")).isEqualTo(projectA.getUuid().toString());
 
         final JsonObject jsonObjectB = jsonArray.getJsonObject(1);
-        assertThat(jsonObjectB.getString("uuid")).isEqualTo(violationA.getUuid().toString());
+        assertThat(jsonObjectB.getString("uuid")).isEqualTo(violationB.getUuid().toString());
         assertThat(jsonObjectB.getString("type")).isEqualTo(PolicyViolation.Type.OPERATIONAL.name());
         assertThat(jsonObjectB.getJsonObject("policyCondition")).isNotNull();
         assertThat(jsonObjectB.getJsonObject("policyCondition").getJsonObject("policy")).isNotNull();
         assertThat(jsonObjectB.getJsonObject("policyCondition").getJsonObject("policy").getString("name")).isEqualTo("Blacklisted Version");
         assertThat(jsonObjectB.getJsonObject("policyCondition").getJsonObject("policy").getString("violationState")).isEqualTo("FAIL");
-        assertThat(jsonObjectB.getJsonObject("project").getString("uuid")).isEqualTo(projectA.getUuid().toString());
+        assertThat(jsonObjectB.getJsonObject("project").getString("uuid")).isEqualTo(projectA_child.getUuid().toString());
+
+        final JsonObject jsonObjectC = jsonArray.getJsonObject(2);
+        assertThat(jsonObjectC.getString("uuid")).isEqualTo(violationA.getUuid().toString());
+        assertThat(jsonObjectC.getString("type")).isEqualTo(PolicyViolation.Type.OPERATIONAL.name());
+        assertThat(jsonObjectC.getJsonObject("policyCondition")).isNotNull();
+        assertThat(jsonObjectC.getJsonObject("policyCondition").getJsonObject("policy")).isNotNull();
+        assertThat(jsonObjectC.getJsonObject("policyCondition").getJsonObject("policy").getString("name")).isEqualTo("Blacklisted Version");
+        assertThat(jsonObjectC.getJsonObject("policyCondition").getJsonObject("policy").getString("violationState")).isEqualTo("FAIL");
+        assertThat(jsonObjectC.getJsonObject("project").getString("uuid")).isEqualTo(projectA.getUuid().toString());
     }
 
     @Test

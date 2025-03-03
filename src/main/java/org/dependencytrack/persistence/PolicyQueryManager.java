@@ -18,13 +18,9 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.model.ApiKey;
-import alpine.model.Team;
-import alpine.model.UserPrincipal;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
 import org.dependencytrack.model.Policy;
@@ -804,43 +800,4 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
         }
     }
 
-    @Override
-    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
-        if (super.principal != null && isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED) && !bypass) {
-            final List<Team> teams;
-            if (super.principal instanceof UserPrincipal) {
-                final UserPrincipal userPrincipal = ((UserPrincipal) super.principal);
-                teams = userPrincipal.getTeams();
-                if (super.hasAccessManagementPermission(userPrincipal)) {
-                    query.setFilter(inputFilter);
-                    return;
-                }
-            } else {
-                final ApiKey apiKey = ((ApiKey) super.principal);
-                teams = apiKey.getTeams();
-                if (super.hasAccessManagementPermission(apiKey)) {
-                    query.setFilter(inputFilter);
-                    return;
-                }
-            }
-            if (teams != null && teams.size() > 0) {
-                final StringBuilder sb = new StringBuilder();
-                for (int i = 0, teamsSize = teams.size(); i < teamsSize; i++) {
-                    final Team team = super.getObjectById(Team.class, teams.get(i).getId());
-                    sb.append(" project.accessTeams.contains(:team").append(i).append(") ");
-                    params.put("team" + i, team);
-                    if (i < teamsSize-1) {
-                        sb.append(" || ");
-                    }
-                }
-                if (inputFilter != null) {
-                    query.setFilter(inputFilter + " && (" + sb.toString() + ")");
-                } else {
-                    query.setFilter(sb.toString());
-                }
-            }
-        } else {
-            query.setFilter(inputFilter);
-        }
-    }
 }

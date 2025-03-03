@@ -20,7 +20,6 @@ package org.dependencytrack.resources.v1;
 
 import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -31,6 +30,7 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;

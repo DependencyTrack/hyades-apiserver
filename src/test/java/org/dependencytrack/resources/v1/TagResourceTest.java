@@ -21,10 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
-import jakarta.json.JsonArray;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -34,15 +30,16 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.resources.v1.exception.ConstraintViolationExceptionMapper;
-import org.dependencytrack.resources.v1.exception.NoSuchElementExceptionMapper;
-import org.dependencytrack.resources.v1.exception.TagOperationFailedExceptionMapper;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonArray;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -60,10 +57,7 @@ public class TagResourceTest extends ResourceTest {
             new ResourceConfig(TagResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class)
-                    .register(AuthorizationFilter.class)
-                    .register(ConstraintViolationExceptionMapper.class)
-                    .register(NoSuchElementExceptionMapper.class)
-                    .register(TagOperationFailedExceptionMapper.class));
+                    .register(AuthorizationFilter.class));
 
     @Test
     public void getTagsTest() {
