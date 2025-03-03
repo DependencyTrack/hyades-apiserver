@@ -936,12 +936,8 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getRole(null);
     }
 
-    public Role updateRole(Role role) {
-        return getRoleQueryManager().updateRole(role);
-    }
-
-    public boolean deleteRole(String uuid, boolean value) {
-        return getRoleQueryManager().deleteRole(uuid, value);
+    public Role updateRole(Role transientRole) {
+        return getRoleQueryManager().updateRole(transientRole);
     }
 
     public Vulnerability createVulnerability(Vulnerability vulnerability, boolean commitIndex) {
@@ -1353,12 +1349,12 @@ public class QueryManager extends AlpineQueryManager {
         return getRepositoryQueryManager().synchronizeRepositoryMetaComponent(transientRepositoryMetaComponent);
     }
 
-    public boolean addRoleToUser(UserPrincipal principal, Role role, String roleName, String projectName){
-        return getRoleQueryManager().addRoleToUser(principal, role, roleName, projectName);
+    public boolean addRoleToUser(UserPrincipal principal, Role role, Project project){
+        return getRoleQueryManager().addRoleToUser(principal, role, project);
     }
 
-    public boolean removeRoleFromUser(UserPrincipal principal, Role role, String roleName, String projectName){
-        return getRoleQueryManager().removeRoleFromUser(principal, role, roleName, projectName);
+    public boolean removeRoleFromUser(UserPrincipal principal, Role role, Project project){
+        return getRoleQueryManager().removeRoleFromUser(principal, role, project);
     }
 
     public NotificationRule createNotificationRule(String name, NotificationScope scope, NotificationLevel level, NotificationPublisher publisher) {
