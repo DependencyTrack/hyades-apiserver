@@ -1331,7 +1331,7 @@ public class BomResourceTest extends ResourceTest {
         final var bomProto = Bom.newBuilder().setSpecVersion("1.6").build();
         final var multiPart = new FormDataMultiPart()
                 .field("project", project.getUuid().toString())
-                .field("bom", bomProto.toByteArray(), new MediaType("application", "x-protobuf"))
+                .field("bom", bomProto.toByteArray(), new MediaType("application", "x.vnd.cyclonedx+protobuf"))
                 .field("autoCreate", "true");
 
         // NB: The GrizzlyConnectorProvider doesn't work with MultiPart requests.

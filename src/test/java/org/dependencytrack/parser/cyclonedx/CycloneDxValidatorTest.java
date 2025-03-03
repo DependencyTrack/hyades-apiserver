@@ -51,7 +51,7 @@ import static org.assertj.core.api.Assertions.catchThrowableOfType;
 public class CycloneDxValidatorTest {
 
     private CycloneDxValidator validator;
-    private final MediaType mediaTypeProtobuf = new MediaType("application", "x-protobuf");
+    private final MediaType mediaTypeProtobuf = new MediaType("application", "x.vnd.cyclonedx+protobuf");
 
     @Before
     public void setUp() {

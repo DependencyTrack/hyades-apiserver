@@ -80,7 +80,7 @@ public class CycloneDxValidator {
 
     public void validate(final byte[] bomBytes, MediaType mediaType) {
         // Validating protobuf format
-        if (mediaType != null && mediaType.toString().contains("protobuf")) {
+        if (mediaType != null && mediaType.toString().equalsIgnoreCase("application/x.vnd.cyclonedx+protobuf")) {
             try {
                 final var bom = Bom.parseFrom(bomBytes);
                 switch (bom.getSpecVersion()) {
