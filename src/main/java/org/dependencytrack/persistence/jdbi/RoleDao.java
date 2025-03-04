@@ -26,11 +26,47 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
  */
 public interface RoleDao {
 
-    @SqlUpdate("""
+    @SqlUpdate(/* language=sql */ """
             DELETE
               FROM "ROLE"
              WHERE "ID" = :roleId
             """)
     int deleteRole(@Bind final long roleId);
+
+    @SqlUpdate(/* language=sql */ """
+        DELETE
+          FROM "LDAPUSERS_PROJECTS_ROLES"
+         WHERE "LDAPUSER_ID" = :userId
+           AND "PROJECT_ACCESS_ROLE_ID" IN (
+               SELECT "ID"
+                 FROM "PROJECT_ACCESS_ROLES"
+                WHERE "ROLE_ID" = :roleId
+                  AND "PROJECT_ID" = :projectId)
+        """)
+    int removeRoleFromLdapUser(@Bind final long userId, @Bind final long projectId, @Bind final long roleId);
+
+    @SqlUpdate(/* language=sql */ """
+        DELETE
+          FROM "MANAGEDUSERS_PROJECTS_ROLES"
+         WHERE "MANAGEDUSER_ID" = :userId
+           AND "PROJECT_ACCESS_ROLE_ID" IN (
+               SELECT "ID"
+                 FROM "PROJECT_ACCESS_ROLES"
+                WHERE "ROLE_ID" = :roleId
+                  AND "PROJECT_ID" = :projectId)
+        """)
+    int removeRoleFromManagedUser(@Bind final long userId, @Bind final long projectId, @Bind final long roleId);
+
+    @SqlUpdate(/* language=sql */ """
+            DELETE
+              FROM "OIDCUSERS_PROJECTS_ROLES"
+             WHERE "OIDCUSER_ID" = :userId
+               AND "PROJECT_ACCESS_ROLE_ID" IN (
+                   SELECT "ID"
+                     FROM "PROJECT_ACCESS_ROLES"
+                    WHERE "ROLE_ID" = :roleId
+                      AND "PROJECT_ID" = :projectId)
+            """)
+    int removeRoleFromOidcUser(@Bind final long userId, @Bind final long projectId, @Bind final long roleId);
 
 }
