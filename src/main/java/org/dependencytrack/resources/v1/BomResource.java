@@ -366,6 +366,7 @@ public class BomResource extends AbstractApiResource {
                       or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
                     </p>
                     <p>
+                      MediaType supported for BOM artifact is 'application/xml', 'application/json' or 'application/x.vnd.cyclonedx+protobuf'.
                       The BOM will be validated against the CycloneDX schema. If schema validation fails,
                       a response with problem details in RFC 9457 format will be returned. In this case,
                       the response's content type will be <code>application/problem+json</code>.
@@ -498,7 +499,7 @@ public class BomResource extends AbstractApiResource {
                 final File bomFile;
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
-                    bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                    bomFile = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project, artifactPart.getMediaType());
                 } catch (IOException e) {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -522,7 +523,11 @@ public class BomResource extends AbstractApiResource {
     }
 
     private File validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
-        validate(bomBytes, project);
+        return validateAndStoreBom(bomBytes, project, null);
+    }
+
+    private File validateAndStoreBom(final byte[] bomBytes, final Project project, MediaType mediaType) throws IOException {
+        validate(bomBytes, project, mediaType);
 
         // TODO: Store externally so other instances of the API server can pick it up.
         //   https://github.com/CycloneDX/cyclonedx-bom-repo-server
@@ -539,12 +544,16 @@ public class BomResource extends AbstractApiResource {
     }
 
     static void validate(final byte[] bomBytes, final Project project) {
+        validate(bomBytes, project, null);
+    }
+
+    static void validate(final byte[] bomBytes, final Project project, MediaType mediaType) {
         if (!shouldValidate(project)) {
             return;
         }
 
         try {
-            CycloneDxValidator.getInstance().validate(bomBytes);
+            CycloneDxValidator.getInstance().validate(bomBytes, mediaType);
         } catch (InvalidBomException e) {
             final var problemDetails = new InvalidBomProblemDetails();
             problemDetails.setStatus(400);
@@ -554,9 +563,7 @@ public class BomResource extends AbstractApiResource {
                 problemDetails.setErrors(e.getValidationErrors());
             }
 
-            final var bomEncoded = Base64.getEncoder()
-                    .encodeToString(bomBytes);
-            dispatchBomValidationFailedNotification(project, bomEncoded, problemDetails.getErrors());
+            dispatchBomValidationFailedNotification(project, problemDetails.getErrors());
 
             throw new WebApplicationException(problemDetails.toResponse());
         } catch (RuntimeException e) {
@@ -566,7 +573,7 @@ public class BomResource extends AbstractApiResource {
         }
     }
 
-    private static void dispatchBomValidationFailedNotification(Project project, String bom, List<String> errors) {
+    private static void dispatchBomValidationFailedNotification(Project project, List<String> errors) {
         final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
         eventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.PORTFOLIO)
@@ -574,7 +581,7 @@ public class BomResource extends AbstractApiResource {
                 .level(NotificationLevel.ERROR)
                 .title(NotificationConstants.Title.BOM_VALIDATION_FAILED)
                 .content("An error occurred while validating a BOM")
-                .subject(new BomValidationFailed(project, bom, errors)));
+                .subject(new BomValidationFailed(project, /* bom */ "(Omitted)", errors)));
     }
 
     private static boolean shouldValidate(final Project project) {

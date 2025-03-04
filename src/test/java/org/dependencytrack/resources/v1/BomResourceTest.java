@@ -29,7 +29,7 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
-import org.assertj.core.api.AssertionsForClassTypes;
+import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -52,6 +52,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
+import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
@@ -1215,7 +1216,7 @@ public class BomResourceTest extends ResourceTest {
     }
 
     @Test
-    public void uploadBomInvalidJsonTest() throws InterruptedException {
+    public void uploadBomInvalidJsonTest() throws Exception {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
 
         final var project = new Project();
@@ -1262,17 +1263,28 @@ public class BomResourceTest extends ResourceTest {
                 """);
 
         assertThat(kafkaMockProducer.history()).hasSize(1);
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
-        AssertionsForClassTypes.assertThat(userNotification).isNotNull();
-        AssertionsForClassTypes.assertThat(userNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        AssertionsForClassTypes.assertThat(userNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
-        AssertionsForClassTypes.assertThat(userNotification.getLevel()).isEqualTo(LEVEL_ERROR);
-        AssertionsForClassTypes.assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.BOM_VALIDATION_FAILED);
-        AssertionsForClassTypes.assertThat(userNotification.getContent()).isEqualTo("An error occurred while validating a BOM");
+        final org.dependencytrack.proto.notification.v1.Notification validationFailureNotification =
+                deserializeValue(KafkaTopics.NOTIFICATION_BOM, kafkaMockProducer.history().getFirst());
+        assertThat(validationFailureNotification).isNotNull();
+        assertThat(validationFailureNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        assertThat(validationFailureNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
+        assertThat(validationFailureNotification.getLevel()).isEqualTo(LEVEL_ERROR);
+        assertThat(validationFailureNotification.getTitle()).isEqualTo(NotificationConstants.Title.BOM_VALIDATION_FAILED);
+        assertThat(validationFailureNotification.getContent()).isEqualTo("An error occurred while validating a BOM");
+        assertThat(validationFailureNotification.getSubject().is(BomValidationFailedSubject.class)).isTrue();
+
+        final var subject = validationFailureNotification.getSubject().unpack(BomValidationFailedSubject.class);
+        assertThat(subject.getBom().getFormat()).isEmpty();
+        assertThat(subject.getBom().getSpecVersion()).isEmpty();
+        assertThat(subject.getBom().getContent()).isEqualTo("(Omitted)");
+        assertThat(subject.getErrorsList()).containsOnly("""
+                $.components[0].type: does not have a value in the enumeration \
+                ["application", "framework", "library", "container", "operating-system", \
+                "device", "firmware", "file"]""");
     }
 
     @Test
-    public void uploadBomInvalidXmlTest() throws InterruptedException {
+    public void uploadBomInvalidXmlTest() throws Exception {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
 
         final var project = new Project();
@@ -1316,13 +1328,23 @@ public class BomResourceTest extends ResourceTest {
                 """);
 
         assertThat(kafkaMockProducer.history()).hasSize(1);
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
-        AssertionsForClassTypes.assertThat(userNotification).isNotNull();
-        AssertionsForClassTypes.assertThat(userNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
-        AssertionsForClassTypes.assertThat(userNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
-        AssertionsForClassTypes.assertThat(userNotification.getLevel()).isEqualTo(LEVEL_ERROR);
-        AssertionsForClassTypes.assertThat(userNotification.getTitle()).isEqualTo(NotificationConstants.Title.BOM_VALIDATION_FAILED);
-        AssertionsForClassTypes.assertThat(userNotification.getContent()).isEqualTo("An error occurred while validating a BOM");
+        final org.dependencytrack.proto.notification.v1.Notification validationFailureNotification =
+                deserializeValue(KafkaTopics.NOTIFICATION_BOM, kafkaMockProducer.history().getFirst());
+        assertThat(validationFailureNotification).isNotNull();
+        assertThat(validationFailureNotification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+        assertThat(validationFailureNotification.getGroup()).isEqualTo(GROUP_BOM_VALIDATION_FAILED);
+        assertThat(validationFailureNotification.getLevel()).isEqualTo(LEVEL_ERROR);
+        assertThat(validationFailureNotification.getTitle()).isEqualTo(NotificationConstants.Title.BOM_VALIDATION_FAILED);
+        assertThat(validationFailureNotification.getContent()).isEqualTo("An error occurred while validating a BOM");
+        assertThat(validationFailureNotification.getSubject().is(BomValidationFailedSubject.class)).isTrue();
+
+        final var subject = validationFailureNotification.getSubject().unpack(BomValidationFailedSubject.class);
+        assertThat(subject.getBom().getFormat()).isEmpty();
+        assertThat(subject.getBom().getSpecVersion()).isEmpty();
+        assertThat(subject.getBom().getContent()).isEqualTo("(Omitted)");
+        assertThat(subject.getErrorsList()).containsExactlyInAnyOrder(
+                "cvc-enumeration-valid: Value 'foo' is not facet-valid with respect to enumeration '[application, framework, library, container, operating-system, device, firmware, file]'. It must be a value from the enumeration.",
+                "cvc-attribute.3: The value 'foo' of attribute 'type' on element 'component' is not valid with respect to its type, 'classification'.");
     }
 
     @Test
@@ -1387,6 +1409,37 @@ public class BomResourceTest extends ResourceTest {
         assertThat(project.getTags())
                 .extracting(Tag::getName)
                 .containsExactlyInAnyOrder("tag1", "tag2");
+    }
+
+    @Test
+    public void uploadBomProtobufFormatTest() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final var bomProto = Bom.newBuilder().setSpecVersion("1.6").build();
+        final var multiPart = new FormDataMultiPart()
+                .field("project", project.getUuid().toString())
+                .field("bom", bomProto.toByteArray(), new MediaType("application", "x.vnd.cyclonedx+protobuf"))
+                .field("autoCreate", "true");
+
+        // NB: The GrizzlyConnectorProvider doesn't work with MultiPart requests.
+        // https://github.com/eclipse-ee4j/jersey/issues/5094
+        final var client = ClientBuilder.newClient(new ClientConfig()
+                .register(MultiPartFeature.class)
+                .connectorProvider(new HttpUrlConnectorProvider()));
+
+        final Response response = client.target(jersey.target(V1_BOM).getUri()).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(multiPart, multiPart.getMediaType()));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "token": "${json-unit.any-string}"
+                }
+                """);
+
+        final var projectResponse = qm.getProject("Acme Example", "1.0");
+        assertThat(projectResponse).isNotNull();
+        assertThat(projectResponse.getName()).isEqualTo(project.getName());
     }
 
     @Test
