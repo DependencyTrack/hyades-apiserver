@@ -206,19 +206,19 @@ public class ModelConverterProto {
 
         if (cdxComponent.getHashesCount() > 0) {
             for (final org.cyclonedx.proto.v1_6.Hash cdxHash : cdxComponent.getHashesList()) {
-                final Consumer<String> hashSetter = switch (cdxHash.getAlg().name()) {
-                    case "HASH_ALG_MD_5" -> component::setMd5;
-                    case "HASH_ALG_SHA_1" -> component::setSha1;
-                    case "HASH_ALG_SHA_256" -> component::setSha256;
-                    case "HASH_ALG_SHA_384" -> component::setSha384;
-                    case "HASH_ALG_SHA_512" -> component::setSha512;
-                    case "HASH_ALG_SHA_3_256" -> component::setSha3_256;
-                    case "HASH_ALG_SHA_3_384" -> component::setSha3_384;
-                    case "HASH_ALG_SHA_3_512" -> component::setSha3_512;
-                    case "HASH_ALG_BLAKE_2_B_256" -> component::setBlake2b_256;
-                    case "HASH_ALG_BLAKE_2_B_384" -> component::setBlake2b_384;
-                    case "HASH_ALG_BLAKE_2_B_512" -> component::setBlake2b_512;
-                    case "HASH_ALG_BLAKE_3" -> component::setBlake3;
+                final Consumer<String> hashSetter = switch (cdxHash.getAlg()) {
+                    case HASH_ALG_MD_5 -> component::setMd5;
+                    case HASH_ALG_SHA_1 -> component::setSha1;
+                    case HASH_ALG_SHA_256 -> component::setSha256;
+                    case HASH_ALG_SHA_384 -> component::setSha384;
+                    case HASH_ALG_SHA_512 -> component::setSha512;
+                    case HASH_ALG_SHA_3_256 -> component::setSha3_256;
+                    case HASH_ALG_SHA_3_384 -> component::setSha3_384;
+                    case HASH_ALG_SHA_3_512 -> component::setSha3_512;
+                    case HASH_ALG_BLAKE_2_B_256 -> component::setBlake2b_256;
+                    case HASH_ALG_BLAKE_2_B_384 -> component::setBlake2b_384;
+                    case HASH_ALG_BLAKE_2_B_512 -> component::setBlake2b_512;
+                    case HASH_ALG_BLAKE_3 -> component::setBlake3;
                     default -> null;
                 };
                 if (hashSetter != null) {
@@ -296,19 +296,19 @@ public class ModelConverterProto {
 
         if (tools.getHashesCount() > 0) {
             for (final org.cyclonedx.proto.v1_6.Hash cdxHash : tools.getHashesList()) {
-                final Consumer<String> hashSetter = switch (cdxHash.getAlg().name()) {
-                    case "HASH_ALG_MD_5" -> component::setMd5;
-                    case "HASH_ALG_SHA_1" -> component::setSha1;
-                    case "HASH_ALG_SHA_256" -> component::setSha256;
-                    case "HASH_ALG_SHA_384" -> component::setSha384;
-                    case "HASH_ALG_SHA_512" -> component::setSha512;
-                    case "HASH_ALG_SHA_3_256" -> component::setSha3_256;
-                    case "HASH_ALG_SHA_3_384" -> component::setSha3_384;
-                    case "HASH_ALG_SHA_3_512" -> component::setSha3_512;
-                    case "HASH_ALG_BLAKE_2_B_256" -> component::setBlake2b_256;
-                    case "HASH_ALG_BLAKE_2_B_384" -> component::setBlake2b_384;
-                    case "HASH_ALG_BLAKE_2_B_512" -> component::setBlake2b_512;
-                    case "HASH_ALG_BLAKE_3" -> component::setBlake3;
+                final Consumer<String> hashSetter = switch (cdxHash.getAlg()) {
+                    case HASH_ALG_MD_5 -> component::setMd5;
+                    case HASH_ALG_SHA_1 -> component::setSha1;
+                    case HASH_ALG_SHA_256 -> component::setSha256;
+                    case HASH_ALG_SHA_384 -> component::setSha384;
+                    case HASH_ALG_SHA_512 -> component::setSha512;
+                    case HASH_ALG_SHA_3_256 -> component::setSha3_256;
+                    case HASH_ALG_SHA_3_384 -> component::setSha3_384;
+                    case HASH_ALG_SHA_3_512 -> component::setSha3_512;
+                    case HASH_ALG_BLAKE_2_B_256 -> component::setBlake2b_256;
+                    case HASH_ALG_BLAKE_2_B_384 -> component::setBlake2b_384;
+                    case HASH_ALG_BLAKE_2_B_512 -> component::setBlake2b_512;
+                    case HASH_ALG_BLAKE_3 -> component::setBlake3;
                     default -> null;
                 };
                 if (hashSetter != null) {
