@@ -36,7 +36,7 @@ public class FindingTest extends PersistenceCapableTest {
     private final Finding finding = new Finding(projectUuid, "component-uuid", "component-name", "component-group",
             "component-version", "component-purl", "component-cpe", "vuln-uuid", "vuln-source", "vuln-vulnId", "vuln-title",
             "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.HIGH, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-            BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.INTERNAL_ANALYZER, attributedOn, null, null, AnalysisState.NOT_AFFECTED, true);
+            "owasp-vector", BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.INTERNAL_ANALYZER, attributedOn, null, null, AnalysisState.NOT_AFFECTED, true);
 
     @Test
     public void testComponent() {
@@ -65,6 +65,7 @@ public class FindingTest extends PersistenceCapableTest {
         Assert.assertEquals(BigDecimal.valueOf(1.25), map.get("owaspLikelihoodScore"));
         Assert.assertEquals(BigDecimal.valueOf(1.75), map.get("owaspTechnicalImpactScore"));
         Assert.assertEquals(BigDecimal.valueOf(1.3), map.get("owaspBusinessImpactScore"));
+        Assert.assertEquals("owasp-vector", map.get("owaspRRVector"));
         Assert.assertEquals(Severity.HIGH.name(), map.get("severity"));
         Assert.assertEquals(1, map.get("severityRank"));
         Assert.assertEquals(BigDecimal.valueOf(0.5), map.get("epssScore"));

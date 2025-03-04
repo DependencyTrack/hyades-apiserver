@@ -76,6 +76,7 @@ public class Finding implements Serializable {
                  , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
                  , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
                  , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
+                 , "VULNERABILITY"."OWASPRRVECTOR"
                  , "EPSS"."SCORE"
                  , "EPSS"."PERCENTILE"
                  , "VULNERABILITY"."CWES"
@@ -126,6 +127,7 @@ public class Finding implements Serializable {
                  , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
                  , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
                  , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
+                 , "VULNERABILITY"."OWASPRRVECTOR"
                  , "EPSS"."SCORE"
                  , "EPSS"."PERCENTILE"
                  , "VULNERABILITY"."CWES"
@@ -194,28 +196,29 @@ public class Finding implements Serializable {
         optValue(vulnerability, "owaspLikelihoodScore", o[18]);
         optValue(vulnerability, "owaspTechnicalImpactScore", o[19]);
         optValue(vulnerability, "owaspBusinessImpactScore", o[20]);
+        optValue(vulnerability, "owaspRRVector", o[21]);
         optValue(vulnerability, "severity", severity.name());
         optValue(vulnerability, "severityRank", severity.ordinal());
-        optValue(vulnerability, "epssScore", o[21]);
-        optValue(vulnerability, "epssPercentile", o[22]);
-        final List<Cwe> cwes = getCwes(o[23]);
+        optValue(vulnerability, "epssScore", o[22]);
+        optValue(vulnerability, "epssPercentile", o[23]);
+        final List<Cwe> cwes = getCwes(o[24]);
         if (cwes != null && !cwes.isEmpty()) {
             // Ensure backwards-compatibility with DT < 4.5.0. Remove this in v5!
             optValue(vulnerability, "cweId", cwes.get(0).getCweId());
             optValue(vulnerability, "cweName", cwes.get(0).getName());
         }
         optValue(vulnerability, "cwes", cwes);
-        optValue(attribution, "analyzerIdentity", o[24]);
-        optValue(attribution, "attributedOn", o[25]);
-        optValue(attribution, "alternateIdentifier", o[26]);
-        optValue(attribution, "referenceUrl", o[27]);
+        optValue(attribution, "analyzerIdentity", o[25]);
+        optValue(attribution, "attributedOn", o[26]);
+        optValue(attribution, "alternateIdentifier", o[27]);
+        optValue(attribution, "referenceUrl", o[28]);
 
-        optValue(analysis, "state", o[28]);
-        optValue(analysis, "isSuppressed", o[29], false);
-        if (o.length > 32) {
-            optValue(vulnerability, "published", o[30]);
-            optValue(component, "projectName", o[32]);
-            optValue(component, "projectVersion", o[33]);
+        optValue(analysis, "state", o[29]);
+        optValue(analysis, "isSuppressed", o[30], false);
+        if (o.length > 33) {
+            optValue(vulnerability, "published", o[31]);
+            optValue(component, "projectName", o[33]);
+            optValue(component, "projectVersion", o[34]);
         }
     }
 

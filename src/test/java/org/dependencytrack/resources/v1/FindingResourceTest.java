@@ -47,6 +47,7 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -444,6 +445,37 @@ public class FindingResourceTest extends ResourceTest {
         Assert.assertFalse(json.getJsonObject(0).getJsonObject("analysis").getBoolean("isSuppressed"));
         assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v1.getUuid().toString(), json.getJsonObject(0).getString("matrix"));
         Assert.assertThrows(NullPointerException.class, () -> json.getJsonObject(0).getJsonObject("component").getString("latestVersion"));
+    }
+
+    @Test
+    public void getFindingsByProjectWithCvssAndOwaspData() {
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Component c1 = createComponent(p1, "Component A", "1.0");
+        c1.setPurl("pkg:/maven/org.acme/component-a@1.0.0");
+
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
+        v1.setCvssV2BaseScore(BigDecimal.valueOf(0.2));
+        v1.setCvssV3BaseScore(BigDecimal.valueOf(0.3));
+        v1.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(0.4));
+        v1.setCvssV2Vector("cvssV2-vector");
+        v1.setCvssV3Vector("cvssV3-vector");
+        v1.setOwaspRRVector("owasp-vector");
+        qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
+
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertEquals(200, response.getStatus(), 0);
+        assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray json = parseJsonArray(response);
+        Assert.assertNotNull(json);
+        assertEquals(1, json.size());
+        assertEquals(0.2, json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("cvssV2BaseScore").doubleValue(), 0);
+        assertEquals(0.3, json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("cvssV3BaseScore").doubleValue(), 0);
+        assertEquals(0.4, json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("owaspBusinessImpactScore").doubleValue(), 0);
+        assertEquals("cvssV2-vector", json.getJsonObject(0).getJsonObject("vulnerability").getString("cvssV2Vector"));
+        assertEquals("cvssV3-vector", json.getJsonObject(0).getJsonObject("vulnerability").getString("cvssV3Vector"));
+        assertEquals("owasp-vector", json.getJsonObject(0).getJsonObject("vulnerability").getString("owaspRRVector"));
     }
 
     @Test
