@@ -55,10 +55,9 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public Role createRole(final String name, final String description, final List<Permission> permissions) {
+    public Role createRole(final String name, final List<Permission> permissions) {
         Role role = new Role();
         role.setName(name);
-        role.setDescription(description);
         role.setPermissions(permissions);
 
         return persist(role);
@@ -101,7 +100,6 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
             return null;
 
         role.setName(transientRole.getName());
-        role.setDescription(transientRole.getDescription());
 
         return persist(role);
     }

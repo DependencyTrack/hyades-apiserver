@@ -923,8 +923,8 @@ public class QueryManager extends AlpineQueryManager {
         getPolicyQueryManager().deletePolicyCondition(policyCondition);
     }
 
-    public Role createRole(final String name, final String description, final List<Permission> permissions) {
-        return getRoleQueryManager().createRole(name, description, permissions);
+    public Role createRole(final String name, final List<Permission> permissions) {
+        return getRoleQueryManager().createRole(name, permissions);
     }
 
     public List<Role> getRoles() {

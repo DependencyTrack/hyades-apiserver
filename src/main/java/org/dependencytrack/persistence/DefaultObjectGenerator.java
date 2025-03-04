@@ -308,13 +308,13 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
             LOGGER.info("Adding default roles to datastore");
             LOGGER.debug("Creating role: Project Admin");
-            final Role projectAdmin = qm.createRole("Project Admin", null, getProjectAdminPermissions(fullList));
+            final Role projectAdmin = qm.createRole("Project Admin", getProjectAdminPermissions(fullList));
             LOGGER.debug("Creating role: Project Auditor");
-            final Role projectAuditor = qm.createRole("Project Auditor", null, getProjectAuditorPermissions(fullList));
+            final Role projectAuditor = qm.createRole("Project Auditor", getProjectAuditorPermissions(fullList));
             LOGGER.debug("Creating role: Project Editor");
-            final Role projectEditor = qm.createRole("Project Editor", null, getProjectEditorPermissions(fullList));
+            final Role projectEditor = qm.createRole("Project Editor", getProjectEditorPermissions(fullList));
             LOGGER.debug("Creating role: Project Viewer");
-            final Role projectViewer = qm.createRole("Project Viewer", null, getProjectViewerPermissions(fullList));
+            final Role projectViewer = qm.createRole("Project Viewer", getProjectViewerPermissions(fullList));
 
             qm.persist(projectAdmin);
             qm.persist(projectAuditor);
