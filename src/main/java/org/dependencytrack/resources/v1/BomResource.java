@@ -563,9 +563,7 @@ public class BomResource extends AbstractApiResource {
                 problemDetails.setErrors(e.getValidationErrors());
             }
 
-            final var bomEncoded = Base64.getEncoder()
-                    .encodeToString(bomBytes);
-            dispatchBomValidationFailedNotification(project, bomEncoded, problemDetails.getErrors());
+            dispatchBomValidationFailedNotification(project, problemDetails.getErrors());
 
             throw new WebApplicationException(problemDetails.toResponse());
         } catch (RuntimeException e) {
@@ -575,7 +573,7 @@ public class BomResource extends AbstractApiResource {
         }
     }
 
-    private static void dispatchBomValidationFailedNotification(Project project, String bom, List<String> errors) {
+    private static void dispatchBomValidationFailedNotification(Project project, List<String> errors) {
         final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
         eventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.PORTFOLIO)
@@ -583,7 +581,7 @@ public class BomResource extends AbstractApiResource {
                 .level(NotificationLevel.ERROR)
                 .title(NotificationConstants.Title.BOM_VALIDATION_FAILED)
                 .content("An error occurred while validating a BOM")
-                .subject(new BomValidationFailed(project, bom, errors)));
+                .subject(new BomValidationFailed(project, /* bom */ "(Omitted)", errors)));
     }
 
     private static boolean shouldValidate(final Project project) {
