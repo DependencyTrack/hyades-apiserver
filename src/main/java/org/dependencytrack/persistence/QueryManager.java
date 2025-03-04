@@ -97,7 +97,6 @@ import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanStatus;
 import org.dependencytrack.proto.vulnanalysis.v1.ScannerResult;
-import org.dependencytrack.resources.v1.vo.AffectedProject;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
@@ -1167,10 +1166,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public long getSuppressedCount(Project project, Component component) {
         return getFindingsQueryManager().getSuppressedCount(project, component);
-    }
-
-    public List<AffectedProject> getAffectedProjects(Vulnerability vulnerability) {
-        return getVulnerabilityQueryManager().getAffectedProjects(vulnerability);
     }
 
     public VulnerabilityAlias synchronizeVulnerabilityAlias(VulnerabilityAlias alias) {

@@ -18,6 +18,42 @@
  */
 package org.dependencytrack.resources.v1;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
+import java.security.Principal;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import static java.util.function.Predicate.not;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
+import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
+import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
+import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
+
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
@@ -25,7 +61,6 @@ import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -70,42 +105,6 @@ import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonReader;
-import jakarta.json.JsonString;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
-import java.security.Principal;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import static java.util.function.Predicate.not;
-import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
-import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
-import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
-import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
-
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
  *
@@ -118,7 +117,7 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.p
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class BomResource extends AlpineResource {
+public class BomResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(BomResource.class);
 
@@ -136,7 +135,10 @@ public class BomResource extends AlpineResource {
                     content = @Content(schema = @Schema(type = "string"))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -154,9 +156,7 @@ public class BomResource extends AlpineResource {
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-            }
+            requireAccess(qm, project);
 
             final CycloneDXExporter exporter;
             if (StringUtils.trimToNull(variant) == null || variant.equalsIgnoreCase("inventory")) {
@@ -210,7 +210,10 @@ public class BomResource extends AlpineResource {
                     content = @Content(schema = @Schema(type = "string"))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified component is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -224,9 +227,7 @@ public class BomResource extends AlpineResource {
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
-            if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
-            }
+            requireAccess(qm, component.getProject());
 
             final CycloneDXExporter exporter = new CycloneDXExporter(CycloneDXExporter.Variant.INVENTORY, qm);
             try {
@@ -289,7 +290,10 @@ public class BomResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "400", description = "The uploaded BOM is invalid"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
@@ -330,19 +334,15 @@ public class BomResource extends AlpineResource {
                             }
 
                             if (parent == null) { // if parent project is specified but not found
-                                return Response.status(Response.Status.NOT_FOUND).entity("The parent component could not be found.").build();
-                            } else if (!qm.hasAccess(super.getPrincipal(), parent)) {
-                                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified parent project is forbidden").build();
+                                return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
                             }
+                            requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                         }
                         final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
                         if (request.isLatestProjectVersion()) {
                             final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if (oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
-                                return Response.status(Response.Status.FORBIDDEN)
-                                        .entity("Cannot create latest version for project with this name. Access to current latest " +
-                                                "version is forbidden!")
-                                        .build();
+                            if(oldLatest != null) {
+                                requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
                             }
                         }
                         project = qm.createProject(trimmedProjectName, null,
@@ -374,6 +374,7 @@ public class BomResource extends AlpineResource {
                       or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
                     </p>
                     <p>
+                      MediaType supported for BOM artifact is 'application/xml', 'application/json' or 'application/x.vnd.cyclonedx+protobuf'.
                       The BOM will be validated against the CycloneDX schema. If schema validation fails,
                       a response with problem details in RFC 9457 format will be returned. In this case,
                       the response's content type will be <code>application/problem+json</code>.
@@ -397,7 +398,10 @@ public class BomResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "400", description = "The uploaded BOM is invalid"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to the specified project is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
@@ -437,18 +441,14 @@ public class BomResource extends AlpineResource {
                             }
 
                             if (parent == null) { // if parent project is specified but not found
-                                return Response.status(Response.Status.NOT_FOUND).entity("The parent component could not be found.").build();
-                            } else if (!qm.hasAccess(super.getPrincipal(), parent)) {
-                                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified parent project is forbidden").build();
+                                return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
                             }
+                            requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                         }
                         if (isLatest) {
                             final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if (oldLatest != null && !qm.hasAccess(super.getPrincipal(), oldLatest)) {
-                                return Response.status(Response.Status.FORBIDDEN)
-                                        .entity("Cannot create latest version for project with this name. Access to current latest " +
-                                                "version is forbidden!")
-                                        .build();
+                            if(oldLatest != null) {
+                                requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
                             }
                         }
                         final List<org.dependencytrack.model.Tag> tags = (projectTags != null && !projectTags.isBlank())
@@ -471,9 +471,7 @@ public class BomResource extends AlpineResource {
      */
     private Response process(QueryManager qm, Project project, String encodedBomData) {
         if (project != null) {
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-            }
+            requireAccess(qm, project);
 
             final FileMetadata bomFileMetadata;
             try (final var encodedInputStream = new ByteArrayInputStream(encodedBomData.getBytes(StandardCharsets.UTF_8));
@@ -525,14 +523,12 @@ public class BomResource extends AlpineResource {
         for (final FormDataBodyPart artifactPart : artifactParts) {
             final BodyPartEntity bodyPartEntity = (BodyPartEntity) artifactPart.getEntity();
             if (project != null) {
-                if (!qm.hasAccess(super.getPrincipal(), project)) {
-                    return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-                }
+                requireAccess(qm, project);
 
                 final FileMetadata bomFileMetadata;
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
-                    bomFileMetadata = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                    bomFileMetadata = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project, artifactPart.getMediaType());
                 } catch (IOException e) {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -578,7 +574,11 @@ public class BomResource extends AlpineResource {
     }
 
     private FileMetadata validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
-        validate(bomBytes, project);
+        return validateAndStoreBom(bomBytes, project, null);
+    }
+
+    private FileMetadata validateAndStoreBom(final byte[] bomBytes, final Project project, MediaType mediaType) throws IOException {
+        validate(bomBytes, project, mediaType);
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             return fileStorage.store("bom", bomBytes);
@@ -586,12 +586,16 @@ public class BomResource extends AlpineResource {
     }
 
     static void validate(final byte[] bomBytes, final Project project) {
+        validate(bomBytes, project, null);
+    }
+
+    static void validate(final byte[] bomBytes, final Project project, MediaType mediaType) {
         if (!shouldValidate(project)) {
             return;
         }
 
         try {
-            CycloneDxValidator.getInstance().validate(bomBytes);
+            CycloneDxValidator.getInstance().validate(bomBytes, mediaType);
         } catch (InvalidBomException e) {
             final var problemDetails = new InvalidBomProblemDetails();
             problemDetails.setStatus(400);

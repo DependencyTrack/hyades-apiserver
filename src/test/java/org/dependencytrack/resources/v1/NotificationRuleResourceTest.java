@@ -23,11 +23,6 @@ import alpine.model.Team;
 import alpine.notification.NotificationLevel;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.NotificationPublisher;
@@ -44,10 +39,16 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -262,6 +263,40 @@ public class NotificationRuleResourceTest extends ResourceTest {
     }
 
     @Test
+    public void addProjectToRuleAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final NotificationPublisher publisher = qm.getNotificationPublisher(
+                DefaultNotificationPublishers.SLACK.getPublisherName());
+        final NotificationRule rule = qm.createNotificationRule(
+                "rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(""));
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
     public void removeProjectFromRuleTest() {
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
@@ -327,6 +362,41 @@ public class NotificationRuleResourceTest extends ResourceTest {
                 .delete();
         Assert.assertEquals(304, response.getStatus(), 0);
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+    }
+
+    @Test
+    public void removeProjectFromRuleAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final NotificationPublisher publisher = qm.getNotificationPublisher(
+                DefaultNotificationPublishers.SLACK.getPublisherName());
+        final NotificationRule rule = qm.createNotificationRule(
+                "rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
+        rule.setProjects(List.of(project));
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + project.getUuid().toString()).request()
+                .header(X_API_KEY, apiKey)
+                .delete();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 
     @Test

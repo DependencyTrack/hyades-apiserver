@@ -34,6 +34,7 @@ import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -116,6 +117,40 @@ public class ComponentPropertyResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(404);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
         assertThat(getPlainTextBody(response)).isEqualTo("The component could not be found.");
+    }
+
+    @Test
+    public void getPropertiesAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target("%s/%s/property".formatted(V1_COMPONENT, component.getUuid())).request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 
     @Test
@@ -293,6 +328,48 @@ public class ComponentPropertyResourceTest extends ResourceTest {
     }
 
     @Test
+    public void createPropertyAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target("%s/%s/property".formatted(V1_COMPONENT, component.getUuid())).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "groupName": "foo",
+                          "propertyName": "bar",
+                          "propertyValue": "baz",
+                          "propertyType": "STRING",
+                          "description": "qux"
+                        }
+                        """));
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(201);
+    }
+
+    @Test
     public void deletePropertyTest() {
         final var project = new Project();
         project.setName("acme-app");
@@ -318,4 +395,47 @@ public class ComponentPropertyResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(204);
         assertThat(getPlainTextBody(response)).isEmpty();
     }
+
+    @Test
+    public void deletePropertyAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final var property = new ComponentProperty();
+        property.setComponent(component);
+        property.setGroupName("foo");
+        property.setPropertyName("bar");
+        property.setPropertyValue("baz");
+        property.setPropertyType(PropertyType.STRING);
+        qm.persist(property);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target("%s/%s/property/%s".formatted(V1_COMPONENT, component.getUuid(), property.getUuid())).request()
+                .header(X_API_KEY, apiKey)
+                .delete();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(204);
+    }
+
 }

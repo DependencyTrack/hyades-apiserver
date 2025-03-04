@@ -18,34 +18,6 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.model.IConfigProperty.PropertyType;
-import com.github.packageurl.PackageURL;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.BomUploadEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.model.Bom;
-import org.dependencytrack.model.Classifier;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentProperty;
-import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
-import org.dependencytrack.model.License;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
-import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
-import org.dependencytrack.proto.notification.v1.Group;
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
-import org.dependencytrack.storage.FileStorage;
-import org.junit.Before;
-import org.junit.Test;
-
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
@@ -93,6 +65,43 @@ import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
+
+import alpine.model.IConfigProperty.PropertyType;
+import com.github.packageurl.PackageURL;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.cyclonedx.proto.v1_6.Classification;
+import org.cyclonedx.proto.v1_6.Dependency;
+import org.cyclonedx.proto.v1_6.ExternalReference;
+import org.cyclonedx.proto.v1_6.ExternalReferenceType;
+import org.cyclonedx.proto.v1_6.Metadata;
+import org.cyclonedx.proto.v1_6.OrganizationalContact;
+import org.cyclonedx.proto.v1_6.OrganizationalEntity;
+import org.cyclonedx.proto.v1_6.Service;
+import org.cyclonedx.proto.v1_6.Tool;
+import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.model.Bom;
+import org.dependencytrack.model.Classifier;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentProperty;
+import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.model.License;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.Group;
+import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.storage.FileStorage;
+import org.junit.Before;
+import org.junit.Test;
 
 public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
@@ -1727,6 +1736,100 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         });
     }
 
+    @Test
+    public void informBomWithProtobufFormat() throws Exception {
+        DefaultObjectGenerator.loadDefaultLicenses();
+
+        Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()),
+                createTempBomProtoFile());
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
+                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name())
+        );
+        qm.getPersistenceManager().refresh(project);
+        qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
+        assertThat(project.getClassifier()).isEqualTo(Classifier.APPLICATION);
+        assertThat(project.getPurl()).asString().isEqualTo("pkg:npm/packageurl-js@1.0.0");
+        assertThat(project.getLastBomImport()).isNotNull();
+        assertThat(project.getLastBomImportFormat()).isEqualTo("CycloneDX 1.6");
+        assertThat(project.getExternalReferences()).isNotNull();
+        assertThat(project.getExternalReferences()).hasSize(1);
+        assertThat(project.getSupplier()).satisfies(supplier -> {
+            assertThat(supplier.getName()).isEqualTo("Foo Incorporated");
+            assertThat(supplier.getUrls()).containsOnly("https://foo.bar.com");
+            assertThat(supplier.getContacts()).satisfiesExactly(contact -> {
+                assertThat(contact.getName()).isEqualTo("Foo Jr.");
+                assertThat(contact.getEmail()).isEqualTo("foojr@bar.com");
+                assertThat(contact.getPhone()).isEqualTo("123-456-7890");
+            });
+        });
+
+        assertThat(project.getMetadata()).isNotNull();
+        assertThat(project.getMetadata().getAuthors().size()).isEqualTo(1);
+        assertThat(project.getMetadata().getSupplier()).isNotNull();
+
+        final List<Component> components = qm.getAllComponents(project);
+        assertThat(components).hasSize(1);
+
+        final Component component = components.get(0);
+        assertThat(component.getPublisher()).isEqualTo("publisher");
+        assertThat(component.getClassifier()).isEqualTo(Classifier.CONTAINER);
+        assertThat(component.getName()).isEqualTo("acme-test");
+        assertThat(component.getPurl().canonicalize()).isEqualTo("pkg:npm/packageurl-js@1.0.0");
+
+        qm.getPersistenceManager().refreshAll(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier()));
+        assertThat(qm.getAllWorkflowStatesForAToken(bomUploadEvent.getChainIdentifier())).satisfiesExactlyInAnyOrder(
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_CONSUMPTION);
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    assertThat(state.getStep()).isEqualTo(BOM_PROCESSING);
+                    assertThat(state.getStatus()).isEqualTo(COMPLETED);
+                    assertThat(state.getStartedAt()).isNotNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    //vuln analysis has not been handled yet, so it will be in pending state
+                    assertThat(state.getStep()).isEqualTo(VULN_ANALYSIS);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getStartedAt()).isBefore(Date.from(Instant.now()));
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    //policy evaluation has not been handled yet, so it will be in pending state
+                    assertThat(state.getStep()).isEqualTo(POLICY_EVALUATION);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getParent()).isNotNull();
+                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                },
+                state -> {
+                    //metrics update has not been handled yet, so it will be in pending state
+                    assertThat(state.getStep()).isEqualTo(METRICS_UPDATE);
+                    assertThat(state.getStatus()).isEqualTo(PENDING);
+                    assertThat(state.getParent()).isNotNull();
+                    assertThat(state.getStartedAt()).isNull();
+                    assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
+                }
+        );
+        final VulnerabilityScan vulnerabilityScan = qm.getVulnerabilityScan(bomUploadEvent.getChainIdentifier());
+        assertThat(vulnerabilityScan).isNotNull();
+        var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
+        assertThat(workflowStatus.getStartedAt()).isNotNull();
+    }
+
     private void assertBomProcessedNotification() throws Exception {
         try {
             assertThat(kafkaMockProducer.history()).anySatisfy(record -> {
@@ -1764,4 +1867,44 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         }
     }
 
+    private FileMetadata createTempBomProtoFile() throws Exception {
+        // The task will delete the input file after processing it,
+        // so create a temporary copy to not impact other tests.{
+        final var cdxContact = OrganizationalContact.newBuilder()
+                .setName("Foo Jr.")
+                .setEmail("foojr@bar.com")
+                .setPhone("123-456-7890").build();
+        final org.cyclonedx.proto.v1_6.Bom bomTest = org.cyclonedx.proto.v1_6.Bom
+                .newBuilder()
+                .setSpecVersion("1.6")
+                .addComponents(org.cyclonedx.proto.v1_6.Component.newBuilder()
+                        .setName("acme-test")
+                        .setPublisher("publisher")
+                        .setPurl("pkg:npm/packageurl-js@1.0.0")
+                        .setType(Classification.CLASSIFICATION_CONTAINER)
+                        .build())
+                .addDependencies(Dependency.newBuilder()
+                        .setRef("dependency-ref").build())
+                .setMetadata(Metadata.newBuilder()
+                        .addAuthors(cdxContact)
+                        .setComponent(org.cyclonedx.proto.v1_6.Component.newBuilder()
+                                .setName("acme-test")
+                                .setPublisher("publisher")
+                                .setPurl("pkg:npm/packageurl-js@1.0.0")
+                                .setType(Classification.CLASSIFICATION_APPLICATION)
+                                .setSupplier(OrganizationalEntity.newBuilder()
+                                        .setName("Foo Incorporated")
+                                        .addUrl("https://foo.bar.com")
+                                        .addContact(cdxContact).build())
+                                .addExternalReferences(ExternalReference.newBuilder()
+                                        .setType(ExternalReferenceType.EXTERNAL_REFERENCE_TYPE_BOM).build())
+                                .build())
+                        .setTools(Tool.newBuilder()
+                                .addComponents(org.cyclonedx.proto.v1_6.Component.newBuilder().build())
+                                .addServices(Service.newBuilder().setName("service").build())
+                                .build())
+                        .setSupplier(OrganizationalEntity.newBuilder().addContact(cdxContact).build()))
+                .build();
+        return storeBomFile(bomTest.toByteArray());
+    }
 }

@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.auth.PermissionRequired;
-import alpine.server.resources.AlpineResource;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,6 +31,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.RepositoryMetaComponent;
+import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.RepositoryQueryManager;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
+
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonException;
@@ -43,16 +53,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.RepositoryQueryManager;
-import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
-
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -70,7 +70,7 @@ import java.util.UUID;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class DependencyGraphResource extends AlpineResource {
+public class DependencyGraphResource extends AbstractApiResource {
 
     @GET
     @Path("/project/{uuid}/directDependencies")
@@ -87,7 +87,10 @@ public class DependencyGraphResource extends AlpineResource {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = DependencyGraphResponse.class)))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to a specified component is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "Any component can be found"),
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -99,9 +102,7 @@ public class DependencyGraphResource extends AlpineResource {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
 
-            if (!qm.hasAccess(super.getPrincipal(), project)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified project is forbidden").build();
-            }
+            requireAccess(qm, project);
 
             final String directDependenciesJSON = project.getDirectDependencies();
 
@@ -129,7 +130,10 @@ public class DependencyGraphResource extends AlpineResource {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = DependencyGraphResponse.class)))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Access to a specified component is forbidden"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access to the requested project is forbidden",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "Any component can be found"),
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
@@ -140,9 +144,7 @@ public class DependencyGraphResource extends AlpineResource {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
 
-            if (!qm.hasAccess(super.getPrincipal(), component.getProject())) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Access to the specified component is forbidden").build();
-            }
+            requireAccess(qm, component.getProject());
 
             final String directDependenciesJSON = component.getDirectDependencies();
 

@@ -22,11 +22,14 @@ import alpine.common.logging.Logger;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.google.protobuf.InvalidProtocolBufferException;
+import jakarta.ws.rs.core.MediaType;
 import org.cyclonedx.Version;
 import org.cyclonedx.exception.ParseException;
 import org.cyclonedx.parsers.JsonParser;
 import org.cyclonedx.parsers.Parser;
 import org.cyclonedx.parsers.XmlParser;
+import org.cyclonedx.proto.v1_6.Bom;
 
 import javax.xml.XMLConstants;
 import javax.xml.stream.XMLInputFactory;
@@ -72,24 +75,42 @@ public class CycloneDxValidator {
     }
 
     public void validate(final byte[] bomBytes) {
-        final FormatAndVersion formatAndVersion = detectFormatAndSchemaVersion(bomBytes);
+        validate(bomBytes, null);
+    }
 
-        final Parser bomParser = switch (formatAndVersion.format()) {
-            case JSON -> new JsonParser();
-            case XML -> new XmlParser();
-        };
-
-        final List<ParseException> validationErrors;
-        try {
-            validationErrors = bomParser.validate(bomBytes, formatAndVersion.version());
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to validate BOM", e);
-        }
-
-        if (!validationErrors.isEmpty()) {
-            throw new InvalidBomException("Schema validation failed", validationErrors.stream()
-                    .map(ParseException::getMessage)
-                    .toList());
+    public void validate(final byte[] bomBytes, MediaType mediaType) {
+        // Validating protobuf format
+        if (mediaType != null && mediaType.toString().equalsIgnoreCase("application/x.vnd.cyclonedx+protobuf")) {
+            try {
+                final var bom = Bom.parseFrom(bomBytes);
+                switch (bom.getSpecVersion()) {
+                    case "1.0", "1.1", "1.2", "1.3", "1.4" ->
+                            throw new InvalidBomException("Protobuf is not supported for specVersion %s".formatted(bom.getSpecVersion()));
+                    case "1.5", "1.6" -> {}
+                    default ->
+                            throw new InvalidBomException("Unrecognized specVersion %s".formatted(bom.getSpecVersion()));
+                }
+            } catch (InvalidProtocolBufferException e) {
+                throw new InvalidBomException("Protobuf Schema validation failed", e);
+            }
+        } else {
+            // Validating JSON/XML format
+            final FormatAndVersion formatAndVersion = detectFormatAndSchemaVersion(bomBytes);
+            final Parser bomParser = switch (formatAndVersion.format()) {
+                case JSON -> new JsonParser();
+                case XML -> new XmlParser();
+            };
+            final List<ParseException> validationErrors;
+            try {
+                validationErrors = bomParser.validate(bomBytes, formatAndVersion.version());
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to validate BOM", e);
+            }
+            if (!validationErrors.isEmpty()) {
+                throw new InvalidBomException("Schema validation failed", validationErrors.stream()
+                        .map(ParseException::getMessage)
+                        .toList());
+            }
         }
     }
 

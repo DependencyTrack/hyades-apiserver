@@ -23,11 +23,6 @@ import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.fasterxml.jackson.core.StreamReadConstraints;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.javacrumbs.jsonunit.core.Option;
@@ -35,6 +30,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.assertj.core.api.AssertionsForClassTypes;
+import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -57,7 +53,6 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
-import org.dependencytrack.resources.v1.exception.JsonMappingExceptionMapper;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
@@ -70,6 +65,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -86,6 +86,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -112,8 +113,7 @@ public class BomResourceTest extends ResourceTest {
             new ResourceConfig(BomResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class)
-                    .register(MultiPartFeature.class)
-                    .register(JsonMappingExceptionMapper.class));
+                    .register(MultiPartFeature.class));
 
     @Before
     @Override
@@ -147,6 +147,37 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
         Assert.assertEquals("The project could not be found.", body);
+    }
+
+    @Test
+    public void exportProjectAsCycloneDxAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_BOM + "/cyclonedx/project/" + project.getUuid())
+                .queryParam("variant", "inventory")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_FORBIDDEN);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
     }
 
     @Test
@@ -851,6 +882,42 @@ public class BomResourceTest extends ResourceTest {
     }
 
     @Test
+    public void exportComponentAsCycloneDxAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_BOM + "/cyclonedx/component/" + component.getUuid())
+                .queryParam("variant", "inventory")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_FORBIDDEN);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+    }
+
+    @Test
     public void uploadBomTest() throws Exception {
         initializeWithPermissions(Permissions.BOM_UPLOAD);
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -1104,7 +1171,7 @@ public class BomResourceTest extends ResourceTest {
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(404, response.getStatus(), 0);
         String body = getPlainTextBody(response);
-        Assert.assertEquals("The parent component could not be found.", body);
+        Assert.assertEquals("The parent project could not be found.", body);
 
         request = new BomSubmitRequest(null, "Acme Example", "2.0", null, true, null, "Non-existent parent", null, false, bomString);
         response = jersey.target(V1_BOM).request()
@@ -1112,7 +1179,7 @@ public class BomResourceTest extends ResourceTest {
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
         Assert.assertEquals(404, response.getStatus(), 0);
         body = getPlainTextBody(response);
-        Assert.assertEquals("The parent component could not be found.", body);
+        Assert.assertEquals("The parent project could not be found.", body);
     }
 
     @SuppressWarnings("unused")
@@ -1321,6 +1388,37 @@ public class BomResourceTest extends ResourceTest {
         assertThat(project.getTags())
                 .extracting(Tag::getName)
                 .containsExactlyInAnyOrder("tag1", "tag2");
+    }
+
+    @Test
+    public void uploadBomProtobufFormatTest() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final var bomProto = Bom.newBuilder().setSpecVersion("1.6").build();
+        final var multiPart = new FormDataMultiPart()
+                .field("project", project.getUuid().toString())
+                .field("bom", bomProto.toByteArray(), new MediaType("application", "x.vnd.cyclonedx+protobuf"))
+                .field("autoCreate", "true");
+
+        // NB: The GrizzlyConnectorProvider doesn't work with MultiPart requests.
+        // https://github.com/eclipse-ee4j/jersey/issues/5094
+        final var client = ClientBuilder.newClient(new ClientConfig()
+                .register(MultiPartFeature.class)
+                .connectorProvider(new HttpUrlConnectorProvider()));
+
+        final Response response = client.target(jersey.target(V1_BOM).getUri()).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(multiPart, multiPart.getMediaType()));
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                {
+                  "token": "${json-unit.any-string}"
+                }
+                """);
+
+        final var projectResponse = qm.getProject("Acme Example", "1.0");
+        assertThat(projectResponse).isNotNull();
+        assertThat(projectResponse.getName()).isEqualTo(project.getName());
     }
 
     @Test

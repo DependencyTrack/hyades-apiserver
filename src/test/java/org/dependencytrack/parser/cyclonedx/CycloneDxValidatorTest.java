@@ -19,8 +19,12 @@
 package org.dependencytrack.parser.cyclonedx;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import jakarta.ws.rs.core.MediaType;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import org.cyclonedx.proto.v1_6.Bom;
+import org.cyclonedx.proto.v1_6.Source;
+import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -47,6 +51,7 @@ import static org.assertj.core.api.Assertions.catchThrowableOfType;
 public class CycloneDxValidatorTest {
 
     private CycloneDxValidator validator;
+    private final MediaType mediaTypeProtobuf = new MediaType("application", "x.vnd.cyclonedx+protobuf");
 
     @Before
     public void setUp() {
@@ -278,4 +283,28 @@ public class CycloneDxValidatorTest {
         }
     }
 
+    @Test
+    public void testValidateProtobufWithUnsupportedSpecVersion() {
+        assertThatExceptionOfType(InvalidBomException.class)
+                .isThrownBy(() -> validator.validate(Bom.newBuilder().setSpecVersion("1.1").build().toByteArray(), mediaTypeProtobuf))
+                .withMessage("Protobuf is not supported for specVersion 1.1");
+    }
+
+    @Test
+    public void testValidateProtobufWithUnknownSpecVersion() {
+        assertThatExceptionOfType(InvalidBomException.class)
+                .isThrownBy(() -> validator.validate(Bom.newBuilder().setSpecVersion("666").build().toByteArray(), mediaTypeProtobuf))
+                .withMessage("Unrecognized specVersion 666");
+    }
+
+    @Test
+    public void testValidateWithValidBomProtobuf() {
+        final Bom bom = Bom.newBuilder()
+                .setSpecVersion("1.6")
+                .addVulnerabilities(Vulnerability.newBuilder()
+                        .setId("CVE-test")
+                        .setSource(Source.newBuilder().setName("NVD").build()).build()).build();
+
+        assertThatNoException().isThrownBy(() -> validator.validate(bom.toByteArray(), mediaTypeProtobuf));
+    }
 }
