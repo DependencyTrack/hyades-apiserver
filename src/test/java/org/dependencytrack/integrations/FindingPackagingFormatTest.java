@@ -69,13 +69,13 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
 
         Finding findingWithoutAlias = new Finding(project.getUuid(), "component-uuid-1", "component-name-1", "component-group",
                 "component-version", "component-purl", "component-cpe", "vuln-uuid", Vulnerability.Source.GITHUB, "vuln-vulnId-1", "vuln-title",
-                "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.CRITICAL, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-                BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.OSSINDEX_ANALYZER, new Date(), null, null, AnalysisState.NOT_AFFECTED, true);
+                "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.CRITICAL, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
+                "owasp-vector", BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.OSSINDEX_ANALYZER, new Date(), null, null, AnalysisState.NOT_AFFECTED, true);
 
         Finding findingWithAlias = new Finding(project.getUuid(), "component-uuid-2", "component-name-2", "component-group",
                 "component-version", "component-purl", "component-cpe", "vuln-uuid", Vulnerability.Source.NVD, "vuln-vulnId-2", "vuln-title",
-                "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.HIGH, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-                BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.INTERNAL_ANALYZER, new Date(), null, null, AnalysisState.NOT_AFFECTED, true);
+                "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.HIGH, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
+                "owasp-vector", BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.INTERNAL_ANALYZER, new Date(), null, null, AnalysisState.NOT_AFFECTED, true);
 
         var alias = new VulnerabilityAlias();
         alias.setCveId("someCveId");

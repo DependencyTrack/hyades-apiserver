@@ -71,9 +71,12 @@ public class Finding implements Serializable {
                  , "VULNERABILITY"."SEVERITY"
                  , "VULNERABILITY"."CVSSV2BASESCORE"
                  , "VULNERABILITY"."CVSSV3BASESCORE"
+                 , "VULNERABILITY"."CVSSV2VECTOR"
+                 , "VULNERABILITY"."CVSSV3VECTOR"
                  , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
                  , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
                  , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
+                 , "VULNERABILITY"."OWASPRRVECTOR"
                  , "EPSS"."SCORE"
                  , "EPSS"."PERCENTILE"
                  , "VULNERABILITY"."CWES"
@@ -119,9 +122,12 @@ public class Finding implements Serializable {
                  , "VULNERABILITY"."SEVERITY"
                  , "VULNERABILITY"."CVSSV2BASESCORE"
                  , "VULNERABILITY"."CVSSV3BASESCORE"
+                 , "VULNERABILITY"."CVSSV2VECTOR"
+                 , "VULNERABILITY"."CVSSV3VECTOR"
                  , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
                  , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
                  , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
+                 , "VULNERABILITY"."OWASPRRVECTOR"
                  , "EPSS"."SCORE"
                  , "EPSS"."PERCENTILE"
                  , "VULNERABILITY"."CWES"
@@ -182,34 +188,37 @@ public class Finding implements Serializable {
         optValue(vulnerability, "subtitle", o[10]);
         optValue(vulnerability, "description", o[11]);
         optValue(vulnerability, "recommendation", o[12]);
-        final Severity severity = VulnerabilityUtil.getSeverity(o[13], (BigDecimal) o[14], (BigDecimal) o[15], (BigDecimal) o[16], (BigDecimal) o[17], (BigDecimal) o[18]);
+        final Severity severity = VulnerabilityUtil.getSeverity(o[13], (BigDecimal) o[14], (BigDecimal) o[15], (BigDecimal) o[18], (BigDecimal) o[19], (BigDecimal) o[20]);
         optValue(vulnerability, "cvssV2BaseScore", o[14]);
         optValue(vulnerability, "cvssV3BaseScore", o[15]);
-        optValue(vulnerability, "owaspLikelihoodScore", o[16]);
-        optValue(vulnerability, "owaspTechnicalImpactScore", o[17]);
-        optValue(vulnerability, "owaspBusinessImpactScore", o[18]);
+        optValue(vulnerability, "cvssV2Vector", o[16]);
+        optValue(vulnerability, "cvssV3Vector", o[17]);
+        optValue(vulnerability, "owaspLikelihoodScore", o[18]);
+        optValue(vulnerability, "owaspTechnicalImpactScore", o[19]);
+        optValue(vulnerability, "owaspBusinessImpactScore", o[20]);
+        optValue(vulnerability, "owaspRRVector", o[21]);
         optValue(vulnerability, "severity", severity.name());
         optValue(vulnerability, "severityRank", severity.ordinal());
-        optValue(vulnerability, "epssScore", o[19]);
-        optValue(vulnerability, "epssPercentile", o[20]);
-        final List<Cwe> cwes = getCwes(o[21]);
+        optValue(vulnerability, "epssScore", o[22]);
+        optValue(vulnerability, "epssPercentile", o[23]);
+        final List<Cwe> cwes = getCwes(o[24]);
         if (cwes != null && !cwes.isEmpty()) {
             // Ensure backwards-compatibility with DT < 4.5.0. Remove this in v5!
             optValue(vulnerability, "cweId", cwes.get(0).getCweId());
             optValue(vulnerability, "cweName", cwes.get(0).getName());
         }
         optValue(vulnerability, "cwes", cwes);
-        optValue(attribution, "analyzerIdentity", o[22]);
-        optValue(attribution, "attributedOn", o[23]);
-        optValue(attribution, "alternateIdentifier", o[24]);
-        optValue(attribution, "referenceUrl", o[25]);
+        optValue(attribution, "analyzerIdentity", o[25]);
+        optValue(attribution, "attributedOn", o[26]);
+        optValue(attribution, "alternateIdentifier", o[27]);
+        optValue(attribution, "referenceUrl", o[28]);
 
-        optValue(analysis, "state", o[26]);
-        optValue(analysis, "isSuppressed", o[27], false);
-        if (o.length > 30) {
-            optValue(vulnerability, "published", o[28]);
-            optValue(component, "projectName", o[30]);
-            optValue(component, "projectVersion", o[31]);
+        optValue(analysis, "state", o[29]);
+        optValue(analysis, "isSuppressed", o[30], false);
+        if (o.length > 33) {
+            optValue(vulnerability, "published", o[31]);
+            optValue(component, "projectName", o[33]);
+            optValue(component, "projectVersion", o[34]);
         }
     }
 
