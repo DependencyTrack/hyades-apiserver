@@ -59,7 +59,6 @@ import javax.jdo.annotations.Unique;
 @PersistenceCapable
 @FetchGroup(name = "ALL", members = {
         @Persistent(name = "name"),
-        @Persistent(name = "description"),
         @Persistent(name = "permissions"),
         @Persistent(name = "uuid"),
 })
@@ -90,14 +89,6 @@ public class Role implements Serializable {
             message = "The name may only contain printable characters")
     private String name;
 
-    @Persistent
-    @Column(name = "DESCRIPTION", jdbcType = "VARCHAR")
-    @Size(max = 255)
-    @JsonDeserialize(using = TrimmedStringDeserializer.class)
-    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS,
-            message = "The description may only contain printable characters")
-    private String description;
-
     @Persistent(table = "ROLES_PERMISSIONS", defaultFetchGroup = "true")
     @Unique(name = "ROLES_PERMISSIONS_IDX")
     @Join(column = "ROLE_ID")
@@ -125,14 +116,6 @@ public class Role implements Serializable {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public List<Permission> getPermissions() {
@@ -173,7 +156,6 @@ public class Role implements Serializable {
                 getClass().getSimpleName(),
                 id,
                 name,
-                description != null ? description : "",
                 permissionStrings);
     }
 }
