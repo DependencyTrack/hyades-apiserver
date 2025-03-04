@@ -18,19 +18,29 @@
  */
 package org.dependencytrack.persistence;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 
+import org.dependencytrack.model.MappedRole;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
+import org.dependencytrack.persistence.jdbi.RoleDao;
+import org.jdbi.v3.core.Handle;
 
 import alpine.common.logging.Logger;
+import alpine.model.LdapUser;
+import alpine.model.ManagedUser;
+import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.UserPrincipal;
 import alpine.resources.AlpineRequest;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 final class RoleQueryManager extends QueryManager implements IQueryManager {
 
@@ -98,14 +108,72 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean addRoleToUser(UserPrincipal user, Role role, Project project) {
-        // TODO: Implement addRoleToUser
-        return true;
+        Query<MappedRole> query = pm.newQuery(MappedRole.class)
+                .filter("project.id == :projectId && role.id == :roleId")
+                .setNamedParameters(Map.of(
+                        "roleId", role.getId(),
+                        "projectId", project.getId()));
+
+        try {
+            query.getFetchPlan().setGroup(MappedRole.FetchGroup.ALL.name());
+            MappedRole result = query.executeUnique();
+
+            if (result == null) {
+                LOGGER.info("Creating role mapping for project: %s / role: %s"
+                        .formatted(project.getName(), role.getName()));
+
+                result = new MappedRole();
+                result.setProject(project);
+                result.setRole(role);
+            }
+
+            result.setLdapUsers(result.getLdapUsers() != null ? result.getLdapUsers() : new ArrayList<>());
+            result.setManagedUsers(result.getManagedUsers() != null ? result.getManagedUsers() : new ArrayList<>());
+            result.setOidcUsers(result.getOidcUsers() != null ? result.getOidcUsers() : new ArrayList<>());
+
+            final MappedRole mappedRole = result;
+
+            boolean modified = switch (user) {
+                case LdapUser ldapUser when !mappedRole.getLdapUsers().contains(ldapUser) -> {
+                    mappedRole.addLdapUsers(ldapUser);
+                    yield true;
+                }
+                case ManagedUser managedUser when !mappedRole.getManagedUsers().contains(managedUser) -> {
+                    mappedRole.addManagedUsers(managedUser);
+                    yield true;
+                }
+                case OidcUser oidcUser when !mappedRole.getOidcUsers().contains(oidcUser) -> {
+                    mappedRole.addOidcUsers(oidcUser);
+                    yield true;
+                }
+                default -> false;
+            };
+
+            if (modified)
+                persist(mappedRole);
+
+            return modified;
+        } finally {
+            query.closeAll();
+        }
     }
 
     @Override
-    public boolean removeRoleFromUser(UserPrincipal principal, Role role, Project project) {
-        // TODO: Implement removeRoleFromUser
-        return true;
+    public boolean removeRoleFromUser(UserPrincipal user, Role role, Project project) {
+        try (final Handle jdbiHandle = openJdbiHandle()) {
+            int count = switch (user) {
+                case LdapUser ldapUser -> jdbiHandle.attach(RoleDao.class)
+                        .removeRoleFromLdapUser(ldapUser.getId(), project.getId(), role.getId());
+                case ManagedUser managedUser -> jdbiHandle.attach(RoleDao.class)
+                        .removeRoleFromManagedUser(managedUser.getId(), project.getId(), role.getId());
+                case OidcUser oidcUser -> jdbiHandle.attach(RoleDao.class)
+                        .removeRoleFromOidcUser(oidcUser.getId(), project.getId(), role.getId());
+                default -> 0;
+            };
+
+            return count == 1;
+        }
+
     }
 
 }
