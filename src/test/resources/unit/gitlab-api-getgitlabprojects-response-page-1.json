@@ -1,0 +1,33 @@
+{
+  "data": {
+    "projects": {
+      "nodes": [
+        {
+          "name": "test-project-1",
+          "fullPath": "test-group/test-subgroup/test-project-1",
+          "maxAccessLevel": {
+            "stringValue": "DEVELOPER"
+          }
+        },
+        {
+          "name": "test-project-2",
+          "fullPath": "test-group/test-subgroup/test-project-2",
+          "maxAccessLevel": {
+            "stringValue": "REPORTER"
+          }
+        },
+        {
+          "name": "test-project-3",
+          "fullPath": "test-group/test-subgroup-2/test-project-3",
+          "maxAccessLevel": {
+            "stringValue": "REPORTER"
+          }
+        }
+      ],
+      "pageInfo": {
+        "endCursor": "eyJpZCI6IjE1ODU5NyJ9",
+        "hasNextPage": true
+      }
+    }
+  }
+}
