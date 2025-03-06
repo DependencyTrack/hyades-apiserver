@@ -40,6 +40,7 @@ import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
@@ -233,6 +234,16 @@ public class BomResourceTest extends ResourceTest {
         componentWithoutVuln.setDirectDependencies("[]");
         componentWithoutVuln = qm.createComponent(componentWithoutVuln, false);
 
+        // NB: Line, offset, and symbol are only supported since CycloneDX v1.6,
+        // and will not show up in this export since it's still in v1.5 format.
+        final var componentOccurrence = new ComponentOccurrence();
+        componentOccurrence.setComponent(componentWithoutVuln);
+        componentOccurrence.setLocation("/foo/bar");
+        componentOccurrence.setLine(666);
+        componentOccurrence.setOffset(123);
+        componentOccurrence.setSymbol("someSymbol");
+        qm.persist(componentOccurrence);
+
         final var componentProperty = new ComponentProperty();
         componentProperty.setComponent(componentWithoutVuln);
         componentProperty.setGroupName("foo");
@@ -294,7 +305,7 @@ public class BomResourceTest extends ResourceTest {
                 .withMatcher("componentWithoutVulnUuid", equalTo(componentWithoutVuln.getUuid().toString()))
                 .withMatcher("componentWithVulnUuid", equalTo(componentWithVuln.getUuid().toString()))
                 .withMatcher("componentWithVulnAndAnalysisUuid", equalTo(componentWithVulnAndAnalysis.getUuid().toString()))
-                .isEqualTo(json("""
+                .isEqualTo(json(/* language=JSON */ """
                         {
                             "bomFormat": "CycloneDX",
                             "specVersion": "1.5",
@@ -340,6 +351,13 @@ public class BomResourceTest extends ResourceTest {
                                     },
                                     "name": "acme-lib-a",
                                     "version": "1.0.0",
+                                    "evidence": {
+                                      "occurrences": [
+                                        {
+                                          "location": "/foo/bar"
+                                        }
+                                      ]
+                                    },
                                     "properties": [
                                       {
                                         "name": "foo:bar",

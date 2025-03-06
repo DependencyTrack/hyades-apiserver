@@ -58,7 +58,7 @@ public class JdbiFactory {
     }
 
     public static <X extends Exception> void useJdbiHandle(final HandleConsumer<X> handleConsumer) throws X {
-        createJdbi().useHandle(handleConsumer);
+        useJdbiHandle(/* apiRequest */ null, handleConsumer);
     }
 
     public static <X extends Exception> void useJdbiHandle(final AlpineRequest apiRequest, final HandleConsumer<X> handleConsumer) throws X {
@@ -66,7 +66,7 @@ public class JdbiFactory {
     }
 
     public static <T, X extends Exception> T withJdbiHandle(final HandleCallback<T, X> handleCallback) throws X {
-        return createJdbi().withHandle(handleCallback);
+        return withJdbiHandle(/* apiRequest */  null, handleCallback);
     }
 
     public static <T, X extends Exception> T withJdbiHandle(final AlpineRequest apiRequest, final HandleCallback<T, X> handleCallback) throws X {
@@ -74,7 +74,7 @@ public class JdbiFactory {
     }
 
     public static <X extends Exception> void useJdbiTransaction(final HandleConsumer<X> handleConsumer) throws X {
-        createJdbi().useTransaction(handleConsumer);
+        useJdbiTransaction(/* apiRequest */ null, handleConsumer);
     }
 
     public static <X extends Exception> void useJdbiTransaction(final AlpineRequest apiRequest, final HandleConsumer<X> handleConsumer) throws X {
@@ -82,7 +82,7 @@ public class JdbiFactory {
     }
 
     public static <T, X extends Exception> T inJdbiTransaction(final HandleCallback<T, X> handleCallback) throws X {
-        return createJdbi().inTransaction(handleCallback);
+        return inJdbiTransaction(/* apiRequest */  null, handleCallback);
     }
 
     public static <T, X extends Exception> T inJdbiTransaction(final AlpineRequest apiRequest, final HandleCallback<T, X> handleCallback) throws X {

@@ -53,6 +53,7 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentMetaInformation;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.DependencyMetrics;
@@ -2030,6 +2031,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public void synchronizeComponentProperties(final Component component, final List<ComponentProperty> properties) {
         getComponentQueryManager().synchronizeComponentProperties(component, properties);
+    }
+
+    public void synchronizeComponentOccurrences(final Component component, final Collection<ComponentOccurrence> occurrences) {
+        getComponentQueryManager().synchronizeComponentOccurrences(component, occurrences);
     }
 
     /**

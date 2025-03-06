@@ -159,6 +159,7 @@ public class ComponentProjection {
 
     public Boolean isCustomLicense;
 
+    public long occurrenceCount;
     public Long totalCount;
 
     public static Component mapToComponent(ComponentProjection result) {
@@ -197,6 +198,7 @@ public class ComponentProjection {
         if (result.externalReferences != null) {
             componentPersistent.setExternalReferences(SerializationUtils.deserialize(result.externalReferences));
         }
+        componentPersistent.setOccurrenceCount(result.occurrenceCount);
         componentPersistent.setPurl(result.purl);
         componentPersistent.setPurlCoordinates(result.purlCoordinates);
         componentPersistent.setVersion(result.version);

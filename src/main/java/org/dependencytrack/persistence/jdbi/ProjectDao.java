@@ -105,7 +105,7 @@ public interface ProjectDao {
                  LIMIT 1
               ) AS "metrics" ON TRUE
             </#if>
-             WHERE ${apiProjectAclCondition!"TRUE"}
+             WHERE ${apiProjectAclCondition}
             <#if nameFilter>
                AND "PROJECT"."NAME" = :nameFilter
             </#if>
@@ -141,7 +141,7 @@ public interface ProjectDao {
                        FROM "PROJECT" AS "PARENT_PROJECT"
                       WHERE "PARENT_PROJECT"."ID" = "PROJECT"."PARENT_PROJECT_ID"
                         AND "PARENT_PROJECT"."UUID" = :parentUuidFilter
-                        AND ${apiParentProjectAclCondition!"TRUE"})
+                        AND ${apiParentProjectAclCondition})
             </#if>
             <#if apiFilterParameter??>
                AND (LOWER("PROJECT"."NAME") LIKE ('%' || LOWER(${apiFilterParameter}) || '%')
@@ -157,7 +157,7 @@ public interface ProjectDao {
     @DefineNamedBindings
     @DefineApiProjectAclCondition(
             name = "apiParentProjectAclCondition",
-            projectTableAlias = "PARENT_PROJECT"
+            projectIdColumn = "\"PARENT_PROJECT\".\"ID\""
     )
     @AllowApiOrdering(alwaysBy = "id", by = {
             @AllowApiOrdering.Column(name = "id"),

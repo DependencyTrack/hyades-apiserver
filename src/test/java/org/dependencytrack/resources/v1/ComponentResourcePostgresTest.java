@@ -97,7 +97,8 @@ public class ComponentResourcePostgresTest extends ResourceTest {
                             "lastCheck": "${json-unit.any-number}"
                           },
                           "expandDependencyGraph": false,
-                          "isInternal": false
+                          "isInternal": false,
+                          "occurrenceCount": 0
                         }
                         """);
     }

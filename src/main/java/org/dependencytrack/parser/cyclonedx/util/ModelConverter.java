@@ -22,20 +22,18 @@ import alpine.common.logging.Logger;
 import alpine.model.IConfigProperty;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonValue;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.model.BomReference;
 import org.cyclonedx.model.Dependency;
+import org.cyclonedx.model.Evidence;
 import org.cyclonedx.model.Hash;
 import org.cyclonedx.model.LicenseChoice;
 import org.cyclonedx.model.Metadata;
 import org.cyclonedx.model.Swid;
 import org.cyclonedx.model.Tool;
+import org.cyclonedx.model.component.evidence.Occurrence;
 import org.cyclonedx.model.license.Expression;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
@@ -43,6 +41,7 @@ import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.Cwe;
 import org.dependencytrack.model.DataClassification;
@@ -63,6 +62,10 @@ import org.dependencytrack.parser.spdx.expression.model.SpdxExpression;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.VulnerabilityUtil;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonValue;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -72,10 +75,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNullElse;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -284,6 +289,10 @@ public class ModelConverter {
             }
         }
         component.setLicenseCandidates(licenseCandidates);
+
+        if (cdxComponent.getEvidence() != null && cdxComponent.getEvidence().getOccurrences() != null) {
+            component.setOccurrences(convertOccurrences(cdxComponent.getEvidence().getOccurrences()));
+        }
 
         if (cdxComponent.getComponents() != null && !cdxComponent.getComponents().isEmpty()) {
             final var children = new ArrayList<Component>();
@@ -575,6 +584,24 @@ public class ModelConverter {
                 .toList();
     }
 
+    private static Set<ComponentOccurrence> convertOccurrences(
+            final List<org.cyclonedx.model.component.evidence.Occurrence> cdxOccurrences) {
+        if (cdxOccurrences == null || cdxOccurrences.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        return cdxOccurrences.stream()
+                .map(cdxOccurrence -> {
+                    final var occurrence = new ComponentOccurrence();
+                    occurrence.setLocation(trimToNull(cdxOccurrence.getLocation()));
+                    occurrence.setLine(cdxOccurrence.getLine());
+                    occurrence.setOffset(cdxOccurrence.getOffset());
+                    occurrence.setSymbol(trimToNull(cdxOccurrence.getSymbol()));
+                    return occurrence;
+                })
+                .collect(Collectors.toSet());
+    }
+
     private static String useOrGenerateRandomBomRef(final String bomRef) {
         return Optional.ofNullable(bomRef)
                 .map(StringUtils::trimToNull)
@@ -692,6 +719,23 @@ public class ModelConverter {
             cycloneComponent.setExternalReferences(references);
         } else {
             cycloneComponent.setExternalReferences(null);
+        }
+
+        if (component.getOccurrences() != null && !component.getOccurrences().isEmpty()) {
+            final List<Occurrence> cdxOccurrences = component.getOccurrences().stream()
+                    .map(occurrence -> {
+                        final var cdxOccurrence = new Occurrence();
+                        cdxOccurrence.setLocation(occurrence.getLocation());
+                        cdxOccurrence.setLine(occurrence.getLine());
+                        cdxOccurrence.setOffset(occurrence.getOffset());
+                        cdxOccurrence.setSymbol(occurrence.getSymbol());
+                        return cdxOccurrence;
+                    })
+                    .toList();
+
+            final var cdxEvidence = new Evidence();
+            cdxEvidence.setOccurrences(cdxOccurrences);
+            cycloneComponent.setEvidence(cdxEvidence);
         }
 
         /*
