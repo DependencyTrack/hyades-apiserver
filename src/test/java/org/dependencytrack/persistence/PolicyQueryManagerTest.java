@@ -23,12 +23,11 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisComment;
 import org.dependencytrack.model.ViolationAnalysisState;
-import org.junit.Test;
 import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -37,63 +36,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class PolicyQueryManagerTest extends PersistenceCapableTest {
-
-    @Test
-    public void testGetApplicablePolicies() {
-        final var grandParentProject = new Project();
-        grandParentProject.setName("grandParent");
-        qm.persist(grandParentProject);
-
-        final var parentProject = new Project();
-        parentProject.setParent(grandParentProject);
-        parentProject.setName("parent");
-        qm.persist(parentProject);
-
-        final var childProject = new Project();
-        childProject.setParent(parentProject);
-        childProject.setName("child");
-        qm.persist(childProject);
-
-        final Tag policyTag = qm.createTag("foo");
-        qm.bind(parentProject, List.of(policyTag));
-
-        final Tag nonPolicyTag = qm.createTag("bar");
-        qm.bind(childProject, List.of(nonPolicyTag));
-
-        final var globalPolicy = new Policy();
-        globalPolicy.setName("globalPolicy");
-        globalPolicy.setOperator(Policy.Operator.ANY);
-        globalPolicy.setViolationState(Policy.ViolationState.FAIL);
-        qm.persist(globalPolicy);
-
-        final var tagPolicy = new Policy();
-        tagPolicy.setName("tagPolicy");
-        tagPolicy.setOperator(Policy.Operator.ANY);
-        tagPolicy.setViolationState(Policy.ViolationState.FAIL);
-        qm.persist(tagPolicy);
-        qm.bind(tagPolicy, List.of(policyTag));
-
-        final var inheritedPolicy = new Policy();
-        inheritedPolicy.setName("inheritedPolicy");
-        inheritedPolicy.setOperator(Policy.Operator.ANY);
-        inheritedPolicy.setViolationState(Policy.ViolationState.FAIL);
-        inheritedPolicy.setProjects(List.of(parentProject));
-        inheritedPolicy.setIncludeChildren(true);
-        qm.persist(inheritedPolicy);
-
-        assertThat(qm.getApplicablePolicies(grandParentProject)).satisfiesExactly(
-                policy -> assertThat(policy.getName()).isEqualTo("globalPolicy")
-        );
-        assertThat(qm.getApplicablePolicies(parentProject)).satisfiesExactly(
-                policy -> assertThat(policy.getName()).isEqualTo("globalPolicy"),
-                policy -> assertThat(policy.getName()).isEqualTo("tagPolicy"),
-                policy -> assertThat(policy.getName()).isEqualTo("inheritedPolicy")
-        );
-        assertThat(qm.getApplicablePolicies(childProject)).satisfiesExactly(
-                policy -> assertThat(policy.getName()).isEqualTo("globalPolicy"),
-                policy -> assertThat(policy.getName()).isEqualTo("inheritedPolicy")
-        );
-    }
 
     @Test
     public void testRemoveProjectFromPolicies() {

@@ -1,29 +1,18 @@
-create or replace function has_project_access(
-  project_id bigint
-, team_ids bigint[]
-) returns bool
-  language "sql"
-  parallel safe
-  stable
-as
+CREATE OR REPLACE FUNCTION has_project_access(
+  project_id BIGINT
+, team_ids BIGINT[]
+) RETURNS BOOL
+  LANGUAGE "sql"
+  PARALLEL SAFE
+  STABLE
+AS
 $$
-with recursive project_hierarchy(id, parent_id) as(
-  select "ID" as id
-       , "PARENT_PROJECT_ID" as parent_id
-    from "PROJECT"
-   where "ID" = project_id
-   union all
-  select "PROJECT"."ID" as id
-       , "PROJECT"."PARENT_PROJECT_ID" as parent_id
-    from "PROJECT"
-   inner join project_hierarchy
-      on project_hierarchy.parent_id = "PROJECT"."ID"
-)
-select exists(
-  select 1
-    from project_hierarchy
-   inner join "PROJECT_ACCESS_TEAMS"
-      on "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = project_hierarchy.id
-   where "PROJECT_ACCESS_TEAMS"."TEAM_ID" = any(team_ids)
+SELECT EXISTS(
+  SELECT 1
+    FROM "PROJECT_ACCESS_TEAMS"
+   INNER JOIN "PROJECT_HIERARCHY"
+      ON "PROJECT_HIERARCHY"."PARENT_PROJECT_ID" = "PROJECT_ACCESS_TEAMS"."PROJECT_ID"
+   WHERE "PROJECT_ACCESS_TEAMS"."TEAM_ID" = ANY(team_ids)
+     AND "PROJECT_HIERARCHY"."CHILD_PROJECT_ID" = project_id
 )
 $$;
