@@ -567,10 +567,6 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getProjectsWithoutDescendantsOf(name, excludeInactive, project);
     }
 
-    public List<UUID> getParents(final Project project) {
-        return getProjectQueryManager().getParents(project);
-    }
-
     public boolean hasAccess(final Principal principal, final Project project) {
         return getProjectQueryManager().hasAccess(principal, project);
     }
@@ -780,10 +776,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<Policy> getAllPolicies() {
         return getPolicyQueryManager().getAllPolicies();
-    }
-
-    public List<Policy> getApplicablePolicies(final Project project) {
-        return getPolicyQueryManager().getApplicablePolicies(project);
     }
 
     public Policy getPolicy(final String name) {
