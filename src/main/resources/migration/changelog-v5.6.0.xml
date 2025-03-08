@@ -636,4 +636,125 @@
                                  onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="WORKFLOW_STATE" validate="true"/>
     </changeSet>
+
+    <changeSet id="v5.6.0-13" author="nscuro">
+        <createTable tableName="PROJECT_HIERARCHY">
+            <column name="PARENT_PROJECT_ID" type="BIGINT"/>
+            <column name="CHILD_PROJECT_ID" type="BIGINT"/>
+            <column name="DEPTH" type="SMALLINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="PROJECT_HIERARCHY"
+                columnNames="PARENT_PROJECT_ID, CHILD_PROJECT_ID"
+                constraintName="PROJECT_HIERARCHY_PK"/>
+        <addForeignKeyConstraint
+                baseTableName="PROJECT_HIERARCHY"
+                baseColumnNames="PARENT_PROJECT_ID"
+                constraintName="PROJECT_HIERARCHY_PARENT_PROJECT_FK"
+                referencedTableName="PROJECT"
+                referencedColumnNames="ID"
+                deferrable="true"
+                initiallyDeferred="true"/>
+        <addForeignKeyConstraint
+                baseTableName="PROJECT_HIERARCHY"
+                baseColumnNames="CHILD_PROJECT_ID"
+                constraintName="PROJECT_HIERARCHY_CHILD_PROJECT_FK"
+                referencedTableName="PROJECT"
+                referencedColumnNames="ID"
+                deferrable="true"
+                initiallyDeferred="true"/>
+
+        <sql splitStatements="false">
+            create function project_hierarchy_maintenance_on_project_insert()
+            returns trigger as $$
+            begin
+              insert into "PROJECT_HIERARCHY"("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+              values(new."ID", new."ID", 0);
+
+              insert into "PROJECT_HIERARCHY"("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+              select "PARENT_PROJECT_ID", new."ID", "DEPTH" + 1
+                from "PROJECT_HIERARCHY"
+               where "CHILD_PROJECT_ID" = new."PARENT_PROJECT_ID";
+
+              return new;
+            end;
+            $$ language plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            create function project_hierarchy_maintenance_on_project_update()
+            returns trigger as $$
+            begin
+              delete from "PROJECT_HIERARCHY" where "CHILD_PROJECT_ID" = old."ID";
+
+              insert into "PROJECT_HIERARCHY"("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+              values(new."ID", new."ID", 0);
+
+              insert into "PROJECT_HIERARCHY"("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+              select "PARENT_PROJECT_ID", new."ID", "DEPTH" + 1
+                from "PROJECT_HIERARCHY"
+               where "CHILD_PROJECT_ID" = new."PARENT_PROJECT_ID";
+
+              return new;
+            end;
+            $$ language plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            create function project_hierarchy_maintenance_on_project_delete()
+            returns trigger as $$
+            begin
+              delete from "PROJECT_HIERARCHY"
+               where "PARENT_PROJECT_ID" in (select "ID" from old_table)
+                  or "CHILD_PROJECT_ID" in (select "ID" from old_table);
+
+              return null;
+            end;
+            $$ language plpgsql;
+        </sql>
+
+        <sql splitStatements="true">
+            create trigger trigger_project_hierarchy_maintenance_on_project_insert
+                after insert on "PROJECT"
+                for each row
+                execute function project_hierarchy_maintenance_on_project_insert();
+
+            create trigger trigger_project_hierarchy_maintenance_on_project_update
+                after update of "PARENT_PROJECT_ID" on "PROJECT"
+                for each row
+                execute function project_hierarchy_maintenance_on_project_update();
+
+             create trigger trigger_project_hierarchy_maintenance_on_project_delete
+                after delete on "PROJECT"
+                referencing old table as old_table
+                for each statement
+                execute function project_hierarchy_maintenance_on_project_delete();
+        </sql>
+
+        <!-- Populate hierarchy table with existing relationships -->
+        <sql splitStatements="true">
+            insert into "PROJECT_HIERARCHY"("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+            select "ID", "ID", 0 from "PROJECT";
+
+            with recursive cte_project_hierarchy as(
+              select "ID" as child_id
+                   , "PARENT_PROJECT_ID" as parent_id
+                   , 1 as depth
+                from "PROJECT"
+               union all
+              select child_id
+                   , "PARENT_PROJECT_ID" as parent_id
+                   , depth + 1 as depth
+                from cte_project_hierarchy
+               inner join "PROJECT"
+                  on "PROJECT"."ID" = cte_project_hierarchy.parent_id
+               where "PROJECT"."PARENT_PROJECT_ID" is not null
+            )
+            insert into "PROJECT_HIERARCHY"("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+            select parent_id, child_id, depth from cte_project_hierarchy;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
