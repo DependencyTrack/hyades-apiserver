@@ -24,6 +24,11 @@ import alpine.model.ConfigProperty;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -42,11 +47,7 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.Response;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -74,10 +75,10 @@ public class FindingResourceTest extends ResourceTest {
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
-        Component c3 = createComponent(p1, "Component C", "1.0");
-        Component c4 = createComponent(p2, "Component D", "1.0");
+        createComponent(p1, "Component C", "1.0");
+        createComponent(p2, "Component D", "1.0");
         Component c5 = createComponent(p2, "Component E", "1.0");
-        Component c6 = createComponent(p2, "Component F", "1.0");
+        createComponent(p2, "Component F", "1.0");
         Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
         Vulnerability v2 = createVulnerability("Vuln-2", Severity.HIGH);
         Vulnerability v3 = createVulnerability("Vuln-3", Severity.MEDIUM);
@@ -205,10 +206,10 @@ public class FindingResourceTest extends ResourceTest {
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
-        Component c3 = createComponent(p1, "Component C", "1.0");
-        Component c4 = createComponent(p2, "Component D", "1.0");
+        createComponent(p1, "Component C", "1.0");
+        createComponent(p2, "Component D", "1.0");
         Component c5 = createComponent(p2, "Component E", "1.0");
-        Component c6 = createComponent(p2, "Component F", "1.0");
+        createComponent(p2, "Component F", "1.0");
         Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
         Vulnerability v2 = createVulnerability("Vuln-2", Severity.HIGH);
         Vulnerability v3 = createVulnerability("Vuln-3", Severity.MEDIUM);
@@ -341,8 +342,8 @@ public class FindingResourceTest extends ResourceTest {
         r2.setRepositoryType(RepositoryType.MAVEN);
         qm.persist(r2);
 
-        Component c3 = createComponent(p1, "Component C", "1.0");
-        Component c4 = createComponent(p2, "Component D", "1.0");
+        createComponent(p1, "Component C", "1.0");
+        createComponent(p2, "Component D", "1.0");
 
         Component c5 = createComponent(p2, "Component E", "1.0");
         c5.setPurl("pkg:/maven/org.acme/component-e@1.0.0");
@@ -355,7 +356,7 @@ public class FindingResourceTest extends ResourceTest {
         r3.setRepositoryType(RepositoryType.MAVEN);
         qm.persist(r3);
 
-        Component c6 = createComponent(p2, "Component F", "1.0");
+        createComponent(p2, "Component F", "1.0");
         Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
         Vulnerability v2 = createVulnerability("Vuln-2", Severity.HIGH);
         Vulnerability v3 = createVulnerability("Vuln-3", Severity.MEDIUM);
@@ -447,6 +448,37 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getFindingsByProjectWithCvssAndOwaspData() {
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Component c1 = createComponent(p1, "Component A", "1.0");
+        c1.setPurl("pkg:/maven/org.acme/component-a@1.0.0");
+
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
+        v1.setCvssV2BaseScore(BigDecimal.valueOf(0.2));
+        v1.setCvssV3BaseScore(BigDecimal.valueOf(0.3));
+        v1.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(0.4));
+        v1.setCvssV2Vector("cvssV2-vector");
+        v1.setCvssV3Vector("cvssV3-vector");
+        v1.setOwaspRRVector("owasp-vector");
+        qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
+
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertEquals(200, response.getStatus(), 0);
+        assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray json = parseJsonArray(response);
+        Assert.assertNotNull(json);
+        assertEquals(1, json.size());
+        assertEquals(0.2, json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("cvssV2BaseScore").doubleValue(), 0);
+        assertEquals(0.3, json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("cvssV3BaseScore").doubleValue(), 0);
+        assertEquals(0.4, json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("owaspBusinessImpactScore").doubleValue(), 0);
+        assertEquals("cvssV2-vector", json.getJsonObject(0).getJsonObject("vulnerability").getString("cvssV2Vector"));
+        assertEquals("cvssV3-vector", json.getJsonObject(0).getJsonObject("vulnerability").getString("cvssV3Vector"));
+        assertEquals("owasp-vector", json.getJsonObject(0).getJsonObject("vulnerability").getString("owaspRRVector"));
+    }
+
+    @Test
     public void testWorkflowStepsShouldBeCreatedOnReanalyze() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -486,9 +518,9 @@ public class FindingResourceTest extends ResourceTest {
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
         Component c3 = createComponent(p1_child, "Component C", "1.0");
-        Component c4 = createComponent(p2, "Component D", "1.0");
+        createComponent(p2, "Component D", "1.0");
         Component c5 = createComponent(p2, "Component E", "1.0");
-        Component c6 = createComponent(p2, "Component F", "1.0");
+        createComponent(p2, "Component F", "1.0");
         Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
         Vulnerability v2 = createVulnerability("Vuln-2", Severity.HIGH);
         Vulnerability v3 = createVulnerability("Vuln-3", Severity.MEDIUM);
@@ -546,9 +578,9 @@ public class FindingResourceTest extends ResourceTest {
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
         Component c3 = createComponent(p1_child, "Component C", "1.0");
-        Component c4 = createComponent(p2, "Component D", "1.0");
+        createComponent(p2, "Component D", "1.0");
         Component c5 = createComponent(p2, "Component E", "1.0");
-        Component c6 = createComponent(p2, "Component F", "1.0");
+        createComponent(p2, "Component F", "1.0");
         Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
         Vulnerability v2 = createVulnerability("Vuln-2", Severity.HIGH);
         Vulnerability v3 = createVulnerability("Vuln-3", Severity.MEDIUM);
@@ -935,18 +967,5 @@ public class FindingResourceTest extends ResourceTest {
         vulnerability.setRecommendation(recommendation);
         vulnerability.setCwes(List.of(cweId));
         return qm.createVulnerability(vulnerability, false);
-    }
-
-    private static String getSARIFLevelFromSeverity(Severity severity) {
-        if (Severity.LOW == severity || Severity.INFO == severity) {
-            return "note";
-        }
-        if (Severity.MEDIUM == severity) {
-            return "warning";
-        }
-        if (Severity.HIGH == severity || Severity.CRITICAL == severity) {
-            return "error";
-        }
-        return "none";
     }
 }
