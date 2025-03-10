@@ -63,7 +63,9 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runner.RunWith;
 
 import jakarta.json.JsonObject;
@@ -115,6 +117,11 @@ public class BomResourceTest extends ResourceTest {
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class)
                     .register(MultiPartFeature.class));
+
+    @Rule
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+            .set("FILE_STORAGE_EXTENSION_MEMORY_ENABLED", "true")
+            .set("FILE_STORAGE_DEFAULT_EXTENSION", "memory");
 
     @Before
     @Override

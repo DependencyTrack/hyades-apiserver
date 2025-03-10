@@ -48,18 +48,21 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
-import java.io.File;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -72,6 +75,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class CelPolicyEngineTest extends PersistenceCapableTest {
+
+    @Rule
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+            .set("FILE_STORAGE_EXTENSION_MEMORY_ENABLED", "true")
+            .set("FILE_STORAGE_DEFAULT_EXTENSION", "memory");
 
     @Before
     public void before() throws Exception {
@@ -1959,18 +1967,20 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         qm.persist(policyConditionA);
 
         // Import the bloated BOM.
-        new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile("bom-bloated.json")));
+        new BomUploadProcessingTask().inform(new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile("bom-bloated.json")));
 
         // Evaluate policies on the project.
         new CelPolicyEngine().evaluateProject(project.getUuid());
     }
 
-    private static File createTempBomFile(final String testFileName) throws Exception {
-        // The task will delete the input file after processing it,
-        // so create a temporary copy to not impact other tests.
-        final Path bomFilePath = Files.createTempFile(null, null);
-        Files.copy(Paths.get(resourceToURL("/unit/" + testFileName).toURI()), bomFilePath, StandardCopyOption.REPLACE_EXISTING);
-        return bomFilePath.toFile();
+    private static FileMetadata storeBomFile(final String testFileName) throws Exception {
+        final Path bomFilePath = Paths.get(resourceToURL("/unit/" + testFileName).toURI());
+        final byte[] bomBytes = Files.readAllBytes(bomFilePath);
+
+        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            return fileStorage.store(
+                    "test/%s-%s".formatted(CelPolicyEngineTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
+        }
     }
 
 }
