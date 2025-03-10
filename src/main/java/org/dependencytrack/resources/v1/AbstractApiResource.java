@@ -24,11 +24,16 @@ import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ComponentDao;
+import org.jdbi.v3.core.Handle;
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.UUID;
 
 import static java.util.Objects.requireNonNullElse;
+import static org.dependencytrack.common.MdcKeys.MDC_COMPONENT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
@@ -72,6 +77,30 @@ abstract class AbstractApiResource extends AlpineResource {
 
             throw new ProjectAccessDeniedException(requireNonNullElse(
                     message, "Access to the requested project is forbidden"));
+        }
+    }
+
+    /**
+     * Asserts that the authenticated {@link java.security.Principal} has access to the component with a given {@link UUID}.
+     *
+     * @param jdbiHandle    The {@link Handle} to use.
+     * @param componentUuid {@link UUID} of the component to verify access permission for.
+     * @throws NoSuchElementException       When no component with the given {@link UUID} exists.
+     * @throws ProjectAccessDeniedException When the authenticated {@link java.security.Principal}
+     *                                      does not have access to the given {@link Project}.
+     */
+    void requireComponentAccess(final Handle jdbiHandle, final UUID componentUuid) {
+        final var dao = jdbiHandle.attach(ComponentDao.class);
+
+        final Boolean isAccessible = dao.isAccessible(componentUuid);
+        if (isAccessible == null) {
+            throw new NoSuchElementException("Component could not be found");
+        } else if (!isAccessible) {
+            try (var ignored = new MdcScope(Map.of(MDC_COMPONENT_UUID, componentUuid.toString()))) {
+                logSecurityEvent(logger, SecurityMarkers.SECURITY_FAILURE, "Unauthorized project access attempt");
+            }
+
+            throw new ProjectAccessDeniedException("Access to the requested project is forbidden");
         }
     }
 

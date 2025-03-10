@@ -18,6 +18,44 @@
  */
 package org.dependencytrack.tasks;
 
+import alpine.model.IConfigProperty.PropertyType;
+import com.github.packageurl.PackageURL;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.cyclonedx.proto.v1_6.Classification;
+import org.cyclonedx.proto.v1_6.Dependency;
+import org.cyclonedx.proto.v1_6.ExternalReference;
+import org.cyclonedx.proto.v1_6.ExternalReferenceType;
+import org.cyclonedx.proto.v1_6.Metadata;
+import org.cyclonedx.proto.v1_6.OrganizationalContact;
+import org.cyclonedx.proto.v1_6.OrganizationalEntity;
+import org.cyclonedx.proto.v1_6.Service;
+import org.cyclonedx.proto.v1_6.Tool;
+import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.model.Bom;
+import org.dependencytrack.model.Classifier;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentOccurrence;
+import org.dependencytrack.model.ComponentProperty;
+import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.model.License;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.VulnerabilityScan;
+import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.Group;
+import org.dependencytrack.proto.notification.v1.Notification;
+import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.storage.FileStorage;
+import org.junit.Before;
+import org.junit.Test;
+
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
@@ -65,43 +103,6 @@ import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
-
-import alpine.model.IConfigProperty.PropertyType;
-import com.github.packageurl.PackageURL;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.cyclonedx.proto.v1_6.Classification;
-import org.cyclonedx.proto.v1_6.Dependency;
-import org.cyclonedx.proto.v1_6.ExternalReference;
-import org.cyclonedx.proto.v1_6.ExternalReferenceType;
-import org.cyclonedx.proto.v1_6.Metadata;
-import org.cyclonedx.proto.v1_6.OrganizationalContact;
-import org.cyclonedx.proto.v1_6.OrganizationalEntity;
-import org.cyclonedx.proto.v1_6.Service;
-import org.cyclonedx.proto.v1_6.Tool;
-import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.BomUploadEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.model.Bom;
-import org.dependencytrack.model.Classifier;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentProperty;
-import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
-import org.dependencytrack.model.License;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.VulnerabilityScan;
-import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
-import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
-import org.dependencytrack.proto.notification.v1.Group;
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
-import org.dependencytrack.storage.FileStorage;
-import org.junit.Before;
-import org.junit.Test;
 
 public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
@@ -1828,6 +1829,142 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(vulnerabilityScan).isNotNull();
         var workflowStatus = qm.getWorkflowStateByTokenAndStep(bomUploadEvent.getChainIdentifier(), WorkflowStep.VULN_ANALYSIS);
         assertThat(workflowStatus.getStartedAt()).isNotNull();
+    }
+
+    @Test
+    public void informWithComponentOccurrencesTest() throws Exception {
+        final var project = new Project();
+        project.setName("acme-license-app");
+        qm.persist(project);
+
+        final byte[] bomBytes = /* language=JSON */ """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.6",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": "acme-lib",
+                      "evidence": {
+                        "occurrences": [
+                          {
+                            "location": "/foo/bar/baz"
+                          },
+                          {
+                            "location": "/foo/bar.js",
+                            "line": 5,
+                            "offset": 666,
+                            "symbol": "someSymbol"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getOccurrences()).satisfiesExactlyInAnyOrder(
+                    occurrence -> {
+                        assertThat(occurrence.getLocation()).isEqualTo("/foo/bar/baz");
+                        assertThat(occurrence.getLine()).isNull();
+                        assertThat(occurrence.getOffset()).isNull();
+                        assertThat(occurrence.getSymbol()).isNull();
+                        assertThat(occurrence.getCreatedAt()).isNotNull();
+                    },
+                    occurrence -> {
+                        assertThat(occurrence.getLocation()).isEqualTo("/foo/bar.js");
+                        assertThat(occurrence.getLine()).isEqualTo(5);
+                        assertThat(occurrence.getOffset()).isEqualTo(666);
+                        assertThat(occurrence.getSymbol()).isEqualTo("someSymbol");
+                        assertThat(occurrence.getCreatedAt()).isNotNull();
+                    });
+        });
+    }
+
+    @Test
+    public void informWithExistingComponentOccurrencesAndBomWithComponentOccurrencesTest() throws Exception {
+        final var project = new Project();
+        project.setName("acme-license-app");
+        qm.persist(project);
+
+        final var existingComponent = new Component();
+        existingComponent.setProject(project);
+        existingComponent.setName("acme-lib");
+        qm.persist(existingComponent);
+
+        final var existingOccurrenceA = new ComponentOccurrence();
+        existingOccurrenceA.setComponent(existingComponent);
+        existingOccurrenceA.setLocation("/foo/bar/baz");
+        qm.persist(existingOccurrenceA);
+
+        final var existingOccurrenceB = new ComponentOccurrence();
+        existingOccurrenceB.setComponent(existingComponent);
+        existingOccurrenceB.setLocation("/foo/bar.js");
+        existingOccurrenceB.setLine(5);
+        existingOccurrenceB.setOffset(666);
+        existingOccurrenceB.setSymbol("someSymbol");
+        qm.persist(existingOccurrenceB);
+
+        final byte[] bomBytes = /* language=JSON */ """
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.6",
+                  "version": 1,
+                  "components": [
+                    {
+                      "type": "library",
+                      "name": "acme-lib",
+                      "evidence": {
+                        "occurrences": [
+                          {
+                            "location": "/foo/bar.js",
+                            "line": 5,
+                            "offset": 666,
+                            "symbol": "someSymbol"
+                          },
+                          {
+                            "location": "/foo.js",
+                            "line": 666
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(bomBytes));
+        qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
+        new BomUploadProcessingTask().inform(bomUploadEvent);
+        assertBomProcessedNotification();
+
+        qm.getPersistenceManager().evictAll();
+        assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
+            assertThat(component.getOccurrences()).satisfiesExactlyInAnyOrder(
+                    occurrence -> {
+                        assertThat(occurrence.getId()).isEqualTo(existingOccurrenceB.getId());
+                        assertThat(occurrence.getLocation()).isEqualTo("/foo/bar.js");
+                        assertThat(occurrence.getLine()).isEqualTo(5);
+                        assertThat(occurrence.getOffset()).isEqualTo(666);
+                        assertThat(occurrence.getSymbol()).isEqualTo("someSymbol");
+                        assertThat(occurrence.getCreatedAt()).isNotNull();
+                    },
+                    occurrence -> {
+                        assertThat(occurrence.getLocation()).isEqualTo("/foo.js");
+                        assertThat(occurrence.getLine()).isEqualTo(666);
+                        assertThat(occurrence.getOffset()).isNull();
+                        assertThat(occurrence.getSymbol()).isNull();
+                        assertThat(occurrence.getCreatedAt()).isNotNull();
+                    });
+        });
     }
 
     private void assertBomProcessedNotification() throws Exception {
