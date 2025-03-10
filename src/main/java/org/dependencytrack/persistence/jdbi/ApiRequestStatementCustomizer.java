@@ -101,6 +101,9 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
         }
 
         final var config = ctx.getConfig(ApiRequestConfig.class);
+        if (config.orderingAllowedColumns() == null) {
+            return;
+        }
         if (config.orderingAllowedColumns().isEmpty()) {
             throw new IllegalArgumentException("Ordering is not allowed");
         }

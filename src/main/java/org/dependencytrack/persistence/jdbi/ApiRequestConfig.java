@@ -20,7 +20,6 @@ package org.dependencytrack.persistence.jdbi;
 
 import org.jdbi.v3.core.config.JdbiConfig;
 
-import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
@@ -29,7 +28,7 @@ import java.util.Set;
  */
 public class ApiRequestConfig implements JdbiConfig<ApiRequestConfig> {
 
-    private Set<OrderingColumn> orderingAllowedColumns = Collections.emptySet();
+    private Set<OrderingColumn> orderingAllowedColumns;
     private String orderingAlwaysBy = "";
     private String projectIdColumn = "\"PROJECT\".\"ID\"";
 
@@ -39,7 +38,9 @@ public class ApiRequestConfig implements JdbiConfig<ApiRequestConfig> {
     }
 
     private ApiRequestConfig(final ApiRequestConfig that) {
-        this.orderingAllowedColumns = Set.copyOf(that.orderingAllowedColumns);
+        this.orderingAllowedColumns = that.orderingAllowedColumns != null
+                ? Set.copyOf(that.orderingAllowedColumns)
+                : that.orderingAllowedColumns;
         this.orderingAlwaysBy = that.orderingAlwaysBy;
         this.projectIdColumn = that.projectIdColumn;
     }
