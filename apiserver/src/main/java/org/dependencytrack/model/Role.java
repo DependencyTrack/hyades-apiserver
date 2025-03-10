@@ -65,7 +65,7 @@ import javax.jdo.annotations.Unique;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Role implements Serializable {
 
-    private static final long serialVersionUID = -7592438796591673355L;
+    private static final long serialVersionUID = -427858073810766917L;
 
     /**
      * Defines JDO fetch groups for this class.
@@ -152,7 +152,7 @@ public class Role implements Serializable {
                 .map(permission -> permission.getName())
                 .toList();
 
-        return "%s{id=%d, name='%s', description='%s', permissions=%s}".formatted(
+        return "%s{id=%d, name='%s', permissions=%s}".formatted(
                 getClass().getSimpleName(),
                 id,
                 name,
