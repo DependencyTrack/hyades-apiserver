@@ -611,6 +611,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 applyIfChanged(persistentComponent, component, Component::isInternal, persistentComponent::setInternal);
                 applyIfChanged(persistentComponent, component, Component::getExternalReferences, persistentComponent::setExternalReferences);
 
+                qm.synchronizeComponentOccurrences(persistentComponent, component.getOccurrences());
                 qm.synchronizeComponentProperties(persistentComponent, component.getProperties());
                 idsOfComponentsToDelete.remove(persistentComponent.getId());
             }
