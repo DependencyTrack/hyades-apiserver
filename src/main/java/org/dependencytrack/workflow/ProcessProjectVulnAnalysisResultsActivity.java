@@ -65,7 +65,7 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                 // TODO: Fail with a terminal exception when a file was not found?
                 //  Consider checking for all files first so we can report when more
                 //  than one file is missing.
-                LOGGER.info("Retrieving VDR file {}", result.getVdrFileMetadata().getKey());
+                LOGGER.info("Retrieving VDR file {}", result.getVdrFileMetadata().getLocation());
                 final byte[] fileContent = fileStorage.get(result.getVdrFileMetadata());
                 results.add(AnalyzeProjectVulnsResult.parseFrom(fileContent));
             }
@@ -94,7 +94,7 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             for (final FileMetadata fileMetadata : resultsFileMetadataSet) {
-                LOGGER.info("Deleting VDR file {}", fileMetadata.getKey());
+                LOGGER.info("Deleting VDR file {}", fileMetadata.getLocation());
                 fileStorage.delete(fileMetadata);
             }
         }

@@ -25,13 +25,17 @@ import org.dependencytrack.plugin.api.Plugin;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * @since 5.6.0
+ */
 public final class FileStoragePlugin implements Plugin {
 
     @Override
     public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
         return List.of(
                 new LocalFileStorageFactory(),
-                new MemoryFileStorageFactory());
+                new MemoryFileStorageFactory(),
+                new S3FileStorageFactory());
     }
 
 }

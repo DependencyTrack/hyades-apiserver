@@ -31,6 +31,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * @since 5.6.0
+ */
 public final class LocalFileStorageFactory implements ExtensionFactory<FileStorage> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorageFactory.class);
@@ -67,7 +70,7 @@ public final class LocalFileStorageFactory implements ExtensionFactory<FileStora
 
     @Override
     public int priority() {
-        return 110;
+        return 100;
     }
 
     @Override
@@ -89,15 +92,16 @@ public final class LocalFileStorageFactory implements ExtensionFactory<FileStora
         final boolean canRead = directoryPath.toFile().canRead();
         final boolean canWrite = directoryPath.toFile().canWrite();
         if (!canRead || !canWrite) {
-            throw new IllegalStateException("Insufficient permissions for directory %s (canRead=%s, canWrite=%s)"
-                    .formatted(directoryPath, canRead, canWrite));
+            throw new IllegalStateException(
+                    "Insufficient permissions for directory %s (canRead=%s, canWrite=%s)".formatted(
+                            directoryPath, canRead, canWrite));
         }
 
-        LOGGER.info("Files will be stored in {}", directoryPath);
+        LOGGER.debug("Files will be stored in {}", directoryPath);
 
         compressionThresholdBytes = configRegistry.getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES)
                 .map(Integer::parseInt)
-                .orElse(1024);
+                .orElse(4096);
         compressionLevel = configRegistry.getOptionalValue(CONFIG_COMPRESSION_LEVEL)
                 .map(Integer::parseInt)
                 .orElse(5);

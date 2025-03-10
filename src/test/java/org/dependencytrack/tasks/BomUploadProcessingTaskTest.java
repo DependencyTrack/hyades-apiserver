@@ -54,7 +54,9 @@ import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.storage.FileStorage;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -105,6 +107,11 @@ import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
 import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
+
+    @Rule
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+            .set("FILE_STORAGE_EXTENSION_MEMORY_ENABLED", "true")
+            .set("FILE_STORAGE_DEFAULT_EXTENSION", "memory");
 
     @Before
     @Override
@@ -1864,7 +1871,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 }
                 """.getBytes(StandardCharsets.UTF_8);
 
-        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), createTempBomFile(bomBytes));
+        final var bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, project.getId()), storeBomFile(bomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
@@ -1994,13 +2001,15 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         final byte[] bomBytes = Files.readAllBytes(bomFilePath);
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            return fileStorage.store("bom", bomBytes);
+            return fileStorage.store(
+                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
         }
     }
 
     private static FileMetadata storeBomFile(final byte[] bomBytes) throws Exception {
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            return fileStorage.store("bom", bomBytes);
+            return fileStorage.store(
+                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
         }
     }
 

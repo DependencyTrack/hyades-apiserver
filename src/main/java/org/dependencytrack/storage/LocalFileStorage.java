@@ -18,26 +18,33 @@
  */
 package org.dependencytrack.storage;
 
-import com.fasterxml.uuid.Generators;
 import com.github.luben.zstd.Zstd;
-import org.bouncycastle.jcajce.provider.digest.Blake3.Blake3_256;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.client.utils.URIBuilder;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HexFormat;
-import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.storage.FileStorage.requireValidName;
+import static org.dependencytrack.storage.FileStorage.requireValidFileName;
 
+/**
+ * @since 5.6.0
+ */
 final class LocalFileStorage implements FileStorage {
 
     static final String EXTENSION_NAME = "local";
-    private static final String METADATA_KEY_BLAKE3_DIGEST = "blake3_digest";
+    private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorage.class);
 
     private final Path baseDirPath;
     private final int compressionThresholdBytes;
@@ -53,21 +60,37 @@ final class LocalFileStorage implements FileStorage {
     }
 
     @Override
-    public FileMetadata store(final String name, final byte[] content) throws IOException {
-        requireValidName(name);
+    public FileMetadata store(final String fileName, final String mediaType, final byte[] content) throws IOException {
+        requireValidFileName(fileName);
         requireNonNull(content, "content must not be null");
 
-        // NB: Using UUIDv7 ensures that file names are sortable by creation time.
-        // TODO: Consider supporting sub-directories, where the provided name could be foo/bar/baz.
-        final UUID uuid = Generators.timeBasedEpochRandomGenerator().generate();
-        final Path filePath = resolveFilePath("%s_%s".formatted(uuid, name));
+        final Path filePath = resolveFilePath(fileName);
+        if (Files.isDirectory(filePath)) {
+            throw new IOException("Path %s exists, but is a directory".formatted(fileName));
+        }
+        if (!Files.exists(filePath.getParent())) {
+            LOGGER.debug("Creating parent directories of {}", filePath);
+            Files.createDirectories(filePath.getParent());
+        }
+
+        final Path relativeFilePath = baseDirPath.relativize(filePath);
+
+        final URI locationUri;
+        try {
+            locationUri = new URIBuilder()
+                    .setScheme(EXTENSION_NAME)
+                    .setHost("")
+                    .setPath(relativeFilePath.toString())
+                    .build();
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("Failed to build URI for " + relativeFilePath, e);
+        }
 
         final byte[] maybeCompressedContent = content.length >= compressionThresholdBytes
                 ? Zstd.compress(content, compressionLevel)
                 : content;
 
-        // TODO: Blake3 optionally supports a key. Could use that to authenticate files.
-        final byte[] contentDigest = new Blake3_256().digest(maybeCompressedContent);
+        final byte[] contentDigest = DigestUtils.sha256(maybeCompressedContent);
 
         try (final var fileOutputStream = Files.newOutputStream(filePath);
              final var bufferedOutputStream = new BufferedOutputStream(fileOutputStream)) {
@@ -75,9 +98,9 @@ final class LocalFileStorage implements FileStorage {
         }
 
         return FileMetadata.newBuilder()
-                .setKey(baseDirPath.relativize(filePath).toString())
-                .setStorageName(EXTENSION_NAME)
-                .putStorageMetadata(METADATA_KEY_BLAKE3_DIGEST, HexFormat.of().formatHex(contentDigest))
+                .setLocation(locationUri.toString())
+                .setMediaType(mediaType)
+                .setSha256Digest(HexFormat.of().formatHex(contentDigest))
                 .build();
     }
 
@@ -85,25 +108,15 @@ final class LocalFileStorage implements FileStorage {
     public byte[] get(final FileMetadata fileMetadata) throws IOException {
         requireNonNull(fileMetadata, "fileMetadata must not be null");
 
-        if (!EXTENSION_NAME.equals(fileMetadata.getStorageName())) {
-            throw new IllegalArgumentException("Unable to retrieve file from storage: " + fileMetadata.getStorageName());
-        }
-
-        final String expectedContentDigestHex = fileMetadata.getStorageMetadataMap().get(METADATA_KEY_BLAKE3_DIGEST);
-        if (expectedContentDigestHex == null) {
-            throw new IllegalArgumentException("File metadata does not contain " + METADATA_KEY_BLAKE3_DIGEST);
-        }
-
-        final Path filePath = resolveFilePath(fileMetadata.getKey());
+        final Path filePath = resolveFilePath(fileMetadata);
 
         final byte[] maybeCompressedContent = Files.readAllBytes(filePath);
-
-        final byte[] actualContentDigest = new Blake3_256().digest(maybeCompressedContent);
-        final byte[] expectedContentDigest = HexFormat.of().parseHex(expectedContentDigestHex);
+        final byte[] actualContentDigest = DigestUtils.sha256(maybeCompressedContent);
+        final byte[] expectedContentDigest = HexFormat.of().parseHex(fileMetadata.getSha256Digest());
 
         if (!Arrays.equals(actualContentDigest, expectedContentDigest)) {
-            throw new IOException("File digest mismatch: actual=%s, expected=%s".formatted(
-                    HexFormat.of().formatHex(actualContentDigest), expectedContentDigestHex));
+            throw new IOException("SHA256 digest mismatch: actual=%s, expected=%s".formatted(
+                    HexFormat.of().formatHex(actualContentDigest), fileMetadata.getSha256Digest()));
         }
 
         final long decompressedSize = Zstd.decompressedSize(maybeCompressedContent);
@@ -118,23 +131,41 @@ final class LocalFileStorage implements FileStorage {
     public boolean delete(final FileMetadata fileMetadata) throws IOException {
         requireNonNull(fileMetadata, "fileMetadata must not be null");
 
-        if (!EXTENSION_NAME.equals(fileMetadata.getStorageName())) {
-            throw new IllegalArgumentException("Unable to delete file from storage: " + fileMetadata.getStorageName());
-        }
+        final Path filePath = resolveFilePath(fileMetadata);
 
-        final Path filePath = resolveFilePath(fileMetadata.getKey());
         return Files.deleteIfExists(filePath);
     }
 
-    Path resolveFilePath(final String key) {
-        final Path filePath = baseDirPath.resolve(key).normalize().toAbsolutePath();
-        if (!filePath.startsWith(baseDirPath)) {
-            throw new IllegalStateException("""
-                    The provided key %s does not resolve to a path within the \
-                    configured file storage base directory (%s)""".formatted(key, baseDirPath));
+    private Path resolveFilePath(final String filePath) {
+        final Path resolvedFilePath = baseDirPath.resolve(filePath).normalize().toAbsolutePath();
+        if (!resolvedFilePath.startsWith(baseDirPath)) {
+            throw new IllegalArgumentException("""
+                    The provided filePath %s does not resolve to a path within the \
+                    configured base directory (%s)""".formatted(filePath, baseDirPath));
         }
 
-        return filePath;
+        return resolvedFilePath;
+    }
+
+    @VisibleForTesting
+    Path resolveFilePath(final FileMetadata fileMetadata) {
+        final URI locationUri = URI.create(fileMetadata.getLocation());
+        if (!EXTENSION_NAME.equals(locationUri.getScheme())) {
+            throw new IllegalArgumentException("%s: Unexpected scheme %s, expected %s".formatted(
+                    locationUri, locationUri.getScheme(), EXTENSION_NAME));
+        }
+        if (locationUri.getHost() != null) {
+            throw new IllegalArgumentException(
+                    "%s: Host portion is not allowed for scheme %s".formatted(locationUri, EXTENSION_NAME));
+        }
+        if (locationUri.getPath() == null || locationUri.getPath().equals("/")) {
+            throw new IllegalArgumentException(
+                    "%s: Path portion not set; Unable to determine file name".formatted(locationUri));
+        }
+
+        // The value returned by URI#getPath always has a leading slash.
+        // Remove it to prevent the path from erroneously be interpreted as absolute.
+        return resolveFilePath(locationUri.getPath().replaceFirst("^/", ""));
     }
 
 }

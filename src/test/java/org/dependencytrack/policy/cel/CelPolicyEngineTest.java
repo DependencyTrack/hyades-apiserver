@@ -55,7 +55,9 @@ import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -73,6 +75,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class CelPolicyEngineTest extends PersistenceCapableTest {
+
+    @Rule
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+            .set("FILE_STORAGE_EXTENSION_MEMORY_ENABLED", "true")
+            .set("FILE_STORAGE_DEFAULT_EXTENSION", "memory");
 
     @Before
     public void before() throws Exception {
@@ -1971,7 +1978,8 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         final byte[] bomBytes = Files.readAllBytes(bomFilePath);
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            return fileStorage.store("bom", bomBytes);
+            return fileStorage.store(
+                    "test/%s-%s".formatted(CelPolicyEngineTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
         }
     }
 

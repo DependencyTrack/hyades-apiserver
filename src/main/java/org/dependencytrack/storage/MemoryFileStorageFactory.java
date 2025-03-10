@@ -24,6 +24,9 @@ import org.dependencytrack.plugin.api.ExtensionFactory;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * @since 5.6.0
+ */
 public final class MemoryFileStorageFactory implements ExtensionFactory<FileStorage> {
 
     private Map<String, byte[]> fileContentByKey;
@@ -40,7 +43,7 @@ public final class MemoryFileStorageFactory implements ExtensionFactory<FileStor
 
     @Override
     public int priority() {
-        return 100;
+        return 110;
     }
 
     @Override

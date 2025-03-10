@@ -18,16 +18,25 @@
  */
 package org.dependencytrack.storage;
 
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.client.utils.URIBuilder;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.Map;
-import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.storage.FileStorage.requireValidName;
+import static org.dependencytrack.storage.FileStorage.requireValidFileName;
 
+/**
+ * @since 5.6.0
+ */
 final class MemoryFileStorage implements FileStorage {
 
     static final String EXTENSION_NAME = "memory";
@@ -39,16 +48,31 @@ final class MemoryFileStorage implements FileStorage {
     }
 
     @Override
-    public FileMetadata store(final String name, final byte[] content) throws IOException {
-        requireValidName(name);
+    public FileMetadata store(final String fileName, final String mediaType, final byte[] content) {
+        requireValidFileName(fileName);
         requireNonNull(content, "content must not be null");
 
-        final String key = "%s_%s".formatted(UUID.randomUUID().toString(), name);
+        final String normalizedFileName = normalizeFileName(fileName);
 
-        fileContentByKey.put(key, content);
+        final URI locationUri;
+        try {
+            locationUri = new URIBuilder()
+                    .setScheme(EXTENSION_NAME)
+                    .setHost("")
+                    .setPath(normalizedFileName)
+                    .build();
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("Failed to build URI for " + fileName, e);
+        }
+
+        final byte[] contentDigest = DigestUtils.sha256(content);
+
+        fileContentByKey.put(fileName, content);
+
         return FileMetadata.newBuilder()
-                .setKey(key)
-                .setStorageName(EXTENSION_NAME)
+                .setLocation(locationUri.toString())
+                .setMediaType(mediaType)
+                .setSha256Digest(HexFormat.of().formatHex(contentDigest))
                 .build();
     }
 
@@ -56,27 +80,55 @@ final class MemoryFileStorage implements FileStorage {
     public byte[] get(final FileMetadata fileMetadata) throws IOException {
         requireNonNull(fileMetadata, "fileMetadata must not be null");
 
-        if (!EXTENSION_NAME.equals(fileMetadata.getStorageName())) {
-            throw new IllegalArgumentException("Unable to retrieve file from storage: " + fileMetadata.getStorageName());
+        final String fileName = resolveFileName(fileMetadata);
+
+        final byte[] fileContent = fileContentByKey.get(fileName);
+        if (fileContent == null) {
+            throw new NoSuchFileException(fileMetadata.getLocation());
         }
 
-        final byte[] fileContent = fileContentByKey.get(fileMetadata.getKey());
-        if (fileContent == null) {
-            throw new NoSuchFileException(fileMetadata.getKey());
+        final byte[] actualContentDigest = DigestUtils.sha256(fileContent);
+        final byte[] expectedContentDigest = HexFormat.of().parseHex(fileMetadata.getSha256Digest());
+
+        if (!Arrays.equals(actualContentDigest, expectedContentDigest)) {
+            throw new IOException("SHA256 digest mismatch: actual=%s, expected=%s".formatted(
+                    HexFormat.of().formatHex(actualContentDigest), fileMetadata.getSha256Digest()));
         }
 
         return fileContent;
     }
 
     @Override
-    public boolean delete(final FileMetadata fileMetadata) throws IOException {
+    public boolean delete(final FileMetadata fileMetadata) {
         requireNonNull(fileMetadata, "fileMetadata must not be null");
 
-        if (!EXTENSION_NAME.equals(fileMetadata.getStorageName())) {
-            throw new IllegalArgumentException("Unable to delete file from storage: " + fileMetadata.getStorageName());
+        final String filePath = resolveFileName(fileMetadata);
+
+        return fileContentByKey.remove(filePath) != null;
+    }
+
+    private static String normalizeFileName(final String fileName) {
+        return Paths.get(fileName).normalize().toString();
+    }
+
+    private static String resolveFileName(final FileMetadata fileMetadata) {
+        final URI locationUri = URI.create(fileMetadata.getLocation());
+        if (!EXTENSION_NAME.equals(locationUri.getScheme())) {
+            throw new IllegalArgumentException("%s: Unexpected scheme %s, expected %s".formatted(
+                    locationUri, locationUri.getScheme(), EXTENSION_NAME));
+        }
+        if (locationUri.getHost() != null) {
+            throw new IllegalArgumentException(
+                    "%s: Host portion is not allowed for scheme %s".formatted(locationUri, EXTENSION_NAME));
+        }
+        if (locationUri.getPath() == null) {
+            throw new IllegalArgumentException(
+                    "%s: Path portion not set; Unable to determine file name".formatted(locationUri));
         }
 
-        return fileContentByKey.remove(fileMetadata.getKey()) != null;
+        // The value returned by URI#getPath always has a leading slash.
+        // Remove it to prevent the path from erroneously be interpreted as absolute.
+        return normalizeFileName(locationUri.getPath().replaceFirst("^/", ""));
     }
 
 }
