@@ -18,60 +18,9 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.Config;
-import alpine.common.logging.Logger;
-import alpine.event.framework.ChainableEvent;
-import alpine.event.framework.Event;
-import alpine.event.framework.EventService;
-import alpine.event.framework.Subscriber;
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
-import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.commons.collections4.MultiValuedMap;
-import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
-import org.cyclonedx.exception.ParseException;
-import org.cyclonedx.parsers.BomParserFactory;
-import org.cyclonedx.parsers.Parser;
-import org.datanucleus.flush.FlushMode;
-import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.event.BomUploadEvent;
-import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
-import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.IntegrityAnalysisEvent;
-import org.dependencytrack.event.ProjectMetricsUpdateEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
-import org.dependencytrack.model.Bom;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.FetchStatus;
-import org.dependencytrack.model.IntegrityMetaComponent;
-import org.dependencytrack.model.License;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetadata;
-import org.dependencytrack.model.ServiceComponent;
-import org.dependencytrack.model.VulnerabilityAnalysisLevel;
-import org.dependencytrack.model.VulnerabilityScan.TargetType;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.WorkflowStatus;
-import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
-import org.dependencytrack.notification.vo.BomProcessingFailed;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.WorkflowDao;
-import org.dependencytrack.util.InternalComponentIdentifier;
-import org.dependencytrack.util.WaitingLockConfiguration;
-import org.json.JSONArray;
-import org.slf4j.MDC;
-
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -126,6 +75,57 @@ import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META
 import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
+
+import alpine.Config;
+import alpine.common.logging.Logger;
+import alpine.event.framework.ChainableEvent;
+import alpine.event.framework.Event;
+import alpine.event.framework.EventService;
+import alpine.event.framework.Subscriber;
+import alpine.notification.Notification;
+import alpine.notification.NotificationLevel;
+import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
+import org.cyclonedx.exception.ParseException;
+import org.cyclonedx.parsers.BomParserFactory;
+import org.cyclonedx.parsers.Parser;
+import org.datanucleus.flush.FlushMode;
+import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.event.BomUploadEvent;
+import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
+import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.IntegrityAnalysisEvent;
+import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
+import org.dependencytrack.model.Bom;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
+import org.dependencytrack.model.License;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetadata;
+import org.dependencytrack.model.ServiceComponent;
+import org.dependencytrack.model.VulnerabilityAnalysisLevel;
+import org.dependencytrack.model.VulnerabilityScan.TargetType;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
+import org.dependencytrack.notification.vo.BomProcessingFailed;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.WorkflowDao;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.storage.FileStorage;
+import org.dependencytrack.util.InternalComponentIdentifier;
+import org.dependencytrack.util.WaitingLockConfiguration;
+import org.json.JSONArray;
+import org.slf4j.MDC;
 
 /**
  * Subscriber task that performs processing of bill-of-material (bom)
@@ -182,21 +182,40 @@ public class BomUploadProcessingTask implements Subscriber {
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, ctx.project.getUuid().toString());
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
-             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString())) {
-            processEvent(ctx, event);
+             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
+             var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            final byte[] cdxBomBytes;
+            try {
+                cdxBomBytes = fileStorage.get(event.getFileMetadata());
+            } catch (IOException ex) {
+                LOGGER.error("Failed to retrieve BOM file %s from storage".formatted(
+                        event.getFileMetadata().getLocation()), ex);
+                return;
+            }
+
+            try {
+                processEvent(ctx, cdxBomBytes);
+            } finally {
+                // There are currently no retries, so the BOM file needs to be removed
+                // from storage no matter if processing failed or succeeded.
+
+                try {
+                    fileStorage.delete(event.getFileMetadata());
+                } catch (IOException ex) {
+                    LOGGER.error("Failed to delete BOM file %s from storage".formatted(
+                            event.getFileMetadata().getLocation()), ex);
+                }
+            }
         }
     }
 
-    private void processEvent(final Context ctx, final BomUploadEvent event) {
+    private void processEvent(final Context ctx, final byte[] cdxBomBytes) {
         useJdbiTransaction(handle -> {
             final var workflowDao = handle.attach(WorkflowDao.class);
             workflowDao.startState(WorkflowStep.BOM_CONSUMPTION, ctx.token);
         });
         final ConsumedBom consumedBom;
-
-        try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
-            final byte[] cdxBomBytes = bomFileInputStream.readAllBytes();
-
+        try {
             // Validate if bom is in protobuf format
             final var protoBom = parseBomProtobuf(cdxBomBytes);
             if (protoBom != null) {
@@ -222,7 +241,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 ctx.bomVersion = cdxBom.getVersion();
                 consumedBom = consumeBom(cdxBom);
             }
-        } catch (IOException | ParseException | RuntimeException e) {
+        } catch (ParseException | RuntimeException e) {
             LOGGER.error("Failed to consume BOM", e);
             failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
             dispatchBomProcessingFailedNotification(ctx, e);
