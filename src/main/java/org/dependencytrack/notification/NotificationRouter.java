@@ -61,6 +61,7 @@ import java.nio.ByteBuffer;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -163,15 +164,6 @@ public class NotificationRouter implements Closeable {
 
         LOGGER.debug("Received notification: [{}]", DebugFormat.singleLine().lazyToString(notification));
 
-        // Depending on the type of notification, the notification content can be arbitrarily large.
-        // We're better off using file storage for it, rather than submitting it as workflow argument.
-        final FileMetadata notificationFileMetadata;
-        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            notificationFileMetadata = fileStorage.store("notification", notification.toByteArray());
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to store notification", e);
-        }
-
         // TODO: Evaluate notification rules.
 
         final List<NotificationRule> matchedRules;
@@ -185,6 +177,17 @@ public class NotificationRouter implements Closeable {
         if (matchedRules.isEmpty()) {
             LOGGER.debug("No matching rules found");
             return;
+        }
+
+        // Depending on the type of notification, the notification content can be arbitrarily large.
+        // We're better off using file storage for it, rather than submitting it as workflow argument.
+        final FileMetadata notificationFileMetadata;
+        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            final String fileName = "notifications/%d_%s.proto".formatted(Instant.now().toEpochMilli(), message.lsn().asLong());
+            final String mediaType = "application/x-protobuf; type=" + notification.getDescriptorForType().getFullName();
+            notificationFileMetadata = fileStorage.store(fileName, mediaType, notification.toByteArray());
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to store notification", e);
         }
 
         // TODO: To enforce ordering (e.g. to ensure that all notifications for a project

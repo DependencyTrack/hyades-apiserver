@@ -31,6 +31,7 @@ import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,11 +74,14 @@ public class AnalyzeProjectVulnsActivity implements ActivityExecutor<AnalyzeProj
                     /* isTerminal */ true);
         }
 
-        final Bom vdr = analyzer.analyzeProject(UUID.fromString(args.getProject().getUuid()));
+        final var projectUuid = UUID.fromString(args.getProject().getUuid());
+        final Bom vdr = analyzer.analyzeProject(projectUuid);
 
         final FileMetadata vdrFileMetadata;
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            vdrFileMetadata = fileStorage.store("vdr.proto", vdr.toByteArray());
+            final String fileName = "analysis/%d_%s.vdr.proto".formatted(Instant.now().toEpochMilli(), projectUuid);
+            final String mediaType = "application/x-protobuf; type=" + vdr.getDescriptorForType().getFullName();
+            vdrFileMetadata = fileStorage.store(fileName, mediaType, vdr.toByteArray());
         }
 
         return Optional.of(AnalyzeProjectVulnsResult.newBuilder()
