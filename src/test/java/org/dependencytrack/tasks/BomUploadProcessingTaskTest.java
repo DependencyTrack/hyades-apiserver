@@ -1573,8 +1573,9 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
             new BomUploadProcessingTask().inform(bomUploadEvent);
             assertBomProcessedNotification();
             qm.getPersistenceManager().evictAll();
-            assertThat(qm.getAllComponents(project)).isNotEmpty();
-            Component component = qm.getAllComponents().getFirst();
+            final List<Component> components = qm.getAllComponents(project);
+            assertThat(components).isNotEmpty();
+            Component component = components.getFirst();
             assertThat(component.getAuthors().get(0).getName()).isEqualTo("Joane Doe et al.");
             if (i == 2) {
                 assertThat(component.getAuthors().size()).isEqualTo(2);

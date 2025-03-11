@@ -78,55 +78,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     }
 
     /**
-     * Returns a list of all Components defined in the datastore.
-     *
-     * @return a List of Components
-     */
-    public PaginatedResult getComponents(final boolean includeMetrics) {
-        final PaginatedResult result;
-        final Query<Component> query = pm.newQuery(Component.class);
-        if (orderBy == null) {
-            query.setOrdering("name asc, version desc, id asc");
-        }
-        if (filter != null) {
-            query.setFilter("name.toLowerCase().matches(:name)");
-            final String filterString = ".*" + filter.toLowerCase() + ".*";
-            result = execute(query, filterString);
-        } else {
-            result = execute(query);
-        }
-        if (includeMetrics) {
-            // Populate each Component object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Component component : result.getList(Component.class)) {
-                component.setMetrics(getMostRecentDependencyMetrics(component));
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Returns a list of all Components defined in the datastore.
-     *
-     * @return a List of Components
-     */
-    public PaginatedResult getComponents() {
-        return getComponents(false);
-    }
-
-    /**
-     * Returns a list of all components.
-     * This method if designed NOT to provide paginated results.
-     *
-     * @return a List of Components
-     */
-    public List<Component> getAllComponents() {
-        final Query<Component> query = pm.newQuery(Component.class);
-        query.setOrdering("id asc");
-        return query.executeList();
-    }
-
-    /**
      * Returns a List of all Components for the specified Project.
      * This method if designed NOT to provide paginated results.
      *
@@ -139,17 +90,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         query.getFetchPlan().setMaxFetchDepth(2);
         query.setOrdering("name asc");
         return (List<Component>) query.execute(project);
-    }
-
-    /**
-     * Returns a List of Dependency for the specified Project.
-     *
-     * @param project        the Project to retrieve dependencies of
-     * @param includeMetrics Optionally includes third-party metadata about the component from external repositories
-     * @return a List of Dependency objects
-     */
-    public PaginatedResult getComponents(final Project project, final boolean includeMetrics) {
-        return getComponents(project, includeMetrics, false, false);
     }
 
     /**
@@ -383,7 +323,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         };
 
         final Query<Component> query = pm.newQuery(Component.class);
-        ;
         final Map<String, Object> params = Map.of("hash", hash);
         preprocessACLs(query, queryFilter, params, false);
         return execute(query, params);
@@ -403,20 +342,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         query.setParameters(purl);
         query.setResult("DISTINCT purlCoordinates, internal");
         return query.executeResultUnique(IntegrityMetaInitializerTask.ComponentProjection.class);
-    }
-
-    /**
-     * Returns Components by their identity.
-     *
-     * @param identity the ComponentIdentity to query against
-     * @return a list of components
-     */
-    public PaginatedResult getComponents(ComponentIdentity identity) {
-        return getComponents(identity, null, false);
-    }
-
-    public PaginatedResult getComponents(ComponentIdentity identity, boolean includeMetrics) {
-        return getComponents(identity, null, includeMetrics);
     }
 
     /**
@@ -601,20 +526,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     }
 
     /**
-     * Deletes all components for the specified Project.
-     *
-     * @param project the Project to delete components of
-     */
-    protected void deleteComponents(Project project) {
-        final Query<Component> query = pm.newQuery(Component.class, "project == :project");
-        try {
-            query.deletePersistentAll(project);
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    /**
      * Returns a list of components by matching its identity information.
      *
      * @param project the Project the component is a dependency of
@@ -624,19 +535,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     @SuppressWarnings("unchecked")
     public List<Component> matchIdentity(final Project project, final ComponentIdentity cid) {
         final Pair<String, Map<String, Object>> queryFilterParamsPair = buildComponentIdentityQuery(project, cid);
-        final Query<Component> query = pm.newQuery(Component.class, queryFilterParamsPair.getLeft());
-        return (List<Component>) query.executeWithMap(queryFilterParamsPair.getRight());
-    }
-
-    /**
-     * Returns a List of components by matching identity information.
-     *
-     * @param cid the identity values of the component
-     * @return a List of Component objects
-     */
-    @SuppressWarnings("unchecked")
-    public List<Component> matchIdentity(final ComponentIdentity cid) {
-        final Pair<String, Map<String, Object>> queryFilterParamsPair = buildComponentIdentityQuery(null, cid);
         final Query<Component> query = pm.newQuery(Component.class, queryFilterParamsPair.getLeft());
         return (List<Component>) query.executeWithMap(queryFilterParamsPair.getRight());
     }
