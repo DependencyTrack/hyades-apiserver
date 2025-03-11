@@ -35,6 +35,7 @@ import org.dependencytrack.workflow.framework.WorkflowClient;
 import org.dependencytrack.workflow.framework.WorkflowContext;
 import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
+import org.dependencytrack.workflow.framework.failure.ActivityFailureException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -82,35 +83,43 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
                         .sorted()
                         .toList();
 
-        final RetryPolicy scannerRetryPolicy = defaultRetryPolicy().withMaxAttempts(6);
-        final var pendingScannerResults = new ArrayList<Awaitable<AnalyzeProjectVulnsResult>>();
+        final RetryPolicy vulnAnalyzerRetryPolicy = defaultRetryPolicy().withMaxAttempts(6);
+        final var pendingVulnAnalyzerResults = new ArrayList<Awaitable<AnalyzeProjectVulnsResult>>();
         for (final String analyzerName : enabledAnalyzerNames) {
             ctx.logger().info("Scheduling vulnerability analysis with {}", analyzerName);
-            pendingScannerResults.add(AnalyzeProjectVulnsActivity.CLIENT.call(
+            pendingVulnAnalyzerResults.add(AnalyzeProjectVulnsActivity.CLIENT.call(
                     ctx,
                     AnalyzeProjectVulnsArgs.newBuilder()
                             .setProject(args.getProject())
                             .setAnalyzerName(analyzerName)
                             .build(),
-                    scannerRetryPolicy));
+                    vulnAnalyzerRetryPolicy));
         }
 
-        // TODO: Handle analyzer failures.
-        //  We can still process partial results, but the process-project-analysis-results
-        //  needs to know when something failed.
-        ctx.logger().info("Waiting for results from {} scanners", pendingScannerResults.size());
-        final List<AnalyzeProjectVulnsResult> scannerResults = pendingScannerResults.stream()
-                .map(Awaitable::await)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .toList();
+        final var vulnAnalysisResults = new ArrayList<ProcessProjectVulnAnalysisResultsArgs.Result>();
+        ctx.logger().info("Waiting for results from {} scanners", pendingVulnAnalyzerResults.size());
+        for (final Awaitable<AnalyzeProjectVulnsResult> pendingResult : pendingVulnAnalyzerResults) {
+            try {
+                pendingResult.await().ifPresent(
+                        result -> vulnAnalysisResults.add(
+                                ProcessProjectVulnAnalysisResultsArgs.Result.newBuilder()
+                                        .setVdrFileMetadata(result.getVdrFileMetadata())
+                                        .build()));
+            } catch (ActivityFailureException e) {
+                vulnAnalysisResults.add(
+                        ProcessProjectVulnAnalysisResultsArgs.Result.newBuilder()
+                                .setFailureReason(e.getMessage())
+                                .build());
+            }
+        }
 
         ctx.setStatus(STATUS_PROCESSING_VULN_ANALYSIS_RESULTS);
         ctx.logger().info("Scheduling processing of vulnerability analysis results");
         ProcessProjectVulnAnalysisResultsActivity.CLIENT.call(
                 ctx,
                 ProcessProjectVulnAnalysisResultsArgs.newBuilder()
-                        .addAllResults(scannerResults)
+                        .setProject(args.getProject())
+                        .addAllResults(vulnAnalysisResults)
                         .build(),
                 defaultRetryPolicy()).await();
 

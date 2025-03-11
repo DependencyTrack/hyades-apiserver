@@ -14,6 +14,7 @@ message Project {
   string version = 3;
 }
 
+// Arguments of ProcessBomUploadWorkflow.
 message ProcessBomUploadArgs {
   Project project = 1;
   org.dependencytrack.storage.v1alpha1.FileMetadata bom_file_metadata = 2;
@@ -24,27 +25,42 @@ message IngestBomArgs {
   org.dependencytrack.storage.v1alpha1.FileMetadata bom_file_metadata = 2;
 }
 
+// Arguments of AnalyzeProjectWorkflow.
 message AnalyzeProjectArgs {
   Project project = 1;
 }
 
+// Arguments of AnalyzeProjectVulnsActivity.
 message AnalyzeProjectVulnsArgs {
+  // Project to analyze vulnerabilities for.
   Project project = 1;
+
+  // Name of the analyzer to use.
   string analyzer_name = 2;
 }
 
-// TODO: Find better name.
-// TODO: Move this to separate package.
-// TODO: Consider project-level findings?
+// Result of AnalyzerProjectVulnsActivity.
 message AnalyzeProjectVulnsResult {
+  // Name of the analyzer that produced the result.
   string analyzer = 1;
+
+  // Metadata of the VDR file containing the analysis results.
   org.dependencytrack.storage.v1alpha1.FileMetadata vdr_file_metadata = 2;
 }
 
-// TODO: Find better name.
-// TODO: Move this to separate package.
+// Arguments of ProcessProjectVulnAnalysisResultsActivity.
 message ProcessProjectVulnAnalysisResultsArgs {
-  repeated AnalyzeProjectVulnsResult results = 1;
+  Project project = 1;
+  repeated Result results = 2;
+
+  message Result {
+    string analyzer = 1;
+
+    oneof result {
+      org.dependencytrack.storage.v1alpha1.FileMetadata vdr_file_metadata = 25;
+      string failure_reason = 26;
+    }
+  }
 }
 
 // TODO: Find better name.
