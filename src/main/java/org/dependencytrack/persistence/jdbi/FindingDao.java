@@ -82,7 +82,7 @@ public interface FindingDao {
                AND (:includeSuppressed OR "ANALYSIS"."SUPPRESSED" IS NULL OR NOT "ANALYSIS"."SUPPRESSED")
             """)
     @RegisterRowMapper(FindingRowMapper.class)
-    List<Finding> getFindings(@Bind long projectId, @Bind boolean includeSuppressed);
+    List<Finding> getAllFindings(@Bind long projectId, @Bind boolean includeSuppressed);
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="queryFilter" type="String" -->
@@ -142,5 +142,5 @@ public interface FindingDao {
              </#if>
             """)
     @RegisterRowMapper(FindingRowMapper.class)
-    List<Finding> getFindings(@Define String queryFilter);
+    List<Finding> getAllFindings(@Define String queryFilter);
 }

@@ -117,7 +117,7 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
         processFilters(filters, queryFilter, params, false);
         queryFilter.append(this.orderBy != null ? " ORDER BY " + sortingAttributes.get(this.orderBy) + " " + (this.orderDirection == OrderDirection.DESCENDING ? " DESC" : "ASC") : "");
         final List<Finding> findings = withJdbiHandle(handle ->
-                handle.attach(FindingDao.class).getFindings(String.valueOf(queryFilter)));
+                handle.attach(FindingDao.class).getAllFindings(String.valueOf(queryFilter)));
 
         PaginatedResult result = new PaginatedResult();
         result.setTotal(findings.size());
@@ -285,26 +285,6 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
             }
             params.put(paramName, value);
             queryFilter.append(")");
-        }
-    }
-
-    private void processAggregatedDateRangeFilter(StringBuilder queryFilter, Map<String, Object> params, String paramName, String filter, String column, boolean fromValue, boolean isMin) {
-        if (filter != null && !filter.isEmpty()) {
-            if (queryFilter.isEmpty()) {
-                queryFilter.append(" HAVING (");
-            } else {
-                queryFilter.append(isMin ? " AND (" : " OR ");
-            }
-            if (DbUtil.isPostgreSQL()) {
-                queryFilter.append(column).append(fromValue ? " >= " : " <= ");
-                queryFilter.append("TO_TIMESTAMP(:").append(paramName).append(", 'YYYY-MM-DD HH24:MI:SS')");
-            } else {
-                queryFilter.append(column).append(fromValue ? " >= :" : " <= :").append(paramName);
-            }
-            params.put(paramName, filter + (fromValue ? " 00:00:00" : " 23:59:59"));
-            if (!isMin) {
-                queryFilter.append(")");
-            }
         }
     }
 

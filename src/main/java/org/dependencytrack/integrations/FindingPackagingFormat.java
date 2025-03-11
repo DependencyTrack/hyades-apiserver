@@ -24,6 +24,7 @@ import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.DateUtil;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Date;
@@ -112,7 +113,9 @@ public class FindingPackagingFormat {
             root.put(FIELD_VERSION, FPF_VERSION);
             root.put(FIELD_META, meta);
             root.put(FIELD_PROJECT, projectJson);
-            root.put(FIELD_FINDINGS, findings);
+            JSONArray jsonArray = new JSONArray();
+            findings.forEach(jsonArray::put);
+            root.put(FIELD_FINDINGS, jsonArray);
             return root;
         }
     }
