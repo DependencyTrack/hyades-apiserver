@@ -137,7 +137,7 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
         //  whereas here we'll deal with all components of a project.
 
         final var analyzersByReportedFindingId = new HashMap<FindingId, Set<String>>();
-        final var reportedVulnsByVulnId = new HashMap<String, Set<org.dependencytrack.model.Vulnerability>>();
+        final var reportedVulnsByVulnId = new HashMap<String, Set<Vulnerability>>();
         final var vulnIdsByComponentId = new HashMap<Long, Set<String>>();
 
         for (final Map.Entry<String, Bom> entry : vdrByAnalyzerName.entrySet()) {
@@ -364,7 +364,7 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                 qm.acquireAdvisoryLock("vuln:write:%s:%s".formatted(vuln.getSource(), vuln.getVulnId()));
 
                 final org.dependencytrack.model.Vulnerability existingVuln;
-                final javax.jdo.Query<org.dependencytrack.model.Vulnerability> query = qm.getPersistenceManager().newQuery(org.dependencytrack.model.Vulnerability.class);
+                final javax.jdo.Query<Vulnerability> query = qm.getPersistenceManager().newQuery(Vulnerability.class);
                 try {
                     query.setFilter("vulnId == :vulnId && source == :source");
                     query.setParameters(vuln.getVulnId(), vuln.getSource());
@@ -386,36 +386,36 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                     LOGGER.debug("Vulnerability exists; Updating if necessary");
 
                     final var differ = new PersistenceUtil.Differ<>(existingVuln, vuln);
-                    differ.applyIfChanged("title", org.dependencytrack.model.Vulnerability::getTitle, existingVuln::setTitle);
-                    differ.applyIfChanged("subTitle", org.dependencytrack.model.Vulnerability::getSubTitle, existingVuln::setSubTitle);
-                    differ.applyIfChanged("description", org.dependencytrack.model.Vulnerability::getDescription, existingVuln::setDescription);
-                    differ.applyIfChanged("detail", org.dependencytrack.model.Vulnerability::getDetail, existingVuln::setDetail);
-                    differ.applyIfChanged("recommendation", org.dependencytrack.model.Vulnerability::getRecommendation, existingVuln::setRecommendation);
-                    differ.applyIfChanged("references", org.dependencytrack.model.Vulnerability::getReferences, existingVuln::setReferences);
-                    differ.applyIfChanged("credits", org.dependencytrack.model.Vulnerability::getCredits, existingVuln::setCredits);
-                    differ.applyIfChanged("created", org.dependencytrack.model.Vulnerability::getCreated, existingVuln::setCreated);
-                    differ.applyIfChanged("published", org.dependencytrack.model.Vulnerability::getPublished, existingVuln::setPublished);
-                    differ.applyIfChanged("updated", org.dependencytrack.model.Vulnerability::getUpdated, existingVuln::setUpdated);
-                    differ.applyIfChanged("cwes", org.dependencytrack.model.Vulnerability::getCwes, existingVuln::setCwes);
-                    differ.applyIfChanged("severity", org.dependencytrack.model.Vulnerability::getSeverity, existingVuln::setSeverity);
-                    differ.applyIfChanged("cvssV2BaseScore", org.dependencytrack.model.Vulnerability::getCvssV2BaseScore, existingVuln::setCvssV2BaseScore);
-                    differ.applyIfChanged("cvssV2ImpactSubScore", org.dependencytrack.model.Vulnerability::getCvssV2ImpactSubScore, existingVuln::setCvssV2ImpactSubScore);
-                    differ.applyIfChanged("cvssV2ExploitabilitySubScore", org.dependencytrack.model.Vulnerability::getCvssV2ExploitabilitySubScore, existingVuln::setCvssV2ExploitabilitySubScore);
-                    differ.applyIfChanged("cvssV2Vector", org.dependencytrack.model.Vulnerability::getCvssV2Vector, existingVuln::setCvssV2Vector);
-                    differ.applyIfChanged("cvssv3BaseScore", org.dependencytrack.model.Vulnerability::getCvssV3BaseScore, existingVuln::setCvssV3BaseScore);
-                    differ.applyIfChanged("cvssV3ImpactSubScore", org.dependencytrack.model.Vulnerability::getCvssV3ImpactSubScore, existingVuln::setCvssV3ImpactSubScore);
-                    differ.applyIfChanged("cvssV3ExploitabilitySubScore", org.dependencytrack.model.Vulnerability::getCvssV3ExploitabilitySubScore, existingVuln::setCvssV3ExploitabilitySubScore);
-                    differ.applyIfChanged("cvssV3Vector", org.dependencytrack.model.Vulnerability::getCvssV3Vector, existingVuln::setCvssV3Vector);
-                    differ.applyIfChanged("owaspRRLikelihoodScore", org.dependencytrack.model.Vulnerability::getOwaspRRLikelihoodScore, existingVuln::setOwaspRRLikelihoodScore);
-                    differ.applyIfChanged("owaspRRTechnicalImpactScore", org.dependencytrack.model.Vulnerability::getOwaspRRTechnicalImpactScore, existingVuln::setOwaspRRTechnicalImpactScore);
-                    differ.applyIfChanged("owaspRRBusinessImpactScore", org.dependencytrack.model.Vulnerability::getOwaspRRBusinessImpactScore, existingVuln::setOwaspRRBusinessImpactScore);
-                    differ.applyIfChanged("owaspRRVector", org.dependencytrack.model.Vulnerability::getOwaspRRVector, existingVuln::setOwaspRRVector);
+                    differ.applyIfChanged("title", Vulnerability::getTitle, existingVuln::setTitle);
+                    differ.applyIfChanged("subTitle", Vulnerability::getSubTitle, existingVuln::setSubTitle);
+                    differ.applyIfChanged("description", Vulnerability::getDescription, existingVuln::setDescription);
+                    differ.applyIfChanged("detail", Vulnerability::getDetail, existingVuln::setDetail);
+                    differ.applyIfChanged("recommendation", Vulnerability::getRecommendation, existingVuln::setRecommendation);
+                    differ.applyIfChanged("references", Vulnerability::getReferences, existingVuln::setReferences);
+                    differ.applyIfChanged("credits", Vulnerability::getCredits, existingVuln::setCredits);
+                    differ.applyIfChanged("created", Vulnerability::getCreated, existingVuln::setCreated);
+                    differ.applyIfChanged("published", Vulnerability::getPublished, existingVuln::setPublished);
+                    differ.applyIfChanged("updated", Vulnerability::getUpdated, existingVuln::setUpdated);
+                    differ.applyIfChanged("cwes", Vulnerability::getCwes, existingVuln::setCwes);
+                    differ.applyIfChanged("severity", Vulnerability::getSeverity, existingVuln::setSeverity);
+                    differ.applyIfChanged("cvssV2BaseScore", Vulnerability::getCvssV2BaseScore, existingVuln::setCvssV2BaseScore);
+                    differ.applyIfChanged("cvssV2ImpactSubScore", Vulnerability::getCvssV2ImpactSubScore, existingVuln::setCvssV2ImpactSubScore);
+                    differ.applyIfChanged("cvssV2ExploitabilitySubScore", Vulnerability::getCvssV2ExploitabilitySubScore, existingVuln::setCvssV2ExploitabilitySubScore);
+                    differ.applyIfChanged("cvssV2Vector", Vulnerability::getCvssV2Vector, existingVuln::setCvssV2Vector);
+                    differ.applyIfChanged("cvssv3BaseScore", Vulnerability::getCvssV3BaseScore, existingVuln::setCvssV3BaseScore);
+                    differ.applyIfChanged("cvssV3ImpactSubScore", Vulnerability::getCvssV3ImpactSubScore, existingVuln::setCvssV3ImpactSubScore);
+                    differ.applyIfChanged("cvssV3ExploitabilitySubScore", Vulnerability::getCvssV3ExploitabilitySubScore, existingVuln::setCvssV3ExploitabilitySubScore);
+                    differ.applyIfChanged("cvssV3Vector", Vulnerability::getCvssV3Vector, existingVuln::setCvssV3Vector);
+                    differ.applyIfChanged("owaspRRLikelihoodScore", Vulnerability::getOwaspRRLikelihoodScore, existingVuln::setOwaspRRLikelihoodScore);
+                    differ.applyIfChanged("owaspRRTechnicalImpactScore", Vulnerability::getOwaspRRTechnicalImpactScore, existingVuln::setOwaspRRTechnicalImpactScore);
+                    differ.applyIfChanged("owaspRRBusinessImpactScore", Vulnerability::getOwaspRRBusinessImpactScore, existingVuln::setOwaspRRBusinessImpactScore);
+                    differ.applyIfChanged("owaspRRVector", Vulnerability::getOwaspRRVector, existingVuln::setOwaspRRVector);
                     // Aliases of existingVuln will always be null, as they'd have to be fetched separately.
                     // Synchronization of aliases is performed after synchronizing the vulnerability.
                     // updated |= applyIfChanged(existingVuln, vuln, Vulnerability::getAliases, existingVuln::setAliases);
 
-                    differ.applyIfChanged("vulnerableVersions", org.dependencytrack.model.Vulnerability::getVulnerableVersions, existingVuln::setVulnerableVersions);
-                    differ.applyIfChanged("patchedVersions", org.dependencytrack.model.Vulnerability::getPatchedVersions, existingVuln::setPatchedVersions);
+                    differ.applyIfChanged("vulnerableVersions", Vulnerability::getVulnerableVersions, existingVuln::setVulnerableVersions);
+                    differ.applyIfChanged("patchedVersions", Vulnerability::getPatchedVersions, existingVuln::setPatchedVersions);
 
                     if (!differ.getDiffs().isEmpty() && LOGGER.isDebugEnabled()) {
                         LOGGER.debug("Vulnerability changed: {}", differ.getDiffs());
