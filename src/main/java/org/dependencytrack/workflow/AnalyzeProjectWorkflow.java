@@ -38,6 +38,7 @@ import org.dependencytrack.workflow.framework.annotation.Workflow;
 import org.dependencytrack.workflow.framework.failure.ActivityFailureException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -84,30 +85,36 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
                         .toList();
 
         final RetryPolicy vulnAnalyzerRetryPolicy = defaultRetryPolicy().withMaxAttempts(6);
-        final var pendingVulnAnalyzerResults = new ArrayList<Awaitable<AnalyzeProjectVulnsResult>>();
+        final var pendingVulnAnalysisResultByAnalyzerName = new HashMap<String, Awaitable<AnalyzeProjectVulnsResult>>();
         for (final String analyzerName : enabledAnalyzerNames) {
             ctx.logger().info("Scheduling vulnerability analysis with {}", analyzerName);
-            pendingVulnAnalyzerResults.add(AnalyzeProjectVulnsActivity.CLIENT.call(
-                    ctx,
-                    AnalyzeProjectVulnsArgs.newBuilder()
-                            .setProject(args.getProject())
-                            .setAnalyzerName(analyzerName)
-                            .build(),
-                    vulnAnalyzerRetryPolicy));
+            final Awaitable<AnalyzeProjectVulnsResult> awaitable =
+                    AnalyzeProjectVulnsActivity.CLIENT.call(
+                            ctx,
+                            AnalyzeProjectVulnsArgs.newBuilder()
+                                    .setProject(args.getProject())
+                                    .setAnalyzerName(analyzerName)
+                                    .build(),
+                            vulnAnalyzerRetryPolicy);
+            pendingVulnAnalysisResultByAnalyzerName.put(analyzerName, awaitable);
         }
 
         final var vulnAnalysisResults = new ArrayList<ProcessProjectVulnAnalysisResultsArgs.Result>();
-        ctx.logger().info("Waiting for results from {} scanners", pendingVulnAnalyzerResults.size());
-        for (final Awaitable<AnalyzeProjectVulnsResult> pendingResult : pendingVulnAnalyzerResults) {
+        ctx.logger().info("Waiting for results from {} analyzers", pendingVulnAnalysisResultByAnalyzerName.size());
+        for (final String analyzerName : enabledAnalyzerNames) {
+            final Awaitable<AnalyzeProjectVulnsResult> pendingResult = pendingVulnAnalysisResultByAnalyzerName.get(analyzerName);
+
             try {
                 pendingResult.await().ifPresent(
                         result -> vulnAnalysisResults.add(
                                 ProcessProjectVulnAnalysisResultsArgs.Result.newBuilder()
+                                        .setAnalyzer(analyzerName)
                                         .setVdrFileMetadata(result.getVdrFileMetadata())
                                         .build()));
             } catch (ActivityFailureException e) {
                 vulnAnalysisResults.add(
                         ProcessProjectVulnAnalysisResultsArgs.Result.newBuilder()
+                                .setAnalyzer(analyzerName)
                                 .setFailureReason(e.getMessage())
                                 .build());
             }

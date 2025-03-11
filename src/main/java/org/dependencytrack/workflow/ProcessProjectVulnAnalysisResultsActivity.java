@@ -19,11 +19,10 @@
 package org.dependencytrack.workflow;
 
 import org.cyclonedx.proto.v1_6.Bom;
-import org.cyclonedx.proto.v1_6.Component;
 import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
 import org.datanucleus.flush.FlushMode;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.dependencytrack.ModelConverterCdxToVuln;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
@@ -37,16 +36,17 @@ import org.dependencytrack.workflow.framework.ActivityContext;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -57,13 +57,23 @@ import java.util.stream.Collectors;
 
 import static org.datanucleus.PropertyNames.PROPERTY_FLUSH_MODE;
 import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Activity(name = "process-project-vuln-analysis-results")
 public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecutor<ProcessProjectVulnAnalysisResultsArgs, Void> {
+
+    public record FindingId(long componentId, String vulnId) {
+    }
+
+    public record FindingAttribution(
+            long componentId,
+            long vulnerabilityId,
+            String analyzerIdentity,
+            Instant attributedOn) {
+    }
 
     public static final ActivityClient<ProcessProjectVulnAnalysisResultsArgs, Void> CLIENT = ActivityClient.of(
             ProcessProjectVulnAnalysisResultsActivity.class,
@@ -126,7 +136,8 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
         //  The difference is that the processor does all this for a single component at a time,
         //  whereas here we'll deal with all components of a project.
 
-        final var vulnsById = new HashMap<String, Set<org.dependencytrack.model.Vulnerability>>();
+        final var analyzersByReportedFindingId = new HashMap<FindingId, Set<String>>();
+        final var reportedVulnsByVulnId = new HashMap<String, Set<org.dependencytrack.model.Vulnerability>>();
         final var vulnIdsByComponentId = new HashMap<Long, Set<String>>();
 
         for (final Map.Entry<String, Bom> entry : vdrByAnalyzerName.entrySet()) {
@@ -134,18 +145,18 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
             final Bom vdr = entry.getValue();
 
             // Group components by their BOM ref for easier lookups later.
-            final Map<String, Component> componentByBomRef = vdr.getComponentsList().stream()
-                    .collect(Collectors.toMap(Component::getBomRef, Function.identity()));
+            final Map<String, org.cyclonedx.proto.v1_6.Component> componentByBomRef = vdr.getComponentsList().stream()
+                    .collect(Collectors.toMap(org.cyclonedx.proto.v1_6.Component::getBomRef, Function.identity()));
 
-            for (final Vulnerability vdrVuln : vdr.getVulnerabilitiesList()) {
-                final org.dependencytrack.model.Vulnerability vuln = ModelConverterCdxToVuln.convert(
+            for (final org.cyclonedx.proto.v1_6.Vulnerability vdrVuln : vdr.getVulnerabilitiesList()) {
+                final Vulnerability vuln = ModelConverterCdxToVuln.convert(
                         /* qm */ null, vdr, vdrVuln, /* isAliasSyncEnabled */ false);
 
-                vulnsById.computeIfAbsent(vuln.getVulnId(), ignored -> new HashSet<>()).add(vuln);
+                reportedVulnsByVulnId.computeIfAbsent(vuln.getVulnId(), ignored -> new HashSet<>()).add(vuln);
 
                 // Restore which components are affected by this vulnerability.
                 for (final VulnerabilityAffects affects : vdrVuln.getAffectsList()) {
-                    final Component affectedComponent = componentByBomRef.get(affects.getRef());
+                    final org.cyclonedx.proto.v1_6.Component affectedComponent = componentByBomRef.get(affects.getRef());
                     if (affectedComponent == null) {
                         LOGGER.warn("No component found for BOM ref {}", affects.getRef());
                         continue;
@@ -162,6 +173,8 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                         continue;
                     }
 
+                    final var findingId = new FindingId(componentId, vuln.getVulnId());
+                    analyzersByReportedFindingId.computeIfAbsent(findingId, ignored -> new HashSet<>()).add(analyzerName);
                     vulnIdsByComponentId.computeIfAbsent(componentId, ignored -> new HashSet<>()).add(vuln.getVulnId());
                 }
             }
@@ -172,154 +185,147 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
         // TODO: Move to DAO class.
         // NB: Batch operations can lead to deadlocks here when multiple threads do it concurrently.
         final var vulnRecordIdByVulnId = new HashMap<String, Long>();
-        for (final Map.Entry<String, Set<org.dependencytrack.model.Vulnerability>> entry : vulnsById.entrySet()) {
+        final var vulnIdByVulnRecordId = new HashMap<Long, String>();
+        for (final Map.Entry<String, Set<Vulnerability>> entry : reportedVulnsByVulnId.entrySet()) {
             // TODO: Pick the "best" among $vulns.
-            final org.dependencytrack.model.Vulnerability vuln = entry.getValue().iterator().next();
+            final Vulnerability vuln = entry.getValue().iterator().next();
 
-            try (final var qm = new QueryManager();
-                 var ignoredMdcVulnId = MDC.putCloseable("vulnId", vuln.getVulnId())) {
-                qm.getPersistenceManager().setProperty(PROPERTY_FLUSH_MODE, FlushMode.MANUAL.name());
-                qm.getPersistenceManager().setProperty(PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
-
-                final org.dependencytrack.model.Vulnerability persistentVuln = qm.callInTransaction(() -> {
-                    LOGGER.debug("Acquiring write lock");
-                    qm.acquireAdvisoryLock("vuln:write:%s:%s".formatted(vuln.getSource(), vuln.getVulnId()));
-
-                    final org.dependencytrack.model.Vulnerability existingVuln;
-                    final javax.jdo.Query<org.dependencytrack.model.Vulnerability> query = qm.getPersistenceManager().newQuery(org.dependencytrack.model.Vulnerability.class);
-                    try {
-                        query.setFilter("vulnId == :vulnId && source == :source");
-                        query.setParameters(vuln.getVulnId(), vuln.getSource());
-                        existingVuln = query.executeUnique();
-                    } finally {
-                        query.closeAll();
-                    }
-
-                    if (existingVuln == null) {
-                        if (org.dependencytrack.model.Vulnerability.Source.INTERNAL.name().equals(vuln.getSource())) {
-                            throw new NoSuchElementException("An internal vulnerability with ID %s does not exist".formatted(vuln.getVulnId()));
-                        }
-
-                        LOGGER.debug("Vulnerability does not exist yet; Creating it");
-                        return qm.persist(vuln);
-                    }
-
-                    if (/* canUpdateVulnerability(existingVuln, scanner) */ true) {
-                        LOGGER.debug("Vulnerability exists; Updating if necessary");
-
-                        final var differ = new PersistenceUtil.Differ<>(existingVuln, vuln);
-                        differ.applyIfChanged("title", org.dependencytrack.model.Vulnerability::getTitle, existingVuln::setTitle);
-                        differ.applyIfChanged("subTitle", org.dependencytrack.model.Vulnerability::getSubTitle, existingVuln::setSubTitle);
-                        differ.applyIfChanged("description", org.dependencytrack.model.Vulnerability::getDescription, existingVuln::setDescription);
-                        differ.applyIfChanged("detail", org.dependencytrack.model.Vulnerability::getDetail, existingVuln::setDetail);
-                        differ.applyIfChanged("recommendation", org.dependencytrack.model.Vulnerability::getRecommendation, existingVuln::setRecommendation);
-                        differ.applyIfChanged("references", org.dependencytrack.model.Vulnerability::getReferences, existingVuln::setReferences);
-                        differ.applyIfChanged("credits", org.dependencytrack.model.Vulnerability::getCredits, existingVuln::setCredits);
-                        differ.applyIfChanged("created", org.dependencytrack.model.Vulnerability::getCreated, existingVuln::setCreated);
-                        differ.applyIfChanged("published", org.dependencytrack.model.Vulnerability::getPublished, existingVuln::setPublished);
-                        differ.applyIfChanged("updated", org.dependencytrack.model.Vulnerability::getUpdated, existingVuln::setUpdated);
-                        differ.applyIfChanged("cwes", org.dependencytrack.model.Vulnerability::getCwes, existingVuln::setCwes);
-                        differ.applyIfChanged("severity", org.dependencytrack.model.Vulnerability::getSeverity, existingVuln::setSeverity);
-                        differ.applyIfChanged("cvssV2BaseScore", org.dependencytrack.model.Vulnerability::getCvssV2BaseScore, existingVuln::setCvssV2BaseScore);
-                        differ.applyIfChanged("cvssV2ImpactSubScore", org.dependencytrack.model.Vulnerability::getCvssV2ImpactSubScore, existingVuln::setCvssV2ImpactSubScore);
-                        differ.applyIfChanged("cvssV2ExploitabilitySubScore", org.dependencytrack.model.Vulnerability::getCvssV2ExploitabilitySubScore, existingVuln::setCvssV2ExploitabilitySubScore);
-                        differ.applyIfChanged("cvssV2Vector", org.dependencytrack.model.Vulnerability::getCvssV2Vector, existingVuln::setCvssV2Vector);
-                        differ.applyIfChanged("cvssv3BaseScore", org.dependencytrack.model.Vulnerability::getCvssV3BaseScore, existingVuln::setCvssV3BaseScore);
-                        differ.applyIfChanged("cvssV3ImpactSubScore", org.dependencytrack.model.Vulnerability::getCvssV3ImpactSubScore, existingVuln::setCvssV3ImpactSubScore);
-                        differ.applyIfChanged("cvssV3ExploitabilitySubScore", org.dependencytrack.model.Vulnerability::getCvssV3ExploitabilitySubScore, existingVuln::setCvssV3ExploitabilitySubScore);
-                        differ.applyIfChanged("cvssV3Vector", org.dependencytrack.model.Vulnerability::getCvssV3Vector, existingVuln::setCvssV3Vector);
-                        differ.applyIfChanged("owaspRRLikelihoodScore", org.dependencytrack.model.Vulnerability::getOwaspRRLikelihoodScore, existingVuln::setOwaspRRLikelihoodScore);
-                        differ.applyIfChanged("owaspRRTechnicalImpactScore", org.dependencytrack.model.Vulnerability::getOwaspRRTechnicalImpactScore, existingVuln::setOwaspRRTechnicalImpactScore);
-                        differ.applyIfChanged("owaspRRBusinessImpactScore", org.dependencytrack.model.Vulnerability::getOwaspRRBusinessImpactScore, existingVuln::setOwaspRRBusinessImpactScore);
-                        differ.applyIfChanged("owaspRRVector", org.dependencytrack.model.Vulnerability::getOwaspRRVector, existingVuln::setOwaspRRVector);
-                        // Aliases of existingVuln will always be null, as they'd have to be fetched separately.
-                        // Synchronization of aliases is performed after synchronizing the vulnerability.
-                        // updated |= applyIfChanged(existingVuln, vuln, Vulnerability::getAliases, existingVuln::setAliases);
-
-                        differ.applyIfChanged("vulnerableVersions", org.dependencytrack.model.Vulnerability::getVulnerableVersions, existingVuln::setVulnerableVersions);
-                        differ.applyIfChanged("patchedVersions", org.dependencytrack.model.Vulnerability::getPatchedVersions, existingVuln::setPatchedVersions);
-
-                        if (!differ.getDiffs().isEmpty() && LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("Vulnerability changed: {}", differ.getDiffs());
-                        }
-                    }
-
-                    return existingVuln;
-                });
-
-                vulnRecordIdByVulnId.put(entry.getKey(), persistentVuln.getId());
-            }
+            final Vulnerability syncedVuln = syncVuln(vuln);
+            vulnRecordIdByVulnId.put(syncedVuln.getVulnId(), syncedVuln.getId());
+            vulnIdByVulnRecordId.put(syncedVuln.getId(), syncedVuln.getVulnId());
         }
 
         LOGGER.debug("Created or updated {} vulns", vulnRecordIdByVulnId.size());
 
-        final int createdFindingsCount = inJdbiTransaction(handle -> {
-            final var componentIds = new ArrayList<Long>();
-            final var vulnRecordIds = new ArrayList<Long>();
+        // NB: Processing findings cannot be done with DataNucleus.
+        // In order to associate a component with a vulnerability, DN would need to
+        // load *all* components already associated with the vulnerability into memory.
 
-            for (final Map.Entry<Long, Set<String>> entry : vulnIdsByComponentId.entrySet()) {
-                for (final String vulnId : entry.getValue()) {
-                    componentIds.add(entry.getKey());
-                    vulnRecordIds.add(vulnRecordIdByVulnId.get(vulnId));
+        useJdbiTransaction(handle -> {
+            // Fetch all existing finding attributions for this project.
+            // We need them to determine which findings to create, which to suppress, and which leave untouched.
+            final Query attributionsQuery = handle.createQuery("""
+                    SELECT "COMPONENT_ID"
+                         , "VULNERABILITY_ID"
+                         , "ANALYZERIDENTITY"
+                         , "ATTRIBUTED_ON"
+                      FROM "FINDINGATTRIBUTION"
+                     WHERE "PROJECT_ID" = :projectId
+                    """);
+
+            final Map<FindingId, FindingAttribution> attributionByFindingId = attributionsQuery
+                    .bind("projectId", projectId)
+                    .map(ConstructorMapper.of(FindingAttribution.class))
+                    .list()
+                    .stream()
+                    .collect(Collectors.toMap(
+                            attribution -> new FindingId(
+                                    attribution.componentId(),
+                                    vulnIdByVulnRecordId.get(attribution.vulnerabilityId())),
+                            Function.identity()));
+
+            final var findingIds = new HashSet<FindingId>();
+            findingIds.addAll(analyzersByReportedFindingId.keySet());
+            findingIds.addAll(attributionByFindingId.keySet());
+
+            final var analyzerByFindingIdToCreate = new HashMap<FindingId, String>();
+            final var findingIdsToSuppress = new HashSet<FindingId>();
+
+            for (final FindingId findingId : findingIds) {
+                final Set<String> reportingAnalyzers = analyzersByReportedFindingId.get(findingId);
+                final FindingAttribution existingAttribution = attributionByFindingId.get(findingId);
+
+                if (reportingAnalyzers == null || reportingAnalyzers.isEmpty()) {
+                    if (failedAnalyzers.contains(existingAttribution.analyzerIdentity())) {
+                        LOGGER.warn("""
+                                Finding {} was previously reported by {}, but is no longer reported \
+                                by any analyzer; {} was failed its analysis, will not suppress\
+                                """, findingId, existingAttribution.analyzerIdentity(), existingAttribution.analyzerIdentity());
+                    } else {
+                        LOGGER.info("""
+                                Finding {} was reported by {} before, but no longer reported \
+                                by any analyzer and will be suppressed""", findingId, existingAttribution.analyzerIdentity());
+                        findingIdsToSuppress.add(findingId);
+                    }
+                } else if (existingAttribution == null) {
+                    // TODO: Any better strategy than choosing the first alphabetically?
+                    final String analyzer = reportingAnalyzers.stream().sorted().findFirst().get();
+
+                    LOGGER.debug("Finding {} was not reported before and will be attributed to {}", findingId, analyzer);
+                    analyzerByFindingIdToCreate.put(findingId, analyzer);
+                } else {
+                    // TODO: Handle findings that were previously auto-suppressed but now reported again.
+
+                    LOGGER.debug(
+                            "Finding {} was reported before by {} and is still reported by {}",
+                            findingId, existingAttribution.analyzerIdentity(), reportingAnalyzers);
                 }
             }
 
-            final Update createFindingsQuery = handle.createUpdate("""
-                    INSERT INTO "COMPONENTS_VULNERABILITIES"("COMPONENT_ID", "VULNERABILITY_ID")
-                    SELECT * FROM UNNEST(:componentIds, :vulnRecordIds) ORDER BY 1, 2
-                    ON CONFLICT("COMPONENT_ID", "VULNERABILITY_ID") DO NOTHING
-                    RETURNING "COMPONENT_ID", "VULNERABILITY_ID"
-                    """);
+            if (!analyzerByFindingIdToCreate.isEmpty()) {
+                final var findingComponentIds = new ArrayList<Long>();
+                final var findingVulnRecordIds = new ArrayList<Long>();
+                final var analyzers = new ArrayList<String>();
+                final var attributionUuids = new ArrayList<UUID>();
 
-            final List<Map<String, Long>> createdFindings = createFindingsQuery
-                    .bindArray("componentIds", Long.class, componentIds)
-                    .bindArray("vulnRecordIds", Long.class, vulnRecordIds)
-                    .executeAndReturnGeneratedKeys()
-                    .mapToMap(Long.class)
-                    .list();
-            if (createdFindings.isEmpty()) {
-                return 0;
+                for (final Map.Entry<FindingId, String> entry : analyzerByFindingIdToCreate.entrySet()) {
+                    final FindingId findingId = entry.getKey();
+                    final String analyzer = entry.getValue();
+
+                    findingComponentIds.add(findingId.componentId());
+                    findingVulnRecordIds.add(vulnRecordIdByVulnId.get(findingId.vulnId()));
+                    analyzers.add(analyzer);
+                    attributionUuids.add(UUID.randomUUID());
+                }
+
+                final Update createFindingsQuery = handle.createUpdate("""
+                        WITH
+                        finding as (
+                          SELECT *
+                            FROM UNNEST(:componentIds, :vulnRecordIds, :analyzers, :attributionUuids) AS t(component_id, vulnerability_id, analyzer, attribution_uuid)
+                           ORDER BY component_id, vulnerability_id
+                        ),
+                        created_finding AS (
+                          INSERT INTO "COMPONENTS_VULNERABILITIES"("COMPONENT_ID", "VULNERABILITY_ID")
+                          SELECT component_id, vulnerability_id FROM finding
+                          ON CONFLICT ("COMPONENT_ID", "VULNERABILITY_ID") DO NOTHING
+                          RETURNING "COMPONENT_ID", "VULNERABILITY_ID"
+                        )
+                        INSERT INTO "FINDINGATTRIBUTION" (
+                          "PROJECT_ID"
+                        , "COMPONENT_ID"
+                        , "VULNERABILITY_ID"
+                        , "ANALYZERIDENTITY"
+                        , "ATTRIBUTED_ON"
+                        , "UUID"
+                        )
+                        SELECT :projectId
+                             , finding.component_id
+                             , finding.vulnerability_id
+                             , analyzer
+                             , NOW()
+                             , attribution_uuid
+                          FROM finding
+                         INNER JOIN created_finding
+                            on created_finding."COMPONENT_ID" = finding.component_id
+                           and created_finding."VULNERABILITY_ID" = finding.vulnerability_id
+                        """);
+
+                final int findingsCreated = createFindingsQuery
+                        .bindArray("componentIds", Long.class, findingComponentIds)
+                        .bindArray("vulnRecordIds", Long.class, findingVulnRecordIds)
+                        .bindArray("analyzers", String.class, analyzers)
+                        .bindArray("attributionUuids", UUID.class, attributionUuids)
+                        .bind("projectId", projectId)
+                        .execute();
+                LOGGER.debug("Created {} findings", findingsCreated);
             }
 
-            final var attributionComponentIds = new ArrayList<Long>(createdFindings.size());
-            final var attributionVulnRecordIds = new ArrayList<Long>(createdFindings.size());
-            final var attributionUuids = new ArrayList<UUID>(createdFindings.size());
-            for (final Map<String, Long> createdFinding : createdFindings) {
-                attributionComponentIds.add(createdFinding.get("component_id"));
-                attributionVulnRecordIds.add(createdFinding.get("vulnerability_id"));
-                attributionUuids.add(UUID.randomUUID());
+            if (!findingIdsToSuppress.isEmpty()) {
+                // TODO: We need a way to mark *why* a finding was suppressed.
+                LOGGER.warn("Suppressing {}", findingIdsToSuppress);
             }
-
-            final Update createAttributionsQuery = handle.createUpdate("""
-                    INSERT INTO "FINDINGATTRIBUTION" (
-                      "PROJECT_ID"
-                    , "COMPONENT_ID"
-                    , "VULNERABILITY_ID"
-                    , "ANALYZERIDENTITY"
-                    , "ATTRIBUTED_ON"
-                    , "UUID"
-                    )
-                    SELECT :projectId
-                         , "COMPONENT_ID"
-                         , "VULNERABILITY_ID"
-                         , 'INTERNAL_ANALYZER'
-                         , NOW()
-                         , "UUID"
-                      FROM UNNEST(:componentIds, :vulnRecordIds, :uuids) AS t("COMPONENT_ID", "VULNERABILITY_ID", "UUID") ORDER BY 1, 2
-                    ON CONFLICT ("COMPONENT_ID", "VULNERABILITY_ID") DO NOTHING
-                    """);
-
-            final int createdAttributions = createAttributionsQuery
-                    .bindArray("componentIds", Long.class, attributionComponentIds)
-                    .bindArray("vulnRecordIds", Long.class, attributionVulnRecordIds)
-                    .bindArray("uuids", UUID.class, attributionUuids)
-                    .bind("projectId", projectId)
-                    .execute();
-
-            return createdFindings.size();
         });
-
-        LOGGER.debug("Created {} findings", createdFindingsCount);
 
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             for (final FileMetadata fileMetadata : resultsFileMetadataSet) {
@@ -345,6 +351,80 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                     .findOne()
                     .orElse(null);
         });
+    }
+
+    private Vulnerability syncVuln(final Vulnerability vuln) {
+        try (final var qm = new QueryManager();
+             var ignoredMdcVulnId = MDC.putCloseable("vulnId", vuln.getVulnId())) {
+            qm.getPersistenceManager().setProperty(PROPERTY_FLUSH_MODE, FlushMode.MANUAL.name());
+            qm.getPersistenceManager().setProperty(PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
+
+            return qm.callInTransaction(() -> {
+                LOGGER.debug("Acquiring write lock");
+                qm.acquireAdvisoryLock("vuln:write:%s:%s".formatted(vuln.getSource(), vuln.getVulnId()));
+
+                final org.dependencytrack.model.Vulnerability existingVuln;
+                final javax.jdo.Query<org.dependencytrack.model.Vulnerability> query = qm.getPersistenceManager().newQuery(org.dependencytrack.model.Vulnerability.class);
+                try {
+                    query.setFilter("vulnId == :vulnId && source == :source");
+                    query.setParameters(vuln.getVulnId(), vuln.getSource());
+                    existingVuln = query.executeUnique();
+                } finally {
+                    query.closeAll();
+                }
+
+                if (existingVuln == null) {
+                    if (org.dependencytrack.model.Vulnerability.Source.INTERNAL.name().equals(vuln.getSource())) {
+                        throw new NoSuchElementException("An internal vulnerability with ID %s does not exist".formatted(vuln.getVulnId()));
+                    }
+
+                    LOGGER.debug("Vulnerability does not exist yet; Creating it");
+                    return qm.persist(vuln);
+                }
+
+                if (/* canUpdateVulnerability(existingVuln, scanner) */ true) {
+                    LOGGER.debug("Vulnerability exists; Updating if necessary");
+
+                    final var differ = new PersistenceUtil.Differ<>(existingVuln, vuln);
+                    differ.applyIfChanged("title", org.dependencytrack.model.Vulnerability::getTitle, existingVuln::setTitle);
+                    differ.applyIfChanged("subTitle", org.dependencytrack.model.Vulnerability::getSubTitle, existingVuln::setSubTitle);
+                    differ.applyIfChanged("description", org.dependencytrack.model.Vulnerability::getDescription, existingVuln::setDescription);
+                    differ.applyIfChanged("detail", org.dependencytrack.model.Vulnerability::getDetail, existingVuln::setDetail);
+                    differ.applyIfChanged("recommendation", org.dependencytrack.model.Vulnerability::getRecommendation, existingVuln::setRecommendation);
+                    differ.applyIfChanged("references", org.dependencytrack.model.Vulnerability::getReferences, existingVuln::setReferences);
+                    differ.applyIfChanged("credits", org.dependencytrack.model.Vulnerability::getCredits, existingVuln::setCredits);
+                    differ.applyIfChanged("created", org.dependencytrack.model.Vulnerability::getCreated, existingVuln::setCreated);
+                    differ.applyIfChanged("published", org.dependencytrack.model.Vulnerability::getPublished, existingVuln::setPublished);
+                    differ.applyIfChanged("updated", org.dependencytrack.model.Vulnerability::getUpdated, existingVuln::setUpdated);
+                    differ.applyIfChanged("cwes", org.dependencytrack.model.Vulnerability::getCwes, existingVuln::setCwes);
+                    differ.applyIfChanged("severity", org.dependencytrack.model.Vulnerability::getSeverity, existingVuln::setSeverity);
+                    differ.applyIfChanged("cvssV2BaseScore", org.dependencytrack.model.Vulnerability::getCvssV2BaseScore, existingVuln::setCvssV2BaseScore);
+                    differ.applyIfChanged("cvssV2ImpactSubScore", org.dependencytrack.model.Vulnerability::getCvssV2ImpactSubScore, existingVuln::setCvssV2ImpactSubScore);
+                    differ.applyIfChanged("cvssV2ExploitabilitySubScore", org.dependencytrack.model.Vulnerability::getCvssV2ExploitabilitySubScore, existingVuln::setCvssV2ExploitabilitySubScore);
+                    differ.applyIfChanged("cvssV2Vector", org.dependencytrack.model.Vulnerability::getCvssV2Vector, existingVuln::setCvssV2Vector);
+                    differ.applyIfChanged("cvssv3BaseScore", org.dependencytrack.model.Vulnerability::getCvssV3BaseScore, existingVuln::setCvssV3BaseScore);
+                    differ.applyIfChanged("cvssV3ImpactSubScore", org.dependencytrack.model.Vulnerability::getCvssV3ImpactSubScore, existingVuln::setCvssV3ImpactSubScore);
+                    differ.applyIfChanged("cvssV3ExploitabilitySubScore", org.dependencytrack.model.Vulnerability::getCvssV3ExploitabilitySubScore, existingVuln::setCvssV3ExploitabilitySubScore);
+                    differ.applyIfChanged("cvssV3Vector", org.dependencytrack.model.Vulnerability::getCvssV3Vector, existingVuln::setCvssV3Vector);
+                    differ.applyIfChanged("owaspRRLikelihoodScore", org.dependencytrack.model.Vulnerability::getOwaspRRLikelihoodScore, existingVuln::setOwaspRRLikelihoodScore);
+                    differ.applyIfChanged("owaspRRTechnicalImpactScore", org.dependencytrack.model.Vulnerability::getOwaspRRTechnicalImpactScore, existingVuln::setOwaspRRTechnicalImpactScore);
+                    differ.applyIfChanged("owaspRRBusinessImpactScore", org.dependencytrack.model.Vulnerability::getOwaspRRBusinessImpactScore, existingVuln::setOwaspRRBusinessImpactScore);
+                    differ.applyIfChanged("owaspRRVector", org.dependencytrack.model.Vulnerability::getOwaspRRVector, existingVuln::setOwaspRRVector);
+                    // Aliases of existingVuln will always be null, as they'd have to be fetched separately.
+                    // Synchronization of aliases is performed after synchronizing the vulnerability.
+                    // updated |= applyIfChanged(existingVuln, vuln, Vulnerability::getAliases, existingVuln::setAliases);
+
+                    differ.applyIfChanged("vulnerableVersions", org.dependencytrack.model.Vulnerability::getVulnerableVersions, existingVuln::setVulnerableVersions);
+                    differ.applyIfChanged("patchedVersions", org.dependencytrack.model.Vulnerability::getPatchedVersions, existingVuln::setPatchedVersions);
+
+                    if (!differ.getDiffs().isEmpty() && LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Vulnerability changed: {}", differ.getDiffs());
+                    }
+                }
+
+                return existingVuln;
+            });
+        }
     }
 
 }
