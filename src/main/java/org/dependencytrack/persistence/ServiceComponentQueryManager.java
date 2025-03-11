@@ -73,17 +73,6 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
     }
 
     /**
-     * Returns a list of all service components.
-     * This method if designed NOT to provide paginated results.
-     * @return a List of ServiceComponent objects
-     */
-    public List<ServiceComponent> getAllServiceComponents() {
-        final Query<ServiceComponent> query = pm.newQuery(ServiceComponent.class);
-        query.setOrdering("id asc");
-        return query.executeList();
-    }
-
-    /**
      * Returns a List of all ServiceComponent for the specified Project.
      * This method if designed NOT to provide paginated results.
      * @param project the Project to retrieve dependencies of
@@ -95,42 +84,6 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
         query.getFetchPlan().setMaxFetchDepth(2);
         query.setOrdering("name asc");
         return (List<ServiceComponent>)query.execute(project);
-    }
-
-    /**
-     * Returns a list of all ServiceComponents defined in the datastore.
-     * @return a List of ServiceComponents
-     */
-    public PaginatedResult getServiceComponents() {
-        return getServiceComponents(false);
-    }
-
-    /**
-     * Returns a list of all ServiceComponents defined in the datastore.
-     * @return a List of ServiceComponents
-     */
-    public PaginatedResult getServiceComponents(final boolean includeMetrics) {
-        final PaginatedResult result;
-        final Query<ServiceComponent> query = pm.newQuery(ServiceComponent.class);
-        if (orderBy == null) {
-            query.setOrdering("name asc, version desc");
-        }
-        if (filter != null) {
-            query.setFilter("name.toLowerCase().matches(:name)");
-            final String filterString = ".*" + filter.toLowerCase() + ".*";
-            result = execute(query, filterString);
-        } else {
-            result = execute(query);
-        }
-        if (includeMetrics) {
-            // TODO: Add metrics
-            // Populate each Component object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            //for (ServiceComponent service : result.getList(ServiceComponent.class)) {
-            //    service.setMetrics(getMostRecentDependencyMetrics(service));
-            //}
-        }
-        return result;
     }
 
     /**
