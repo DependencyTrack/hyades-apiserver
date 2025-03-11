@@ -23,7 +23,6 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
 import com.github.packageurl.PackageURL;
-import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.GroupedFinding;
@@ -31,6 +30,7 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -38,7 +38,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class FindingsSearchQueryManager extends QueryManager implements IQueryManager {
 
@@ -111,22 +112,20 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
             } else {
                 queryFilter.append(" AND ");
             }
-            queryFilter.append("(\"ANALYSIS\".\"SUPPRESSED\" = :showSuppressed OR \"ANALYSIS\".\"SUPPRESSED\" IS NULL)");
-            params.put("showSuppressed", false);
+            queryFilter.append("(\"ANALYSIS\".\"SUPPRESSED\" = 'false' OR \"ANALYSIS\".\"SUPPRESSED\" IS NULL)");
         }
         processFilters(filters, queryFilter, params, false);
-        final Query<Object[]> query = pm.newQuery(Query.SQL, Finding.QUERY_ALL_FINDINGS + queryFilter + (this.orderBy != null ? " ORDER BY " + sortingAttributes.get(this.orderBy) + " " + (this.orderDirection == OrderDirection.DESCENDING ? " DESC" : "ASC") : ""));
+        queryFilter.append(this.orderBy != null ? " ORDER BY " + sortingAttributes.get(this.orderBy) + " " + (this.orderDirection == OrderDirection.DESCENDING ? " DESC" : "ASC") : "");
+        final List<Finding> findings = withJdbiHandle(handle ->
+                handle.attach(FindingDao.class).getFindings(String.valueOf(queryFilter)));
+
         PaginatedResult result = new PaginatedResult();
-        query.setNamedParameters(params);
-        final List<Object[]> totalList = query.executeList();
-        result.setTotal(totalList.size());
-        final List<Object[]> list = totalList.subList(this.pagination.getOffset(), Math.min(this.pagination.getOffset() + this.pagination.getLimit(), totalList.size()));
-        final List<Finding> findings = new ArrayList<>();
-        for (final Object[] o : list) {
-            final Finding finding = new Finding((UUID) o[32], o);
+        result.setTotal(findings.size());
+
+        final List<Finding> list = findings.subList(this.pagination.getOffset(), Math.min(this.pagination.getOffset() + this.pagination.getLimit(), findings.size()));
+        for (final Finding finding : list) {
             final Component component = getObjectByUuid(Component.class, finding.getComponent().get("uuid").toString());
             final Vulnerability vulnerability = getObjectByUuid(Vulnerability.class, finding.getVulnerability().get("uuid").toString());
-            final Analysis analysis = getAnalysis(component, vulnerability);
             final List<VulnerabilityAlias> aliases = detach(getVulnerabilityAliases(vulnerability));
             aliases.forEach(alias -> alias.setUuid(null));
             finding.getVulnerability().put("aliases", aliases);
@@ -144,7 +143,6 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
                 }
 
             }
-            findings.add(finding);
         }
         result.setObjects(findings);
         return result;

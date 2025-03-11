@@ -33,17 +33,19 @@ import org.dependencytrack.model.VulnIdAndSource;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.RepositoryQueryManager.RepositoryMetaComponentSearch;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.util.PurlUtil;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class FindingsQueryManager extends QueryManager implements IQueryManager {
 
@@ -343,22 +345,8 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
      */
     @SuppressWarnings("unchecked")
     public List<Finding> getFindings(Project project, boolean includeSuppressed) {
-        final Query<Object[]> query = pm.newQuery(Query.SQL, Finding.QUERY);
-        query.setNamedParameters(Map.ofEntries(
-                Map.entry("projectId", project.getId()),
-                Map.entry("includeSuppressed", includeSuppressed)
-        ));
-        final List<Object[]> queryResultRows;
-        try {
-            queryResultRows = new ArrayList<>(query.executeList());
-        } finally {
-            query.closeAll();
-        }
-
-        final List<Finding> findings = queryResultRows.stream()
-                .map(row -> new Finding(project.getUuid(), row))
-                .toList();
-
+        final List<Finding> findings = withJdbiHandle(handle ->
+                handle.attach(FindingDao.class).getFindings(project.getId(), includeSuppressed));
         final Map<VulnIdAndSource, List<Finding>> findingsByVulnIdAndSource = findings.stream()
                 .collect(Collectors.groupingBy(
                         finding -> new VulnIdAndSource(

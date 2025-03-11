@@ -20,9 +20,13 @@ package org.dependencytrack.integrations;
 
 import alpine.Config;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.Finding;
+import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
@@ -67,15 +71,58 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         Project project = qm.createProject(
                 "Test", "Sample project", "1.0", null, null, null, null, false);
 
-        Finding findingWithoutAlias = new Finding(project.getUuid(), "component-uuid-1", "component-name-1", "component-group",
-                "component-version", "component-purl", "component-cpe", "vuln-uuid", Vulnerability.Source.GITHUB, "vuln-vulnId-1", "vuln-title",
-                "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.CRITICAL, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-                "owasp-vector", BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.OSSINDEX_ANALYZER, new Date(), null, null, AnalysisState.NOT_AFFECTED, true);
+        var component = new Component();
+        component.setProject(project);
+        component.setName("component-name-1");
+        component.setVersion("component-version");
+        qm.createComponent(component, false);
 
-        Finding findingWithAlias = new Finding(project.getUuid(), "component-uuid-2", "component-name-2", "component-group",
-                "component-version", "component-purl", "component-cpe", "vuln-uuid", Vulnerability.Source.NVD, "vuln-vulnId-2", "vuln-title",
-                "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.HIGH, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-                "owasp-vector", BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.INTERNAL_ANALYZER, new Date(), null, null, AnalysisState.NOT_AFFECTED, true);
+        var vulnerability = new Vulnerability();
+        vulnerability.setVulnId("vuln-vulnId-1");
+        vulnerability.setSource(Vulnerability.Source.GITHUB);
+        vulnerability.setSeverity(Severity.CRITICAL);
+        qm.createVulnerability(vulnerability, false);
+
+        var epss = new Epss();
+        epss.setCve("vuln-vulnId-1");
+        epss.setScore(BigDecimal.valueOf(0.5));
+        epss.setPercentile(BigDecimal.valueOf(0.9));
+        qm.persist(epss);
+
+        var attribution = new FindingAttribution();
+        attribution.setComponent(component);
+        attribution.setVulnerability(vulnerability);
+        attribution.setAnalyzerIdentity(AnalyzerIdentity.OSSINDEX_ANALYZER);
+        attribution.setAttributedOn(new Date());
+        qm.persist(attribution);
+
+        var analysis = new Analysis();
+        analysis.setVulnerability(vulnerability);
+        analysis.setAnalysisState(AnalysisState.NOT_AFFECTED);
+        analysis.setSuppressed(true);
+        qm.persist(analysis);
+
+        Finding findingWithoutAlias = new Finding(project, component, vulnerability, epss, analysis, attribution);
+
+        component.setName("component-name-2");
+        qm.persist(component);
+
+        vulnerability.setVulnId("vuln-vulnId-2");
+        vulnerability.setSource(Vulnerability.Source.NVD);
+        vulnerability.setSeverity(Severity.HIGH);
+        qm.persist(vulnerability);
+
+        epss.setCve("vuln-vulnId-2");
+        epss.setScore(BigDecimal.valueOf(0.5));
+        epss.setPercentile(BigDecimal.valueOf(0.9));
+        qm.persist(epss);
+
+        attribution.setAnalyzerIdentity(AnalyzerIdentity.INTERNAL_ANALYZER);
+        attribution.setComponent(component);
+        attribution.setVulnerability(vulnerability);
+        qm.persist(attribution);
+
+        Finding findingWithAlias = new Finding(project, component, vulnerability, epss, analysis, attribution);
 
         var alias = new VulnerabilityAlias();
         alias.setCveId("someCveId");
