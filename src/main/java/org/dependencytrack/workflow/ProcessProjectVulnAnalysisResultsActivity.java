@@ -26,12 +26,15 @@ import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectVulnAnalysisResultsArgs;
+import org.dependencytrack.proto.workflow.payload.v1alpha1.Project;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityContext;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +51,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
@@ -65,7 +69,11 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
     public Optional<Void> execute(final ActivityContext<ProcessProjectVulnAnalysisResultsArgs> ctx) throws Exception {
         final ProcessProjectVulnAnalysisResultsArgs args = ctx.argument().orElseThrow();
 
-        // TODO: Check if project still exists.
+        final Long projectId = getProjectId(args.getProject());
+        if (projectId == null) {
+            throw new ApplicationFailureException("Project with UUID %s does not exist".formatted(
+                    args.getProject().getUuid()), null, true);
+        }
 
         final var resultsFileMetadataSet = new HashSet<FileMetadata>(args.getResultsCount());
         final var vdrByAnalyzerName = new HashMap<String, Bom>(args.getResultsCount());
@@ -154,41 +162,51 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
         // TODO: Filter out components that no longer exist?
 
         // TODO: Move to DAO class.
-        // TODO: This can lead to deadlocks when multiple threads do batch inserts concurrently.
-        //  Since activities will be retried automatically, it's not a big issue, but still sub-optimal.
-        final Map<String, Long> vulnRecordIdByVulnId = inJdbiTransaction(handle -> {
-            final var vulnIds = new ArrayList<String>(vulnsById.size());
-            final var vulnSources = new ArrayList<String>(vulnsById.size());
-            final var uuids = new ArrayList<UUID>(vulnsById.size());
-            for (final Map.Entry<String, Set<org.dependencytrack.model.Vulnerability>> entry : vulnsById.entrySet()) {
-                final org.dependencytrack.model.Vulnerability vuln = entry.getValue().iterator().next();
+        // NB: Batch operations can lead to deadlocks here when multiple threads do it concurrently.
+        final var vulnRecordIdByVulnId = new HashMap<String, Long>();
+        for (final Map.Entry<String, Set<org.dependencytrack.model.Vulnerability>> entry : vulnsById.entrySet()) {
+            final org.dependencytrack.model.Vulnerability vuln = entry.getValue().iterator().next();
 
-                // TODO: Pick the "best" among $vulns.
+            // TODO: Pick the "best" among $vulns.
 
-                vulnIds.add(vuln.getVulnId());
-                vulnSources.add(vuln.getSource());
-                uuids.add(UUID.randomUUID());
-            }
+            final long vulnRecordId = inJdbiTransaction(handle -> {
+                acquireAdvisoryLockForVuln(handle, vuln.getVulnId());
 
-            final Update update = handle.createUpdate("""
-                    INSERT INTO "VULNERABILITY"("VULNID", "SOURCE", "UUID")
-                    SELECT * FROM UNNEST(:vulnIds, :vulnSources, :uuids) ORDER BY 1, 2
-                    ON CONFLICT("VULNID", "SOURCE") DO UPDATE SET "VULNID" = EXCLUDED."VULNID"
-                    RETURNING "ID", "VULNID"
-                    """);
+                // TODO: Fetch entire vuln record, compare, and update if necessary.
+                final Query vulnQuery = handle.createQuery("""
+                        SELECT "ID"
+                          FROM "VULNERABILITY"
+                         WHERE "VULNID" = :vulnId
+                           AND "SOURCE" = :source
+                        """);
 
-            return update
-                    .bindArray("vulnIds", String.class, vulnIds)
-                    .bindArray("vulnSources", String.class, vulnSources)
-                    .bindArray("uuids", UUID.class, uuids)
-                    .setMapKeyColumn("VULNID")
-                    .setMapValueColumn("ID")
-                    .executeAndReturnGeneratedKeys()
-                    .map(rs -> Map.entry(rs.getColumn("VULNID", String.class), rs.getColumn("ID", Long.class)))
-                    .list()
-                    .stream()
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        });
+                final Long id = vulnQuery
+                        .bind("vulnId", vuln.getVulnId())
+                        .bind("source", vuln.getSource())
+                        .mapTo(Long.class)
+                        .findOne()
+                        .orElse(null);
+                if (id != null) {
+                    return id;
+                }
+
+                final Update update = handle.createUpdate("""
+                        INSERT INTO "VULNERABILITY"("VULNID", "SOURCE", "UUID")
+                        VALUES (:vulnId, :source, :uuid)
+                        RETURNING "ID"
+                        """);
+
+                return update
+                        .bind("vulnId", vuln.getVulnId())
+                        .bind("source", vuln.getSource())
+                        .bind("uuid", UUID.randomUUID())
+                        .executeAndReturnGeneratedKeys()
+                        .mapTo(Long.class)
+                        .one();
+            });
+
+            vulnRecordIdByVulnId.put(entry.getKey(), vulnRecordId);
+        }
 
         LOGGER.debug("Created or updated {} vulns", vulnRecordIdByVulnId.size());
 
@@ -238,7 +256,7 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                     , "ATTRIBUTED_ON"
                     , "UUID"
                     )
-                    SELECT (SELECT "ID" FROM "PROJECT" WHERE "UUID" = :projectUuid)
+                    SELECT :projectId
                          , "COMPONENT_ID"
                          , "VULNERABILITY_ID"
                          , 'INTERNAL_ANALYZER'
@@ -252,7 +270,7 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                     .bindArray("componentIds", Long.class, attributionComponentIds)
                     .bindArray("vulnRecordIds", Long.class, attributionVulnRecordIds)
                     .bindArray("uuids", UUID.class, attributionUuids)
-                    .bind("projectUuid", UUID.fromString(args.getProject().getUuid()))
+                    .bind("projectId", projectId)
                     .execute();
 
             return createdFindings.size();
@@ -268,6 +286,34 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
         }
 
         return Optional.empty();
+    }
+
+    private Long getProjectId(final Project project) {
+        return withJdbiHandle(handle -> {
+            final Query query = handle.createQuery("""
+                    SELECT "ID"
+                     FROM "PROJECT"
+                    WHERE "UUID" = CAST(:projectUuid AS UUID)
+                    """);
+
+            return query
+                    .bind("projectUuid", project.getUuid())
+                    .mapTo(Long.class)
+                    .findOne()
+                    .orElse(null);
+        });
+    }
+
+    private void acquireAdvisoryLockForVuln(final Handle jdbiHandle, final String vulnId) {
+        if (!jdbiHandle.isInTransaction()) {
+            throw new IllegalStateException();
+        }
+
+        jdbiHandle
+                .createUpdate("SELECT PG_ADVISORY_XACT_LOCK(:lockId)")
+                .setQueryTimeout(30 /* seconds */)
+                .bind("lockId", "%s::%s".formatted(getClass().getName(), vulnId).hashCode())
+                .execute();
     }
 
 }

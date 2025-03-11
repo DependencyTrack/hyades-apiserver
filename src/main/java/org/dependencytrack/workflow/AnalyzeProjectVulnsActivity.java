@@ -79,7 +79,7 @@ public class AnalyzeProjectVulnsActivity implements ActivityExecutor<AnalyzeProj
 
         final FileMetadata vdrFileMetadata;
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            final String fileName = "analysis/%d_%s.vdr.proto".formatted(Instant.now().toEpochMilli(), projectUuid);
+            final String fileName = "analysis/%d_%s_%s.vdr.proto".formatted(Instant.now().toEpochMilli(), projectUuid, analyzer.name());
             final String mediaType = "application/x-protobuf; type=" + vdr.getDescriptorForType().getFullName();
             vdrFileMetadata = fileStorage.store(fileName, mediaType, vdr.toByteArray());
         }
