@@ -1975,4 +1975,15 @@ public class QueryManager extends AlpineQueryManager {
 
         return clauseTemplate.formatted(pagination.getOffset(), pagination.getLimit());
     }
+
+    public void acquireAdvisoryLock(final String lockId) {
+        if (!pm.currentTransaction().isActive()) {
+            throw new IllegalStateException("Must be in active transaction to acquire advisory lock");
+        }
+
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ "SELECT PG_ADVISORY_XACT_LOCK(?)");
+        query.setDatastoreReadTimeoutMillis(30_000);
+        query.execute(lockId.hashCode());
+    }
+
 }
