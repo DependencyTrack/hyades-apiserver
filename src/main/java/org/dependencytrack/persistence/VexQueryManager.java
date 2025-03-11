@@ -21,10 +21,9 @@ package org.dependencytrack.persistence;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vex;
+
 import javax.jdo.PersistenceManager;
-import javax.jdo.Query;
 import java.util.Date;
-import java.util.List;
 
 final class VexQueryManager extends QueryManager implements IQueryManager {
 
@@ -62,23 +61,4 @@ final class VexQueryManager extends QueryManager implements IQueryManager {
         return persist(vex);
     }
 
-    /**
-     * Returns a list of all Vex for the specified Project.
-     * @param project the Project to retrieve vex for
-     * @return a List of Vex
-     */
-    @SuppressWarnings("unchecked")
-    public List<Vex> getAllVexs(Project project) {
-        final Query<Vex> query = pm.newQuery(Vex.class, "project == :project");
-        return (List<Vex>) query.execute(project);
-    }
-
-    /**
-     * Deletes vexs belonging to the specified Project.
-     * @param project the Project to delete vexs for
-     */
-    public void deleteVexs(Project project) {
-        final Query<Vex> query = pm.newQuery(Vex.class, "project == :project");
-        query.deletePersistentAll(project);
-    }
 }

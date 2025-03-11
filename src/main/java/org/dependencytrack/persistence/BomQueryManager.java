@@ -76,12 +76,4 @@ final class BomQueryManager extends QueryManager implements IQueryManager {
         return (List<Bom>) query.execute(project);
     }
 
-    /**
-     * Deletes boms belonging to the specified Project.
-     * @param project the Project to delete boms for
-     */
-    public void deleteBoms(Project project) {
-        final Query<Bom> query = pm.newQuery(Bom.class, "project == :project");
-        query.deletePersistentAll(project);
-    }
 }
