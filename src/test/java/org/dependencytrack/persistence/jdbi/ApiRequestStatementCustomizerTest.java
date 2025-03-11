@@ -35,6 +35,7 @@ import org.jdbi.v3.core.statement.StatementCustomizer;
 import org.junit.Test;
 
 import java.sql.PreparedStatement;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -55,12 +56,9 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
             SELECT 1 AS "valueA"
                  , 2 AS "valueB"
               FROM "PROJECT"
-             WHERE TRUE
+             WHERE ${apiProjectAclCondition}
             <#if apiFilterParameter??>
                AND 'foo' = ${apiFilterParameter}
-            </#if>
-            <#if apiProjectAclCondition??>
-               AND ${apiProjectAclCondition}
             </#if>
             ${apiOrderByClause!}
             ${apiOffsetLimitClause!}
@@ -138,8 +136,33 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                 /* orderDirection */ OrderDirection.DESCENDING
         );
 
+        useJdbiHandle(request, handle -> handle
+                .addCustomizer(inspectStatement(ctx -> {
+                    assertThat(ctx.getRenderedSql()).isEqualToIgnoringWhitespace("""
+                            SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE
+                            """);
+
+                    assertThat(ctx.getBinding()).hasToString("{}");
+                }))
+                .createQuery(TEST_QUERY_TEMPLATE)
+                .mapTo(Integer.class)
+                .findOne());
+    }
+
+    @Test
+    public void testWithAlpineRequestOrderingEmptyAllowedColumns() {
+        final var request = new AlpineRequest(
+                /* principal */ null,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ "value",
+                /* orderDirection */ OrderDirection.DESCENDING
+        );
+
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> useJdbiHandle(request, handle -> handle
+                        .configure(ApiRequestConfig.class, config ->
+                                config.setOrderingAllowedColumns(Collections.emptySet()))
                         .createQuery(TEST_QUERY_TEMPLATE)
                         .mapTo(Integer.class)
                         .findOne()))
@@ -372,7 +395,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
         useJdbiHandle(request, handle -> handle
                 .addCustomizer(inspectStatement(ctx -> {
                     assertThat(ctx.getRenderedSql()).isEqualToIgnoringWhitespace("""
-                            SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE AND FALSE
+                            SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE FALSE
                             """);
 
                     assertThat(ctx.getBinding()).hasToString("{}");
@@ -565,8 +588,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                             SELECT 1 AS "valueA"
                                  , 2 AS "valueB"
                               FROM "PROJECT"
-                             WHERE TRUE
-                               AND HAS_PROJECT_ACCESS("PROJECT"."ID", :projectAclTeamIds)
+                             WHERE HAS_PROJECT_ACCESS("PROJECT"."ID", :projectAclTeamIds)
                             """);
 
                     assertThat(ctx.getBinding()).hasToString("{named:{projectAclTeamIds:[%s]}}".formatted(team.getId()));

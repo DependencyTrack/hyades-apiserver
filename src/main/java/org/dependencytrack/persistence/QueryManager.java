@@ -53,6 +53,7 @@ import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentMetaInformation;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.DependencyMetrics;
@@ -598,10 +599,6 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getChildrenProjects(classifier, uuid, includeMetrics, excludeInactive);
     }
 
-    public PaginatedResult getProjects(final Tag tag) {
-        return getProjectQueryManager().getProjects(tag);
-    }
-
     public boolean doesProjectExist(final String name, final String version) {
         return getProjectQueryManager().doesProjectExist(name, version);
     }
@@ -646,10 +643,6 @@ public class QueryManager extends AlpineQueryManager {
                 includeComponents, includeServices, includeAuditHistory, includeACL, includePolicyViolations, makeCloneLatest);
     }
 
-    public Project updateLastBomImport(Project p, Date date, String bomFormat) {
-        return getProjectQueryManager().updateLastBomImport(p, date, bomFormat);
-    }
-
     public ProjectProperty createProjectProperty(final Project project, final String groupName, final String propertyName,
                                                  final String propertyValue, final ProjectProperty.PropertyType propertyType,
                                                  final String description) {
@@ -672,32 +665,8 @@ public class QueryManager extends AlpineQueryManager {
         return getBomQueryManager().getAllBoms(project);
     }
 
-    public void deleteBoms(Project project) {
-        getBomQueryManager().deleteBoms(project);
-    }
-
     public Vex createVex(Project project, Date imported, Vex.Format format, String specVersion, Integer vexVersion, String serialNumber) {
         return getVexQueryManager().createVex(project, imported, format, specVersion, vexVersion, serialNumber);
-    }
-
-    public List<Vex> getAllVexs(Project project) {
-        return getVexQueryManager().getAllVexs(project);
-    }
-
-    public void deleteVexs(Project project) {
-        getVexQueryManager().deleteVexs(project);
-    }
-
-    public PaginatedResult getComponents(final boolean includeMetrics) {
-        return getComponentQueryManager().getComponents(includeMetrics);
-    }
-
-    public PaginatedResult getComponents() {
-        return getComponentQueryManager().getComponents(false);
-    }
-
-    public List<Component> getAllComponents() {
-        return getComponentQueryManager().getAllComponents();
     }
 
     public PaginatedResult getComponentByHash(String hash) {
@@ -706,14 +675,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public IntegrityMetaInitializerTask.ComponentProjection getComponentByPurl(String purl) {
         return getComponentQueryManager().getComponentByPurl(purl);
-    }
-
-    public PaginatedResult getComponents(ComponentIdentity identity) {
-        return getComponentQueryManager().getComponents(identity);
-    }
-
-    public PaginatedResult getComponents(ComponentIdentity identity, boolean includeMetrics) {
-        return getComponentQueryManager().getComponents(identity, includeMetrics);
     }
 
     public PaginatedResult getComponents(ComponentIdentity identity, Project project, boolean includeMetrics) {
@@ -730,10 +691,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public Component updateComponent(Component transientComponent, boolean commitIndex) {
         return getComponentQueryManager().updateComponent(transientComponent, commitIndex);
-    }
-
-    void deleteComponents(Project project) {
-        getComponentQueryManager().deleteComponents(project);
     }
 
     public Map<String, Component> getDependencyGraphForComponents(Project project, List<Component> components) {
@@ -1018,14 +975,6 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByCpe23AndVersion(cpe23, version);
     }
 
-    public PaginatedResult getVulnerableSoftware() {
-        return getVulnerableSoftwareQueryManager().getVulnerableSoftware();
-    }
-
-    public List<VulnerableSoftware> getAllVulnerableSoftwareByCpe(final String cpeString) {
-        return getVulnerableSoftwareQueryManager().getAllVulnerableSoftwareByCpe(cpeString);
-    }
-
     public VulnerableSoftware getVulnerableSoftwareByPurl(String purlType, String purlNamespace, String purlName,
                                                           String versionEndExcluding, String versionEndIncluding,
                                                           String versionStartExcluding, String versionStartIncluding) {
@@ -1036,32 +985,12 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByVulnId(source, vulnId);
     }
 
-    public List<VulnerableSoftware> getAllVulnerableSoftwareByPurl(final PackageURL purl) {
-        return getVulnerableSoftwareQueryManager().getAllVulnerableSoftwareByPurl(purl);
-    }
-
-    public List<VulnerableSoftware> getAllVulnerableSoftware(final String cpePart, final String cpeVendor, final String cpeProduct, final String cpeVersion, final PackageURL purl) {
-        return getVulnerableSoftwareQueryManager().getAllVulnerableSoftware(cpePart, cpeVendor, cpeProduct, cpeVersion, purl);
-    }
-
-    public List<VulnerableSoftware> getAllVulnerableSoftware(final String cpePart, final String cpeVendor, final String cpeProduct, final PackageURL purl) {
-        return getVulnerableSoftwareQueryManager().getAllVulnerableSoftware(cpePart, cpeVendor, cpeProduct, purl);
-    }
-
     public List<Component> matchIdentity(final Project project, final ComponentIdentity cid) {
         return getComponentQueryManager().matchIdentity(project, cid);
     }
 
-    public List<Component> matchIdentity(final ComponentIdentity cid) {
-        return getComponentQueryManager().matchIdentity(cid);
-    }
-
     public List<Component> getAllComponents(Project project) {
         return getComponentQueryManager().getAllComponents(project);
-    }
-
-    public PaginatedResult getComponents(final Project project, final boolean includeMetrics) {
-        return getComponentQueryManager().getComponents(project, includeMetrics);
     }
 
     public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
@@ -1076,20 +1005,8 @@ public class QueryManager extends AlpineQueryManager {
         return getServiceComponentQueryManager().createServiceComponent(service, commitIndex);
     }
 
-    public List<ServiceComponent> getAllServiceComponents() {
-        return getServiceComponentQueryManager().getAllServiceComponents();
-    }
-
     public List<ServiceComponent> getAllServiceComponents(Project project) {
         return getServiceComponentQueryManager().getAllServiceComponents(project);
-    }
-
-    public PaginatedResult getServiceComponents() {
-        return getServiceComponentQueryManager().getServiceComponents();
-    }
-
-    public PaginatedResult getServiceComponents(final boolean includeMetrics) {
-        return getServiceComponentQueryManager().getServiceComponents(includeMetrics);
     }
 
     public PaginatedResult getServiceComponents(final Project project, final boolean includeMetrics) {
@@ -1136,30 +1053,6 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerabilityQueryManager().getVulnerabilities(project, includeSuppressed);
     }
 
-    public long getAuditedCount() {
-        return getFindingsQueryManager().getAuditedCount();
-    }
-
-    public long getAuditedCount(Project project) {
-        return getFindingsQueryManager().getAuditedCount(project);
-    }
-
-    public long getAuditedCount(Component component) {
-        return getFindingsQueryManager().getAuditedCount(component);
-    }
-
-    public long getAuditedCount(Project project, Component component) {
-        return getFindingsQueryManager().getAuditedCount(project, component);
-    }
-
-    public long getSuppressedCount() {
-        return getFindingsQueryManager().getSuppressedCount();
-    }
-
-    public long getSuppressedCount(Project project) {
-        return getFindingsQueryManager().getSuppressedCount(project);
-    }
-
     public long getSuppressedCount(Component component) {
         return getFindingsQueryManager().getSuppressedCount(component);
     }
@@ -1200,14 +1093,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public AnalysisComment makeAnalysisComment(Analysis analysis, String comment, String commenter) {
         return getFindingsQueryManager().makeAnalysisComment(analysis, comment, commenter);
-    }
-
-    void deleteAnalysisTrail(Component component) {
-        getFindingsQueryManager().deleteAnalysisTrail(component);
-    }
-
-    void deleteAnalysisTrail(Project project) {
-        getFindingsQueryManager().deleteAnalysisTrail(project);
     }
 
     public List<Finding> getFindings(Project project) {
@@ -2030,6 +1915,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public void synchronizeComponentProperties(final Component component, final List<ComponentProperty> properties) {
         getComponentQueryManager().synchronizeComponentProperties(component, properties);
+    }
+
+    public void synchronizeComponentOccurrences(final Component component, final Collection<ComponentOccurrence> occurrences) {
+        getComponentQueryManager().synchronizeComponentOccurrences(component, occurrences);
     }
 
     /**

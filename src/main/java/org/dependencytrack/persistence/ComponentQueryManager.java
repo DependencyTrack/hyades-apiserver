@@ -24,12 +24,10 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonValue;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -38,10 +36,14 @@ import org.dependencytrack.model.sqlmapping.ComponentProjection;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonValue;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -76,55 +78,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     }
 
     /**
-     * Returns a list of all Components defined in the datastore.
-     *
-     * @return a List of Components
-     */
-    public PaginatedResult getComponents(final boolean includeMetrics) {
-        final PaginatedResult result;
-        final Query<Component> query = pm.newQuery(Component.class);
-        if (orderBy == null) {
-            query.setOrdering("name asc, version desc, id asc");
-        }
-        if (filter != null) {
-            query.setFilter("name.toLowerCase().matches(:name)");
-            final String filterString = ".*" + filter.toLowerCase() + ".*";
-            result = execute(query, filterString);
-        } else {
-            result = execute(query);
-        }
-        if (includeMetrics) {
-            // Populate each Component object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Component component : result.getList(Component.class)) {
-                component.setMetrics(getMostRecentDependencyMetrics(component));
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Returns a list of all Components defined in the datastore.
-     *
-     * @return a List of Components
-     */
-    public PaginatedResult getComponents() {
-        return getComponents(false);
-    }
-
-    /**
-     * Returns a list of all components.
-     * This method if designed NOT to provide paginated results.
-     *
-     * @return a List of Components
-     */
-    public List<Component> getAllComponents() {
-        final Query<Component> query = pm.newQuery(Component.class);
-        query.setOrdering("id asc");
-        return query.executeList();
-    }
-
-    /**
      * Returns a List of all Components for the specified Project.
      * This method if designed NOT to provide paginated results.
      *
@@ -137,17 +90,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         query.getFetchPlan().setMaxFetchDepth(2);
         query.setOrdering("name asc");
         return (List<Component>) query.execute(project);
-    }
-
-    /**
-     * Returns a List of Dependency for the specified Project.
-     *
-     * @param project        the Project to retrieve dependencies of
-     * @param includeMetrics Optionally includes third-party metadata about the component from external repositories
-     * @return a List of Dependency objects
-     */
-    public PaginatedResult getComponents(final Project project, final boolean includeMetrics) {
-        return getComponents(project, includeMetrics, false, false);
     }
 
     /**
@@ -226,6 +168,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                         "I0"."PUBLISHED_AT" AS "publishedAt",
                         "IA"."INTEGRITY_CHECK_STATUS" AS "integrityCheckStatus",
                         "I0"."REPOSITORY_URL" AS "integrityRepoUrl",
+                        (SELECT COUNT(*) FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = "A0"."ID") AS "occurrenceCount",
                         COUNT(*) OVER() AS "totalCount"
                 FROM "COMPONENT" "A0"
                 INNER JOIN "PROJECT" "B0" ON "A0"."PROJECT_ID" = "B0"."ID"
@@ -308,6 +251,9 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                             ORDER BY "integrityCheckStatus"
                         """;
             }
+            if (orderBy.equalsIgnoreCase("occurrenceCount")) {
+                queryString += "ORDER BY \"occurrenceCount\"";
+            }
             if (queryString.contains("ORDER BY")) {
                 if (orderDirection == OrderDirection.ASCENDING) {
                     queryString += " ASC ";
@@ -377,7 +323,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         };
 
         final Query<Component> query = pm.newQuery(Component.class);
-        ;
         final Map<String, Object> params = Map.of("hash", hash);
         preprocessACLs(query, queryFilter, params, false);
         return execute(query, params);
@@ -397,20 +342,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         query.setParameters(purl);
         query.setResult("DISTINCT purlCoordinates, internal");
         return query.executeResultUnique(IntegrityMetaInitializerTask.ComponentProjection.class);
-    }
-
-    /**
-     * Returns Components by their identity.
-     *
-     * @param identity the ComponentIdentity to query against
-     * @return a list of components
-     */
-    public PaginatedResult getComponents(ComponentIdentity identity) {
-        return getComponents(identity, null, false);
-    }
-
-    public PaginatedResult getComponents(ComponentIdentity identity, boolean includeMetrics) {
-        return getComponents(identity, null, includeMetrics);
     }
 
     /**
@@ -595,20 +526,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     }
 
     /**
-     * Deletes all components for the specified Project.
-     *
-     * @param project the Project to delete components of
-     */
-    protected void deleteComponents(Project project) {
-        final Query<Component> query = pm.newQuery(Component.class, "project == :project");
-        try {
-            query.deletePersistentAll(project);
-        } finally {
-            query.closeAll();
-        }
-    }
-
-    /**
      * Returns a list of components by matching its identity information.
      *
      * @param project the Project the component is a dependency of
@@ -618,19 +535,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     @SuppressWarnings("unchecked")
     public List<Component> matchIdentity(final Project project, final ComponentIdentity cid) {
         final Pair<String, Map<String, Object>> queryFilterParamsPair = buildComponentIdentityQuery(project, cid);
-        final Query<Component> query = pm.newQuery(Component.class, queryFilterParamsPair.getLeft());
-        return (List<Component>) query.executeWithMap(queryFilterParamsPair.getRight());
-    }
-
-    /**
-     * Returns a List of components by matching identity information.
-     *
-     * @param cid the identity values of the component
-     * @return a List of Component objects
-     */
-    @SuppressWarnings("unchecked")
-    public List<Component> matchIdentity(final ComponentIdentity cid) {
-        final Pair<String, Map<String, Object>> queryFilterParamsPair = buildComponentIdentityQuery(null, cid);
         final Query<Component> query = pm.newQuery(Component.class, queryFilterParamsPair.getLeft());
         return (List<Component>) query.executeWithMap(queryFilterParamsPair.getRight());
     }
@@ -875,17 +779,24 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             //   modified manually.
             if (component.getProperties() != null && !component.getProperties().isEmpty()) {
                 pm.deletePersistentAll(component.getProperties());
+                component.setProperties(null);
             }
 
             return;
         }
 
-        properties.forEach(property -> assertNonPersistent(property, "property must not be persistent"));
+        // Map and de-duplicate incoming properties by their identity.
+        final var incomingPropertyIdentitiesSeen = new HashSet<ComponentProperty.Identity>();
+        final var incomingPropertiesByIdentity = properties.stream()
+                .peek(property -> assertNonPersistent(property, "property must not be persistent"))
+                .filter(property -> incomingPropertyIdentitiesSeen.add(new ComponentProperty.Identity(property)))
+                .collect(Collectors.toMap(ComponentProperty.Identity::new, Function.identity()));
 
         if (component.getProperties() == null || component.getProperties().isEmpty()) {
-            for (final ComponentProperty property : properties) {
+            for (final ComponentProperty property : incomingPropertiesByIdentity.values()) {
                 property.setComponent(component);
                 pm.makePersistent(property);
+                component.addProperty(property);
             }
 
             return;
@@ -909,13 +820,10 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
                     return isUnique;
                 })
                 .collect(Collectors.toMap(ComponentProperty.Identity::new, Function.identity()));
-        final var incomingPropertyIdentitiesSeen = new HashSet<ComponentProperty.Identity>();
-        final var incomingPropertiesByIdentity = properties.stream()
-                .filter(property -> incomingPropertyIdentitiesSeen.add(new ComponentProperty.Identity(property)))
-                .collect(Collectors.toMap(ComponentProperty.Identity::new, Function.identity()));
 
         if (!existingDuplicateProperties.isEmpty()) {
             pm.deletePersistentAll(existingDuplicateProperties);
+            component.getProperties().removeAll(existingDuplicateProperties);
         }
 
         final var propertyIdentities = new HashSet<ComponentProperty.Identity>();
@@ -929,9 +837,72 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             if (existingProperty == null) {
                 incomingProperty.setComponent(component);
                 pm.makePersistent(incomingProperty);
+                component.addProperty(incomingProperty);
             } else if (incomingProperty == null) {
                 pm.deletePersistent(existingProperty);
+                component.getProperties().remove(existingProperty);
             }
         }
     }
+
+    /**
+     * @since 5.6.0
+     */
+    @Override
+    public void synchronizeComponentOccurrences(final Component component, final Collection<ComponentOccurrence> occurrences) {
+        assertPersistent(component, "component must be persistent");
+
+        // No incoming occurrences. Remove existing occurrences from the component if there are any.
+        if (occurrences == null || occurrences.isEmpty()) {
+            if (component.getOccurrences() != null && !component.getOccurrences().isEmpty()) {
+                pm.deletePersistentAll(component.getProperties());
+                component.setOccurrences(null);
+            }
+
+            return;
+        }
+
+        // Map and de-duplicate incoming occurrences by their identity.
+        final var incomingOccurrenceIdentitiesSeen = new HashSet<ComponentOccurrence.Identity>();
+        final var incomingOccurrenceByIdentity = occurrences.stream()
+                .peek(occurrence -> assertNonPersistent(occurrence, "occurrence must not be persistent"))
+                .filter(occurrence -> incomingOccurrenceIdentitiesSeen.add(ComponentOccurrence.Identity.of(occurrence)))
+                .collect(Collectors.toMap(ComponentOccurrence.Identity::of, Function.identity(), (left, right) -> left));
+
+        // No existing occurrences. Add them all.
+        if (component.getOccurrences() == null || component.getOccurrences().isEmpty()) {
+            for (final ComponentOccurrence occurrence : incomingOccurrenceByIdentity.values()) {
+                occurrence.setComponent(component);
+                pm.makePersistent(occurrence);
+                component.addOccurrence(occurrence);
+            }
+
+            return;
+        }
+
+        // Map existing occurrences by their identity.
+        final var existingOccurrenceIdentitiesSeen = new HashSet<ComponentOccurrence.Identity>();
+        final var existingOccurrenceByIdentity = component.getOccurrences().stream()
+                .filter(occurrence -> existingOccurrenceIdentitiesSeen.add(ComponentOccurrence.Identity.of(occurrence)))
+                .collect(Collectors.toMap(ComponentOccurrence.Identity::of, Function.identity()));
+
+        final var identities = new HashSet<ComponentOccurrence.Identity>();
+        identities.addAll(existingOccurrenceByIdentity.keySet());
+        identities.addAll(incomingOccurrenceByIdentity.keySet());
+
+        for (final ComponentOccurrence.Identity identity : identities) {
+            final ComponentOccurrence existingOccurrence = existingOccurrenceByIdentity.get(identity);
+            final ComponentOccurrence incomingOccurrence = incomingOccurrenceByIdentity.get(identity);
+
+            if (existingOccurrence == null) {
+                incomingOccurrence.setComponent(component);
+                pm.makePersistent(incomingOccurrence);
+                component.addOccurrence(incomingOccurrence);
+            } else if (incomingOccurrence == null) {
+                component.getOccurrences().remove(existingOccurrence);
+                pm.deletePersistent(existingOccurrence);
+            }
+        }
+    }
+
 }
