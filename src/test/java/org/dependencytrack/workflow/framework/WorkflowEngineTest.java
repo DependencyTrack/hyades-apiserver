@@ -26,7 +26,6 @@ import org.dependencytrack.workflow.framework.failure.ApplicationFailureExceptio
 import org.dependencytrack.workflow.framework.failure.SubWorkflowFailureException;
 import org.dependencytrack.workflow.framework.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunListRow;
-import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowScheduleRow;
 import org.junit.After;
 import org.junit.Before;
@@ -101,14 +100,12 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                         .withLabels(Map.of("label-a", "123", "label-b", "321"))
                         .withArgument("someArgument", stringConverter()));
 
-        final WorkflowRunRow completedRun = awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+        final WorkflowRunStateView completedRun = awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThat(completedRun.customStatus()).isEqualTo("someCustomStatus");
         assertThat(completedRun.concurrencyGroupId()).isEqualTo("someConcurrencyGroupId");
         assertThat(completedRun.priority()).isEqualTo(6);
         assertThat(completedRun.labels()).containsOnlyKeys("label-a", "label-b");
-        assertThat(completedRun.lockedBy()).isNull();
-        assertThat(completedRun.lockedUntil()).isNull();
         assertThat(completedRun.createdAt()).isNotNull();
         assertThat(completedRun.updatedAt()).isNotNull();
         assertThat(completedRun.startedAt()).isNotNull();
@@ -168,14 +165,12 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
-        final WorkflowRunRow failedRun = awaitRunStatus(runId, WorkflowRunStatus.FAILED);
+        final WorkflowRunStateView failedRun = awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
         assertThat(failedRun.customStatus()).isNull();
         assertThat(failedRun.concurrencyGroupId()).isNull();
         assertThat(failedRun.priority()).isNull();
         assertThat(failedRun.labels()).isNull();
-        assertThat(failedRun.lockedBy()).isNull();
-        assertThat(failedRun.lockedUntil()).isNull();
         assertThat(failedRun.createdAt()).isNotNull();
         assertThat(failedRun.updatedAt()).isNotNull();
         assertThat(failedRun.startedAt()).isNotNull();
@@ -210,14 +205,12 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
         engine.cancelWorkflowRun(runId, "Stop it!");
 
-        final WorkflowRunRow cancelledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
+        final WorkflowRunStateView cancelledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
 
         assertThat(cancelledRun.customStatus()).isNull();
         assertThat(cancelledRun.concurrencyGroupId()).isNull();
         assertThat(cancelledRun.priority()).isNull();
         assertThat(cancelledRun.labels()).isNull();
-        assertThat(cancelledRun.lockedBy()).isNull();
-        assertThat(cancelledRun.lockedUntil()).isNull();
         assertThat(cancelledRun.createdAt()).isNotNull();
         assertThat(cancelledRun.updatedAt()).isNotNull();
         assertThat(cancelledRun.startedAt()).isNotNull();
@@ -530,7 +523,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         await("Update")
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> {
-                    final WorkflowRunRow run = engine.getRun(runId);
+                    final WorkflowRunStateView run = engine.getRun(runId);
                     assertThat(run.updatedAt()).isNotNull();
                 });
 
@@ -952,7 +945,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
         });
     }
 
-    private WorkflowRunRow awaitRunStatus(
+    private WorkflowRunStateView awaitRunStatus(
             final UUID runId,
             final WorkflowRunStatus expectedStatus,
             final Duration timeout) {
@@ -971,7 +964,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 .until(() -> engine.getRun(runId), run -> run.status() == expectedStatus);
     }
 
-    private WorkflowRunRow awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
+    private WorkflowRunStateView awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
         return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(5));
     }
 

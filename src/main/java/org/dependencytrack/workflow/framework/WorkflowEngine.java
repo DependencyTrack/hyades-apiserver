@@ -1113,9 +1113,22 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
-    // TODO: This should not return an internal persistence model.
-    public WorkflowRunRow getRun(final UUID runId) {
-        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRun(runId));
+    public WorkflowRunStateView getRun(final UUID runId) {
+        return jdbi.withHandle(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            final WorkflowRunRow runRow = dao.getRun(runId);
+            final List<WorkflowEvent> runJournal = dao.getRunJournal(runId);
+
+            final var runState = new WorkflowRunState(
+                    runRow.id(),
+                    runRow.workflowName(),
+                    runRow.workflowVersion(),
+                    runRow.concurrencyGroupId(),
+                    runJournal);
+
+            return WorkflowRunStateView.of(runState);
+        });
     }
 
     public boolean existsRunWithNonTerminalStatus(final UUID runId) {

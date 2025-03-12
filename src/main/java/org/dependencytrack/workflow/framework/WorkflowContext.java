@@ -771,6 +771,7 @@ public final class WorkflowContext<A, R> {
                 new CompleteRunCommand(
                         eventId,
                         WorkflowRunStatus.CANCELLED,
+                        customStatus,
                         /* result */ null,
                         FailureConverter.toFailure(new CancellationFailureException(reason))));
 
@@ -787,6 +788,7 @@ public final class WorkflowContext<A, R> {
                 new CompleteRunCommand(
                         eventId,
                         WorkflowRunStatus.COMPLETED,
+                        customStatus,
                         resultConverter.convertToPayload(result),
                         /* failure */ null));
     }
@@ -801,6 +803,7 @@ public final class WorkflowContext<A, R> {
                 new CompleteRunCommand(
                         eventId,
                         WorkflowRunStatus.FAILED,
+                        customStatus,
                         /* result */ null,
                         FailureConverter.toFailure(exception)));
     }

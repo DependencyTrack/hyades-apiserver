@@ -42,10 +42,10 @@ import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.resources.v1.vo.WorkflowRunListResponseItem;
 import org.dependencytrack.resources.v1.vo.WorkflowRunResponse;
 import org.dependencytrack.resources.v1.vo.WorkflowRunStats;
+import org.dependencytrack.workflow.framework.WorkflowRunStateView;
 import org.dependencytrack.workflow.framework.WorkflowRunStatus;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunListRow;
-import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRow;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.ClientErrorException;
@@ -214,29 +214,37 @@ public class WorkflowResource extends AlpineResource {
 
         final UUID runId = UUID.fromString(runIdStr);
 
-        final WorkflowRunRow runRow = workflowEngine().getRun(runId);
-        if (runRow == null) {
+        final WorkflowRunStateView runView = workflowEngine().getRun(runId);
+        if (runView == null) {
             throw new ClientErrorException(Response.Status.NOT_FOUND);
         }
 
-        final List<WorkflowEvent> journal = workflowEngine().getRunJournal(runId);
-        final List<WorkflowEvent> inbox = workflowEngine().getRunInbox(runId);
-
         return Response.ok(new WorkflowRunResponse(
-                runRow.id(),
-                runRow.workflowName(),
-                runRow.workflowVersion(),
-                runRow.customStatus(),
-                runRow.status(),
-                runRow.priority(),
-                runRow.labels(),
-                runRow.lockedBy(),
-                runRow.lockedUntil(),
-                runRow.createdAt(),
-                runRow.updatedAt(),
-                runRow.completedAt(),
-                journal,
-                inbox)).build();
+                runView.id(),
+                runView.workflowName(),
+                runView.workflowVersion(),
+                runView.customStatus(),
+                runView.status(),
+                runView.priority(),
+                runView.labels(),
+                runView.createdAt(),
+                runView.updatedAt(),
+                runView.completedAt())).build();
+    }
+
+    @GET
+    @Path("/run/{id}/journal")
+    @Produces(MediaType.APPLICATION_JSON)
+    @AuthenticationNotRequired // TODO
+    public Response getWorkflowRunJournal(@PathParam("id") @ValidUuid final String runIdStr) {
+        assertWorkflowEngineEnabled();
+
+        final UUID runId = UUID.fromString(runIdStr);
+
+        // TODO: Apply @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) somehow.
+        final List<WorkflowEvent> runJournal = workflowEngine().getRunJournal(runId);
+
+        return Response.ok(runJournal).build();
     }
 
     @POST

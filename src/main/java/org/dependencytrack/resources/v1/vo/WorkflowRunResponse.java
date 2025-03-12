@@ -20,13 +20,9 @@ package org.dependencytrack.resources.v1.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.resources.v1.serializers.WorkflowEventJsonSerializer;
 import org.dependencytrack.workflow.framework.WorkflowRunStatus;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -39,11 +35,7 @@ public record WorkflowRunResponse(
         WorkflowRunStatus runtimeStatus,
         Integer priority,
         Map<String, String> labels,
-        String lockedBy,
-        Instant lockedUntil,
         @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant createdAt,
         @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant updatedAt,
-        @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant completedAt,
-        @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> journal,
-        @JsonSerialize(contentUsing = WorkflowEventJsonSerializer.class) List<WorkflowEvent> inbox) {
+        @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT, without = JsonFormat.Feature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS) Instant completedAt) {
 }

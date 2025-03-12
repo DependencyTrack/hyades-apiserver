@@ -143,8 +143,9 @@ message RunResumed {
 
 message RunCompleted {
   WorkflowRunStatus status = 1;
-  optional WorkflowPayload result = 2;
-  optional WorkflowFailure failure = 3;
+  optional string custom_status = 2;
+  optional WorkflowPayload result = 3;
+  optional WorkflowFailure failure = 4;
 }
 
 message ActivityTaskScheduled {

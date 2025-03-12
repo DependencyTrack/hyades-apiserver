@@ -42,6 +42,7 @@ import org.dependencytrack.workflow.framework.WorkflowCommand.ScheduleTimerComma
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.SequencedCollection;
 import java.util.UUID;
@@ -74,6 +75,8 @@ final class WorkflowRunState {
     private WorkflowFailure failure;
     private WorkflowRunStatus status = WorkflowRunStatus.PENDING;
     private String customStatus;
+    private Integer priority;
+    private Map<String, String> labels;
     private Instant createdAt;
     private Instant updatedAt;
     private Instant startedAt;
@@ -102,6 +105,14 @@ final class WorkflowRunState {
 
     UUID id() {
         return id;
+    }
+
+    String workflowName() {
+        return workflowName;
+    }
+
+    int workflowVersion() {
+        return workflowVersion;
     }
 
     Optional<String> concurrencyGroupId() {
@@ -138,6 +149,14 @@ final class WorkflowRunState {
 
     void setCustomStatus(final String customStatus) {
         this.customStatus = customStatus;
+    }
+
+    Optional<Integer> priority() {
+        return Optional.ofNullable(priority);
+    }
+
+    Optional<Map<String, String>> labels() {
+        return Optional.ofNullable(labels);
     }
 
     Optional<WorkflowPayload> argument() {
@@ -187,6 +206,12 @@ final class WorkflowRunState {
                 argument = event.getRunScheduled().hasArgument()
                         ? event.getRunScheduled().getArgument()
                         : null;
+                priority = event.getRunScheduled().hasPriority()
+                        ? event.getRunScheduled().getPriority()
+                        : null;
+                labels = event.getRunScheduled().getLabelsCount() > 0
+                        ? event.getRunScheduled().getLabelsMap()
+                        : null;
                 createdAt = WorkflowEngine.toInstant(event.getTimestamp());
             }
             case RUN_STARTED -> {
@@ -213,6 +238,9 @@ final class WorkflowRunState {
                 }
                 completedEvent = event;
                 setStatus(WorkflowRunStatus.fromProto(completedEvent.getRunCompleted().getStatus()));
+                customStatus = event.getRunCompleted().hasCustomStatus()
+                        ? event.getRunCompleted().getCustomStatus()
+                        : null;
                 result = event.getRunCompleted().hasResult()
                         ? event.getRunCompleted().getResult()
                         : null;
@@ -285,6 +313,9 @@ final class WorkflowRunState {
 
         final var subjectBuilder = RunCompleted.newBuilder()
                 .setStatus(command.status().toProto());
+        if (command.customStatus() != null) {
+            subjectBuilder.setCustomStatus(command.customStatus());
+        }
         if (command.result() != null) {
             subjectBuilder.setResult(command.result());
         }

@@ -40,6 +40,7 @@ sealed interface WorkflowCommand permits
     record CompleteRunCommand(
             int eventId,
             WorkflowRunStatus status,
+            String customStatus,
             WorkflowPayload result,
             WorkflowFailure failure) implements WorkflowCommand {
     }
