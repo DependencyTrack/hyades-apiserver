@@ -27,6 +27,14 @@ public final class ApplicationFailureException extends WorkflowFailureException 
         this.isTerminal = isTerminal;
     }
 
+    public static ApplicationFailureException forMissingArguments() {
+        return new ApplicationFailureException("Arguments were expected but not provided", null, true);
+    }
+
+    public static ApplicationFailureException forMissingResult() {
+        return new ApplicationFailureException("Results were expected but not provided", null, false);
+    }
+
     public boolean isTerminal() {
         return isTerminal;
     }

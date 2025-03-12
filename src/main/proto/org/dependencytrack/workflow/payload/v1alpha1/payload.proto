@@ -87,3 +87,19 @@ message PublishNotificationActivityArgs {
   string notification_rule_name = 2;
 }
 
+message CloneProjectArgs {
+  Project project = 1;
+  string new_version = 2;
+  bool include_tags = 3;
+  bool include_properties = 4;
+  bool include_components = 5;
+  bool include_services = 6;
+  bool include_audit_history = 7;
+  bool include_acl = 8;
+  bool include_policy_violations = 9;
+  bool make_clone_latest = 10;
+}
+
+message CloneProjectResult {
+  Project cloned_project = 1;
+}
