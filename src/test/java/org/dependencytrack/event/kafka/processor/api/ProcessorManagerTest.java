@@ -58,7 +58,11 @@ public class ProcessorManagerTest {
     public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     @Rule
-    public KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:3.8.0");
+    public KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:3.9.0")
+            // TODO: Remove this when Kafka >= 3.9.1 is available.
+            //   * https://github.com/testcontainers/testcontainers-java/issues/9506#issuecomment-2463504967
+            //   * https://issues.apache.org/jira/browse/KAFKA-18281
+            .withEnv("KAFKA_LISTENERS", "PLAINTEXT://:9092,BROKER://:9093,CONTROLLER://:9094");
 
     private AdminClient adminClient;
     private Producer<String, String> producer;
