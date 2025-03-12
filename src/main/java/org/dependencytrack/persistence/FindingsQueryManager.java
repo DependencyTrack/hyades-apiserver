@@ -255,7 +255,7 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
     @SuppressWarnings("unchecked")
     public List<Finding> getFindings(Project project, boolean includeSuppressed) {
         final List<Finding> findings = withJdbiHandle(handle ->
-                handle.attach(FindingDao.class).getAllFindings(project.getId(), includeSuppressed));
+                handle.attach(FindingDao.class).getFindings(project.getId(), includeSuppressed));
         final Map<VulnIdAndSource, List<Finding>> findingsByVulnIdAndSource = findings.stream()
                 .collect(Collectors.groupingBy(
                         finding -> new VulnIdAndSource(

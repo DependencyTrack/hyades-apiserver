@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
@@ -33,8 +32,6 @@ import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.jdbi.FindingDao;
 
 import javax.jdo.PersistenceManager;
-import javax.jdo.Query;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,39 +39,6 @@ import java.util.Map;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class FindingsSearchQueryManager extends QueryManager implements IQueryManager {
-
-    private static final Map<String, String> sortingAttributes = Map.ofEntries(
-            Map.entry("vulnerability.vulnId", "\"VULNERABILITY\".\"VULNID\""),
-            Map.entry("vulnerability.title", "\"VULNERABILITY\".\"TITLE\""),
-            Map.entry("vulnerability.severity", """
-                    CASE WHEN "VULNERABILITY"."SEVERITY" = 'UNASSIGNED'
-                         THEN 0
-                         WHEN "VULNERABILITY"."SEVERITY" = 'LOW'
-                         THEN 3
-                         WHEN "VULNERABILITY"."SEVERITY" = 'MEDIUM'
-                         THEN 6
-                         WHEN "VULNERABILITY"."SEVERITY" = 'HIGH'
-                         THEN 8
-                         WHEN "VULNERABILITY"."SEVERITY" = 'CRITICAL'
-                         THEN 10
-                         ELSE CASE WHEN "VULNERABILITY"."CVSSV3BASESCORE" IS NOT NULL
-                                   THEN "VULNERABILITY"."CVSSV3BASESCORE"
-                                   ELSE "VULNERABILITY"."CVSSV2BASESCORE"
-                              END
-                    END
-                    """),
-            Map.entry("attribution.analyzerIdentity", "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\""),
-            Map.entry("vulnerability.published", "\"VULNERABILITY\".\"PUBLISHED\""),
-            Map.entry("vulnerability.cvssV2BaseScore", "\"VULNERABILITY\".\"CVSSV2BASESCORE\""),
-            Map.entry("vulnerability.cvssV3BaseScore", "\"VULNERABILITY\".\"CVSSV3BASESCORE\""),
-            Map.entry("component.projectName", "concat(\"PROJECT\".\"NAME\", ' ', \"PROJECT\".\"VERSION\")"),
-            Map.entry("component.name", "\"COMPONENT\".\"NAME\""),
-            Map.entry("component.version", "\"COMPONENT\".\"VERSION\""),
-            Map.entry("analysis.state", "\"ANALYSIS\".\"STATE\""),
-            Map.entry("analysis.isSuppressed", "\"ANALYSIS\".\"SUPPRESSED\""),
-            Map.entry("attribution.attributedOn", "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\""),
-            Map.entry("vulnerability.affectedProjectCount", "COUNT(DISTINCT \"PROJECT\".\"ID\")")
-    );
 
     /**
      * Constructs a new QueryManager.
@@ -114,16 +78,15 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
             }
             queryFilter.append("(\"ANALYSIS\".\"SUPPRESSED\" = 'false' OR \"ANALYSIS\".\"SUPPRESSED\" IS NULL)");
         }
-        processFilters(filters, queryFilter, params, false);
-        queryFilter.append(this.orderBy != null ? " ORDER BY " + sortingAttributes.get(this.orderBy) + " " + (this.orderDirection == OrderDirection.DESCENDING ? " DESC" : "ASC") : "");
+        processFilters(filters, queryFilter, params);
         final List<Finding> findings = withJdbiHandle(handle ->
                 handle.attach(FindingDao.class).getAllFindings(String.valueOf(queryFilter)));
 
         PaginatedResult result = new PaginatedResult();
         result.setTotal(findings.size());
 
-        final List<Finding> list = findings.subList(this.pagination.getOffset(), Math.min(this.pagination.getOffset() + this.pagination.getLimit(), findings.size()));
-        for (final Finding finding : list) {
+        final List<Finding> findingList = findings.subList(this.pagination.getOffset(), Math.min(this.pagination.getOffset() + this.pagination.getLimit(), findings.size()));
+        for (final Finding finding : findingList) {
             final Component component = getObjectByUuid(Component.class, finding.getComponent().get("uuid").toString());
             final Vulnerability vulnerability = getObjectByUuid(Vulnerability.class, finding.getVulnerability().get("uuid").toString());
             final List<VulnerabilityAlias> aliases = detach(getVulnerabilityAliases(vulnerability));
@@ -141,17 +104,17 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
                         finding.getComponent().put("latestVersion", repoMetaComponent.getLatestVersion());
                     }
                 }
-
             }
         }
-        result.setObjects(findings);
+        result.setObjects(findingList);
         return result;
     }
 
     /**
      * Returns a List of all Finding objects filtered by ACL and other optional filters. The resulting list is grouped by vulnerability.
-     * @param filters      determines the filters to apply on the list of Finding objects
-     * @param showInactive determines if inactive projects should be included or not
+     *
+     * @param filters       determines the filters to apply on the list of Finding objects
+     * @param showInactive  determines if inactive projects should be included or not
      * @return a List of Finding objects
      */
     public PaginatedResult getAllFindingsGroupedByVulnerability(final Map<String, String> filters, final boolean showInactive) {
@@ -160,23 +123,17 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
         if (!showInactive) {
             queryFilter.append(" WHERE (\"PROJECT\".\"INACTIVE_SINCE\" IS NULL)");
         }
-        processFilters(filters, queryFilter, params, true);
-        final Query<Object[]> query = pm.newQuery(Query.SQL, GroupedFinding.QUERY + queryFilter + (this.orderBy != null ? " ORDER BY " + sortingAttributes.get(this.orderBy) + " " + (this.orderDirection == OrderDirection.DESCENDING ? " DESC" : "ASC") : ""));
+        processFilters(filters, queryFilter, params);
+        final List<GroupedFinding> findings = withJdbiHandle(handle ->
+                handle.attach(FindingDao.class).getGroupedFindings(String.valueOf(queryFilter)));
         PaginatedResult result = new PaginatedResult();
-        query.setNamedParameters(params);
-        final List<Object[]> totalList = query.executeList();
-        result.setTotal(totalList.size());
-        final List<Object[]> list = totalList.subList(this.pagination.getOffset(), Math.min(this.pagination.getOffset() + this.pagination.getLimit(), totalList.size()));
-        final List<GroupedFinding> findings = new ArrayList<>();
-        for (Object[] o : list) {
-            final GroupedFinding finding = new GroupedFinding(o);
-            findings.add(finding);
-        }
-        result.setObjects(findings);
+        result.setTotal(findings.size());
+        final List<GroupedFinding> findingsList = findings.subList(this.pagination.getOffset(), Math.min(this.pagination.getOffset() + this.pagination.getLimit(), findings.size()));
+        result.setObjects(findingsList);
         return result;
     }
 
-    private void processFilters(Map<String, String> filters, StringBuilder queryFilter, Map<String, Object> params, boolean isGroupedByVulnerabilities) {
+    private void processFilters(Map<String, String> filters, StringBuilder queryFilter, Map<String, Object> params) {
         for (String filter : filters.keySet()) {
             switch (filter) {
                 case "severity" ->
@@ -206,26 +163,6 @@ public class FindingsSearchQueryManager extends QueryManager implements IQueryMa
             }
         }
         preprocessACLs(queryFilter, params);
-        if (isGroupedByVulnerabilities) {
-            queryFilter.append("""
-                    GROUP BY "VULNERABILITY"."ID"
-                           , "VULNERABILITY"."SOURCE"
-                           , "VULNERABILITY"."VULNID"
-                           , "VULNERABILITY"."TITLE"
-                           , "VULNERABILITY"."SEVERITY"
-                           , "VULNERABILITY"."CVSSV2BASESCORE"
-                           , "VULNERABILITY"."CVSSV3BASESCORE"
-                           , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
-                           , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
-                           , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
-                           , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
-                           , "VULNERABILITY"."PUBLISHED"
-                           , "VULNERABILITY"."CWES"
-                    """);
-            StringBuilder aggregateFilter = new StringBuilder();
-            processAggregateFilters(filters, aggregateFilter, params);
-            queryFilter.append(aggregateFilter);
-        }
     }
 
     private void processAggregateFilters(Map<String, String> filters, StringBuilder queryFilter, Map<String, Object> params) {

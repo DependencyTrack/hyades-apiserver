@@ -36,7 +36,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.text.WordUtils;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
@@ -51,15 +59,6 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -386,11 +385,10 @@ public class FindingResource extends AbstractApiResource {
         final About about = new About();
 
         // Using "vulnId" as key, forming a list of unique vulnerabilities across all findings
-        // Also converts cweName to PascalCase, since it will be used as rule.name in the SARIF file
         List<Map<String, Object>> uniqueVulnerabilities = findings.stream()
                 .collect(Collectors.toMap(
                         finding -> finding.getVulnerability().get("vulnId"),
-                        FindingResource::convertCweNameToPascalCase,
+                        Finding::getVulnerability,
                         (existingVuln, replacementVuln) -> existingVuln))
                 .values()
                 .stream()
@@ -404,15 +402,5 @@ public class FindingResource extends AbstractApiResource {
             sarifTemplate.evaluate(writer, context);
             return writer.toString();
         }
-    }
-
-    private static Map<String, Object> convertCweNameToPascalCase(Finding finding) {
-        final Object cweName = finding.getVulnerability()
-                .get("cweName");
-        if (cweName != null) {
-            final String pascalCasedCweName = WordUtils.capitalizeFully(cweName.toString()).replaceAll("\\s", "");
-            finding.getVulnerability().put("cweName", pascalCasedCweName);
-        }
-        return finding.getVulnerability();
     }
 }

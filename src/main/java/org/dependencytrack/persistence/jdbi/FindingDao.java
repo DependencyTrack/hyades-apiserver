@@ -19,7 +19,9 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.Finding;
+import org.dependencytrack.model.GroupedFinding;
 import org.dependencytrack.persistence.jdbi.mapping.FindingRowMapper;
+import org.dependencytrack.persistence.jdbi.mapping.GroupedFindingRowMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
@@ -82,7 +84,7 @@ public interface FindingDao {
                AND (:includeSuppressed OR "ANALYSIS"."SUPPRESSED" IS NULL OR NOT "ANALYSIS"."SUPPRESSED")
             """)
     @RegisterRowMapper(FindingRowMapper.class)
-    List<Finding> getAllFindings(@Bind long projectId, @Bind boolean includeSuppressed);
+    List<Finding> getFindings(@Bind long projectId, @Bind boolean includeSuppressed);
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="queryFilter" type="String" -->
@@ -142,5 +144,77 @@ public interface FindingDao {
              </#if>
             """)
     @RegisterRowMapper(FindingRowMapper.class)
+    @AllowApiOrdering(alwaysBy = "\"VULNERABILITY\".\"VULNID\"", by = {
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"TITLE\""),
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"VULNID\""),
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"SEVERITY\""),
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"CVSSV3BASESCORE\""),
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"CVSSV2BASESCORE\""),
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"PUBLISHED\""),
+            @AllowApiOrdering.Column(name = "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\""),
+            @AllowApiOrdering.Column(name = "concat(projectName, ' ', projectVersion"),
+            @AllowApiOrdering.Column(name = "\"COMPONENT\".\"NAME\""),
+            @AllowApiOrdering.Column(name = "\"COMPONENT\".\"VERSION\""),
+            @AllowApiOrdering.Column(name = "\"ANALYSIS\".\"STATE\""),
+            @AllowApiOrdering.Column(name = "\"ANALYSIS\".\"SUPPRESSED\""),
+            @AllowApiOrdering.Column(name = "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"")
+    })
     List<Finding> getAllFindings(@Define String queryFilter);
+
+    @SqlQuery("""
+            SELECT "VULNERABILITY"."SOURCE"
+                , "VULNERABILITY"."VULNID"
+                , "VULNERABILITY"."TITLE"
+                , "VULNERABILITY"."SEVERITY"
+                , "VULNERABILITY"."CVSSV2BASESCORE"
+                , "VULNERABILITY"."CVSSV3BASESCORE"
+                , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
+                , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
+                , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
+                , "VULNERABILITY"."PUBLISHED"
+                , CAST(STRING_TO_ARRAY("VULNERABILITY"."CWES", ',') AS INT[]) AS "CWES"
+                , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
+                , COUNT(DISTINCT "PROJECT"."ID") AS "affectedProjectCount"
+            FROM "COMPONENT"
+                INNER JOIN "COMPONENTS_VULNERABILITIES"
+                    ON ("COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID")
+                INNER JOIN "VULNERABILITY"
+                    ON ("COMPONENTS_VULNERABILITIES"."VULNERABILITY_ID" = "VULNERABILITY"."ID")
+                INNER JOIN "FINDINGATTRIBUTION"
+                    ON ("COMPONENT"."ID" = "FINDINGATTRIBUTION"."COMPONENT_ID")
+                    AND ("VULNERABILITY"."ID" = "FINDINGATTRIBUTION"."VULNERABILITY_ID")
+                LEFT JOIN "ANALYSIS"
+                    ON ("COMPONENT"."ID" = "ANALYSIS"."COMPONENT_ID")
+                    AND ("VULNERABILITY"."ID" = "ANALYSIS"."VULNERABILITY_ID")
+                    AND ("COMPONENT"."PROJECT_ID" = "ANALYSIS"."PROJECT_ID")
+                INNER JOIN "PROJECT"
+                    ON ("COMPONENT"."PROJECT_ID" = "PROJECT"."ID")
+            <#if queryFilter??>
+                ${queryFilter}
+            </#if>
+            GROUP BY "VULNERABILITY"."ID"
+               , "VULNERABILITY"."SOURCE"
+               , "VULNERABILITY"."VULNID"
+               , "VULNERABILITY"."TITLE"
+               , "VULNERABILITY"."SEVERITY"
+               , "VULNERABILITY"."CVSSV2BASESCORE"
+               , "VULNERABILITY"."CVSSV3BASESCORE"
+               , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
+               , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
+               , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
+               , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
+               , "VULNERABILITY"."PUBLISHED"
+               , "VULNERABILITY"."CWES"
+            """)
+    @RegisterRowMapper(GroupedFindingRowMapper.class)
+    @AllowApiOrdering(alwaysBy = "\"VULNERABILITY\".\"VULNID\"", by = {
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"TITLE\""),
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"SEVERITY\""),
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"CVSSV3BASESCORE\""),
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"CVSSV2BASESCORE\""),
+            @AllowApiOrdering.Column(name = "\"VULNERABILITY\".\"PUBLISHED\""),
+            @AllowApiOrdering.Column(name = "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\""),
+            @AllowApiOrdering.Column(name = "affectedProjectCount")
+    })
+    List<GroupedFinding> getGroupedFindings(@Define String queryFilter);
 }

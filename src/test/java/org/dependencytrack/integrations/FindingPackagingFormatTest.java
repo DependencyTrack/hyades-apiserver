@@ -33,19 +33,17 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class FindingPackagingFormatTest extends PersistenceCapableTest {
 
@@ -63,7 +61,7 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         JSONObject meta = root.getJSONObject("meta");
         assertEquals(Config.getInstance().getApplicationName(), meta.getString("application"));
         assertEquals(Config.getInstance().getApplicationVersion(), meta.getString("version"));
-        Assert.assertNotNull(meta.getString("timestamp"));
+        assertNotNull(meta.getString("timestamp"));
 
         JSONObject pjson = root.getJSONObject("project");
         assertEquals(project.getName(), pjson.getString("name"));
@@ -81,52 +79,35 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         component.setProject(project);
         component.setName("component-name-1");
         component.setVersion("component-version");
-        qm.createComponent(component, false);
 
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("vuln-vulnId-1");
         vulnerability.setSource(Vulnerability.Source.GITHUB);
         vulnerability.setSeverity(Severity.CRITICAL);
-        qm.createVulnerability(vulnerability, false);
 
         var epss = new Epss();
         epss.setCve("vuln-vulnId-1");
         epss.setScore(BigDecimal.valueOf(0.5));
         epss.setPercentile(BigDecimal.valueOf(0.9));
-        qm.persist(epss);
 
         var attribution = new FindingAttribution();
         attribution.setComponent(component);
         attribution.setVulnerability(vulnerability);
         attribution.setAnalyzerIdentity(AnalyzerIdentity.OSSINDEX_ANALYZER);
         attribution.setAttributedOn(new Date());
-        qm.persist(attribution);
 
         var analysis = new Analysis();
         analysis.setVulnerability(vulnerability);
         analysis.setAnalysisState(AnalysisState.NOT_AFFECTED);
         analysis.setSuppressed(true);
-        qm.persist(analysis);
 
         Finding findingWithoutAlias = new Finding(project, component, vulnerability, epss, analysis, attribution);
 
         component.setName("component-name-2");
-        qm.persist(component);
-
         vulnerability.setVulnId("vuln-vulnId-2");
         vulnerability.setSource(Vulnerability.Source.NVD);
         vulnerability.setSeverity(Severity.HIGH);
-        qm.persist(vulnerability);
-
-        epss.setCve("vuln-vulnId-2");
-        epss.setScore(BigDecimal.valueOf(0.5));
-        epss.setPercentile(BigDecimal.valueOf(0.9));
-        qm.persist(epss);
-
         attribution.setAnalyzerIdentity(AnalyzerIdentity.INTERNAL_ANALYZER);
-        attribution.setComponent(component);
-        attribution.setVulnerability(vulnerability);
-        qm.persist(attribution);
 
         Finding findingWithAlias = new Finding(project, component, vulnerability, epss, analysis, attribution);
 
@@ -159,40 +140,35 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         );
 
         JSONObject root = fpf.getDocument();
-
         JSONArray findings = root.getJSONArray("findings");
-        var finding1 = (Finding) findings.get(0);
-        var finding2 = (Finding) findings.get(1);
-        assertEquals("component-name-1", finding1.getComponent().get("name"));
-        assertEquals("component-name-2", finding2.getComponent().get("name"));
 
-        assertEquals(AnalyzerIdentity.OSSINDEX_ANALYZER, finding1.getAttribution().get("analyzerIdentity"));
-        assertEquals(AnalyzerIdentity.INTERNAL_ANALYZER, finding2.getAttribution().get("analyzerIdentity"));
+        assertEquals("component-name-1", findings.getJSONObject(0).getJSONObject("component").getString("name"));
+        assertEquals("component-name-2", findings.getJSONObject(1).getJSONObject("component").getString("name"));
 
-        assertEquals(Severity.CRITICAL.toString(), finding1.getVulnerability().get("severity"));
-        assertEquals(Severity.HIGH.toString(), finding2.getVulnerability().get("severity"));
+        assertEquals(AnalyzerIdentity.OSSINDEX_ANALYZER, findings.getJSONObject(0).getJSONObject("attribution").get("analyzerIdentity"));
+        assertEquals(AnalyzerIdentity.INTERNAL_ANALYZER, findings.getJSONObject(1).getJSONObject("attribution").get("analyzerIdentity"));
 
-        assertEquals(BigDecimal.valueOf(0.5), finding1.getVulnerability().get("epssScore"));
-        assertEquals(BigDecimal.valueOf(0.9), finding2.getVulnerability().get("epssPercentile"));
+        assertEquals(Severity.CRITICAL.toString(), findings.getJSONObject(0).getJSONObject("vulnerability").get("severity"));
+        assertEquals(Severity.HIGH.toString(), findings.getJSONObject(1).getJSONObject("vulnerability").get("severity"));
 
-        var aliases_1 = (HashSet) finding1.getVulnerability().get("aliases");
-        Assert.assertTrue(aliases_1.isEmpty());
-        var aliases_2 = (Set<Map<String, String>>) finding2.getVulnerability().get("aliases");
-        Assert.assertFalse(aliases_2.isEmpty());
-        assertEquals(2, aliases_2.size());
+        assertEquals(BigDecimal.valueOf(0.5), findings.getJSONObject(0).getJSONObject("vulnerability").get("epssScore"));
+        assertEquals(BigDecimal.valueOf(0.9), findings.getJSONObject(1).getJSONObject("vulnerability").get("epssPercentile"));
 
-        var alias_1 = aliases_2.stream().toList().get(0);
-        var alias_2 = aliases_2.stream().toList().get(1);
-        Assert.assertEquals("anotherCveId", alias_1.get("cveId"));
-        Assert.assertEquals("anotherGhsaId", alias_1.get("ghsaId"));
-        Assert.assertEquals("someCveId", alias_2.get("cveId"));
-        Assert.assertEquals("someOsvId", alias_2.get("osvId"));
+        JSONArray aliases_1 = findings.getJSONObject(0).getJSONObject("vulnerability").getJSONArray("aliases");
+        assertTrue(aliases_1.isEmpty());
+        JSONArray aliases_2 = findings.getJSONObject(1).getJSONObject("vulnerability").getJSONArray("aliases");
+        assertFalse(aliases_2.isEmpty());
+        assertEquals(2, aliases_2.length());
+        assertEquals("anotherCveId", aliases_2.getJSONObject(0).getString("cveId"));
+        assertEquals("anotherGhsaId", aliases_2.getJSONObject(0).getString("ghsaId"));
+        assertEquals("someCveId", aliases_2.getJSONObject(1).getString("cveId"));
+        assertEquals("someOsvId", aliases_2.getJSONObject(1).getString("osvId"));
 
         // negative test to see if technical id is not included
-        assertThat(alias_1.get("id")).isNull();
+        assertFalse(aliases_2.getJSONObject(0).has("id"));
 
         //final negative test to make sure the allBySource element is not included
         String finalJsonOutput = root.toString();
-        Assert.assertFalse(finalJsonOutput.contains("allBySource"));
+        assertFalse(finalJsonOutput.contains("allBySource"));
     }
 }
