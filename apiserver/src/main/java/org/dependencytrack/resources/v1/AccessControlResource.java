@@ -19,7 +19,11 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
+import alpine.model.LdapUser;
+import alpine.model.ManagedUser;
+import alpine.model.OidcUser;
 import alpine.model.Team;
+import alpine.model.UserPrincipal;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
@@ -103,6 +107,52 @@ public class AccessControlResource extends AlpineResource {
                 return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team could not be found.").build();
+            }
+        }
+    }
+
+    @GET
+    @Path("/user/{username}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns the projects accessible by the specified user",
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>")
+    @PaginatedApi
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Projects accessible by the specified user",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects",
+                            schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "No unassigned projects for specified user."),
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
+    public Response retrieveUserProjects(
+            @Parameter(description = "The username to retrieve projects for",
+                    required = true) @PathParam("username") String username,
+            @Parameter(description = "Optionally excludes inactive projects from being returned",
+                    required = false) @QueryParam("excludeInactive") boolean excludeInactive,
+            @Parameter(description = "Optionally excludes children projects from being returned",
+                    required = false) @QueryParam("onlyRoot") boolean onlyRoot) {
+
+        try (QueryManager qm = new QueryManager()) {
+            UserPrincipal principal = qm.getUserPrincipal(username);
+
+            try (final Handle jdbiHandle = openJdbiHandle()) {
+                var dao = jdbiHandle.attach(RoleDao.class);
+                List<Project> projects = switch (principal) {
+                    case LdapUser user -> dao.getLdapUserUnassignedProjects(user.getUsername());
+                    case ManagedUser user -> dao.getManagedUserUnassignedProjects(user.getUsername());
+                    case OidcUser user -> dao.getOidcUserUnassignedProjects(user.getUsername());
+                    default -> Collections.emptyList();
+                };
+
+                if (projects.isEmpty())
+                    return Response.status(Response.Status.NOT_FOUND).entity("No unassigned projects for specified user.").build();
+                
+                return Response.ok(projects).header(TOTAL_COUNT_HEADER, projects.size()).build();
             }
         }
     }
