@@ -84,23 +84,19 @@
     <properties>
         <!-- Dependency Versions -->
         <lib.alpine.version>${project.parent.version}</lib.alpine.version>
-        <lib.awaitility.version>4.2.2</lib.awaitility.version>
+        <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.cel-tools.version>0.5.1</lib.cel-tools.version>
-        <lib.checkstyle.version>10.20.1</lib.checkstyle.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.21.0</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.checkstyle.version>10.21.4</lib.checkstyle.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.23.1</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
         <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
-        <lib.cyclonedx-java.version>10.1.0</lib.cyclonedx-java.version>
+        <lib.cyclonedx-java.version>10.2.1</lib.cyclonedx-java.version>
         <lib.datanucleus-postgresql.version>0.3.0</lib.datanucleus-postgresql.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <!--
-            Downgraded from 2.18.2 due to incompatibility with swagger-core.
-            https://github.com/swagger-api/swagger-core/issues/4755
-        -->
-        <lib.jackson.version>2.17.3</lib.jackson.version>
-        <lib.jackson-databind.version>2.17.3</lib.jackson-databind.version>
+        <lib.jackson.version>2.18.3</lib.jackson.version>
+        <lib.jackson-databind.version>2.18.3</lib.jackson-databind.version>
         <lib.jdbi.version>3.47.0</lib.jdbi.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
@@ -116,12 +112,8 @@
         <lib.protobuf-java.version>4.30.0</lib.protobuf-java.version>
         <lib.testcontainers.version>1.20.6</lib.testcontainers.version>
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
-        <!--
-            Downgraded from 2.2.26 due to incompatibilities with newer jackson-databind versions.
-            https://github.com/swagger-api/swagger-core/issues/4755
-        -->
-        <lib.swagger.version>2.2.25</lib.swagger.version>
-        <lib.swagger-parser.version>2.1.23</lib.swagger-parser.version>
+        <lib.swagger.version>2.2.29</lib.swagger.version>
+        <lib.swagger-parser.version>2.1.25</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
         <lib.woodstox.version>7.1.0</lib.woodstox.version>
@@ -130,7 +122,7 @@
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
         <lib.net.javacrumbs.shedlock.version>6.3.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
-        <lib.jdbc-driver.postgresql.version>42.7.4</lib.jdbc-driver.postgresql.version>
+        <lib.jdbc-driver.postgresql.version>42.7.5</lib.jdbc-driver.postgresql.version>
         <!-- Maven Plugin Properties -->
         <plugin.cyclonedx.projectType>application</plugin.cyclonedx.projectType>
         <plugin.cyclonedx.outputFormat>json</plugin.cyclonedx.outputFormat>
@@ -177,15 +169,6 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib-jdk8</artifactId>
                 <version>${lib.kotlin-stdlib.version}</version>
-            </dependency>
-            <!--
-                Downgraded from 2.18.2 due to incompatibility with swagger-core.
-                https://github.com/swagger-api/swagger-core/issues/4755
-            -->
-            <dependency>
-                <groupId>com.fasterxml.jackson.dataformat</groupId>
-                <artifactId>jackson-dataformat-xml</artifactId>
-                <version>${lib.jackson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
