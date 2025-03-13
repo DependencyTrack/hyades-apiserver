@@ -146,7 +146,6 @@ public class QueryManager extends AlpineQueryManager {
     private BomQueryManager bomQueryManager;
     private ComponentQueryManager componentQueryManager;
     private FindingsQueryManager findingsQueryManager;
-    private FindingsSearchQueryManager findingsSearchQueryManager;
     private LicenseQueryManager licenseQueryManager;
     private MetricsQueryManager metricsQueryManager;
     private NotificationQueryManager notificationQueryManager;
@@ -405,17 +404,6 @@ public class QueryManager extends AlpineQueryManager {
             findingsQueryManager = (request == null) ? new FindingsQueryManager(getPersistenceManager()) : new FindingsQueryManager(getPersistenceManager(), request);
         }
         return findingsQueryManager;
-    }
-
-    /**
-     * Lazy instantiation of FindingsSearchQueryManager.
-     * @return a FindingsSearchQueryManager object
-     */
-    private FindingsSearchQueryManager getFindingsSearchQueryManager() {
-        if (findingsSearchQueryManager == null) {
-            findingsSearchQueryManager = (request == null) ? new FindingsSearchQueryManager(getPersistenceManager()) : new FindingsSearchQueryManager(getPersistenceManager(), request);
-        }
-        return findingsSearchQueryManager;
     }
 
     /**
@@ -1101,14 +1089,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<Finding> getFindings(Project project, boolean includeSuppressed) {
         return getFindingsQueryManager().getFindings(project, includeSuppressed);
-    }
-
-    public PaginatedResult getAllFindings(final Map<String, String> filters, final boolean showSuppressed, final boolean showInactive) {
-        return getFindingsSearchQueryManager().getAllFindings(filters, showSuppressed, showInactive);
-    }
-
-    public PaginatedResult getAllFindingsGroupedByVulnerability(final Map<String, String> filters, final boolean showInactive) {
-        return getFindingsSearchQueryManager().getAllFindingsGroupedByVulnerability(filters, showInactive);
     }
 
     public List<VulnerabilityMetrics> getVulnerabilityMetrics() {

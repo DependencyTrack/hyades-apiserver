@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.persistence.jdbi.mapping;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Epss;
@@ -25,14 +26,18 @@ import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityAlias;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.UUID;
 
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.deserializeJson;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.hasColumn;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
 /**
@@ -40,6 +45,8 @@ import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSe
  */
 public class FindingRowMapper implements RowMapper<Finding> {
 
+    private static final TypeReference<List<VulnerabilityAlias>> VULNERABILITY_ALIASES_TYPE_REF = new TypeReference<>() {
+    };
     private final RowMapper<Component> componentMapper = BeanMapper.of(Component.class);
     private final RowMapper<Project> projectMapper = BeanMapper.of(Project.class);
     private final RowMapper<Epss> epssMapper = BeanMapper.of(Epss.class);
@@ -65,7 +72,12 @@ public class FindingRowMapper implements RowMapper<Finding> {
         final Analysis analysis = analysisMapper.map(rs, ctx);
         final FindingAttribution attribution = attributionMapper.map(rs, ctx);
         final Vulnerability vulnerability = vulnerabilityMapper.map(rs, ctx);
+        maybeSet(rs, "vulnAliasesJson", (ignored, columnName) ->
+                deserializeJson(rs, columnName, VULNERABILITY_ALIASES_TYPE_REF), vulnerability::setAliases);
         final Finding finding = new Finding(project, component, vulnerability, epss, analysis, attribution);
+        if (hasColumn(rs, "latest_version")) {
+            finding.getComponent().put("latestVersion", rs.getString("latest_version"));
+        }
         return finding;
     }
 }

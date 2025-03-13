@@ -56,6 +56,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 
@@ -68,6 +69,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing findings.
@@ -310,7 +313,8 @@ public class FindingResource extends AbstractApiResource {
             filters.put("cvssv2To", cvssv2To);
             filters.put("cvssv3From", cvssv3From);
             filters.put("cvssv3To", cvssv3To);
-            final PaginatedResult result = qm.getAllFindings(filters, showSuppressed, showInactive);
+            final PaginatedResult result = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(FindingDao.class)
+                    .getAllFindings(this.getAlpineRequest(), filters, showSuppressed, showInactive));
             return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
         }
     }
@@ -369,7 +373,8 @@ public class FindingResource extends AbstractApiResource {
             filters.put("cvssv3To", cvssv3To);
             filters.put("occurrencesFrom", occurrencesFrom);
             filters.put("occurrencesTo", occurrencesTo);
-            final PaginatedResult result = qm.getAllFindingsGroupedByVulnerability(filters, showInactive);
+            final PaginatedResult result = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(FindingDao.class)
+                    .getGroupedFindings(this.getAlpineRequest(), filters, showInactive));
             return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
         }
     }
