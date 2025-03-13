@@ -23,6 +23,7 @@ import alpine.server.persistence.PersistenceManagerFactory;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
+import org.dependencytrack.cache.CacheManager;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManagerTestUtil;
@@ -78,6 +79,7 @@ public abstract class PersistenceCapableTest {
 
         PersistenceManagerFactory.tearDown();
         KafkaProducerInitializer.tearDown();
+        CacheManager.tearDown();
     }
 
     @AfterClass

@@ -98,6 +98,7 @@
         <lib.jackson.version>2.18.3</lib.jackson.version>
         <lib.jackson-databind.version>2.18.3</lib.jackson-databind.version>
         <lib.jdbi.version>3.47.0</lib.jdbi.version>
+        <lib.jcache-api.version>1.1.1</lib.jcache-api.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.9.0</lib.kafka.version>
@@ -110,6 +111,7 @@
         <lib.parallel-consumer.version>0.5.3.2</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.2</lib.pebble.version>
         <lib.protobuf-java.version>4.30.1</lib.protobuf-java.version>
+        <lib.redisson.version>3.45.0</lib.redisson.version>
         <lib.testcontainers.version>1.20.6</lib.testcontainers.version>
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
         <lib.swagger.version>2.2.29</lib.swagger.version>
@@ -206,6 +208,22 @@
                     <artifactId>h2</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <!-- Caching -->
+        <dependency>
+            <groupId>javax.cache</groupId>
+            <artifactId>cache-api</artifactId>
+            <version>${lib.jcache-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>jcache</artifactId>
+            <version>${lib.caffeine.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>${lib.redisson.version}</version>
         </dependency>
         <!-- Common Expression Language (CEL) -->
         <dependency>
@@ -440,6 +458,11 @@
             <version>${lib.commons-compress.version}</version>
         </dependency>
         <!-- Resilience4J -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-cache</artifactId>
+            <version>${lib.resilience4j.version}</version>
+        </dependency>
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-retry</artifactId>
