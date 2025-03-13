@@ -125,7 +125,8 @@ public class FindingResource extends AbstractApiResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);
-                final List<Finding> findings = qm.getFindings(project, suppressed);
+                final List<Finding> findings = withJdbiHandle(handle ->
+                        handle.attach(FindingDao.class).getFindings(project.getId(), suppressed));
                 if (acceptHeader != null && acceptHeader.contains(MEDIA_TYPE_SARIF_JSON)) {
                     try {
                         return Response.ok(generateSARIF(findings), MEDIA_TYPE_SARIF_JSON)
@@ -175,7 +176,8 @@ public class FindingResource extends AbstractApiResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);
-                final List<Finding> findings = qm.getFindings(project);
+                final List<Finding> findings = withJdbiHandle(handle ->
+                        handle.attach(FindingDao.class).getFindings(project.getId(), false));
                 final FindingPackagingFormat fpf = new FindingPackagingFormat(UUID.fromString(uuid), findings);
                 final Response.ResponseBuilder rb = Response.ok(fpf.getDocument().toString(), "application/json");
                 rb.header("Content-Disposition", "inline; filename=findings-" + uuid + ".fpf");

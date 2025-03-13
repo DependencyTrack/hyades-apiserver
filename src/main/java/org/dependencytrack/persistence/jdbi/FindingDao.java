@@ -21,8 +21,12 @@ package org.dependencytrack.persistence.jdbi;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
+import com.github.packageurl.MalformedPackageURLException;
+import com.github.packageurl.PackageURL;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.GroupedFinding;
+import org.dependencytrack.model.RepositoryMetaComponent;
+import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.jdbi.mapping.FindingRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.GroupedFindingRowMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
@@ -41,6 +45,8 @@ public interface FindingDao {
 
     @SqlQuery("""
             SELECT "PROJECT"."UUID" AS "projectUuid"
+                 , "PROJECT"."NAME" AS "projectName"
+                 , "PROJECT"."VERSION" AS "projectVersion"
                  , "COMPONENT"."UUID" AS "componentUuid"
                  , "COMPONENT"."NAME"
                  , "COMPONENT"."GROUP"
@@ -64,6 +70,7 @@ public interface FindingDao {
                  , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
                  , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
                  , "VULNERABILITY"."OWASPRRVECTOR"
+                 , JSONB_VULN_ALIASES("VULNERABILITY"."SOURCE", "VULNERABILITY"."VULNID") AS "vulnAliasesJson"
                  , "EPSS"."SCORE"
                  , "EPSS"."PERCENTILE"
                  , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
@@ -92,7 +99,14 @@ public interface FindingDao {
                AND (:includeSuppressed OR "ANALYSIS"."SUPPRESSED" IS NULL OR NOT "ANALYSIS"."SUPPRESSED")
             """)
     @RegisterRowMapper(FindingRowMapper.class)
-    List<Finding> getFindings(@Bind long projectId, @Bind boolean includeSuppressed);
+    List<Finding> getFindingsByProject(@Bind long projectId, @Bind boolean includeSuppressed);
+
+    default List<Finding> getFindings(final long projectId, final boolean includeSuppressed) {
+        List<Finding> findings = withJdbiHandle(handle ->
+                getFindingsByProject(projectId, includeSuppressed));
+        findings = mapComponentLatestVersion(findings);
+        return findings;
+    }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
@@ -136,7 +150,6 @@ public interface FindingDao {
                  , "FINDINGATTRIBUTION"."REFERENCE_URL"
                  , "ANALYSIS"."STATE"
                  , "ANALYSIS"."SUPPRESSED"
-                 , "REPOSITORY_META_COMPONENT"."LATEST_VERSION" AS "latest_version"
               FROM "COMPONENT"
              INNER JOIN "COMPONENTS_VULNERABILITIES"
                 ON "COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID"
@@ -151,8 +164,6 @@ public interface FindingDao {
                 ON "COMPONENT"."ID" = "ANALYSIS"."COMPONENT_ID"
                AND "VULNERABILITY"."ID" = "ANALYSIS"."VULNERABILITY_ID"
                AND "COMPONENT"."PROJECT_ID" = "ANALYSIS"."PROJECT_ID"
-              LEFT JOIN "REPOSITORY_META_COMPONENT"
-                ON "COMPONENT"."NAME" = "REPOSITORY_META_COMPONENT"."NAME"
              INNER JOIN "PROJECT"
                 ON "COMPONENT"."PROJECT_ID" = "PROJECT"."ID"
              WHERE ${apiProjectAclCondition}
@@ -189,6 +200,27 @@ public interface FindingDao {
     List<Finding> getAllFindings(@Define String queryFilter,
                                  @Define boolean activeFilter,
                                  @Define boolean suppressedFilter);
+
+    /**
+     * Returns a List of all Finding objects filtered by ACL and other optional filters.
+     * @param filters        determines the filters to apply on the list of Finding objects
+     * @param showSuppressed determines if suppressed vulnerabilities should be included or not
+     * @param showInactive   determines if inactive projects should be included or not
+     * @return a List of Finding objects
+     */
+    default PaginatedResult getAllFindings(final AlpineRequest alpineRequest, final Map<String, String> filters, final boolean showSuppressed, final boolean showInactive) {
+        StringBuilder queryFilter = new StringBuilder();
+        processFilters(filters, queryFilter);
+        final List<Finding> findings = withJdbiHandle(handle ->
+                getAllFindings(String.valueOf(queryFilter), showInactive, showSuppressed));
+        PaginatedResult result = new PaginatedResult();
+        result.setTotal(findings.size());
+        List<Finding> findingList = findings.subList(alpineRequest.getPagination().getOffset(),
+                Math.min(alpineRequest.getPagination().getOffset() + alpineRequest.getPagination().getLimit(), findings.size()));
+        findingList = mapComponentLatestVersion(findingList);
+        result.setObjects(findingList);
+        return result;
+    }
 
     @SqlQuery("""
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
@@ -280,24 +312,26 @@ public interface FindingDao {
         return result;
     }
 
-    /**
-     * Returns a List of all Finding objects filtered by ACL and other optional filters.
-     * @param filters        determines the filters to apply on the list of Finding objects
-     * @param showSuppressed determines if suppressed vulnerabilities should be included or not
-     * @param showInactive   determines if inactive projects should be included or not
-     * @return a List of Finding objects
-     */
-    default PaginatedResult getAllFindings(final AlpineRequest alpineRequest, final Map<String, String> filters, final boolean showSuppressed, final boolean showInactive) {
-        StringBuilder queryFilter = new StringBuilder();
-        processFilters(filters, queryFilter);
-        final List<Finding> findings = withJdbiHandle(handle ->
-                getAllFindings(String.valueOf(queryFilter), showInactive, showSuppressed));
-        PaginatedResult result = new PaginatedResult();
-        result.setTotal(findings.size());
-        final List<Finding> findingList = findings.subList(alpineRequest.getPagination().getOffset(),
-                Math.min(alpineRequest.getPagination().getOffset() + alpineRequest.getPagination().getLimit(), findings.size()));
-        result.setObjects(findingList);
-        return result;
+    private List<Finding> mapComponentLatestVersion(List<Finding> findingList){
+        for (final Finding finding : findingList) {
+            if (finding.getComponent().get("purl") != null) {
+                try {
+                    final PackageURL purl = new PackageURL(finding.getComponent().get("purl").toString());
+                    if (purl != null) {
+                        final RepositoryType type = RepositoryType.resolve(purl);
+                        if (RepositoryType.UNSUPPORTED != type) {
+                            final RepositoryMetaComponent repoMetaComponent = withJdbiHandle(handle ->
+                                    handle.attach(RepositoryMetaDao.class).getRepositoryMetaComponent(type.name(), purl.getNamespace(), purl.getName()));
+                            if (repoMetaComponent != null) {
+                                finding.getComponent().put("latestVersion", repoMetaComponent.getLatestVersion());
+                            }
+                        }
+                    }
+                } catch (MalformedPackageURLException e) {
+                }
+            }
+        }
+        return findingList;
     }
 
 

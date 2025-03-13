@@ -109,8 +109,6 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         vulnerability.setSeverity(Severity.HIGH);
         attribution.setAnalyzerIdentity(AnalyzerIdentity.INTERNAL_ANALYZER);
 
-        Finding findingWithAlias = new Finding(project, component, vulnerability, epss, analysis, attribution);
-
         var alias = new VulnerabilityAlias();
         alias.setCveId("someCveId");
         alias.setSonatypeId("someSonatypeId");
@@ -131,8 +129,9 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         other.setInternalId("anotherInternalId");
         other.setVulnDbId(null);
 
-        findingWithoutAlias.addVulnerabilityAliases(List.of());
-        findingWithAlias.addVulnerabilityAliases(List.of(alias, other));
+        vulnerability.setAliases(List.of(alias, other));
+
+        Finding findingWithAlias = new Finding(project, component, vulnerability, epss, analysis, attribution);
 
         FindingPackagingFormat fpf = new FindingPackagingFormat(
                 project.getUuid(),

@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.deserializeJson;
-import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.hasColumn;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
 /**
@@ -75,9 +74,6 @@ public class FindingRowMapper implements RowMapper<Finding> {
         maybeSet(rs, "vulnAliasesJson", (ignored, columnName) ->
                 deserializeJson(rs, columnName, VULNERABILITY_ALIASES_TYPE_REF), vulnerability::setAliases);
         final Finding finding = new Finding(project, component, vulnerability, epss, analysis, attribution);
-        if (hasColumn(rs, "latest_version")) {
-            finding.getComponent().put("latestVersion", rs.getString("latest_version"));
-        }
         return finding;
     }
 }

@@ -60,6 +60,8 @@ import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.resources.v1.FindingResource.MEDIA_TYPE_SARIF_JSON;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 
 public class FindingResourceTest extends ResourceTest {
 
@@ -104,7 +106,7 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
                     assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
                     assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
-                    Assert.assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
+                    assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v1.getUuid().toString(), finding.getString("matrix"));
                 },
                 jsonValue -> {
@@ -116,7 +118,7 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
                     assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
                     assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
-                    Assert.assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
+                    assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v2.getUuid().toString(), finding.getString("matrix"));
                 },
                 jsonValue -> {
@@ -128,7 +130,7 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
                     assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
                     assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
-                    Assert.assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
+                    assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c2.getUuid().toString() + ":" + v3.getUuid().toString(), finding.getString("matrix"));
                 }
         );
@@ -240,7 +242,7 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
                     assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
                     assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
-                    Assert.assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
+                    assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v1.getUuid().toString(), finding.getString("matrix"));
                 },
                 jsonValue -> {
@@ -252,7 +254,7 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
                     assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
                     assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
-                    Assert.assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
+                    assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v2.getUuid().toString(), finding.getString("matrix"));
                 },
                 jsonValue -> {
@@ -264,7 +266,7 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals(2, findings.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").size());
                     assertEquals(80, findings.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
                     assertEquals(666, findings.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
-                    Assert.assertFalse(findings.getJsonObject(0).getJsonObject("analysis").getBoolean("isSuppressed"));
+                    assertFalse(findings.getJsonObject(0).getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c2.getUuid().toString() + ":" + v3.getUuid().toString(), finding.getString("matrix"));
                 }
         );
@@ -376,7 +378,7 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
                     assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
                     assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
-                    Assert.assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
+                    assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v1.getUuid().toString(), finding.getString("matrix"));
                     assertEquals("2.0.0", finding.getJsonObject("component").getString("latestVersion"));
                 },
@@ -389,7 +391,7 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
                     assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
                     assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
-                    Assert.assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
+                    assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v2.getUuid().toString(), finding.getString("matrix"));
                     assertEquals("2.0.0", finding.getJsonObject("component").getString("latestVersion"));
                 },
@@ -402,7 +404,7 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
                     assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
                     assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
-                    Assert.assertFalse(json.getJsonObject(0).getJsonObject("analysis").getBoolean("isSuppressed"));
+                    assertFalse(json.getJsonObject(0).getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c2.getUuid().toString() + ":" + v3.getUuid().toString(), finding.getString("matrix"));
                     assertEquals("3.0.0", finding.getJsonObject("component").getString("latestVersion"));
                 }
@@ -432,9 +434,9 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals(2, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
         assertEquals(666, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
-        Assert.assertFalse(json.getJsonObject(0).getJsonObject("analysis").getBoolean("isSuppressed"));
+        assertFalse(json.getJsonObject(0).getJsonObject("analysis").getBoolean("isSuppressed"));
         assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v1.getUuid().toString(), json.getJsonObject(0).getString("matrix"));
-        Assert.assertThrows(NullPointerException.class, () -> json.getJsonObject(0).getJsonObject("component").getString("latestVersion"));
+        assertNull(json.getJsonObject(0).getJsonObject("component").get("latestVersion"));
     }
 
     @Test

@@ -58,7 +58,6 @@ import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Epss;
-import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
@@ -1081,14 +1080,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public AnalysisComment makeAnalysisComment(Analysis analysis, String comment, String commenter) {
         return getFindingsQueryManager().makeAnalysisComment(analysis, comment, commenter);
-    }
-
-    public List<Finding> getFindings(Project project) {
-        return getFindingsQueryManager().getFindings(project);
-    }
-
-    public List<Finding> getFindings(Project project, boolean includeSuppressed) {
-        return getFindingsQueryManager().getFindings(project, includeSuppressed);
     }
 
     public List<VulnerabilityMetrics> getVulnerabilityMetrics() {
