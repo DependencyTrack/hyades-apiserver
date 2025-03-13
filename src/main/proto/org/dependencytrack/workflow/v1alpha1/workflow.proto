@@ -55,8 +55,13 @@ message WorkflowPayload {
   map<string, bytes> metadata = 1;
 
   oneof content {
-    bytes binary_content = 10;
+    BinaryContent binary_content = 10;
     google.protobuf.Any proto_content = 11;
+  }
+
+  message BinaryContent {
+    string media_type = 1;
+    bytes data = 2;
   }
 }
 

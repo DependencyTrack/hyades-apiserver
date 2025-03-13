@@ -26,10 +26,6 @@ public class PayloadConverters {
         return new ProtobufPayloadConverter<>(clazz);
     }
 
-    public static PayloadConverter<String> stringConverter() {
-        return new StringPayloadConverter();
-    }
-
     public static PayloadConverter<Void> voidConverter() {
         return new VoidPayloadConverter();
     }

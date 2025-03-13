@@ -53,8 +53,9 @@ public class ProtobufPayloadConverter<T extends Message> implements PayloadConve
         }
 
         if (!payload.getProtoContent().is(clazz)) {
-            throw new PayloadConversionException("Expected Protobuf payload to be of type %s, but was %s".formatted(
-                    clazz.getName(), payload.getProtoContent().getTypeUrl()));
+            throw new PayloadConversionException(
+                    "Expected Protobuf payload to be of type %s, but was %s".formatted(
+                            clazz.getName(), payload.getProtoContent().getTypeUrl()));
         }
 
         try {

@@ -20,30 +20,40 @@ package org.dependencytrack.workflow.framework.payload;
 
 import com.google.protobuf.ByteString;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-import org.jetbrains.annotations.Nullable;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload.BinaryContent;
 
 public class StringPayloadConverter implements PayloadConverter<String> {
 
-    @Nullable
+    private static final String MEDIA_TYPE = "text/plain";
+
     @Override
-    public WorkflowPayload convertToPayload(@Nullable final String value) {
+    public WorkflowPayload convertToPayload(final String value) {
         if (value == null) {
             return null;
         }
 
         return WorkflowPayload.newBuilder()
-                .setBinaryContent(ByteString.copyFromUtf8(value))
+                .setBinaryContent(BinaryContent.newBuilder()
+                        .setMediaType(MEDIA_TYPE)
+                        .setData(ByteString.copyFromUtf8(value))
+                        .build())
                 .build();
     }
 
-    @Nullable
     @Override
-    public String convertFromPayload(@Nullable final WorkflowPayload payload) {
+    public String convertFromPayload(final WorkflowPayload payload) {
         if (payload == null || !payload.hasBinaryContent()) {
             return null;
         }
 
-        return payload.getBinaryContent().toStringUtf8();
+        final BinaryContent binaryContent = payload.getBinaryContent();
+        if (!MEDIA_TYPE.equals(binaryContent.getMediaType())) {
+            throw new PayloadConversionException(
+                    "Expected binary content of type %s, but got %s".formatted(
+                            MEDIA_TYPE, binaryContent.getMediaType()));
+        }
+
+        return payload.getBinaryContent().getData().toStringUtf8();
     }
 
 }

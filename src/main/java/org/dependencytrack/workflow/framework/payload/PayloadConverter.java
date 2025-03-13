@@ -20,14 +20,10 @@ package org.dependencytrack.workflow.framework.payload;
 
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 
-import jakarta.annotation.Nullable;
-
 public interface PayloadConverter<T> {
 
-    @Nullable
-    WorkflowPayload convertToPayload(@Nullable final T value);
+    WorkflowPayload convertToPayload(final T value);
 
-    @Nullable
-    T convertFromPayload(@Nullable final WorkflowPayload payload);
+    T convertFromPayload(final WorkflowPayload payload);
 
 }

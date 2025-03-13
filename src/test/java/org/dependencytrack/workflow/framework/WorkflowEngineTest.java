@@ -18,20 +18,22 @@
  */
 package org.dependencytrack.workflow.framework;
 
-import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.util.PersistenceUtil;
 import org.dependencytrack.workflow.framework.failure.ActivityFailureException;
 import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.framework.failure.SubWorkflowFailureException;
 import org.dependencytrack.workflow.framework.failure.WorkflowFailureException;
+import org.dependencytrack.workflow.framework.payload.StringPayloadConverter;
+import org.dependencytrack.workflow.framework.persistence.Migration;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunListRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowScheduleRow;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.postgresql.ds.PGSimpleDataSource;
+import org.testcontainers.containers.PostgreSQLContainer;
 
-import javax.sql.DataSource;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -50,19 +52,24 @@ import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORK
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
 import static org.dependencytrack.proto.workflow.v1alpha1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.stringConverter;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
-public class WorkflowEngineTest extends PersistenceCapableTest {
+public class WorkflowEngineTest {
+
+    @Rule
+    public final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:17-alpine");
 
     private WorkflowEngine engine;
 
     @Before
-    @Override
     public void before() throws Exception {
-        super.before();
+        final var dataSource = new PGSimpleDataSource();
+        dataSource.setUrl(postgresContainer.getJdbcUrl());
+        dataSource.setUser(postgresContainer.getUsername());
+        dataSource.setPassword(postgresContainer.getPassword());
+        dataSource.setDatabaseName(postgresContainer.getDatabaseName());
 
-        final DataSource dataSource = PersistenceUtil.getDataSource(qm.getPersistenceManager());
+        Migration.run(dataSource);
 
         final var config = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
         config.scheduler().setInitialDelay(Duration.ofMillis(250));
@@ -73,7 +80,6 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     }
 
     @After
-    @Override
     public void after() {
         if (engine != null) {
             try {
@@ -82,13 +88,11 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                 throw new RuntimeException(e);
             }
         }
-
-        super.after();
     }
 
     @Test
     public void shouldRunWorkflowWithArgumentAndResult() {
-        engine.registerWorkflowExecutor("foo", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, new StringPayloadConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.setStatus("someCustomStatus");
             return Optional.of("someResult");
         });
@@ -98,7 +102,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                         .withConcurrencyGroupId("someConcurrencyGroupId")
                         .withPriority(6)
                         .withLabels(Map.of("label-a", "123", "label-b", "321"))
-                        .withArgument("someArgument", stringConverter()));
+                        .withArgument("someArgument", new StringPayloadConverter()));
 
         final WorkflowRunStateView completedRun = awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -129,7 +133,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(event.getRunScheduled().getPriority()).isEqualTo(6);
                     assertThat(event.getRunScheduled().getLabelsMap()).containsOnlyKeys("label-a", "label-b");
                     assertThat(event.getRunScheduled().getArgument().hasBinaryContent()).isTrue();
-                    assertThat(event.getRunScheduled().getArgument().getBinaryContent().toStringUtf8()).isEqualTo("someArgument");
+                    assertThat(event.getRunScheduled().getArgument().getBinaryContent().getData().toStringUtf8()).isEqualTo("someArgument");
                 },
                 event -> {
                     assertThat(event.getId()).isEqualTo(-1);
@@ -144,7 +148,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
                     assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
                     assertThat(event.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_COMPLETED);
                     assertThat(event.getRunCompleted().getResult().hasBinaryContent()).isTrue();
-                    assertThat(event.getRunCompleted().getResult().getBinaryContent().toStringUtf8()).isEqualTo("someResult");
+                    assertThat(event.getRunCompleted().getResult().getBinaryContent().getData().toStringUtf8()).isEqualTo("someResult");
                     assertThat(event.getRunCompleted().hasFailure()).isFalse();
                 },
                 event -> {
@@ -304,12 +308,12 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldWaitForSubWorkflowRun() {
         engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             final Optional<String> subWorkflowResult = ctx.callSubWorkflow(
-                    "bar", 1, null, "inputValue", stringConverter(), stringConverter()).await();
+                    "bar", 1, null, "inputValue", new StringPayloadConverter(), new StringPayloadConverter()).await();
             assertThat(subWorkflowResult).contains("inputValue-outputValue");
             return Optional.empty();
         });
 
-        engine.registerWorkflowExecutor("bar", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5),
+        engine.registerWorkflowExecutor("bar", 1, new StringPayloadConverter(), new StringPayloadConverter(), Duration.ofSeconds(5),
                 ctx -> ctx.argument().map(argument -> argument + "-outputValue"));
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
@@ -638,11 +642,11 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldCallActivity() {
         engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callActivity(
-                    "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await().orElseThrow();
+                    "abc", null, voidConverter(), new StringPayloadConverter(), defaultRetryPolicy()).await().orElseThrow();
             return Optional.empty();
         });
 
-        engine.registerActivityExecutor("abc", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> Optional.of("123"));
+        engine.registerActivityExecutor("abc", 1, voidConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> Optional.of("123"));
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
@@ -662,10 +666,10 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
     @Test
     public void shouldScheduleMultipleActivitiesConcurrently() {
-        engine.registerWorkflowExecutor("foo", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowExecutor("foo", 1, voidConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> {
             final List<Awaitable<String>> awaitables = List.of(
-                    ctx.callActivity("abc", "first", stringConverter(), stringConverter(), defaultRetryPolicy()),
-                    ctx.callActivity("abc", "second", stringConverter(), stringConverter(), defaultRetryPolicy()));
+                    ctx.callActivity("abc", "first", new StringPayloadConverter(), new StringPayloadConverter(), defaultRetryPolicy()),
+                    ctx.callActivity("abc", "second", new StringPayloadConverter(), new StringPayloadConverter(), defaultRetryPolicy()));
 
             final String joinedResult = awaitables.stream()
                     .map(Awaitable::await)
@@ -675,7 +679,7 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
             return Optional.of(joinedResult);
         });
 
-        engine.registerActivityExecutor("abc", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5),
+        engine.registerActivityExecutor("abc", 1, new StringPayloadConverter(), new StringPayloadConverter(), Duration.ofSeconds(5),
                 ctx -> Optional.of(ctx.argument().orElseThrow()));
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
@@ -704,11 +708,11 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
 
         engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callActivity(
-                    "abc", null, voidConverter(), stringConverter(), retryPolicy).await().orElseThrow();
+                    "abc", null, voidConverter(), new StringPayloadConverter(), retryPolicy).await().orElseThrow();
             return Optional.empty();
         });
 
-        engine.registerActivityExecutor("abc", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerActivityExecutor("abc", 1, voidConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> {
             throw new IllegalStateException();
         });
 
@@ -740,11 +744,11 @@ public class WorkflowEngineTest extends PersistenceCapableTest {
     public void shouldNotRetryActivityFailingWithTerminalException() {
         engine.registerWorkflowExecutor("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.callActivity(
-                    "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await().orElseThrow();
+                    "abc", null, voidConverter(), new StringPayloadConverter(), defaultRetryPolicy()).await().orElseThrow();
             return Optional.empty();
         });
 
-        engine.registerActivityExecutor("abc", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerActivityExecutor("abc", 1, voidConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> {
             throw new ApplicationFailureException("Ouch!", null, true);
         });
 
