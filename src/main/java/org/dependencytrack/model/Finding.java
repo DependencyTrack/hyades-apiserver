@@ -70,7 +70,11 @@ public class Finding implements Serializable {
         optValue(vulnerability, "subtitle", vulnToMap.getSubTitle());
         optValue(vulnerability, "description", vulnToMap.getDescription());
         optValue(vulnerability, "recommendation", vulnToMap.getRecommendation());
-        final Severity severity = vulnToMap.getSeverity();
+        if (vulnToMap.getSeverity() != null) {
+            final Severity severity = vulnToMap.getSeverity();
+            optValue(vulnerability, "severity", severity.name());
+            optValue(vulnerability, "severityRank", severity.ordinal());
+        }
         optValue(vulnerability, "cvssV2BaseScore", vulnToMap.getCvssV2BaseScore());
         optValue(vulnerability, "cvssV3BaseScore", vulnToMap.getCvssV3BaseScore());
         optValue(vulnerability, "cvssV2Vector", vulnToMap.getCvssV2Vector());
@@ -79,12 +83,11 @@ public class Finding implements Serializable {
         optValue(vulnerability, "owaspTechnicalImpactScore", vulnToMap.getOwaspRRTechnicalImpactScore());
         optValue(vulnerability, "owaspBusinessImpactScore", vulnToMap.getOwaspRRBusinessImpactScore());
         optValue(vulnerability, "owaspRRVector", vulnToMap.getOwaspRRVector());
-        optValue(vulnerability, "severity", severity.name());
-        optValue(vulnerability, "severityRank", severity.ordinal());
         optValue(vulnerability, "epssScore", epss.getScore());
         optValue(vulnerability, "epssPercentile", epss.getPercentile());
         optValue(vulnerability, "cwes", vulnToMap.getCwes());
         addVulnerabilityAliases(vulnToMap.getAliases());
+
         optValue(attribution, "analyzerIdentity", attributionToMap.getAnalyzerIdentity());
         optValue(attribution, "attributedOn", attributionToMap.getAttributedOn());
         optValue(attribution, "alternateIdentifier", attributionToMap.getAlternateIdentifier());
