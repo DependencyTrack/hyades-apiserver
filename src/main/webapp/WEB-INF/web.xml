@@ -39,6 +39,9 @@
         <listener-class>alpine.server.persistence.PersistenceManagerFactory</listener-class>
     </listener>
     <listener>
+        <listener-class>org.dependencytrack.cache.CacheManager</listener-class>
+    </listener>
+    <listener>
         <listener-class>org.dependencytrack.plugin.PluginInitializer</listener-class>
     </listener>
     <listener>

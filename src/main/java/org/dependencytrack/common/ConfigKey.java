@@ -19,6 +19,7 @@
 package org.dependencytrack.common;
 
 import alpine.Config;
+import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 
 public enum ConfigKey implements Config.Key {
 
@@ -59,6 +60,8 @@ public enum ConfigKey implements Config.Key {
     DATABASE_RUN_MIGRATIONS_ONLY("database.run.migrations.only", false),
     INIT_TASKS_ENABLED("init.tasks.enabled", true),
     INIT_AND_EXIT("init.and.exit", false),
+    CACHE_PROVIDER("cache.provider", CaffeineCachingProvider.class.getName()),
+    CACHE_CONFIG_FILE("cache.config.file", null),
 
     DEV_SERVICES_ENABLED("dev.services.enabled", false),
     DEV_SERVICES_IMAGE_FRONTEND("dev.services.image.frontend", "ghcr.io/dependencytrack/hyades-frontend:snapshot"),
