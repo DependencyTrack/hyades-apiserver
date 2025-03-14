@@ -296,7 +296,7 @@ public class Project implements Serializable {
             type = "integer", format = "int64", description = "UNIX epoch timestamp in milliseconds")
     private Date inactiveSince;
 
-    @Persistent(table = "PROJECT_ACCESS_TEAMS", defaultFetchGroup = "true")
+    @Persistent(table = "PROJECT_ACCESS_TEAMS")
     @Join(column = "PROJECT_ID")
     @Element(column = "TEAM_ID")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
