@@ -24,6 +24,9 @@ import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
 import alpine.model.IConfigProperty.PropertyType;
+import alpine.model.LdapUser;
+import alpine.model.ManagedUser;
+import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
@@ -65,6 +68,7 @@ import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
+import org.dependencytrack.model.MappedRole;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Policy;
@@ -127,6 +131,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED;
 import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
@@ -502,6 +507,38 @@ public class QueryManager extends AlpineQueryManager {
     public QueryManager withL2CacheDisabled() {
         disableL2Cache();
         return this;
+    }
+
+    /**
+     * Get the IDs of the {@link MappedRole}s a given {@link Principal} is a member of.
+     *
+     * @return A {@link Set} of {@link MappedRole} IDs
+     */
+    protected Set<Long> getRoleIds(final Principal principal, final Project project) {
+        String usersField;
+
+        final MappedRole mappedRole = new MappedRole();
+        Supplier<Long> roleIds = mappedRole.getRole()::getId;
+
+        switch (principal) {
+            case LdapUser ldapUser -> usersField = "ldapUsers";
+            case ManagedUser managedUser -> usersField = "managedUsers";
+            case OidcUser oidcUser -> usersField = "oidcUsers";
+            default -> {
+                return Collections.emptySet();
+            }
+        };
+
+        Query<MappedRole> query = pm.newQuery(MappedRole.class)
+                .filter("project.id == :projectId && %s.contains(:principal)".formatted(usersField))
+                .setNamedParameters(Map.ofEntries(
+                    Map.entry("principal", principal),
+                    Map.entry("projectId", project.getId())));
+
+        return Set.of(executeAndCloseList(query).stream()
+                .map(MappedRole::getRole)
+                .map(Role::getId)
+                .toArray(Long[]::new));
     }
 
     /**
@@ -935,8 +972,17 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getRole(null);
     }
 
+    public List<MappedRole> getUserRoles(UserPrincipal user) {
+        return getRoleQueryManager().getUserRoles(user);
+    }
+
     public Role updateRole(Role transientRole) {
         return getRoleQueryManager().updateRole(transientRole);
+    }
+
+    public List<Project> getUnassignedProjects(UserPrincipal user) {
+        // TODO Auto-generated method stub
+        return getRoleQueryManager().getUnassignedProjects(user);
     }
 
     public Vulnerability createVulnerability(Vulnerability vulnerability, boolean commitIndex) {

@@ -801,21 +801,13 @@ public class UserResource extends AlpineResource {
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response addRoleToUser(
             @Parameter(description = "A valid username", required = true)
-            @PathParam("username")
-            String username,
-
-            @Parameter(description = "The UUID of the role to associate username with", required = true)
-            IdentifiableObject identifiableObject,
-
-            @Parameter(description = "The name of the project", required = true)
-            @QueryParam("projectName")
-            String projectName,
-            
-            @Parameter(description = "The version of the project")
-            @QueryParam("projectVersion")
-            String projectVersion) {
+            @PathParam("username") String username,
+            @Parameter(description = "Role and project information", required = true)
+            RoleProjectRequest roleProjectRequest) {
         try (QueryManager qm = new QueryManager()) {
-            final Role role = qm.getObjectByUuid(Role.class, identifiableObject.getUuid());
+            LOGGER.info("received Project info: " + roleProjectRequest.getProjectUUID());
+            LOGGER.info("received Role info: " + roleProjectRequest.getRoleUUID());
+            final Role role = qm.getObjectByUuid(Role.class, roleProjectRequest.getRoleUUID());
             if (role == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
 
@@ -823,7 +815,7 @@ public class UserResource extends AlpineResource {
             if (principal == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
 
-            Project project = qm.getProject(projectName, projectVersion);
+            Project project = qm.getProject(roleProjectRequest.getProjectUUID());
             if (project == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
 
@@ -834,7 +826,7 @@ public class UserResource extends AlpineResource {
             principal = qm.getObjectById(principal.getClass(), principal.getId());
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
                     "Added role membership for: %s / role: %s / project: %s"
-                            .formatted(principal.getName(), role.getName(), projectName));
+                            .formatted(principal.getName(), role.getName(), project.getName()));
 
             return Response.ok(principal).build();
         }

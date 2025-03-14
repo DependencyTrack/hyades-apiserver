@@ -135,11 +135,7 @@ public class AccessControlResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
     public Response retrieveUserProjects(
             @Parameter(description = "The username to retrieve projects for",
-                    required = true) @PathParam("username") String username,
-            @Parameter(description = "Optionally excludes inactive projects from being returned",
-                    required = false) @QueryParam("excludeInactive") boolean excludeInactive,
-            @Parameter(description = "Optionally excludes children projects from being returned",
-                    required = false) @QueryParam("onlyRoot") boolean onlyRoot) {
+                    required = true) @PathParam("username") String username) {
 
         try (QueryManager qm = new QueryManager()) {
             UserPrincipal principal = qm.getUserPrincipal(username);
