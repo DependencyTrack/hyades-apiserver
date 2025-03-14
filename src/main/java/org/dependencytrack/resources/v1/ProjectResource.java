@@ -555,7 +555,6 @@ public class ProjectResource extends AbstractApiResource {
                     LOGGER.error("Failed to create project %s".formatted(jsonProject), e);
                     throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
                 }
-                qm.updateNewProjectACL(project, principal);
                 return project;
             });
 

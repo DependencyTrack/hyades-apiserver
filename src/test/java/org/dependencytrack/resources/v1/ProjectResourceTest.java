@@ -3567,12 +3567,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsApiKeyWithAclEnabledAndWithExistentTeamTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+        enablePortfolioAccessControl();
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()
