@@ -29,7 +29,6 @@ import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -80,9 +79,27 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetExtensionWithImplementationClass() {
-        final DummyTestExtension extension =
-                PluginManager.getInstance().getExtension(DummyTestExtension.class);
-        assertThat(extension).isNull();
+        assertThatExceptionOfType(NoSuchExtensionException.class)
+                .isThrownBy(() -> PluginManager.getInstance().getExtension(DummyTestExtension.class))
+                .withMessage("""
+                        No extension exists for the extension point \
+                        org.dependencytrack.plugin.DummyTestExtension""");
+    }
+
+    @Test
+    public void testGetExtensionByName() {
+        final TestExtensionPoint extension =
+                PluginManager.getInstance().getExtension(TestExtensionPoint.class, "dummy");
+        assertThat(extension).isNotNull();
+    }
+
+    @Test
+    public void testGetExtensionByNameWhenNoExists() {
+        assertThatExceptionOfType(NoSuchExtensionException.class)
+                .isThrownBy(() -> PluginManager.getInstance().getExtension(TestExtensionPoint.class, "doesNotExist"))
+                .withMessage("""
+                        No extension named doesNotExist exists for the extension point \
+                        org.dependencytrack.plugin.TestExtensionPoint""");
     }
 
     @Test
@@ -94,9 +111,11 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetFactoryForUnknownExtensionPoint() {
-        final ExtensionFactory<UnknownExtensionPoint> factory =
-                PluginManager.getInstance().getFactory(UnknownExtensionPoint.class);
-        assertThat(factory).isNull();
+        assertThatExceptionOfType(NoSuchExtensionException.class)
+                .isThrownBy(() -> PluginManager.getInstance().getFactory(UnknownExtensionPoint.class))
+                .withMessage("""
+                        No extension factory exists for the extension point \
+                        org.dependencytrack.plugin.PluginManagerTest$UnknownExtensionPoint""");
     }
 
     @Test
@@ -131,7 +150,11 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
         pluginManager.loadPlugins();
 
-        assertThat(pluginManager.getExtension(TestExtensionPoint.class)).isNull();
+        assertThatExceptionOfType(NoSuchExtensionException.class)
+                .isThrownBy(() -> PluginManager.getInstance().getExtension(TestExtensionPoint.class))
+                .withMessage("""
+                        No extension exists for the extension point \
+                        org.dependencytrack.plugin.TestExtensionPoint""");
     }
 
     @Test
@@ -142,7 +165,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
         environmentVariables.set("TEST_DEFAULT_EXTENSION", "does.not.exist");
 
-        assertThatExceptionOfType(NoSuchElementException.class)
+        assertThatExceptionOfType(NoSuchExtensionException.class)
                 .isThrownBy(pluginManager::loadPlugins)
                 .withMessage("""
                         No extension named does.not.exist exists for extension point \
