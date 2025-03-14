@@ -39,6 +39,8 @@ import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ComponentOccurrence;
+import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.OrganizationalContact;
@@ -2409,6 +2411,22 @@ public class ProjectResourceTest extends ResourceTest {
         componentA.setSupplier(componentSupplier);
         qm.persist(componentA);
 
+        final var componentOccurrence = new ComponentOccurrence();
+        componentOccurrence.setComponent(componentA);
+        componentOccurrence.setLocation("location");
+        componentOccurrence.setLine(666);
+        componentOccurrence.setOffset(123);
+        componentOccurrence.setSymbol("symbol");
+        qm.persist(componentOccurrence);
+
+        final var componentProperty = new ComponentProperty();
+        componentProperty.setComponent(componentA);
+        componentProperty.setGroupName("groupName");
+        componentProperty.setPropertyName("propertyName");
+        componentProperty.setPropertyValue("propertyValue");
+        componentProperty.setPropertyType(PropertyType.STRING);
+        qm.persist(componentProperty);
+
         final var componentB = new Component();
         componentB.setProject(project);
         componentB.setName("acme-lib-b");
@@ -2545,6 +2563,20 @@ public class ProjectResourceTest extends ResourceTest {
                                 assertThat(clonedComponent.getSwidTagId()).isEqualTo("swidTagId");
                                 assertThat(clonedComponent.getSupplier()).isNotNull();
                                 assertThat(clonedComponent.getSupplier().getName()).isEqualTo("componentSupplier");
+
+                                assertThat(clonedComponent.getOccurrences()).satisfiesExactly(occurrence -> {
+                                    assertThat(occurrence.getLocation()).isEqualTo("location");
+                                    assertThat(occurrence.getLine()).isEqualTo(666);
+                                    assertThat(occurrence.getOffset()).isEqualTo(123);
+                                    assertThat(occurrence.getSymbol()).isEqualTo("symbol");
+                                });
+
+                                assertThat(clonedComponent.getProperties()).satisfiesExactly(property -> {
+                                    assertThat(property.getGroupName()).isEqualTo("groupName");
+                                    assertThat(property.getPropertyName()).isEqualTo("propertyName");
+                                    assertThat(property.getPropertyValue()).isEqualTo("propertyValue");
+                                    assertThat(property.getPropertyType()).isEqualTo(PropertyType.STRING);
+                                });
 
                                 assertThat(qm.getAllVulnerabilities(clonedComponent)).containsOnly(vuln);
 
