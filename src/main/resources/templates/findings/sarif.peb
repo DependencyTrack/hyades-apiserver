@@ -12,7 +12,7 @@
           "rules": [{% for vuln in uniqueVulnerabilities %}
             {
               "id": "{{ vuln.vulnId }}",
-              "name": "{{ vuln.cweName }}",
+              "name": "{{ vuln.vulnId }}",
               "shortDescription": {
                 "text": "{{ vuln.vulnId }}"
               },
@@ -44,7 +44,7 @@
             "group": "{{ finding.component.group }}",
             "version": "{{ finding.component.version }}",
             "source": "{{ finding.vulnerability.source }}",
-            "cweId": "{{ finding.vulnerability.cweId }}",
+            "cwes": "{{ finding.vulnerability.cwes }}",
             "cvssV3BaseScore": "{{ finding.vulnerability.cvssV3BaseScore }}",
             "epssScore": "{{ finding.vulnerability.epssScore }}",
             "epssPercentile": "{{ finding.vulnerability.epssPercentile }}",

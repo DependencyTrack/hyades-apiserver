@@ -20,6 +20,7 @@ package org.dependencytrack.integrations.defectdojo;
 
 import alpine.model.IConfigProperty;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import jakarta.ws.rs.core.MediaType;
 import org.apache.http.HttpHeaders;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -28,12 +29,12 @@ import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
-import jakarta.ws.rs.core.MediaType;
 import java.io.InputStream;
 import java.util.List;
 
@@ -54,6 +55,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_API_K
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_REIMPORT_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.DEFECTDOJO_URL;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class DefectDojoUploaderTest extends PersistenceCapableTest {
 
@@ -160,7 +162,8 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         final var uploader = new DefectDojoUploader();
         uploader.setQueryManager(qm);
 
-        final List<Finding> findings = qm.getFindings(project);
+        final List<Finding> findings = withJdbiHandle(handle ->
+                handle.attach(FindingDao.class).getFindings(project.getId(), false));
         final InputStream inputStream = uploader.process(project, findings);
         uploader.upload(project, inputStream);
 
@@ -208,7 +211,9 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                                         "uuid": "${json-unit.any-string}",
                                         "name": "acme-lib",
                                         "version": "1.2.3",
-                                        "project": "${json-unit.any-string}"
+                                        "project": "${json-unit.any-string}",
+                                        "projectName" : "acme-app",
+                                        "projectVersion" : "1.0.0"
                                       },
                                       "attribution": {
                                         "analyzerIdentity": "INTERNAL_ANALYZER",
@@ -408,7 +413,8 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         final var uploader = new DefectDojoUploader();
         uploader.setQueryManager(qm);
 
-        final List<Finding> findings = qm.getFindings(project);
+        final List<Finding> findings = withJdbiHandle(handle ->
+                handle.attach(FindingDao.class).getFindings(project.getId(), false));
         final InputStream inputStream = uploader.process(project, findings);
         uploader.upload(project, inputStream);
 
@@ -461,7 +467,9 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                                         "uuid": "${json-unit.any-string}",
                                         "name": "acme-lib",
                                         "version": "1.2.3",
-                                        "project": "${json-unit.any-string}"
+                                        "project": "${json-unit.any-string}",
+                                        "projectName" : "acme-app",
+                                        "projectVersion" : "1.0.0"
                                       },
                                       "attribution": {
                                         "analyzerIdentity": "INTERNAL_ANALYZER",
@@ -584,7 +592,8 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         final var uploader = new DefectDojoUploader();
         uploader.setQueryManager(qm);
 
-        final List<Finding> findings = qm.getFindings(project);
+        final List<Finding> findings = withJdbiHandle(handle ->
+                handle.attach(FindingDao.class).getFindings(project.getId(), false));
         final InputStream inputStream = uploader.process(project, findings);
         uploader.upload(project, inputStream);
 
@@ -681,7 +690,8 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         final var uploader = new DefectDojoUploader();
         uploader.setQueryManager(qm);
 
-        final List<Finding> findings = qm.getFindings(project);
+        final List<Finding> findings = withJdbiHandle(handle ->
+                handle.attach(FindingDao.class).getFindings(project.getId(), false));
         final InputStream inputStream = uploader.process(project, findings);
         uploader.upload(project, inputStream);
 
@@ -773,7 +783,8 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
         final var uploader = new DefectDojoUploader();
         uploader.setQueryManager(qm);
 
-        final List<Finding> findings = qm.getFindings(project);
+        final List<Finding> findings = withJdbiHandle(handle ->
+                handle.attach(FindingDao.class).getFindings(project.getId(), false));
         final InputStream inputStream = uploader.process(project, findings);
         uploader.upload(project, inputStream);
     }

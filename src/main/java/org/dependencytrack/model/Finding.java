@@ -21,10 +21,8 @@ package org.dependencytrack.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.parser.common.resolver.CweResolver;
-import org.dependencytrack.util.VulnerabilityUtil;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,179 +45,59 @@ public class Finding implements Serializable {
 
     private static final long serialVersionUID = 5313521394432526986L;
 
-    /*
-     * This statement works on Microsoft SQL Server, MySQL, and PostgreSQL. Due to the standardization
-     * of upper-case table and column names in Dependency-Track, every identifier needs to be wrapped
-     * in double quotes to satisfy PostgreSQL case-sensitive requirements. This also places a requirement
-     * on ANSI_QUOTES mode being enabled in MySQL. SQL Server works regardless and is just happy to be invited :-)
-     */
-    // language=SQL
-    public static final String QUERY = """
-            SELECT "COMPONENT"."UUID"
-                 , "COMPONENT"."NAME"
-                 , "COMPONENT"."GROUP"
-                 , "COMPONENT"."VERSION"
-                 , "COMPONENT"."PURL"
-                 , "COMPONENT"."CPE"
-                 , "VULNERABILITY"."UUID"
-                 , "VULNERABILITY"."SOURCE"
-                 , "VULNERABILITY"."VULNID"
-                 , "VULNERABILITY"."TITLE"
-                 , "VULNERABILITY"."SUBTITLE"
-                 , "VULNERABILITY"."DESCRIPTION"
-                 , "VULNERABILITY"."RECOMMENDATION"
-                 , "VULNERABILITY"."SEVERITY"
-                 , "VULNERABILITY"."CVSSV2BASESCORE"
-                 , "VULNERABILITY"."CVSSV3BASESCORE"
-                 , "VULNERABILITY"."CVSSV2VECTOR"
-                 , "VULNERABILITY"."CVSSV3VECTOR"
-                 , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
-                 , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
-                 , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
-                 , "VULNERABILITY"."OWASPRRVECTOR"
-                 , "EPSS"."SCORE"
-                 , "EPSS"."PERCENTILE"
-                 , "VULNERABILITY"."CWES"
-                 , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
-                 , "FINDINGATTRIBUTION"."ATTRIBUTED_ON"
-                 , "FINDINGATTRIBUTION"."ALT_ID"
-                 , "FINDINGATTRIBUTION"."REFERENCE_URL"
-                 , "ANALYSIS"."STATE"
-                 , "ANALYSIS"."SUPPRESSED"
-              FROM "COMPONENT"
-             INNER JOIN "COMPONENTS_VULNERABILITIES"
-                ON "COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID"
-             INNER JOIN "VULNERABILITY"
-                ON "COMPONENTS_VULNERABILITIES"."VULNERABILITY_ID" = "VULNERABILITY"."ID"
-              LEFT JOIN "EPSS"
-                ON "VULNERABILITY"."VULNID" = "EPSS"."CVE"
-             INNER JOIN "FINDINGATTRIBUTION"
-                ON "COMPONENT"."ID" = "FINDINGATTRIBUTION"."COMPONENT_ID"
-               AND "VULNERABILITY"."ID" = "FINDINGATTRIBUTION"."VULNERABILITY_ID"
-              LEFT JOIN "ANALYSIS"
-                ON "COMPONENT"."ID" = "ANALYSIS"."COMPONENT_ID"
-               AND "VULNERABILITY"."ID" = "ANALYSIS"."VULNERABILITY_ID"
-               AND "COMPONENT"."PROJECT_ID" = "ANALYSIS"."PROJECT_ID"
-             WHERE "COMPONENT"."PROJECT_ID" = :projectId
-               AND (:includeSuppressed OR "ANALYSIS"."SUPPRESSED" IS NULL OR NOT "ANALYSIS"."SUPPRESSED")
-            """;
-
-    // language=SQL
-    public static final String QUERY_ALL_FINDINGS = """
-            SELECT "COMPONENT"."UUID"
-                 , "COMPONENT"."NAME"
-                 , "COMPONENT"."GROUP"
-                 , "COMPONENT"."VERSION"
-                 , "COMPONENT"."PURL"
-                 , "COMPONENT"."CPE"
-                 , "VULNERABILITY"."UUID"
-                 , "VULNERABILITY"."SOURCE"
-                 , "VULNERABILITY"."VULNID"
-                 , "VULNERABILITY"."TITLE"
-                 , "VULNERABILITY"."SUBTITLE"
-                 , "VULNERABILITY"."DESCRIPTION"
-                 , "VULNERABILITY"."RECOMMENDATION"
-                 , "VULNERABILITY"."SEVERITY"
-                 , "VULNERABILITY"."CVSSV2BASESCORE"
-                 , "VULNERABILITY"."CVSSV3BASESCORE"
-                 , "VULNERABILITY"."CVSSV2VECTOR"
-                 , "VULNERABILITY"."CVSSV3VECTOR"
-                 , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
-                 , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
-                 , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
-                 , "VULNERABILITY"."OWASPRRVECTOR"
-                 , "EPSS"."SCORE"
-                 , "EPSS"."PERCENTILE"
-                 , "VULNERABILITY"."CWES"
-                 , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
-                 , "FINDINGATTRIBUTION"."ATTRIBUTED_ON"
-                 , "FINDINGATTRIBUTION"."ALT_ID"
-                 , "FINDINGATTRIBUTION"."REFERENCE_URL"
-                 , "ANALYSIS"."STATE"
-                 , "ANALYSIS"."SUPPRESSED"
-                 , "VULNERABILITY"."PUBLISHED"
-                 , "PROJECT"."UUID"
-                 , "PROJECT"."NAME"
-                 , "PROJECT"."VERSION"
-              FROM "COMPONENT"
-             INNER JOIN "COMPONENTS_VULNERABILITIES"
-                ON "COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID"
-             INNER JOIN "VULNERABILITY"
-                ON "COMPONENTS_VULNERABILITIES"."VULNERABILITY_ID" = "VULNERABILITY"."ID"
-             LEFT JOIN "EPSS"
-                ON "VULNERABILITY"."VULNID" = "EPSS"."CVE"
-             INNER JOIN "FINDINGATTRIBUTION"
-                ON "COMPONENT"."ID" = "FINDINGATTRIBUTION"."COMPONENT_ID"
-               AND "VULNERABILITY"."ID" = "FINDINGATTRIBUTION"."VULNERABILITY_ID"
-              LEFT JOIN "ANALYSIS"
-                ON "COMPONENT"."ID" = "ANALYSIS"."COMPONENT_ID"
-               AND "VULNERABILITY"."ID" = "ANALYSIS"."VULNERABILITY_ID"
-               AND "COMPONENT"."PROJECT_ID" = "ANALYSIS"."PROJECT_ID"
-             INNER JOIN "PROJECT"
-                ON "COMPONENT"."PROJECT_ID" = "PROJECT"."ID"
-            """;
-
     private final UUID project;
     private final Map<String, Object> component = new LinkedHashMap<>();
     private final Map<String, Object> vulnerability = new LinkedHashMap<>();
     private final Map<String, Object> analysis = new LinkedHashMap<>();
     private final Map<String, Object> attribution = new LinkedHashMap<>();
 
-    /**
-     * Constructs a new Finding object. The generic Object array passed as an argument is the
-     * individual values for each row in a resultset. The order of these must match the order
-     * of the columns being queried in {@link #QUERY} or {@link #QUERY_ALL_FINDINGS}.
-     * @param o An array of values specific to an individual row returned from {@link #QUERY} or {@link #QUERY_ALL_FINDINGS}
-     */
-    public Finding(UUID project, Object... o) {
-        this.project = project;
-        optValue(component, "uuid", o[0]);
-        optValue(component, "name", o[1]);
-        optValue(component, "group", o[2]);
-        optValue(component, "version", o[3]);
-        optValue(component, "purl", o[4]);
-        optValue(component, "cpe", o[5]);
-        optValue(component, "project", project.toString());
-
-        optValue(vulnerability, "uuid", o[6]);
-        optValue(vulnerability, "source", o[7]);
-        optValue(vulnerability, "vulnId", o[8]);
-        optValue(vulnerability, "title", o[9]);
-        optValue(vulnerability, "subtitle", o[10]);
-        optValue(vulnerability, "description", o[11]);
-        optValue(vulnerability, "recommendation", o[12]);
-        final Severity severity = VulnerabilityUtil.getSeverity(o[13], (BigDecimal) o[14], (BigDecimal) o[15], (BigDecimal) o[18], (BigDecimal) o[19], (BigDecimal) o[20]);
-        optValue(vulnerability, "cvssV2BaseScore", o[14]);
-        optValue(vulnerability, "cvssV3BaseScore", o[15]);
-        optValue(vulnerability, "cvssV2Vector", o[16]);
-        optValue(vulnerability, "cvssV3Vector", o[17]);
-        optValue(vulnerability, "owaspLikelihoodScore", o[18]);
-        optValue(vulnerability, "owaspTechnicalImpactScore", o[19]);
-        optValue(vulnerability, "owaspBusinessImpactScore", o[20]);
-        optValue(vulnerability, "owaspRRVector", o[21]);
-        optValue(vulnerability, "severity", severity.name());
-        optValue(vulnerability, "severityRank", severity.ordinal());
-        optValue(vulnerability, "epssScore", o[22]);
-        optValue(vulnerability, "epssPercentile", o[23]);
-        final List<Cwe> cwes = getCwes(o[24]);
-        if (cwes != null && !cwes.isEmpty()) {
-            // Ensure backwards-compatibility with DT < 4.5.0. Remove this in v5!
-            optValue(vulnerability, "cweId", cwes.get(0).getCweId());
-            optValue(vulnerability, "cweName", cwes.get(0).getName());
+    public Finding(Project projectToMap, Component componentToMap, Vulnerability vulnToMap, Epss epss, Analysis analysisToMap, FindingAttribution attributionToMap) {
+        this.project = projectToMap.getUuid();
+        optValue(component, "uuid", componentToMap.getUuid());
+        optValue(component, "name", componentToMap.getName());
+        optValue(component, "group", componentToMap.getGroup());
+        optValue(component, "version", componentToMap.getVersion());
+        if (componentToMap.getPurl() != null) {
+            optValue(component, "purl", componentToMap.getPurl().canonicalize());
         }
-        optValue(vulnerability, "cwes", cwes);
-        optValue(attribution, "analyzerIdentity", o[25]);
-        optValue(attribution, "attributedOn", o[26]);
-        optValue(attribution, "alternateIdentifier", o[27]);
-        optValue(attribution, "referenceUrl", o[28]);
+        optValue(component, "cpe", componentToMap.getCpe());
+        optValue(component, "project", projectToMap.getUuid().toString());
 
-        optValue(analysis, "state", o[29]);
-        optValue(analysis, "isSuppressed", o[30], false);
-        if (o.length > 33) {
-            optValue(vulnerability, "published", o[31]);
-            optValue(component, "projectName", o[33]);
-            optValue(component, "projectVersion", o[34]);
+        optValue(vulnerability, "uuid", vulnToMap.getUuid());
+        optValue(vulnerability, "source", vulnToMap.getSource());
+        optValue(vulnerability, "vulnId", vulnToMap.getVulnId());
+        optValue(vulnerability, "title", vulnToMap.getTitle());
+        optValue(vulnerability, "subtitle", vulnToMap.getSubTitle());
+        optValue(vulnerability, "description", vulnToMap.getDescription());
+        optValue(vulnerability, "recommendation", vulnToMap.getRecommendation());
+        if (vulnToMap.getSeverity() != null) {
+            final Severity severity = vulnToMap.getSeverity();
+            optValue(vulnerability, "severity", severity.name());
+            optValue(vulnerability, "severityRank", severity.ordinal());
         }
+        optValue(vulnerability, "cvssV2BaseScore", vulnToMap.getCvssV2BaseScore());
+        optValue(vulnerability, "cvssV3BaseScore", vulnToMap.getCvssV3BaseScore());
+        optValue(vulnerability, "cvssV2Vector", vulnToMap.getCvssV2Vector());
+        optValue(vulnerability, "cvssV3Vector", vulnToMap.getCvssV3Vector());
+        optValue(vulnerability, "owaspLikelihoodScore", vulnToMap.getOwaspRRLikelihoodScore());
+        optValue(vulnerability, "owaspTechnicalImpactScore", vulnToMap.getOwaspRRTechnicalImpactScore());
+        optValue(vulnerability, "owaspBusinessImpactScore", vulnToMap.getOwaspRRBusinessImpactScore());
+        optValue(vulnerability, "owaspRRVector", vulnToMap.getOwaspRRVector());
+        optValue(vulnerability, "epssScore", epss.getScore());
+        optValue(vulnerability, "epssPercentile", epss.getPercentile());
+        optValue(vulnerability, "cwes", vulnToMap.getCwes());
+        addVulnerabilityAliases(vulnToMap.getAliases());
+
+        optValue(attribution, "analyzerIdentity", attributionToMap.getAnalyzerIdentity());
+        optValue(attribution, "attributedOn", attributionToMap.getAttributedOn());
+        optValue(attribution, "alternateIdentifier", attributionToMap.getAlternateIdentifier());
+        optValue(attribution, "referenceUrl", attributionToMap.getReferenceUrl());
+
+        optValue(analysis, "state", analysisToMap.getAnalysisState());
+        optValue(analysis, "isSuppressed", analysisToMap.isSuppressed(), false);
+        optValue(vulnerability, "published", vulnToMap.getPublished());
+        optValue(component, "projectName", projectToMap.getName());
+        optValue(component, "projectVersion", projectToMap.getVersion());
     }
 
     public Map<String, Object> getComponent() {
@@ -281,29 +159,31 @@ public class Finding implements Serializable {
 
     public void addVulnerabilityAliases(List<VulnerabilityAlias> aliases) {
         final Set<Map<String, String>> uniqueAliases = new HashSet<>();
-        for (final VulnerabilityAlias alias : aliases) {
-            Map<String,String> map = new HashMap<>();
-            if (alias.getCveId() != null && !alias.getCveId().isBlank()) {
-                map.put("cveId", alias.getCveId());
+        if (aliases != null) {
+            for (final VulnerabilityAlias alias : aliases) {
+                Map<String,String> map = new HashMap<>();
+                if (alias.getCveId() != null && !alias.getCveId().isBlank()) {
+                    map.put("cveId", alias.getCveId());
+                }
+                if (alias.getGhsaId() != null && !alias.getGhsaId().isBlank()) {
+                    map.put("ghsaId", alias.getGhsaId());
+                }
+                if (alias.getSonatypeId() != null && !alias.getSonatypeId().isBlank()) {
+                    map.put("sonatypeId", alias.getSonatypeId());
+                }
+                if (alias.getOsvId() != null && !alias.getOsvId().isBlank()) {
+                    map.put("osvId", alias.getOsvId());
+                }
+                if (alias.getSnykId() != null && !alias.getSnykId().isBlank()) {
+                    map.put("snykId", alias.getSnykId());
+                }
+                if (alias.getVulnDbId() != null && !alias.getVulnDbId().isBlank()) {
+                    map.put("vulnDbId", alias.getVulnDbId());
+                }
+                uniqueAliases.add(map);
             }
-            if (alias.getGhsaId() != null && !alias.getGhsaId().isBlank()) {
-                map.put("ghsaId", alias.getGhsaId());
-            }
-            if (alias.getSonatypeId() != null && !alias.getSonatypeId().isBlank()) {
-                map.put("sonatypeId", alias.getSonatypeId());
-            }
-            if (alias.getOsvId() != null && !alias.getOsvId().isBlank()) {
-                map.put("osvId", alias.getOsvId());
-            }
-            if (alias.getSnykId() != null && !alias.getSnykId().isBlank()) {
-                map.put("snykId", alias.getSnykId());
-            }
-            if (alias.getVulnDbId() != null && !alias.getVulnDbId().isBlank()) {
-                map.put("vulnDbId", alias.getVulnDbId());
-            }
-            uniqueAliases.add(map);
         }
-        vulnerability.put("aliases",uniqueAliases);
+        vulnerability.put("aliases", uniqueAliases);
     }
 
 }

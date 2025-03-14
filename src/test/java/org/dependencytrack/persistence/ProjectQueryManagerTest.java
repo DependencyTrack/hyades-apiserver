@@ -25,12 +25,14 @@ import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.junit.Test;
 
 import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ProjectQueryManagerTest extends PersistenceCapableTest {
 
@@ -51,7 +53,8 @@ public class ProjectQueryManagerTest extends PersistenceCapableTest {
         qm.persist(vuln);
         qm.addVulnerability(vuln, comp, AnalyzerIdentity.INTERNAL_ANALYZER, "Vuln1", "http://vuln.com/vuln1", new Date());
         Project clonedProject = qm.clone(project.getUuid(), "1.1.0", false, false, true, false, false, false, false, false);
-        List<Finding> findings = qm.getFindings(clonedProject);
+        List<Finding> findings = withJdbiHandle(handle ->
+                handle.attach(FindingDao.class).getFindings(clonedProject.getId(), false));
         assertThat(findings.size()).isEqualTo(1);
         Finding finding = findings.get(0);
         assertThat(finding).isNotNull();

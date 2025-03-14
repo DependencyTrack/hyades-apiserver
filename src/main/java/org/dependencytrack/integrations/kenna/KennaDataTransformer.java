@@ -26,6 +26,7 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.util.DateUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -35,6 +36,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * Transforms Dependency-Track findings into Kenna Data Importer (KDI) format.
@@ -71,7 +74,8 @@ public class KennaDataTransformer {
     public void process(final Project project, final String externalId) {
         final JSONObject kdiAsset = generateKdiAsset(project, externalId);
         final JSONArray vulns = new JSONArray();
-        final List<Finding> findings = qm.getFindings(project);
+        final List<Finding> findings = withJdbiHandle(handle ->
+                handle.attach(FindingDao.class).getFindings(project.getId(), false));
         for (final Finding finding: findings) {
             final Map<String, Object> analysis = finding.getAnalysis();
             final Object suppressed = finding.getAnalysis().get("isSuppressed");
