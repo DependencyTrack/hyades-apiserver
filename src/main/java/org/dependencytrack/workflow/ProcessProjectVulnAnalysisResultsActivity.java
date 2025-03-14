@@ -50,6 +50,7 @@ import org.slf4j.MDC;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -227,12 +228,19 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                             .setUuid(args.getProject().getUuid())
                             .build();
 
+            final Map<Long, UUID> componentUuidByComponentId = getComponentUuids(vulnIdsByComponentId.keySet());
+
             // TODO: Should evaluate once for the entire project,
             //  instead of for each component separately.
 
             for (final Map.Entry<Long, Set<String>> entry : vulnIdsByComponentId.entrySet()) {
                 final Long componentId = entry.getKey();
                 final Set<String> vulnIds = entry.getValue();
+
+                final org.dependencytrack.proto.policy.v1.Component policyComponent =
+                        org.dependencytrack.proto.policy.v1.Component.newBuilder()
+                                .setUuid(componentUuidByComponentId.get(componentId).toString())
+                                .build();
 
                 final List<org.dependencytrack.proto.policy.v1.Vulnerability> policyVulns =
                         vulnIds.stream()
@@ -241,7 +249,7 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                                 .toList();
 
                 matchedPolicyByVulnUuid.putAll(
-                        vulnPolicyEvaluator.evaluate(policyVulns, /* TODO: component */ null, policyProject));
+                        vulnPolicyEvaluator.evaluate(policyVulns, policyComponent, policyProject));
             }
         }
 
@@ -412,6 +420,25 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                     .mapTo(Long.class)
                     .findOne()
                     .orElse(null);
+        });
+    }
+
+    private Map<Long, UUID> getComponentUuids(final Collection<Long> componentIds) {
+        return withJdbiHandle(handle -> {
+            final Query query = handle.createQuery("""
+                    SELECT "ID"
+                         , "UUID"
+                      FROM "COMPONENT"
+                     WHERE "ID" = ANY(:componentIds)
+                    """);
+            final List<Map<String, Object>> queryResult = query
+                    .bindArray("componentIds", Long.class, componentIds)
+                    .mapToMap()
+                    .list();
+            return queryResult.stream()
+                    .collect(Collectors.toMap(
+                            row -> (Long) row.get("id"),
+                            row -> (UUID) row.get("uuid")));
         });
     }
 
