@@ -18,14 +18,19 @@
  */
 package org.dependencytrack.workflow;
 
+import alpine.Config;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Property;
 import org.cyclonedx.proto.v1_6.VulnerabilityAffects;
 import org.datanucleus.flush.FlushMode;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.mapping.PolicyProtoMapper;
 import org.dependencytrack.parser.dependencytrack.ModelConverterCdxToVuln;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
+import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyEvaluator;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectVulnAnalysisResultsArgs;
 import org.dependencytrack.proto.workflow.payload.v1alpha1.Project;
@@ -47,9 +52,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -75,21 +82,33 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
             Instant attributedOn) {
     }
 
-    public static final ActivityClient<ProcessProjectVulnAnalysisResultsArgs, Void> CLIENT = ActivityClient.of(
-            ProcessProjectVulnAnalysisResultsActivity.class,
-            protoConverter(ProcessProjectVulnAnalysisResultsArgs.class),
-            voidConverter());
+    public static final ActivityClient<ProcessProjectVulnAnalysisResultsArgs, Void> CLIENT =
+            ActivityClient.of(
+                    ProcessProjectVulnAnalysisResultsActivity.class,
+                    protoConverter(ProcessProjectVulnAnalysisResultsArgs.class),
+                    voidConverter());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProcessProjectVulnAnalysisResultsActivity.class);
 
+    private final VulnerabilityPolicyEvaluator vulnPolicyEvaluator;
+
+    public ProcessProjectVulnAnalysisResultsActivity() {
+        this.vulnPolicyEvaluator =
+                Config.getInstance().getPropertyAsBoolean(ConfigKey.VULNERABILITY_POLICY_ANALYSIS_ENABLED)
+                        ? ServiceLoader.load(VulnerabilityPolicyEvaluator.class).findFirst().orElseThrow()
+                        : null;
+    }
+
     @Override
     public Optional<Void> execute(final ActivityContext<ProcessProjectVulnAnalysisResultsArgs> ctx) throws Exception {
-        final ProcessProjectVulnAnalysisResultsArgs args = ctx.argument().orElseThrow();
+        final ProcessProjectVulnAnalysisResultsArgs args =
+                ctx.argument().orElseThrow(ApplicationFailureException::forMissingArguments);
 
         final Long projectId = getProjectId(args.getProject());
         if (projectId == null) {
-            throw new ApplicationFailureException("Project with UUID %s does not exist".formatted(
-                    args.getProject().getUuid()), null, true);
+            throw new ApplicationFailureException(
+                    "Project with UUID %s does not exist".formatted(
+                            args.getProject().getUuid()), null, true);
         }
 
         final var resultsFileMetadataSet = new HashSet<FileMetadata>(args.getResultsCount());
@@ -145,8 +164,11 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
             final Bom vdr = entry.getValue();
 
             // Group components by their BOM ref for easier lookups later.
-            final Map<String, org.cyclonedx.proto.v1_6.Component> componentByBomRef = vdr.getComponentsList().stream()
-                    .collect(Collectors.toMap(org.cyclonedx.proto.v1_6.Component::getBomRef, Function.identity()));
+            final Map<String, org.cyclonedx.proto.v1_6.Component> componentByBomRef =
+                    vdr.getComponentsList().stream()
+                            .collect(Collectors.toMap(
+                                    org.cyclonedx.proto.v1_6.Component::getBomRef,
+                                    Function.identity()));
 
             for (final org.cyclonedx.proto.v1_6.Vulnerability vdrVuln : vdr.getVulnerabilitiesList()) {
                 final Vulnerability vuln = ModelConverterCdxToVuln.convert(
@@ -184,18 +206,44 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
 
         // TODO: Move to DAO class.
         // NB: Batch operations can lead to deadlocks here when multiple threads do it concurrently.
-        final var vulnRecordIdByVulnId = new HashMap<String, Long>();
+        final var vulnRecordByVulnId = new HashMap<String, Vulnerability>();
         final var vulnIdByVulnRecordId = new HashMap<Long, String>();
         for (final Map.Entry<String, Set<Vulnerability>> entry : reportedVulnsByVulnId.entrySet()) {
             // TODO: Pick the "best" among $vulns.
             final Vulnerability vuln = entry.getValue().iterator().next();
 
             final Vulnerability syncedVuln = syncVuln(vuln);
-            vulnRecordIdByVulnId.put(syncedVuln.getVulnId(), syncedVuln.getId());
+            vulnRecordByVulnId.put(syncedVuln.getVulnId(), syncedVuln);
             vulnIdByVulnRecordId.put(syncedVuln.getId(), syncedVuln.getVulnId());
         }
 
-        LOGGER.debug("Created or updated {} vulns", vulnRecordIdByVulnId.size());
+        LOGGER.debug("Created or updated {} vulns", vulnRecordByVulnId.size());
+
+        final var matchedPolicyByVulnUuid = new HashMap<UUID, VulnerabilityPolicy>();
+
+        if (vulnPolicyEvaluator != null) {
+            final var policyProject =
+                    org.dependencytrack.proto.policy.v1.Project.newBuilder()
+                            .setUuid(args.getProject().getUuid())
+                            .build();
+
+            // TODO: Should evaluate once for the entire project,
+            //  instead of for each component separately.
+
+            for (final Map.Entry<Long, Set<String>> entry : vulnIdsByComponentId.entrySet()) {
+                final Long componentId = entry.getKey();
+                final Set<String> vulnIds = entry.getValue();
+
+                final List<org.dependencytrack.proto.policy.v1.Vulnerability> policyVulns =
+                        vulnIds.stream()
+                                .map(vulnRecordByVulnId::get)
+                                .map(PolicyProtoMapper::mapToProto)
+                                .toList();
+
+                matchedPolicyByVulnUuid.putAll(
+                        vulnPolicyEvaluator.evaluate(policyVulns, /* TODO: component */ null, policyProject));
+            }
+        }
 
         // NB: Processing findings cannot be done with DataNucleus.
         // In order to associate a component with a vulnerability, DN would need to
@@ -249,6 +297,7 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                     }
                 } else if (existingAttribution == null) {
                     // TODO: Any better strategy than choosing the first alphabetically?
+                    // TODO: Mid-term, *all* analyzers must be attributed, not just one.
                     final String analyzer = reportingAnalyzers.stream().sorted().findFirst().get();
 
                     LOGGER.debug("Finding {} was not reported before and will be attributed to {}", findingId, analyzer);
@@ -273,7 +322,7 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                     final String analyzer = entry.getValue();
 
                     findingComponentIds.add(findingId.componentId());
-                    findingVulnRecordIds.add(vulnRecordIdByVulnId.get(findingId.vulnId()));
+                    findingVulnRecordIds.add(vulnRecordByVulnId.get(findingId.vulnId()).getId());
                     analyzers.add(analyzer);
                     attributionUuids.add(UUID.randomUUID());
                 }
@@ -282,12 +331,25 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                         WITH
                         finding as (
                           SELECT *
-                            FROM UNNEST(:componentIds, :vulnRecordIds, :analyzers, :attributionUuids) AS t(component_id, vulnerability_id, analyzer, attribution_uuid)
-                           ORDER BY component_id, vulnerability_id
+                            FROM UNNEST(
+                                   :componentIds
+                                 , :vulnRecordIds
+                                 , :analyzers
+                                 , :attributionUuids
+                                 ) AS t (
+                                   component_id
+                                 , vulnerability_id
+                                 , analyzer
+                                 , attribution_uuid
+                                 )
+                           ORDER BY component_id
+                                  , vulnerability_id
                         ),
                         created_finding AS (
-                          INSERT INTO "COMPONENTS_VULNERABILITIES"("COMPONENT_ID", "VULNERABILITY_ID")
-                          SELECT component_id, vulnerability_id FROM finding
+                          INSERT INTO "COMPONENTS_VULNERABILITIES" ("COMPONENT_ID", "VULNERABILITY_ID")
+                          SELECT component_id
+                               , vulnerability_id
+                            FROM finding
                           ON CONFLICT ("COMPONENT_ID", "VULNERABILITY_ID") DO NOTHING
                           RETURNING "COMPONENT_ID", "VULNERABILITY_ID"
                         )
@@ -307,8 +369,8 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                              , attribution_uuid
                           FROM finding
                          INNER JOIN created_finding
-                            on created_finding."COMPONENT_ID" = finding.component_id
-                           and created_finding."VULNERABILITY_ID" = finding.vulnerability_id
+                            ON created_finding."COMPONENT_ID" = finding.component_id
+                           AND created_finding."VULNERABILITY_ID" = finding.vulnerability_id
                         """);
 
                 final int findingsCreated = createFindingsQuery
@@ -418,6 +480,7 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
                     differ.applyIfChanged("patchedVersions", Vulnerability::getPatchedVersions, existingVuln::setPatchedVersions);
 
                     if (!differ.getDiffs().isEmpty() && LOGGER.isDebugEnabled()) {
+                        // TODO: Notification.
                         LOGGER.debug("Vulnerability changed: {}", differ.getDiffs());
                     }
                 }

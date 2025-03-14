@@ -28,8 +28,6 @@ import org.dependencytrack.workflow.framework.annotation.Workflow;
 
 import java.util.Optional;
 
-import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
-
 @Workflow(name = "process-bom-upload")
 public class ProcessBomUploadWorkflow implements WorkflowExecutor<ProcessBomUploadArgs, Void> {
 
@@ -49,9 +47,7 @@ public class ProcessBomUploadWorkflow implements WorkflowExecutor<ProcessBomUplo
                 IngestBomArgs.newBuilder()
                         .setProject(args.getProject())
                         .setBomFileMetadata(args.getBomFileMetadata())
-                        .build(),
-                defaultRetryPolicy()
-                        .withMaxAttempts(6)).await();
+                        .build()).await();
 
         ctx.logger().info("Triggering project analysis");
         ctx.setStatus(STATUS_ANALYZING);

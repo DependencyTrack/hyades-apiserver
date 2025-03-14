@@ -22,6 +22,7 @@ import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
 
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
 
 public final class ActivityClient<A, R> {
 
@@ -62,6 +63,10 @@ public final class ActivityClient<A, R> {
                 this.argumentConverter,
                 this.resultConverter,
                 retryPolicy);
+    }
+
+    public Awaitable<R> call(final WorkflowContext<?, ?> ctx, final A argument) {
+        return call(ctx, argument, defaultRetryPolicy());
     }
 
     // TODO: Add more call variations as needed.

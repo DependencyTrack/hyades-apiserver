@@ -30,7 +30,7 @@ public record RetryPolicy(
         int maxAttempts) {
 
     public static RetryPolicy defaultRetryPolicy() {
-        return new RetryPolicy(Duration.ofSeconds(5), 1.5, 0.3, Duration.ofMinutes(30), -1);
+        return new RetryPolicy(Duration.ofSeconds(5), 1.5, 0.3, Duration.ofMinutes(30), 6);
     }
 
     public RetryPolicy withInitialDelay(final Duration initialDelay) {

@@ -46,10 +46,11 @@ public class AnalyzeProjectVulnsActivity implements ActivityExecutor<AnalyzeProj
 
     private final Map<String, VulnAnalyzer> analyzerByName = new HashMap<>();
 
-    public static final ActivityClient<AnalyzeProjectVulnsArgs, AnalyzeProjectVulnsResult> CLIENT = ActivityClient.of(
-            AnalyzeProjectVulnsActivity.class,
-            protoConverter(AnalyzeProjectVulnsArgs.class),
-            protoConverter(AnalyzeProjectVulnsResult.class));
+    public static final ActivityClient<AnalyzeProjectVulnsArgs, AnalyzeProjectVulnsResult> CLIENT =
+            ActivityClient.of(
+                    AnalyzeProjectVulnsActivity.class,
+                    protoConverter(AnalyzeProjectVulnsArgs.class),
+                    protoConverter(AnalyzeProjectVulnsResult.class));
 
     public AnalyzeProjectVulnsActivity() {
         this(ServiceLoader.load(VulnAnalyzer.class).stream()

@@ -30,7 +30,6 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsA
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.workflow.framework.Awaitable;
-import org.dependencytrack.workflow.framework.RetryPolicy;
 import org.dependencytrack.workflow.framework.WorkflowClient;
 import org.dependencytrack.workflow.framework.WorkflowContext;
 import org.dependencytrack.workflow.framework.WorkflowExecutor;
@@ -47,7 +46,6 @@ import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_INTERNAL
 import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_OSSINDEX_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_SNYK_ENABLED;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
@@ -55,7 +53,10 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.v
 public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectArgs, Void> {
 
     public static final WorkflowClient<AnalyzeProjectArgs, Void> CLIENT =
-            WorkflowClient.of(AnalyzeProjectWorkflow.class, protoConverter(AnalyzeProjectArgs.class), voidConverter());
+            WorkflowClient.of(
+                    AnalyzeProjectWorkflow.class,
+                    protoConverter(AnalyzeProjectArgs.class),
+                    voidConverter());
 
     private static final String STATUS_ANALYZING_VULNS = "ANALYZING_VULNS";
     private static final String STATUS_PROCESSING_VULN_ANALYSIS_RESULTS = "PROCESSING_VULN_ANALYSIS_RESULTS";
@@ -84,7 +85,6 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
                         .sorted()
                         .toList();
 
-        final RetryPolicy vulnAnalyzerRetryPolicy = defaultRetryPolicy().withMaxAttempts(6);
         final var pendingVulnAnalysisResultByAnalyzerName = new HashMap<String, Awaitable<AnalyzeProjectVulnsResult>>();
         for (final String analyzerName : enabledAnalyzerNames) {
             ctx.logger().info("Scheduling vulnerability analysis with {}", analyzerName);
@@ -94,8 +94,7 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
                             AnalyzeProjectVulnsArgs.newBuilder()
                                     .setProject(args.getProject())
                                     .setAnalyzerName(analyzerName)
-                                    .build(),
-                            vulnAnalyzerRetryPolicy);
+                                    .build());
             pendingVulnAnalysisResultByAnalyzerName.put(analyzerName, awaitable);
         }
 
@@ -127,8 +126,7 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
                 ProcessProjectVulnAnalysisResultsArgs.newBuilder()
                         .setProject(args.getProject())
                         .addAllResults(vulnAnalysisResults)
-                        .build(),
-                defaultRetryPolicy()).await();
+                        .build()).await();
 
         ctx.logger().info("Scheduling policy evaluation");
         ctx.setStatus(STATUS_EVALUATING_POLICIES);
@@ -136,9 +134,7 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
                 ctx,
                 EvalProjectPoliciesArgs.newBuilder()
                         .setProject(args.getProject())
-                        .build(),
-                defaultRetryPolicy()
-                        .withMaxAttempts(6)).await();
+                        .build()).await();
 
         ctx.logger().info("Scheduling metrics update");
         ctx.setStatus(STATUS_UPDATING_METRICS);
@@ -146,9 +142,7 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
                 ctx,
                 UpdateProjectMetricsArgs.newBuilder()
                         .setProject(args.getProject())
-                        .build(),
-                defaultRetryPolicy()
-                        .withMaxAttempts(6)).await();
+                        .build()).await();
 
         ctx.setStatus(STATUS_COMPLETED);
         return Optional.empty();

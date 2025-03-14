@@ -36,10 +36,11 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.p
 @Activity(name = "clone-project")
 public class CloneProjectActivity implements ActivityExecutor<CloneProjectArgs, CloneProjectResult> {
 
-    public static final ActivityClient<CloneProjectArgs, CloneProjectResult> CLIENT = ActivityClient.of(
-            CloneProjectActivity.class,
-            protoConverter(CloneProjectArgs.class),
-            protoConverter(CloneProjectResult.class));
+    public static final ActivityClient<CloneProjectArgs, CloneProjectResult> CLIENT =
+            ActivityClient.of(
+                    CloneProjectActivity.class,
+                    protoConverter(CloneProjectArgs.class),
+                    protoConverter(CloneProjectResult.class));
 
     @Override
     public Optional<CloneProjectResult> execute(final ActivityContext<CloneProjectArgs> ctx) throws Exception {

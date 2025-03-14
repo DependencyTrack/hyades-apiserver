@@ -32,8 +32,6 @@ import org.dependencytrack.workflow.framework.failure.ApplicationFailureExceptio
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.StatementContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -53,12 +51,11 @@ import static org.dependencytrack.workflow.framework.payload.PayloadConverters.v
 @Activity(name = "publish-notification")
 public class PublishNotificationActivity implements ActivityExecutor<PublishNotificationActivityArgs, Void> {
 
-    public static final ActivityClient<PublishNotificationActivityArgs, Void> CLIENT = ActivityClient.of(
-            PublishNotificationActivity.class,
-            protoConverter(PublishNotificationActivityArgs.class),
-            voidConverter());
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(PublishNotificationActivity.class);
+    public static final ActivityClient<PublishNotificationActivityArgs, Void> CLIENT =
+            ActivityClient.of(
+                    PublishNotificationActivity.class,
+                    protoConverter(PublishNotificationActivityArgs.class),
+                    voidConverter());
 
     private final List<NotificationPublisher> publishers;
 

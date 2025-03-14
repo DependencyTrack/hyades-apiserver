@@ -29,8 +29,6 @@ import org.dependencytrack.workflow.framework.failure.ApplicationFailureExceptio
 
 import java.util.Optional;
 
-import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
-
 @Workflow(name = "clone-project")
 public class CloneProjectWorkflow implements WorkflowExecutor<CloneProjectArgs, CloneProjectResult> {
 
@@ -39,8 +37,8 @@ public class CloneProjectWorkflow implements WorkflowExecutor<CloneProjectArgs, 
         final CloneProjectArgs args = ctx.argument().orElseThrow(ApplicationFailureException::forMissingArguments);
 
         ctx.logger().info("Scheduling cloning of project {}", args.getProject().getUuid());
-        final CloneProjectResult cloneResult = CloneProjectActivity.CLIENT.call(
-                ctx, args, defaultRetryPolicy()).await().orElseThrow(ApplicationFailureException::forMissingResult);
+        final CloneProjectResult cloneResult = CloneProjectActivity.CLIENT.call(ctx, args)
+                .await().orElseThrow(ApplicationFailureException::forMissingResult);
 
         ctx.logger().info(
                 "Scheduling metrics update for cloned project {}",
@@ -48,7 +46,7 @@ public class CloneProjectWorkflow implements WorkflowExecutor<CloneProjectArgs, 
         final var updateMetricsArgs = UpdateProjectMetricsArgs.newBuilder()
                 .setProject(cloneResult.getClonedProject())
                 .build();
-        ProjectMetricsUpdateTask.ACTIVITY_CLIENT.call(ctx, updateMetricsArgs, defaultRetryPolicy()).await();
+        ProjectMetricsUpdateTask.ACTIVITY_CLIENT.call(ctx, updateMetricsArgs).await();
 
         return Optional.of(cloneResult);
     }

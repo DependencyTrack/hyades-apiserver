@@ -23,7 +23,6 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationAc
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.Awaitable;
-import org.dependencytrack.workflow.framework.RetryPolicy;
 import org.dependencytrack.workflow.framework.WorkflowContext;
 import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
@@ -55,9 +54,7 @@ public class PublishNotificationWorkflow implements WorkflowExecutor<PublishNoti
                     PublishNotificationActivityArgs.newBuilder()
                             .setNotificationFileMetadata(args.getNotificationFileMetadata())
                             .setNotificationRuleName(ruleName)
-                            .build(),
-                    RetryPolicy.defaultRetryPolicy()
-                            .withMaxAttempts(6));
+                            .build());
             awaitableByRuleName.put(ruleName, awaitable);
         }
 
