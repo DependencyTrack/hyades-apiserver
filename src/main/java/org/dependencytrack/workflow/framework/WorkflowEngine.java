@@ -41,7 +41,6 @@ import org.dependencytrack.workflow.framework.TaskAction.AbandonWorkflowTaskActi
 import org.dependencytrack.workflow.framework.TaskAction.CompleteActivityTaskAction;
 import org.dependencytrack.workflow.framework.TaskAction.CompleteWorkflowTaskAction;
 import org.dependencytrack.workflow.framework.TaskAction.FailActivityTaskAction;
-import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
 import org.dependencytrack.workflow.framework.failure.FailureConverter;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
@@ -61,6 +60,7 @@ import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunIn
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunJournalRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowScheduleRow;
+import org.dependencytrack.workflow.framework.persistence.model.PollActivityTaskCommand;
 import org.dependencytrack.workflow.framework.persistence.model.PolledActivityTaskRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEventRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEvents;
@@ -177,6 +177,7 @@ public class WorkflowEngine implements Closeable {
                 // frequently queries are being executed.
                 // TODO: Don't do this in the engine's constructor.
                 .registerArgument(new WorkflowEventArgumentFactory())
+                .registerArrayType(Duration.class, "interval")
                 .registerArrayType(Instant.class, "timestamptz")
                 .registerArrayType(WorkflowRunStatus.class, "workflow_run_status")
                 .registerArrayType(new WorkflowEventSqlArrayType())
@@ -379,49 +380,12 @@ public class WorkflowEngine implements Closeable {
         taskDispatcherExecutor.execute(taskDispatcher);
     }
 
-    public <A, R> void registerActivityExecutor(
-            final ActivityExecutor<A, R> activityExecutor,
-            final int maxConcurrency,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final Duration taskLockTimeout) {
-        requireNonNull(activityExecutor, "activityExecutor must not be null");
-
-        // TODO: Find a better way to do this.
-        //  It's only temporary to make testing easier.
-        final Class<? extends ActivityExecutor> activityExecutorClass;
-        if (activityExecutor instanceof final FaultInjectingActivityExecutor<A, R> executor) {
-            activityExecutorClass = executor.delegate().getClass();
-        } else {
-            activityExecutorClass = activityExecutor.getClass();
-        }
-
-        final var activityAnnotation = activityExecutorClass.getAnnotation(Activity.class);
-        if (activityAnnotation == null) {
-            throw new IllegalArgumentException("activityExecutor class must be annotated with @Activity");
-        }
-
-        registerActivityExecutor(activityAnnotation.name(), maxConcurrency,
-                argumentConverter, resultConverter, taskLockTimeout, activityExecutor);
-    }
-
-    <A, R> void registerActivityExecutor(
-            final String activityName,
-            final int maxConcurrency,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final Duration taskLockTimeout,
-            final ActivityExecutor<A, R> activityExecutor) {
+    public void mount(final ActivityRegistry executorRegistry, final int maxConcurrency) {
         state.assertRunning();
-        requireNonNull(activityName, "activityName must not be null");
-        requireValidActivityName(activityName);
-        requireNonNull(argumentConverter, "argumentConverter must not be null");
-        requireNonNull(resultConverter, "resultConverter must not be null");
-        requireNonNull(activityExecutor, "activityExecutor must not be null");
 
-        final String executorName = "activity:%s".formatted(activityName);
+        final String executorName = "activity-registry:%s".formatted(executorRegistry.name());
         if (executorServiceByName.containsKey(executorName)) {
-            throw new IllegalStateException("Activity %s is already registered".formatted(activityName));
+            throw new IllegalStateException("Activity registry %s is already mounted".formatted(executorRegistry.name()));
         }
 
         // TODO: Micrometer currently can't instrument this executor type.
@@ -429,16 +393,15 @@ public class WorkflowEngine implements Closeable {
         final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                        .name("WorkflowEngine-ActivityExecutor-" + activityName + "-", 0)
+                        .name("WorkflowEngine-Activity-" + executorRegistry.name() + "-", 0)
                         .factory());
         if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(executorService, "WorkflowEngine-ActivityExecutor-" + activityName, null)
+            new ExecutorServiceMetrics(executorService, "WorkflowEngine-Activity-" + executorRegistry.name(), null)
                     .bindTo(config.meterRegistry());
         }
         executorServiceByName.put(executorName, executorService);
 
-        final var taskProcessor = new ActivityTaskProcessor<>(
-                this, activityName, activityExecutor, argumentConverter, resultConverter, taskLockTimeout);
+        final var taskProcessor = new ActivityTaskProcessor<>(this, executorRegistry);
 
         final var taskDispatcher = new TaskDispatcher<>(
                 this,
@@ -968,11 +931,11 @@ public class WorkflowEngine implements Closeable {
         }
     }
 
-    List<ActivityTask> pollActivityTasks(final String activityName, final int limit, final Duration lockTimeout) {
+    List<ActivityTask> pollActivityTasks(final Collection<PollActivityTaskCommand> pollCommands, final int limit) {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            return dao.pollAndLockActivityTasks(this.config.instanceId(), activityName, lockTimeout, limit).stream()
+            return dao.pollAndLockActivityTasks(this.config.instanceId(), pollCommands, limit).stream()
                     .map(polledTask -> new ActivityTask(
                             polledTask.workflowRunId(),
                             polledTask.scheduledEventId(),

@@ -44,6 +44,7 @@ import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationAc
 import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.util.PersistenceUtil;
+import org.dependencytrack.workflow.framework.ActivityRegistry;
 import org.dependencytrack.workflow.framework.ScheduleWorkflowRunOptions;
 import org.dependencytrack.workflow.framework.WorkflowEngine;
 import org.dependencytrack.workflow.framework.WorkflowEngineConfig;
@@ -99,12 +100,13 @@ public class PublishNotificationWorkflowTest extends PersistenceCapableTest {
                 voidConverter(),
                 Duration.ofSeconds(5));
 
-        engine.registerActivityExecutor(
-                new PublishNotificationActivity(),
-                1,
-                protoConverter(PublishNotificationActivityArgs.class),
-                voidConverter(),
-                Duration.ofSeconds(5));
+        engine.mount(new ActivityRegistry("notification")
+                .register(
+                        "publish-notification",
+                        protoConverter(PublishNotificationActivityArgs.class),
+                        voidConverter(),
+                        Duration.ofSeconds(5),
+                        new PublishNotificationActivity()), 1);
     }
 
     @After

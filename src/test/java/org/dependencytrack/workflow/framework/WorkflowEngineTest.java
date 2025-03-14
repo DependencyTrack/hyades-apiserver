@@ -646,7 +646,9 @@ public class WorkflowEngineTest {
             return Optional.empty();
         });
 
-        engine.registerActivityExecutor("abc", 1, voidConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> Optional.of("123"));
+        final var activityRegistry = new ActivityRegistry("foo")
+                .register("abc", voidConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> Optional.of("123"));
+        engine.mount(activityRegistry, 1);
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
@@ -679,8 +681,10 @@ public class WorkflowEngineTest {
             return Optional.of(joinedResult);
         });
 
-        engine.registerActivityExecutor("abc", 1, new StringPayloadConverter(), new StringPayloadConverter(), Duration.ofSeconds(5),
-                ctx -> Optional.of(ctx.argument().orElseThrow()));
+        final var activityRegistry = new ActivityRegistry("foo")
+                .register("abc", new StringPayloadConverter(), new StringPayloadConverter(), Duration.ofSeconds(5),
+                        ctx -> Optional.of(ctx.argument().orElseThrow()));
+        engine.mount(activityRegistry, 1);
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
@@ -712,9 +716,11 @@ public class WorkflowEngineTest {
             return Optional.empty();
         });
 
-        engine.registerActivityExecutor("abc", 1, voidConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> {
-            throw new IllegalStateException();
-        });
+        final var activityRegistry = new ActivityRegistry("foo")
+                .register("abc", voidConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> {
+                    throw new IllegalStateException();
+                });
+        engine.mount(activityRegistry, 1);
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
@@ -748,9 +754,11 @@ public class WorkflowEngineTest {
             return Optional.empty();
         });
 
-        engine.registerActivityExecutor("abc", 1, voidConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> {
-            throw new ApplicationFailureException("Ouch!", null, true);
-        });
+        final var activityRegistry = new ActivityRegistry("foo")
+                .register("abc", voidConverter(), new StringPayloadConverter(), Duration.ofSeconds(5), ctx -> {
+                    throw new ApplicationFailureException("Ouch!", null, true);
+                });
+        engine.mount(activityRegistry, 1);
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
 
@@ -798,9 +806,11 @@ public class WorkflowEngineTest {
             return Optional.empty();
         });
 
-        engine.registerActivityExecutor("qux", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            throw new ApplicationFailureException("Ouch!", null, true);
-        });
+        final var activityRegistry = new ActivityRegistry("foo")
+                .register("qux", voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+                    throw new ApplicationFailureException("Ouch!", null, true);
+                });
+        engine.mount(activityRegistry, 1);
 
         final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1)
                 .withLabels(Map.of("oof", "rab")));
@@ -929,7 +939,7 @@ public class WorkflowEngineTest {
             assertThat(run.status()).isEqualTo(WorkflowRunStatus.PENDING);
             assertThat(run.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
             assertThat(run.priority()).isEqualTo(666);
-            assertThat(run.labels()).containsExactlyEntriesOf(Map.ofEntries(
+            assertThat(run.labels()).containsExactlyInAnyOrderEntriesOf(Map.ofEntries(
                     Map.entry("label", "123"),
                     Map.entry("schedule", "foo-schedule")));
         });

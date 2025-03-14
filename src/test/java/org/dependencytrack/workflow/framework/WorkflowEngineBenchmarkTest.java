@@ -92,9 +92,9 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
             return Optional.empty();
         });
 
-        engine.registerActivityExecutor("foo", 50, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
-        engine.registerActivityExecutor("bar", 50, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
-        engine.registerActivityExecutor("baz", 50, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
+        engine.mount(new ActivityRegistry("foo").register("foo", voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty()), 50);
+        engine.mount(new ActivityRegistry("bar").register("bar", voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty()), 50);
+        engine.mount(new ActivityRegistry("baz").register("baz", voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty()), 50);
     }
 
     @After

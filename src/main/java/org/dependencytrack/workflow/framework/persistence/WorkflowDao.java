@@ -29,6 +29,7 @@ import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunIn
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunJournalRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowScheduleRow;
+import org.dependencytrack.workflow.framework.persistence.model.PollActivityTaskCommand;
 import org.dependencytrack.workflow.framework.persistence.model.PolledActivityTaskRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEventRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEvents;
@@ -722,15 +723,19 @@ public final class WorkflowDao {
 
     public List<PolledActivityTaskRow> pollAndLockActivityTasks(
             final UUID workerInstanceId,
-            final String activityName,
-            final Duration lockTimeout,
+            final Collection<PollActivityTaskCommand> pollCommands,
             final int limit) {
         final Update update = jdbiHandle.createUpdate("""
-                with cte_poll as (
+                with
+                cte_poll_cmd as (
+                    select *
+                      from unnest(:activityNames, :lockTimeouts) as t(activity_name, lock_timeout)
+                ),
+                cte_poll as (
                     select workflow_run_id
                          , scheduled_event_id
                       from workflow_activity_task
-                     where activity_name = :activityName
+                     where activity_name in (select activity_name from cte_poll_cmd)
                        and (visible_from is null or visible_from <= now())
                        and (locked_until is null or locked_until <= now())
                      order by priority desc nulls last
@@ -740,11 +745,13 @@ public final class WorkflowDao {
                      limit :limit)
                 update workflow_activity_task as wat
                    set locked_by = :workerInstanceId
-                     , locked_until = now() + :lockTimeout
+                     , locked_until = now() + cte_poll_cmd.lock_timeout
                      , updated_at = now()
                   from cte_poll
+                     , cte_poll_cmd
                  where cte_poll.workflow_run_id = wat.workflow_run_id
                    and cte_poll.scheduled_event_id = wat.scheduled_event_id
+                   and cte_poll_cmd.activity_name = wat.activity_name
                 returning wat.workflow_run_id
                         , wat.scheduled_event_id
                         , wat.activity_name
@@ -753,10 +760,18 @@ public final class WorkflowDao {
                         , wat.locked_until
                 """);
 
+        final var activityNames = new ArrayList<String>(pollCommands.size());
+        final var lockTimeouts = new ArrayList<Duration>(pollCommands.size());
+
+        for (final PollActivityTaskCommand command : pollCommands) {
+            activityNames.add(command.activityName());
+            lockTimeouts.add(command.lockTimeout());
+        }
+
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bind("activityName", activityName)
-                .bind("lockTimeout", lockTimeout)
+                .bindArray("activityNames", String.class, activityNames)
+                .bindArray("lockTimeouts", Duration.class, lockTimeouts)
                 .bind("limit", limit)
                 .executeAndReturnGeneratedKeys(
                         "workflow_run_id",

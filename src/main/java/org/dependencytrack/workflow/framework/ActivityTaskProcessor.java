@@ -19,14 +19,16 @@
 package org.dependencytrack.workflow.framework;
 
 import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
+import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.framework.ActivityRegistry.RegisteredActivity;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
+import org.dependencytrack.workflow.framework.persistence.model.PollActivityTaskCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
@@ -34,35 +36,28 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ActivityTaskProcessor.class);
 
     private final WorkflowEngine engine;
-    private final String activityName;
-    private final ActivityExecutor<A, R> activityExecutor;
-    private final PayloadConverter<A> argumentConverter;
-    private final PayloadConverter<R> resultConverter;
-    private final Duration taskLockTimeout;
+    private final ActivityRegistry activityRegistry;
+    private final List<PollActivityTaskCommand> pollCommands;
 
     ActivityTaskProcessor(
             final WorkflowEngine engine,
-            final String activityName,
-            final ActivityExecutor<A, R> activityExecutor,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final Duration taskLockTimeout) {
+            final ActivityRegistry activityRegistry) {
         this.engine = engine;
-        this.activityName = activityName;
-        this.activityExecutor = activityExecutor;
-        this.argumentConverter = argumentConverter;
-        this.resultConverter = resultConverter;
-        this.taskLockTimeout = taskLockTimeout;
+        this.activityRegistry = activityRegistry;
+        this.pollCommands = activityRegistry.getActivities().entrySet().stream()
+                .map(entry -> new PollActivityTaskCommand(
+                        entry.getKey(), entry.getValue().lockTimeout()))
+                .toList();
     }
 
     @Override
     public String taskName() {
-        return activityName;
+        return activityRegistry.name(); // TODO
     }
 
     @Override
     public List<ActivityTask> poll(final int limit) {
-        return engine.pollActivityTasks(activityName, limit, taskLockTimeout);
+        return engine.pollActivityTasks(pollCommands, limit);
     }
 
     @Override
@@ -89,29 +84,45 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
         }
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private void processInternal(final ActivityTask task) {
+        final RegisteredActivity registeredActivity = activityRegistry.getActivity(task.activityName());
+        if (registeredActivity == null) {
+            throw new IllegalStateException(
+                    "Received task for activity %s, but it is not registered".formatted(task.activityName()));
+        }
+
+        final ActivityExecutor executor = registeredActivity.executor();
+        final PayloadConverter argumentConverter = registeredActivity.argumentConverter();
+        final PayloadConverter resultConverter = registeredActivity.resultConverter();
+        final Duration lockTimeout = registeredActivity.lockTimeout();
+
         final var ctx = new ActivityContext<>(
                 engine,
                 task.workflowRunId(),
                 task.scheduledEventId(),
                 argumentConverter.convertFromPayload(task.argument()),
-                activityExecutor,
-                taskLockTimeout,
+                executor,
+                lockTimeout,
                 task.lockedUntil());
 
         try {
-            final Optional<R> result;
+            final WorkflowPayload result;
             try (ctx) {
-                result = activityExecutor.execute(ctx);
+                result = (WorkflowPayload) executor.execute(ctx)
+                        .map(resultConverter::convertToPayload)
+                        .orElse(null);
             }
 
             try {
                 final var subjectBuilder = ActivityTaskCompleted.newBuilder()
                         .setTaskScheduledEventId(task.scheduledEventId());
-                result.ifPresent(r -> subjectBuilder.setResult(resultConverter.convertToPayload(r)));
+                if (result != null) {
+                    subjectBuilder.setResult(result);
+                }
 
                 // TODO: Retry on TimeoutException
-                engine.completeActivityTask(task, result.map(resultConverter::convertToPayload).orElse(null)).join();
+                engine.completeActivityTask(task, result).join();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 LOGGER.warn("Interrupted while waiting for task completion to be acknowledged", e);
