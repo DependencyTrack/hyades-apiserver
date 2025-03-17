@@ -20,13 +20,15 @@ package org.dependencytrack.persistence.jdbi;
 
 import java.util.List;
 
-import org.dependencytrack.model.MappedRole;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectRole;
+import org.dependencytrack.persistence.jdbi.mapping.ProjectRoleRowMapper;
+
 import org.jdbi.v3.sqlobject.config.RegisterFieldMapper;
+import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
-import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
@@ -38,111 +40,73 @@ import alpine.model.UserPrincipal;
 public interface RoleDao {
 
     @SqlUpdate(/* language=sql */ """
-            INSERT INTO "PROJECT_ACCESS_ROLES" ("PROJECT_ID", "ROLE_ID")
-            VALUES (:projectId, :roleId)
-            ON CONFLICT DO NOTHING
-            """)
-    @GetGeneratedKeys
-    @RegisterFieldMapper(MappedRole.class)
-    MappedRole addProjectAccessRole(@Bind final long projectId, @Bind final long roleId);
-
-    @SqlUpdate(/* language=sql */ """
-            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
-            INSERT INTO "${user.getClass().getSimpleName()?upper_case}S_PROJECTS_ROLES"
-              ("${user.getClass().getSimpleName()?upper_case}_ID", "PROJECT_ACCESS_ROLE_ID")
-            VALUES
-              (${user.getId()}, :projectAccessRoleId)
-            ON CONFLICT DO NOTHING
-            """)
-    @DefineNamedBindings
-    <T extends UserPrincipal> int addRoleToUser(@Define T user, @Bind final long projectAccessRoleId);
-
-    @SqlUpdate(/* language=sql */"""
             DELETE
               FROM "ROLE"
              WHERE "ID" = :roleId
             """)
     int deleteRole(@Bind final long roleId);
 
-    @SqlQuery(/* language=sql */"""
-            SELECT DISTINCT "PROJECT"."UUID", "PROJECT"."NAME"
+    @SqlUpdate(/* language=sql */ """
+            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
+            <#assign prefix = user.getClass().getSimpleName()?upper_case>
+            INSERT INTO "${prefix}S_PROJECTS_ROLES"
+              ("${prefix}_ID", "PROJECT_ID", "ROLE_ID")
+            VALUES
+              (${user.getId()}, :projectId, :roleId)
+            ON CONFLICT DO NOTHING
+            """)
+    @DefineNamedBindings
+    <T extends UserPrincipal> int addRoleToUser(@Define T user, @Bind long projectId, @Bind long roleId);
+
+    @SqlUpdate(/* language=sql */ """
+            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
+            <#-- @ftlvariable name="project" type="org.dependencytrack.model.Project" -->
+            <#assign prefix = user.getClass().getSimpleName()?upper_case>
+            DELETE
+              FROM "${prefix}S_PROJECTS_ROLES"
+             WHERE "${prefix}_ID" = ${user.getId()}
+               AND "ROLE_ID" = :roleId
+               AND "PROJECT_ID" IN (
+                 SELECT "ID"
+                   FROM "PROJECT"
+                  WHERE "NAME" = '${project.getName()}'
+               )
+            """)
+    @DefineNamedBindings
+    <T extends UserPrincipal> int removeRoleFromUser(@Define T user, @Define Project project, @Bind long roleId);
+
+    @SqlQuery(/* language=sql */ """
+            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
+            <#assign prefix = user.getClass().getSimpleName()?upper_case>
+            SELECT "PROJECT"."ID" AS "PROJECT_ID",
+                   "ROLE"."ID" AS "ROLE_ID"
               FROM "PROJECT"
-              LEFT JOIN "PROJECT_ACCESS_ROLES"
-                ON "PROJECT_ACCESS_ROLES"."PROJECT_ID" = "PROJECT"."ID"
-              LEFT JOIN "LDAPUSERS_PROJECTS_ROLES"
-                ON "LDAPUSERS_PROJECTS_ROLES"."PROJECT_ACCESS_ROLE_ID" = "PROJECT_ACCESS_ROLES"."ID"
-              LEFT JOIN "LDAPUSER"
-                ON "LDAPUSER"."ID" = "LDAPUSERS_PROJECTS_ROLES"."LDAPUSER_ID"
-             WHERE "LDAPUSER"."USERNAME" != :username
-                OR "LDAPUSER"."USERNAME" IS NULL
+             INNER JOIN "${prefix}S_PROJECTS_ROLES"
+                ON "${prefix}S_PROJECTS_ROLES"."PROJECT_ID" = "PROJECT"."ID"
+             INNER JOIN "${prefix}"
+                ON "${prefix}"."ID" = "${prefix}S_PROJECTS_ROLES"."${prefix}_ID"
+             INNER JOIN "ROLE"
+                ON "ROLE"."ID" = "${prefix}S_PROJECTS_ROLES"."ROLE_ID"
+             WHERE "${prefix}"."USERNAME" != '${user.getUsername()}'
+                OR "${prefix}"."USERNAME" IS NULL
             """)
-    @RegisterFieldMapper(Project.class)
-    List<Project> getLdapUserUnassignedProjects(@Bind final String username);
+    @RegisterRowMapper(ProjectRoleRowMapper.class)
+    @DefineNamedBindings
+    <T extends UserPrincipal> List<ProjectRole> getUserRoles(@Define T user);
 
-    @SqlQuery(/* language=sql */"""
-             SELECT DISTINCT "PROJECT"."UUID", "PROJECT"."NAME"
-               FROM "PROJECT"
-               LEFT JOIN "PROJECT_ACCESS_ROLES"
-                 ON "PROJECT_ACCESS_ROLES"."PROJECT_ID" = "PROJECT"."ID"
-               LEFT JOIN "MANAGEDUSERS_PROJECTS_ROLES"
-                 ON "MANAGEDUSERS_PROJECTS_ROLES"."PROJECT_ACCESS_ROLE_ID" = "PROJECT_ACCESS_ROLES"."ID"
-               LEFT JOIN "MANAGEDUSER"
-                 ON "MANAGEDUSER"."ID" = "MANAGEDUSERS_PROJECTS_ROLES"."MANAGEDUSER_ID"
-              WHERE "MANAGEDUSER"."USERNAME" != :username
-                 OR "MANAGEDUSER"."USERNAME" IS NULL
-            """)
-    @RegisterFieldMapper(Project.class)
-    List<Project> getManagedUserUnassignedProjects(@Bind final String username);
-
-    @SqlQuery(/* language=sql */"""
-            SELECT DISTINCT "PROJECT"."UUID", "PROJECT"."NAME"
+    @SqlQuery(/* language=sql */ """
+            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
+            <#assign prefix = user.getClass().getSimpleName()?upper_case>
+            SELECT "PROJECT"."ID", "PROJECT"."NAME"
               FROM "PROJECT"
-              LEFT JOIN "PROJECT_ACCESS_ROLES"
-                ON "PROJECT_ACCESS_ROLES"."PROJECT_ID" = "PROJECT"."ID"
-              LEFT JOIN "OIDCUSERS_PROJECTS_ROLES"
-                ON "OIDCUSERS_PROJECTS_ROLES"."PROJECT_ACCESS_ROLE_ID" = "PROJECT_ACCESS_ROLES"."ID"
-              LEFT JOIN "OIDCUSER"
-                ON "OIDCUSER"."ID" = "OIDCUSERS_PROJECTS_ROLES"."OIDCUSER_ID"
-             WHERE "OIDCUSER"."USERNAME" != :username
-                OR "OIDCUSER"."USERNAME" IS NULL
+              LEFT JOIN "${prefix}S_PROJECTS_ROLES"
+                ON "${prefix}S_PROJECTS_ROLES"."PROJECT_ID" = "PROJECT"."ID"
+              LEFT JOIN "${prefix}"
+                ON "${prefix}"."ID" = "${prefix}S_PROJECTS_ROLES"."${prefix}_ID"
+             WHERE "${prefix}"."USERNAME" != '${user.getUsername()}'
+                OR "${prefix}"."USERNAME" IS NULL
             """)
     @RegisterFieldMapper(Project.class)
-    List<Project> getOidcUserUnassignedProjects(@Bind final String username);
-
-    @SqlUpdate(/* language=sql */"""
-            DELETE
-              FROM "LDAPUSERS_PROJECTS_ROLES"
-             WHERE "LDAPUSER_ID" = :userId
-               AND "PROJECT_ACCESS_ROLE_ID" IN (
-                   SELECT "ID"
-                     FROM "PROJECT_ACCESS_ROLES"
-                    WHERE "ROLE_ID" = :roleId
-                      AND "PROJECT_ID" = :projectId)
-            """)
-    int removeRoleFromLdapUser(@Bind final long userId, @Bind final long projectId, @Bind final long roleId);
-
-    @SqlUpdate(/* language=sql */"""
-            DELETE
-              FROM "MANAGEDUSERS_PROJECTS_ROLES"
-             WHERE "MANAGEDUSER_ID" = :userId
-               AND "PROJECT_ACCESS_ROLE_ID" IN (
-                   SELECT "ID"
-                     FROM "PROJECT_ACCESS_ROLES"
-                    WHERE "ROLE_ID" = :roleId
-                      AND "PROJECT_ID" = :projectId)
-            """)
-    int removeRoleFromManagedUser(@Bind final long userId, @Bind final long projectId, @Bind final long roleId);
-
-    @SqlUpdate(/* language=sql */"""
-            DELETE
-              FROM "OIDCUSERS_PROJECTS_ROLES"
-             WHERE "OIDCUSER_ID" = :userId
-               AND "PROJECT_ACCESS_ROLE_ID" IN (
-                   SELECT "ID"
-                     FROM "PROJECT_ACCESS_ROLES"
-                    WHERE "ROLE_ID" = :roleId
-                      AND "PROJECT_ID" = :projectId)
-            """)
-    int removeRoleFromOidcUser(@Bind final long userId, @Bind final long projectId, @Bind final long roleId);
+    <T extends UserPrincipal> List<Project> getUserUnassignedProjects(@Define T user);
 
 }

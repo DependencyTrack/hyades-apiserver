@@ -1011,31 +1011,23 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean hasAccess(final Principal principal, final Project project) {
-        if (principal == null) {
-            // This is a system request being made (e.g. MetricsUpdateTask, etc) where there isn't a principal
+        if (!isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)
+                || principal == null // System request (e.g. MetricsUpdateTask, etc) where there isn't a principal
+                || super.hasAccessManagementPermission(principal)) // TODO: After Alpine >= 3.2.0: request.getEffectivePermission().contains(Permissions.ACCESS_MANAGEMENT.name())
             return true;
-        }
 
-        if (!isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)) {
-            return true;
-        }
-
-        // TODO: After upgrading to Alpine >= 3.2.0, this should become:
-        //   request.getEffectivePermission().contains(Permissions.ACCESS_MANAGEMENT.name())
-        // https://github.com/stevespringett/Alpine/pull/764
-        if (super.hasAccessManagementPermission(principal)) {
-            return true;
-        }
-
+        final Set<Long> roleIds = getRoleIds(principal, project);
         final Set<Long> teamIds = getTeamIds(principal);
-        if (teamIds.isEmpty()) {
-            return false;
-        }
 
-        final Query<?> query = pm.newQuery(Query.SQL, "SELECT HAS_PROJECT_ACCESS(:projectId, :teamIds)");
+        if (teamIds.isEmpty() && roleIds.isEmpty())
+            return false;
+
+        final Query<?> query = pm.newQuery(Query.SQL, "SELECT HAS_PROJECT_ACCESS(:projectId, :teamIds, :roleIds)");
         query.setNamedParameters(Map.ofEntries(
                 Map.entry("projectId", project.getId()),
-                Map.entry("teamIds", teamIds.toArray(new Long[0]))));
+                Map.entry("teamIds", teamIds.toArray(Long[]::new)),
+                Map.entry("roleIds", roleIds.toArray(Long[]::new))));
+
         return executeAndCloseResultUnique(query, Boolean.class);
     }
 
