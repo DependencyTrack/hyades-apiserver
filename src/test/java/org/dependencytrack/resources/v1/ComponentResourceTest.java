@@ -26,6 +26,7 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -60,6 +61,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_FAILED;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_UNKNOWN;
+import static org.hamcrest.Matchers.equalTo;
 
 public class ComponentResourceTest extends ResourceTest {
 
@@ -1160,6 +1162,111 @@ public class ComponentResourceTest extends ResourceTest {
 
         response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    public void getOccurrencesTest() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final var occurrenceA = new ComponentOccurrence();
+        occurrenceA.setComponent(component);
+        occurrenceA.setLocation("/foo/bar");
+        qm.persist(occurrenceA);
+
+        final var occurrenceB = new ComponentOccurrence();
+        occurrenceB.setComponent(component);
+        occurrenceB.setLocation("/foo/bar/baz");
+        occurrenceB.setLine(5);
+        occurrenceB.setOffset(666);
+        occurrenceB.setSymbol("someSymbol");
+        qm.persist(occurrenceB);
+
+        final Response response = jersey.target(V1_COMPONENT + "/" + component.getUuid() + "/occurrence")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("occurrenceIdA", equalTo(occurrenceA.getId().toString()))
+                .withMatcher("occurrenceIdB", equalTo(occurrenceB.getId().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        [
+                          {
+                            "id": "${json-unit.matches:occurrenceIdA}",
+                            "location": "/foo/bar",
+                            "createdAt": "${json-unit.any-number}"
+                          },
+                          {
+                            "id": "${json-unit.matches:occurrenceIdB}",
+                            "location": "/foo/bar/baz",
+                            "line": 5,
+                            "offset": 666,
+                            "symbol": "someSymbol",
+                            "createdAt": "${json-unit.any-number}"
+                          }
+                        ]
+                        """);
+    }
+
+    @Test
+    public void getOccurrencesComponentNotFoundTest() {
+        final Response response = jersey.target(V1_COMPONENT + "/aa684b6f-de53-4249-a2b1-bf16ac458328/occurrence")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 404,
+                  "title": "Resource does not exist",
+                  "detail": "Component could not be found"
+                }
+                """);
+    }
+
+    @Test
+    public void getOccurrencesAclTest() {
+        enablePortfolioAccessControl();
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_COMPONENT + "/" + component.getUuid() + "/occurrence")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("[]");
     }
 
 }

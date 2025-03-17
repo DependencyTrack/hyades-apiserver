@@ -62,6 +62,8 @@ import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.WaitingLockConfiguration;
 import org.json.JSONArray;
@@ -70,8 +72,6 @@ import org.slf4j.MDC;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -182,21 +182,40 @@ public class BomUploadProcessingTask implements Subscriber {
         try (var ignoredMdcProjectUuid = MDC.putCloseable(MDC_PROJECT_UUID, ctx.project.getUuid().toString());
              var ignoredMdcProjectName = MDC.putCloseable(MDC_PROJECT_NAME, ctx.project.getName());
              var ignoredMdcProjectVersion = MDC.putCloseable(MDC_PROJECT_VERSION, ctx.project.getVersion());
-             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString())) {
-            processEvent(ctx, event);
+             var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
+             var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+            final byte[] cdxBomBytes;
+            try {
+                cdxBomBytes = fileStorage.get(event.getFileMetadata());
+            } catch (IOException ex) {
+                LOGGER.error("Failed to retrieve BOM file %s from storage".formatted(
+                        event.getFileMetadata().getLocation()), ex);
+                return;
+            }
+
+            try {
+                processEvent(ctx, cdxBomBytes);
+            } finally {
+                // There are currently no retries, so the BOM file needs to be removed
+                // from storage no matter if processing failed or succeeded.
+
+                try {
+                    fileStorage.delete(event.getFileMetadata());
+                } catch (IOException ex) {
+                    LOGGER.error("Failed to delete BOM file %s from storage".formatted(
+                            event.getFileMetadata().getLocation()), ex);
+                }
+            }
         }
     }
 
-    private void processEvent(final Context ctx, final BomUploadEvent event) {
+    private void processEvent(final Context ctx, final byte[] cdxBomBytes) {
         useJdbiTransaction(handle -> {
             final var workflowDao = handle.attach(WorkflowDao.class);
             workflowDao.startState(WorkflowStep.BOM_CONSUMPTION, ctx.token);
         });
         final ConsumedBom consumedBom;
-
-        try (final var bomFileInputStream = Files.newInputStream(event.getFile().toPath(), StandardOpenOption.DELETE_ON_CLOSE)) {
-            final byte[] cdxBomBytes = bomFileInputStream.readAllBytes();
-
+        try {
             // Validate if bom is in protobuf format
             final var protoBom = parseBomProtobuf(cdxBomBytes);
             if (protoBom != null) {
@@ -222,7 +241,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 ctx.bomVersion = cdxBom.getVersion();
                 consumedBom = consumeBom(cdxBom);
             }
-        } catch (IOException | ParseException | RuntimeException e) {
+        } catch (ParseException | RuntimeException e) {
             LOGGER.error("Failed to consume BOM", e);
             failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_CONSUMPTION, e);
             dispatchBomProcessingFailedNotification(ctx, e);
@@ -611,6 +630,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 applyIfChanged(persistentComponent, component, Component::isInternal, persistentComponent::setInternal);
                 applyIfChanged(persistentComponent, component, Component::getExternalReferences, persistentComponent::setExternalReferences);
 
+                qm.synchronizeComponentOccurrences(persistentComponent, component.getOccurrences());
                 qm.synchronizeComponentProperties(persistentComponent, component.getProperties());
                 idsOfComponentsToDelete.remove(persistentComponent.getId());
             }

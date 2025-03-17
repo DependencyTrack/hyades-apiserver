@@ -418,17 +418,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         return result;
     }
 
-    /**
-     * Returns a paginated result of projects by tag.
-     *
-     * @param tag the tag associated with the Project
-     * @return a List of Projects that contain the tag
-     */
-    @Override
-    public PaginatedResult getProjects(final Tag tag) {
-        return getProjects(tag, false, false, false);
-    }
-
     @Override
     public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
                                  PackageURL purl, Date inactiveSince, boolean commitIndex) {
@@ -921,21 +910,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     @Override
     public void bind(final Project project, final List<Tag> tags) {
         bind(project, tags, /* keepExisting */ false);
-    }
-
-    /**
-     * Updates the last time a bom was imported.
-     *
-     * @param date      the date of the last bom import
-     * @param bomFormat the format and version of the bom format
-     * @return the updated Project
-     */
-    @Override
-    public Project updateLastBomImport(Project p, Date date, String bomFormat) {
-        final Project project = getObjectById(Project.class, p.getId());
-        project.setLastBomImport(date);
-        project.setLastBomImportFormat(bomFormat);
-        return persist(project);
     }
 
     @Override

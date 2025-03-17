@@ -16,21 +16,26 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.storage;
 
-import org.dependencytrack.model.Project;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
-import org.junit.Assert;
-import org.junit.Test;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
 
-public class BomUploadEventTest {
+import java.util.Collection;
+import java.util.List;
 
-    @Test
-    public void testFileConstructor() {
-        Project project = new Project();
-        FileMetadata fileMetadata = FileMetadata.getDefaultInstance();
-        BomUploadEvent event = new BomUploadEvent(project, FileMetadata.getDefaultInstance());
-        Assert.assertEquals(project, event.getProject());
-        Assert.assertEquals(fileMetadata, event.getFileMetadata());
+/**
+ * @since 5.6.0
+ */
+public final class FileStoragePlugin implements Plugin {
+
+    @Override
+    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+        return List.of(
+                new LocalFileStorageFactory(),
+                new MemoryFileStorageFactory(),
+                new S3FileStorageFactory());
     }
+
 }

@@ -68,77 +68,6 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
     }
 
     /**
-     * Returns the number of audited findings for the portfolio.
-     * Findings that are suppressed or have been assigned the states {@link AnalysisState#NOT_SET} or {@link AnalysisState#IN_TRIAGE}
-     * do not count as audited. Suppressions are tracked separately.
-     *
-     * @return the total number of analysis decisions
-     */
-    public long getAuditedCount() {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "analysisState != null && suppressed == false && analysisState != :notSet && analysisState != :inTriage");
-        return getCount(query, AnalysisState.NOT_SET, AnalysisState.IN_TRIAGE);
-    }
-
-    /**
-     * Returns the number of audited findings for the specified Project.
-     * Findings that are suppressed or have been assigned the states {@link AnalysisState#NOT_SET} or {@link AnalysisState#IN_TRIAGE}
-     * do not count as audited. Suppressions are tracked separately.
-     *
-     * @param project the Project to retrieve audit counts for
-     * @return the total number of analysis decisions for the project
-     */
-    public long getAuditedCount(Project project) {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "project == :project && analysisState != null && suppressed == false && analysisState != :notSet && analysisState != :inTriage");
-        return getCount(query, project, AnalysisState.NOT_SET, AnalysisState.IN_TRIAGE);
-    }
-
-    /**
-     * Returns the number of audited findings for the specified Component.
-     * Findings that are suppressed or have been assigned the states {@link AnalysisState#NOT_SET} or {@link AnalysisState#IN_TRIAGE}
-     * do not count as audited. Suppressions are tracked separately.
-     *
-     * @param component the Component to retrieve audit counts for
-     * @return the total number of analysis decisions for the component
-     */
-    public long getAuditedCount(Component component) {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "component == :component && analysisState != null && suppressed == false && analysisState != :notSet && analysisState != :inTriage");
-        return getCount(query, component, AnalysisState.NOT_SET, AnalysisState.IN_TRIAGE);
-    }
-
-    /**
-     * Returns the number of audited findings for the specified Project / Component.
-     *
-     * @param project   the Project to retrieve audit counts for
-     * @param component the Component to retrieve audit counts for
-     * @return the total number of analysis decisions for the project / component
-     */
-    public long getAuditedCount(Project project, Component component) {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "project == :project && component == :component && analysisState != null && analysisState != :notSet && analysisState != :inTriage");
-        return getCount(query, project, component, AnalysisState.NOT_SET, AnalysisState.IN_TRIAGE);
-    }
-
-    /**
-     * Returns the number of suppressed vulnerabilities for the portfolio.
-     *
-     * @return the total number of suppressed vulnerabilities
-     */
-    public long getSuppressedCount() {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "suppressed == true");
-        return getCount(query);
-    }
-
-    /**
-     * Returns the number of suppressed vulnerabilities for the specified Project
-     *
-     * @param project the Project to retrieve suppressed vulnerabilities of
-     * @return the total number of suppressed vulnerabilities for the project
-     */
-    public long getSuppressedCount(Project project) {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "project == :project && suppressed == true");
-        return getCount(query, project);
-    }
-
-    /**
      * Returns the number of suppressed vulnerabilities for the specified Component.
      *
      * @param component the Component to retrieve suppressed vulnerabilities of
@@ -301,26 +230,6 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
         analysisComment.setComment(comment);
         analysisComment.setCommenter(commenter);
         return persist(analysisComment);
-    }
-
-    /**
-     * Deleted all analysis and comments associated for the specified Component.
-     *
-     * @param component the Component to delete analysis for
-     */
-    void deleteAnalysisTrail(Component component) {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "component == :component");
-        query.deletePersistentAll(component);
-    }
-
-    /**
-     * Deleted all analysis and comments associated for the specified Project.
-     *
-     * @param project the Project to delete analysis for
-     */
-    void deleteAnalysisTrail(Project project) {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "project == :project");
-        query.deletePersistentAll(project);
     }
 
     /**

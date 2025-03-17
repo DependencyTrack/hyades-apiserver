@@ -99,6 +99,10 @@ public class DevServicesInitializer implements ServletContextListener {
             final Class<?> kafkaContainerClass = Class.forName("org.testcontainers.kafka.KafkaContainer");
             final Constructor<?> kafkaContainerConstructor = kafkaContainerClass.getDeclaredConstructor(String.class);
             kafkaContainer = (AutoCloseable) kafkaContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_KAFKA));
+            // TODO: Remove this when Kafka >= 3.9.1 is available.
+            //   * https://github.com/testcontainers/testcontainers-java/issues/9506#issuecomment-2463504967
+            //   * https://issues.apache.org/jira/browse/KAFKA-18281
+            kafkaContainerClass.getMethod("withEnv", String.class, String.class).invoke(kafkaContainer, "KAFKA_LISTENERS", "PLAINTEXT://:9092,BROKER://:9093,CONTROLLER://:9094");
 
             final Class<?> frontendContainerClass = Class.forName("org.testcontainers.containers.GenericContainer");
             final Constructor<?> frontendContainerConstructor = frontendContainerClass.getDeclaredConstructor(String.class);

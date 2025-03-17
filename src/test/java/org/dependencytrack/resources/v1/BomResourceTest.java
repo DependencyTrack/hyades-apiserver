@@ -40,6 +40,7 @@ import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
@@ -62,7 +63,9 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runner.RunWith;
 
 import jakarta.json.JsonObject;
@@ -114,6 +117,11 @@ public class BomResourceTest extends ResourceTest {
                     .register(ApiFilter.class)
                     .register(AuthenticationFilter.class)
                     .register(MultiPartFeature.class));
+
+    @Rule
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+            .set("FILE_STORAGE_EXTENSION_MEMORY_ENABLED", "true")
+            .set("FILE_STORAGE_DEFAULT_EXTENSION", "memory");
 
     @Before
     @Override
@@ -233,6 +241,16 @@ public class BomResourceTest extends ResourceTest {
         componentWithoutVuln.setDirectDependencies("[]");
         componentWithoutVuln = qm.createComponent(componentWithoutVuln, false);
 
+        // NB: Line, offset, and symbol are only supported since CycloneDX v1.6,
+        // and will not show up in this export since it's still in v1.5 format.
+        final var componentOccurrence = new ComponentOccurrence();
+        componentOccurrence.setComponent(componentWithoutVuln);
+        componentOccurrence.setLocation("/foo/bar");
+        componentOccurrence.setLine(666);
+        componentOccurrence.setOffset(123);
+        componentOccurrence.setSymbol("someSymbol");
+        qm.persist(componentOccurrence);
+
         final var componentProperty = new ComponentProperty();
         componentProperty.setComponent(componentWithoutVuln);
         componentProperty.setGroupName("foo");
@@ -294,7 +312,7 @@ public class BomResourceTest extends ResourceTest {
                 .withMatcher("componentWithoutVulnUuid", equalTo(componentWithoutVuln.getUuid().toString()))
                 .withMatcher("componentWithVulnUuid", equalTo(componentWithVuln.getUuid().toString()))
                 .withMatcher("componentWithVulnAndAnalysisUuid", equalTo(componentWithVulnAndAnalysis.getUuid().toString()))
-                .isEqualTo(json("""
+                .isEqualTo(json(/* language=JSON */ """
                         {
                             "bomFormat": "CycloneDX",
                             "specVersion": "1.5",
@@ -340,6 +358,13 @@ public class BomResourceTest extends ResourceTest {
                                     },
                                     "name": "acme-lib-a",
                                     "version": "1.0.0",
+                                    "evidence": {
+                                      "occurrences": [
+                                        {
+                                          "location": "/foo/bar"
+                                        }
+                                      ]
+                                    },
                                     "properties": [
                                       {
                                         "name": "foo:bar",

@@ -637,6 +637,44 @@
                                  referencedTableName="WORKFLOW_STATE" validate="true"/>
     </changeSet>
 
+    <changeSet id="v5.6.0-13" author="nscuro">
+        <createTable tableName="COMPONENT_OCCURRENCE">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="COMPONENT_OCCURRENCE_PK"/>
+            </column>
+            <column name="COMPONENT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LOCATION" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LINE" type="INT"/>
+            <column name="OFFSET" type="INT"/>
+            <column name="SYMBOL" type="TEXT"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)" defaultValue="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="COMPONENT_OCCURRENCE"
+                baseColumnNames="COMPONENT_ID"
+                constraintName="COMPONENT_OCCURRENCE_COMPONENT_FK"
+                referencedTableName="COMPONENT"
+                referencedColumnNames="ID"
+                deferrable="true"
+                initiallyDeferred="true"
+                onDelete="CASCADE"
+                onUpdate="NO ACTION"
+                validate="true"/>
+
+        <createIndex
+                tableName="COMPONENT_OCCURRENCE"
+                indexName="COMPONENT_OCCURRENCE_COMPONENT_ID_IDX">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+
     <changeSet id="v5.6.0-13-dev" author="pkwiatkowski1">
         <addColumn tableName="APIKEY">
             <column name="IS_LEGACY" type="BOOLEAN" defaultValueBoolean="false">

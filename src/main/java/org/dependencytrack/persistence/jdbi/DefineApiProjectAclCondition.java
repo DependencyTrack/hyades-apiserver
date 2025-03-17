@@ -48,12 +48,12 @@ public @interface DefineApiProjectAclCondition {
     /**
      * @return Name of the attribute to define the condition as
      */
-    String name();
+    String name() default JdbiAttributes.ATTRIBUTE_API_PROJECT_ACL_CONDITION;
 
     /**
      * @return Alias of the {@code PROJECT} table to use in the condition
      */
-    String projectTableAlias();
+    String projectIdColumn();
 
     final class StatementCustomizerFactory implements SqlStatementCustomizerFactory {
 
@@ -73,12 +73,12 @@ public @interface DefineApiProjectAclCondition {
                     throw new IllegalArgumentException("name must not be blank");
                 }
 
-                final String projectTableAlias = defineAnnotation.projectTableAlias().trim();
-                if (projectTableAlias.isEmpty()) {
-                    throw new IllegalArgumentException("project table alias must not be blank");
+                final String projectIdColumn = defineAnnotation.projectIdColumn().trim();
+                if (projectIdColumn.isEmpty()) {
+                    throw new IllegalArgumentException("project id column must not be blank");
                 }
 
-                statement.addCustomizer(new StatementCustomizer(attributeName, projectTableAlias));
+                statement.addCustomizer(new StatementCustomizer(attributeName, projectIdColumn));
             };
         }
 
@@ -87,11 +87,11 @@ public @interface DefineApiProjectAclCondition {
     final class StatementCustomizer implements org.jdbi.v3.core.statement.StatementCustomizer {
 
         private final String attributeName;
-        private final String projectTableAlias;
+        private final String projectIdColumn;
 
-        private StatementCustomizer(final String attributeName, final String projectTableAlias) {
+        private StatementCustomizer(final String attributeName, final String projectIdColumn) {
             this.attributeName = attributeName;
-            this.projectTableAlias = projectTableAlias;
+            this.projectIdColumn = projectIdColumn;
         }
 
         @Override
@@ -104,16 +104,16 @@ public @interface DefineApiProjectAclCondition {
             // Ensure that the chosen table alias doesn't overlap with the one used
             // in the condition defined by ApiRequestStatementCustomizer.
             final var apiRequestConfig = ctx.getConfig(ApiRequestConfig.class);
-            final String defaultProjectTableAlias = apiRequestConfig.projectAclProjectTableName();
-            if (projectTableAlias.equals(defaultProjectTableAlias)) {
-                throw new IllegalArgumentException("project table alias must be different from default alias");
+            final String defaultProjectIdColumn = apiRequestConfig.projectAclProjectIdColumn();
+            if (projectIdColumn.equals(defaultProjectIdColumn)) {
+                throw new IllegalArgumentException("project id column must be different from default column name");
             }
 
             if (ctx.getBinding().findForName(PARAMETER_PROJECT_ACL_TEAM_IDS, ctx).isPresent()) {
                 // The existing condition has defined team IDs for the ACL check already,
                 // so it's not a trivial TRUE or FALSE. Re-use those bindings by defining
                 // a new condition, using the chosen project table alias.
-                ctx.define(attributeName, TEMPLATE_PROJECT_ACL_CONDITION.formatted(projectTableAlias));
+                ctx.define(attributeName, TEMPLATE_PROJECT_ACL_CONDITION.formatted(projectIdColumn));
             } else {
                 // Likely a trivial TRUE or FALSE; Just re-use it.
                 ctx.define(attributeName, aclCondition);
