@@ -18,29 +18,23 @@
  */
 package org.dependencytrack.persistence;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 
-import org.dependencytrack.model.MappedRole;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
+import org.dependencytrack.model.ProjectRole;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.persistence.jdbi.RoleDao;
-import org.jdbi.v3.core.Handle;
 
 import alpine.common.logging.Logger;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.UserPrincipal;
 import alpine.resources.AlpineRequest;
-
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 final class RoleQueryManager extends QueryManager implements IQueryManager {
 
@@ -73,41 +67,39 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public List<MappedRole> getUserRoles(UserPrincipal user) {
-        String usersField;
-
-        switch (user) {
-            case LdapUser ldapUser -> usersField = "ldapUsers";
-            case ManagedUser managedUser -> usersField = "managedUsers";
-            case OidcUser oidcUser -> usersField = "oidcUsers";
-            default -> {
-                return null;
-            }
-        }
-        ;
-
-        Query<MappedRole> query = pm.newQuery(MappedRole.class)
-                .filter("%s.contains(:user)".formatted(usersField))
-                .setNamedParameters(Map.ofEntries(
-                        Map.entry("user", user)));
-
-        return executeAndCloseList(query);
-    }
-
-    @Override
     public Role getRole(String uuid) {
         final Query<Role> query = pm.newQuery(Role.class, "uuid == :uuid");
 
         return query.executeUnique();
     }
 
+    @Override
+    public List<? extends ProjectRole> getUserRoles(UserPrincipal user) {
+        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).getUserRoles(user));
+    }
+
     public List<Project> getUnassignedProjects(final String username) {
         return getUnassignedProjects(getUserPrincipal(username));
     }
 
+    public List<Project> getUnassignedProjects(final UserPrincipal user) {
+        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).getUserUnassignedProjects(user));
+    }
+
     public List<Permission> getUnassignedRolePermissions(final Role role) {
-        // TODO: Implement getUnassignedRolePermissions
-        return Collections.emptyList();
+        List<Permission> permissions = new ArrayList<>();
+
+        var permissionNames = role.getPermissions().stream()
+                .map(Permission::getName)
+                .toList();
+
+        Query<Permission> query = pm.newQuery(Permission.class)
+                .filter("!:permissionNames.contains(name)")
+                .setNamedParameters(Map.of("permissionNames", permissionNames));
+
+        permissions.addAll(executeAndCloseList(query));
+
+        return permissions;
     }
 
     @Override
@@ -123,29 +115,14 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean addRoleToUser(UserPrincipal user, Role role, Project project) {
-        return JdbiFactory.withJdbiHandle(handle -> {
-            RoleDao dao = handle.attach(RoleDao.class);
-            MappedRole mappedRole = dao.addProjectAccessRole(project.getId(), role.getId());
-
-            return dao.addRoleToUser(user, mappedRole.getId()) == 1;
-        });
+        return JdbiFactory.withJdbiHandle(
+                handle -> handle.attach(RoleDao.class).addRoleToUser(user, project.getId(), role.getId())) == 1;
     }
 
     @Override
     public boolean removeRoleFromUser(UserPrincipal user, Role role, Project project) {
-        try (final Handle jdbiHandle = openJdbiHandle()) {
-            int count = switch (user) {
-                case LdapUser ldapUser -> jdbiHandle.attach(RoleDao.class)
-                        .removeRoleFromLdapUser(ldapUser.getId(), project.getId(), role.getId());
-                case ManagedUser managedUser -> jdbiHandle.attach(RoleDao.class)
-                        .removeRoleFromManagedUser(managedUser.getId(), project.getId(), role.getId());
-                case OidcUser oidcUser -> jdbiHandle.attach(RoleDao.class)
-                        .removeRoleFromOidcUser(oidcUser.getId(), project.getId(), role.getId());
-                default -> 0;
-            };
-
-            return count == 1;
-        }
+        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).removeRoleFromUser(user,
+                project, role.getId())) > 0;
 
     }
 

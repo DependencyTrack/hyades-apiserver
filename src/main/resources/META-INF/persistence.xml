@@ -27,13 +27,13 @@
     <class>org.dependencytrack.model.Bom</class>
     <class>org.dependencytrack.model.Component</class>
     <class>org.dependencytrack.model.ComponentProperty</class>
-    <class>org.dependencytrack.model.IntegrityMetaComponent</class>
     <class>org.dependencytrack.model.DependencyMetrics</class>
     <class>org.dependencytrack.model.Epss</class>
     <class>org.dependencytrack.model.FindingAttribution</class>
+    <class>org.dependencytrack.model.IntegrityAnalysis</class>
+    <class>org.dependencytrack.model.IntegrityMetaComponent</class>
     <class>org.dependencytrack.model.License</class>
     <class>org.dependencytrack.model.LicenseGroup</class>
-    <class>org.dependencytrack.model.MappedRole</class>
     <class>org.dependencytrack.model.NotificationPublisher</class>
     <class>org.dependencytrack.model.NotificationRule</class>
     <class>org.dependencytrack.model.Policy</class>
@@ -44,6 +44,9 @@
     <class>org.dependencytrack.model.ProjectMetadata</class>
     <class>org.dependencytrack.model.ProjectMetrics</class>
     <class>org.dependencytrack.model.ProjectProperty</class>
+    <class>org.dependencytrack.model.ProjectRole$LdapUserProjectRole</class>
+    <class>org.dependencytrack.model.ProjectRole$ManagedUserProjectRole</class>
+    <class>org.dependencytrack.model.ProjectRole$OidcUserProjectRole</class>
     <class>org.dependencytrack.model.Repository</class>
     <class>org.dependencytrack.model.RepositoryMetaComponent</class>
     <class>org.dependencytrack.model.Role</class>
@@ -56,11 +59,10 @@
     <class>org.dependencytrack.model.Vulnerability</class>
     <class>org.dependencytrack.model.VulnerabilityAlias</class>
     <class>org.dependencytrack.model.VulnerabilityMetrics</class>
+    <class>org.dependencytrack.model.VulnerabilityPolicyBundle</class>
     <class>org.dependencytrack.model.VulnerabilityScan</class>
     <class>org.dependencytrack.model.VulnerableSoftware</class>
     <class>org.dependencytrack.model.WorkflowState</class>
-    <class>org.dependencytrack.model.IntegrityAnalysis</class>
-    <class>org.dependencytrack.model.VulnerabilityPolicyBundle</class>
     <exclude-unlisted-classes>true</exclude-unlisted-classes>
     <shared-cache-mode>NONE</shared-cache-mode>
   </persistence-unit>

@@ -23,10 +23,10 @@ import alpine.common.util.BooleanUtil;
 import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
-import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
+import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
@@ -68,7 +68,6 @@ import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
-import org.dependencytrack.model.MappedRole;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Policy;
@@ -78,6 +77,7 @@ import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.ProjectRole;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -124,14 +124,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED;
 import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
@@ -510,33 +508,40 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Get the IDs of the {@link MappedRole}s a given {@link Principal} is a member of.
+     * Get the IDs of the {@link ProjectRole}s a given {@link Principal} is a member of.
      *
-     * @return A {@link Set} of {@link MappedRole} IDs
+     * @return A {@link Set} of {@link ProjectRole} IDs
      */
     protected Set<Long> getRoleIds(final Principal principal, final Project project) {
         String usersField;
-
-        final MappedRole mappedRole = new MappedRole();
-        Supplier<Long> roleIds = mappedRole.getRole()::getId;
+        Class<? extends ProjectRole> cls;
 
         switch (principal) {
-            case LdapUser ldapUser -> usersField = "ldapUsers";
-            case ManagedUser managedUser -> usersField = "managedUsers";
-            case OidcUser oidcUser -> usersField = "oidcUsers";
+            case LdapUser ldapUser -> {
+                usersField = "ldapUsers";
+                cls = ProjectRole.LdapUserProjectRole.class;
+            }
+            case ManagedUser managedUser -> {
+                usersField = "managedUsers";
+                cls = ProjectRole.ManagedUserProjectRole.class;
+            }
+            case OidcUser oidcUser -> {
+                usersField = "oidcUsers";
+                cls = ProjectRole.OidcUserProjectRole.class;
+            }
             default -> {
                 return Collections.emptySet();
             }
         };
 
-        Query<MappedRole> query = pm.newQuery(MappedRole.class)
+        Query<? extends ProjectRole> query = pm.newQuery(cls)
                 .filter("project.id == :projectId && %s.contains(:principal)".formatted(usersField))
                 .setNamedParameters(Map.ofEntries(
                     Map.entry("principal", principal),
                     Map.entry("projectId", project.getId())));
 
         return Set.of(executeAndCloseList(query).stream()
-                .map(MappedRole::getRole)
+                .map(ProjectRole::getRole)
                 .map(Role::getId)
                 .toArray(Long[]::new));
     }
@@ -547,19 +552,11 @@ public class QueryManager extends AlpineQueryManager {
      * @return A {@link Set} of {@link Team} IDs
      */
     protected Set<Long> getTeamIds(final Principal principal) {
-        final var principalTeamIds = new HashSet<Long>();
-        if (principal instanceof final UserPrincipal userPrincipal
-                && userPrincipal.getTeams() != null) {
-            for (final Team userInTeam : userPrincipal.getTeams()) {
-                principalTeamIds.add(userInTeam.getId());
-            }
-        } else if (principal instanceof final ApiKey apiKey
-                && apiKey.getTeams() != null) {
-            for (final Team userInTeam : apiKey.getTeams()) {
-                principalTeamIds.add(userInTeam.getId());
-            }
-        }
-        return principalTeamIds;
+        return switch (principal) {
+            case UserPrincipal userPrincipal -> Set.of(userPrincipal.getTeams().toArray(Long[]::new));
+            case ApiKey apiKey -> Set.of(apiKey.getTeams().toArray(Long[]::new));
+            default -> Collections.emptySet();
+        };
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -972,17 +969,8 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getRole(null);
     }
 
-    public List<MappedRole> getUserRoles(UserPrincipal user) {
-        return getRoleQueryManager().getUserRoles(user);
-    }
-
     public Role updateRole(Role transientRole) {
         return getRoleQueryManager().updateRole(transientRole);
-    }
-
-    public List<Project> getUnassignedProjects(UserPrincipal user) {
-        // TODO Auto-generated method stub
-        return getRoleQueryManager().getUnassignedProjects(user);
     }
 
     public Vulnerability createVulnerability(Vulnerability vulnerability, boolean commitIndex) {
@@ -1394,8 +1382,24 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().addRoleToUser(principal, role, project);
     }
 
-    public boolean removeRoleFromUser(UserPrincipal principal, Role role, Project project){
-        return getRoleQueryManager().removeRoleFromUser(principal, role, project);
+    public List<Project> getUnassignedProjects(final String username) {
+        return getRoleQueryManager().getUnassignedProjects(username);
+    }
+
+    public List<Project> getUnassignedProjects(final UserPrincipal user) {
+        return getRoleQueryManager().getUnassignedProjects(user);
+    }
+
+    public List<Permission> getUnassignedRolePermissions(final Role role) {
+        return getRoleQueryManager().getUnassignedRolePermissions(role);
+    }
+
+    public List<? extends ProjectRole> getUserRoles(UserPrincipal user) {
+        return getRoleQueryManager().getUserRoles(user);
+    }
+
+    public boolean removeRoleFromUser(UserPrincipal user, Role role, Project project) {
+        return getRoleQueryManager().removeRoleFromUser(user, role, project);
     }
 
     public NotificationRule createNotificationRule(String name, NotificationScope scope, NotificationLevel level, NotificationPublisher publisher) {

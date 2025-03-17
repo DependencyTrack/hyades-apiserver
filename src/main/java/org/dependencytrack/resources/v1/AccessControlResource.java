@@ -19,9 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.persistence.PaginatedResult;
@@ -60,7 +57,6 @@ import org.jdbi.v3.core.Handle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -142,14 +138,9 @@ public class AccessControlResource extends AlpineResource {
 
             try (final Handle jdbiHandle = openJdbiHandle()) {
                 var dao = jdbiHandle.attach(RoleDao.class);
-                List<Project> projects = switch (principal) {
-                    case LdapUser user -> dao.getLdapUserUnassignedProjects(user.getUsername());
-                    case ManagedUser user -> dao.getManagedUserUnassignedProjects(user.getUsername());
-                    case OidcUser user -> dao.getOidcUserUnassignedProjects(user.getUsername());
-                    default -> Collections.emptyList();
-                };
+                List<Project> projects = dao.getUserUnassignedProjects(principal);
 
-                if (projects.isEmpty())
+                if (projects == null || projects.isEmpty())
                     return Response.status(Response.Status.NOT_FOUND).entity("No unassigned projects for specified user.").build();
                 
                 return Response.ok(projects).header(TOTAL_COUNT_HEADER, projects.size()).build();
