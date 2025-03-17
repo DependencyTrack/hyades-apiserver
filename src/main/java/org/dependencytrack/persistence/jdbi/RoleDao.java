@@ -97,7 +97,7 @@ public interface RoleDao {
     @SqlQuery(/* language=sql */ """
             <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
             <#assign prefix = user.getClass().getSimpleName()?upper_case>
-            SELECT "PROJECT"."ID", "PROJECT"."NAME"
+            SELECT "PROJECT"."ID", "PROJECT"."NAME", "PROJECT"."UUID"
               FROM "PROJECT"
               LEFT JOIN "${prefix}S_PROJECTS_ROLES"
                 ON "${prefix}S_PROJECTS_ROLES"."PROJECT_ID" = "PROJECT"."ID"
