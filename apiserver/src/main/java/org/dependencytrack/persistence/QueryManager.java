@@ -23,6 +23,9 @@ import alpine.common.util.BooleanUtil;
 import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
+import alpine.model.LdapUser;
+import alpine.model.ManagedUser;
+import alpine.model.OidcUser;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Permission;
 import alpine.model.Team;
@@ -479,24 +482,55 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
+     * Get the IDs of the {@link ProjectRole}s a given {@link Principal} is a member of.
+     *
+     * @return A {@link Set} of {@link ProjectRole} IDs
+     */
+    protected Set<Long> getRoleIds(final Principal principal, final Project project) {
+        String usersField;
+        Class<? extends ProjectRole> cls;
+
+        switch (principal) {
+            case LdapUser ldapUser -> {
+                usersField = "ldapUsers";
+                cls = ProjectRole.LdapUserProjectRole.class;
+            }
+            case ManagedUser managedUser -> {
+                usersField = "managedUsers";
+                cls = ProjectRole.ManagedUserProjectRole.class;
+            }
+            case OidcUser oidcUser -> {
+                usersField = "oidcUsers";
+                cls = ProjectRole.OidcUserProjectRole.class;
+            }
+            default -> {
+                return Collections.emptySet();
+            }
+        };
+
+        Query<? extends ProjectRole> query = pm.newQuery(cls)
+                .filter("project.id == :projectId && %s.contains(:principal)".formatted(usersField))
+                .setNamedParameters(Map.ofEntries(
+                    Map.entry("principal", principal),
+                    Map.entry("projectId", project.getId())));
+
+        return Set.of(executeAndCloseList(query).stream()
+                .map(ProjectRole::getRole)
+                .map(Role::getId)
+                .toArray(Long[]::new));
+    }
+
+    /**
      * Get the IDs of the {@link Team}s a given {@link Principal} is a member of.
      *
      * @return A {@link Set} of {@link Team} IDs
      */
     protected Set<Long> getTeamIds(final Principal principal) {
-        final var principalTeamIds = new HashSet<Long>();
-        if (principal instanceof final User user
-            && user.getTeams() != null) {
-            for (final Team userInTeam : user.getTeams()) {
-                principalTeamIds.add(userInTeam.getId());
-            }
-        } else if (principal instanceof final ApiKey apiKey
-                && apiKey.getTeams() != null) {
-            for (final Team userInTeam : apiKey.getTeams()) {
-                principalTeamIds.add(userInTeam.getId());
-            }
-        }
-        return principalTeamIds;
+        return switch (principal) {
+            case UserPrincipal userPrincipal -> Set.of(userPrincipal.getTeams().toArray(Long[]::new));
+            case ApiKey apiKey -> Set.of(apiKey.getTeams().toArray(Long[]::new));
+            default -> Collections.emptySet();
+        };
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1108,8 +1142,24 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().addRoleToUser(principal, role, project);
     }
 
-    public boolean removeRoleFromUser(UserPrincipal principal, Role role, Project project){
-        return getRoleQueryManager().removeRoleFromUser(principal, role, project);
+    public List<Project> getUnassignedProjects(final String username) {
+        return getRoleQueryManager().getUnassignedProjects(username);
+    }
+
+    public List<Project> getUnassignedProjects(final UserPrincipal user) {
+        return getRoleQueryManager().getUnassignedProjects(user);
+    }
+
+    public List<Permission> getUnassignedRolePermissions(final Role role) {
+        return getRoleQueryManager().getUnassignedRolePermissions(role);
+    }
+
+    public List<? extends ProjectRole> getUserRoles(UserPrincipal user) {
+        return getRoleQueryManager().getUserRoles(user);
+    }
+
+    public boolean removeRoleFromUser(UserPrincipal user, Role role, Project project) {
+        return getRoleQueryManager().removeRoleFromUser(user, role, project);
     }
 
     public NotificationRule createNotificationRule(String name, NotificationScope scope, NotificationLevel level, NotificationPublisher publisher) {
