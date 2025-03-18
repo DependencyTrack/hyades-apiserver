@@ -27,6 +27,8 @@ import org.dependencytrack.persistence.converter.ToolsJsonConverter;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Convert;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
@@ -52,6 +54,7 @@ public class ProjectMetadata {
     private long id;
 
     @Persistent
+    @ForeignKey(name = "PROJECT_METADATA_PROJECT_ID_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Unique(name = "PROJECT_METADATA_PROJECT_ID_IDX")
     @Column(name = "PROJECT_ID", allowsNull = "false")
     @JsonIgnore

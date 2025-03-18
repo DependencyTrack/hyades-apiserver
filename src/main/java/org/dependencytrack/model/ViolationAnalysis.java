@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
@@ -51,16 +53,19 @@ public class ViolationAnalysis implements Serializable {
     private long id;
 
     @Persistent(defaultFetchGroup = "true")
+    @ForeignKey(name = "VIOLATIONANALYSIS_PROJECT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "PROJECT_ID")
     @JsonIgnore
     private Project project;
 
     @Persistent(defaultFetchGroup = "true")
+    @ForeignKey(name = "VIOLATIONANALYSIS_COMPONENT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "COMPONENT_ID")
     @JsonIgnore
     private Component component;
 
     @Persistent(defaultFetchGroup = "true")
+    @ForeignKey(name = "VIOLATIONANALYSIS_POLICYVIOLATION_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "POLICYVIOLATION_ID", allowsNull = "false")
     @NotNull
     @JsonIgnore

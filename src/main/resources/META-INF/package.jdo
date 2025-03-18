@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ~ This file is part of Dependency-Track.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~ Copyright (c) OWASP Foundation. All Rights Reserved.
+  -->
+<jdo xmlns="https://db.apache.org/jdo/xmlns/jdo"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="https://db.apache.org/jdo/xmlns/jdo https://db.apache.org/jdo/xmlns/jdo_3_2.xsd" version="3.2">
+    <!--
+      Enrich Alpine model classes with Foreign Key metadata.
+        * https://github.com/DependencyTrack/hyades/issues/1716
+        * https://www.datanucleus.org/products/accessplatform_6_0/jdo/metadata_xml.html
+      TODO: Remove once the model class annotations have been updated.
+    -->
+    <package name="alpine.model">
+        <class name="ApiKey">
+            <field name="teams" table="APIKEYS_TEAMS" default-fetch-group="true">
+                <element>
+                    <column name="TEAM_ID"/>
+                    <foreign-key name="APIKEYS_TEAMS_TEAM_FK" delete-action="cascade"/>
+                </element>
+                <join>
+                    <column name="APIKEY_ID"/>
+                    <foreign-key name="APIKEYS_TEAMS_APIKEY_FK" delete-action="cascade"/>
+                </join>
+                <order>
+                    <extension vendor-name="datanucleus" key="list-ordering" value="name ASC"/>
+                </order>
+            </field>
+        </class>
+        <class name="LdapUser">
+            <field name="permissions" table="LDAPUSERS_PERMISSIONS" default-fetch-group="true">
+                <element>
+                    <column name="PERMISSION_ID"/>
+                    <foreign-key name="LDAPUSERS_PERMISSIONS_PERMISSION_FK" delete-action="cascade"/>
+                </element>
+                <join>
+                    <column name="LDAPUSER_ID"/>
+                    <foreign-key name="LDAPUSERS_PERMISSIONS_LDAPUSER_FK" delete-action="cascade"/>
+                </join>
+                <order>
+                    <extension vendor-name="datanucleus" key="list-ordering" value="name ASC"/>
+                </order>
+            </field>
+            <field name="teams" table="LDAPUSERS_TEAMS" default-fetch-group="true">
+                <element>
+                    <column name="TEAM_ID"/>
+                    <foreign-key name="LDAPUSERS_TEAMS_TEAM_FK" delete-action="cascade"/>
+                </element>
+                <join>
+                    <column name="LDAPUSER_ID"/>
+                    <foreign-key name="LDAPUSERS_TEAMS_LDAPUSER_FK" delete-action="cascade"/>
+                </join>
+                <order>
+                    <extension vendor-name="datanucleus" key="list-ordering" value="name ASC"/>
+                </order>
+            </field>
+        </class>
+        <class name="ManagedUser">
+            <field name="permissions" table="MANAGEDUSERS_PERMISSIONS" default-fetch-group="true">
+                <element>
+                    <column name="PERMISSION_ID"/>
+                    <foreign-key name="MANAGEDUSERS_PERMISSIONS_PERMISSION_FK" delete-action="cascade"/>
+                </element>
+                <join>
+                    <column name="MANAGEDUSER_ID"/>
+                    <foreign-key name="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK" delete-action="cascade"/>
+                </join>
+                <order>
+                    <extension vendor-name="datanucleus" key="list-ordering" value="name ASC"/>
+                </order>
+            </field>
+            <field name="teams" table="MANAGEDUSERS_TEAMS" default-fetch-group="true">
+                <element>
+                    <column name="TEAM_ID"/>
+                    <foreign-key name="MANAGEDUSERS_TEAMS_TEAM_FK" delete-action="cascade"/>
+                </element>
+                <join>
+                    <column name="MANAGEDUSER_ID"/>
+                    <foreign-key name="MANAGEDUSERS_TEAMS_MANAGEDUSER_FK" delete-action="cascade"/>
+                </join>
+                <order>
+                    <extension vendor-name="datanucleus" key="list-ordering" value="name ASC"/>
+                </order>
+            </field>
+        </class>
+        <class name="MappedLdapGroup">
+            <field name="team" default-fetch-group="true">
+                <foreign-key name="MAPPEDLDAPGROUP_TEAM_FK" update-action="none" delete-action="cascade" deferred="true"/>
+            </field>
+        </class>
+        <class name="MappedOidcGroup">
+            <field name="group" default-fetch-group="true">
+                <foreign-key name="MAPPEDOIDCGROUP_OIDCGROUP_FK" update-action="none" delete-action="cascade"/>
+            </field>
+            <field name="team" default-fetch-group="true">
+                <foreign-key name="MAPPEDOIDCGROUP_TEAM_FK" update-action="none" delete-action="cascade" deferred="true"/>
+            </field>
+        </class>
+        <class name="OidcUser">
+            <field name="permissions" table="OIDCUSERS_PERMISSIONS" default-fetch-group="true">
+                <element>
+                    <column name="PERMISSION_ID"/>
+                    <foreign-key name="OIDCUSERS_PERMISSIONS_PERMISSION_FK" delete-action="cascade"/>
+                </element>
+                <join>
+                    <column name="OIDCUSER_ID"/>
+                    <foreign-key name="OIDCUSERS_PERMISSIONS_OIDCUSER_FK" delete-action="cascade"/>
+                </join>
+                <order>
+                    <extension vendor-name="datanucleus" key="list-ordering" value="name ASC"/>
+                </order>
+            </field>
+            <field name="teams" table="OIDCUSERS_TEAMS" default-fetch-group="true">
+                <element>
+                    <column name="TEAM_ID"/>
+                    <foreign-key name="OIDCUSERS_TEAMS_TEAM_FK" delete-action="cascade"/>
+                </element>
+                <join>
+                    <column name="OIDCUSERS_ID"/>
+                    <foreign-key name="OIDCUSERS_TEAMS_OIDCUSER_FK" delete-action="cascade"/>
+                </join>
+                <order>
+                    <extension vendor-name="datanucleus" key="list-ordering" value="name ASC"/>
+                </order>
+            </field>
+        </class>
+        <class name="Team">
+            <field name="permissions" table="TEAMS_PERMISSIONS" default-fetch-group="true">
+                <element>
+                    <column name="PERMISSION_ID"/>
+                    <foreign-key name="TEAMS_PERMISSIONS_PERMISSION_FK" delete-action="cascade"/>
+                </element>
+                <join>
+                    <column name="TEAM_ID"/>
+                    <foreign-key name="TEAMS_PERMISSIONS_TEAM_FK" delete-action="cascade"/>
+                </join>
+                <order>
+                    <extension vendor-name="datanucleus" key="list-ordering" value="name ASC"/>
+                </order>
+            </field>
+        </class>
+    </package>
+</jdo>
+
