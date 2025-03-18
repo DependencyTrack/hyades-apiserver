@@ -21,14 +21,15 @@ package org.dependencytrack.persistence.jdbi;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
-import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.GroupedFinding;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.persistence.RepositoryQueryManager.RepositoryMetaComponentSearch;
 import org.dependencytrack.persistence.jdbi.mapping.FindingRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.GroupedFindingRowMapper;
+import org.dependencytrack.util.PurlUtil;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
 import org.jdbi.v3.sqlobject.customizer.Bind;
@@ -38,6 +39,8 @@ import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -171,7 +174,7 @@ public interface FindingDao {
                 AND "PROJECT"."INACTIVE_SINCE" IS NULL
              </#if>
              <#if !suppressedFilter>
-                AND "ANALYSIS"."SUPPRESSED" IS NULL OR "ANALYSIS"."SUPPRESSED" = false
+                AND "ANALYSIS"."SUPPRESSED" IS NULL OR NOT "ANALYSIS"."SUPPRESSED"
              </#if>
              <#if queryFilter??>
                 ${queryFilter}
@@ -184,7 +187,23 @@ public interface FindingDao {
     @AllowApiOrdering(by = {
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
-            @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = "\"VULNERABILITY\".\"SEVERITY\""),
+            @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = """ 
+                     CASE WHEN "VULNERABILITY"."SEVERITY" = 'UNASSIGNED' 
+                          THEN 0 
+                          WHEN "VULNERABILITY"."SEVERITY" = 'LOW' 
+                          THEN 3 
+                          WHEN "VULNERABILITY"."SEVERITY" = 'MEDIUM' 
+                          THEN 6 
+                          WHEN "VULNERABILITY"."SEVERITY" = 'HIGH' 
+                          THEN 8 
+                          WHEN "VULNERABILITY"."SEVERITY" = 'CRITICAL' 
+                          THEN 10 
+                          ELSE CASE WHEN "VULNERABILITY"."CVSSV3BASESCORE" IS NOT NULL 
+                                    THEN "VULNERABILITY"."CVSSV3BASESCORE" 
+                                    ELSE "VULNERABILITY"."CVSSV2BASESCORE" 
+                               END 
+                     END 
+                     """),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV3BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV3BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV2BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV2BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "\"VULNERABILITY\".\"PUBLISHED\""),
@@ -210,7 +229,8 @@ public interface FindingDao {
      */
     default PaginatedResult getAllFindings(final AlpineRequest alpineRequest, final Map<String, String> filters, final boolean showSuppressed, final boolean showInactive) {
         StringBuilder queryFilter = new StringBuilder();
-        processFilters(filters, queryFilter);
+        Map<String, Object> params = new HashMap<>();
+        processFilters(filters, queryFilter, params);
         final List<Finding> findings = withJdbiHandle(handle ->
                 getAllFindings(String.valueOf(queryFilter), showInactive, showSuppressed));
         PaginatedResult result = new PaginatedResult();
@@ -281,7 +301,23 @@ public interface FindingDao {
     @AllowApiOrdering(by = {
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
-            @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = "\"VULNERABILITY\".\"SEVERITY\""),
+            @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = """ 
+                     CASE WHEN "VULNERABILITY"."SEVERITY" = 'UNASSIGNED' 
+                          THEN 0 
+                          WHEN "VULNERABILITY"."SEVERITY" = 'LOW' 
+                          THEN 3 
+                          WHEN "VULNERABILITY"."SEVERITY" = 'MEDIUM' 
+                          THEN 6 
+                          WHEN "VULNERABILITY"."SEVERITY" = 'HIGH' 
+                          THEN 8 
+                          WHEN "VULNERABILITY"."SEVERITY" = 'CRITICAL' 
+                          THEN 10 
+                          ELSE CASE WHEN "VULNERABILITY"."CVSSV3BASESCORE" IS NOT NULL 
+                                    THEN "VULNERABILITY"."CVSSV3BASESCORE" 
+                                    ELSE "VULNERABILITY"."CVSSV2BASESCORE" 
+                               END 
+                     END 
+                     """),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV3BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV3BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV2BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV2BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "\"VULNERABILITY\".\"PUBLISHED\""),
@@ -300,7 +336,11 @@ public interface FindingDao {
      */
     default PaginatedResult getGroupedFindings(final AlpineRequest alpineRequest, final Map<String, String> filters, final boolean showInactive) {
         StringBuilder queryFilter = new StringBuilder();
-        processFilters(filters, queryFilter);
+        Map<String, Object> params = new HashMap<>();
+        processFilters(filters, queryFilter, params);
+        StringBuilder aggregateFilter = new StringBuilder();
+        processAggregateFilters(filters, aggregateFilter, params);
+        queryFilter.append(aggregateFilter);
         final List<GroupedFinding> findings = withJdbiHandle(alpineRequest, handle ->
                 getGroupedFindings(String.valueOf(queryFilter), showInactive));
         PaginatedResult result = new PaginatedResult();
@@ -313,30 +353,45 @@ public interface FindingDao {
     }
 
     private List<Finding> mapComponentLatestVersion(List<Finding> findingList){
-        for (final Finding finding : findingList) {
-            if (finding.getComponent().get("purl") != null) {
-                try {
-                    final PackageURL purl = new PackageURL(finding.getComponent().get("purl").toString());
-                    if (purl != null) {
-                        final RepositoryType type = RepositoryType.resolve(purl);
-                        if (RepositoryType.UNSUPPORTED != type) {
-                            final RepositoryMetaComponent repoMetaComponent = withJdbiHandle(handle ->
-                                    handle.attach(RepositoryMetaDao.class).getRepositoryMetaComponent(type.name(), purl.getNamespace(), purl.getName()));
-                            if (repoMetaComponent != null) {
-                                finding.getComponent().put("latestVersion", repoMetaComponent.getLatestVersion());
-                            }
+
+        final Map<RepositoryMetaComponentSearch, List<Finding>> findingsByMetaComponentSearch = findingList.stream()
+                .filter(finding -> finding.getComponent().get("purl") != null)
+                .map(finding -> {
+                    final PackageURL purl = PurlUtil.silentPurl((String) finding.getComponent().get("purl"));
+                    if (purl == null) {
+                        return null;
+                    }
+
+                    final var repositoryType = RepositoryType.resolve(purl);
+                    if (repositoryType == RepositoryType.UNSUPPORTED) {
+                        return null;
+                    }
+
+                    final var search = new RepositoryMetaComponentSearch(repositoryType, purl.getNamespace(), purl.getName());
+                    return Map.entry(search, finding);
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(
+                        Map.Entry::getKey,
+                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())
+                ));
+
+        final List<RepositoryMetaComponent> repositoryMetaComponents = withJdbiHandle(handle ->
+                                    handle.attach(RepositoryMetaDao.class).getRepositoryMetaComponents(findingsByMetaComponentSearch.keySet()));
+        repositoryMetaComponents.forEach(metaComponent -> {
+                    final var search = new RepositoryMetaComponentSearch(metaComponent.getRepositoryType(), metaComponent.getNamespace(), metaComponent.getName());
+                    final List<Finding> affectedFindings = findingsByMetaComponentSearch.get(search);
+                    if (affectedFindings != null) {
+                        for (final Finding finding : affectedFindings) {
+                            finding.getComponent().put("latestVersion", metaComponent.getLatestVersion());
                         }
                     }
-                } catch (MalformedPackageURLException e) {
-                }
-            }
-        }
+                });
         return findingList;
     }
 
 
-    private void processFilters(Map<String, String> filters, StringBuilder queryFilter) {
-        Map<String, Object> params = new HashMap<>();
+    private void processFilters(Map<String, String> filters, StringBuilder queryFilter, Map<String, Object> params) {
         for (String filter : filters.keySet()) {
             switch (filter) {
                 case "severity" ->
@@ -363,6 +418,17 @@ public interface FindingDao {
                         processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV3BASESCORE\"", true, false, false);
                 case "cvssv3To" ->
                         processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV3BASESCORE\"", false, false, false);
+            }
+        }
+    }
+
+    private void processAggregateFilters(Map<String, String> filters, StringBuilder queryFilter, Map<String, Object> params) {
+        for (String filter : filters.keySet()) {
+            switch (filter) {
+                case "occurrencesFrom" ->
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "COUNT(DISTINCT \"PROJECT\".\"ID\")", true, false, true);
+                case "occurrencesTo" ->
+                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "COUNT(DISTINCT \"PROJECT\".\"ID\")", false, false, true);
             }
         }
     }
