@@ -19,13 +19,15 @@
 package org.dependencytrack.model;
 
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -52,12 +54,12 @@ public class FindingTest extends PersistenceCapableTest {
     public void testVulnerability() {
         Map<String, Object> map = finding.getVulnerability();
         assertThat(map.get("uuid")).isNotNull();
-        Assert.assertEquals("vuln-source", map.get("source"));
+        Assert.assertEquals(Vulnerability.Source.GITHUB, map.get("source"));
         Assert.assertEquals("vuln-vulnId", map.get("vulnId"));
         Assert.assertEquals("vuln-title", map.get("title"));
         Assert.assertEquals("vuln-subtitle", map.get("subtitle"));
-        //Assert.assertEquals("vuln-description", map.get("description"));
-        //Assert.assertEquals("vuln-recommendation", map.get("recommendation"));
+        Assert.assertEquals("vuln-description", map.get("description"));
+        Assert.assertEquals("vuln-recommendation", map.get("recommendation"));
         Assert.assertEquals(BigDecimal.valueOf(7.2), map.get("cvssV2BaseScore"));
         Assert.assertEquals(BigDecimal.valueOf(8.4), map.get("cvssV3BaseScore"));
         Assert.assertEquals("cvssV2-vector", map.get("cvssV2Vector"));
@@ -109,52 +111,14 @@ public class FindingTest extends PersistenceCapableTest {
     private Finding createTestFinding() {
         final var project = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
 
-        var component = new Component();
-        component.setProject(project);
-        component.setName("component-name");
-        component.setVersion("component-version");
-        component.setGroup("component-group");
-        component.setPurl("pkg:maven/foo/bar@1.2.3");
-        component.setCpe("component-cpe");
-        qm.createComponent(component, false);
+        FindingDao.FindingRow findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
+                "component-name", "component-group", "component-version", "pkg:maven/foo/bar@1.2.3", "component-cpe",
+                UUID.randomUUID(), Vulnerability.Source.GITHUB, "vuln-vulnId", "vuln-title", "vuln-subtitle", "vuln-description",
+                "vuln-recommendation", Instant.now(), Severity.HIGH, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
+                "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
+                "owasp-vector", null, BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
+                AnalyzerIdentity.INTERNAL_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
 
-        var vulnerability = new Vulnerability();
-        vulnerability.setVulnId("vuln-vulnId");
-        vulnerability.setSource("vuln-source");
-        vulnerability.setTitle("vuln-title");
-        vulnerability.setSubTitle("vuln-subtitle");
-        vulnerability.setDescription("vuln-description");
-        vulnerability.setRecommendation("vuln-recommendation");
-        vulnerability.setSeverity(Severity.HIGH);
-        vulnerability.setCvssV2BaseScore(BigDecimal.valueOf(7.2));
-        vulnerability.setCvssV3BaseScore(BigDecimal.valueOf(8.4));
-        vulnerability.setCvssV2Vector("cvssV2-vector");
-        vulnerability.setCvssV3Vector("cvssV3-vector");
-        vulnerability.setOwaspRRLikelihoodScore(BigDecimal.valueOf(1.25));
-        vulnerability.setOwaspRRTechnicalImpactScore(BigDecimal.valueOf(1.75));
-        vulnerability.setOwaspRRBusinessImpactScore(BigDecimal.valueOf(1.3));
-        vulnerability.setOwaspRRVector("owasp-vector");
-        qm.createVulnerability(vulnerability, false);
-
-        var epss = new Epss();
-        epss.setCve("vuln-vulnId");
-        epss.setScore(BigDecimal.valueOf(0.5));
-        epss.setPercentile(BigDecimal.valueOf(0.9));
-        qm.persist(epss);
-
-        var attribution = new FindingAttribution();
-        attribution.setComponent(component);
-        attribution.setVulnerability(vulnerability);
-        attribution.setAnalyzerIdentity(AnalyzerIdentity.INTERNAL_ANALYZER);
-        attribution.setAttributedOn(new Date());
-        qm.persist(attribution);
-
-        var analysis = new Analysis();
-        analysis.setVulnerability(vulnerability);
-        analysis.setAnalysisState(AnalysisState.NOT_AFFECTED);
-        analysis.setSuppressed(true);
-        qm.persist(analysis);
-
-        return new Finding(project, component, vulnerability, epss, analysis, attribution);
+        return new Finding(findingRow);
     }
 }

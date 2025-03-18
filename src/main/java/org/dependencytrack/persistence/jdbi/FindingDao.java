@@ -22,29 +22,89 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
 import com.github.packageurl.PackageURL;
+import org.dependencytrack.model.AnalysisState;
+import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.GroupedFinding;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.Severity;
+import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.RepositoryQueryManager.RepositoryMetaComponentSearch;
-import org.dependencytrack.persistence.jdbi.mapping.FindingRowMapper;
-import org.dependencytrack.persistence.jdbi.mapping.GroupedFindingRowMapper;
 import org.dependencytrack.util.PurlUtil;
-import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
+import org.jdbi.v3.core.mapper.reflect.ColumnName;
+import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public interface FindingDao {
+
+    record FindingRow(
+            UUID projectUuid,
+            UUID componentUuid,
+            String projectName,
+            String projectVersion,
+            @ColumnName("NAME") String name,
+            @ColumnName("GROUP") String group,
+            @ColumnName("VERSION") String version,
+            String componentPurl,
+            @ColumnName("CPE") String cpe,
+            @ColumnName("UUID") UUID vulnUuid,
+            @ColumnName("SOURCE") Vulnerability.Source vulnSource,
+            @ColumnName("VULNID") String vulnId,
+            @ColumnName("TITLE") String vulnTitle,
+            @ColumnName("SUBTITLE") String vulnSubtitle,
+            @ColumnName("DESCRIPTION") String vulnDescription,
+            @ColumnName("RECOMMENDATION") String vulnRecommendation,
+            @ColumnName("PUBLISHED") Instant published,
+            @ColumnName("SEVERITY") Severity severity,
+            @ColumnName("CWES") List<Integer> cwes,
+            @ColumnName("CVSSV2BASESCORE") BigDecimal cvssV2BaseScore,
+            @ColumnName("CVSSV3BASESCORE") BigDecimal cvssV3BaseScore,
+            @ColumnName("CVSSV2VECTOR") String cvssV2Vector,
+            @ColumnName("CVSSV3VECTOR") String cvssV3Vector,
+            @ColumnName("OWASPRRLIKELIHOODSCORE") BigDecimal owaspRRLikelihoodScore,
+            @ColumnName("OWASPRRTECHNICALIMPACTSCORE") BigDecimal owaspRRTechnicalImpactScore,
+            @ColumnName("OWASPRRBUSINESSIMPACTSCORE") BigDecimal owaspRRBusinessImpactScore,
+            @ColumnName("OWASPRRVECTOR") String owaspRRVector,
+            String vulnAliasesJson,
+            @ColumnName("SCORE") BigDecimal epssScore,
+            @ColumnName("PERCENTILE") BigDecimal epssPercentile,
+            @ColumnName("ANALYZERIDENTITY") AnalyzerIdentity analyzerIdentity,
+            @ColumnName("ATTRIBUTED_ON") Instant attributedOn,
+            @ColumnName("ALT_ID") String alternateIdentifier,
+            @ColumnName("REFERENCE_URL") String referenceUrl,
+            @ColumnName("STATE") AnalysisState analysisState,
+            @ColumnName("SUPPRESSED") boolean isSuppressed
+    ) {
+    }
+
+    record GroupedFindingRow(
+            @ColumnName("SOURCE") Vulnerability.Source vulnSource,
+            @ColumnName("VULNID") String vulnId,
+            @ColumnName("TITLE") String vulnTitle,
+            @ColumnName("SEVERITY") Severity severity,
+            @ColumnName("CVSSV2BASESCORE") BigDecimal cvssV2BaseScore,
+            @ColumnName("CVSSV3BASESCORE") BigDecimal cvssV3BaseScore,
+            @ColumnName("PUBLISHED") Instant published,
+            @ColumnName("CWES") List<Integer> cwes,
+            @ColumnName("ANALYZERIDENTITY") AnalyzerIdentity analyzerIdentity,
+            int affectedProjectCount
+    ) {
+    }
 
     @SqlQuery("""
             SELECT "PROJECT"."UUID" AS "projectUuid"
@@ -63,6 +123,7 @@ public interface FindingDao {
                  , "VULNERABILITY"."SUBTITLE"
                  , "VULNERABILITY"."DESCRIPTION"
                  , "VULNERABILITY"."RECOMMENDATION"
+                 , "VULNERABILITY"."PUBLISHED"
                  , "VULNERABILITY"."SEVERITY"
                  , CAST(STRING_TO_ARRAY("VULNERABILITY"."CWES", ',') AS INT[]) AS "CWES"
                  , "VULNERABILITY"."CVSSV2BASESCORE"
@@ -101,12 +162,13 @@ public interface FindingDao {
              WHERE "COMPONENT"."PROJECT_ID" = :projectId
                AND (:includeSuppressed OR "ANALYSIS"."SUPPRESSED" IS NULL OR NOT "ANALYSIS"."SUPPRESSED")
             """)
-    @RegisterRowMapper(FindingRowMapper.class)
-    List<Finding> getFindingsByProject(@Bind long projectId, @Bind boolean includeSuppressed);
+    @RegisterConstructorMapper(FindingRow.class)
+    List<FindingRow> getFindingsByProject(@Bind long projectId, @Bind boolean includeSuppressed);
 
     default List<Finding> getFindings(final long projectId, final boolean includeSuppressed) {
-        List<Finding> findings = withJdbiHandle(handle ->
+        List<FindingRow> findingRows = withJdbiHandle(handle ->
                 getFindingsByProject(projectId, includeSuppressed));
+        List<Finding> findings = findingRows.stream().map(Finding::new).toList();
         findings = mapComponentLatestVersion(findings);
         return findings;
     }
@@ -183,7 +245,6 @@ public interface FindingDao {
               ${apiOrderByClause}
              </#if>
             """)
-    @RegisterRowMapper(FindingRowMapper.class)
     @AllowApiOrdering(by = {
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
@@ -216,7 +277,8 @@ public interface FindingDao {
             @AllowApiOrdering.Column(name = "attribution.attributedOn", queryName = "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"")
     })
     @AllowUnusedBindings
-    List<Finding> getAllFindings(@Define String queryFilter,
+    @RegisterConstructorMapper(FindingRow.class)
+    List<FindingRow> getAllFindings(@Define String queryFilter,
                                  @Define boolean activeFilter,
                                  @Define boolean suppressedFilter);
 
@@ -231,8 +293,9 @@ public interface FindingDao {
         StringBuilder queryFilter = new StringBuilder();
         Map<String, Object> params = new HashMap<>();
         processFilters(filters, queryFilter, params);
-        final List<Finding> findings = withJdbiHandle(handle ->
+        final List<FindingRow> findingRows = withJdbiHandle(handle ->
                 getAllFindings(String.valueOf(queryFilter), showInactive, showSuppressed));
+        List<Finding> findings = findingRows.stream().map(Finding::new).toList();
         PaginatedResult result = new PaginatedResult();
         result.setTotal(findings.size());
         List<Finding> findingList = findings.subList(alpineRequest.getPagination().getOffset(),
@@ -252,9 +315,6 @@ public interface FindingDao {
                 , "VULNERABILITY"."SEVERITY"
                 , "VULNERABILITY"."CVSSV2BASESCORE"
                 , "VULNERABILITY"."CVSSV3BASESCORE"
-                , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
-                , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
-                , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
                 , "VULNERABILITY"."PUBLISHED"
                 , CAST(STRING_TO_ARRAY("VULNERABILITY"."CWES", ',') AS INT[]) AS "CWES"
                 , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
@@ -287,9 +347,6 @@ public interface FindingDao {
                , "VULNERABILITY"."SEVERITY"
                , "VULNERABILITY"."CVSSV2BASESCORE"
                , "VULNERABILITY"."CVSSV3BASESCORE"
-               , "VULNERABILITY"."OWASPRRLIKELIHOODSCORE"
-               , "VULNERABILITY"."OWASPRRTECHNICALIMPACTSCORE"
-               , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
                , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
                , "VULNERABILITY"."PUBLISHED"
                , "VULNERABILITY"."CWES"
@@ -297,7 +354,6 @@ public interface FindingDao {
               ${apiOrderByClause}
             </#if>
             """)
-    @RegisterRowMapper(GroupedFindingRowMapper.class)
     @AllowApiOrdering(by = {
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
@@ -325,7 +381,8 @@ public interface FindingDao {
             @AllowApiOrdering.Column(name = "vulnerability.affectedProjectCount", queryName = "affectedProjectCount")
     })
     @AllowUnusedBindings
-    List<GroupedFinding> getGroupedFindings(@Define String queryFilter, @Define boolean activeFilter);
+    @RegisterConstructorMapper(GroupedFindingRow.class)
+    List<GroupedFindingRow> getGroupedFindings(@Define String queryFilter, @Define boolean activeFilter);
 
     /**
      * Returns a List of all Finding objects filtered by ACL and other optional filters. The resulting list is grouped by vulnerability.
@@ -341,8 +398,9 @@ public interface FindingDao {
         StringBuilder aggregateFilter = new StringBuilder();
         processAggregateFilters(filters, aggregateFilter, params);
         queryFilter.append(aggregateFilter);
-        final List<GroupedFinding> findings = withJdbiHandle(alpineRequest, handle ->
+        final List<GroupedFindingRow> findingRows = withJdbiHandle(alpineRequest, handle ->
                 getGroupedFindings(String.valueOf(queryFilter), showInactive));
+        List<GroupedFinding> findings = findingRows.stream().map(GroupedFinding::new).toList();
         PaginatedResult result = new PaginatedResult();
         result.setTotal(findings.size());
         final List<GroupedFinding> findingsList = findings.subList(alpineRequest.getPagination().getOffset(),

@@ -20,25 +20,23 @@ package org.dependencytrack.integrations;
 
 import alpine.Config;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.Finding;
-import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
 import static org.junit.Assert.assertEquals;
@@ -75,39 +73,23 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         Project project = qm.createProject(
                 "Test", "Sample project", "1.0", null, null, null, null, false);
 
-        var component = new Component();
-        component.setProject(project);
-        component.setName("component-name-1");
-        component.setVersion("component-version");
+        FindingDao.FindingRow findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
+                "component-name-1", null, "component-version", null, null, UUID.randomUUID(),
+                Vulnerability.Source.GITHUB, "vuln-vulnId-1", "vuln-title", "vuln-subtitle", "vuln-description",
+                "vuln-recommendation", Instant.now(), Severity.CRITICAL, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
+                "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
+                "owasp-vector", null, BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
+                AnalyzerIdentity.OSSINDEX_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
+        Finding findingWithoutAlias = new Finding(findingRow);
 
-        var vulnerability = new Vulnerability();
-        vulnerability.setVulnId("vuln-vulnId-1");
-        vulnerability.setSource(Vulnerability.Source.GITHUB);
-        vulnerability.setSeverity(Severity.CRITICAL);
-
-        var epss = new Epss();
-        epss.setCve("vuln-vulnId-1");
-        epss.setScore(BigDecimal.valueOf(0.5));
-        epss.setPercentile(BigDecimal.valueOf(0.9));
-
-        var attribution = new FindingAttribution();
-        attribution.setComponent(component);
-        attribution.setVulnerability(vulnerability);
-        attribution.setAnalyzerIdentity(AnalyzerIdentity.OSSINDEX_ANALYZER);
-        attribution.setAttributedOn(new Date());
-
-        var analysis = new Analysis();
-        analysis.setVulnerability(vulnerability);
-        analysis.setAnalysisState(AnalysisState.NOT_AFFECTED);
-        analysis.setSuppressed(true);
-
-        Finding findingWithoutAlias = new Finding(project, component, vulnerability, epss, analysis, attribution);
-
-        component.setName("component-name-2");
-        vulnerability.setVulnId("vuln-vulnId-2");
-        vulnerability.setSource(Vulnerability.Source.NVD);
-        vulnerability.setSeverity(Severity.HIGH);
-        attribution.setAnalyzerIdentity(AnalyzerIdentity.INTERNAL_ANALYZER);
+        findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
+                "component-name-2", null, "component-version", null, null, UUID.randomUUID(),
+                Vulnerability.Source.NVD, "vuln-vulnId-2", "vuln-title", "vuln-subtitle", "vuln-description",
+                "vuln-recommendation", Instant.now(), Severity.HIGH, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
+                "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
+                "owasp-vector", null, BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
+                AnalyzerIdentity.INTERNAL_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
+        Finding findingWithAlias = new Finding(findingRow);
 
         var alias = new VulnerabilityAlias();
         alias.setCveId("someCveId");
@@ -129,9 +111,7 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         other.setInternalId("anotherInternalId");
         other.setVulnDbId(null);
 
-        vulnerability.setAliases(List.of(alias, other));
-
-        Finding findingWithAlias = new Finding(project, component, vulnerability, epss, analysis, attribution);
+        findingWithAlias.addVulnerabilityAliases(List.of(alias, other));
 
         FindingPackagingFormat fpf = new FindingPackagingFormat(
                 project.getUuid(),

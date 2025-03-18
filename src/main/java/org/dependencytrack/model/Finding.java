@@ -19,11 +19,16 @@
 package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.parser.common.resolver.CweResolver;
+import org.dependencytrack.persistence.jdbi.FindingDao;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -31,6 +36,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.OBJECT_MAPPER;
 
 
 /**
@@ -43,61 +51,67 @@ import java.util.UUID;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Finding implements Serializable {
 
-    private static final long serialVersionUID = 5313521394432526986L;
-
     private final UUID project;
     private final Map<String, Object> component = new LinkedHashMap<>();
     private final Map<String, Object> vulnerability = new LinkedHashMap<>();
     private final Map<String, Object> analysis = new LinkedHashMap<>();
     private final Map<String, Object> attribution = new LinkedHashMap<>();
 
-    public Finding(Project projectToMap, Component componentToMap, Vulnerability vulnToMap, Epss epss, Analysis analysisToMap, FindingAttribution attributionToMap) {
-        this.project = projectToMap.getUuid();
-        optValue(component, "uuid", componentToMap.getUuid());
-        optValue(component, "name", componentToMap.getName());
-        optValue(component, "group", componentToMap.getGroup());
-        optValue(component, "version", componentToMap.getVersion());
-        if (componentToMap.getPurl() != null) {
-            optValue(component, "purl", componentToMap.getPurl().canonicalize());
+    public Finding(final FindingDao.FindingRow findingRow) {
+        this.project = findingRow.projectUuid();
+        optValue(component, "uuid", findingRow.componentUuid());
+        optValue(component, "name", findingRow.name());
+        optValue(component, "group", findingRow.group());
+        optValue(component, "version", findingRow.version());
+        if (findingRow.componentPurl() != null) {
+            optValue(component, "purl", findingRow.componentPurl());
         }
-        optValue(component, "cpe", componentToMap.getCpe());
-        optValue(component, "project", projectToMap.getUuid().toString());
+        optValue(component, "cpe", findingRow.cpe());
+        optValue(component, "project", findingRow.projectUuid());
 
-        optValue(vulnerability, "uuid", vulnToMap.getUuid());
-        optValue(vulnerability, "source", vulnToMap.getSource());
-        optValue(vulnerability, "vulnId", vulnToMap.getVulnId());
-        optValue(vulnerability, "title", vulnToMap.getTitle());
-        optValue(vulnerability, "subtitle", vulnToMap.getSubTitle());
-        optValue(vulnerability, "description", vulnToMap.getDescription());
-        optValue(vulnerability, "recommendation", vulnToMap.getRecommendation());
-        if (vulnToMap.getSeverity() != null) {
-            final Severity severity = vulnToMap.getSeverity();
+        optValue(vulnerability, "uuid", findingRow.vulnUuid());
+        optValue(vulnerability, "source", findingRow.vulnSource());
+        optValue(vulnerability, "vulnId", findingRow.vulnId());
+        optValue(vulnerability, "title", findingRow.vulnTitle());
+        optValue(vulnerability, "subtitle", findingRow.vulnSubtitle());
+        optValue(vulnerability, "description", findingRow.vulnDescription());
+        optValue(vulnerability, "recommendation", findingRow.vulnRecommendation());
+        if (findingRow.severity() != null) {
+            final Severity severity = findingRow.severity();
             optValue(vulnerability, "severity", severity.name());
             optValue(vulnerability, "severityRank", severity.ordinal());
         }
-        optValue(vulnerability, "cvssV2BaseScore", vulnToMap.getCvssV2BaseScore());
-        optValue(vulnerability, "cvssV3BaseScore", vulnToMap.getCvssV3BaseScore());
-        optValue(vulnerability, "cvssV2Vector", vulnToMap.getCvssV2Vector());
-        optValue(vulnerability, "cvssV3Vector", vulnToMap.getCvssV3Vector());
-        optValue(vulnerability, "owaspLikelihoodScore", vulnToMap.getOwaspRRLikelihoodScore());
-        optValue(vulnerability, "owaspTechnicalImpactScore", vulnToMap.getOwaspRRTechnicalImpactScore());
-        optValue(vulnerability, "owaspBusinessImpactScore", vulnToMap.getOwaspRRBusinessImpactScore());
-        optValue(vulnerability, "owaspRRVector", vulnToMap.getOwaspRRVector());
-        optValue(vulnerability, "epssScore", epss.getScore());
-        optValue(vulnerability, "epssPercentile", epss.getPercentile());
-        optValue(vulnerability, "cwes", vulnToMap.getCwes());
-        addVulnerabilityAliases(vulnToMap.getAliases());
+        optValue(vulnerability, "cvssV2BaseScore", findingRow.cvssV2BaseScore());
+        optValue(vulnerability, "cvssV3BaseScore", findingRow.cvssV3BaseScore());
+        optValue(vulnerability, "cvssV2Vector", findingRow.cvssV2Vector());
+        optValue(vulnerability, "cvssV3Vector", findingRow.cvssV3Vector());
+        optValue(vulnerability, "owaspLikelihoodScore", findingRow.owaspRRLikelihoodScore());
+        optValue(vulnerability, "owaspTechnicalImpactScore", findingRow.owaspRRTechnicalImpactScore());
+        optValue(vulnerability, "owaspBusinessImpactScore", findingRow.owaspRRBusinessImpactScore());
+        optValue(vulnerability, "owaspRRVector", findingRow.owaspRRVector());
+        optValue(vulnerability, "epssScore", findingRow.epssScore());
+        optValue(vulnerability, "epssPercentile", findingRow.epssPercentile());
+        optValue(vulnerability, "cwes", findingRow.cwes());
+        if (findingRow.vulnAliasesJson() != null && !findingRow.vulnAliasesJson().isBlank()) {
+            final TypeReference<List<VulnerabilityAlias>> VULNERABILITY_ALIASES_TYPE_REF = new TypeReference<>() {};
+            try {
+                final List<VulnerabilityAlias> aliases = OBJECT_MAPPER.readValue(findingRow.vulnAliasesJson(), VULNERABILITY_ALIASES_TYPE_REF);
+                addVulnerabilityAliases(aliases);
+            } catch (JacksonException e) {}
+        } else {
+            optValue(vulnerability, "aliases", Collections.EMPTY_LIST);
+        }
 
-        optValue(attribution, "analyzerIdentity", attributionToMap.getAnalyzerIdentity());
-        optValue(attribution, "attributedOn", attributionToMap.getAttributedOn());
-        optValue(attribution, "alternateIdentifier", attributionToMap.getAlternateIdentifier());
-        optValue(attribution, "referenceUrl", attributionToMap.getReferenceUrl());
+        optValue(attribution, "analyzerIdentity", findingRow.analyzerIdentity());
+        optValue(attribution, "attributedOn", findingRow.attributedOn());
+        optValue(attribution, "alternateIdentifier", findingRow.alternateIdentifier());
+        optValue(attribution, "referenceUrl", findingRow.referenceUrl());
 
-        optValue(analysis, "state", analysisToMap.getAnalysisState());
-        optValue(analysis, "isSuppressed", analysisToMap.isSuppressed(), false);
-        optValue(vulnerability, "published", vulnToMap.getPublished());
-        optValue(component, "projectName", projectToMap.getName());
-        optValue(component, "projectVersion", projectToMap.getVersion());
+        optValue(analysis, "state", findingRow.analysisState());
+        optValue(analysis, "isSuppressed", findingRow.isSuppressed(), false);
+        optValue(vulnerability, "published", findingRow.published());
+        optValue(component, "projectName", findingRow.projectName());
+        optValue(component, "projectVersion", findingRow.projectVersion());
     }
 
     public Map<String, Object> getComponent() {
@@ -132,7 +146,7 @@ public class Finding implements Serializable {
 
     static List<Cwe> getCwes(final Object value) {
         if (value instanceof final String cweIds) {
-            if (StringUtils.isBlank(cweIds)) {
+            if (isBlank(cweIds)) {
                 return null;
             }
             final List<Cwe> cwes = new ArrayList<>();
@@ -161,29 +175,34 @@ public class Finding implements Serializable {
         final Set<Map<String, String>> uniqueAliases = new HashSet<>();
         if (aliases != null) {
             for (final VulnerabilityAlias alias : aliases) {
-                Map<String,String> map = new HashMap<>();
-                if (alias.getCveId() != null && !alias.getCveId().isBlank()) {
-                    map.put("cveId", alias.getCveId());
-                }
-                if (alias.getGhsaId() != null && !alias.getGhsaId().isBlank()) {
-                    map.put("ghsaId", alias.getGhsaId());
-                }
-                if (alias.getSonatypeId() != null && !alias.getSonatypeId().isBlank()) {
-                    map.put("sonatypeId", alias.getSonatypeId());
-                }
-                if (alias.getOsvId() != null && !alias.getOsvId().isBlank()) {
-                    map.put("osvId", alias.getOsvId());
-                }
-                if (alias.getSnykId() != null && !alias.getSnykId().isBlank()) {
-                    map.put("snykId", alias.getSnykId());
-                }
-                if (alias.getVulnDbId() != null && !alias.getVulnDbId().isBlank()) {
-                    map.put("vulnDbId", alias.getVulnDbId());
-                }
+                Map<String, String> map = getAliasMap(alias);
                 uniqueAliases.add(map);
             }
         }
         vulnerability.put("aliases", uniqueAliases);
     }
 
+    @NotNull
+    private static Map<String, String> getAliasMap(VulnerabilityAlias alias) {
+        Map<String,String> map = new HashMap<>();
+        if (alias.getCveId() != null && !alias.getCveId().isBlank()) {
+            map.put("cveId", alias.getCveId());
+        }
+        if (alias.getGhsaId() != null && !alias.getGhsaId().isBlank()) {
+            map.put("ghsaId", alias.getGhsaId());
+        }
+        if (alias.getSonatypeId() != null && !alias.getSonatypeId().isBlank()) {
+            map.put("sonatypeId", alias.getSonatypeId());
+        }
+        if (alias.getOsvId() != null && !alias.getOsvId().isBlank()) {
+            map.put("osvId", alias.getOsvId());
+        }
+        if (alias.getSnykId() != null && !alias.getSnykId().isBlank()) {
+            map.put("snykId", alias.getSnykId());
+        }
+        if (alias.getVulnDbId() != null && !alias.getVulnDbId().isBlank()) {
+            map.put("vulnDbId", alias.getVulnDbId());
+        }
+        return map;
+    }
 }

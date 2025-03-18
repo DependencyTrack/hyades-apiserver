@@ -19,6 +19,7 @@
 package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 
 import java.io.Serializable;
 import java.util.LinkedHashMap;
@@ -39,17 +40,17 @@ public class GroupedFinding implements Serializable {
     private Map<String, Object> vulnerability = new LinkedHashMap<>();
     private Map<String, Object> attribution = new LinkedHashMap<>();
 
-    public GroupedFinding(Vulnerability vulnToMap, FindingAttribution attributionToMap) {
-        optValue(vulnerability, "source", vulnToMap.getSource());
-        optValue(vulnerability, "vulnId", vulnToMap.getVulnId());
-        optValue(vulnerability, "title", vulnToMap.getTitle());
-        optValue(vulnerability, "severity", vulnToMap.getSeverity());
-        optValue(vulnerability, "cvssV2BaseScore", vulnToMap.getCvssV2BaseScore());
-        optValue(vulnerability, "cvssV3BaseScore", vulnToMap.getCvssV3BaseScore());
-        optValue(attribution, "analyzerIdentity", attributionToMap.getAnalyzerIdentity());
-        optValue(vulnerability, "published", vulnToMap.getPublished());
-        optValue(vulnerability, "cwes", vulnToMap.getCwes());
-        optValue(vulnerability, "affectedProjectCount", vulnToMap.getAffectedProjectCount());
+    public GroupedFinding(final FindingDao.GroupedFindingRow row) {
+        optValue(vulnerability, "source", row.vulnSource());
+        optValue(vulnerability, "vulnId", row.vulnId());
+        optValue(vulnerability, "title", row.vulnTitle());
+        optValue(vulnerability, "severity", row.severity());
+        optValue(vulnerability, "cvssV2BaseScore", row.cvssV2BaseScore());
+        optValue(vulnerability, "cvssV3BaseScore", row.cvssV3BaseScore());
+        optValue(attribution, "analyzerIdentity", row.analyzerIdentity());
+        optValue(vulnerability, "published", row.published());
+        optValue(vulnerability, "cwes", row.cwes());
+        optValue(vulnerability, "affectedProjectCount", row.affectedProjectCount());
     }
 
     public Map getVulnerability() {
