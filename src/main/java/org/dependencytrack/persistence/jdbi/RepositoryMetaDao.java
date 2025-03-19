@@ -30,8 +30,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-
 public interface RepositoryMetaDao {
 
     @SqlQuery("""
@@ -59,7 +57,6 @@ public interface RepositoryMetaDao {
             namespaces.add(repoMeta.namespace());
             names.add(repoMeta.name());
         }
-        return withJdbiHandle(handle ->
-                getRepositoryMetaComponents(types, namespaces, names));
+        return getRepositoryMetaComponents(types, namespaces, names);
     }
 }

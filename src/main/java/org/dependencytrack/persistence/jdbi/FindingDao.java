@@ -30,9 +30,10 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.RepositoryQueryManager.RepositoryMetaComponentSearch;
 import org.dependencytrack.util.PurlUtil;
-import org.jdbi.v3.core.mapper.reflect.ColumnName;
+import org.jdbi.v3.json.Json;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
 import org.jdbi.v3.sqlobject.customizer.Bind;
@@ -57,51 +58,51 @@ public interface FindingDao {
             UUID componentUuid,
             String projectName,
             String projectVersion,
-            @ColumnName("NAME") String name,
-            @ColumnName("GROUP") String group,
-            @ColumnName("VERSION") String version,
+            String componentName,
+            String componentGroup,
+            String componentVersion,
             String componentPurl,
-            @ColumnName("CPE") String cpe,
-            @ColumnName("UUID") UUID vulnUuid,
-            @ColumnName("SOURCE") Vulnerability.Source vulnSource,
-            @ColumnName("VULNID") String vulnId,
-            @ColumnName("TITLE") String vulnTitle,
-            @ColumnName("SUBTITLE") String vulnSubtitle,
-            @ColumnName("DESCRIPTION") String vulnDescription,
-            @ColumnName("RECOMMENDATION") String vulnRecommendation,
-            @ColumnName("PUBLISHED") Instant published,
-            @ColumnName("SEVERITY") Severity severity,
-            @ColumnName("CWES") List<Integer> cwes,
-            @ColumnName("CVSSV2BASESCORE") BigDecimal cvssV2BaseScore,
-            @ColumnName("CVSSV3BASESCORE") BigDecimal cvssV3BaseScore,
-            @ColumnName("CVSSV2VECTOR") String cvssV2Vector,
-            @ColumnName("CVSSV3VECTOR") String cvssV3Vector,
-            @ColumnName("OWASPRRLIKELIHOODSCORE") BigDecimal owaspRRLikelihoodScore,
-            @ColumnName("OWASPRRTECHNICALIMPACTSCORE") BigDecimal owaspRRTechnicalImpactScore,
-            @ColumnName("OWASPRRBUSINESSIMPACTSCORE") BigDecimal owaspRRBusinessImpactScore,
-            @ColumnName("OWASPRRVECTOR") String owaspRRVector,
-            String vulnAliasesJson,
-            @ColumnName("SCORE") BigDecimal epssScore,
-            @ColumnName("PERCENTILE") BigDecimal epssPercentile,
-            @ColumnName("ANALYZERIDENTITY") AnalyzerIdentity analyzerIdentity,
-            @ColumnName("ATTRIBUTED_ON") Instant attributedOn,
-            @ColumnName("ALT_ID") String alternateIdentifier,
-            @ColumnName("REFERENCE_URL") String referenceUrl,
-            @ColumnName("STATE") AnalysisState analysisState,
-            @ColumnName("SUPPRESSED") boolean isSuppressed
+            String componentCpe,
+            UUID vulnUuid,
+            Vulnerability.Source vulnSource,
+            String vulnId,
+            String vulnTitle,
+            String vulnSubtitle,
+            String vulnDescription,
+            String vulnRecommendation,
+            Instant vulnPublished,
+            Severity vulnSeverity,
+            List<Integer> cwes,
+            BigDecimal cvssV2BaseScore,
+            BigDecimal cvssV3BaseScore,
+            String cvssV2Vector,
+            String cvssV3Vector,
+            BigDecimal owaspRRLikelihoodScore,
+            BigDecimal owaspRRTechnicalImpactScore,
+            BigDecimal owaspRRBusinessImpactScore,
+            String owaspRRVector,
+            @Json List<VulnerabilityAlias> vulnAliasesJson,
+            BigDecimal epssScore,
+            BigDecimal epssPercentile,
+            AnalyzerIdentity analyzerIdentity,
+            Instant attributed_on,
+            String alt_id,
+            String reference_url,
+            AnalysisState analysisState,
+            boolean suppressed
     ) {
     }
 
     record GroupedFindingRow(
-            @ColumnName("SOURCE") Vulnerability.Source vulnSource,
-            @ColumnName("VULNID") String vulnId,
-            @ColumnName("TITLE") String vulnTitle,
-            @ColumnName("SEVERITY") Severity severity,
-            @ColumnName("CVSSV2BASESCORE") BigDecimal cvssV2BaseScore,
-            @ColumnName("CVSSV3BASESCORE") BigDecimal cvssV3BaseScore,
-            @ColumnName("PUBLISHED") Instant published,
-            @ColumnName("CWES") List<Integer> cwes,
-            @ColumnName("ANALYZERIDENTITY") AnalyzerIdentity analyzerIdentity,
+            Vulnerability.Source vulnSource,
+            String vulnId,
+            String vulnTitle,
+            Severity vulnSeverity,
+            BigDecimal cvssV2BaseScore,
+            BigDecimal cvssV3BaseScore,
+            Instant vulnPublished,
+            List<Integer> cwes,
+            AnalyzerIdentity analyzerIdentity,
             int affectedProjectCount
     ) {
     }
@@ -111,20 +112,20 @@ public interface FindingDao {
                  , "PROJECT"."NAME" AS "projectName"
                  , "PROJECT"."VERSION" AS "projectVersion"
                  , "COMPONENT"."UUID" AS "componentUuid"
-                 , "COMPONENT"."NAME"
-                 , "COMPONENT"."GROUP"
-                 , "COMPONENT"."VERSION"
+                 , "COMPONENT"."NAME" AS "componentName"
+                 , "COMPONENT"."GROUP" AS "componentGroup"
+                 , "COMPONENT"."VERSION" AS "componentVersion"
                  , "COMPONENT"."PURL" AS "componentPurl"
-                 , "COMPONENT"."CPE"
-                 , "VULNERABILITY"."UUID"
-                 , "VULNERABILITY"."SOURCE"
+                 , "COMPONENT"."CPE" AS "componentCpe"
+                 , "VULNERABILITY"."UUID" AS "vulnUuid"
+                 , "VULNERABILITY"."SOURCE" AS "vulnSource"
                  , "VULNERABILITY"."VULNID"
-                 , "VULNERABILITY"."TITLE"
-                 , "VULNERABILITY"."SUBTITLE"
-                 , "VULNERABILITY"."DESCRIPTION"
-                 , "VULNERABILITY"."RECOMMENDATION"
-                 , "VULNERABILITY"."PUBLISHED"
-                 , "VULNERABILITY"."SEVERITY"
+                 , "VULNERABILITY"."TITLE" AS "vulnTitle"
+                 , "VULNERABILITY"."SUBTITLE" AS "vulnSubtitle"
+                 , "VULNERABILITY"."DESCRIPTION" AS "vulnDescription"
+                 , "VULNERABILITY"."RECOMMENDATION" AS "vulnRecommendation"
+                 , "VULNERABILITY"."PUBLISHED" AS "vulnPublished"
+                 , "VULNERABILITY"."SEVERITY" AS "vulnSeverity"
                  , CAST(STRING_TO_ARRAY("VULNERABILITY"."CWES", ',') AS INT[]) AS "CWES"
                  , "VULNERABILITY"."CVSSV2BASESCORE"
                  , "VULNERABILITY"."CVSSV3BASESCORE"
@@ -135,13 +136,13 @@ public interface FindingDao {
                  , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
                  , "VULNERABILITY"."OWASPRRVECTOR"
                  , JSONB_VULN_ALIASES("VULNERABILITY"."SOURCE", "VULNERABILITY"."VULNID") AS "vulnAliasesJson"
-                 , "EPSS"."SCORE"
-                 , "EPSS"."PERCENTILE"
+                 , "EPSS"."SCORE" AS "epssScore"
+                 , "EPSS"."PERCENTILE" AS "epssPercentile"
                  , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
                  , "FINDINGATTRIBUTION"."ATTRIBUTED_ON"
                  , "FINDINGATTRIBUTION"."ALT_ID"
                  , "FINDINGATTRIBUTION"."REFERENCE_URL"
-                 , "ANALYSIS"."STATE"
+                 , "ANALYSIS"."STATE" AS "analysisState"
                  , "ANALYSIS"."SUPPRESSED"
               FROM "COMPONENT"
              INNER JOIN "COMPONENTS_VULNERABILITIES"
@@ -183,20 +184,20 @@ public interface FindingDao {
                  , "PROJECT"."NAME" AS "projectName"
                  , "PROJECT"."VERSION" AS "projectVersion"
                  , "COMPONENT"."UUID" AS "componentUuid"
-                 , "COMPONENT"."NAME"
-                 , "COMPONENT"."GROUP"
-                 , "COMPONENT"."VERSION"
+                 , "COMPONENT"."NAME" AS "componentName"
+                 , "COMPONENT"."GROUP" AS "componentGroup"
+                 , "COMPONENT"."VERSION" AS "componentVersion"
                  , "COMPONENT"."PURL" AS "componentPurl"
-                 , "COMPONENT"."CPE"
-                 , "VULNERABILITY"."UUID"
-                 , "VULNERABILITY"."SOURCE"
+                 , "COMPONENT"."CPE" AS "componentCpe"
+                 , "VULNERABILITY"."UUID" AS "vulnUuid"
+                 , "VULNERABILITY"."SOURCE" AS "vulnSource"
                  , "VULNERABILITY"."VULNID"
-                 , "VULNERABILITY"."TITLE"
-                 , "VULNERABILITY"."SUBTITLE"
-                 , "VULNERABILITY"."DESCRIPTION"
-                 , "VULNERABILITY"."RECOMMENDATION"
-                 , "VULNERABILITY"."PUBLISHED"
-                 , "VULNERABILITY"."SEVERITY"
+                 , "VULNERABILITY"."TITLE" AS "vulnTitle"
+                 , "VULNERABILITY"."SUBTITLE" AS "vulnSubtitle"
+                 , "VULNERABILITY"."DESCRIPTION" AS "vulnDescription"
+                 , "VULNERABILITY"."RECOMMENDATION" AS "vulnRecommendation"
+                 , "VULNERABILITY"."PUBLISHED" AS "vulnPublished"
+                 , "VULNERABILITY"."SEVERITY" AS "vulnSeverity"
                  , CAST(STRING_TO_ARRAY("VULNERABILITY"."CWES", ',') AS INT[]) AS "CWES"
                  , "VULNERABILITY"."CVSSV2BASESCORE"
                  , "VULNERABILITY"."CVSSV3BASESCORE"
@@ -207,13 +208,13 @@ public interface FindingDao {
                  , "VULNERABILITY"."OWASPRRBUSINESSIMPACTSCORE"
                  , "VULNERABILITY"."OWASPRRVECTOR"
                  , JSONB_VULN_ALIASES("VULNERABILITY"."SOURCE", "VULNERABILITY"."VULNID") AS "vulnAliasesJson"
-                 , "EPSS"."SCORE"
-                 , "EPSS"."PERCENTILE"
+                 , "EPSS"."SCORE" AS "epssScore"
+                 , "EPSS"."PERCENTILE" AS "epssPercentile"
                  , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
                  , "FINDINGATTRIBUTION"."ATTRIBUTED_ON"
                  , "FINDINGATTRIBUTION"."ALT_ID"
                  , "FINDINGATTRIBUTION"."REFERENCE_URL"
-                 , "ANALYSIS"."STATE"
+                 , "ANALYSIS"."STATE" AS "analysisState"
                  , "ANALYSIS"."SUPPRESSED"
               FROM "COMPONENT"
              INNER JOIN "COMPONENTS_VULNERABILITIES"
@@ -309,13 +310,13 @@ public interface FindingDao {
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
             <#-- @ftlvariable name="apiOrderByClause" type="String" -->
             <#-- @ftlvariable name="activeFilter" type="Boolean" -->
-            SELECT "VULNERABILITY"."SOURCE"
+            SELECT "VULNERABILITY"."SOURCE" AS "vulnSource"
                 , "VULNERABILITY"."VULNID"
-                , "VULNERABILITY"."TITLE"
-                , "VULNERABILITY"."SEVERITY"
+                , "VULNERABILITY"."TITLE" AS "vulnTitle"
+                , "VULNERABILITY"."SEVERITY" AS "vulnSeverity"
                 , "VULNERABILITY"."CVSSV2BASESCORE"
                 , "VULNERABILITY"."CVSSV3BASESCORE"
-                , "VULNERABILITY"."PUBLISHED"
+                , "VULNERABILITY"."PUBLISHED" AS "vulnPublished"
                 , CAST(STRING_TO_ARRAY("VULNERABILITY"."CWES", ',') AS INT[]) AS "CWES"
                 , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
                 , COUNT(DISTINCT "PROJECT"."ID") AS "affectedProjectCount"

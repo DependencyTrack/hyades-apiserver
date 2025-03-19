@@ -82,15 +82,6 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
                 AnalyzerIdentity.OSSINDEX_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
         Finding findingWithoutAlias = new Finding(findingRow);
 
-        findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
-                "component-name-2", null, "component-version", null, null, UUID.randomUUID(),
-                Vulnerability.Source.NVD, "vuln-vulnId-2", "vuln-title", "vuln-subtitle", "vuln-description",
-                "vuln-recommendation", Instant.now(), Severity.HIGH, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
-                "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-                "owasp-vector", null, BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
-                AnalyzerIdentity.INTERNAL_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
-        Finding findingWithAlias = new Finding(findingRow);
-
         var alias = new VulnerabilityAlias();
         alias.setCveId("someCveId");
         alias.setSonatypeId("someSonatypeId");
@@ -111,7 +102,14 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         other.setInternalId("anotherInternalId");
         other.setVulnDbId(null);
 
-        findingWithAlias.addVulnerabilityAliases(List.of(alias, other));
+        findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
+                "component-name-2", null, "component-version", null, null, UUID.randomUUID(),
+                Vulnerability.Source.NVD, "vuln-vulnId-2", "vuln-title", "vuln-subtitle", "vuln-description",
+                "vuln-recommendation", Instant.now(), Severity.HIGH, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
+                "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
+                "owasp-vector", List.of(alias, other), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
+                AnalyzerIdentity.INTERNAL_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
+        Finding findingWithAlias = new Finding(findingRow);
 
         FindingPackagingFormat fpf = new FindingPackagingFormat(
                 project.getUuid(),
@@ -138,10 +136,10 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         JSONArray aliases_2 = findings.getJSONObject(1).getJSONObject("vulnerability").getJSONArray("aliases");
         assertFalse(aliases_2.isEmpty());
         assertEquals(2, aliases_2.length());
-        assertEquals("anotherCveId", aliases_2.getJSONObject(0).getString("cveId"));
-        assertEquals("anotherGhsaId", aliases_2.getJSONObject(0).getString("ghsaId"));
-        assertEquals("someCveId", aliases_2.getJSONObject(1).getString("cveId"));
-        assertEquals("someOsvId", aliases_2.getJSONObject(1).getString("osvId"));
+        assertEquals("someCveId", aliases_2.getJSONObject(0).getString("cveId"));
+        assertEquals("someOsvId", aliases_2.getJSONObject(0).getString("osvId"));
+        assertEquals("anotherCveId", aliases_2.getJSONObject(1).getString("cveId"));
+        assertEquals("anotherGhsaId", aliases_2.getJSONObject(1).getString("ghsaId"));
 
         // negative test to see if technical id is not included
         assertFalse(aliases_2.getJSONObject(0).has("id"));

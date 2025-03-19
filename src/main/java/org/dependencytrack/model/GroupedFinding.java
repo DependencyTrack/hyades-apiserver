@@ -44,11 +44,11 @@ public class GroupedFinding implements Serializable {
         optValue(vulnerability, "source", row.vulnSource());
         optValue(vulnerability, "vulnId", row.vulnId());
         optValue(vulnerability, "title", row.vulnTitle());
-        optValue(vulnerability, "severity", row.severity());
+        optValue(vulnerability, "severity", row.vulnSeverity());
         optValue(vulnerability, "cvssV2BaseScore", row.cvssV2BaseScore());
         optValue(vulnerability, "cvssV3BaseScore", row.cvssV3BaseScore());
         optValue(attribution, "analyzerIdentity", row.analyzerIdentity());
-        optValue(vulnerability, "published", row.published());
+        optValue(vulnerability, "published", row.vulnPublished());
         optValue(vulnerability, "cwes", row.cwes());
         optValue(vulnerability, "affectedProjectCount", row.affectedProjectCount());
     }
