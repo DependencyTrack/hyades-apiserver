@@ -553,11 +553,13 @@ public class QueryManager extends AlpineQueryManager {
      * @return A {@link Set} of {@link Team} IDs
      */
     protected Set<Long> getTeamIds(final Principal principal) {
-        return switch (principal) {
-            case UserPrincipal user -> Set.copyOf(user.getTeams().stream().map(Team::getId).toList());
-            case ApiKey apiKey -> Set.copyOf(apiKey.getTeams().stream().map(Team::getId).toList());
-            default -> Collections.emptySet();
+        List<Team> teams = switch (principal) {
+            case UserPrincipal user -> user.getTeams();
+            case ApiKey apiKey -> apiKey.getTeams();
+            default -> Collections.emptyList();
         };
+
+        return Set.copyOf(teams.stream().map(Team::getId).toList());
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1279,11 +1281,15 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getUnassignedRolePermissions(role);
     }
 
-    public List<? extends ProjectRole> getUserRoles(UserPrincipal user) {
+    public List<? extends ProjectRole> getUserRoles(final UserPrincipal user) {
         return getRoleQueryManager().getUserRoles(user);
     }
 
-    public boolean removeRoleFromUser(UserPrincipal user, Role role, Project project) {
+    public List<Permission> getUserProjectPermissions(final String username, final String projectName) {
+        return getRoleQueryManager().getUserProjectPermissions(username, projectName);
+    }
+
+    public boolean removeRoleFromUser(final UserPrincipal user, final Role role, final Project project) {
         return getRoleQueryManager().removeRoleFromUser(user, role, project);
     }
 
