@@ -20,6 +20,7 @@ package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.commons.lang3.StringUtils;
+import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.persistence.jdbi.FindingDao;
 
@@ -90,13 +91,15 @@ public class Finding implements Serializable {
         addVulnerabilityAliases(findingRow.vulnAliasesJson());
 
         optValue(attribution, "analyzerIdentity", findingRow.analyzerIdentity());
-        optValue(attribution, "attributedOn", findingRow.attributed_on());
+        optValue(attribution, "attributedOn", Date.from(findingRow.attributed_on()));
         optValue(attribution, "alternateIdentifier", findingRow.alt_id());
         optValue(attribution, "referenceUrl", findingRow.reference_url());
 
         optValue(analysis, "state", findingRow.analysisState());
         optValue(analysis, "isSuppressed", findingRow.suppressed(), false);
-        optValue(vulnerability, "published", findingRow.vulnPublished());
+        if (findingRow.vulnPublished() != null) {
+            optValue(vulnerability, "published", Date.from(findingRow.vulnPublished()));
+        }
         optValue(component, "projectName", findingRow.projectName());
         optValue(component, "projectVersion", findingRow.projectVersion());
     }

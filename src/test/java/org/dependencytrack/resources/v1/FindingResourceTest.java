@@ -538,23 +538,23 @@ public class FindingResourceTest extends ResourceTest {
         JsonArray json = parseJsonArray(response);
         assertNotNull(json);
         assertEquals(5, json.size());
-        assertNotNull(json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(p1.getName() ,json.getJsonObject(0).getJsonObject("component").getString("projectName"));
         assertEquals(p1.getVersion() ,json.getJsonObject(0).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1.getUuid().toString(), json.getJsonObject(0).getJsonObject("component").getString("project"));
-        assertNotNull(json.getJsonObject(1).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(1).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(p1.getName() ,json.getJsonObject(1).getJsonObject("component").getString("projectName"));
         assertEquals(p1.getVersion() ,json.getJsonObject(1).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1.getUuid().toString(), json.getJsonObject(1).getJsonObject("component").getString("project"));
-        assertNotNull(json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(p1.getName() ,json.getJsonObject(2).getJsonObject("component").getString("projectName"));
         assertEquals(p1.getVersion() ,json.getJsonObject(2).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1.getUuid().toString(), json.getJsonObject(2).getJsonObject("component").getString("project"));
-        assertNotNull(json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(p1_child.getName() ,json.getJsonObject(3).getJsonObject("component").getString("projectName"));
         assertEquals(p1_child.getVersion() ,json.getJsonObject(3).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1_child.getUuid().toString(), json.getJsonObject(3).getJsonObject("component").getString("project"));
-        assertNotNull(json.getJsonObject(4).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(4).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(p2.getName() ,json.getJsonObject(4).getJsonObject("component").getString("projectName"));
         assertEquals(p2.getVersion() ,json.getJsonObject(4).getJsonObject("component").getString("projectVersion"));
         assertEquals(p2.getUuid().toString(), json.getJsonObject(4).getJsonObject("component").getString("project"));
@@ -602,21 +602,21 @@ public class FindingResourceTest extends ResourceTest {
         JsonArray json = parseJsonArray(response);
         assertNotNull(json);
         assertEquals(4, json.size());
-        assertNotNull(json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(p1.getName() ,json.getJsonObject(0).getJsonObject("component").getString("projectName"));
         assertEquals(p1.getVersion() ,json.getJsonObject(0).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1.getUuid().toString(), json.getJsonObject(0).getJsonObject("component").getString("project"));
-        assertNotNull(json.getJsonObject(1).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(1).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(p1.getName() ,json.getJsonObject(1).getJsonObject("component").getString("projectName"));
         assertEquals(p1.getVersion() ,json.getJsonObject(1).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1.getUuid().toString(), json.getJsonObject(1).getJsonObject("component").getString("project"));
-        assertNotNull(json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(p1.getName() ,json.getJsonObject(2).getJsonObject("component").getString("projectName"));
         assertEquals(p1.getVersion() ,json.getJsonObject(2).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1.getUuid().toString(), json.getJsonObject(2).getJsonObject("component").getString("project"));
 
         // Findings of p1_child are returned because team was given access to its parent project p1.
-        assertNotNull(json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(p1_child.getName(), json.getJsonObject(3).getJsonObject("component").getString("projectName"));
         assertEquals(p1_child.getVersion(), json.getJsonObject(3).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1_child.getUuid().toString(), json.getJsonObject(3).getJsonObject("component").getString("project"));
@@ -661,7 +661,7 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals("Vuln-1", json.getJsonObject(0).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.CRITICAL.name(), json.getJsonObject(0).getJsonObject("vulnerability").getString("severity"));
         assertEquals("NONE", json.getJsonObject(0).getJsonObject("attribution").getString("analyzerIdentity"));
-        assertNotNull(json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(2, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
         assertEquals(666, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
@@ -671,7 +671,7 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals("Vuln-2", json.getJsonObject(1).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.HIGH.name(), json.getJsonObject(1).getJsonObject("vulnerability").getString("severity"));
         assertEquals("NONE", json.getJsonObject(1).getJsonObject("attribution").getString("analyzerIdentity"));
-        assertNotNull(json.getJsonObject(1).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(1).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(2, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
         assertEquals(666, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
@@ -681,7 +681,7 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals("Vuln-3", json.getJsonObject(2).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.MEDIUM.name(), json.getJsonObject(2).getJsonObject("vulnerability").getString("severity"));
         assertEquals("NONE", json.getJsonObject(2).getJsonObject("attribution").getString("analyzerIdentity"));
-        assertNotNull(json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(2, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
         assertEquals(666, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
@@ -691,7 +691,7 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals("Vuln-4", json.getJsonObject(3).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.LOW.name(), json.getJsonObject(3).getJsonObject("vulnerability").getString("severity"));
         assertEquals("NONE", json.getJsonObject(3).getJsonObject("attribution").getString("analyzerIdentity"));
-        assertNotNull(json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(2, json.getJsonObject(3).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(3).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
         assertEquals(666, json.getJsonObject(3).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
@@ -746,7 +746,7 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals("Vuln-1", json.getJsonObject(0).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.CRITICAL.name(), json.getJsonObject(0).getJsonObject("vulnerability").getString("severity"));
         assertEquals("NONE", json.getJsonObject(0).getJsonObject("attribution").getString("analyzerIdentity"));
-        assertNotNull(json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(2, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
         assertEquals(666, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
@@ -756,7 +756,7 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals("Vuln-2", json.getJsonObject(1).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.HIGH.name(), json.getJsonObject(1).getJsonObject("vulnerability").getString("severity"));
         assertEquals("NONE", json.getJsonObject(1).getJsonObject("attribution").getString("analyzerIdentity"));
-        assertNotNull(json.getJsonObject(1).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(1).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(2, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
         assertEquals(666, json.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
@@ -766,7 +766,7 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals("Vuln-3", json.getJsonObject(2).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.MEDIUM.name(), json.getJsonObject(2).getJsonObject("vulnerability").getString("severity"));
         assertEquals("NONE", json.getJsonObject(2).getJsonObject("attribution").getString("analyzerIdentity"));
-        assertNotNull(json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(date.getTime(), json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
         assertEquals(2, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").size());
         assertEquals(80, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
         assertEquals(666, json.getJsonObject(2).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));

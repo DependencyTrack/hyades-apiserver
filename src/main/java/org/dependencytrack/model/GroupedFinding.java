@@ -19,6 +19,7 @@
 package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.persistence.jdbi.FindingDao;
 
 import java.io.Serializable;
@@ -48,7 +49,9 @@ public class GroupedFinding implements Serializable {
         optValue(vulnerability, "cvssV2BaseScore", row.cvssV2BaseScore());
         optValue(vulnerability, "cvssV3BaseScore", row.cvssV3BaseScore());
         optValue(attribution, "analyzerIdentity", row.analyzerIdentity());
-        optValue(vulnerability, "published", row.vulnPublished());
+        if (row.vulnPublished() != null) {
+            optValue(vulnerability, "published", Date.from(row.vulnPublished()));
+        }
         optValue(vulnerability, "cwes", row.cwes());
         optValue(vulnerability, "affectedProjectCount", row.affectedProjectCount());
     }
