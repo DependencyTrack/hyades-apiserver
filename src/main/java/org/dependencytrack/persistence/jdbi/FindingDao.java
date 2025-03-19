@@ -43,7 +43,6 @@ import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -294,8 +293,7 @@ public interface FindingDao {
      */
     default PaginatedResult getAllFindings(final AlpineRequest alpineRequest, final Map<String, String> filters, final boolean showSuppressed, final boolean showInactive) {
         StringBuilder queryFilter = new StringBuilder();
-        Map<String, Object> params = new HashMap<>();
-        processFilters(filters, queryFilter, params);
+        processFilters(filters, queryFilter);
         final List<FindingRow> findingRows = withJdbiHandle(handle ->
                 getAllFindings(String.valueOf(queryFilter), showInactive, showSuppressed));
         List<Finding> findings = findingRows.stream().map(Finding::new).toList();
@@ -353,6 +351,9 @@ public interface FindingDao {
                , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
                , "VULNERABILITY"."PUBLISHED"
                , "VULNERABILITY"."CWES"
+            <#if aggregateFilter??>
+                ${aggregateFilter}
+            </#if>
             <#if apiOrderByClause??>
               ${apiOrderByClause}
             </#if>
@@ -386,7 +387,7 @@ public interface FindingDao {
     @AllowUnusedBindings
     @DefineNamedBindings
     @RegisterConstructorMapper(GroupedFindingRow.class)
-    List<GroupedFindingRow> getGroupedFindings(@Define String queryFilter, @Define boolean activeFilter);
+    List<GroupedFindingRow> getGroupedFindings(@Define String queryFilter, @Define String aggregateFilter, @Define boolean activeFilter);
 
     /**
      * Returns a List of all Finding objects filtered by ACL and other optional filters. The resulting list is grouped by vulnerability.
@@ -397,13 +398,11 @@ public interface FindingDao {
      */
     default PaginatedResult getGroupedFindings(final AlpineRequest alpineRequest, final Map<String, String> filters, final boolean showInactive) {
         StringBuilder queryFilter = new StringBuilder();
-        Map<String, Object> params = new HashMap<>();
-        processFilters(filters, queryFilter, params);
+        processFilters(filters, queryFilter);
         StringBuilder aggregateFilter = new StringBuilder();
-        processAggregateFilters(filters, aggregateFilter, params);
-        queryFilter.append(aggregateFilter);
+        processAggregateFilters(filters, aggregateFilter);
         final List<GroupedFindingRow> findingRows = withJdbiHandle(alpineRequest, handle ->
-                getGroupedFindings(String.valueOf(queryFilter), showInactive));
+                getGroupedFindings(String.valueOf(queryFilter), String.valueOf(aggregateFilter), showInactive));
         List<GroupedFinding> findings = findingRows.stream().map(GroupedFinding::new).toList();
         PaginatedResult result = new PaginatedResult();
         result.setTotal(findings.size());
@@ -453,55 +452,61 @@ public interface FindingDao {
     }
 
 
-    private void processFilters(Map<String, String> filters, StringBuilder queryFilter, Map<String, Object> params) {
+    private void processFilters(Map<String, String> filters, StringBuilder queryFilter) {
         for (String filter : filters.keySet()) {
             switch (filter) {
                 case "severity" ->
-                        processArrayFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"SEVERITY\"");
+                        processArrayFilter(queryFilter, filter, filters.get(filter), "\"VULNERABILITY\".\"SEVERITY\"");
                 case "analysisStatus" ->
-                        processArrayFilter(queryFilter, params, filter, filters.get(filter), "\"ANALYSIS\".\"STATE\"");
+                        processArrayFilter(queryFilter, filter, filters.get(filter), "\"ANALYSIS\".\"STATE\"");
                 case "vendorResponse" ->
-                        processArrayFilter(queryFilter, params, filter, filters.get(filter), "\"ANALYSIS\".\"RESPONSE\"");
+                        processArrayFilter(queryFilter, filter, filters.get(filter), "\"ANALYSIS\".\"RESPONSE\"");
                 case "publishDateFrom" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"PUBLISHED\"", true, true, false);
+                        processRangeFilter(queryFilter, filters.get(filter), "\"VULNERABILITY\".\"PUBLISHED\"", true, true);
                 case "publishDateTo" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"PUBLISHED\"", false, true, false);
+                        processRangeFilter(queryFilter, filters.get(filter), "\"VULNERABILITY\".\"PUBLISHED\"", false, true);
                 case "attributedOnDateFrom" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"", true, true, false);
+                        processRangeFilter(queryFilter, filters.get(filter), "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"", true, true);
                 case "attributedOnDateTo" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"", false, true, false);
+                        processRangeFilter(queryFilter, filters.get(filter), "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"", false, true);
                 case "textSearchField" ->
-                        processInputFilter(queryFilter, params, filter, filters.get(filter), filters.get("textSearchInput"));
+                        processInputFilter(queryFilter, filters.get(filter), filters.get("textSearchInput"));
                 case "cvssv2From" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV2BASESCORE\"", true, false, false);
+                        processRangeFilter(queryFilter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV2BASESCORE\"", true, false);
                 case "cvssv2To" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV2BASESCORE\"", false, false, false);
+                        processRangeFilter(queryFilter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV2BASESCORE\"", false, false);
                 case "cvssv3From" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV3BASESCORE\"", true, false, false);
+                        processRangeFilter(queryFilter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV3BASESCORE\"", true, false);
                 case "cvssv3To" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV3BASESCORE\"", false, false, false);
+                        processRangeFilter(queryFilter, filters.get(filter), "\"VULNERABILITY\".\"CVSSV3BASESCORE\"", false, false);
             }
         }
     }
 
-    private void processAggregateFilters(Map<String, String> filters, StringBuilder queryFilter, Map<String, Object> params) {
+    private void processAggregateFilters(Map<String, String> filters, StringBuilder aggregateFilter) {
         for (String filter : filters.keySet()) {
             switch (filter) {
-                case "occurrencesFrom" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "COUNT(DISTINCT \"PROJECT\".\"ID\")", true, false, true);
-                case "occurrencesTo" ->
-                        processRangeFilter(queryFilter, params, filter, filters.get(filter), "COUNT(DISTINCT \"PROJECT\".\"ID\")", false, false, true);
+                case "occurrencesFrom" -> {
+                        aggregateFilter.append("HAVING COUNT(DISTINCT \"PROJECT\".\"ID\") >= ").append(filters.get(filter));
+                }
+                case "occurrencesTo" -> {
+                    if (aggregateFilter.isEmpty()) {
+                        aggregateFilter.append("HAVING ");
+                    } else {
+                        aggregateFilter.append(" AND ");
+                    }
+                    aggregateFilter.append("COUNT(DISTINCT \"PROJECT\".\"ID\") <= ").append(filters.get(filter));
+                }
             }
         }
     }
 
-    private void processArrayFilter(StringBuilder queryFilter, Map<String, Object> params, String paramName, String filter, String column) {
+    private void processArrayFilter(StringBuilder queryFilter, String paramName, String filter, String column) {
         if (filter != null && !filter.isEmpty()) {
             queryFilter.append(" AND (");
             String[] filters = filter.split(",");
             for (int i = 0, length = filters.length; i < length; i++) {
-                queryFilter.append(column).append(" = :").append(paramName).append(i);
-                params.put(paramName + i, filters[i].toUpperCase());
+                queryFilter.append(column).append(" = '").append(filters[i].toUpperCase()).append("'");
                 if (filters[i].equals("NOT_SET") && (paramName.equals("analysisStatus") || paramName.equals("vendorResponse"))) {
                     queryFilter.append(" OR ").append(column).append(" IS NULL");
                 }
@@ -513,30 +518,24 @@ public interface FindingDao {
         }
     }
 
-    private void processRangeFilter(StringBuilder queryFilter, Map<String, Object> params, String paramName, String filter, String column, boolean fromValue, boolean isDate, boolean isAggregateFilter) {
+    private void processRangeFilter(StringBuilder queryFilter, String filter, String column, boolean fromValue, boolean isDate) {
         if (filter != null && !filter.isEmpty()) {
             queryFilter.append(" AND (");
             String value = filter;
             if (DbUtil.isPostgreSQL()) {
                 queryFilter.append(column).append(fromValue ? " >= " : " <= ");
                 if (isDate) {
-                    queryFilter.append("TO_TIMESTAMP(:").append(paramName).append(", 'YYYY-MM-DD HH24:MI:SS')");
                     value += (fromValue ? " 00:00:00" : " 23:59:59");
+                    queryFilter.append("'").append(value).append("'");
                 } else {
-                    queryFilter.append("CAST(:").append(paramName).append(" AS NUMERIC)");
-                }
-            } else {
-                queryFilter.append(column).append(fromValue ? " >= :" : " <= :").append(paramName);
-                if (isDate) {
-                    value += (fromValue ? " 00:00:00" : " 23:59:59");
+                    queryFilter.append("'").append(value).append("'");
                 }
             }
-            params.put(paramName, value);
             queryFilter.append(")");
         }
     }
 
-    private void processInputFilter(StringBuilder queryFilter, Map<String, Object> params, String paramName, String filter, String input) {
+    private void processInputFilter(StringBuilder queryFilter, String filter, String input) {
         if (filter != null && !filter.isEmpty() && input != null && !input.isEmpty()) {
             queryFilter.append(" AND (");
             String[] filters = filter.split(",");
@@ -549,13 +548,10 @@ public interface FindingDao {
                     case "PROJECT_NAME" ->
                             queryFilter.append("concat(\"PROJECT\".\"NAME\", ' ', \"PROJECT\".\"VERSION\")");
                 }
-                queryFilter.append(" LIKE :").append(paramName);
+                queryFilter.append(" LIKE ").append("'%" + input + "%'");
                 if (i < length - 1) {
                     queryFilter.append(" OR ");
                 }
-            }
-            if (filters.length > 0) {
-                params.put(paramName, "%" + input + "%");
             }
             queryFilter.append(")");
         }
