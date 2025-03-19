@@ -485,17 +485,19 @@ public interface FindingDao {
 
     private void processAggregateFilters(Map<String, String> filters, StringBuilder aggregateFilter) {
         for (String filter : filters.keySet()) {
-            switch (filter) {
-                case "occurrencesFrom" -> {
+            if (filters.get(filter) != null) {
+                switch (filter) {
+                    case "occurrencesFrom" -> {
                         aggregateFilter.append("HAVING COUNT(DISTINCT \"PROJECT\".\"ID\") >= ").append(filters.get(filter));
-                }
-                case "occurrencesTo" -> {
-                    if (aggregateFilter.isEmpty()) {
-                        aggregateFilter.append("HAVING ");
-                    } else {
-                        aggregateFilter.append(" AND ");
                     }
-                    aggregateFilter.append("COUNT(DISTINCT \"PROJECT\".\"ID\") <= ").append(filters.get(filter));
+                    case "occurrencesTo" -> {
+                        if (aggregateFilter.isEmpty()) {
+                            aggregateFilter.append("HAVING ");
+                        } else {
+                            aggregateFilter.append(" AND ");
+                        }
+                        aggregateFilter.append("COUNT(DISTINCT \"PROJECT\".\"ID\") <= ").append(filters.get(filter));
+                    }
                 }
             }
         }
