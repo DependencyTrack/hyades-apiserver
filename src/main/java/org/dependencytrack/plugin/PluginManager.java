@@ -37,7 +37,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.SequencedMap;
 import java.util.ServiceLoader;
@@ -110,7 +109,20 @@ public class PluginManager {
     public <T extends ExtensionPoint> T getExtension(final Class<T> extensionPointClass) {
         final ExtensionFactory<?> factory = defaultFactoryByExtensionPointClass.get(extensionPointClass);
         if (factory == null) {
-            return null;
+            throw new NoSuchExtensionException(
+                    "No extension exists for the extension point " + extensionPointClass.getName());
+        }
+
+        return (T) factory.create();
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends ExtensionPoint> T getExtension(final Class<T> extensionPointClass, final String name) {
+        final var extensionIdentity = new ExtensionIdentity(extensionPointClass, name);
+        final ExtensionFactory<?> factory = factoryByExtensionIdentity.get(extensionIdentity);
+        if (factory == null) {
+            throw new NoSuchExtensionException("No extension named %s exists for the extension point %s".formatted(
+                    name, extensionPointClass.getName()));
         }
 
         return (T) factory.create();
@@ -120,7 +132,8 @@ public class PluginManager {
     public <T extends ExtensionPoint, U extends ExtensionFactory<T>> U getFactory(final Class<T> extensionPointClass) {
         final ExtensionFactory<?> factory = defaultFactoryByExtensionPointClass.get(extensionPointClass);
         if (factory == null) {
-            return null;
+            throw new NoSuchExtensionException(
+                    "No extension factory exists for the extension point " + extensionPointClass.getName());
         }
 
         return (U) factory;
@@ -339,7 +352,7 @@ public class PluginManager {
                     extensionFactory = factories.stream()
                             .filter(factory -> factory.extensionName().equals(defaultExtensionName.get()))
                             .findFirst()
-                            .orElseThrow(() -> new NoSuchElementException("""
+                            .orElseThrow(() -> new NoSuchExtensionException("""
                                     No extension named %s exists for extension point %s (%s)"""
                                     .formatted(defaultExtensionName.get(), MDC.get(MDC_EXTENSION_POINT_NAME), MDC.get(MDC_EXTENSION_POINT))));
                     LOGGER.debug("Using extension %s (%s) as default"
