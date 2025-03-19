@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.workflow.framework;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.framework.failure.CancellationFailureException;
 import org.dependencytrack.workflow.framework.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowPayload;
 
 import java.util.Optional;
 import java.util.function.Consumer;

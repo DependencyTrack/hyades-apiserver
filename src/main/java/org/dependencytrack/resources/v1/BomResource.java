@@ -58,13 +58,13 @@ import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.ScheduleWorkflowRunOptions;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.ProcessBomUploadArgs;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -494,7 +494,7 @@ public class BomResource extends AbstractApiResource {
                                         Map.entry("project", project.getUuid().toString()),
                                         Map.entry("initiator", getPrincipal().getName())))
                                 .withArgument(ProcessBomUploadArgs.newBuilder()
-                                                .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
+                                                .setProject(org.dependencytrack.workflow.payload.proto.v1alpha1.Project.newBuilder()
                                                         .setUuid(project.getUuid().toString())
                                                         .setName(project.getName())
                                                         .setVersion(project.getVersion())
@@ -547,7 +547,7 @@ public class BomResource extends AbstractApiResource {
                                             Map.entry("project", project.getUuid().toString()),
                                             Map.entry("initiator", getPrincipal().getName())))
                                     .withArgument(ProcessBomUploadArgs.newBuilder()
-                                                    .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
+                                                    .setProject(org.dependencytrack.workflow.payload.proto.v1alpha1.Project.newBuilder()
                                                             .setUuid(project.getUuid().toString())
                                                             .setName(project.getName())
                                                             .setVersion(project.getVersion())

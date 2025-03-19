@@ -20,13 +20,6 @@ package org.dependencytrack.workflow;
 
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResult;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzerStatuses;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.EvalProjectPoliciesArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessProjectVulnAnalysisResultsArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.workflow.framework.Awaitable;
@@ -35,6 +28,13 @@ import org.dependencytrack.workflow.framework.WorkflowContext;
 import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
 import org.dependencytrack.workflow.framework.failure.ActivityFailureException;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.AnalyzeProjectArgs;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.AnalyzeProjectVulnsArgs;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.AnalyzeProjectVulnsResult;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.AnalyzerStatuses;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.EvalProjectPoliciesArgs;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.ProcessProjectVulnAnalysisResultsArgs;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.UpdateProjectMetricsArgs;
 
 import java.util.ArrayList;
 import java.util.HashMap;

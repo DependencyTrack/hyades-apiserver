@@ -22,14 +22,14 @@ import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.analysis.vulnerability.VulnAnalyzer;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectVulnsResult;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityContext;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.AnalyzeProjectVulnsArgs;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.AnalyzeProjectVulnsResult;
 
 import java.time.Instant;
 import java.util.Collection;

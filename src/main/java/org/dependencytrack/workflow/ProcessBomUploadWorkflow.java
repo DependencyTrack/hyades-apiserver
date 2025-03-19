@@ -18,13 +18,13 @@
  */
 package org.dependencytrack.workflow;
 
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.IngestBomArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.ProcessBomUploadArgs;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.workflow.framework.WorkflowContext;
 import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.AnalyzeProjectArgs;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.IngestBomArgs;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.ProcessBomUploadArgs;
 
 import java.util.Optional;
 

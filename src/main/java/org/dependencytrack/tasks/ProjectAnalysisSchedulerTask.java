@@ -21,8 +21,8 @@ package org.dependencytrack.tasks;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.ScheduleProjectAnalysesEvent;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.workflow.framework.ScheduleWorkflowRunOptions;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.AnalyzeProjectArgs;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ public class ProjectAnalysisSchedulerTask implements Subscriber {
                         .withConcurrencyGroupId("analyze-project-" + project.uuid())
                         .withArgument(
                                 AnalyzeProjectArgs.newBuilder()
-                                        .setProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
+                                        .setProject(org.dependencytrack.workflow.payload.proto.v1alpha1.Project.newBuilder()
                                                 .setUuid(project.uuid().toString())
                                                 .setName(project.name())
                                                 .setVersion(project.version())

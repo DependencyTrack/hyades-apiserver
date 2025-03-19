@@ -19,8 +19,8 @@
 package org.dependencytrack.workflow.framework.payload;
 
 import com.google.protobuf.ByteString;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload.BinaryContent;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowPayload.BinaryContent;
 
 public class StringPayloadConverter implements PayloadConverter<String> {
 

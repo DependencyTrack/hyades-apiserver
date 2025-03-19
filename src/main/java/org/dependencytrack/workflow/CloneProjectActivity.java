@@ -20,13 +20,13 @@ package org.dependencytrack.workflow;
 
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.CloneProjectArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.CloneProjectResult;
 import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityContext;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.failure.ApplicationFailureException;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.CloneProjectArgs;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.CloneProjectResult;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -62,7 +62,7 @@ public class CloneProjectActivity implements ActivityExecutor<CloneProjectArgs, 
         }
 
         final var cloneResult = CloneProjectResult.newBuilder()
-                .setClonedProject(org.dependencytrack.proto.workflow.payload.v1alpha1.Project.newBuilder()
+                .setClonedProject(org.dependencytrack.workflow.payload.proto.v1alpha1.Project.newBuilder()
                         .setUuid(clonedProject.getUuid().toString())
                         .setName(clonedProject.getName())
                         .setVersion(clonedProject.getVersion()))

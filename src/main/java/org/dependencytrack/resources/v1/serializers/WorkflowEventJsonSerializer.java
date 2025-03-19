@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.google.protobuf.util.JsonFormat;
 import org.dependencytrack.proto.storage.v1alpha1.Storage;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.Payload;
-import org.dependencytrack.proto.workflow.v1alpha1.Workflow;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.Workflow;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowEvent;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.Payload;
 
 import java.io.IOException;
 

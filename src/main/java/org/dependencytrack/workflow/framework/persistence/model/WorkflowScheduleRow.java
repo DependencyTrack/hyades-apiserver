@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.framework.persistence.model;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowPayload;
 
 import jakarta.annotation.Nullable;
 import java.time.Instant;

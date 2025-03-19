@@ -19,8 +19,6 @@
 package org.dependencytrack.workflow.framework.persistence;
 
 import alpine.persistence.OrderDirection;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.framework.WorkflowRunStatus;
 import org.dependencytrack.workflow.framework.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.framework.persistence.model.DeleteInboxEventsCommand;
@@ -40,6 +38,8 @@ import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunListR
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunRowUpdate;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowScheduleRow;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowEvent;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowPayload;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;

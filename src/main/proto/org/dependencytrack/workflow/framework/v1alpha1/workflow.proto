@@ -1,12 +1,12 @@
 syntax = "proto3";
 
-package org.dependencytrack.workflow.v1alpha1;
+package org.dependencytrack.workflow.framework.v1alpha1;
 
 import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
 
 option java_multiple_files = true;
-option java_package = "org.dependencytrack.proto.workflow.v1alpha1";
+option java_package = "org.dependencytrack.workflow.framework.proto.v1alpha1";
 
 message WorkflowFailure {
   optional string message = 1;

@@ -19,12 +19,12 @@
 package org.dependencytrack.workflow.framework.failure;
 
 import com.google.protobuf.DebugFormat;
-import org.dependencytrack.proto.workflow.v1alpha1.ActivityFailureDetails;
-import org.dependencytrack.proto.workflow.v1alpha1.ApplicationFailureDetails;
-import org.dependencytrack.proto.workflow.v1alpha1.CancellationFailureDetails;
-import org.dependencytrack.proto.workflow.v1alpha1.SideEffectFailureDetails;
-import org.dependencytrack.proto.workflow.v1alpha1.SubWorkflowFailureDetails;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowFailure;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.ActivityFailureDetails;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.ApplicationFailureDetails;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.CancellationFailureDetails;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.SideEffectFailureDetails;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.SubWorkflowFailureDetails;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowFailure;
 
 import java.util.ArrayList;
 import java.util.Collections;

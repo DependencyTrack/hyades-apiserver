@@ -19,14 +19,14 @@
 package org.dependencytrack.workflow;
 
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationActivityArgs;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.PublishNotificationWorkflowArgs;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.workflow.framework.Awaitable;
 import org.dependencytrack.workflow.framework.WorkflowContext;
 import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
 import org.dependencytrack.workflow.framework.failure.ActivityFailureException;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.PublishNotificationActivityArgs;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.PublishNotificationWorkflowArgs;
 
 import java.io.IOException;
 import java.util.HashMap;

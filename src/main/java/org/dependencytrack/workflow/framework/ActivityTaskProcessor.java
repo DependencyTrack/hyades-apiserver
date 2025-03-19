@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.workflow.framework;
 
-import org.dependencytrack.proto.workflow.v1alpha1.ActivityTaskCompleted;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowPayload;
 import org.dependencytrack.workflow.framework.ActivityRegistry.RegisteredActivity;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
 import org.dependencytrack.workflow.framework.persistence.model.PollActivityTaskCommand;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.ActivityTaskCompleted;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;

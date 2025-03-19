@@ -3,7 +3,7 @@ syntax = "proto3";
 package org.dependencytrack.workflow.payload.v1alpha1;
 
 option java_multiple_files = true;
-option java_package = "org.dependencytrack.proto.workflow.payload.v1alpha1";
+option java_package = "org.dependencytrack.workflow.payload.proto.v1alpha1";
 
 import "org/cyclonedx/v1_6/cyclonedx.proto";
 import "org/dependencytrack/storage/v1alpha1/storage.proto";

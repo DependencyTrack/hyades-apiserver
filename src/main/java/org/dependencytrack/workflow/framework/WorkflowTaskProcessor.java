@@ -19,11 +19,11 @@
 package org.dependencytrack.workflow.framework;
 
 import com.google.protobuf.util.Timestamps;
-import org.dependencytrack.proto.workflow.v1alpha1.ExecutionCompleted;
-import org.dependencytrack.proto.workflow.v1alpha1.ExecutionStarted;
-import org.dependencytrack.proto.workflow.v1alpha1.RunStarted;
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.ExecutionCompleted;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.ExecutionStarted;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.RunStarted;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;

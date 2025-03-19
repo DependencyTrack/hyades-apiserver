@@ -27,11 +27,11 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.workflow.payload.v1alpha1.UpdateProjectMetricsArgs;
 import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityContext;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
+import org.dependencytrack.workflow.payload.proto.v1alpha1.UpdateProjectMetricsArgs;
 import org.slf4j.MDC;
 
 import java.time.Duration;

@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.framework.persistence.mapping;
 
-import org.dependencytrack.proto.workflow.v1alpha1.WorkflowEvent;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEventRow;
+import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowEvent;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
