@@ -539,8 +539,8 @@ public class QueryManager extends AlpineQueryManager {
      */
     protected Set<Long> getTeamIds(final Principal principal) {
         return switch (principal) {
-            case UserPrincipal userPrincipal -> Set.of(userPrincipal.getTeams().toArray(Long[]::new));
-            case ApiKey apiKey -> Set.of(apiKey.getTeams().toArray(Long[]::new));
+            case UserPrincipal user -> Set.copyOf(user.getTeams().stream().map(Team::getId).toList());
+            case ApiKey apiKey -> Set.copyOf(apiKey.getTeams().stream().map(Team::getId).toList());
             default -> Collections.emptySet();
         };
     }
