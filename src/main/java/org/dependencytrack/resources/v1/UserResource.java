@@ -33,6 +33,7 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.notification.v1.UserSubject;
+import org.dependencytrack.resources.v1.vo.RoleProjectRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
 import alpine.Config;
@@ -74,7 +75,6 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -844,31 +844,18 @@ public class UserResource extends AlpineResource {
             @ApiResponse(
                     responseCode = "200",
                     description = "Updated user with a specific role removed",
-                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))
-            ),
+                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
             @ApiResponse(responseCode = "204", description = "The role has been successfully removed from the user"),
             @ApiResponse(responseCode = "304", description = "The user is not a member of the specified role"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or role could not be found")
-})
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response removeRoleFromUser(
-            @Parameter(description = "A valid username", required = true)
-            @PathParam("username")
-            String username,
-
-            @Parameter(description = "The UUID of the role to associate username with", required = true)
-            IdentifiableObject identifiableObject,
-
-            @Parameter(description = "The name of the project", required = true)
-            @QueryParam("projectName")
-            String projectName,
-
-            @Parameter(description = "The version of the project")
-            @QueryParam("projectVersion")
-            String projectVersion) {
+            @Parameter(description = "A valid username", required = true) @PathParam("username") String username,
+            @Parameter(description = "Role and project information", required = true) RoleProjectRequest roleProjectRequest) {
         try (QueryManager qm = new QueryManager()) {
-            final Role role = qm.getObjectByUuid(Role.class, identifiableObject.getUuid());
+            final Role role = qm.getObjectByUuid(Role.class, roleProjectRequest.getRoleUUID());
             if (role == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
 
@@ -876,7 +863,7 @@ public class UserResource extends AlpineResource {
             if (principal == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
 
-            Project project = qm.getProject(projectName, projectVersion);
+            Project project = qm.getProject(roleProjectRequest.getProjectUUID());
             if (project == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
 
@@ -887,7 +874,7 @@ public class UserResource extends AlpineResource {
             principal = qm.getObjectById(principal.getClass(), principal.getId());
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
                     "Removed role membership for: %s / role: %s / project: %s"
-                            .formatted(principal.getName(), role.getName(), projectName));
+                            .formatted(principal.getName(), role.getName(), project.getName()));
 
             return Response.noContent().build();
         }

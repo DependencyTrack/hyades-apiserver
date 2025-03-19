@@ -48,12 +48,17 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.model.Role;
+import org.dependencytrack.model.ProjectRole;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.RoleDao;
 import org.jdbi.v3.core.Handle;
 import org.owasp.security.logging.SecurityMarkers;
 
+import alpine.model.UserPrincipal;
+
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+
+import java.util.List;
 
 /**
  * JAX-RS resources for processing roles.
@@ -205,4 +210,37 @@ public class RoleResource extends AlpineResource {
         }
     }
 
+    @GET
+    @Path("/{username}/roles")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a list of roles assigned to the specified user",
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of roles assigned to the user",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProjectRole.class)))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The user could not be found")
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
+    public Response getUserRoles(
+            @Parameter(description = "A valid username", required = true) @PathParam("username") String username) {
+        try (QueryManager qm = new QueryManager()) {
+            UserPrincipal principal = qm.getUserPrincipal(username);
+            if (principal == null) {
+                LOGGER.warn("User not found: " + username);
+                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+            }
+
+            List<? extends ProjectRole> roles = qm.getUserRoles(principal);
+            if (roles == null || roles.isEmpty()) {
+                LOGGER.info("No roles found for user: " + username);
+                return Response.ok(List.of()).build();
+            }
+            
+            return Response.ok(roles).build();
+        }
+    }
 }

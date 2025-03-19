@@ -74,12 +74,19 @@ public interface RoleDao {
             """)
     @DefineNamedBindings
     <T extends UserPrincipal> int removeRoleFromUser(@Define T user, @Define Project project, @Bind long roleId);
+    // (@Bind long userId, @Bind String projectName, @Bind long roleId)
 
     @SqlQuery(/* language=sql */ """
             <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
             <#assign prefix = user.getClass().getSimpleName()?upper_case>
-            SELECT "PROJECT"."ID" AS "PROJECT_ID",
-                   "ROLE"."ID" AS "ROLE_ID"
+            SELECT
+                "PROJECT"."ID"   AS "PROJECT_ID",
+                "PROJECT"."NAME" AS "PROJECT_NAME",
+                "PROJECT"."UUID" AS "PROJECT_UUID",
+                "ROLE"."ID"      AS "ROLE_ID",
+                "ROLE"."NAME"    AS "ROLE_NAME",
+                "ROLE"."UUID"    AS "ROLE_UUID",
+                "${prefix}"."ID" AS "${prefix}_ID"
               FROM "PROJECT"
              INNER JOIN "${prefix}S_PROJECTS_ROLES"
                 ON "${prefix}S_PROJECTS_ROLES"."PROJECT_ID" = "PROJECT"."ID"
@@ -87,8 +94,7 @@ public interface RoleDao {
                 ON "${prefix}"."ID" = "${prefix}S_PROJECTS_ROLES"."${prefix}_ID"
              INNER JOIN "ROLE"
                 ON "ROLE"."ID" = "${prefix}S_PROJECTS_ROLES"."ROLE_ID"
-             WHERE "${prefix}"."USERNAME" != '${user.getUsername()}'
-                OR "${prefix}"."USERNAME" IS NULL
+             WHERE "${prefix}"."USERNAME" = '${user.getUsername()}'
             """)
     @RegisterRowMapper(ProjectRoleRowMapper.class)
     @DefineNamedBindings
