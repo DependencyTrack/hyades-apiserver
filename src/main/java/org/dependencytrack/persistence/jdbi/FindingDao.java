@@ -38,6 +38,7 @@ import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
+import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
 import java.math.BigDecimal;
@@ -277,6 +278,7 @@ public interface FindingDao {
             @AllowApiOrdering.Column(name = "analysis.isSuppressed", queryName = "\"ANALYSIS\".\"SUPPRESSED\""),
             @AllowApiOrdering.Column(name = "attribution.attributedOn", queryName = "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"")
     })
+    @DefineNamedBindings
     @AllowUnusedBindings
     @RegisterConstructorMapper(FindingRow.class)
     List<FindingRow> getAllFindings(@Define String queryFilter,
@@ -379,9 +381,10 @@ public interface FindingDao {
             @AllowApiOrdering.Column(name = "vulnerability.cvssV2BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV2BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "\"VULNERABILITY\".\"PUBLISHED\""),
             @AllowApiOrdering.Column(name = "attribution.analyzerIdentity", queryName = "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\""),
-            @AllowApiOrdering.Column(name = "vulnerability.affectedProjectCount", queryName = "affectedProjectCount")
+            @AllowApiOrdering.Column(name = "vulnerability.affectedProjectCount", queryName = "COUNT(DISTINCT \"PROJECT\".\"ID\")")
     })
     @AllowUnusedBindings
+    @DefineNamedBindings
     @RegisterConstructorMapper(GroupedFindingRow.class)
     List<GroupedFindingRow> getGroupedFindings(@Define String queryFilter, @Define boolean activeFilter);
 
