@@ -823,5 +823,30 @@
         <createIndex indexName="OIDCUSERS_PROJECTS_ROLES_ROLE_ID_IDX" tableName="OIDCUSERS_PROJECTS_ROLES">
             <column name="ROLE_ID" />
         </createIndex>
+
+        <createView viewName="USER_PROJECT_EFFECTIVE_PERMISSIONS" replaceIfExists="true">
+            SELECT
+                lpr."LDAPUSER_ID"    AS "LDAPUSER_ID",
+                mpr."MANAGEDUSER_ID" AS "MANAGEDUSER_ID",
+                opr."OIDCUSER_ID"    AS "OIDCUSER_ID",
+                pr."ID"              AS "PROJECT_ID",
+                p."ID"               AS "PERMISSION_ID",
+                p."NAME"             AS "PERMISSION_NAME"
+              FROM "PERMISSION" p
+             INNER JOIN "ROLES_PERMISSIONS" rp
+                ON rp."PERMISSION_ID" = p."ID"
+              FULL OUTER JOIN "LDAPUSERS_PROJECTS_ROLES" lpr
+                ON lpr."ROLE_ID" = rp."ROLE_ID"
+              FULL OUTER JOIN "MANAGEDUSERS_PROJECTS_ROLES" mpr
+                ON lpr."PROJECT_ID" = mpr."PROJECT_ID"
+               AND lpr."ROLE_ID" = mpr."ROLE_ID"
+              FULL OUTER JOIN "OIDCUSERS_PROJECTS_ROLES" opr
+                ON mpr."PROJECT_ID" = opr."PROJECT_ID"
+               AND mpr."ROLE_ID" = opr."ROLE_ID"
+             INNER JOIN "PROJECT" pr
+                ON lpr."PROJECT_ID" = pr."ID"
+                OR mpr."PROJECT_ID" = pr."ID"
+                OR opr."PROJECT_ID" = pr."ID"
+        </createView>
     </changeSet>
 </databaseChangeLog>

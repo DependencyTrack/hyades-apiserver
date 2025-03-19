@@ -21,6 +21,7 @@ package org.dependencytrack.persistence;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -32,11 +33,28 @@ import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.persistence.jdbi.RoleDao;
 
 import alpine.common.logging.Logger;
+import alpine.model.LdapUser;
+import alpine.model.ManagedUser;
+import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.UserPrincipal;
 import alpine.resources.AlpineRequest;
 
 final class RoleQueryManager extends QueryManager implements IQueryManager {
+
+    /**
+     * Represents a row returned by the USER_PROJECT_EFFECTIVE_PERMISSIONS view.
+     *
+     * @since 5.6.0
+     */
+    public record UserProjectEffectivePermissionsRow(
+            Long ldapUserId,
+            Long managedUserId,
+            Long oidcUserId,
+            Long projectId,
+            Long permissionId,
+            String permissionName) {
+    }
 
     private static final Logger LOGGER = Logger.getLogger(RoleQueryManager.class);
 
@@ -49,8 +67,8 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public Role createRole(final String name, final String description, final List<Permission> permissions) {
-        Role role = new Role();
+    public Role createRole(final String name, final List<Permission> permissions) {
+        final Role role = new Role();
         role.setName(name);
         role.setDescription(description);
         role.setPermissions(permissions);
@@ -68,15 +86,15 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public Role getRole(String uuid) {
+    public Role getRole(final String uuid) {
         final Query<Role> query = pm.newQuery(Role.class, "uuid == :uuid");
 
         return query.executeUnique();
     }
 
     @Override
-    public List<? extends ProjectRole> getUserRoles(UserPrincipal user) {
-        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).getUserRoles(user));
+    public List<? extends ProjectRole> getUserRoles(final UserPrincipal user) {
+        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).getUserRoles(user.getUsername()));
     }
 
     public List<Project> getUnassignedProjects(final String username) {
@@ -88,13 +106,13 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     public List<Permission> getUnassignedRolePermissions(final Role role) {
-        List<Permission> permissions = new ArrayList<>();
+        final List<Permission> permissions = new ArrayList<>();
 
-        var permissionNames = role.getPermissions().stream()
+        final var permissionNames = role.getPermissions().stream()
                 .map(Permission::getName)
                 .toList();
 
-        Query<Permission> query = pm.newQuery(Permission.class)
+        final Query<Permission> query = pm.newQuery(Permission.class)
                 .filter("!:permissionNames.contains(name)")
                 .setNamedParameters(Map.of("permissionNames", permissionNames));
 
@@ -104,7 +122,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public Role updateRole(Role transientRole) {
+    public Role updateRole(final Role transientRole) {
         final Role role = getObjectByUuid(Role.class, transientRole.getUuid());
         if (role == null)
             return null;
@@ -116,16 +134,65 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public boolean addRoleToUser(UserPrincipal user, Role role, Project project) {
+    public List<Permission> getUserProjectPermissions(final String username, final String projectName) {
+        final UserPrincipal user = getUserPrincipal(username);
+        final String columnName;
+
+        switch (user) {
+            case LdapUser ldapUser -> columnName = "LDAPUSER_ID";
+            case ManagedUser managedUser -> columnName = "MANAGEDUSER_ID";
+            case OidcUser oidcUser -> columnName = "OIDCUSER_ID";
+            default -> {
+                return null;
+            }
+        };
+
+        final Query<Project> projectsQuery = pm.newQuery(Project.class)
+                .filter("name == :projectName")
+                .setNamedParameters(Map.of("projectName", projectName));
+
+        final String projectIds = executeAndCloseList(projectsQuery).stream()
+                .map(Project::getId)
+                .map(String::valueOf)
+                .collect(Collectors.joining(", ", "'{", "}'"));
+
+        // language=SQL
+        final var queryString = """
+                SELECT
+                    upep."LDAPUSER_ID",
+                    upep."MANAGEDUSER_ID",
+                    upep."OIDCUSER_ID",
+                    upep."PROJECT_ID",
+                    upep."PERMISSION_ID",
+                    upep."PERMISSION_NAME"
+                  FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" upep
+                 WHERE upep."%s" = :userId
+                   AND upep."PROJECT_ID" = ANY(%s)
+                """.formatted(columnName, projectIds);
+
+        final Query<?> query = pm.newQuery(Query.SQL, queryString);
+        query.setNamedParameters(Map.of(
+                "userId", user.getId(),
+                "projectIds", projectIds));
+
+        return executeAndCloseResultList(query, UserProjectEffectivePermissionsRow.class)
+                .stream()
+                .map(UserProjectEffectivePermissionsRow::permissionName)
+                .map(this::getPermission)
+                .distinct()
+                .toList();
+    }
+
+    @Override
+    public boolean addRoleToUser(final UserPrincipal user, final Role role, final Project project) {
         return JdbiFactory.withJdbiHandle(
                 handle -> handle.attach(RoleDao.class).addRoleToUser(user, project.getId(), role.getId())) == 1;
     }
 
     @Override
-    public boolean removeRoleFromUser(UserPrincipal user, Role role, Project project) {
+    public boolean removeRoleFromUser(final UserPrincipal user, final Role role, final Project project) {
         return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).removeRoleFromUser(user,
                 project, role.getId())) > 0;
-
     }
 
 }
