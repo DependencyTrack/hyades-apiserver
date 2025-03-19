@@ -25,10 +25,12 @@ import org.dependencytrack.persistence.jdbi.FindingDao;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -85,9 +87,7 @@ public class Finding implements Serializable {
         optValue(vulnerability, "epssScore", findingRow.epssScore());
         optValue(vulnerability, "epssPercentile", findingRow.epssPercentile());
         optValue(vulnerability, "cwes", findingRow.cwes());
-        optValue(vulnerability, "aliases", findingRow.vulnAliasesJson() == null
-                ? Collections.EMPTY_LIST
-                : findingRow.vulnAliasesJson());
+        addVulnerabilityAliases(findingRow.vulnAliasesJson());
 
         optValue(attribution, "analyzerIdentity", findingRow.analyzerIdentity());
         optValue(attribution, "attributedOn", findingRow.attributed_on());
@@ -156,5 +156,34 @@ public class Finding implements Serializable {
 
     public String getMatrix() {
         return project.toString() + ":" + component.get("uuid") + ":" + vulnerability.get("uuid");
+    }
+
+    public void addVulnerabilityAliases(List<VulnerabilityAlias> aliases) {
+        final Set<Map<String, String>> uniqueAliases = new HashSet<>();
+        if (aliases != null) {
+            for (final VulnerabilityAlias alias : aliases) {
+                Map<String, String> map = new HashMap<>();
+                if (alias.getCveId() != null && !alias.getCveId().isBlank()) {
+                    map.put("cveId", alias.getCveId());
+                }
+                if (alias.getGhsaId() != null && !alias.getGhsaId().isBlank()) {
+                    map.put("ghsaId", alias.getGhsaId());
+                }
+                if (alias.getSonatypeId() != null && !alias.getSonatypeId().isBlank()) {
+                    map.put("sonatypeId", alias.getSonatypeId());
+                }
+                if (alias.getOsvId() != null && !alias.getOsvId().isBlank()) {
+                    map.put("osvId", alias.getOsvId());
+                }
+                if (alias.getSnykId() != null && !alias.getSnykId().isBlank()) {
+                    map.put("snykId", alias.getSnykId());
+                }
+                if (alias.getVulnDbId() != null && !alias.getVulnDbId().isBlank()) {
+                    map.put("vulnDbId", alias.getVulnDbId());
+                }
+                uniqueAliases.add(map);
+            }
+        }
+        vulnerability.put("aliases",uniqueAliases);
     }
 }

@@ -136,10 +136,10 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         JSONArray aliases_2 = findings.getJSONObject(1).getJSONObject("vulnerability").getJSONArray("aliases");
         assertFalse(aliases_2.isEmpty());
         assertEquals(2, aliases_2.length());
-        assertEquals("someCveId", aliases_2.getJSONObject(0).getString("cveId"));
-        assertEquals("someOsvId", aliases_2.getJSONObject(0).getString("osvId"));
-        assertEquals("anotherCveId", aliases_2.getJSONObject(1).getString("cveId"));
-        assertEquals("anotherGhsaId", aliases_2.getJSONObject(1).getString("ghsaId"));
+        assertEquals("anotherCveId", aliases_2.getJSONObject(0).getString("cveId"));
+        assertEquals("anotherGhsaId", aliases_2.getJSONObject(0).getString("ghsaId"));
+        assertEquals("someCveId", aliases_2.getJSONObject(1).getString("cveId"));
+        assertEquals("someOsvId", aliases_2.getJSONObject(1).getString("osvId"));
 
         // negative test to see if technical id is not included
         assertFalse(aliases_2.getJSONObject(0).has("id"));
