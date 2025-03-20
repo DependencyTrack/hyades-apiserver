@@ -1374,7 +1374,6 @@ public class ProjectResourceTest extends ResourceTest {
                               "inactiveSince": "${json-unit.any-number}"
                             }
                           ],
-                          "properties": [],
                           "tags": [],
                           "isLatest": false,
                           "active":true,
@@ -2049,7 +2048,6 @@ public class ProjectResourceTest extends ResourceTest {
                             "version": "3.0",
                             "uuid": "${json-unit.matches:parentProjectUuid}"
                           },
-                          "properties": [],
                           "tags": [],
                           "isLatest": false,
                           "active": true
@@ -2236,7 +2234,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "description": "Test project",
                           "version": "1.0",
                           "uuid": "${json-unit.matches:projectUuid}",
-                          "properties": [],
                           "tags": [
                             {
                               "name": "tag4"
@@ -2868,7 +2865,6 @@ public class ProjectResourceTest extends ResourceTest {
                       "active": true
                     }
                   ],
-                  "properties": [],
                   "tags": [],
                   "isLatest": false,
                   "active": true,
@@ -2899,7 +2895,6 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}"
                   },
                   "children": [],
-                  "properties": [],
                   "tags": [],
                   "isLatest": false,
                   "active": true,
@@ -3348,7 +3343,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "name": "acme-app",
                           "classifier": "APPLICATION",
                           "children": [],
-                          "properties": [],
                           "tags": [],
                           "active": true,
                           "isLatest": false
@@ -3394,7 +3388,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "name": "acme-app",
                           "classifier": "APPLICATION",
                           "children": [],
-                          "properties": [],
                           "tags": [],
                           "isLatest":false,
                           "active": true
@@ -3435,7 +3428,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "name": "acme-app",
                           "classifier": "APPLICATION",
                           "children": [],
-                          "properties": [],
                           "tags": [],
                           "isLatest":false,
                           "active":true
@@ -3517,7 +3509,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "name": "acme-app",
                           "classifier": "APPLICATION",
                           "children": [],
-                          "properties": [],
                           "tags": [],
                           "isLatest":false,
                           "active":true
@@ -3627,7 +3618,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "name": "acme-app",
                           "classifier": "APPLICATION",
                           "children": [],
-                          "properties": [],
                           "tags": [],
                           "isLatest":false,
                           "active":true
@@ -3662,7 +3652,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "uuid": "${json-unit.any-string}",
                           "name": "ABC-Updated",
                           "children": [],
-                          "properties": [],
                           "tags": [],
                           "inactiveSince": "${json-unit.any-number}",
                           "isLatest":false,
@@ -3694,7 +3683,6 @@ public class ProjectResourceTest extends ResourceTest {
                         {
                           "uuid": "${json-unit.any-string}",
                           "name": "ABC-Updated",
-                          "properties": [],
                           "tags": [],
                           "isLatest":false,
                           "active": true
@@ -3727,7 +3715,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "name": "ABC-Updated",
                           "classifier":"APPLICATION",
                           "children": [],
-                          "properties": [],
                           "tags": [],
                           "inactiveSince": "${json-unit.any-number}",
                           "isLatest":false,
@@ -3760,7 +3747,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "uuid": "${json-unit.any-string}",
                           "name": "ABC-Updated",
                           "classifier":"APPLICATION",
-                          "properties": [],
                           "tags": [],
                           "isLatest":false,
                           "active": true
