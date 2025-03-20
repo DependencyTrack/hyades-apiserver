@@ -88,6 +88,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -1757,7 +1758,7 @@ public class BomResourceTest extends ResourceTest {
         accessLatestProject.setName("acme-app-a");
         accessLatestProject.setVersion("1.0.0");
         accessLatestProject.setIsLatest(true);
-        accessLatestProject.setAccessTeams(List.of(team));
+        accessLatestProject.setAccessTeams(Set.of(team));
         qm.persist(accessLatestProject);
 
         String bomString = Base64.getEncoder().encodeToString(resourceToByteArray("/unit/bom-1.xml"));

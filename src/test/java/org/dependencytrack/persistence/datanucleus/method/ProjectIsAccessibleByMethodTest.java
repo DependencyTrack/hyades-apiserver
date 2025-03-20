@@ -28,6 +28,7 @@ import javax.jdo.Query;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -47,7 +48,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
         final var project = new Project();
         project.setName("acme-app");
-        project.setAccessTeams(List.of(teamA, teamB));
+        project.setAccessTeams(Set.of(teamA, teamB));
         qm.persist(project);
 
         final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
@@ -67,7 +68,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
         final var parentProject = new Project();
         parentProject.setName("acme-app-parent");
-        parentProject.setAccessTeams(List.of(team));
+        parentProject.setAccessTeams(Set.of(team));
         qm.persist(parentProject);
 
         final var project = new Project();
@@ -92,7 +93,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
         final var grandParentProject = new Project();
         grandParentProject.setName("acme-app-grand-parent");
-        grandParentProject.setAccessTeams(List.of(team));
+        grandParentProject.setAccessTeams(Set.of(team));
         qm.persist(grandParentProject);
 
         final var parentProject = new Project();
@@ -126,7 +127,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
         final var project = new Project();
         project.setName("acme-app");
-        project.setAccessTeams(List.of(teamA));
+        project.setAccessTeams(Set.of(teamA));
         qm.persist(project);
 
         final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
@@ -151,7 +152,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
         final var project = new Project();
         project.setParent(parentProject);
         project.setName("acme-app");
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
 
         final Query<Project> query = qm.getPersistenceManager().newQuery(Project.class);
@@ -171,7 +172,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
 
         final var project = new Project();
         project.setName("acme-app");
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
 
         final var component = new Component();
