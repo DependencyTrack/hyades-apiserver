@@ -54,6 +54,12 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.persistence.jdbi.RoleDao;
+import org.jdbi.v3.core.Handle;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+
+import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
