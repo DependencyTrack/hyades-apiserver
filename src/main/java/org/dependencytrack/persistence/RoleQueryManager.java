@@ -93,7 +93,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public List<? extends ProjectRole> getUserRoles(final UserPrincipal user) {
-        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).getUserRoles(user.getUsername()));
+        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).getUserRoles(user));
     }
 
     public List<Project> getUnassignedProjects(final String username) {

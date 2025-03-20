@@ -823,7 +823,6 @@ public class UserResource extends AlpineResource {
             if (!modified)
                 return Response.notModified().entity("The user is already a member of the specified role.").build();
 
-            principal = qm.getObjectById(principal.getClass(), principal.getId());
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
                     "Added role membership for: %s / role: %s / project: %s"
                             .formatted(principal.getName(), role.getName(), project.getName()));
