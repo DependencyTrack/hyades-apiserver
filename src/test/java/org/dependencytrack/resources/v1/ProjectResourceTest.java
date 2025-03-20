@@ -84,6 +84,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -145,7 +146,7 @@ public class ProjectResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
         // Create project and give access to current principal's team.
         final Project accessProject = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
-        accessProject.setAccessTeams(List.of(team));
+        accessProject.setAccessTeams(Set.of(team));
         qm.persist(accessProject);
 
         // Create a second project that the current principal has no access to.
@@ -2377,7 +2378,7 @@ public class ProjectResourceTest extends ResourceTest {
         project.setVersion("1.0.0");
         project.setManufacturer(projectManufacturer);
         project.setSupplier(projectSupplier);
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
 
         final ProjectProperty projectProperty = qm.createProjectProperty(project, "group", "name", "value", PropertyType.STRING, "description");
@@ -2628,7 +2629,7 @@ public class ProjectResourceTest extends ResourceTest {
         final var accessProject = new Project();
         accessProject.setName("acme-app-a");
         accessProject.setVersion("1.0.0");
-        accessProject.setAccessTeams(List.of(team));
+        accessProject.setAccessTeams(Set.of(team));
         qm.persist(accessProject);
 
         final var noAccessProject = new Project();
@@ -2956,7 +2957,7 @@ public class ProjectResourceTest extends ResourceTest {
         accessProject.setName("acme-app-a");
         accessProject.setVersion("1.0.0");
         accessProject.setIsLatest(true);
-        accessProject.setAccessTeams(List.of(team));
+        accessProject.setAccessTeams(Set.of(team));
         qm.persist(accessProject);
 
         final var noAccessProject = new Project();
@@ -3055,14 +3056,14 @@ public class ProjectResourceTest extends ResourceTest {
         accessLatestProject.setName("acme-app-a");
         accessLatestProject.setVersion("1.0.0");
         accessLatestProject.setIsLatest(true);
-        accessLatestProject.setAccessTeams(List.of(team));
+        accessLatestProject.setAccessTeams(Set.of(team));
         qm.persist(accessLatestProject);
 
         final var accessNotLatestProject = new Project();
         accessNotLatestProject.setName("acme-app-a");
         accessNotLatestProject.setVersion("1.0.1");
         accessNotLatestProject.setIsLatest(false);
-        accessNotLatestProject.setAccessTeams(List.of(team));
+        accessNotLatestProject.setAccessTeams(Set.of(team));
         qm.persist(accessNotLatestProject);
 
         // make the new version latest afterwards via update
@@ -3095,7 +3096,7 @@ public class ProjectResourceTest extends ResourceTest {
         accessNotLatestProject.setName("acme-app-a");
         accessNotLatestProject.setVersion("1.0.1");
         accessNotLatestProject.setIsLatest(false);
-        accessNotLatestProject.setAccessTeams(List.of(team));
+        accessNotLatestProject.setAccessTeams(Set.of(team));
         qm.persist(accessNotLatestProject);
 
         // make the new version latest afterwards via update (but have no access to old latest)
@@ -3155,14 +3156,14 @@ public class ProjectResourceTest extends ResourceTest {
         accessLatestProject.setName("acme-app-a");
         accessLatestProject.setVersion("1.0.0");
         accessLatestProject.setIsLatest(true);
-        accessLatestProject.setAccessTeams(List.of(team));
+        accessLatestProject.setAccessTeams(Set.of(team));
         qm.persist(accessLatestProject);
 
         final var accessNotLatestProject = new Project();
         accessNotLatestProject.setName("acme-app-a");
         accessNotLatestProject.setVersion("1.0.1");
         accessNotLatestProject.setIsLatest(false);
-        accessNotLatestProject.setAccessTeams(List.of(team));
+        accessNotLatestProject.setAccessTeams(Set.of(team));
         qm.persist(accessNotLatestProject);
 
         // make the new version latest afterwards via update
@@ -3196,7 +3197,7 @@ public class ProjectResourceTest extends ResourceTest {
         accessNotLatestProject.setName("acme-app-a");
         accessNotLatestProject.setVersion("1.0.1");
         accessNotLatestProject.setIsLatest(false);
-        accessNotLatestProject.setAccessTeams(List.of(team));
+        accessNotLatestProject.setAccessTeams(Set.of(team));
         qm.persist(accessNotLatestProject);
 
         // make the new version latest afterwards via update (but have no access to old latest)
@@ -3275,11 +3276,11 @@ public class ProjectResourceTest extends ResourceTest {
 
         // Create project and give access to current principal's team.
         Project accessProject = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false, false);
-        accessProject.setAccessTeams(List.of(team));
+        accessProject.setAccessTeams(Set.of(team));
         qm.persist(accessProject);
 
         accessProject = qm.createProject("acme-app-a", null, "1.0.2", null, null, null, null, true, false);
-        accessProject.setAccessTeams(List.of(team));
+        accessProject.setAccessTeams(Set.of(team));
         qm.persist(accessProject);
 
         final Response response = jersey.target(V1_PROJECT_LATEST + "acme-app-a")
@@ -3590,12 +3591,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsApiKeyWithAclEnabledAndWithExistentTeamTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+        enablePortfolioAccessControl();
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()
