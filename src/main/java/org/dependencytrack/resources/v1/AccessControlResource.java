@@ -54,18 +54,11 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.RoleDao;
-import org.dependencytrack.resources.v1.openapi.PaginatedApi;
-import org.dependencytrack.resources.v1.vo.AclMappingRequest;
 import org.jdbi.v3.core.Handle;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
