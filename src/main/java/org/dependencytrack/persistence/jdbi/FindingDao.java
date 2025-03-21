@@ -239,7 +239,7 @@ public interface FindingDao {
                 AND "PROJECT"."INACTIVE_SINCE" IS NULL
              </#if>
              <#if !suppressedFilter>
-                AND "ANALYSIS"."SUPPRESSED" IS NULL OR NOT "ANALYSIS"."SUPPRESSED"
+                AND ("ANALYSIS"."SUPPRESSED" IS NULL OR NOT "ANALYSIS"."SUPPRESSED")
              </#if>
              <#if queryFilter??>
                 ${queryFilter}
