@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.Join;
@@ -163,8 +164,8 @@ public class VulnerableSoftware implements ICpe, Serializable {
     private boolean vulnerable;
 
     @Persistent(table = "VULNERABLESOFTWARE_VULNERABILITIES", mappedBy = "vulnerableSoftware")
-    @Join(column = "VULNERABLESOFTWARE_ID")
-    @Element(column = "VULNERABILITY_ID", dependent = "false")
+    @Join(column = "VULNERABLESOFTWARE_ID", foreignKey = "VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "VULNERABILITY_ID", foreignKey = "VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK", deleteAction = ForeignKeyAction.CASCADE, dependent = "false")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
     private List<Vulnerability> vulnerabilities;
 

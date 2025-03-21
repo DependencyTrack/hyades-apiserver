@@ -20,16 +20,21 @@ package org.dependencytrack.model;
 
 import com.github.packageurl.PackageURL;
 import com.github.packageurl.PackageURLBuilder;
+import org.dependencytrack.PersistenceCapableTest;
 import org.junit.Assert;
 import org.junit.Test;
 import us.springett.parsers.cpe.Cpe;
 import us.springett.parsers.cpe.CpeParser;
 
+import javax.jdo.JDOObjectNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class ComponentTest {
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
+
+public class ComponentTest extends PersistenceCapableTest {
 
     @Test
     public void testId() {
@@ -229,4 +234,54 @@ public class ComponentTest {
         component.setVersion("1.0");
         Assert.assertEquals("acme : product : 1.0", component.toString());
     }
+
+    @Test
+    public void shouldCascadeDeleteOfProject() {
+        final var project = new Project();
+        project.setName("project");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("component");
+        qm.persist(component);
+
+        qm.delete(project);
+
+        qm.getPersistenceManager().evictAll();
+
+        assertThatExceptionOfType(JDOObjectNotFoundException.class)
+                .isThrownBy(() -> qm.getObjectById(Project.class, project.getId()));
+        assertThatExceptionOfType(JDOObjectNotFoundException.class)
+                .isThrownBy(() -> qm.getObjectById(Component.class, component.getId()));
+    }
+
+    @Test
+    public void shouldCascadeDeleteOfParent() {
+        final var project = new Project();
+        project.setName("project");
+        qm.persist(project);
+
+        final var parentComponent = new Component();
+        parentComponent.setProject(project);
+        parentComponent.setName("parent");
+        qm.persist(parentComponent);
+
+        final var childComponent = new Component();
+        childComponent.setProject(project);
+        childComponent.setParent(parentComponent);
+        childComponent.setName("child");
+        qm.persist(childComponent);
+
+        qm.delete(parentComponent);
+
+        qm.getPersistenceManager().evictAll();
+
+        assertThat(qm.getObjectById(Project.class, project.getId())).isNotNull();
+        assertThatExceptionOfType(JDOObjectNotFoundException.class)
+                .isThrownBy(() -> qm.getObjectById(Component.class, parentComponent.getId()));
+        assertThatExceptionOfType(JDOObjectNotFoundException.class)
+                .isThrownBy(() -> qm.getObjectById(Component.class, childComponent.getId()));
+    }
+
 }

@@ -46,6 +46,8 @@ import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.Extensions;
 import javax.jdo.annotations.FetchGroup;
 import javax.jdo.annotations.FetchGroups;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.Join;
@@ -351,6 +353,7 @@ public class Component implements Serializable {
     private List<ExternalReference> externalReferences;
 
     @Persistent
+    @ForeignKey(name = "COMPONENT_COMPONENT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "PARENT_COMPONENT_ID")
     private Component parent;
 
@@ -367,12 +370,13 @@ public class Component implements Serializable {
     private List<ComponentProperty> properties;
 
     @Persistent(table = "COMPONENTS_VULNERABILITIES")
-    @Join(column = "COMPONENT_ID")
-    @Element(column = "VULNERABILITY_ID")
+    @Join(column = "COMPONENT_ID", foreignKey = "COMPONENTS_VULNERABILITIES_COMPONENT_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "VULNERABILITY_ID", foreignKey = "COMPONENTS_VULNERABILITIES_VULNERABILITY_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "id ASC"))
     private List<Vulnerability> vulnerabilities;
 
     @Persistent(defaultFetchGroup = "true")
+    @ForeignKey(name = "COMPONENT_PROJECT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Index(name = "COMPONENT_PROJECT_ID_IDX")
     @Column(name = "PROJECT_ID", allowsNull = "false")
     @NotNull

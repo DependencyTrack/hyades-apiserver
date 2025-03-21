@@ -26,17 +26,19 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import org.apache.commons.collections4.CollectionUtils;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Join;
 import javax.jdo.annotations.Order;
@@ -111,20 +113,20 @@ public class NotificationRule implements Serializable {
     private NotificationLevel notificationLevel;
 
     @Persistent(table = "NOTIFICATIONRULE_PROJECTS", defaultFetchGroup = "true")
-    @Join(column = "NOTIFICATIONRULE_ID")
-    @Element(column = "PROJECT_ID")
+    @Join(column = "NOTIFICATIONRULE_ID", foreignKey = "NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "PROJECT_ID", foreignKey = "NOTIFICATIONRULE_PROJECTS_PROJECT_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC, version ASC"))
     private List<Project> projects;
 
     @Persistent(table = "NOTIFICATIONRULE_TAGS", defaultFetchGroup = "true", mappedBy = "notificationRules")
-    @Join(column = "NOTIFICATIONRULE_ID")
-    @Element(column = "TAG_ID")
+    @Join(column = "NOTIFICATIONRULE_ID", foreignKey = "NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "TAG_ID", foreignKey = "NOTIFICATIONRULE_TAGS_TAG_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Tag> tags;
 
     @Persistent(table = "NOTIFICATIONRULE_TEAMS", defaultFetchGroup = "true")
-    @Join(column = "NOTIFICATIONRULE_ID")
-    @Element(column = "TEAM_ID")
+    @Join(column = "NOTIFICATIONRULE_ID", foreignKey = "NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "TEAM_ID", foreignKey = "NOTIFICATIONRULE_TEAMS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Team> teams;
 
@@ -140,6 +142,7 @@ public class NotificationRule implements Serializable {
     private String message;
 
     @Persistent(defaultFetchGroup = "true")
+    @ForeignKey(name = "NOTIFICATIONRULE_NOTIFICATIONPUBLISHER_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "PUBLISHER")
     private NotificationPublisher publisher;
 

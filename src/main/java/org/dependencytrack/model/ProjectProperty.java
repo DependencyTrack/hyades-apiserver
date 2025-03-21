@@ -29,6 +29,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
@@ -55,6 +57,7 @@ public class ProjectProperty implements IConfigProperty, Serializable {
     private long id;
 
     @Persistent
+    @ForeignKey(name = "PROJECT_PROPERTY_PROJECT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "PROJECT_ID", allowsNull = "false")
     @JsonIgnore
     private Project project;

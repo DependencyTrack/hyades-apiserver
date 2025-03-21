@@ -23,9 +23,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.Join;
@@ -34,10 +39,6 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.List;
 import java.util.UUID;
@@ -73,8 +74,8 @@ public class LicenseGroup implements Serializable {
      * A list of zero-to-n licenses that are part of this license group.
      */
     @Persistent(table = "LICENSEGROUP_LICENSE", defaultFetchGroup = "true")
-    @Join(column = "LICENSEGROUP_ID")
-    @Element(column = "LICENSE_ID")
+    @Join(column = "LICENSEGROUP_ID", foreignKey = "LICENSEGROUP_LICENSE_LICENSEGROUP_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "LICENSE_ID", foreignKey = "LICENSEGROUP_LICENSE_LICENSE_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<License> licenses;
 

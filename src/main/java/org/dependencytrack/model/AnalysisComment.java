@@ -26,6 +26,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
@@ -50,6 +52,7 @@ public class AnalysisComment implements Serializable {
     private long id;
 
     @Persistent(defaultFetchGroup = "true", dependent = "true")
+    @ForeignKey(name = "ANALYSISCOMMENT_ANALYSIS_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "ANALYSIS_ID", allowsNull = "false")
     @NotNull
     @JsonIgnore

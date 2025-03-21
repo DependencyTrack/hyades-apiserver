@@ -24,6 +24,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
@@ -51,11 +53,13 @@ public class DependencyMetrics implements Serializable {
     private long id;
 
     @Persistent
+    @ForeignKey(name = "DEPENDENCYMETRICS_PROJECT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "PROJECT_ID", allowsNull = "false")
     @NotNull
     private Project project;
 
     @Persistent
+    @ForeignKey(name = "DEPENDENCYMETRICS_COMPONENT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "COMPONENT_ID", allowsNull = "false")
     @NotNull
     private Component component;

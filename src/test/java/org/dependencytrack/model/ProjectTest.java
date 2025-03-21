@@ -22,8 +22,11 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.jdo.JDOObjectNotFoundException;
 import java.util.Date;
 import java.util.UUID;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 
 public class ProjectTest extends PersistenceCapableTest {
 
@@ -60,4 +63,26 @@ public class ProjectTest extends PersistenceCapableTest {
 
         Assert.assertNull(persistedProject.getInactiveSince());
     }
+
+    @Test
+    public void shouldCascadeDeleteOfParent() {
+        final var parentProject = new Project();
+        parentProject.setName("parent");
+        qm.persist(parentProject);
+
+        final var childProject = new Project();
+        childProject.setParent(parentProject);
+        childProject.setName("child");
+        qm.persist(childProject);
+
+        qm.delete(parentProject);
+
+        qm.getPersistenceManager().evictAll();
+
+        assertThatExceptionOfType(JDOObjectNotFoundException.class)
+                .isThrownBy(() -> qm.getObjectById(Project.class, parentProject.getId()));
+        assertThatExceptionOfType(JDOObjectNotFoundException.class)
+                .isThrownBy(() -> qm.getObjectById(Project.class, childProject.getId()));
+    }
+
 }

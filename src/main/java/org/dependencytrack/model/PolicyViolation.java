@@ -28,6 +28,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
@@ -68,16 +70,19 @@ public class PolicyViolation implements Serializable {
     private Type type;
 
     @Persistent(defaultFetchGroup = "true")
+    @ForeignKey(name = "POLICYVIOLATION_PROJECT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "PROJECT_ID", allowsNull = "false")
     @Index(name = "POLICYVIOLATION_PROJECT_IDX")
     private Project project;
 
     @Persistent(defaultFetchGroup = "true")
+    @ForeignKey(name = "POLICYVIOLATION_COMPONENT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "COMPONENT_ID", allowsNull = "false")
     @Index(name = "POLICYVIOLATION_COMPONENT_IDX")
     private Component component;
 
     @Persistent(defaultFetchGroup = "true")
+    @ForeignKey(name = "POLICYVIOLATION_POLICYCONDITION_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "POLICYCONDITION_ID", allowsNull = "false")
     private PolicyCondition policyCondition;
 
