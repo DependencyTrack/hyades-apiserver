@@ -36,7 +36,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BADGE_ENABLED;
@@ -133,7 +133,7 @@ public class BadgeResourceTest extends ResourceTest {
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0.0");
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid())
                 .queryParam(API_KEY, apiKey)
@@ -157,7 +157,7 @@ public class BadgeResourceTest extends ResourceTest {
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0.0");
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
         Response response = jersey.target(V1_BADGE + "/vulns/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
@@ -278,7 +278,7 @@ public class BadgeResourceTest extends ResourceTest {
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0.0");
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0")
                 .queryParam(API_KEY, apiKey)
@@ -302,7 +302,7 @@ public class BadgeResourceTest extends ResourceTest {
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0.0");
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
         Response response = jersey.target(V1_BADGE + "/vulns/project/Acme%20Example/1.0.0").request()
                 .header(X_API_KEY, apiKey)
@@ -413,7 +413,7 @@ public class BadgeResourceTest extends ResourceTest {
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0.0");
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid())
                 .queryParam(API_KEY, apiKey)
@@ -437,7 +437,7 @@ public class BadgeResourceTest extends ResourceTest {
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0.0");
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
         Response response = jersey.target(V1_BADGE + "/violations/project/" + project.getUuid()).request()
                 .header(X_API_KEY, apiKey)
@@ -557,7 +557,7 @@ public class BadgeResourceTest extends ResourceTest {
                 null
         );
         Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0")
                 .queryParam(API_KEY, apiKey)
@@ -579,7 +579,7 @@ public class BadgeResourceTest extends ResourceTest {
                 null
         );
         Project project = qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
-        project.setAccessTeams(List.of(team));
+        project.setAccessTeams(Set.of(team));
         qm.persist(project);
         Response response = jersey.target(V1_BADGE + "/violations/project/Acme%20Example/1.0.0").request()
                 .header(X_API_KEY, apiKey)

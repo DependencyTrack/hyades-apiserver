@@ -66,7 +66,6 @@ import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
-import org.dependencytrack.util.WaitingLockConfiguration;
 import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityContext;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
@@ -78,7 +77,6 @@ import org.slf4j.MDC;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.IOException;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -131,7 +129,6 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
-import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
@@ -298,28 +295,22 @@ public class BomUploadProcessingTask implements ActivityExecutor<IngestBomArgs, 
              var ignoredMdcBomSpecVersion = MDC.putCloseable(MDC_BOM_SPEC_VERSION, ctx.bomSpecVersion);
              var ignoredMdcBomSerialNumber = MDC.putCloseable(MDC_BOM_SERIAL_NUMBER, ctx.bomSerialNumber);
              var ignoredMdcBomVersion = MDC.putCloseable(MDC_BOM_VERSION, String.valueOf(ctx.bomVersion))) {
-            if (!isWorkflowEngineEnabled) {
-                // Prevent BOMs for the same project to be processed concurrently.
-                // Note that this is an edge case, we're not expecting any lock waits under normal circumstances.
-                final WaitingLockConfiguration lockConfiguration = createLockConfiguration(ctx);
-                processedBom = executeWithLockWaiting(lockConfiguration, () -> processBom(ctx, consumedBom));
-            } else {
-                // Concurrency is managed by the workflow engine, based on the workflow run's concurrencyGroupId.
+            try {
                 processedBom = processBom(ctx, consumedBom);
-            }
-        } catch (Throwable e) {
-            LOGGER.error("Failed to process BOM", e);
-            dispatchBomProcessingFailedNotification(ctx, e);
+            } catch (Throwable e) {
+                LOGGER.error("Failed to process BOM", e);
+                dispatchBomProcessingFailedNotification(ctx, e);
 
-            if (isWorkflowEngineEnabled) {
-                if (e instanceof final RuntimeException re) {
-                    throw re;
+                if (isWorkflowEngineEnabled) {
+                    if (e instanceof final RuntimeException re) {
+                        throw re;
+                    }
+
+                    throw new RuntimeException(e);
+                } else {
+                    failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
+                    return;
                 }
-
-                throw new RuntimeException(e);
-            } else {
-                failWorkflowStepAndCancelDescendants(ctx, WorkflowStep.BOM_PROCESSING, e);
-                return;
             }
         }
 
@@ -516,6 +507,17 @@ public class BomUploadProcessingTask implements ActivityExecutor<IngestBomArgs, 
             qm.getPersistenceManager().setProperty(PROPERTY_RETAIN_VALUES, "true");
 
             return qm.callInTransaction(() -> {
+                // Prevent BOMs for the same project to be processed concurrently.
+                // Note that this is an edge case, we're not expecting any acquisition failures under normal circumstances.
+                // We're not waiting on locks here to prevent threads and connections from being blocked for too long.
+                final boolean lockAcquired = qm.tryAcquireAdvisoryLock(
+                        "%s-%s".formatted(BomUploadProcessingTask.class.getName(), ctx.project.getUuid()));
+                if (!lockAcquired) {
+                    throw new IllegalStateException("""
+                            Failed to acquire advisory lock, likely because another BOM import \
+                            for this project is already in progress""");
+                }
+
                 final Project persistentProject = processProject(ctx, qm, bom.project(), bom.projectMetadata());
 
                 LOGGER.info("Processing %d components".formatted(bom.components().size()));
@@ -1286,17 +1288,6 @@ public class BomUploadProcessingTask implements ActivityExecutor<IngestBomArgs, 
         }
         //don't send event because integrity metadata would be sent recently and don't want to send again
         return false;
-    }
-
-    private static WaitingLockConfiguration createLockConfiguration(final Context ctx) {
-        return new WaitingLockConfiguration(
-                /* createdAt */ Instant.now(),
-                /* name */ "%s-%s".formatted(BomUploadProcessingTask.class.getSimpleName(), ctx.project.getUuid()),
-                /* lockAtMostFor */ Duration.ofMinutes(5),
-                /* lockAtLeastFor */ Duration.ZERO,
-                /* pollInterval */ Duration.ofMillis(100),
-                /* waitTimeout */ Duration.ofMinutes(5)
-        );
     }
 
 }

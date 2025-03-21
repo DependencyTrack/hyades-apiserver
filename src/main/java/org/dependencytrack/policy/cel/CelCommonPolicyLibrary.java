@@ -509,6 +509,7 @@ public class CelCommonPolicyLibrary implements Library {
                           WHERE
                             -- Short-circuit the recursive query if we don't have any matches at all.
                             EXISTS(SELECT 1 FROM "CTE_MATCHES")
+                            AND "C"."PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
                             -- Otherwise, find components of which the given leaf component is a direct dependency.
                             AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                           UNION ALL
@@ -585,6 +586,7 @@ public class CelCommonPolicyLibrary implements Library {
                       WHERE
                         -- Short-circuit the recursive query if we don't have any matches at all.
                         EXISTS(SELECT 1 FROM "CTE_MATCHES")
+                        AND "C"."PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
                         -- Otherwise, find components of which the given leaf component is a direct dependency.
                         AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                       UNION ALL
@@ -699,6 +701,7 @@ public class CelCommonPolicyLibrary implements Library {
                       WHERE
                         -- Short-circuit the recursive query if we don't have any matches at all.
                         EXISTS(SELECT 1 FROM "CTE_MATCHES")
+                        AND "C"."PROJECT_ID" = (SELECT "ID" FROM "CTE_PROJECT")
                         -- Otherwise, find components of which the given leaf component is a direct dependency.
                         AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', :leafComponentUuid))
                       UNION ALL
@@ -730,7 +733,7 @@ public class CelCommonPolicyLibrary implements Library {
                         AND "C"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "PREVIOUS"."UUID"))
                     )
                     SELECT "ID", ${selectColumnNames?join(", ", "", ", ")} "FOUND", "PATH" FROM "CTE_DEPENDENCIES";
-                     """);
+                    """);
 
             final List<DependencyNode> nodes = query
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())

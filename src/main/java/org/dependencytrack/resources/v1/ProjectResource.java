@@ -476,8 +476,8 @@ public class ProjectResource extends AbstractApiResource {
 
                 Principal principal = getPrincipal();
 
-                final List<Team> chosenTeams = requireNonNullElseGet(
-                        jsonProject.getAccessTeams(), Collections::emptyList);
+                final Set<Team> chosenTeams = requireNonNullElseGet(
+                        jsonProject.getAccessTeams(), Collections::emptySet);
                 jsonProject.setAccessTeams(null);
 
                 for (final Team chosenTeam : chosenTeams) {
@@ -486,8 +486,8 @@ public class ProjectResource extends AbstractApiResource {
                                 .status(Response.Status.BAD_REQUEST)
                                 .entity("""
                                         accessTeams must either specify a UUID or a name,\
-                                        but the team at index %d has neither.\
-                                        """.formatted(chosenTeams.indexOf(chosenTeam)))
+                                        but the team %s has neither.\
+                                        """.formatted(chosenTeam))
                                 .build());
                     }
                 }
@@ -555,7 +555,6 @@ public class ProjectResource extends AbstractApiResource {
                     LOGGER.error("Failed to create project %s".formatted(jsonProject), e);
                     throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
                 }
-                qm.updateNewProjectACL(project, principal);
                 return project;
             });
 

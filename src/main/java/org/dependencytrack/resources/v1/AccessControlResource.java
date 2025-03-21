@@ -34,7 +34,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.AclMappingRequest;
+
 import jakarta.validation.Validator;
+import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PUT;
@@ -44,15 +53,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.openapi.PaginatedApi;
-import org.dependencytrack.resources.v1.vo.AclMappingRequest;
-
-import java.util.ArrayList;
-import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * JAX-RS resources for processing LDAP group mapping requests.
@@ -114,10 +115,19 @@ public class AccessControlResource extends AlpineResource {
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Mapping created successfully", content = @Content(schema = @Schema(implementation = AclMappingRequest.class))),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Mapping created successfully",
+                    content = @Content(schema = @Schema(implementation = AclMappingRequest.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The UUID of the team or project could not be found"),
-            @ApiResponse(responseCode = "409", description = "A mapping with the same team and project already exists")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Team or project could not be found",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "A mapping with the same team and project already exists",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON))
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response addMapping(AclMappingRequest request) {
@@ -126,21 +136,31 @@ public class AccessControlResource extends AlpineResource {
                 validator.validateProperty(request, "team"),
                 validator.validateProperty(request, "project")
         );
-        try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.getObjectByUuid(Team.class, request.getTeam());
-            final Project project = qm.getObjectByUuid(Project.class, request.getProject());
-            if (team != null && project != null) {
-                for (final Team t : project.getAccessTeams()) {
-                    if (t.getUuid() == team.getUuid()) {
-                        return Response.status(Response.Status.CONFLICT).entity("A mapping with the same team and project already exists.").build();
-                    }
+        try (final var qm = new QueryManager()) {
+            qm.runInTransaction(() -> {
+                final Team team = qm.getObjectByUuid(Team.class, request.getTeam());
+                if (team == null) {
+                    throw new NoSuchElementException("Team could not be found");
                 }
-                project.addAccessTeam(team);
-                qm.persist(project);
-                return Response.ok().build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team could not be found.").build();
-            }
+
+                final Project project = qm.getObjectByUuid(Project.class, request.getProject());
+                if (project == null) {
+                    throw new NoSuchElementException("Project could not be found");
+                }
+
+                // TODO: The conflict error is legacy behavior, but wouldn't it make more
+                //  sense to return a 304 - Not Modified instead?
+                final boolean added = project.addAccessTeam(team);
+                if (!added) {
+                    final var problemDetails = new ProblemDetails();
+                    problemDetails.setStatus(409);
+                    problemDetails.setTitle("Conflict");
+                    problemDetails.setDetail("A mapping with the same team and project already exists");
+                    throw new ClientErrorException(problemDetails.toResponse());
+                }
+            });
+
+            return Response.ok().build();
         }
     }
 
@@ -154,7 +174,10 @@ public class AccessControlResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Mapping removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The UUID of the team or project could not be found"),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Team or project could not be found",
+                    content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON))
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteMapping(
@@ -162,22 +185,23 @@ public class AccessControlResource extends AlpineResource {
             @PathParam("teamUuid") @ValidUuid String teamUuid,
             @Parameter(description = "The UUID of the project to delete the mapping for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
-        try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.getObjectByUuid(Team.class, teamUuid);
-            final Project project = qm.getObjectByUuid(Project.class, projectUuid);
-            if (team != null && project != null) {
-                final List<Team> teams = new ArrayList<>();
-                for (final Team t : project.getAccessTeams()) {
-                    if (t.getUuid() != team.getUuid()) {
-                        teams.add(t);
-                    }
+        try (final var qm = new QueryManager()) {
+            qm.runInTransaction(() -> {
+                final Team team = qm.getObjectByUuid(Team.class, teamUuid);
+                if (team == null) {
+                    throw new NoSuchElementException("Team could not be found");
                 }
-                project.setAccessTeams(teams);
-                qm.persist(project);
-                return Response.ok().build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team or project could not be found.").build();
-            }
+
+                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+                if (project == null) {
+                    throw new NoSuchElementException("Project could not be found");
+                }
+
+                project.removeAccessTeam(team);
+            });
         }
+
+        return Response.ok().build();
     }
+
 }

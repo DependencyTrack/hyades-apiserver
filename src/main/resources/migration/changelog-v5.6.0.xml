@@ -674,4 +674,32 @@
             <column name="COMPONENT_ID"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-14" author="nscuro">
+        <dropIndex tableName="PROJECT_ACCESS_TEAMS" indexName="PROJECT_ACCESS_TEAMS_PROJECT_ID_IDX"/>
+        <dropIndex tableName="PROJECT_ACCESS_TEAMS" indexName="PROJECT_ACCESS_TEAMS_TEAM_ID_IDX"/>
+        <sql>
+            WITH
+            cte_duplicate AS (
+               SELECT "PROJECT_ID"
+                    , "TEAM_ID"
+                 FROM "PROJECT_ACCESS_TEAMS"
+                GROUP BY "PROJECT_ID"
+                       , "TEAM_ID"
+               HAVING COUNT(*) > 1
+            ),
+            cte_deleted_duplicate AS (
+              DELETE FROM "PROJECT_ACCESS_TEAMS"
+               USING cte_duplicate
+               WHERE cte_duplicate."PROJECT_ID" = "PROJECT_ACCESS_TEAMS"."PROJECT_ID"
+                 AND cte_duplicate."TEAM_ID" = "PROJECT_ACCESS_TEAMS"."TEAM_ID"
+            )
+            INSERT INTO "PROJECT_ACCESS_TEAMS" ("PROJECT_ID", "TEAM_ID")
+            SELECT "PROJECT_ID", "TEAM_ID" FROM cte_duplicate
+        </sql>
+        <addPrimaryKey
+                tableName="PROJECT_ACCESS_TEAMS"
+                columnNames="PROJECT_ID, TEAM_ID"
+                constraintName="PROJECT_ACCESS_TEAMS_PK"/>
+    </changeSet>
 </databaseChangeLog>
