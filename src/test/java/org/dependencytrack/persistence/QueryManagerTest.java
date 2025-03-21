@@ -29,7 +29,13 @@ import org.dependencytrack.model.Project;
 import org.junit.Test;
 
 import java.util.Date;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
 import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_UNKNOWN;
 import static org.junit.Assert.assertEquals;
@@ -119,4 +125,61 @@ public class QueryManagerTest extends PersistenceCapableTest {
         assertNull(componentMetaInformation.publishedDate());
         assertNull(componentMetaInformation.lastFetched());
     }
+
+    @Test
+    public void tryAcquireAdvisoryLockShouldReturnTrueWhenAcquired() {
+        qm.runInTransaction(() -> assertThat(qm.tryAcquireAdvisoryLock("foo")).isTrue());
+    }
+
+    @Test
+    public void tryAcquireAdvisoryLockShouldReturnFalseWhenNotAcquired() throws Exception {
+        try (final ExecutorService executorService = Executors.newFixedThreadPool(2)) {
+            final var startLatch = new CountDownLatch(1);
+            final var firstLockLatch = new CountDownLatch(1);
+            final var secondLockLatch = new CountDownLatch(1);
+
+            final Future<Boolean> firstLockAcquiredFuture = executorService.submit(() -> {
+                startLatch.await();
+
+                try (final var qm = new QueryManager()) {
+                    return qm.callInTransaction(() -> {
+                        final boolean acquired = qm.tryAcquireAdvisoryLock("foo");
+
+                        // Hold the lock until the second lock attempt completed.
+                        firstLockLatch.countDown();
+                        secondLockLatch.await();
+
+                        return acquired;
+                    });
+                }
+            });
+
+            final Future<Boolean> secondLockAcquiredFuture = executorService.submit(() -> {
+                // Wait for first lock attempt to complete.
+                firstLockLatch.await();
+
+                try (final var qm = new QueryManager()) {
+                    return qm.callInTransaction(() -> {
+                        final boolean acquired = qm.tryAcquireAdvisoryLock("foo");
+                        secondLockLatch.countDown();
+                        return acquired;
+                    });
+
+                }
+            });
+
+            startLatch.countDown();
+
+            assertThat(firstLockAcquiredFuture.get()).isTrue();
+            assertThat(secondLockAcquiredFuture.get()).isFalse();
+        }
+    }
+
+    @Test
+    public void tryAcquireAdvisoryLockShouldThrowWhenNoActiveTransaction() {
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> qm.tryAcquireAdvisoryLock("foo"))
+                .withMessage("Advisory lock can only be acquired in a transaction");
+    }
+
 }
