@@ -3647,7 +3647,6 @@ public class ProjectResourceTest extends ResourceTest {
                         {
                           "uuid": "${json-unit.any-string}",
                           "name": "ABC-Updated",
-                          "children": [],
                           "tags": [],
                           "inactiveSince": "${json-unit.any-number}",
                           "isLatest":false,
@@ -3710,7 +3709,6 @@ public class ProjectResourceTest extends ResourceTest {
                           "uuid": "${json-unit.any-string}",
                           "name": "ABC-Updated",
                           "classifier":"APPLICATION",
-                          "children": [],
                           "tags": [],
                           "inactiveSince": "${json-unit.any-number}",
                           "isLatest":false,
