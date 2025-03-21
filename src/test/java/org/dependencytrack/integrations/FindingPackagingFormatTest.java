@@ -27,15 +27,21 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
+import java.util.UUID;
+
+import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class FindingPackagingFormatTest extends PersistenceCapableTest {
 
@@ -51,15 +57,15 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         JSONObject root = fpf.getDocument();
 
         JSONObject meta = root.getJSONObject("meta");
-        Assert.assertEquals(Config.getInstance().getApplicationName(), meta.getString("application"));
-        Assert.assertEquals(Config.getInstance().getApplicationVersion(), meta.getString("version"));
-        Assert.assertNotNull(meta.getString("timestamp"));
+        assertEquals(Config.getInstance().getApplicationName(), meta.getString("application"));
+        assertEquals(Config.getInstance().getApplicationVersion(), meta.getString("version"));
+        assertNotNull(meta.getString("timestamp"));
 
         JSONObject pjson = root.getJSONObject("project");
-        Assert.assertEquals(project.getName(), pjson.getString("name"));
-        Assert.assertEquals(project.getDescription(), pjson.getString("description"));
-        Assert.assertEquals(project.getVersion(), pjson.getString("version"));
-        Assert.assertEquals("1.2", root.getString("version"));
+        assertEquals(project.getName(), pjson.getString("name"));
+        assertEquals(project.getDescription(), pjson.getString("description"));
+        assertEquals(project.getVersion(), pjson.getString("version"));
+        assertEquals("1.2", root.getString("version"));
     }
 
     @Test
@@ -67,15 +73,14 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         Project project = qm.createProject(
                 "Test", "Sample project", "1.0", null, null, null, null, false);
 
-        Finding findingWithoutAlias = new Finding(project.getUuid(), "component-uuid-1", "component-name-1", "component-group",
-                "component-version", "component-purl", "component-cpe", "vuln-uuid", Vulnerability.Source.GITHUB, "vuln-vulnId-1", "vuln-title",
-                "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.CRITICAL, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-                "owasp-vector", BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.OSSINDEX_ANALYZER, new Date(), null, null, AnalysisState.NOT_AFFECTED, true);
-
-        Finding findingWithAlias = new Finding(project.getUuid(), "component-uuid-2", "component-name-2", "component-group",
-                "component-version", "component-purl", "component-cpe", "vuln-uuid", Vulnerability.Source.NVD, "vuln-vulnId-2", "vuln-title",
-                "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.HIGH, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-                "owasp-vector", BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.INTERNAL_ANALYZER, new Date(), null, null, AnalysisState.NOT_AFFECTED, true);
+        FindingDao.FindingRow findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
+                "component-name-1", null, "component-version", null, null, UUID.randomUUID(),
+                Vulnerability.Source.GITHUB, "vuln-vulnId-1", "vuln-title", "vuln-subtitle", "vuln-description",
+                "vuln-recommendation", Instant.now(), Severity.CRITICAL, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
+                "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
+                "owasp-vector", null, BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
+                AnalyzerIdentity.OSSINDEX_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
+        Finding findingWithoutAlias = new Finding(findingRow);
 
         var alias = new VulnerabilityAlias();
         alias.setCveId("someCveId");
@@ -97,8 +102,14 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         other.setInternalId("anotherInternalId");
         other.setVulnDbId(null);
 
-        findingWithoutAlias.addVulnerabilityAliases(List.of());
-        findingWithAlias.addVulnerabilityAliases(List.of(alias, other));
+        findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
+                "component-name-2", null, "component-version", null, null, UUID.randomUUID(),
+                Vulnerability.Source.NVD, "vuln-vulnId-2", "vuln-title", "vuln-subtitle", "vuln-description",
+                "vuln-recommendation", Instant.now(), Severity.HIGH, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
+                "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
+                "owasp-vector", List.of(alias, other), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
+                AnalyzerIdentity.INTERNAL_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
+        Finding findingWithAlias = new Finding(findingRow);
 
         FindingPackagingFormat fpf = new FindingPackagingFormat(
                 project.getUuid(),
@@ -106,37 +117,35 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         );
 
         JSONObject root = fpf.getDocument();
-
         JSONArray findings = root.getJSONArray("findings");
 
-        Assert.assertEquals("component-name-1", findings.getJSONObject(0).getJSONObject("component").getString("name"));
-        Assert.assertEquals("component-name-2", findings.getJSONObject(1).getJSONObject("component").getString("name"));
+        assertEquals("component-name-1", findings.getJSONObject(0).getJSONObject("component").getString("name"));
+        assertEquals("component-name-2", findings.getJSONObject(1).getJSONObject("component").getString("name"));
 
-        Assert.assertEquals(AnalyzerIdentity.OSSINDEX_ANALYZER, findings.getJSONObject(0).getJSONObject("attribution").get("analyzerIdentity"));
-        Assert.assertEquals(AnalyzerIdentity.INTERNAL_ANALYZER, findings.getJSONObject(1).getJSONObject("attribution").get("analyzerIdentity"));
+        assertEquals(AnalyzerIdentity.OSSINDEX_ANALYZER, findings.getJSONObject(0).getJSONObject("attribution").get("analyzerIdentity"));
+        assertEquals(AnalyzerIdentity.INTERNAL_ANALYZER, findings.getJSONObject(1).getJSONObject("attribution").get("analyzerIdentity"));
 
-        Assert.assertEquals(Severity.CRITICAL.toString(), findings.getJSONObject(0).getJSONObject("vulnerability").get("severity"));
-        Assert.assertEquals(Severity.HIGH.toString(), findings.getJSONObject(1).getJSONObject("vulnerability").get("severity"));
+        assertEquals(Severity.CRITICAL.toString(), findings.getJSONObject(0).getJSONObject("vulnerability").get("severity"));
+        assertEquals(Severity.HIGH.toString(), findings.getJSONObject(1).getJSONObject("vulnerability").get("severity"));
 
-        Assert.assertEquals(BigDecimal.valueOf(0.5), findings.getJSONObject(0).getJSONObject("vulnerability").get("epssScore"));
-        Assert.assertEquals(BigDecimal.valueOf(0.9), findings.getJSONObject(1).getJSONObject("vulnerability").get("epssPercentile"));
+        assertEquals(BigDecimal.valueOf(0.5), findings.getJSONObject(0).getJSONObject("vulnerability").get("epssScore"));
+        assertEquals(BigDecimal.valueOf(0.9), findings.getJSONObject(1).getJSONObject("vulnerability").get("epssPercentile"));
 
         JSONArray aliases_1 = findings.getJSONObject(0).getJSONObject("vulnerability").getJSONArray("aliases");
-        Assert.assertTrue(aliases_1.isEmpty());
+        assertTrue(aliases_1.isEmpty());
         JSONArray aliases_2 = findings.getJSONObject(1).getJSONObject("vulnerability").getJSONArray("aliases");
-        Assert.assertFalse(aliases_2.isEmpty());
-        Assert.assertEquals(2, aliases_2.length());
-        Assert.assertEquals("anotherCveId", aliases_2.getJSONObject(0).getString("cveId"));
-        Assert.assertEquals("anotherGhsaId", aliases_2.getJSONObject(0).getString("ghsaId"));
-        Assert.assertEquals("someCveId", aliases_2.getJSONObject(1).getString("cveId"));
-        Assert.assertEquals("someOsvId", aliases_2.getJSONObject(1).getString("osvId"));
+        assertFalse(aliases_2.isEmpty());
+        assertEquals(2, aliases_2.length());
+        assertEquals("anotherCveId", aliases_2.getJSONObject(0).getString("cveId"));
+        assertEquals("anotherGhsaId", aliases_2.getJSONObject(0).getString("ghsaId"));
+        assertEquals("someCveId", aliases_2.getJSONObject(1).getString("cveId"));
+        assertEquals("someOsvId", aliases_2.getJSONObject(1).getString("osvId"));
 
         // negative test to see if technical id is not included
-        Assert.assertFalse(aliases_2.getJSONObject(0).has("id"));
+        assertFalse(aliases_2.getJSONObject(0).has("id"));
 
         //final negative test to make sure the allBySource element is not included
         String finalJsonOutput = root.toString();
-        Assert.assertFalse(finalJsonOutput.contains("allBySource"));
+        assertFalse(finalJsonOutput.contains("allBySource"));
     }
-
 }

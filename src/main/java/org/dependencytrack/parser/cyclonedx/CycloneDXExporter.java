@@ -28,11 +28,14 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class CycloneDXExporter {
 
@@ -60,7 +63,8 @@ public class CycloneDXExporter {
         final List<Component> components = qm.getAllComponents(project);
         final List<ServiceComponent> services = qm.getAllServiceComponents(project);
         final List<Finding> findings = switch (variant) {
-            case INVENTORY_WITH_VULNERABILITIES, VDR, VEX -> qm.getFindings(project, true);
+            case INVENTORY_WITH_VULNERABILITIES, VDR, VEX -> withJdbiHandle(handle ->
+                    handle.attach(FindingDao.class).getFindings(project.getId(), true));
             default -> null;
         };
         return create(components, services, findings, project);

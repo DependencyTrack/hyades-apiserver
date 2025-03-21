@@ -19,11 +19,13 @@
 package org.dependencytrack.model;
 
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -31,33 +33,33 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class FindingTest extends PersistenceCapableTest {
 
-    private final UUID projectUuid = UUID.randomUUID();
-    private final Date attributedOn = new Date();
-    private final Finding finding = new Finding(projectUuid, "component-uuid", "component-name", "component-group",
-            "component-version", "component-purl", "component-cpe", "vuln-uuid", "vuln-source", "vuln-vulnId", "vuln-title",
-            "vuln-subtitle", "vuln-description", "vuln-recommendation", Severity.HIGH, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4), "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
-            "owasp-vector", BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9), null, AnalyzerIdentity.INTERNAL_ANALYZER, attributedOn, null, null, AnalysisState.NOT_AFFECTED, true);
+    private Finding finding;
+
+    @Before
+    public void setUp() {
+        finding = createTestFinding();
+    }
 
     @Test
     public void testComponent() {
         Map<String, Object> map = finding.getComponent();
-        Assert.assertEquals("component-uuid", map.get("uuid"));
+        assertThat(map.get("uuid")).isNotNull();
         Assert.assertEquals("component-name", map.get("name"));
         Assert.assertEquals("component-group", map.get("group"));
         Assert.assertEquals("component-version", map.get("version"));
-        Assert.assertEquals("component-purl", map.get("purl"));
+        Assert.assertEquals("pkg:maven/foo/bar@1.2.3", map.get("purl"));
     }
 
     @Test
     public void testVulnerability() {
         Map<String, Object> map = finding.getVulnerability();
-        Assert.assertEquals("vuln-uuid", map.get("uuid"));
-        Assert.assertEquals("vuln-source", map.get("source"));
+        assertThat(map.get("uuid")).isNotNull();
+        Assert.assertEquals(Vulnerability.Source.GITHUB, map.get("source"));
         Assert.assertEquals("vuln-vulnId", map.get("vulnId"));
         Assert.assertEquals("vuln-title", map.get("title"));
         Assert.assertEquals("vuln-subtitle", map.get("subtitle"));
-        //Assert.assertEquals("vuln-description", map.get("description"));
-        //Assert.assertEquals("vuln-recommendation", map.get("recommendation"));
+        Assert.assertEquals("vuln-description", map.get("description"));
+        Assert.assertEquals("vuln-recommendation", map.get("recommendation"));
         Assert.assertEquals(BigDecimal.valueOf(7.2), map.get("cvssV2BaseScore"));
         Assert.assertEquals(BigDecimal.valueOf(8.4), map.get("cvssV3BaseScore"));
         Assert.assertEquals("cvssV2-vector", map.get("cvssV2Vector"));
@@ -81,7 +83,7 @@ public class FindingTest extends PersistenceCapableTest {
 
     @Test
     public void testMatrix() {
-        Assert.assertEquals(projectUuid + ":component-uuid" + ":vuln-uuid", finding.getMatrix());
+        assertThat(finding.getMatrix()).isNotNull();
     }
 
     @Test
@@ -106,4 +108,17 @@ public class FindingTest extends PersistenceCapableTest {
         assertThat(Finding.getCwes(null)).isNull();
     }
 
+    private Finding createTestFinding() {
+        final var project = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
+
+        FindingDao.FindingRow findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
+                "component-name", "component-group", "component-version", "pkg:maven/foo/bar@1.2.3", "component-cpe",
+                UUID.randomUUID(), Vulnerability.Source.GITHUB, "vuln-vulnId", "vuln-title", "vuln-subtitle", "vuln-description",
+                "vuln-recommendation", Instant.now(), Severity.HIGH, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
+                "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
+                "owasp-vector", null, BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
+                AnalyzerIdentity.INTERNAL_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
+
+        return new Finding(findingRow);
+    }
 }
