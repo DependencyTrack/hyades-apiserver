@@ -220,6 +220,7 @@ public final class ModelConverterCdxToVuln {
             case "OSV" -> alias.setOsvId(cycloneVuln.getId());
             case "SNYK" -> alias.setSnykId(cycloneVuln.getId());
             case "VULNDB" -> alias.setVulnDbId(cycloneVuln.getId());
+            case "CSAF" -> alias.setCsafId(cycloneVuln.getId());
             // Source of the vulnerability itself has been validated before,
             // so this scenario is highly unlikely to ever happen. Including
             // it here to make linters happy.
@@ -234,6 +235,7 @@ public final class ModelConverterCdxToVuln {
             case "OSV" -> alias.setOsvId(cycloneAlias.getId());
             case "SNYK" -> alias.setSnykId(cycloneAlias.getId());
             case "VULNDB" -> alias.setVulnDbId(cycloneAlias.getId());
+            case "CSAF" -> alias.setCsafId(cycloneAlias.getId());
             default -> throw new IllegalArgumentException("Invalid source %s for alias %s"
                     .formatted(cycloneAlias.getSource().getName(), cycloneAlias.getId()));
         }
@@ -265,6 +267,7 @@ public final class ModelConverterCdxToVuln {
         return switch (sourceId) {
             case "GHSA" -> Vulnerability.Source.GITHUB;
             case "CVE" -> Vulnerability.Source.NVD;
+            case "CSAF" -> Vulnerability.Source.CSAF;
             default -> source != null ? Vulnerability.Source.valueOf(source.getName()) : Vulnerability.Source.INTERNAL;
         };
     }
@@ -274,6 +277,7 @@ public final class ModelConverterCdxToVuln {
             case SCANNER_INTERNAL -> AnalyzerIdentity.INTERNAL_ANALYZER;
             case SCANNER_OSSINDEX -> AnalyzerIdentity.OSSINDEX_ANALYZER;
             case SCANNER_SNYK -> AnalyzerIdentity.SNYK_ANALYZER;
+            case SCANNER_CSAF -> AnalyzerIdentity.CSAF_ANALYZER;
             default -> AnalyzerIdentity.NONE;
         };
     }
