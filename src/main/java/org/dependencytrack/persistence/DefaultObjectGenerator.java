@@ -84,8 +84,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
                 /* lockAtMostFor */ Duration.ofMinutes(5),
                 /* lockAtLeastFor */ Duration.ZERO,
                 /* pollInterval */ Duration.ofSeconds(1),
-                /* waitTimeout */ Duration.ofMinutes(5)
-        );
+                /* waitTimeout */ Duration.ofMinutes(5));
 
         try {
             executeWithLockWaiting(lockConfig, this::executeLocked);
@@ -112,8 +111,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         if (!shouldExecute()) {
             LOGGER.info("Default objects already populated for build %s (timestamp: %s); Skipping".formatted(
                     Config.getInstance().getApplicationBuildUuid(),
-                    Config.getInstance().getApplicationBuildTimestamp()
-            ));
+                    Config.getInstance().getApplicationBuildTimestamp()));
             return;
         }
 
@@ -144,8 +142,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         try (final var qm = new QueryManager()) {
             final ConfigProperty configProperty = qm.getConfigProperty(
                     INTERNAL_DEFAULT_OBJECTS_VERSION.getGroupName(),
-                    INTERNAL_DEFAULT_OBJECTS_VERSION.getPropertyName()
-            );
+                    INTERNAL_DEFAULT_OBJECTS_VERSION.getPropertyName());
 
             return configProperty == null
                     || configProperty.getPropertyValue() == null
@@ -193,7 +190,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
      */
     private void loadDefaultLicenseGroups(final QueryManager qm) {
         final DefaultLicenseGroupImporter importer = new DefaultLicenseGroupImporter(qm);
-        if (! importer.shouldImport()) {
+        if (!importer.shouldImport()) {
             return;
         }
         LOGGER.info("Adding default license group definitions to datastore");
@@ -220,7 +217,8 @@ public class DefaultObjectGenerator implements ServletContextListener {
         for (final Permissions permission : Permissions.values()) {
             if (qm.getPermission(permission.name()) == null) {
                 LOGGER.debug("Creating permission: " + permission.name());
-                permissionsMap.put(permission.name(), qm.createPermission(permission.name(), permission.getDescription()));
+                permissionsMap.put(permission.name(),
+                        qm.createPermission(permission.name(), permission.getDescription()));
             }
         }
     }
@@ -231,8 +229,15 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
         LOGGER.debug("Assigning default permissions for team: " + name);
         team.setPermissions(permissions);
-        
+
         qm.persist(team);
+    }
+
+    @SuppressWarnings("unused")
+    private void loadDefaultPersonas() {
+        try (final var qm = new QueryManager()) {
+            loadDefaultPersonas(qm);
+        }
     }
 
     /**
@@ -280,7 +285,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
     /**
      * Perform a lookup of {@link Permission}s for specified name(s).
-     * 
+     *
      * @param names permission names
      * @return list of {@link Permission}s
      */
@@ -302,6 +307,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
     */
     private void loadDefaultRepositories(final QueryManager qm) {
         LOGGER.info("Synchronizing default repositories to datastore");
+        // @formatter:off
         qm.createRepository(RepositoryType.CPAN, "cpan-public-registry", "https://fastapi.metacpan.org/v1/", true, false, false, null, null);
         qm.createRepository(RepositoryType.GEM, "rubygems.org", "https://rubygems.org/", true, false, false,null, null);
         qm.createRepository(RepositoryType.HEX, "hex.pm", "https://hex.pm/", true, false, false, null, null);
@@ -319,6 +325,14 @@ public class DefaultObjectGenerator implements ServletContextListener {
         qm.createRepository(RepositoryType.GITHUB, "github.com", "https://github.com", true, false, false, null, null);
         qm.createRepository(RepositoryType.HACKAGE, "hackage.haskell", "https://hackage.haskell.org/", true, false, false, null, null);
         qm.createRepository(RepositoryType.NIXPKGS, "nixos.org", "https://channels.nixos.org/nixpkgs-unstable/packages.json.br", true, false, false, null, null);
+        // @formatter:on
+    }
+
+    @SuppressWarnings("unused")
+    private void loadDefaultConfigProperties() {
+        try (final var qm = new QueryManager()) {
+            loadDefaultConfigProperties(qm);
+        }
     }
 
     /**
