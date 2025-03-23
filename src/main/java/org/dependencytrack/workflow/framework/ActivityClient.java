@@ -18,57 +18,33 @@
  */
 package org.dependencytrack.workflow.framework;
 
-import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
-
-import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
 
 public final class ActivityClient<A, R> {
 
+    private final WorkflowContext<?, ?> workflowContext;
     private final String activityName;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
 
-    private ActivityClient(
+    ActivityClient(
+            final WorkflowContext<?, ?> workflowContext,
             final String activityName,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter) {
+        this.workflowContext = workflowContext;
         this.activityName = activityName;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
     }
 
-    public static <A, R, T extends ActivityExecutor<A, R>> ActivityClient<A, R> of(
-            final Class<T> executorClass,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter) {
-        requireNonNull(executorClass, "executorClass must not be null");
-        requireNonNull(argumentConverter, "argumentConverter must not be null");
-        requireNonNull(resultConverter, "resultConverter must not be null");
-
-        final Activity annotation = executorClass.getAnnotation(Activity.class);
-        if (annotation == null) {
-            throw new IllegalArgumentException("Executor class %s is not annotated with %s".formatted(
-                    executorClass.getName(), Activity.class.getName()));
-        }
-
-        return new ActivityClient<>(annotation.name(), argumentConverter, resultConverter);
-    }
-
-    public Awaitable<R> call(final WorkflowContext<?, ?> ctx, final A argument, final RetryPolicy retryPolicy) {
-        return ctx.callActivity(
+    public Awaitable<R> call(final ActivityCallOptions<A> options) {
+        return workflowContext.callActivity(
                 this.activityName,
-                argument,
+                options.argument(),
                 this.argumentConverter,
                 this.resultConverter,
-                retryPolicy);
+                options.retryPolicy());
     }
-
-    public Awaitable<R> call(final WorkflowContext<?, ?> ctx, final A argument) {
-        return call(ctx, argument, defaultRetryPolicy());
-    }
-
-    // TODO: Add more call variations as needed.
 
 }

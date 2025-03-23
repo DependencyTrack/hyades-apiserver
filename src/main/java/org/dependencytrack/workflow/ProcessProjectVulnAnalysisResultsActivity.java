@@ -34,7 +34,6 @@ import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyEvaluator;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.util.PersistenceUtil;
-import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityContext;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
@@ -67,8 +66,6 @@ import static org.datanucleus.PropertyNames.PROPERTY_FLUSH_MODE;
 import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Activity(name = "process-project-vuln-analysis-results")
 public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecutor<ProcessProjectVulnAnalysisResultsArgs, Void> {
@@ -82,12 +79,6 @@ public class ProcessProjectVulnAnalysisResultsActivity implements ActivityExecut
             String analyzerIdentity,
             Instant attributedOn) {
     }
-
-    public static final ActivityClient<ProcessProjectVulnAnalysisResultsArgs, Void> CLIENT =
-            ActivityClient.of(
-                    ProcessProjectVulnAnalysisResultsActivity.class,
-                    protoConverter(ProcessProjectVulnAnalysisResultsArgs.class),
-                    voidConverter());
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProcessProjectVulnAnalysisResultsActivity.class);
 

@@ -27,6 +27,8 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.util.PersistenceUtil;
+import org.dependencytrack.workflow.framework.annotation.Activity;
+import org.dependencytrack.workflow.framework.annotation.Workflow;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.junit.After;
 import org.junit.Before;
@@ -50,7 +52,6 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.workflow.framework.RetryPolicy.defaultRetryPolicy;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
@@ -60,6 +61,49 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
     @Rule
     public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
             .set("ALPINE_METRICS_ENABLED", "true");
+
+    @Activity(name = "foo")
+    public static class TestActivityFoo implements ActivityExecutor<Void, Void> {
+
+        @Override
+        public Optional<Void> execute(final ActivityContext<Void> ctx) throws Exception {
+            return Optional.empty();
+        }
+
+    }
+
+    @Activity(name = "bar")
+    public static class TestActivityBar implements ActivityExecutor<Void, Void> {
+
+        @Override
+        public Optional<Void> execute(final ActivityContext<Void> ctx) throws Exception {
+            return Optional.empty();
+        }
+
+    }
+
+    @Activity(name = "baz")
+    public static class TestActivityBaz implements ActivityExecutor<Void, Void> {
+
+        @Override
+        public Optional<Void> execute(final ActivityContext<Void> ctx) throws Exception {
+            return Optional.empty();
+        }
+
+    }
+
+    @Workflow(name = "test")
+    public static class TestWorkflow implements WorkflowExecutor<Void, Void> {
+
+        @Override
+        public Optional<Void> execute(final WorkflowContext<Void, Void> ctx) throws Exception {
+            ctx.activityClient(TestActivityFoo.class).call(null).await();
+            ctx.activityClient(TestActivityBar.class).call(null).await();
+            ctx.activityClient(TestActivityBaz.class).call(null).await();
+            return Optional.empty();
+        }
+
+    }
 
     private WorkflowEngine engine;
     private ScheduledExecutorService statsPrinterExecutor;
@@ -82,19 +126,22 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                 IntervalFunction.of(Duration.ofMillis(50)));
         engineConfig.setMeterRegistry(Metrics.getRegistry());
 
+        engine.register(new TestWorkflow(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+        engine.register(new TestActivityFoo(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+        engine.register(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+        engine.register(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+
         engine = new WorkflowEngine(engineConfig);
         engine.start();
 
-        engine.registerWorkflowExecutor("test", 100, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            ctx.callActivity("foo", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
-            ctx.callActivity("bar", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
-            ctx.callActivity("baz", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
-            return Optional.empty();
-        });
-
-        engine.mount(new ActivityRegistry("foo").register("foo", voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty()), 50);
-        engine.mount(new ActivityRegistry("bar").register("bar", voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty()), 50);
-        engine.mount(new ActivityRegistry("baz").register("baz", voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty()), 50);
+        engine.mount(new WorkflowGroup("test")
+                .withWorkflow(TestWorkflow.class)
+                .withMaxConcurrency(100));
+        engine.mount(new ActivityGroup("test")
+                .withActivity(TestActivityFoo.class)
+                .withActivity(TestActivityBar.class)
+                .withActivity(TestActivityBaz.class)
+                .withMaxConcurrency(100));
     }
 
     @After

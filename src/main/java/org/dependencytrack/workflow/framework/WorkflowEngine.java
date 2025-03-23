@@ -22,6 +22,7 @@ import alpine.event.framework.LoggableUncaughtExceptionHandler;
 import alpine.persistence.OrderDirection;
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
@@ -32,6 +33,7 @@ import org.dependencytrack.workflow.framework.TaskAction.AbandonWorkflowTaskActi
 import org.dependencytrack.workflow.framework.TaskAction.CompleteActivityTaskAction;
 import org.dependencytrack.workflow.framework.TaskAction.CompleteWorkflowTaskAction;
 import org.dependencytrack.workflow.framework.TaskAction.FailActivityTaskAction;
+import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
 import org.dependencytrack.workflow.framework.failure.FailureConverter;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
@@ -52,6 +54,7 @@ import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunJo
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowScheduleRow;
 import org.dependencytrack.workflow.framework.persistence.model.PollActivityTaskCommand;
+import org.dependencytrack.workflow.framework.persistence.model.PollWorkflowTaskCommand;
 import org.dependencytrack.workflow.framework.persistence.model.PolledActivityTaskRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEventRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEvents;
@@ -100,7 +103,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -151,12 +153,11 @@ public class WorkflowEngine implements Closeable {
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngine.class);
-    private static final Pattern WORKFLOW_NAME_PATTERN = Pattern.compile("^[\\w-]+");
-    private static final Pattern ACTIVITY_NAME_PATTERN = WORKFLOW_NAME_PATTERN;
 
     private final WorkflowEngineConfig config;
     private final Jdbi jdbi;
     private final ReentrantLock stateLock = new ReentrantLock();
+    private final ExecutorMetadataRegistry executorMetadataRegistry = new ExecutorMetadataRegistry();
     private State state = State.CREATED;
     private ExecutorService taskDispatcherExecutor;
     private Map<String, ExecutorService> executorServiceByName;
@@ -316,40 +317,91 @@ public class WorkflowEngine implements Closeable {
         LOGGER.debug("Stopped");
     }
 
-    public <A, R> void registerWorkflowExecutor(
+    /**
+     * Register a {@link WorkflowExecutor} with the engine.
+     * <p>
+     * The executor's class <strong>must</strong> be annotated with {@link Workflow}.
+     *
+     * @param workflowExecutor  The {@link WorkflowExecutor} to register.
+     * @param argumentConverter {@link PayloadConverter} for the argument of the workflow.
+     * @param resultConverter   {@link PayloadConverter} for the result of the workflow.
+     * @param lockTimeout       For how long workflow runs should be locked.
+     * @param <A>               Type of the workflow's argument.
+     * @param <R>               Type of the workflow's result.
+     */
+    public <A, R> void register(
             final WorkflowExecutor<A, R> workflowExecutor,
-            final int maxConcurrency,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final Duration taskLockTimeout) {
-        requireNonNull(workflowExecutor, "workflowExecutor must not be null");
-
-        final var workflowAnnotation = workflowExecutor.getClass().getAnnotation(Workflow.class);
-        if (workflowAnnotation == null) {
-            throw new IllegalArgumentException("workflowExecutor must be annotated with @Workflow");
-        }
-
-        registerWorkflowExecutor(workflowAnnotation.name(), maxConcurrency,
-                argumentConverter, resultConverter, taskLockTimeout, workflowExecutor);
+            final Duration lockTimeout) {
+        executorMetadataRegistry.register(workflowExecutor, argumentConverter, resultConverter, lockTimeout);
     }
 
-    <A, R> void registerWorkflowExecutor(
+    @VisibleForTesting
+    <A, R> void register(
             final String workflowName,
-            final int maxConcurrency,
+            final int workflowVersion,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final Duration taskLockTimeout,
+            final Duration lockTimeout,
             final WorkflowExecutor<A, R> workflowExecutor) {
-        state.assertRunning();
-        requireNonNull(workflowName, "workflowName must not be null");
-        requireValidWorkflowName(workflowName);
-        requireNonNull(argumentConverter, "argumentConverter must not be null");
-        requireNonNull(resultConverter, "resultConverter must not be null");
-        requireNonNull(workflowExecutor, "workflowExecutor must not be null");
+        executorMetadataRegistry.register(workflowName, workflowVersion, argumentConverter, resultConverter, lockTimeout, workflowExecutor);
+    }
 
-        final String executorName = "workflow:%s".formatted(workflowName);
+    /**
+     * Register an {@link ActivityExecutor} with the engine.
+     * <p>
+     * The executor's class <strong>must</strong> be annotated with {@link Activity}.
+     *
+     * @param activityExecutor  The {@link ActivityExecutor} to register.
+     * @param argumentConverter {@link PayloadConverter} for the argument of the activity.
+     * @param resultConverter   {@link PayloadConverter} for the result of the activity.
+     * @param lockTimeout       For how long activity instances should be locked.
+     * @param <A>               Type of the activity's argument.
+     * @param <R>               Type of the activity's result.
+     */
+    public <A, R> void register(
+            final ActivityExecutor<A, R> activityExecutor,
+            final PayloadConverter<A> argumentConverter,
+            final PayloadConverter<R> resultConverter,
+            final Duration lockTimeout) {
+        executorMetadataRegistry.register(activityExecutor, argumentConverter, resultConverter, lockTimeout);
+    }
+
+    @VisibleForTesting
+    <A, R> void register(
+            final String activityName,
+            final PayloadConverter<A> argumentConverter,
+            final PayloadConverter<R> resultConverter,
+            final Duration lockTimeout,
+            final ActivityExecutor<A, R> activityExecutor) {
+        executorMetadataRegistry.register(activityName, argumentConverter, resultConverter, lockTimeout, activityExecutor);
+    }
+
+    /**
+     * Mounts a {@link WorkflowGroup} to the engine.
+     * <p>
+     * All workflows in the provided group <strong>must</strong> have been registered with the engine before.
+     *
+     * @param workflowGroup The {@link WorkflowGroup} to mount.
+     * @throws IllegalStateException When any of the workflows within the group have not been registered,
+     *                               or another {@link WorkflowGroup} with the same name is already mounted.
+     */
+    public void mount(final WorkflowGroup workflowGroup) {
+        state.assertRunning();
+        LOGGER.debug("Mounting {}", workflowGroup);
+
+        for (final String workflowName : workflowGroup.workflowNames()) {
+            try {
+                executorMetadataRegistry.getWorkflowMetadata(workflowName);
+            } catch (NoSuchElementException e) {
+                throw new IllegalStateException("Workflow %s is not registered".formatted(workflowName), e);
+            }
+        }
+
+        final String executorName = "WorkflowEngine-WorkflowGroup-%s".formatted(workflowGroup.name());
         if (executorServiceByName.containsKey(executorName)) {
-            throw new IllegalStateException("Workflow %s is already registered".formatted(workflowName));
+            throw new IllegalStateException("Workflow group %s is already registered".formatted(workflowGroup.name()));
         }
 
         // TODO: Micrometer currently can't instrument this executor type.
@@ -357,22 +409,19 @@ public class WorkflowEngine implements Closeable {
         final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                        .name("WorkflowEngine-WorkflowExecutor-" + workflowName + "-", 0)
+                        .name(executorName, 0)
                         .factory());
         if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(executorService, "WorkflowEngine-WorkflowExecutor-" + workflowName, null)
+            new ExecutorServiceMetrics(executorService, executorName, null)
                     .bindTo(config.meterRegistry());
         }
         executorServiceByName.put(executorName, executorService);
 
-        final var taskProcessor = new WorkflowTaskProcessor<>(
-                this, workflowName, workflowExecutor, argumentConverter, resultConverter, taskLockTimeout);
-
         final var taskDispatcher = new TaskDispatcher<>(
                 this,
                 executorService,
-                taskProcessor,
-                maxConcurrency,
+                new WorkflowTaskProcessor(this, workflowGroup, executorMetadataRegistry),
+                workflowGroup.maxConcurrency(),
                 config.workflowTaskDispatcher().minPollInterval(),
                 config.workflowTaskDispatcher().pollBackoffIntervalFunction(),
                 config.meterRegistry());
@@ -380,12 +429,21 @@ public class WorkflowEngine implements Closeable {
         taskDispatcherExecutor.execute(taskDispatcher);
     }
 
-    public void mount(final ActivityRegistry executorRegistry, final int maxConcurrency) {
+    public void mount(final ActivityGroup activityGroup) {
         state.assertRunning();
+        LOGGER.debug("Mounting {}", activityGroup);
 
-        final String executorName = "activity-registry:%s".formatted(executorRegistry.name());
+        for (final String activityName : activityGroup.activityNames()) {
+            try {
+                executorMetadataRegistry.getActivityMetadata(activityName);
+            } catch (NoSuchElementException e) {
+                throw new IllegalStateException("Activity %s is not registered".formatted(activityName), e);
+            }
+        }
+
+        final String executorName = "WorkflowEngine-ActivityGroup-%s".formatted(activityGroup.name());
         if (executorServiceByName.containsKey(executorName)) {
-            throw new IllegalStateException("Activity registry %s is already mounted".formatted(executorRegistry.name()));
+            throw new IllegalStateException("Activity group %s is already mounted".formatted(activityGroup.name()));
         }
 
         // TODO: Micrometer currently can't instrument this executor type.
@@ -393,21 +451,19 @@ public class WorkflowEngine implements Closeable {
         final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual()
                         .uncaughtExceptionHandler(new LoggableUncaughtExceptionHandler())
-                        .name("WorkflowEngine-Activity-" + executorRegistry.name() + "-", 0)
+                        .name(executorName, 0)
                         .factory());
         if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(executorService, "WorkflowEngine-Activity-" + executorRegistry.name(), null)
+            new ExecutorServiceMetrics(executorService, executorName, null)
                     .bindTo(config.meterRegistry());
         }
         executorServiceByName.put(executorName, executorService);
 
-        final var taskProcessor = new ActivityTaskProcessor<>(this, executorRegistry);
-
         final var taskDispatcher = new TaskDispatcher<>(
                 this,
                 executorService,
-                taskProcessor,
-                maxConcurrency,
+                new ActivityTaskProcessor(this, activityGroup, executorMetadataRegistry),
+                activityGroup.maxConcurrency(),
                 config.activityTaskDispatcher().minPollInterval(),
                 config.activityTaskDispatcher().pollBackoffIntervalFunction(),
                 config.meterRegistry());
@@ -672,7 +728,7 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
-    List<WorkflowTask> pollWorkflowTasks(final String workflowName, final int limit, final Duration taskLockTimeout) {
+    List<WorkflowTask> pollWorkflowTasks(final Collection<PollWorkflowTaskCommand> pollCommands, final int limit) {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
@@ -681,7 +737,7 @@ public class WorkflowEngine implements Closeable {
             //  This would allow us to safely cache journal entries locally.
 
             final Map<UUID, PolledWorkflowRunRow> polledRunById =
-                    dao.pollAndLockRuns(this.config.instanceId(), workflowName, taskLockTimeout, limit);
+                    dao.pollAndLockRuns(this.config.instanceId(), pollCommands, limit);
             if (polledRunById.isEmpty()) {
                 return Collections.emptyList();
             }
@@ -1124,6 +1180,10 @@ public class WorkflowEngine implements Closeable {
         return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunCountByNameAndStatus());
     }
 
+    ExecutorMetadataRegistry executorMetadataRegistry() {
+        return executorMetadataRegistry;
+    }
+
     private Set<UUID> getPendingSubWorkflowRunIds(final WorkflowRunState run) {
         final var runIdByEventId = new HashMap<Integer, UUID>();
 
@@ -1184,18 +1244,6 @@ public class WorkflowEngine implements Closeable {
         // https://antonz.org/uuidv7/
         // https://maciejwalkowiak.com/blog/postgres-uuid-primary-key/
         return timeBasedEpochRandomGenerator().generate();
-    }
-
-    private static void requireValidWorkflowName(final String workflowName) {
-        if (!WORKFLOW_NAME_PATTERN.matcher(workflowName).matches()) {
-            throw new IllegalArgumentException("workflowName must match " + WORKFLOW_NAME_PATTERN.pattern());
-        }
-    }
-
-    private static void requireValidActivityName(final String activityName) {
-        if (!ACTIVITY_NAME_PATTERN.matcher(activityName).matches()) {
-            throw new IllegalArgumentException("activityName must match " + ACTIVITY_NAME_PATTERN.pattern());
-        }
     }
 
 }

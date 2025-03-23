@@ -18,8 +18,7 @@
  */
 package org.dependencytrack.workflow.framework;
 
-import org.dependencytrack.workflow.framework.ActivityRegistry.RegisteredActivity;
-import org.dependencytrack.workflow.framework.payload.PayloadConverter;
+import org.dependencytrack.workflow.framework.ExecutorMetadataRegistry.ActivityMetadata;
 import org.dependencytrack.workflow.framework.persistence.model.PollActivityTaskCommand;
 import org.dependencytrack.workflow.framework.proto.v1alpha1.ActivityTaskCompleted;
 import org.dependencytrack.workflow.framework.proto.v1alpha1.WorkflowPayload;
@@ -27,32 +26,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
+final class ActivityTaskProcessor implements TaskProcessor<ActivityTask> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ActivityTaskProcessor.class);
 
     private final WorkflowEngine engine;
-    private final ActivityRegistry activityRegistry;
+    private final ActivityGroup activityGroup;
+    private final ExecutorMetadataRegistry executorMetadataRegistry;
     private final List<PollActivityTaskCommand> pollCommands;
 
     ActivityTaskProcessor(
             final WorkflowEngine engine,
-            final ActivityRegistry activityRegistry) {
+            final ActivityGroup activityGroup,
+            final ExecutorMetadataRegistry executorMetadataRegistry) {
         this.engine = engine;
-        this.activityRegistry = activityRegistry;
-        this.pollCommands = activityRegistry.getActivities().entrySet().stream()
-                .map(entry -> new PollActivityTaskCommand(
-                        entry.getKey(), entry.getValue().lockTimeout()))
+        this.activityGroup = activityGroup;
+        this.executorMetadataRegistry = executorMetadataRegistry;
+        this.pollCommands = activityGroup.activityNames().stream()
+                .map(executorMetadataRegistry::getActivityMetadata)
+                .map(metadata -> new PollActivityTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
     }
 
     @Override
     public String taskName() {
-        return activityRegistry.name(); // TODO
+        return activityGroup.name();
     }
 
     @Override
@@ -86,31 +87,28 @@ final class ActivityTaskProcessor<A, R> implements TaskProcessor<ActivityTask> {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void processInternal(final ActivityTask task) {
-        final RegisteredActivity registeredActivity = activityRegistry.getActivity(task.activityName());
-        if (registeredActivity == null) {
+        if (!activityGroup.activityNames().contains(task.activityName())) {
             throw new IllegalStateException(
-                    "Received task for activity %s, but it is not registered".formatted(task.activityName()));
+                    "Received task for activity %s which is not part of the configured activity group %s".formatted(
+                            task.activityName(), activityGroup.name()));
         }
 
-        final ActivityExecutor executor = registeredActivity.executor();
-        final PayloadConverter argumentConverter = registeredActivity.argumentConverter();
-        final PayloadConverter resultConverter = registeredActivity.resultConverter();
-        final Duration lockTimeout = registeredActivity.lockTimeout();
+        final ActivityMetadata activityMetadata = executorMetadataRegistry.getActivityMetadata(task.activityName());
 
         final var ctx = new ActivityContext<>(
                 engine,
                 task.workflowRunId(),
                 task.scheduledEventId(),
-                argumentConverter.convertFromPayload(task.argument()),
-                executor,
-                lockTimeout,
+                activityMetadata.argumentConverter().convertFromPayload(task.argument()),
+                activityMetadata.executor(),
+                activityMetadata.lockTimeout(),
                 task.lockedUntil());
 
         try {
             final WorkflowPayload result;
             try (ctx) {
-                result = (WorkflowPayload) executor.execute(ctx)
-                        .map(resultConverter::convertToPayload)
+                result = (WorkflowPayload) activityMetadata.executor().execute(ctx)
+                        .map(activityMetadata.resultConverter()::convertToPayload)
                         .orElse(null);
             }
 

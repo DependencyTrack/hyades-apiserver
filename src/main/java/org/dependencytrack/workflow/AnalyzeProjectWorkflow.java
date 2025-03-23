@@ -22,8 +22,8 @@ import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
+import org.dependencytrack.workflow.framework.ActivityCallOptions;
 import org.dependencytrack.workflow.framework.Awaitable;
-import org.dependencytrack.workflow.framework.WorkflowClient;
 import org.dependencytrack.workflow.framework.WorkflowContext;
 import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
@@ -47,16 +47,9 @@ import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_OSSINDEX
 import static org.dependencytrack.model.ConfigPropertyConstants.SCANNER_SNYK_ENABLED;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Workflow(name = "analyze-project")
 public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectArgs, Void> {
-
-    public static final WorkflowClient<AnalyzeProjectArgs, Void> CLIENT =
-            WorkflowClient.of(
-                    AnalyzeProjectWorkflow.class,
-                    protoConverter(AnalyzeProjectArgs.class),
-                    voidConverter());
 
     private static final String STATUS_ANALYZING_VULNS = "ANALYZING_VULNS";
     private static final String STATUS_PROCESSING_VULN_ANALYSIS_RESULTS = "PROCESSING_VULN_ANALYSIS_RESULTS";
@@ -67,6 +60,11 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
     @Override
     public Optional<Void> execute(final WorkflowContext<AnalyzeProjectArgs, Void> ctx) throws Exception {
         final AnalyzeProjectArgs args = ctx.argument().orElseThrow();
+
+        final var analyzeVulnsClient = ctx.activityClient(AnalyzeProjectVulnsActivity.class);
+        final var processVulnAnalysisResultsClient = ctx.activityClient(ProcessProjectVulnAnalysisResultsActivity.class);
+        final var evalPoliciesClient = ctx.activityClient(PolicyEvaluationTask.class);
+        final var updateMetricsClient = ctx.activityClient(ProjectMetricsUpdateTask.class);
 
         ctx.setStatus(STATUS_ANALYZING_VULNS);
 
@@ -89,12 +87,12 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
         for (final String analyzerName : enabledAnalyzerNames) {
             ctx.logger().info("Scheduling vulnerability analysis with {}", analyzerName);
             final Awaitable<AnalyzeProjectVulnsResult> awaitable =
-                    AnalyzeProjectVulnsActivity.CLIENT.call(
-                            ctx,
-                            AnalyzeProjectVulnsArgs.newBuilder()
-                                    .setProject(args.getProject())
-                                    .setAnalyzerName(analyzerName)
-                                    .build());
+                    analyzeVulnsClient.call(
+                            new ActivityCallOptions<AnalyzeProjectVulnsArgs>()
+                                    .withArgument(AnalyzeProjectVulnsArgs.newBuilder()
+                                            .setProject(args.getProject())
+                                            .setAnalyzerName(analyzerName)
+                                            .build()));
             pendingVulnAnalysisResultByAnalyzerName.put(analyzerName, awaitable);
         }
 
@@ -121,28 +119,28 @@ public class AnalyzeProjectWorkflow implements WorkflowExecutor<AnalyzeProjectAr
 
         ctx.setStatus(STATUS_PROCESSING_VULN_ANALYSIS_RESULTS);
         ctx.logger().info("Scheduling processing of vulnerability analysis results");
-        ProcessProjectVulnAnalysisResultsActivity.CLIENT.call(
-                ctx,
-                ProcessProjectVulnAnalysisResultsArgs.newBuilder()
-                        .setProject(args.getProject())
-                        .addAllResults(vulnAnalysisResults)
-                        .build()).await();
+        processVulnAnalysisResultsClient.call(
+                new ActivityCallOptions<ProcessProjectVulnAnalysisResultsArgs>()
+                        .withArgument(ProcessProjectVulnAnalysisResultsArgs.newBuilder()
+                                .setProject(args.getProject())
+                                .addAllResults(vulnAnalysisResults)
+                                .build())).await();
 
         ctx.logger().info("Scheduling policy evaluation");
         ctx.setStatus(STATUS_EVALUATING_POLICIES);
-        PolicyEvaluationTask.ACTIVITY_CLIENT.call(
-                ctx,
-                EvalProjectPoliciesArgs.newBuilder()
-                        .setProject(args.getProject())
-                        .build()).await();
+        evalPoliciesClient.call(
+                new ActivityCallOptions<EvalProjectPoliciesArgs>()
+                        .withArgument(EvalProjectPoliciesArgs.newBuilder()
+                                .setProject(args.getProject())
+                                .build())).await();
 
         ctx.logger().info("Scheduling metrics update");
         ctx.setStatus(STATUS_UPDATING_METRICS);
-        ProjectMetricsUpdateTask.ACTIVITY_CLIENT.call(
-                ctx,
-                UpdateProjectMetricsArgs.newBuilder()
-                        .setProject(args.getProject())
-                        .build()).await();
+        updateMetricsClient.call(
+                new ActivityCallOptions<UpdateProjectMetricsArgs>()
+                        .withArgument(UpdateProjectMetricsArgs.newBuilder()
+                                .setProject(args.getProject())
+                                .build())).await();
 
         ctx.setStatus(STATUS_COMPLETED);
         return Optional.empty();

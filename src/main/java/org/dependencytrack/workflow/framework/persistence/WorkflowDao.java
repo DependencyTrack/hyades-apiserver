@@ -28,6 +28,7 @@ import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunJo
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.framework.persistence.model.NewWorkflowScheduleRow;
 import org.dependencytrack.workflow.framework.persistence.model.PollActivityTaskCommand;
+import org.dependencytrack.workflow.framework.persistence.model.PollWorkflowTaskCommand;
 import org.dependencytrack.workflow.framework.persistence.model.PolledActivityTaskRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEventRow;
 import org.dependencytrack.workflow.framework.persistence.model.PolledWorkflowEvents;
@@ -380,14 +381,18 @@ public final class WorkflowDao {
 
     public Map<UUID, PolledWorkflowRunRow> pollAndLockRuns(
             final UUID workerInstanceId,
-            final String workflowName,
-            final Duration lockTimeout,
+            final Collection<PollWorkflowTaskCommand> pollCommands,
             final int limit) {
         final Update update = jdbiHandle.createUpdate("""
-                with cte_poll as (
+                with
+                cte_poll_cmd as (
+                    select *
+                      from unnest(:workflowNames, :lockTimeouts) as t(workflow_name, lock_timeout)
+                ),
+                cte_poll as (
                     select id
                       from workflow_run
-                     where workflow_name = :workflowName
+                     where workflow_name in (select workflow_name from cte_poll_cmd)
                        and status = any(cast('{PENDING, RUNNING, SUSPENDED}' as workflow_run_status[]))
                        and (concurrency_group_id is null
                             or id = (select next_run_id
@@ -405,9 +410,11 @@ public final class WorkflowDao {
                      limit :limit)
                 update workflow_run
                    set locked_by = :workerInstanceId
-                     , locked_until = now() + :lockTimeout
+                     , locked_until = now() + cte_poll_cmd.lock_timeout
                   from cte_poll
+                     , cte_poll_cmd
                  where cte_poll.id = workflow_run.id
+                   and cte_poll_cmd.workflow_name = workflow_run.workflow_name
                 returning workflow_run.id
                         , workflow_run.workflow_name
                         , workflow_run.workflow_version
@@ -416,10 +423,18 @@ public final class WorkflowDao {
                         , workflow_run.labels
                 """);
 
+        final var workflowNames = new ArrayList<String>(pollCommands.size());
+        final var lockTimeouts = new ArrayList<Duration>(pollCommands.size());
+
+        for (final PollWorkflowTaskCommand pollCommand : pollCommands) {
+            workflowNames.add(pollCommand.workflowName());
+            lockTimeouts.add(pollCommand.lockTimeout());
+        }
+
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bind("workflowName", workflowName)
-                .bind("lockTimeout", lockTimeout)
+                .bindArray("workflowNames", String.class, workflowNames)
+                .bindArray("lockTimeouts", Duration.class, lockTimeouts)
                 .bind("limit", limit)
                 .executeAndReturnGeneratedKeys(
                         "id",

@@ -23,7 +23,6 @@ import org.dependencytrack.notification.publisher.NotificationPublisher;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.notification.v1.Notification;
 import org.dependencytrack.storage.FileStorage;
-import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityContext;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
@@ -45,17 +44,9 @@ import java.util.Optional;
 import java.util.ServiceLoader;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
 @Activity(name = "publish-notification")
 public class PublishNotificationActivity implements ActivityExecutor<PublishNotificationActivityArgs, Void> {
-
-    public static final ActivityClient<PublishNotificationActivityArgs, Void> CLIENT =
-            ActivityClient.of(
-                    PublishNotificationActivity.class,
-                    protoConverter(PublishNotificationActivityArgs.class),
-                    voidConverter());
 
     private final List<NotificationPublisher> publishers;
 

@@ -20,6 +20,8 @@ package org.dependencytrack.workflow.framework;
 
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.Timestamp;
+import org.dependencytrack.workflow.framework.ExecutorMetadataRegistry.ActivityMetadata;
+import org.dependencytrack.workflow.framework.ExecutorMetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.workflow.framework.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.workflow.framework.WorkflowCommand.RecordSideEffectResultCommand;
 import org.dependencytrack.workflow.framework.WorkflowCommand.ScheduleActivityCommand;
@@ -81,6 +83,7 @@ public final class WorkflowContext<A, R> {
     private final int workflowVersion;
     private final Integer priority;
     private final Map<String, String> labels;
+    private final ExecutorMetadataRegistry executorMetadataRegistry;
     private final WorkflowExecutor<A, R> workflowExecutor;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
@@ -107,6 +110,7 @@ public final class WorkflowContext<A, R> {
             final int workflowVersion,
             final Integer priority,
             final Map<String, String> labels,
+            final ExecutorMetadataRegistry executorMetadataRegistry,
             final WorkflowExecutor<A, R> workflowExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
@@ -117,6 +121,7 @@ public final class WorkflowContext<A, R> {
         this.workflowVersion = workflowVersion;
         this.priority = priority;
         this.labels = labels;
+        this.executorMetadataRegistry = executorMetadataRegistry;
         this.workflowExecutor = workflowExecutor;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
@@ -172,6 +177,25 @@ public final class WorkflowContext<A, R> {
      */
     public Logger logger() {
         return new ReplayAwareLogger(this, LoggerFactory.getLogger(workflowExecutor.getClass()));
+    }
+
+    public <AA, AR> ActivityClient<AA, AR> activityClient(final Class<? extends ActivityExecutor<AA, AR>> activityClass) {
+        final ActivityMetadata<AA, AR> activityMetadata = executorMetadataRegistry.getActivityMetadata(activityClass);
+        return new ActivityClient<>(
+                this,
+                activityMetadata.name(),
+                activityMetadata.argumentConverter(),
+                activityMetadata.resultConverter());
+    }
+
+    public <WA, WR> WorkflowClient<WA, WR> workflowClient(final Class<? extends WorkflowExecutor<WA, WR>> workflowClass) {
+        final WorkflowMetadata<WA, WR> workflowMetadata = executorMetadataRegistry.getWorkflowMetadata(workflowClass);
+        return new WorkflowClient<>(
+                this,
+                workflowMetadata.name(),
+                workflowMetadata.version(),
+                workflowMetadata.argumentConverter(),
+                workflowMetadata.resultConverter());
     }
 
     <AA, AR> Awaitable<AR> callActivity(

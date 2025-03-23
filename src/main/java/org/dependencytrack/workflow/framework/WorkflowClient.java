@@ -18,55 +18,37 @@
  */
 package org.dependencytrack.workflow.framework;
 
-import org.dependencytrack.workflow.framework.annotation.Workflow;
 import org.dependencytrack.workflow.framework.payload.PayloadConverter;
 
 import static java.util.Objects.requireNonNull;
 
 public final class WorkflowClient<A, R> {
 
+    private final WorkflowContext<?, ?> workflowContext;
     private final String workflowName;
     private final int workflowVersion;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
 
-    private WorkflowClient(
+    WorkflowClient(
+            final WorkflowContext<?, ?> workflowContext,
             final String workflowName,
             final int workflowVersion,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter) {
+        this.workflowContext = requireNonNull(workflowContext);
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
     }
 
-    public static <A, R, T extends WorkflowExecutor<A, R>> WorkflowClient<A, R> of(
-            final Class<T> executorClass,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter) {
-        requireNonNull(executorClass, "executorClass must not be null");
-        requireNonNull(argumentConverter, "argumentConverter must not be null");
-        requireNonNull(resultConverter, "resultConverter must not be null");
-
-        final Workflow annotation = executorClass.getAnnotation(Workflow.class);
-        if (annotation == null) {
-            throw new IllegalArgumentException("Executor class %s is not annotated with %s".formatted(
-                    executorClass.getName(), Workflow.class.getName()));
-        }
-
-        return new WorkflowClient<>(annotation.name(), annotation.version(), argumentConverter, resultConverter);
-    }
-
-    public Awaitable<R> callWithConcurrencyGroupId(
-            final WorkflowContext<?, ?> ctx,
-            final String concurrencyGroupId,
-            final A argument) {
-        return ctx.callSubWorkflow(
+    public Awaitable<R> call(final WorkflowCallOptions<A> options) {
+        return workflowContext.callSubWorkflow(
                 this.workflowName,
                 this.workflowVersion,
-                concurrencyGroupId,
-                argument,
+                options.concurrencyGroupId(),
+                options.argument(),
                 argumentConverter,
                 resultConverter);
     }

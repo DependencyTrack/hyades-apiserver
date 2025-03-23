@@ -19,7 +19,8 @@
 package org.dependencytrack.workflow.framework;
 
 import com.google.protobuf.util.Timestamps;
-import org.dependencytrack.workflow.framework.payload.PayloadConverter;
+import org.dependencytrack.workflow.framework.ExecutorMetadataRegistry.WorkflowMetadata;
+import org.dependencytrack.workflow.framework.persistence.model.PollWorkflowTaskCommand;
 import org.dependencytrack.workflow.framework.proto.v1alpha1.ExecutionCompleted;
 import org.dependencytrack.workflow.framework.proto.v1alpha1.ExecutionStarted;
 import org.dependencytrack.workflow.framework.proto.v1alpha1.RunStarted;
@@ -28,44 +29,39 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
+final class WorkflowTaskProcessor implements TaskProcessor<WorkflowTask> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowTaskProcessor.class);
 
     private final WorkflowEngine engine;
-    private final String workflowName;
-    private final WorkflowExecutor<A, R> workflowExecutor;
-    private final PayloadConverter<A> argumentConverter;
-    private final PayloadConverter<R> resultConverter;
-    private final Duration taskLockTimeout;
+    private final WorkflowGroup workflowGroup;
+    private final ExecutorMetadataRegistry executorMetadataRegistry;
+    private final List<PollWorkflowTaskCommand> pollCommands;
 
     WorkflowTaskProcessor(
             final WorkflowEngine engine,
-            final String workflowName,
-            final WorkflowExecutor<A, R> workflowExecutor,
-            final PayloadConverter<A> argumentConverter,
-            final PayloadConverter<R> resultConverter,
-            final Duration taskLockTimeout) {
+            final WorkflowGroup workflowGroup,
+            final ExecutorMetadataRegistry executorMetadataRegistry) {
         this.engine = engine;
-        this.workflowName = workflowName;
-        this.workflowExecutor = workflowExecutor;
-        this.argumentConverter = argumentConverter;
-        this.resultConverter = resultConverter;
-        this.taskLockTimeout = taskLockTimeout;
+        this.workflowGroup = workflowGroup;
+        this.executorMetadataRegistry = executorMetadataRegistry;
+        this.pollCommands = workflowGroup.workflowNames().stream()
+                .map(executorMetadataRegistry::getWorkflowMetadata)
+                .map(metadata -> new PollWorkflowTaskCommand(metadata.name(), metadata.lockTimeout()))
+                .toList();
     }
 
     @Override
     public String taskName() {
-        return workflowName;
+        return workflowGroup.name();
     }
 
     @Override
     public List<WorkflowTask> poll(final int limit) {
-        return engine.pollWorkflowTasks(workflowName, limit, taskLockTimeout);
+        return engine.pollWorkflowTasks(pollCommands, limit);
     }
 
     @Override
@@ -95,7 +91,16 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
         }
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private void processInternal(final WorkflowTask task) {
+        if (!workflowGroup.workflowNames().contains(task.workflowName())) {
+            throw new IllegalStateException(
+                    "Received task for workflow %s which is not part of the configured workflow group %s".formatted(
+                            task.workflowName(), workflowGroup.name()));
+        }
+
+        final WorkflowMetadata workflowMetadata = executorMetadataRegistry.getWorkflowMetadata(task.workflowName());
+
         // Hydrate workflow run state from the journal.
         final var workflowRunState = new WorkflowRunState(
                 task.workflowRunId(),
@@ -152,9 +157,10 @@ final class WorkflowTaskProcessor<A, R> implements TaskProcessor<WorkflowTask> {
                 task.workflowVersion(),
                 task.priority(),
                 task.labels(),
-                workflowExecutor,
-                argumentConverter,
-                resultConverter,
+                engine.executorMetadataRegistry(),
+                workflowMetadata.executor(),
+                workflowMetadata.argumentConverter(),
+                workflowMetadata.resultConverter(),
                 workflowRunState.journal(),
                 workflowRunState.inbox());
         final WorkflowRunExecutionResult executionResult = ctx.execute();

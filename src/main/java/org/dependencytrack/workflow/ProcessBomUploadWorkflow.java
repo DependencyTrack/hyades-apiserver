@@ -19,6 +19,8 @@
 package org.dependencytrack.workflow;
 
 import org.dependencytrack.tasks.BomUploadProcessingTask;
+import org.dependencytrack.workflow.framework.ActivityCallOptions;
+import org.dependencytrack.workflow.framework.WorkflowCallOptions;
 import org.dependencytrack.workflow.framework.WorkflowContext;
 import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
@@ -38,25 +40,29 @@ public class ProcessBomUploadWorkflow implements WorkflowExecutor<ProcessBomUplo
     @Override
     public Optional<Void> execute(final WorkflowContext<ProcessBomUploadArgs, Void> ctx) throws Exception {
         final ProcessBomUploadArgs args = ctx.argument().orElseThrow();
+
+        final var ingestBomClient = ctx.activityClient(BomUploadProcessingTask.class);
+        final var analyzeProjectClient = ctx.workflowClient(AnalyzeProjectWorkflow.class);
+
         ctx.logger().info("Processing BOM upload");
 
         ctx.logger().info("Scheduling BOM ingestion");
         ctx.setStatus(STATUS_INGESTING_BOM);
-        BomUploadProcessingTask.ACTIVITY_CLIENT.call(
-                ctx,
-                IngestBomArgs.newBuilder()
-                        .setProject(args.getProject())
-                        .setBomFileMetadata(args.getBomFileMetadata())
-                        .build()).await();
+        ingestBomClient.call(
+                new ActivityCallOptions<IngestBomArgs>()
+                        .withArgument(IngestBomArgs.newBuilder()
+                                .setProject(args.getProject())
+                                .setBomFileMetadata(args.getBomFileMetadata())
+                                .build())).await();
 
         ctx.logger().info("Triggering project analysis");
         ctx.setStatus(STATUS_ANALYZING);
-        AnalyzeProjectWorkflow.CLIENT.callWithConcurrencyGroupId(
-                ctx,
-                "analyze-project-" + args.getProject().getUuid(),
-                AnalyzeProjectArgs.newBuilder()
-                        .setProject(args.getProject())
-                        .build()).await();
+        analyzeProjectClient.call(
+                new WorkflowCallOptions<AnalyzeProjectArgs>()
+                        .withConcurrencyGroupId("analyze-project-" + args.getProject().getUuid())
+                        .withArgument(AnalyzeProjectArgs.newBuilder()
+                                .setProject(args.getProject())
+                                .build())).await();
 
         ctx.logger().info("BOM upload processed successfully");
         ctx.setStatus(STATUS_PROCESSED);

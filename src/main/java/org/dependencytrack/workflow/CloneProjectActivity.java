@@ -20,7 +20,6 @@ package org.dependencytrack.workflow;
 
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityContext;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
@@ -31,16 +30,8 @@ import org.dependencytrack.workflow.payload.proto.v1alpha1.CloneProjectResult;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
-
 @Activity(name = "clone-project")
 public class CloneProjectActivity implements ActivityExecutor<CloneProjectArgs, CloneProjectResult> {
-
-    public static final ActivityClient<CloneProjectArgs, CloneProjectResult> CLIENT =
-            ActivityClient.of(
-                    CloneProjectActivity.class,
-                    protoConverter(CloneProjectArgs.class),
-                    protoConverter(CloneProjectResult.class));
 
     @Override
     public Optional<CloneProjectResult> execute(final ActivityContext<CloneProjectArgs> ctx) throws Exception {

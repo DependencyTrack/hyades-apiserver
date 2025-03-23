@@ -20,6 +20,7 @@ package org.dependencytrack.workflow;
 
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.storage.FileStorage;
+import org.dependencytrack.workflow.framework.ActivityCallOptions;
 import org.dependencytrack.workflow.framework.Awaitable;
 import org.dependencytrack.workflow.framework.WorkflowContext;
 import org.dependencytrack.workflow.framework.WorkflowExecutor;
@@ -41,6 +42,9 @@ public class PublishNotificationWorkflow implements WorkflowExecutor<PublishNoti
     @Override
     public Optional<Void> execute(final WorkflowContext<PublishNotificationWorkflowArgs, Void> ctx) throws Exception {
         final PublishNotificationWorkflowArgs args = ctx.argument().orElseThrow();
+
+        final var publishClient = ctx.activityClient(PublishNotificationActivity.class);
+
         if (args.getNotificationRuleNamesCount() == 0) {
             ctx.logger().warn("No rules provided");
             return Optional.empty();
@@ -49,12 +53,12 @@ public class PublishNotificationWorkflow implements WorkflowExecutor<PublishNoti
         final var awaitableByRuleName = new HashMap<String, Awaitable<Void>>(args.getNotificationRuleNamesCount());
         for (final String ruleName : args.getNotificationRuleNamesList()) {
             ctx.logger().debug("Scheduling notification publish for rule {}", ruleName);
-            final Awaitable<Void> awaitable = PublishNotificationActivity.CLIENT.call(
-                    ctx,
-                    PublishNotificationActivityArgs.newBuilder()
-                            .setNotificationFileMetadata(args.getNotificationFileMetadata())
-                            .setNotificationRuleName(ruleName)
-                            .build());
+            final Awaitable<Void> awaitable = publishClient.call(
+                    new ActivityCallOptions<PublishNotificationActivityArgs>()
+                            .withArgument(PublishNotificationActivityArgs.newBuilder()
+                                    .setNotificationFileMetadata(args.getNotificationFileMetadata())
+                                    .setNotificationRuleName(ruleName)
+                                    .build()));
             awaitableByRuleName.put(ruleName, awaitable);
         }
 

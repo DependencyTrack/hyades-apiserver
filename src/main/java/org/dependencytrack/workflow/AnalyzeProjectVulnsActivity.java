@@ -23,7 +23,6 @@ import org.dependencytrack.analysis.vulnerability.VulnAnalyzer;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.storage.FileStorage;
-import org.dependencytrack.workflow.framework.ActivityClient;
 import org.dependencytrack.workflow.framework.ActivityContext;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
 import org.dependencytrack.workflow.framework.annotation.Activity;
@@ -39,18 +38,10 @@ import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.UUID;
 
-import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
-
 @Activity(name = "analyze-project-vulns")
 public class AnalyzeProjectVulnsActivity implements ActivityExecutor<AnalyzeProjectVulnsArgs, AnalyzeProjectVulnsResult> {
 
     private final Map<String, VulnAnalyzer> analyzerByName = new HashMap<>();
-
-    public static final ActivityClient<AnalyzeProjectVulnsArgs, AnalyzeProjectVulnsResult> CLIENT =
-            ActivityClient.of(
-                    AnalyzeProjectVulnsActivity.class,
-                    protoConverter(AnalyzeProjectVulnsArgs.class),
-                    protoConverter(AnalyzeProjectVulnsResult.class));
 
     public AnalyzeProjectVulnsActivity() {
         this(ServiceLoader.load(VulnAnalyzer.class).stream()

@@ -42,10 +42,11 @@ import org.dependencytrack.proto.notification.v1.Scope;
 import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
 import org.dependencytrack.storage.FileStorage;
 import org.dependencytrack.util.PersistenceUtil;
-import org.dependencytrack.workflow.framework.ActivityRegistry;
+import org.dependencytrack.workflow.framework.ActivityGroup;
 import org.dependencytrack.workflow.framework.ScheduleWorkflowRunOptions;
 import org.dependencytrack.workflow.framework.WorkflowEngine;
 import org.dependencytrack.workflow.framework.WorkflowEngineConfig;
+import org.dependencytrack.workflow.framework.WorkflowGroup;
 import org.dependencytrack.workflow.framework.WorkflowRunStatus;
 import org.dependencytrack.workflow.payload.proto.v1alpha1.PublishNotificationActivityArgs;
 import org.dependencytrack.workflow.payload.proto.v1alpha1.PublishNotificationWorkflowArgs;
@@ -93,20 +94,19 @@ public class PublishNotificationWorkflowTest extends PersistenceCapableTest {
         engine = new WorkflowEngine(config);
         engine.start();
 
-        engine.registerWorkflowExecutor(
+        engine.register(
                 new PublishNotificationWorkflow(),
-                1,
                 protoConverter(PublishNotificationWorkflowArgs.class),
                 voidConverter(),
                 Duration.ofSeconds(5));
+        engine.register(
+                new PublishNotificationActivity(),
+                protoConverter(PublishNotificationActivityArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(5));
 
-        engine.mount(new ActivityRegistry("notification")
-                .register(
-                        "publish-notification",
-                        protoConverter(PublishNotificationActivityArgs.class),
-                        voidConverter(),
-                        Duration.ofSeconds(5),
-                        new PublishNotificationActivity()), 1);
+        engine.mount(new WorkflowGroup("test").withWorkflow(PublishNotificationWorkflow.class));
+        engine.mount(new ActivityGroup("test").withActivity(PublishNotificationActivity.class));
     }
 
     @After

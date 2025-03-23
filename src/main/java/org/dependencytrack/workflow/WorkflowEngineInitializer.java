@@ -30,10 +30,11 @@ import org.dependencytrack.tasks.PolicyEvaluationTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.util.PersistenceUtil;
 import org.dependencytrack.workflow.framework.ActivityExecutor;
-import org.dependencytrack.workflow.framework.ActivityRegistry;
+import org.dependencytrack.workflow.framework.ActivityGroup;
 import org.dependencytrack.workflow.framework.FaultInjectingActivityExecutor;
 import org.dependencytrack.workflow.framework.WorkflowEngine;
 import org.dependencytrack.workflow.framework.WorkflowEngineConfig;
+import org.dependencytrack.workflow.framework.WorkflowGroup;
 import org.dependencytrack.workflow.framework.persistence.Migration;
 import org.dependencytrack.workflow.payload.proto.v1alpha1.AnalyzeProjectArgs;
 import org.dependencytrack.workflow.payload.proto.v1alpha1.AnalyzeProjectVulnsArgs;
@@ -165,81 +166,95 @@ public class WorkflowEngineInitializer implements ServletContextListener {
         }
 
         engine = new WorkflowEngine(config);
+
+        engine.register(
+                new ProcessBomUploadWorkflow(),
+                protoConverter(ProcessBomUploadArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(30));
+        engine.register(
+                new AnalyzeProjectWorkflow(),
+                protoConverter(AnalyzeProjectArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(30));
+        engine.register(
+                new CloneProjectWorkflow(),
+                protoConverter(CloneProjectArgs.class),
+                protoConverter(CloneProjectResult.class),
+                Duration.ofSeconds(30));
+        engine.register(
+                new PublishNotificationWorkflow(),
+                protoConverter(PublishNotificationWorkflowArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(30));
+
+        final var random = new SecureRandom();
+
+        engine.register(
+                maybeFaultInjecting(new BomUploadProcessingTask(), random),
+                protoConverter(IngestBomArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(30));
+        engine.register(
+                maybeFaultInjecting(new AnalyzeProjectVulnsActivity(), random),
+                protoConverter(AnalyzeProjectVulnsArgs.class),
+                protoConverter(AnalyzeProjectVulnsResult.class),
+                Duration.ofSeconds(30));
+        engine.register(
+                maybeFaultInjecting(new ProcessProjectVulnAnalysisResultsActivity(), random),
+                protoConverter(ProcessProjectVulnAnalysisResultsArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(30));
+        engine.register(
+                maybeFaultInjecting(new PolicyEvaluationTask(), random),
+                protoConverter(EvalProjectPoliciesArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(30));
+        engine.register(
+                maybeFaultInjecting(new ProjectMetricsUpdateTask(), random),
+                protoConverter(UpdateProjectMetricsArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(30));
+        engine.register(
+                maybeFaultInjecting(new CloneProjectActivity(), random),
+                protoConverter(CloneProjectArgs.class),
+                protoConverter(CloneProjectResult.class),
+                Duration.ofSeconds(30));
+        engine.register(
+                maybeFaultInjecting(new PublishNotificationActivity(), random),
+                protoConverter(PublishNotificationActivityArgs.class),
+                voidConverter(),
+                Duration.ofSeconds(30));
+
         engine.start();
 
         // TODO: Make configurable which runners are registered,
         //  their max concurrency, and their lock timeout.
 
-        engine.registerWorkflowExecutor(
-                new ProcessBomUploadWorkflow(),
-                /* maxConcurrency */ 50,
-                /* argumentConverter */ protoConverter(ProcessBomUploadArgs.class),
-                /* resultConverter */ voidConverter(),
-                /* lockTimeout */ Duration.ofSeconds(30));
-        engine.registerWorkflowExecutor(
-                new AnalyzeProjectWorkflow(),
-                /* maxConcurrency */ 50,
-                /* argumentConverter */ protoConverter(AnalyzeProjectArgs.class),
-                /* resultConverter */ voidConverter(),
-                /* lockTimeout */ Duration.ofSeconds(30));
-        engine.registerWorkflowExecutor(
-                new PublishNotificationWorkflow(),
-                /* maxConcurrency */ 10,
-                /* argumentConverter */ protoConverter(PublishNotificationWorkflowArgs.class),
-                /* resultConverter */ voidConverter(),
-                /* lockTimeout */ Duration.ofSeconds(30));
+        engine.mount(new ActivityGroup("bom")
+                .withActivity(BomUploadProcessingTask.class)
+                .withMaxConcurrency(10));
+        engine.mount(new ActivityGroup("analysis")
+                .withActivity(AnalyzeProjectVulnsActivity.class)
+                .withActivity(ProcessProjectVulnAnalysisResultsActivity.class)
+                .withActivity(PolicyEvaluationTask.class)
+                .withMaxConcurrency(30));
+        engine.mount(new ActivityGroup("metrics")
+                .withActivity(ProjectMetricsUpdateTask.class)
+                .withMaxConcurrency(10));
+        engine.mount(new ActivityGroup("misc")
+                .withActivity(CloneProjectActivity.class)
+                .withMaxConcurrency(5));
+        engine.mount(new ActivityGroup("notification")
+                .withActivity(PublishNotificationActivity.class)
+                .withMaxConcurrency(10));
 
-        final var random = new SecureRandom();
-
-        final var bomActivityRegistry = new ActivityRegistry("bom")
-                .register(
-                        maybeFaultInjecting(new BomUploadProcessingTask(), random),
-                        protoConverter(IngestBomArgs.class),
-                        voidConverter(),
-                        Duration.ofSeconds(30));
-        engine.mount(bomActivityRegistry, 10);
-
-        final var analysisActivityRegistry = new ActivityRegistry("analysis")
-                .register(
-                        maybeFaultInjecting(new AnalyzeProjectVulnsActivity(), random),
-                        protoConverter(AnalyzeProjectVulnsArgs.class),
-                        protoConverter(AnalyzeProjectVulnsResult.class),
-                        Duration.ofSeconds(30))
-                .register(
-                        maybeFaultInjecting(new ProcessProjectVulnAnalysisResultsActivity(), random),
-                        protoConverter(ProcessProjectVulnAnalysisResultsArgs.class),
-                        voidConverter(),
-                        Duration.ofSeconds(30))
-                .register(
-                        maybeFaultInjecting(new PolicyEvaluationTask(), random),
-                        protoConverter(EvalProjectPoliciesArgs.class),
-                        voidConverter(),
-                        Duration.ofSeconds(30));
-        engine.mount(analysisActivityRegistry, 30);
-
-        final var metricsActivityRegistry = new ActivityRegistry("metrics")
-                .register(
-                        maybeFaultInjecting(new ProjectMetricsUpdateTask(), random),
-                        protoConverter(UpdateProjectMetricsArgs.class),
-                        voidConverter(),
-                        Duration.ofSeconds(30));
-        engine.mount(metricsActivityRegistry, 10);
-
-        final var miscActivityRegistry = new ActivityRegistry("misc")
-                .register(
-                        maybeFaultInjecting(new CloneProjectActivity(), random),
-                        protoConverter(CloneProjectArgs.class),
-                        protoConverter(CloneProjectResult.class),
-                        Duration.ofSeconds(30));
-        engine.mount(miscActivityRegistry, 5);
-
-        final var notificationActivityRegistry = new ActivityRegistry("notification")
-                .register(
-                        maybeFaultInjecting(new PublishNotificationActivity(), random),
-                        protoConverter(PublishNotificationActivityArgs.class),
-                        voidConverter(),
-                        Duration.ofSeconds(30));
-        engine.mount(notificationActivityRegistry, 10);
+        engine.mount(new WorkflowGroup("all")
+                .withWorkflow(ProcessBomUploadWorkflow.class)
+                .withWorkflow(AnalyzeProjectWorkflow.class)
+                .withWorkflow(PublishNotificationWorkflow.class)
+                .withWorkflow(CloneProjectWorkflow.class)
+                .withMaxConcurrency(50));
     }
 
     public static void stopWorkflowEngine() {

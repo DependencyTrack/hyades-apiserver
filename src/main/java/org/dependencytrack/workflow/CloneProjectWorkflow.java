@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow;
 
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
+import org.dependencytrack.workflow.framework.ActivityCallOptions;
 import org.dependencytrack.workflow.framework.WorkflowContext;
 import org.dependencytrack.workflow.framework.WorkflowExecutor;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
@@ -36,17 +37,23 @@ public class CloneProjectWorkflow implements WorkflowExecutor<CloneProjectArgs, 
     public Optional<CloneProjectResult> execute(final WorkflowContext<CloneProjectArgs, CloneProjectResult> ctx) throws Exception {
         final CloneProjectArgs args = ctx.argument().orElseThrow(ApplicationFailureException::forMissingArguments);
 
+        final var cloneClient = ctx.activityClient(CloneProjectActivity.class);
+        final var updateMetricsClient = ctx.activityClient(ProjectMetricsUpdateTask.class);
+
         ctx.logger().info("Scheduling cloning of project {}", args.getProject().getUuid());
-        final CloneProjectResult cloneResult = CloneProjectActivity.CLIENT.call(ctx, args)
+        final CloneProjectResult cloneResult = cloneClient.call(
+                        new ActivityCallOptions<CloneProjectArgs>()
+                                .withArgument(args))
                 .await().orElseThrow(ApplicationFailureException::forMissingResult);
 
         ctx.logger().info(
                 "Scheduling metrics update for cloned project {}",
                 cloneResult.getClonedProject().getUuid());
-        final var updateMetricsArgs = UpdateProjectMetricsArgs.newBuilder()
-                .setProject(cloneResult.getClonedProject())
-                .build();
-        ProjectMetricsUpdateTask.ACTIVITY_CLIENT.call(ctx, updateMetricsArgs).await();
+        updateMetricsClient.call(
+                new ActivityCallOptions<UpdateProjectMetricsArgs>()
+                        .withArgument(UpdateProjectMetricsArgs.newBuilder()
+                                .setProject(cloneResult.getClonedProject())
+                                .build())).await();
 
         return Optional.of(cloneResult);
     }
