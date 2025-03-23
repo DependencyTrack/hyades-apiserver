@@ -23,7 +23,6 @@ import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
-import alpine.model.Team;
 import alpine.server.auth.PasswordService;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
@@ -40,8 +39,11 @@ import jakarta.servlet.ServletContextListener;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_DEFAULT_OBJECTS_VERSION;
@@ -56,6 +58,7 @@ import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 public class DefaultObjectGenerator implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultObjectGenerator.class);
+    private final Map<String, Permission> permissionsMap = new HashMap<>();
 
     /**
      * {@inheritDoc}
@@ -77,8 +80,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
                 /* lockAtMostFor */ Duration.ofMinutes(5),
                 /* lockAtLeastFor */ Duration.ZERO,
                 /* pollInterval */ Duration.ofSeconds(1),
-                /* waitTimeout */ Duration.ofMinutes(5)
-        );
+                /* waitTimeout */ Duration.ofMinutes(5));
 
         try {
             executeWithLockWaiting(lockConfig, this::executeLocked);
@@ -109,23 +111,23 @@ public class DefaultObjectGenerator implements ServletContextListener {
         if (!shouldExecute()) {
             LOGGER.info("Default objects already populated for build %s (timestamp: %s); Skipping".formatted(
                     Config.getInstance().getApplicationBuildUuid(),
-                    Config.getInstance().getApplicationBuildTimestamp()
-            ));
+                    Config.getInstance().getApplicationBuildTimestamp()));
             return;
         }
 
         // TODO: Make population transactional with recordDefaultObjectsVersion().
 
         LOGGER.info("Initializing default object generator");
-        loadDefaultPermissions();
-        loadDefaultPersonas();
-        loadDefaultLicenses();
-        loadDefaultLicenseGroups();
-        loadDefaultRepositories();
-        loadDefaultConfigProperties();
-        loadDefaultNotificationPublishers();
-
-        recordDefaultObjectsVersion();
+        try (final var qm = new QueryManager()) {
+            loadDefaultPermissions(qm);
+            loadDefaultPersonas(qm);
+            loadDefaultLicenses(qm);
+            loadDefaultLicenseGroups(qm);
+            loadDefaultRepositories(qm);
+            loadDefaultConfigProperties(qm);
+            loadDefaultNotificationPublishers(qm);
+            recordDefaultObjectsVersion(qm);
+        }
     }
 
     /**
@@ -140,8 +142,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         try (final var qm = new QueryManager()) {
             final ConfigProperty configProperty = qm.getConfigProperty(
                     INTERNAL_DEFAULT_OBJECTS_VERSION.getGroupName(),
-                    INTERNAL_DEFAULT_OBJECTS_VERSION.getPropertyName()
-            );
+                    INTERNAL_DEFAULT_OBJECTS_VERSION.getPropertyName());
 
             return configProperty == null
                     || configProperty.getPropertyValue() == null
@@ -149,206 +150,220 @@ public class DefaultObjectGenerator implements ServletContextListener {
         }
     }
 
-    private void recordDefaultObjectsVersion() {
-        try (final var qm = new QueryManager()) {
-            qm.runInTransaction(() -> {
-                final ConfigProperty configProperty = qm.getConfigProperty(
-                        INTERNAL_DEFAULT_OBJECTS_VERSION.getGroupName(),
-                        INTERNAL_DEFAULT_OBJECTS_VERSION.getPropertyName()
-                );
+    private void recordDefaultObjectsVersion(final QueryManager qm) {
+        qm.runInTransaction(() -> {
+            final ConfigProperty configProperty = qm.getConfigProperty(
+                    INTERNAL_DEFAULT_OBJECTS_VERSION.getGroupName(),
+                    INTERNAL_DEFAULT_OBJECTS_VERSION.getPropertyName());
 
-                configProperty.setPropertyValue(Config.getInstance().getApplicationBuildUuid());
-            });
+            configProperty.setPropertyValue(Config.getInstance().getApplicationBuildUuid());
+        });
+    }
+
+    public static void loadDefaultLicenses() {
+        try (final var qm = new QueryManager()) {
+            loadDefaultLicenses(qm);
         }
     }
 
     /**
      * Loads the default licenses into the database if no license data exists.
      */
-    public static void loadDefaultLicenses() {
-        try (QueryManager qm = new QueryManager()) {
-            LOGGER.info("Synchronizing SPDX license definitions to datastore");
+    private static void loadDefaultLicenses(final QueryManager qm) {
+        LOGGER.info("Synchronizing SPDX license definitions to datastore");
 
-            final SpdxLicenseDetailParser parser = new SpdxLicenseDetailParser();
-            try {
-                final List<License> licenses = parser.getLicenseDefinitions();
-                for (final License license : licenses) {
-                    LOGGER.debug("Synchronizing: " + license.getName());
-                    qm.synchronizeLicense(license, false);
-                }
-            } catch (IOException e) {
-                LOGGER.error("An error occurred during the parsing SPDX license definitions");
-                LOGGER.error(e.getMessage());
+        final SpdxLicenseDetailParser parser = new SpdxLicenseDetailParser();
+        try {
+            final List<License> licenses = parser.getLicenseDefinitions();
+            for (final License license : licenses) {
+                LOGGER.debug("Synchronizing: " + license.getName());
+                qm.synchronizeLicense(license, false);
             }
+        } catch (IOException e) {
+            LOGGER.error("An error occurred during the parsing SPDX license definitions");
+            LOGGER.error(e.getMessage());
         }
     }
 
     /**
      * Loads the default license groups into the database if no license groups exists.
      */
-    private void loadDefaultLicenseGroups() {
-        try (QueryManager qm = new QueryManager()) {
-            final DefaultLicenseGroupImporter importer = new DefaultLicenseGroupImporter(qm);
-            if (! importer.shouldImport()) {
-                return;
-            }
-            LOGGER.info("Adding default license group definitions to datastore");
-            try {
-                importer.loadDefaults();
-            } catch (IOException e) {
-                LOGGER.error("An error occurred loading default license group definitions");
-                LOGGER.error(e.getMessage());
-            }
+    private void loadDefaultLicenseGroups(final QueryManager qm) {
+        final DefaultLicenseGroupImporter importer = new DefaultLicenseGroupImporter(qm);
+        if (!importer.shouldImport()) {
+            return;
+        }
+        LOGGER.info("Adding default license group definitions to datastore");
+        try {
+            importer.loadDefaults();
+        } catch (IOException e) {
+            LOGGER.error("An error occurred loading default license group definitions");
+            LOGGER.error(e.getMessage());
+        }
+    }
+
+    public void loadDefaultPermissions() {
+        try (final var qm = new QueryManager()) {
+            loadDefaultPermissions(qm);
         }
     }
 
     /**
      * Loads the default permissions
      */
-    public void loadDefaultPermissions() {
-        try (QueryManager qm = new QueryManager()) {
-            LOGGER.info("Synchronizing permissions to datastore");
-            for (final Permissions permission : Permissions.values()) {
-                if (qm.getPermission(permission.name()) == null) {
-                    LOGGER.debug("Creating permission: " + permission.name());
-                    qm.createPermission(permission.name(), permission.getDescription());
-                }
+    private void loadDefaultPermissions(final QueryManager qm) {
+        LOGGER.info("Synchronizing permissions to datastore");
+
+        for (final Permissions permission : Permissions.values()) {
+            if (qm.getPermission(permission.name()) == null) {
+                LOGGER.debug("Creating permission: " + permission.name());
+                permissionsMap.put(permission.name(),
+                        qm.createPermission(permission.name(), permission.getDescription()));
             }
+        }
+    }
+
+    private void createTeam(final QueryManager qm, final String name, final List<Permission> permissions, final boolean createApiKey) {
+        LOGGER.debug("Creating team: " + name);
+        var team = qm.createTeam(name, createApiKey);
+
+        LOGGER.debug("Assigning default permissions for team: " + name);
+        team.setPermissions(permissions);
+
+        qm.persist(team);
+    }
+
+    @SuppressWarnings("unused")
+    private void loadDefaultPersonas() {
+        try (final var qm = new QueryManager()) {
+            loadDefaultPersonas(qm);
         }
     }
 
     /**
      * Loads the default users and teams
      */
-    private void loadDefaultPersonas() {
-        try (QueryManager qm = new QueryManager()) {
-            if (!qm.getManagedUsers().isEmpty() && !qm.getTeams().isEmpty()) {
-                return;
-            }
-            LOGGER.info("Adding default users and teams to datastore");
-            LOGGER.debug("Creating user: admin");
-            ManagedUser admin = qm.createManagedUser("admin", "Administrator", "admin@localhost",
-                    new String(PasswordService.createHash("admin".toCharArray())), true, true, false);
+    private void loadDefaultPersonas(final QueryManager qm) {
+        if (!qm.getManagedUsers().isEmpty() && !qm.getTeams().isEmpty())
+            return;
 
-            LOGGER.debug("Creating team: Administrators");
-            final Team sysadmins = qm.createTeam("Administrators", false);
-            LOGGER.debug("Creating team: Portfolio Managers");
-            final Team managers = qm.createTeam("Portfolio Managers", false);
-            LOGGER.debug("Creating team: Automation");
-            final Team automation = qm.createTeam("Automation", true);
-            LOGGER.debug("Creating team: Badge Viewers");
-            final Team badges = qm.createTeam("Badge Viewers", true);
+        LOGGER.info("Adding default users and teams to datastore");
+        LOGGER.debug("Creating user: admin");
+        ManagedUser admin = qm.createManagedUser("admin", "Administrator", "admin@localhost",
+                new String(PasswordService.createHash("admin".toCharArray())), true, true, false);
 
-            final List<Permission> fullList = qm.getPermissions();
+        createTeam(qm, "Administrators", List.copyOf(permissionsMap.values()), false);
+        createTeam(qm, "Portfolio Managers", getPortfolioManagersPermissions(), false);
+        createTeam(qm, "Automation", getAutomationPermissions(), true);
+        createTeam(qm, "Badge Viewers", getBadgesPermissions(), true);
 
-            LOGGER.debug("Assigning default permissions to teams");
-            sysadmins.setPermissions(fullList);
-            managers.setPermissions(getPortfolioManagersPermissions(fullList));
-            automation.setPermissions(getAutomationPermissions(fullList));
-            badges.setPermissions(getBadgesPermissions(fullList));
+        LOGGER.debug("Adding admin user to System Administrators");
+        qm.addUserToTeam(admin, qm.getTeam("Administrators"));
 
-            qm.persist(sysadmins);
-            qm.persist(managers);
-            qm.persist(automation);
-            qm.persist(badges);
-
-            LOGGER.debug("Adding admin user to System Administrators");
-            qm.addUserToTeam(admin, sysadmins);
-
-            admin = qm.getObjectById(ManagedUser.class, admin.getId());
-            admin.setPermissions(qm.getPermissions());
-            qm.persist(admin);
-        }
+        admin = qm.getObjectById(ManagedUser.class, admin.getId());
+        admin.setPermissions(qm.getPermissions());
+        qm.persist(admin);
     }
 
-    private List<Permission> getPortfolioManagersPermissions(final List<Permission> fullList) {
-        final List<Permission> permissions = new ArrayList<>();
-        for (final Permission permission: fullList) {
-            if (permission.getName().equals(Permissions.Constants.VIEW_PORTFOLIO) ||
-                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT) ||
-                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) ||
-                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_READ) ||
-                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE) ||
-                    permission.getName().equals(Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE)) {
-                permissions.add(permission);
-            }
-        }
-        return permissions;
+    private List<Permission> getPortfolioManagersPermissions() {
+        return getPermissionsByName(Permissions.Constants.VIEW_PORTFOLIO,
+                Permissions.Constants.PORTFOLIO_MANAGEMENT,
+                Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
+                Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
+                Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
+                Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE);
     }
 
-    private List<Permission> getAutomationPermissions(final List<Permission> fullList) {
-        final List<Permission> permissions = new ArrayList<>();
-        for (final Permission permission: fullList) {
-            if (permission.getName().equals(Permissions.Constants.VIEW_PORTFOLIO) ||
-                    permission.getName().equals(Permissions.Constants.BOM_UPLOAD)) {
-                permissions.add(permission);
-            }
-        }
-        return permissions;
+    private List<Permission> getAutomationPermissions() {
+        return getPermissionsByName(Permissions.Constants.VIEW_PORTFOLIO,
+                Permissions.Constants.BOM_UPLOAD);
     }
 
-    private List<Permission> getBadgesPermissions(final List<Permission> fullList) {
-        final List<Permission> permissions = new ArrayList<>();
-        for (final Permission permission : fullList) {
-            if (permission.getName().equals(Permissions.Constants.VIEW_BADGES)) {
-                permissions.add(permission);
-            }
-        }
-        return permissions;
+    private List<Permission> getBadgesPermissions() {
+        return getPermissionsByName(Permissions.Constants.VIEW_BADGES);
     }
 
     /**
-     * Loads the default repositories
+     * Perform a lookup of {@link Permission}s for specified name(s).
+     *
+     * @param names permission names
+     * @return list of {@link Permission}s
      */
+    private List<Permission> getPermissionsByName(String... names) {
+        return Stream.of(names)
+                .map(permissionsMap::get)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
     public void loadDefaultRepositories() {
-        try (QueryManager qm = new QueryManager()) {
-            LOGGER.info("Synchronizing default repositories to datastore");
-            qm.createRepository(RepositoryType.CPAN, "cpan-public-registry", "https://fastapi.metacpan.org/v1/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.GEM, "rubygems.org", "https://rubygems.org/", true, false, false,null, null);
-            qm.createRepository(RepositoryType.HEX, "hex.pm", "https://hex.pm/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.MAVEN, "central", "https://repo1.maven.org/maven2/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.MAVEN, "atlassian-public", "https://packages.atlassian.com/content/repositories/atlassian-public/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.MAVEN, "jboss-releases", "https://repository.jboss.org/nexus/content/repositories/releases/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.MAVEN, "clojars", "https://repo.clojars.org/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.MAVEN, "google-android", "https://maven.google.com/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.NPM, "npm-public-registry", "https://registry.npmjs.org/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.PYPI, "pypi.org", "https://pypi.org/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.NUGET, "nuget-gallery", "https://api.nuget.org/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.COMPOSER, "packagist", "https://repo.packagist.org/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.CARGO, "crates.io", "https://crates.io", true, false, false, null, null);
-            qm.createRepository(RepositoryType.GO_MODULES, "proxy.golang.org", "https://proxy.golang.org", true, false, false, null, null);
-            qm.createRepository(RepositoryType.GITHUB, "github.com", "https://github.com", true, false, false, null, null);
-            qm.createRepository(RepositoryType.HACKAGE, "hackage.haskell", "https://hackage.haskell.org/", true, false, false, null, null);
-            qm.createRepository(RepositoryType.NIXPKGS, "nixos.org", "https://channels.nixos.org/nixpkgs-unstable/packages.json.br", true, false, false, null, null);
+        try (final var qm = new QueryManager()) {
+            loadDefaultRepositories(qm);
+        }
+    }
+
+    /**
+    * Loads the default repositories
+    */
+    private void loadDefaultRepositories(final QueryManager qm) {
+        LOGGER.info("Synchronizing default repositories to datastore");
+        // @formatter:off
+        qm.createRepository(RepositoryType.CPAN, "cpan-public-registry", "https://fastapi.metacpan.org/v1/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.GEM, "rubygems.org", "https://rubygems.org/", true, false, false,null, null);
+        qm.createRepository(RepositoryType.HEX, "hex.pm", "https://hex.pm/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.MAVEN, "central", "https://repo1.maven.org/maven2/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.MAVEN, "atlassian-public", "https://packages.atlassian.com/content/repositories/atlassian-public/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.MAVEN, "jboss-releases", "https://repository.jboss.org/nexus/content/repositories/releases/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.MAVEN, "clojars", "https://repo.clojars.org/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.MAVEN, "google-android", "https://maven.google.com/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.NPM, "npm-public-registry", "https://registry.npmjs.org/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.PYPI, "pypi.org", "https://pypi.org/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.NUGET, "nuget-gallery", "https://api.nuget.org/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.COMPOSER, "packagist", "https://repo.packagist.org/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.CARGO, "crates.io", "https://crates.io", true, false, false, null, null);
+        qm.createRepository(RepositoryType.GO_MODULES, "proxy.golang.org", "https://proxy.golang.org", true, false, false, null, null);
+        qm.createRepository(RepositoryType.GITHUB, "github.com", "https://github.com", true, false, false, null, null);
+        qm.createRepository(RepositoryType.HACKAGE, "hackage.haskell", "https://hackage.haskell.org/", true, false, false, null, null);
+        qm.createRepository(RepositoryType.NIXPKGS, "nixos.org", "https://channels.nixos.org/nixpkgs-unstable/packages.json.br", true, false, false, null, null);
+        // @formatter:on
+    }
+
+    @SuppressWarnings("unused")
+    private void loadDefaultConfigProperties() {
+        try (final var qm = new QueryManager()) {
+            loadDefaultConfigProperties(qm);
         }
     }
 
     /**
      * Loads the default ConfigProperty objects
      */
-    private void loadDefaultConfigProperties() {
-        try (QueryManager qm = new QueryManager()) {
-            LOGGER.info("Synchronizing config properties to datastore");
-            for (final ConfigPropertyConstants cpc : ConfigPropertyConstants.values()) {
-                LOGGER.debug("Creating config property: " + cpc.getGroupName() + " / " + cpc.getPropertyName());
-                if (qm.getConfigProperty(cpc.getGroupName(), cpc.getPropertyName()) == null) {
-                    qm.createConfigProperty(cpc.getGroupName(), cpc.getPropertyName(), cpc.getDefaultPropertyValue(), cpc.getPropertyType(), cpc.getDescription());
-                }
+    private void loadDefaultConfigProperties(final QueryManager qm) {
+        LOGGER.info("Synchronizing config properties to datastore");
+        for (final ConfigPropertyConstants cpc : ConfigPropertyConstants.values()) {
+            LOGGER.debug("Creating config property: " + cpc.getGroupName() + " / " + cpc.getPropertyName());
+            if (qm.getConfigProperty(cpc.getGroupName(), cpc.getPropertyName()) == null) {
+                qm.createConfigProperty(cpc.getGroupName(), cpc.getPropertyName(), cpc.getDefaultPropertyValue(),
+                        cpc.getPropertyType(), cpc.getDescription());
             }
+        }
+    }
+
+    public void loadDefaultNotificationPublishers() {
+        try (final var qm = new QueryManager()) {
+            loadDefaultNotificationPublishers(qm);
         }
     }
 
     /**
      * Loads the default notification publishers
      */
-    public void loadDefaultNotificationPublishers() {
-        try (QueryManager qm = new QueryManager()) {
-            LOGGER.info("Synchronizing notification publishers to datastore");
-            try {
-                NotificationUtil.loadDefaultNotificationPublishers(qm);
-            } catch (IOException e) {
-                LOGGER.error("An error occurred while synchronizing a default notification publisher", e);
-            }
+    private void loadDefaultNotificationPublishers(final QueryManager qm) {
+        LOGGER.info("Synchronizing notification publishers to datastore");
+        try {
+            NotificationUtil.loadDefaultNotificationPublishers(qm);
+        } catch (IOException e) {
+            LOGGER.error("An error occurred while synchronizing a default notification publisher", e);
         }
     }
 }

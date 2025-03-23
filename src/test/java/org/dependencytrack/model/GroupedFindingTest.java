@@ -19,36 +19,48 @@
 package org.dependencytrack.model;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.junit.Assert;
+import org.dependencytrack.persistence.jdbi.FindingDao;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 public class GroupedFindingTest extends PersistenceCapableTest {
-    private Date published = new Date();
+    private GroupedFinding groupedFinding;
 
-    private GroupedFinding groupedFinding = new GroupedFinding("vuln-source", "vuln-vulnId", "vuln-title",
-            Severity.HIGH, BigDecimal.valueOf(8.5), BigDecimal.valueOf(8.4), null, null, null, AnalyzerIdentity.INTERNAL_ANALYZER, published, null, 3);
-
+    @Before
+    public void setUp() {
+        groupedFinding = createTestFinding();
+    }
 
     @Test
     public void testVulnerability() {
         Map map = groupedFinding.getVulnerability();
-        Assert.assertEquals("vuln-source", map.get("source"));
-        Assert.assertEquals("vuln-vulnId", map.get("vulnId"));
-        Assert.assertEquals("vuln-title", map.get("title"));
-        Assert.assertEquals(Severity.HIGH, map.get("severity"));
-        Assert.assertEquals(published, map.get("published"));
-        Assert.assertEquals(BigDecimal.valueOf(8.5), map.get("cvssV2BaseScore"));
-        Assert.assertEquals(BigDecimal.valueOf(8.4), map.get("cvssV3BaseScore"));
-        Assert.assertEquals(3, map.get("affectedProjectCount"));
+        assertEquals(Vulnerability.Source.GITHUB, map.get("source"));
+        assertEquals("vuln-vulnId", map.get("vulnId"));
+        assertEquals("vuln-title", map.get("title"));
+        assertEquals(Severity.HIGH, map.get("severity"));
+        assertNotNull(map.get("published"));
+        assertEquals(BigDecimal.valueOf(8.5), map.get("cvssV2BaseScore"));
+        assertEquals(BigDecimal.valueOf(8.4), map.get("cvssV3BaseScore"));
+        assertEquals(3, map.get("affectedProjectCount"));
     }
 
     @Test
     public void testAttribution() {
         Map map = groupedFinding.getAttribution();
-        Assert.assertEquals(AnalyzerIdentity.INTERNAL_ANALYZER, map.get("analyzerIdentity"));
+        assertEquals(AnalyzerIdentity.INTERNAL_ANALYZER, map.get("analyzerIdentity"));
+    }
+
+    private GroupedFinding createTestFinding() {
+        FindingDao.GroupedFindingRow findingRow = new FindingDao.GroupedFindingRow(Vulnerability.Source.GITHUB,
+                "vuln-vulnId", "vuln-title", Severity.HIGH, BigDecimal.valueOf(8.5), BigDecimal.valueOf(8.4),
+                Instant.now(), null, AnalyzerIdentity.INTERNAL_ANALYZER, 3);
+        return new GroupedFinding(findingRow);
     }
 }

@@ -37,7 +37,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.text.WordUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
@@ -51,6 +50,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.workflow.framework.ScheduleWorkflowRunOptions;
@@ -75,6 +75,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.workflow.WorkflowEngineInitializer.workflowEngine;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.protoConverter;
 
@@ -131,7 +132,8 @@ public class FindingResource extends AbstractApiResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);
-                final List<Finding> findings = qm.getFindings(project, suppressed);
+                final List<Finding> findings = withJdbiHandle(getAlpineRequest(), handle ->
+                        handle.attach(FindingDao.class).getFindings(project.getId(), suppressed));
                 if (acceptHeader != null && acceptHeader.contains(MEDIA_TYPE_SARIF_JSON)) {
                     try {
                         return Response.ok(generateSARIF(findings), MEDIA_TYPE_SARIF_JSON)
@@ -181,7 +183,8 @@ public class FindingResource extends AbstractApiResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);
-                final List<Finding> findings = qm.getFindings(project);
+                final List<Finding> findings = withJdbiHandle(getAlpineRequest(), handle ->
+                        handle.attach(FindingDao.class).getFindings(project.getId(), false));
                 final FindingPackagingFormat fpf = new FindingPackagingFormat(UUID.fromString(uuid), findings);
                 final Response.ResponseBuilder rb = Response.ok(fpf.getDocument().toString(), "application/json");
                 rb.header("Content-Disposition", "inline; filename=findings-" + uuid + ".fpf");
@@ -345,7 +348,8 @@ public class FindingResource extends AbstractApiResource {
             filters.put("cvssv2To", cvssv2To);
             filters.put("cvssv3From", cvssv3From);
             filters.put("cvssv3To", cvssv3To);
-            final PaginatedResult result = qm.getAllFindings(filters, showSuppressed, showInactive);
+            final PaginatedResult result = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(FindingDao.class)
+                    .getAllFindings(this.getAlpineRequest(), filters, showSuppressed, showInactive));
             return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
         }
     }
@@ -404,7 +408,8 @@ public class FindingResource extends AbstractApiResource {
             filters.put("cvssv3To", cvssv3To);
             filters.put("occurrencesFrom", occurrencesFrom);
             filters.put("occurrencesTo", occurrencesTo);
-            final PaginatedResult result = qm.getAllFindingsGroupedByVulnerability(filters, showInactive);
+            final PaginatedResult result = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(FindingDao.class)
+                    .getGroupedFindings(this.getAlpineRequest(), filters, showInactive));
             return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
         }
     }
@@ -420,11 +425,10 @@ public class FindingResource extends AbstractApiResource {
         final About about = new About();
 
         // Using "vulnId" as key, forming a list of unique vulnerabilities across all findings
-        // Also converts cweName to PascalCase, since it will be used as rule.name in the SARIF file
         List<Map<String, Object>> uniqueVulnerabilities = findings.stream()
                 .collect(Collectors.toMap(
                         finding -> finding.getVulnerability().get("vulnId"),
-                        FindingResource::convertCweNameToPascalCase,
+                        Finding::getVulnerability,
                         (existingVuln, replacementVuln) -> existingVuln))
                 .values()
                 .stream()
@@ -438,15 +442,5 @@ public class FindingResource extends AbstractApiResource {
             sarifTemplate.evaluate(writer, context);
             return writer.toString();
         }
-    }
-
-    private static Map<String, Object> convertCweNameToPascalCase(Finding finding) {
-        final Object cweName = finding.getVulnerability()
-                .get("cweName");
-        if (cweName != null) {
-            final String pascalCasedCweName = WordUtils.capitalizeFully(cweName.toString()).replaceAll("\\s", "");
-            finding.getVulnerability().put("cweName", pascalCasedCweName);
-        }
-        return finding.getVulnerability();
     }
 }
