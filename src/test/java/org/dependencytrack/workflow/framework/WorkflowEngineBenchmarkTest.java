@@ -201,7 +201,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
 
         @Override
         public void run() {
-            if (engine == null || engine.state() != WorkflowEngine.State.RUNNING) {
+            if (engine == null || engine.status() != WorkflowEngine.Status.RUNNING) {
                 LOGGER.info("Engine not ready yet");
                 return;
             }

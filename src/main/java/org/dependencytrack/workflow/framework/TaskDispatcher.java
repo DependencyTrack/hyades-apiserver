@@ -76,7 +76,7 @@ final class TaskDispatcher<T extends Task> implements Runnable {
 
         int pollsWithoutResults = 0;
 
-        while (engine.state().isNotStoppingOrStopped() && !Thread.currentThread().isInterrupted()) {
+        while (engine.status().isNotStoppingOrStopped() && !Thread.currentThread().isInterrupted()) {
             final boolean interruptedDuringSleep = maybeSleepUntilNextPollIsDue();
             if (interruptedDuringSleep) {
                 break;

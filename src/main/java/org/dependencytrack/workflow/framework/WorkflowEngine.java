@@ -117,7 +117,7 @@ import static java.util.Objects.requireNonNull;
 // TODO: Buffer schedule commands for ~5ms.
 public class WorkflowEngine implements Closeable {
 
-    public enum State {
+    public enum Status {
 
         CREATED(1),  // 0
         STARTING(2), // 1
@@ -127,12 +127,12 @@ public class WorkflowEngine implements Closeable {
 
         private final Set<Integer> allowedTransitions;
 
-        State(final Integer... allowedTransitions) {
+        Status(final Integer... allowedTransitions) {
             this.allowedTransitions = Set.of(allowedTransitions);
         }
 
-        private boolean canTransitionTo(final State newState) {
-            return allowedTransitions.contains(newState.ordinal());
+        private boolean canTransitionTo(final Status newStatus) {
+            return allowedTransitions.contains(newStatus.ordinal());
         }
 
         boolean isStoppingOrStopped() {
@@ -143,22 +143,15 @@ public class WorkflowEngine implements Closeable {
             return !isStoppingOrStopped();
         }
 
-        private void assertRunning() {
-            if (!equals(RUNNING)) {
-                throw new IllegalStateException(
-                        "Engine must be in state %s, but is %s".formatted(RUNNING, this));
-            }
-        }
-
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngine.class);
 
     private final WorkflowEngineConfig config;
     private final Jdbi jdbi;
-    private final ReentrantLock stateLock = new ReentrantLock();
+    private final ReentrantLock statusLock = new ReentrantLock();
     private final ExecutorMetadataRegistry executorMetadataRegistry = new ExecutorMetadataRegistry();
-    private State state = State.CREATED;
+    private Status status = Status.CREATED;
     private ExecutorService taskDispatcherExecutor;
     private Map<String, ExecutorService> executorServiceByName;
     private ScheduledExecutorService schedulerExecutor;
@@ -213,7 +206,7 @@ public class WorkflowEngine implements Closeable {
     }
 
     public void start() {
-        setState(State.STARTING);
+        setStatus(Status.STARTING);
         LOGGER.debug("Starting");
 
         externalEventBuffer = new Buffer<>(
@@ -280,13 +273,13 @@ public class WorkflowEngine implements Closeable {
                 config.retention().workerInterval().toMillis(),
                 TimeUnit.MILLISECONDS);
 
-        setState(State.RUNNING);
+        setStatus(Status.RUNNING);
         LOGGER.debug("Started");
     }
 
     @Override
     public void close() throws IOException {
-        setState(State.STOPPING);
+        setStatus(Status.STOPPING);
         LOGGER.debug("Stopping");
 
         LOGGER.debug("Waiting for retention worker to stop");
@@ -313,7 +306,7 @@ public class WorkflowEngine implements Closeable {
         taskActionBuffer.close();
         taskActionBuffer = null;
 
-        setState(State.STOPPED);
+        setStatus(Status.STOPPED);
         LOGGER.debug("Stopped");
     }
 
@@ -388,7 +381,7 @@ public class WorkflowEngine implements Closeable {
      *                               or another {@link WorkflowGroup} with the same name is already mounted.
      */
     public void mount(final WorkflowGroup workflowGroup) {
-        state.assertRunning();
+        requireRunningStatus();
         LOGGER.debug("Mounting {}", workflowGroup);
 
         for (final String workflowName : workflowGroup.workflowNames()) {
@@ -430,7 +423,7 @@ public class WorkflowEngine implements Closeable {
     }
 
     public void mount(final ActivityGroup activityGroup) {
-        state.assertRunning();
+        requireRunningStatus();
         LOGGER.debug("Mounting {}", activityGroup);
 
         for (final String activityName : activityGroup.activityNames()) {
@@ -472,7 +465,7 @@ public class WorkflowEngine implements Closeable {
     }
 
     public List<UUID> scheduleWorkflowRuns(final Collection<ScheduleWorkflowRunOptions> options) {
-        state.assertRunning();
+        requireRunningStatus();
 
         final var now = Timestamps.now();
         final var newWorkflowRunRows = new ArrayList<NewWorkflowRunRow>(options.size());
@@ -657,7 +650,7 @@ public class WorkflowEngine implements Closeable {
             final UUID workflowRunId,
             final String eventId,
             final WorkflowPayload content) {
-        state.assertRunning();
+        requireRunningStatus();
 
         // TODO: Write content to file storage instead. We don't know how large the payload is.
 
@@ -1207,26 +1200,33 @@ public class WorkflowEngine implements Closeable {
         return Set.copyOf(runIdByEventId.values());
     }
 
-    public State state() {
-        return state;
+    public Status status() {
+        return status;
     }
 
-    private void setState(final State newState) {
-        stateLock.lock();
+    private void setStatus(final Status newStatus) {
+        statusLock.lock();
         try {
-            if (this.state == newState) {
+            if (this.status == newStatus) {
                 return;
             }
 
-            if (this.state.canTransitionTo(newState)) {
-                this.state = newState;
+            if (this.status.canTransitionTo(newStatus)) {
+                this.status = newStatus;
                 return;
             }
 
             throw new IllegalStateException(
-                    "Can not transition from state %s to %s".formatted(this.state, newState));
+                    "Can not transition from state %s to %s".formatted(this.status, newStatus));
         } finally {
-            stateLock.unlock();
+            statusLock.unlock();
+        }
+    }
+
+    private void requireRunningStatus() {
+        if (!Status.RUNNING.equals(status)) {
+            throw new IllegalStateException(
+                    "Engine must be in state %s, but is %s".formatted(Status.RUNNING, this));
         }
     }
 

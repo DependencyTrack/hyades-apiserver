@@ -36,6 +36,9 @@ public class WorkflowEngineConfig {
         private Duration flushInterval = Duration.ofMillis(5);
         private int maxBatchSize = 100;
 
+        /**
+         * @return Interval at which the buffer content is flushed.
+         */
         public Duration flushInterval() {
             return flushInterval;
         }
@@ -44,6 +47,9 @@ public class WorkflowEngineConfig {
             this.flushInterval = flushInterval;
         }
 
+        /**
+         * @return Maximum batch size of items to flush at once.
+         */
         public int maxBatchSize() {
             return maxBatchSize;
         }
@@ -61,6 +67,9 @@ public class WorkflowEngineConfig {
         private Duration workerInitialDelay = Duration.ofMinutes(3);
         private Duration workerInterval = Duration.ofMinutes(5);
 
+        /**
+         * @return Maximum number of workflow runs to delete at once.
+         */
         public int deletionBatchSize() {
             return deletionBatchSize;
         }
@@ -69,6 +78,9 @@ public class WorkflowEngineConfig {
             this.deletionBatchSize = deletionBatchSize;
         }
 
+        /**
+         * @return Maximum duration to keep completed workflow runs for.
+         */
         public Duration duration() {
             return duration;
         }
@@ -77,6 +89,9 @@ public class WorkflowEngineConfig {
             this.duration = duration;
         }
 
+        /**
+         * @return Initial delay before the retention worker first runs.
+         */
         public Duration workerInitialDelay() {
             return workerInitialDelay;
         }
@@ -85,6 +100,9 @@ public class WorkflowEngineConfig {
             this.workerInitialDelay = workerInitialDelay;
         }
 
+        /**
+         * @return Interval at which the retention worker will run.
+         */
         public Duration workerInterval() {
             return workerInterval;
         }
@@ -100,6 +118,9 @@ public class WorkflowEngineConfig {
         private Duration initialDelay = Duration.ofSeconds(15);
         private Duration pollInterval = Duration.ofSeconds(15);
 
+        /**
+         * @return Initial delay before due schedules will be polled.
+         */
         public Duration initialDelay() {
             return initialDelay;
         }
@@ -108,6 +129,9 @@ public class WorkflowEngineConfig {
             this.initialDelay = initialDelay;
         }
 
+        /**
+         * @return Interval at which due schedules are being polled.
+         */
         public Duration pollInterval() {
             return pollInterval;
         }
@@ -127,6 +151,9 @@ public class WorkflowEngineConfig {
                 /* randomizationFactor */ 0.3,
                 /* maxIntervalMillis */ TimeUnit.SECONDS.toMillis(3));
 
+        /**
+         * @return Minimum interval at which tasks are being polled.
+         */
         public Duration minPollInterval() {
             return minPollInterval;
         }
@@ -135,6 +162,9 @@ public class WorkflowEngineConfig {
             this.minPollInterval = minPollInterval;
         }
 
+        /**
+         * @return Interval function to use for poll backoff.
+         */
         public IntervalFunction pollBackoffIntervalFunction() {
             return pollBackoffIntervalFunction;
         }
@@ -160,38 +190,65 @@ public class WorkflowEngineConfig {
         this.dataSource = requireNonNull(dataSource, "dataSource must not be null");
     }
 
+    /**
+     * @return ID that uniquely identifies this instance of the engine.
+     */
     public UUID instanceId() {
         return instanceId;
     }
 
+    /**
+     * @return {@link DataSource} to use for persistence.
+     */
     public DataSource dataSource() {
         return dataSource;
     }
 
+    /**
+     * @return Config for the buffer of external events.
+     */
     public BufferConfig externalEventBuffer() {
         return externalEventBufferConfig;
     }
 
+    /**
+     * @return Config for the buffer of task actions.
+     */
     public BufferConfig taskActionBuffer() {
         return taskActionBufferConfig;
     }
 
+    /**
+     * @return Config for workflow run retention.
+     */
     public RetentionConfig retention() {
         return retentionConfig;
     }
 
+    /**
+     * @return Config for scheduled workflows.
+     */
     public SchedulerConfig scheduler() {
         return schedulerConfig;
     }
 
+    /**
+     * @return Config for the dispatcher of workflow tasks.
+     */
     public TaskDispatcherConfig workflowTaskDispatcher() {
         return workflowTaskDispatcherConfig;
     }
 
+    /**
+     * @return Config for the dispatcher of activity tasks.
+     */
     public TaskDispatcherConfig activityTaskDispatcher() {
         return activityTaskDispatcherConfig;
     }
 
+    /**
+     * @return {@link MeterRegistry} to bind metrics to.
+     */
     public MeterRegistry meterRegistry() {
         return meterRegistry;
     }

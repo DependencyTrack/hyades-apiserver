@@ -72,8 +72,8 @@ public class WorkflowEngineInitializer implements ServletContextListener {
 
     public void startWorkflowEngine() {
         if (engine != null
-            && engine.state() != WorkflowEngine.State.CREATED
-            && engine.state() != WorkflowEngine.State.STOPPED) {
+            && engine.status() != WorkflowEngine.Status.CREATED
+            && engine.status() != WorkflowEngine.Status.STOPPED) {
             throw new IllegalStateException("Workflow engine is already started");
         }
 

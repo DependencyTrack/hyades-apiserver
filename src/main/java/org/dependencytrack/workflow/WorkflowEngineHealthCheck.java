@@ -46,9 +46,9 @@ public class WorkflowEngineHealthCheck implements HealthCheck {
 
         final HealthCheckResponseBuilder responseBuilder = HealthCheckResponse
                 .named("workflow-engine")
-                .status(engine != null && engine.state() == WorkflowEngine.State.RUNNING);
+                .status(engine != null && engine.status() == WorkflowEngine.Status.RUNNING);
         if (engine != null) {
-            responseBuilder.withData("state", engine.state().name());
+            responseBuilder.withData("internalStatus", engine.status().name());
         }
 
         return responseBuilder.build();
