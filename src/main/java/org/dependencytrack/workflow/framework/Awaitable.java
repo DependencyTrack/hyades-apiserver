@@ -66,7 +66,7 @@ public class Awaitable<T> {
             }
         } while (executionContext.processNextEvent() != null);
 
-        throw new WorkflowRunBlockedException();
+        throw WorkflowRunBlockedException.INSTANCE;
     }
 
     boolean complete(final WorkflowPayload result) {

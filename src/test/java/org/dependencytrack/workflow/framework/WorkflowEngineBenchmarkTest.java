@@ -19,22 +19,22 @@
 package org.dependencytrack.workflow.framework;
 
 import alpine.common.logging.Logger;
-import alpine.common.metrics.Metrics;
+import com.zaxxer.hikari.HikariDataSource;
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
-import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.util.PersistenceUtil;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.workflow.framework.annotation.Activity;
 import org.dependencytrack.workflow.framework.annotation.Workflow;
+import org.dependencytrack.workflow.framework.persistence.Migration;
 import org.dependencytrack.workflow.framework.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
+import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -51,22 +51,20 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.workflow.framework.payload.PayloadConverters.voidConverter;
 
-public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
+public class WorkflowEngineBenchmarkTest {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowEngineBenchmarkTest.class);
 
     @Rule
-    public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
-            .set("ALPINE_METRICS_ENABLED", "true");
+    public final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:17-alpine");
 
     @Activity(name = "foo")
     public static class TestActivityFoo implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Optional<Void> execute(final ActivityContext<Void> ctx) throws Exception {
+        public Optional<Void> execute(final ActivityContext<Void> ctx) {
             return Optional.empty();
         }
 
@@ -76,7 +74,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
     public static class TestActivityBar implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Optional<Void> execute(final ActivityContext<Void> ctx) throws Exception {
+        public Optional<Void> execute(final ActivityContext<Void> ctx) {
             return Optional.empty();
         }
 
@@ -86,7 +84,7 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
     public static class TestActivityBaz implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Optional<Void> execute(final ActivityContext<Void> ctx) throws Exception {
+        public Optional<Void> execute(final ActivityContext<Void> ctx) {
             return Optional.empty();
         }
 
@@ -96,42 +94,48 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
     public static class TestWorkflow implements WorkflowExecutor<Void, Void> {
 
         @Override
-        public Optional<Void> execute(final WorkflowContext<Void, Void> ctx) throws Exception {
-            ctx.activityClient(TestActivityFoo.class).call(null).await();
-            ctx.activityClient(TestActivityBar.class).call(null).await();
-            ctx.activityClient(TestActivityBaz.class).call(null).await();
+        public Optional<Void> execute(final WorkflowContext<Void, Void> ctx) {
+            ctx.activityClient(TestActivityFoo.class).call(new ActivityCallOptions<>()).await();
+            ctx.activityClient(TestActivityBar.class).call(new ActivityCallOptions<>()).await();
+            ctx.activityClient(TestActivityBaz.class).call(new ActivityCallOptions<>()).await();
             return Optional.empty();
         }
 
     }
 
     private WorkflowEngine engine;
+    private MeterRegistry meterRegistry;
     private ScheduledExecutorService statsPrinterExecutor;
 
     @Before
-    @Override
     public void before() throws Exception {
-        super.before();
+        final var dataSource = new HikariDataSource();
+        dataSource.setJdbcUrl(postgresContainer.getJdbcUrl());
+        dataSource.setUsername(postgresContainer.getUsername());
+        dataSource.setPassword(postgresContainer.getPassword());
+        dataSource.setMinimumIdle(5);
+        dataSource.setMaximumPoolSize(5);
+
+        Migration.run(dataSource);
+
+        meterRegistry = new SimpleMeterRegistry();
 
         statsPrinterExecutor = Executors.newSingleThreadScheduledExecutor();
-        statsPrinterExecutor.scheduleAtFixedRate(new StatsReporter(), 3, 5, TimeUnit.SECONDS);
+        statsPrinterExecutor.scheduleAtFixedRate(new StatsReporter(meterRegistry), 3, 5, TimeUnit.SECONDS);
 
-        final var engineConfig = new WorkflowEngineConfig(
-                UUID.randomUUID(),
-                PersistenceUtil.getDataSource(qm.getPersistenceManager()));
+        final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
         engineConfig.taskActionBuffer().setFlushInterval(Duration.ofMillis(3));
         engineConfig.taskActionBuffer().setMaxBatchSize(250);
         engineConfig.workflowTaskDispatcher().setMinPollInterval(Duration.ofMillis(5));
         engineConfig.workflowTaskDispatcher().setPollBackoffIntervalFunction(
                 IntervalFunction.of(Duration.ofMillis(50)));
-        engineConfig.setMeterRegistry(Metrics.getRegistry());
+        engineConfig.setMeterRegistry(meterRegistry);
 
+        engine = new WorkflowEngine(engineConfig);
         engine.register(new TestWorkflow(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
         engine.register(new TestActivityFoo(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
         engine.register(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
         engine.register(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
-
-        engine = new WorkflowEngine(engineConfig);
         engine.start();
 
         engine.mount(new WorkflowGroup("test")
@@ -141,11 +145,10 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                 .withActivity(TestActivityFoo.class)
                 .withActivity(TestActivityBar.class)
                 .withActivity(TestActivityBaz.class)
-                .withMaxConcurrency(100));
+                .withMaxConcurrency(150));
     }
 
     @After
-    @Override
     public void after() {
         if (engine != null) {
             try {
@@ -158,8 +161,6 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
         if (statsPrinterExecutor != null) {
             statsPrinterExecutor.close();
         }
-
-        super.after();
     }
 
     @Test
@@ -182,22 +183,24 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                 .atMost(Duration.ofMinutes(10))
                 .pollInterval(Duration.ofSeconds(3))
                 .untilAsserted(() -> {
-                    final boolean isAllRunsCompleted = withJdbiHandle(
-                            handle -> handle.createQuery("""
-                                            select not exists (
-                                                select 1
-                                                  from workflow_run
-                                                 where status != 'COMPLETED')
-                                            """)
-                                    .mapTo(Boolean.class)
-                                    .one());
-                    assertThat(isAllRunsCompleted).isTrue();
+                    final long notCompletedRuns = engine.getRunStats().stream()
+                            .filter(row -> row.status() != WorkflowRunStatus.COMPLETED)
+                            .map(WorkflowRunCountByNameAndStatusRow::count)
+                            .mapToInt(Math::toIntExact)
+                            .sum();
+                    assertThat(notCompletedRuns).isZero();
                 });
     }
 
     private class StatsReporter implements Runnable {
 
         private static final Logger LOGGER = Logger.getLogger(StatsReporter.class);
+
+        private final MeterRegistry meterRegistry;
+
+        private StatsReporter(final MeterRegistry meterRegistry) {
+            this.meterRegistry = meterRegistry;
+        }
 
         @Override
         public void run() {
@@ -216,7 +219,6 @@ public class WorkflowEngineBenchmarkTest extends PersistenceCapableTest {
                                 WorkflowRunCountByNameAndStatusRow::count));
                 LOGGER.info("Statuses: %s".formatted(countByStatus));
 
-                final MeterRegistry meterRegistry = Metrics.getRegistry();
                 final Collection<Timer> taskDispatcherPollLatencies = meterRegistry.get(
                         "dtrack.workflow.task.dispatcher.poll.latency").timers();
                 final Collection<DistributionSummary> taskDispatcherPollTasks = meterRegistry.get(

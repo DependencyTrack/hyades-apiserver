@@ -23,12 +23,16 @@ public sealed class WorkflowEngineException extends RuntimeException permits
         WorkflowRunBlockedException,
         WorkflowRunCancelledException {
 
-    WorkflowEngineException() {
-        super();
-    }
-
     WorkflowEngineException(final String message) {
         super(message);
+    }
+
+    WorkflowEngineException(
+            final String message,
+            final Throwable cause,
+            final boolean enableSuppression,
+            final boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 
 }

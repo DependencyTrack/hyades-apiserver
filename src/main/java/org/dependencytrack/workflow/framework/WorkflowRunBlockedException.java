@@ -20,8 +20,13 @@ package org.dependencytrack.workflow.framework;
 
 public final class WorkflowRunBlockedException extends WorkflowEngineException {
 
-    WorkflowRunBlockedException() {
-        super();
+    // This exception is thrown very frequently, it is used for control flow,
+    // and we don't care about stack traces for them. Having a single shared
+    // instance avoids garbage, and overhead of filling stack traces.
+    static final WorkflowRunBlockedException INSTANCE = new WorkflowRunBlockedException();
+
+    private WorkflowRunBlockedException() {
+        super(null, null, false, false);
     }
 
 }
