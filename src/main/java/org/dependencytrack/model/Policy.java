@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.Join;
@@ -112,8 +113,8 @@ public class Policy implements Serializable {
      * A list of zero-to-n projects
      */
     @Persistent(table = "POLICY_PROJECTS", defaultFetchGroup = "true")
-    @Join(column = "POLICY_ID")
-    @Element(column = "PROJECT_ID")
+    @Join(column = "POLICY_ID", foreignKey = "POLICY_PROJECTS_POLICY_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "PROJECT_ID", foreignKey = "POLICY_PROJECTS_PROJECT_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC, version ASC"))
     private List<Project> projects;
 
@@ -121,8 +122,8 @@ public class Policy implements Serializable {
      * A list of zero-to-n tags
      */
     @Persistent(table = "POLICY_TAGS", defaultFetchGroup = "true", mappedBy = "policies")
-    @Join(column = "POLICY_ID")
-    @Element(column = "TAG_ID")
+    @Join(column = "POLICY_ID", foreignKey = "POLICY_TAGS_POLICY_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "TAG_ID", foreignKey = "POLICY_TAGS_TAG_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Tag> tags;
 
