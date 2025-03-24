@@ -142,7 +142,7 @@ public class RoleResource extends AlpineResource {
         failOnValidationError(super.getValidator().validateProperty(jsonRole, "name"));
 
         try (QueryManager qm = new QueryManager()) {
-            final Role role = qm.createRole(jsonRole.getName(), jsonRole.getDescription(), jsonRole.getPermissions());
+            final Role role = qm.createRole(jsonRole.getName(), jsonRole.getPermissions().stream().toList());
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role created: " + role.getName());
 
             return Response.status(Response.Status.CREATED).entity(role).build();

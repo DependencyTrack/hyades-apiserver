@@ -36,7 +36,7 @@ import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSe
 public class ProjectRoleRowMapper implements RowMapper<ProjectRole> {
 
     public ProjectRole map(final ResultSet resultSet, final StatementContext ctx) throws SQLException {
-        ProjectRole projectRole;
+        final ProjectRole projectRole;
 
         switch (resultSet) {
             case ResultSet rs when hasColumn(rs, "LDAPUSER_ID") -> projectRole = new LdapUserProjectRole();

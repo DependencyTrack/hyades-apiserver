@@ -85,10 +85,7 @@ public abstract class ProjectRole implements Serializable {
      * @since 5.6.0
      */
     @PersistenceCapable(table = "LDAPUSERS_PROJECTS_ROLES")
-    @Unique(name = "LDAPUSERS_PROJECTS_ROLES_COMPOSITE_IDX",
-            table = "LDAPUSERS_PROJECTS_ROLES",
-            members = { "ldapUsers", "project", "role" },
-            deferred = "true")
+    @Unique(name = "LDAPUSERS_PROJECTS_ROLES_COMPOSITE_IDX", members = { "ldapUsers", "project", "role" })
     @FetchGroup(name = "ALL", members = {
             @Persistent(name = "role"),
             @Persistent(name = "project"),
@@ -136,10 +133,7 @@ public abstract class ProjectRole implements Serializable {
      * @since 5.6.0
      */
     @PersistenceCapable(table = "MANAGEDUSERS_PROJECTS_ROLES")
-    @Unique(name = "MANAGEDUSERS_PROJECTS_ROLES_COMPOSITE_IDX",
-            table = "MANAGEDUSERS_PROJECTS_ROLES",
-            members = { "managedUsers", "project", "role" },
-            deferred = "true")
+    @Unique(name = "MANAGEDUSERS_PROJECTS_ROLES_COMPOSITE_IDX", members = { "managedUsers", "project", "role" })
     @FetchGroup(name = "ALL", members = {
             @Persistent(name = "role"),
             @Persistent(name = "project"),
@@ -187,10 +181,7 @@ public abstract class ProjectRole implements Serializable {
      * @since 5.6.0
      */
     @PersistenceCapable(table = "OIDCUSERS_PROJECTS_ROLES")
-    @Unique(name = "OIDCUSERS_PROJECTS_ROLES_COMPOSITE_IDX",
-            table = "OIDCUSERS_PROJECTS_ROLES",
-            members = { "oidcUsers", "project", "role" },
-            deferred = "true")
+    @Unique(name = "OIDCUSERS_PROJECTS_ROLES_COMPOSITE_IDX", members = { "oidcUsers", "project", "role" })
     @FetchGroup(name = "ALL", members = {
             @Persistent(name = "role"),
             @Persistent(name = "project"),

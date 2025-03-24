@@ -48,65 +48,79 @@ public interface RoleDao {
 
     @SqlUpdate(/* language=sql */ """
             <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
-            <#assign prefix = user.getClass().getSimpleName()?upper_case>
+            <#assign prefix = userClass.getSimpleName()?upper_case>
             INSERT INTO "${prefix}S_PROJECTS_ROLES"
               ("${prefix}_ID", "PROJECT_ID", "ROLE_ID")
             VALUES
-              (${user.getId()}, :projectId, :roleId)
+              (:userId, :projectId, :roleId)
             ON CONFLICT DO NOTHING
             """)
     @DefineNamedBindings
-    <T extends UserPrincipal> int addRoleToUser(@Define T user, @Bind long projectId, @Bind long roleId);
+    <T extends UserPrincipal> int addRoleToUser(
+            @Define Class<T> userClass,
+            @Bind long userId,
+            @Bind long projectId,
+            @Bind long roleId);
 
     @SqlUpdate(/* language=sql */ """
             <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
-            <#-- @ftlvariable name="project" type="org.dependencytrack.model.Project" -->
-            <#assign prefix = user.getClass().getSimpleName()?upper_case>
+            <#assign prefix = userClass.getSimpleName()?upper_case>
             DELETE
               FROM "${prefix}S_PROJECTS_ROLES"
-             WHERE "${prefix}_ID" = ${user.getId()}
+             WHERE "${prefix}_ID" = :userId
                AND "ROLE_ID" = :roleId
                AND "PROJECT_ID" IN (
                  SELECT "ID"
                    FROM "PROJECT"
-                  WHERE "NAME" = '${project.getName()}'
+                  WHERE "NAME" = :projectName
                )
             """)
     @DefineNamedBindings
-    <T extends UserPrincipal> int removeRoleFromUser(@Define T user, @Define Project project, @Bind long roleId);
+    <T extends UserPrincipal> int removeRoleFromUser(
+            @Define Class<T> userClass,
+            @Bind long userId,
+            @Bind String projectName,
+            @Bind long roleId);
 
     @SqlQuery(/* language=sql */ """
             <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
-            <#assign prefix = user.getClass().getSimpleName()?upper_case>
-            SELECT "PROJECT"."ID" AS "PROJECT_ID",
-                   "ROLE"."ID" AS "ROLE_ID"
-              FROM "PROJECT"
-             INNER JOIN "${prefix}S_PROJECTS_ROLES"
-                ON "${prefix}S_PROJECTS_ROLES"."PROJECT_ID" = "PROJECT"."ID"
-             INNER JOIN "${prefix}"
-                ON "${prefix}"."ID" = "${prefix}S_PROJECTS_ROLES"."${prefix}_ID"
-             INNER JOIN "ROLE"
-                ON "ROLE"."ID" = "${prefix}S_PROJECTS_ROLES"."ROLE_ID"
-             WHERE "${prefix}"."USERNAME" != '${user.getUsername()}'
-                OR "${prefix}"."USERNAME" IS NULL
+            <#assign prefix = userClass.getSimpleName()?upper_case>
+            SELECT
+                p."ID"   AS "PROJECT_ID",
+                p."NAME" AS "PROJECT_NAME",
+                p."UUID" AS "PROJECT_UUID",
+                r."ID"   AS "ROLE_ID",
+                r."NAME" AS "ROLE_NAME",
+                r."UUID" AS "ROLE_UUID",
+                u."ID"   AS "${prefix}_ID"
+              FROM "PROJECT" p
+             INNER JOIN "${prefix}S_PROJECTS_ROLES" pr
+                ON pr."PROJECT_ID" = p."ID"
+             INNER JOIN "${prefix}" u
+                ON u."ID" = pr."${prefix}_ID"
+             INNER JOIN "ROLE" r
+                ON r."ID" = pr."ROLE_ID"
+             WHERE u."USERNAME" = :username
             """)
     @RegisterRowMapper(ProjectRoleRowMapper.class)
     @DefineNamedBindings
-    <T extends UserPrincipal> List<ProjectRole> getUserRoles(@Define T user);
+    <T extends UserPrincipal> List<ProjectRole> getUserRoles(@Define Class<T> userClass, @Bind String username);
 
     @SqlQuery(/* language=sql */ """
             <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
-            <#assign prefix = user.getClass().getSimpleName()?upper_case>
-            SELECT "PROJECT"."ID", "PROJECT"."NAME"
-              FROM "PROJECT"
-              LEFT JOIN "${prefix}S_PROJECTS_ROLES"
-                ON "${prefix}S_PROJECTS_ROLES"."PROJECT_ID" = "PROJECT"."ID"
-              LEFT JOIN "${prefix}"
-                ON "${prefix}"."ID" = "${prefix}S_PROJECTS_ROLES"."${prefix}_ID"
-             WHERE "${prefix}"."USERNAME" != '${user.getUsername()}'
-                OR "${prefix}"."USERNAME" IS NULL
+            <#assign prefix = userClass.getSimpleName()?upper_case>
+            SELECT p."ID", p."NAME", p."UUID"
+              FROM "PROJECT" p
+              LEFT JOIN "${prefix}S_PROJECTS_ROLES" pr
+                ON pr."PROJECT_ID" = p."ID"
+              LEFT JOIN "${prefix}" u
+                ON u."ID" = pr."${prefix}_ID"
+             WHERE u."USERNAME" != :username
+                OR u."USERNAME" IS NULL
             """)
     @RegisterFieldMapper(Project.class)
-    <T extends UserPrincipal> List<Project> getUserUnassignedProjects(@Define T user);
+    <T extends UserPrincipal> List<Project> getUserUnassignedProjects(
+            @Define Class<T> userClass,
+            @Bind String username);
 
 }
