@@ -50,6 +50,8 @@ import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.Extensions;
 import javax.jdo.annotations.FetchGroup;
 import javax.jdo.annotations.FetchGroups;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.Join;
@@ -249,6 +251,7 @@ public class Project implements Serializable {
     private UUID uuid;
 
     @Persistent
+    @ForeignKey(name = "PROJECT_PROJECT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "PARENT_PROJECT_ID")
     @JsonIncludeProperties(value = {"name", "version", "uuid"})
     private Project parent;
@@ -262,8 +265,8 @@ public class Project implements Serializable {
     private List<ProjectProperty> properties;
 
     @Persistent(table = "PROJECTS_TAGS", defaultFetchGroup = "true", mappedBy = "projects")
-    @Join(column = "PROJECT_ID")
-    @Element(column = "TAG_ID")
+    @Join(column = "PROJECT_ID", foreignKey = "PROJECTS_TAGS_PROJECT_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "TAG_ID", foreignKey = "PROJECTS_TAGS_TAG_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Tag> tags;
 

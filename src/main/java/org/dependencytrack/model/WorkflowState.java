@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
@@ -45,6 +47,7 @@ public class WorkflowState implements Serializable {
 
     // null allowed because first step will have no parent and will be the first step of recursion
     @Persistent
+    @ForeignKey(name = "WORKFLOW_STATE_WORKFLOW_STATE_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "PARENT_STEP_ID" , allowsNull = "true")
     private WorkflowState parent;
 
