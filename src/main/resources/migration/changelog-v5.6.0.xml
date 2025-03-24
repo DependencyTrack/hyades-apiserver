@@ -703,7 +703,7 @@
                 constraintName="PROJECT_ACCESS_TEAMS_PK"/>
     </changeSet>
 
-    <changeSet id="v5.6.0-13-dev" author="pkwiatkowski1">
+    <changeSet id="v5.6.0-15-dev" author="pkwiatkowski1">
         <addColumn tableName="APIKEY">
             <column name="IS_LEGACY" type="BOOLEAN" defaultValueBoolean="false">
                 <constraints nullable="false"/>
@@ -716,7 +716,7 @@
         <addUniqueConstraint columnNames="PUBLIC_ID" constraintName="APIKEY_PUBLIC_IDX" tableName="APIKEY"/>
     </changeSet>
 
-    <changeSet id="v5.6.0-13" author="jhoward-lm">
+    <changeSet id="v5.6.0-15" author="jhoward-lm">
         <createTable ifNotExists="true" tableName="ROLE">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="ROLE_PK" />

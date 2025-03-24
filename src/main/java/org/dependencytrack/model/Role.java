@@ -32,9 +32,10 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+
+import java.util.LinkedHashSet;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.jdo.annotations.Column;
@@ -85,8 +86,7 @@ public class Role implements Serializable {
     @NotBlank
     @Size(min = 1, max = 255)
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
-    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS,
-            message = "The name may only contain printable characters")
+    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
 
     @Persistent(table = "ROLES_PERMISSIONS", defaultFetchGroup = "true")
@@ -94,7 +94,7 @@ public class Role implements Serializable {
     @Join(column = "ROLE_ID")
     @Element(column = "PERMISSION_ID")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    private List<Permission> permissions;
+    private Set<Permission> permissions = new LinkedHashSet<>();
 
     @Persistent(customValueStrategy = "uuid")
     @Unique(name = "ROLE_UUID_IDX")
@@ -118,24 +118,18 @@ public class Role implements Serializable {
         this.name = name;
     }
 
-    public List<Permission> getPermissions() {
+    public Set<Permission> getPermissions() {
         return permissions;
     }
 
-    public void setPermissions(List<Permission> permissions) {
+    public void setPermissions(Set<Permission> permissions) {
         this.permissions = permissions;
     }
 
-    public void addPermissions(Permission... permissions) {
-        if (this.permissions == null) {
-            this.permissions = new ArrayList<>(Arrays.asList(permissions));
+    public boolean addPermissions(Permission... permissions) {
+        this.permissions = Objects.requireNonNullElse(this.permissions, new LinkedHashSet<>());
 
-            return;
-        }
-
-        for (var permission : permissions)
-            if (!this.permissions.contains(permission))
-                this.permissions.add(permission);
+        return this.permissions.addAll(Set.of(permissions));
     }
 
     public UUID getUuid() {
@@ -152,10 +146,12 @@ public class Role implements Serializable {
                 .map(permission -> permission.getName())
                 .toList();
 
-        return "%s{id=%d, name='%s', permissions=%s}".formatted(
+        return "%s{id=%d, uuid='%s', name='%s', permissions=%s}".formatted(
                 getClass().getSimpleName(),
                 id,
+                uuid,
                 name,
                 permissionStrings);
     }
+
 }

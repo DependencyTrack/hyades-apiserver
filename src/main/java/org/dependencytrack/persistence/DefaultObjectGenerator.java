@@ -32,7 +32,6 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
-import org.dependencytrack.model.Role;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
@@ -43,7 +42,7 @@ import java.io.IOException;
 
 import java.time.Duration;
 import java.time.Instant;
-
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +62,56 @@ import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 public class DefaultObjectGenerator implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultObjectGenerator.class);
-    private final Map<String, Permission> permissionsMap = new HashMap<>();
+    private static final Map<String, Permission> PERMISSIONS_MAP = new HashMap<>();
+
+    private static final Map<String, List<String>> DEFAULT_TEAM_PERMISSIONS = Map.of(
+            "Administrators", Stream.of(Permissions.values())
+                    .map(Permissions::name)
+                    .toList(),
+            "Portfolio Managers", List.of(
+                    Permissions.Constants.VIEW_PORTFOLIO,
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT,
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE),
+            "Automation", List.of(
+                    Permissions.Constants.VIEW_PORTFOLIO,
+                    Permissions.Constants.BOM_UPLOAD),
+            "Badge Viewers", List.of(
+                    Permissions.Constants.VIEW_BADGES));
+
+    private static final Map<String, List<String>> DEFAULT_ROLE_PERMISSIONS = Map.of(
+            "Project Admin", List.of(
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE,
+                    Permissions.Constants.VULNERABILITY_ANALYSIS,
+                    Permissions.Constants.VULNERABILITY_ANALYSIS_CREATE,
+                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
+                    Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE,
+                    Permissions.Constants.POLICY_MANAGEMENT,
+                    Permissions.Constants.POLICY_MANAGEMENT_CREATE,
+                    Permissions.Constants.POLICY_MANAGEMENT_READ,
+                    Permissions.Constants.POLICY_MANAGEMENT_UPDATE,
+                    Permissions.Constants.POLICY_MANAGEMENT_DELETE),
+            "Project Auditor", List.of(
+                    Permissions.Constants.VIEW_PORTFOLIO,
+                    Permissions.Constants.VIEW_VULNERABILITY,
+                    Permissions.Constants.VIEW_POLICY_VIOLATION,
+                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ),
+            "Project Editor", List.of(
+                    Permissions.Constants.BOM_UPLOAD,
+                    Permissions.Constants.VIEW_PORTFOLIO,
+                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
+                    Permissions.Constants.VIEW_VULNERABILITY,
+                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
+                    Permissions.Constants.PROJECT_CREATION_UPLOAD),
+            "Project Viewer", List.of(
+                    Permissions.Constants.VIEW_PORTFOLIO,
+                    Permissions.Constants.VIEW_VULNERABILITY,
+                    Permissions.Constants.VIEW_BADGES));
 
     /**
      * {@inheritDoc}
@@ -125,6 +173,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
             loadDefaultLicenses(qm);
             loadDefaultLicenseGroups(qm);
             loadDefaultRepositories(qm);
+            loadDefaultRoles(qm);
             loadDefaultConfigProperties(qm);
             loadDefaultNotificationPublishers(qm);
             recordDefaultObjectsVersion(qm);
@@ -215,23 +264,16 @@ public class DefaultObjectGenerator implements ServletContextListener {
     private void loadDefaultPermissions(final QueryManager qm) {
         LOGGER.info("Synchronizing permissions to datastore");
 
-        for (final Permissions permission : Permissions.values()) {
-            if (qm.getPermission(permission.name()) == null) {
-                LOGGER.debug("Creating permission: " + permission.name());
-                permissionsMap.put(permission.name(),
-                        qm.createPermission(permission.name(), permission.getDescription()));
+        List<String> existing = Objects.requireNonNullElse(qm.getPermissions(), Collections.<Permission>emptyList())
+                .stream()
+                .map(Permission::getName)
+                .toList();
+
+        for (final Permissions value : Permissions.values())
+            if (!existing.contains(value.name())) {
+                LOGGER.debug("Creating permission: " + value.name());
+                PERMISSIONS_MAP.put(value.name(), qm.createPermission(value.name(), value.getDescription()));
             }
-        }
-    }
-
-    private void createTeam(final QueryManager qm, final String name, final List<Permission> permissions, final boolean createApiKey) {
-        LOGGER.debug("Creating team: " + name);
-        var team = qm.createTeam(name, createApiKey);
-
-        LOGGER.debug("Assigning default permissions for team: " + name);
-        team.setPermissions(permissions);
-
-        qm.persist(team);
     }
 
     @SuppressWarnings("unused")
@@ -249,14 +291,20 @@ public class DefaultObjectGenerator implements ServletContextListener {
             return;
 
         LOGGER.info("Adding default users and teams to datastore");
+
         LOGGER.debug("Creating user: admin");
         ManagedUser admin = qm.createManagedUser("admin", "Administrator", "admin@localhost",
                 new String(PasswordService.createHash("admin".toCharArray())), true, true, false);
 
-        createTeam(qm, "Administrators", List.copyOf(permissionsMap.values()), false);
-        createTeam(qm, "Portfolio Managers", getPortfolioManagersPermissions(), false);
-        createTeam(qm, "Automation", getAutomationPermissions(), true);
-        createTeam(qm, "Badge Viewers", getBadgesPermissions(), true);
+        for (var name : new String[] { "Administrators", "Portfolio Managers", "Automation", "Badge Viewers" }) {
+            LOGGER.debug("Creating team: " + name);
+            var team = qm.createTeam(name);
+
+            LOGGER.debug("Assigning default permissions for team: " + name);
+            team.setPermissions(getPermissionsByName(DEFAULT_TEAM_PERMISSIONS.get(name)));
+
+            qm.persist(team);
+        }
 
         LOGGER.debug("Adding admin user to System Administrators");
         qm.addUserToTeam(admin, qm.getTeam("Administrators"));
@@ -266,126 +314,29 @@ public class DefaultObjectGenerator implements ServletContextListener {
         qm.persist(admin);
     }
 
-    private List<Permission> getPortfolioManagersPermissions() {
-        return getPermissionsByName(Permissions.Constants.VIEW_PORTFOLIO,
-                Permissions.Constants.PORTFOLIO_MANAGEMENT,
-                Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
-                Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-                Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
-                Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE);
-    }
-
-    private List<Permission> getAutomationPermissions() {
-        return getPermissionsByName(Permissions.Constants.VIEW_PORTFOLIO,
-                Permissions.Constants.BOM_UPLOAD);
-    }
-
-    private List<Permission> getBadgesPermissions() {
-        return getPermissionsByName(Permissions.Constants.VIEW_BADGES);
-    }
-  
-    /**
-     * Loads the default Roles
-     */
-    private void loadDefaultRoles() {
-        try (QueryManager qm = new QueryManager()) {
-            if (!qm.getRoles().isEmpty()) {
-                return;
-            }
-            LOGGER.debug("Assigning default permissions to roles");
-            final List<Permission> fullList = qm.getPermissions();
-
-            LOGGER.info("Adding default roles to datastore");
-            LOGGER.debug("Creating role: Project Admin");
-            final Role projectAdmin = qm.createRole("Project Admin", getProjectAdminPermissions(fullList));
-            LOGGER.debug("Creating role: Project Auditor");
-            final Role projectAuditor = qm.createRole("Project Auditor", getProjectAuditorPermissions(fullList));
-            LOGGER.debug("Creating role: Project Editor");
-            final Role projectEditor = qm.createRole("Project Editor", getProjectEditorPermissions(fullList));
-            LOGGER.debug("Creating role: Project Viewer");
-            final Role projectViewer = qm.createRole("Project Viewer", getProjectViewerPermissions(fullList));
-
-            qm.persist(projectAdmin);
-            qm.persist(projectAuditor);
-            qm.persist(projectEditor);
-            qm.persist(projectViewer);
-        }
-    }
-
-    private List<Permission> getProjectAdminPermissions(final List<Permission> fullList) {
-        final List<Permission> permissions = new ArrayList<>();
-        for (final Permission permission : fullList) {
-            if (permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT.name()) ||
-                    permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT_CREATE.name()) ||
-                    permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT_READ.name()) ||
-                    permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT_UPDATE.name()) ||
-                    permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT_DELETE.name()) ||
-                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS.name()) ||
-                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS_CREATE.name()) ||
-                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS_READ.name()) ||
-                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS_UPDATE.name()) ||
-                    permission.getName().equals(Permissions.POLICY_MANAGEMENT.name()) ||
-                    permission.getName().equals(Permissions.POLICY_MANAGEMENT_CREATE.name()) ||
-                    permission.getName().equals(Permissions.POLICY_MANAGEMENT_READ.name()) ||
-                    permission.getName().equals(Permissions.POLICY_MANAGEMENT_UPDATE.name()) ||
-                    permission.getName().equals(Permissions.POLICY_MANAGEMENT_DELETE.name())) {
-                permissions.add(permission);
-            }
-        }
-        return permissions;
-    }
-
-    private List<Permission> getProjectAuditorPermissions(final List<Permission> fullList) {
-        final List<Permission> permissions = new ArrayList<>();
-        for (final Permission permission : fullList) {
-            if (permission.getName().equals(Permissions.VIEW_PORTFOLIO.name()) ||
-                    permission.getName().equals(Permissions.VIEW_VULNERABILITY.name()) ||
-                    permission.getName().equals(Permissions.VIEW_POLICY_VIOLATION.name()) ||
-                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS_READ.name())) {
-                permissions.add(permission);
-            }
-        }
-        return permissions;
-    }
-
-    private List<Permission> getProjectEditorPermissions(final List<Permission> fullList) {
-        final List<Permission> permissions = new ArrayList<>();
-        for (final Permission permission : fullList) {
-            if (permission.getName().equals(Permissions.BOM_UPLOAD.name()) ||
-                    permission.getName().equals(Permissions.VIEW_PORTFOLIO.name()) ||
-                    permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT_READ.name()) ||
-                    permission.getName().equals(Permissions.VIEW_VULNERABILITY.name()) ||
-                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS_READ.name()) ||
-                    permission.getName().equals(Permissions.PROJECT_CREATION_UPLOAD.name())) {
-                permissions.add(permission);
-            }
-        }
-        return permissions;
-    }
-
-    private List<Permission> getProjectViewerPermissions(final List<Permission> fullList) {
-        final List<Permission> permissions = new ArrayList<>();
-        for (final Permission permission : fullList) {
-            if (permission.getName().equals(Permissions.VIEW_PORTFOLIO.name()) ||
-                    permission.getName().equals(Permissions.VIEW_VULNERABILITY.name()) ||
-                    permission.getName().equals(Permissions.VIEW_BADGES.name())) {
-                permissions.add(permission);
-            }
-        }
-        return permissions;
-    }
-
     /**
      * Perform a lookup of {@link Permission}s for specified name(s).
      *
      * @param names permission names
      * @return list of {@link Permission}s
      */
-    private List<Permission> getPermissionsByName(String... names) {
-        return Stream.of(names)
-                .map(permissionsMap::get)
-                .filter(Objects::nonNull)
-                .toList();
+    private List<Permission> getPermissionsByName(List<String> names) {
+        return names.stream().map(PERMISSIONS_MAP::get).filter(Objects::nonNull).toList();
+    }
+
+    /**
+     * Loads the default Roles
+     */
+    private void loadDefaultRoles(final QueryManager qm) {
+        if (!qm.getRoles().isEmpty())
+            return;
+
+        LOGGER.info("Adding default roles to datastore");
+
+        for (var name : new String[] { "Project Admin", "Project Auditor", "Project Editor", "Project Viewer" }) {
+            LOGGER.debug("Creating role: " + name);
+            qm.createRole(name, getPermissionsByName(DEFAULT_ROLE_PERMISSIONS.get(name)));
+        }
     }
 
     public void loadDefaultRepositories() {
