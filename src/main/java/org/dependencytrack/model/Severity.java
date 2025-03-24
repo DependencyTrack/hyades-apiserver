@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.model;
 
-import java.util.Arrays;
-
 /**
  * Defines internal severity labels.
  *
@@ -44,7 +42,4 @@ public enum Severity {
         return level;
     }
 
-    public static Severity getSeverityByLevel(final int level){
-        return Arrays.stream(values()).filter(value -> value.level == level).findFirst().orElse(UNASSIGNED);
-    }
 }

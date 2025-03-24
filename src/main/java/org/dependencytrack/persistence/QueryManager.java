@@ -62,7 +62,6 @@ import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Epss;
-import org.dependencytrack.model.Finding;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
@@ -151,7 +150,6 @@ public class QueryManager extends AlpineQueryManager {
     private BomQueryManager bomQueryManager;
     private ComponentQueryManager componentQueryManager;
     private FindingsQueryManager findingsQueryManager;
-    private FindingsSearchQueryManager findingsSearchQueryManager;
     private LicenseQueryManager licenseQueryManager;
     private MetricsQueryManager metricsQueryManager;
     private NotificationQueryManager notificationQueryManager;
@@ -411,17 +409,6 @@ public class QueryManager extends AlpineQueryManager {
             findingsQueryManager = (request == null) ? new FindingsQueryManager(getPersistenceManager()) : new FindingsQueryManager(getPersistenceManager(), request);
         }
         return findingsQueryManager;
-    }
-
-    /**
-     * Lazy instantiation of FindingsSearchQueryManager.
-     * @return a FindingsSearchQueryManager object
-     */
-    private FindingsSearchQueryManager getFindingsSearchQueryManager() {
-        if (findingsSearchQueryManager == null) {
-            findingsSearchQueryManager = (request == null) ? new FindingsSearchQueryManager(getPersistenceManager()) : new FindingsSearchQueryManager(getPersistenceManager(), request);
-        }
-        return findingsSearchQueryManager;
     }
 
     /**
@@ -1155,22 +1142,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public AnalysisComment makeAnalysisComment(Analysis analysis, String comment, String commenter) {
         return getFindingsQueryManager().makeAnalysisComment(analysis, comment, commenter);
-    }
-
-    public List<Finding> getFindings(Project project) {
-        return getFindingsQueryManager().getFindings(project);
-    }
-
-    public List<Finding> getFindings(Project project, boolean includeSuppressed) {
-        return getFindingsQueryManager().getFindings(project, includeSuppressed);
-    }
-
-    public PaginatedResult getAllFindings(final Map<String, String> filters, final boolean showSuppressed, final boolean showInactive) {
-        return getFindingsSearchQueryManager().getAllFindings(filters, showSuppressed, showInactive);
-    }
-
-    public PaginatedResult getAllFindingsGroupedByVulnerability(final Map<String, String> filters, final boolean showInactive) {
-        return getFindingsSearchQueryManager().getAllFindingsGroupedByVulnerability(filters, showInactive);
     }
 
     public List<VulnerabilityMetrics> getVulnerabilityMetrics() {
@@ -2065,4 +2036,23 @@ public class QueryManager extends AlpineQueryManager {
 
         return clauseTemplate.formatted(pagination.getOffset(), pagination.getLimit());
     }
+
+    /**
+     * @param lockName Name of the lock to acquire.
+     * @return {@code true} when the lock was acquired, otherwise {@code false}.
+     * @see <a href="https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS">Advisory lock docs</a>
+     * @since 5.6.0
+     */
+    public boolean tryAcquireAdvisoryLock(final String lockName) {
+        if (!pm.currentTransaction().isActive()) {
+            throw new IllegalStateException("Advisory lock can only be acquired in a transaction");
+        }
+
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT pg_try_advisory_xact_lock(?)
+                """);
+        query.setParameters(lockName.hashCode());
+        return executeAndCloseResultUnique(query, Boolean.class);
+    }
+
 }
