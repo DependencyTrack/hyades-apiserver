@@ -49,6 +49,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * JAX-RS resources for processing permissions.
@@ -254,7 +255,7 @@ public class PermissionResource extends AlpineResource {
             if (permission == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The permission could not be found.").build();
             }
-            final List<Permission> permissions = role.getPermissions();
+            final Set<Permission> permissions = role.getPermissions();
             if (permissions != null && permissions.contains(permission)) {
                 permissions.remove(permission);
                 role.setPermissions(permissions);
@@ -298,7 +299,7 @@ public class PermissionResource extends AlpineResource {
             if (permission == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The permission could not be found.").build();
             }
-            final List<Permission> permissions = role.getPermissions();
+            final Set<Permission> permissions = role.getPermissions();
             if (permissions != null && !permissions.contains(permission)) {
                 permissions.add(permission);
                 role.setPermissions(permissions);
