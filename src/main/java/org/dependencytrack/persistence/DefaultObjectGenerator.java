@@ -32,6 +32,7 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
@@ -281,6 +282,97 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
     private List<Permission> getBadgesPermissions() {
         return getPermissionsByName(Permissions.Constants.VIEW_BADGES);
+    }
+  
+    /**
+     * Loads the default Roles
+     */
+    private void loadDefaultRoles() {
+        try (QueryManager qm = new QueryManager()) {
+            if (!qm.getRoles().isEmpty()) {
+                return;
+            }
+            LOGGER.debug("Assigning default permissions to roles");
+            final List<Permission> fullList = qm.getPermissions();
+
+            LOGGER.info("Adding default roles to datastore");
+            LOGGER.debug("Creating role: Project Admin");
+            final Role projectAdmin = qm.createRole("Project Admin", getProjectAdminPermissions(fullList));
+            LOGGER.debug("Creating role: Project Auditor");
+            final Role projectAuditor = qm.createRole("Project Auditor", getProjectAuditorPermissions(fullList));
+            LOGGER.debug("Creating role: Project Editor");
+            final Role projectEditor = qm.createRole("Project Editor", getProjectEditorPermissions(fullList));
+            LOGGER.debug("Creating role: Project Viewer");
+            final Role projectViewer = qm.createRole("Project Viewer", getProjectViewerPermissions(fullList));
+
+            qm.persist(projectAdmin);
+            qm.persist(projectAuditor);
+            qm.persist(projectEditor);
+            qm.persist(projectViewer);
+        }
+    }
+
+    private List<Permission> getProjectAdminPermissions(final List<Permission> fullList) {
+        final List<Permission> permissions = new ArrayList<>();
+        for (final Permission permission : fullList) {
+            if (permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT.name()) ||
+                    permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT_CREATE.name()) ||
+                    permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT_READ.name()) ||
+                    permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT_UPDATE.name()) ||
+                    permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT_DELETE.name()) ||
+                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS.name()) ||
+                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS_CREATE.name()) ||
+                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS_READ.name()) ||
+                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS_UPDATE.name()) ||
+                    permission.getName().equals(Permissions.POLICY_MANAGEMENT.name()) ||
+                    permission.getName().equals(Permissions.POLICY_MANAGEMENT_CREATE.name()) ||
+                    permission.getName().equals(Permissions.POLICY_MANAGEMENT_READ.name()) ||
+                    permission.getName().equals(Permissions.POLICY_MANAGEMENT_UPDATE.name()) ||
+                    permission.getName().equals(Permissions.POLICY_MANAGEMENT_DELETE.name())) {
+                permissions.add(permission);
+            }
+        }
+        return permissions;
+    }
+
+    private List<Permission> getProjectAuditorPermissions(final List<Permission> fullList) {
+        final List<Permission> permissions = new ArrayList<>();
+        for (final Permission permission : fullList) {
+            if (permission.getName().equals(Permissions.VIEW_PORTFOLIO.name()) ||
+                    permission.getName().equals(Permissions.VIEW_VULNERABILITY.name()) ||
+                    permission.getName().equals(Permissions.VIEW_POLICY_VIOLATION.name()) ||
+                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS_READ.name())) {
+                permissions.add(permission);
+            }
+        }
+        return permissions;
+    }
+
+    private List<Permission> getProjectEditorPermissions(final List<Permission> fullList) {
+        final List<Permission> permissions = new ArrayList<>();
+        for (final Permission permission : fullList) {
+            if (permission.getName().equals(Permissions.BOM_UPLOAD.name()) ||
+                    permission.getName().equals(Permissions.VIEW_PORTFOLIO.name()) ||
+                    permission.getName().equals(Permissions.PORTFOLIO_MANAGEMENT_READ.name()) ||
+                    permission.getName().equals(Permissions.VIEW_VULNERABILITY.name()) ||
+                    permission.getName().equals(Permissions.VULNERABILITY_ANALYSIS_READ.name()) ||
+                    permission.getName().equals(Permissions.PROJECT_CREATION_UPLOAD.name())) {
+                permissions.add(permission);
+            }
+        }
+        return permissions;
+    }
+
+    private List<Permission> getProjectViewerPermissions(final List<Permission> fullList) {
+        final List<Permission> permissions = new ArrayList<>();
+        for (final Permission permission : fullList) {
+            if (permission.getName().equals(Permissions.VIEW_PORTFOLIO.name()) ||
+                    permission.getName().equals(Permissions.VIEW_VULNERABILITY.name()) ||
+                    permission.getName().equals(Permissions.VIEW_BADGES.name())) {
+                permissions.add(permission);
+            }
+        }
+        return permissions;
     }
 
     /**
