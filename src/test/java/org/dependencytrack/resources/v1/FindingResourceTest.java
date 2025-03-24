@@ -104,8 +104,8 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals("Vuln-1", finding.getJsonObject("vulnerability").getString("vulnId"));
                     assertEquals(Severity.CRITICAL.name(), finding.getJsonObject("vulnerability").getString("severity"));
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
-                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
-                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
+                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
+                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
                     assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v1.getUuid().toString(), finding.getString("matrix"));
                 },
@@ -116,8 +116,8 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals("Vuln-2", finding.getJsonObject("vulnerability").getString("vulnId"));
                     assertEquals(Severity.HIGH.name(), finding.getJsonObject("vulnerability").getString("severity"));
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
-                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
-                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
+                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
+                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
                     assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v2.getUuid().toString(), finding.getString("matrix"));
                 },
@@ -128,8 +128,8 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals("Vuln-3", finding.getJsonObject("vulnerability").getString("vulnId"));
                     assertEquals(Severity.MEDIUM.name(), finding.getJsonObject("vulnerability").getString("severity"));
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
-                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
-                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
+                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
+                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
                     assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c2.getUuid().toString() + ":" + v3.getUuid().toString(), finding.getString("matrix"));
                 }
@@ -240,8 +240,8 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals("Vuln-1", finding.getJsonObject("vulnerability").getString("vulnId"));
                     assertEquals(Severity.CRITICAL.name(), finding.getJsonObject("vulnerability").getString("severity"));
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
-                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
-                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
+                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
+                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
                     assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v1.getUuid().toString(), finding.getString("matrix"));
                 },
@@ -252,8 +252,8 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals("Vuln-2", finding.getJsonObject("vulnerability").getString("vulnId"));
                     assertEquals(Severity.HIGH.name(), finding.getJsonObject("vulnerability").getString("severity"));
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
-                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
-                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
+                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
+                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
                     assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v2.getUuid().toString(), finding.getString("matrix"));
                 },
@@ -264,8 +264,8 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals("Vuln-3", finding.getJsonObject("vulnerability").getString("vulnId"));
                     assertEquals(Severity.MEDIUM.name(), finding.getJsonObject("vulnerability").getString("severity"));
                     assertEquals(2, findings.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").size());
-                    assertEquals(80, findings.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
-                    assertEquals(666, findings.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
+                    assertEquals(80, findings.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
+                    assertEquals(666, findings.getJsonObject(1).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
                     assertFalse(findings.getJsonObject(0).getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c2.getUuid().toString() + ":" + v3.getUuid().toString(), finding.getString("matrix"));
                 }
@@ -376,8 +376,8 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals("Vuln-1", finding.getJsonObject("vulnerability").getString("vulnId"));
                     assertEquals(Severity.CRITICAL.name(), finding.getJsonObject("vulnerability").getString("severity"));
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
-                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
-                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
+                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
+                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
                     assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v1.getUuid().toString(), finding.getString("matrix"));
                     assertEquals("2.0.0", finding.getJsonObject("component").getString("latestVersion"));
@@ -389,8 +389,8 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals("Vuln-2", finding.getJsonObject("vulnerability").getString("vulnId"));
                     assertEquals(Severity.HIGH.name(), finding.getJsonObject("vulnerability").getString("severity"));
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
-                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
-                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
+                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
+                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
                     assertFalse(finding.getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v2.getUuid().toString(), finding.getString("matrix"));
                     assertEquals("2.0.0", finding.getJsonObject("component").getString("latestVersion"));
@@ -402,8 +402,8 @@ public class FindingResourceTest extends ResourceTest {
                     assertEquals("Vuln-3", finding.getJsonObject("vulnerability").getString("vulnId"));
                     assertEquals(Severity.MEDIUM.name(), finding.getJsonObject("vulnerability").getString("severity"));
                     assertEquals(2, finding.getJsonObject("vulnerability").getJsonArray("cwes").size());
-                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
-                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
+                    assertEquals(80, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
+                    assertEquals(666, finding.getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
                     assertFalse(json.getJsonObject(0).getJsonObject("analysis").getBoolean("isSuppressed"));
                     assertEquals(p1.getUuid().toString() + ":" + c2.getUuid().toString() + ":" + v3.getUuid().toString(), finding.getString("matrix"));
                     assertEquals("3.0.0", finding.getJsonObject("component").getString("latestVersion"));
@@ -432,8 +432,8 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals("Vuln-1", json.getJsonObject(0).getJsonObject("vulnerability").getString("vulnId"));
         assertEquals(Severity.CRITICAL.name(), json.getJsonObject(0).getJsonObject("vulnerability").getString("severity"));
         assertEquals(2, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").size());
-        assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getInt(0));
-        assertEquals(666, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getInt(1));
+        assertEquals(80, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(0).getInt("cweId"));
+        assertEquals(666, json.getJsonObject(0).getJsonObject("vulnerability").getJsonArray("cwes").getJsonObject(1).getInt("cweId"));
         assertFalse(json.getJsonObject(0).getJsonObject("analysis").getBoolean("isSuppressed"));
         assertEquals(p1.getUuid().toString() + ":" + c1.getUuid().toString() + ":" + v1.getUuid().toString(), json.getJsonObject(0).getString("matrix"));
         assertNull(json.getJsonObject(0).getJsonObject("component").get("latestVersion"));
@@ -830,7 +830,12 @@ public class FindingResourceTest extends ResourceTest {
                             "group": "org.acme",
                             "version": "1.1.4",
                             "source": "INTERNAL",
-                            "cwes": "[80]",
+                            "cwes": [
+                                {
+                                    "cweId": "80",
+                                    "name": "Improper Neutralization of Script-Related HTML Tags in a Web Page (Basic XSS)"
+                                }
+                            ],
                             "cvssV3BaseScore": "",
                             "epssScore": "",
                             "epssPercentile": "",
@@ -860,7 +865,12 @@ public class FindingResourceTest extends ResourceTest {
                              "group": "org.acme",
                              "version": "1.1.4",
                              "source": "INTERNAL",
-                             "cwes": "[46]",
+                             "cwes": [
+                                {
+                                    "cweId": "46",
+                                    "name": "Path Equivalence: 'filename ' (Trailing Space)"
+                                }
+                             ],
                              "cvssV3BaseScore": "",
                              "epssScore": "",
                              "epssPercentile": "",
@@ -890,7 +900,12 @@ public class FindingResourceTest extends ResourceTest {
                              "group": "org.acme",
                              "version": "1.1.4",
                              "source": "INTERNAL",
-                             "cwes": "[23]",
+                             "cwes": [
+                                {
+                                    "cweId": "23",
+                                    "name": "Relative Path Traversal"
+                                }
+                             ],
                              "cvssV3BaseScore": "",
                              "epssScore": "",
                              "epssPercentile": "",
@@ -920,7 +935,12 @@ public class FindingResourceTest extends ResourceTest {
                              "group": "com.xyz",
                              "version": "2.78.123",
                              "source": "INTERNAL",
-                             "cwes": "[23]",
+                             "cwes": [
+                                {
+                                    "cweId": "23",
+                                    "name": "Relative Path Traversal"
+                                }
+                             ],
                              "cvssV3BaseScore": "",
                              "epssScore": "",
                              "epssPercentile": "",
