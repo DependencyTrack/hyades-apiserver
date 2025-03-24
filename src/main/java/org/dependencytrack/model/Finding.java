@@ -19,7 +19,6 @@
 package org.dependencytrack.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import org.apache.commons.lang3.StringUtils;
 import org.datanucleus.store.types.wrappers.Date;
 import org.dependencytrack.parser.common.resolver.CweResolver;
 import org.dependencytrack.persistence.jdbi.FindingDao;
@@ -33,8 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import static org.apache.commons.lang3.StringUtils.isBlank;
 
 
 /**
@@ -87,7 +84,7 @@ public class Finding implements Serializable {
         optValue(vulnerability, "owaspRRVector", findingRow.owaspRRVector());
         optValue(vulnerability, "epssScore", findingRow.epssScore());
         optValue(vulnerability, "epssPercentile", findingRow.epssPercentile());
-        optValue(vulnerability, "cwes", findingRow.cwes());
+        optValue(vulnerability, "cwes", getCwes(findingRow.cwes()));
         addVulnerabilityAliases(findingRow.vulnAliasesJson());
 
         optValue(attribution, "analyzerIdentity", findingRow.analyzerIdentity());
@@ -134,27 +131,21 @@ public class Finding implements Serializable {
         }
     }
 
-    static List<Cwe> getCwes(final Object value) {
-        if (value instanceof final String cweIds) {
-            if (isBlank(cweIds)) {
-                return null;
-            }
-            final List<Cwe> cwes = new ArrayList<>();
-            for (final String s : cweIds.split(",")) {
-                if (StringUtils.isNumeric(s)) {
-                    final Cwe cwe = CweResolver.getInstance().lookup(Integer.valueOf(s));
-                    if (cwe != null) {
-                        cwes.add(cwe);
-                    }
-                }
-            }
-            if (cwes.isEmpty()) {
-                return null;
-            }
-            return cwes;
-        } else {
+    static List<Cwe> getCwes(final List<Integer> cweIds) {
+        if (cweIds == null || cweIds.isEmpty()) {
             return null;
         }
+        final List<Cwe> cwes = new ArrayList<>();
+        for (final var cweId : cweIds) {
+            final Cwe cwe = CweResolver.getInstance().lookup(cweId);
+            if (cwe != null) {
+                cwes.add(cwe);
+            }
+        }
+        if (cwes.isEmpty()) {
+            return null;
+        }
+        return cwes;
     }
 
     public String getMatrix() {

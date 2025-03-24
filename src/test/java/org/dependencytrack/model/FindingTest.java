@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -88,8 +89,7 @@ public class FindingTest extends PersistenceCapableTest {
 
     @Test
     public void testGetCwes() {
-        assertThat(Finding.getCwes("787,79,,89,"))
-                .hasSize(3)
+        assertThat(Finding.getCwes(List.of(787,79,89)))
                 .satisfiesExactly(
                         cwe -> assertThat(cwe.getCweId()).isEqualTo(787),
                         cwe -> assertThat(cwe.getCweId()).isEqualTo(79),
@@ -98,9 +98,9 @@ public class FindingTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetCwesWhenInputIsEmpty() {
-        assertThat(Finding.getCwes("")).isNull();
-        assertThat(Finding.getCwes(",")).isNull();
+    public void testGetCwesWhenInputIsNullOrEmpty() {
+        assertThat(Finding.getCwes(List.of())).isNull();
+        assertThat(Finding.getCwes(null)).isNull();
     }
 
     @Test
