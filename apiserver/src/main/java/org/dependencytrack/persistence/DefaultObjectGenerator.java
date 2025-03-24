@@ -298,7 +298,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
         for (var name : new String[] { "Administrators", "Portfolio Managers", "Automation", "Badge Viewers" }) {
             LOGGER.debug("Creating team: " + name);
-            var team = qm.createTeam(name);
+            var team = qm.createTeam(name, false);
 
             LOGGER.debug("Assigning default permissions for team: " + name);
             team.setPermissions(getPermissionsByName(DEFAULT_TEAM_PERMISSIONS.get(name)));
