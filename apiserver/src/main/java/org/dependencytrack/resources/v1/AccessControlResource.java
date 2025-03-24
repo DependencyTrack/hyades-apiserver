@@ -141,7 +141,7 @@ public class AccessControlResource extends AlpineResource {
 
             try (final Handle jdbiHandle = openJdbiHandle()) {
                 var dao = jdbiHandle.attach(RoleDao.class);
-                List<Project> projects = dao.getUserUnassignedProjects(principal);
+                List<Project> projects = dao.getUserUnassignedProjects(principal.getClass(), principal.getUsername());
 
                 if (projects == null || projects.isEmpty())
                     return Response.ok(List.of()).entity("No unassigned projects for specified user.").build();
