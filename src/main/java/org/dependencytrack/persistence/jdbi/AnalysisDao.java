@@ -18,7 +18,10 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import org.dependencytrack.model.Analysis;
+import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
@@ -34,9 +37,6 @@ public interface AnalysisDao {
             """)
     void createComments(@Bind List<Long> analysisId, @Bind String commenter, @Bind List<String> comment);
 
-    /**
-     * Returns the number of suppressed vulnerabilities for the specified Component.
-     */
     @SqlQuery("""
             SELECT COUNT(*)
             FROM "ANALYSIS"
@@ -45,9 +45,6 @@ public interface AnalysisDao {
             """)
     long getSuppressedCount(@Bind Long componentId);
 
-    /**
-     * Returns the number of suppressed vulnerabilities for the specified Project / Component.
-     */
     @SqlQuery("""
             SELECT COUNT(*)
             FROM "ANALYSIS"
@@ -56,4 +53,12 @@ public interface AnalysisDao {
             AND "SUPPRESSED" IS TRUE
             """)
     long getSuppressedCount(@Bind Long projectId, @Bind Long componentId);
+
+    @SqlQuery("""
+            SELECT * FROM "ANALYSIS"
+            WHERE "PROJECT_ID" = :projectId
+            """)
+    @GetGeneratedKeys("*")
+    @RegisterBeanMapper(Analysis.class)
+    List<Analysis> getAnalyses(@Bind Long projectId);
 }

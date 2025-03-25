@@ -19,9 +19,6 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.model.AnalysisJustification;
-import org.dependencytrack.model.AnalysisResponse;
-import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Vulnerability;
 import org.jdbi.v3.core.Handle;
@@ -30,6 +27,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.model.AnalysisState.NOT_AFFECTED;
+import static org.dependencytrack.model.Vulnerability.Source.NVD;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 public class AnalysisDaoTest extends PersistenceCapableTest {
@@ -70,26 +69,45 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
 
         final var vuln1 = new Vulnerability();
         vuln1.setVulnId("INT-123");
-        vuln1.setSource(Vulnerability.Source.INTERNAL);
+        vuln1.setSource(NVD);
         qm.persist(vuln1);
 
         final var vuln2 = new Vulnerability();
         vuln2.setVulnId("INT-456");
-        vuln2.setSource(Vulnerability.Source.INTERNAL);
+        vuln2.setSource(NVD);
         qm.persist(vuln2);
 
-        qm.makeAnalysis(c1, vuln1, AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
-                AnalysisResponse.WORKAROUND_AVAILABLE, "analysisDetails", true);
-        qm.makeAnalysis(c1, vuln2, AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
-                AnalysisResponse.WORKAROUND_AVAILABLE, "analysisDetails", true);
-        qm.makeAnalysis(c2, vuln1, AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
-                AnalysisResponse.WORKAROUND_AVAILABLE, "analysisDetails", false);
-        qm.makeAnalysis(c2, vuln2, AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
-                AnalysisResponse.WORKAROUND_AVAILABLE, "analysisDetails", true);
+        qm.makeAnalysis(c1, vuln1, NOT_AFFECTED, null, null, null, true);
+        qm.makeAnalysis(c1, vuln2, NOT_AFFECTED, null, null, null, true);
+        qm.makeAnalysis(c2, vuln1, NOT_AFFECTED, null, null, null, false);
+        qm.makeAnalysis(c2, vuln2, NOT_AFFECTED, null, null, null, true);
 
         assertThat(analysisDao.getSuppressedCount(c1.getId())).isEqualTo(2);
         assertThat(analysisDao.getSuppressedCount(c2.getId())).isEqualTo(1);
         assertThat(analysisDao.getSuppressedCount(project.getId(), c1.getId())).isEqualTo(2);
         assertThat(analysisDao.getSuppressedCount(project.getId(), c2.getId())).isEqualTo(1);
+
+        assertThat(analysisDao.getAnalyses(project.getId())).satisfiesExactlyInAnyOrder(
+                analysis -> {
+                    assertThat(analysis.getComponent().getId()).isEqualTo(c1.getId());
+                    assertThat(analysis.getVulnerability().getId()).isEqualTo(vuln1.getId());
+                    assertThat(analysis.isSuppressed()).isTrue();
+                },
+                analysis -> {
+                    assertThat(analysis.getComponent().getId()).isEqualTo(c1.getId());
+                    assertThat(analysis.getVulnerability().getId()).isEqualTo(vuln2.getId());
+                    assertThat(analysis.isSuppressed()).isTrue();
+                },
+                analysis -> {
+                    assertThat(analysis.getComponent().getId()).isEqualTo(c2.getId());
+                    assertThat(analysis.getVulnerability().getId()).isEqualTo(vuln1.getId());
+                    assertThat(analysis.isSuppressed()).isFalse();
+                },
+                analysis -> {
+                    assertThat(analysis.getComponent().getId()).isEqualTo(c2.getId());
+                    assertThat(analysis.getVulnerability().getId()).isEqualTo(vuln2.getId());
+                    assertThat(analysis.isSuppressed()).isTrue();
+                }
+        );
     }
 }
