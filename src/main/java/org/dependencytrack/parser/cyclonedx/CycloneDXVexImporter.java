@@ -156,20 +156,20 @@ public class CycloneDXVexImporter {
         if (cdxVuln.getAnalysis().getState() != null) {
             analysisState = ModelConverter.convertCdxVulnAnalysisStateToDtAnalysisState(cdxVuln.getAnalysis().getState());
             suppress = (AnalysisState.FALSE_POSITIVE == analysisState || AnalysisState.NOT_AFFECTED == analysisState || AnalysisState.RESOLVED == analysisState);
-            AnalysisCommentUtil.makeStateComment(qm, analysis, analysisState, COMMENTER);
+            AnalysisCommentUtil.makeStateComment(analysis, analysisState, COMMENTER);
         }
         if (cdxVuln.getAnalysis().getJustification() != null) {
             analysisJustification = ModelConverter.convertCdxVulnAnalysisJustificationToDtAnalysisJustification(cdxVuln.getAnalysis().getJustification());
-            AnalysisCommentUtil.makeJustificationComment(qm, analysis, analysisJustification, COMMENTER);
+            AnalysisCommentUtil.makeJustificationComment(analysis, analysisJustification, COMMENTER);
         }
         if (trimToNull(cdxVuln.getAnalysis().getDetail()) != null) {
             analysisDetails = cdxVuln.getAnalysis().getDetail().trim();
-            AnalysisCommentUtil.makeAnalysisDetailsComment(qm, analysis, cdxVuln.getAnalysis().getDetail().trim(), COMMENTER);
+            AnalysisCommentUtil.makeAnalysisDetailsComment(analysis, cdxVuln.getAnalysis().getDetail().trim(), COMMENTER);
         }
         if (cdxVuln.getAnalysis().getResponses() != null) {
             for (org.cyclonedx.model.vulnerability.Vulnerability.Analysis.Response cdxRes : cdxVuln.getAnalysis().getResponses()) {
                 analysisResponse = ModelConverter.convertCdxVulnAnalysisResponseToDtAnalysisResponse(cdxRes);
-                AnalysisCommentUtil.makeAnalysisResponseComment(qm, analysis, analysisResponse, COMMENTER);
+                AnalysisCommentUtil.makeAnalysisResponseComment(analysis, analysisResponse, COMMENTER);
             }
         }
         qm.makeAnalysis(component, refreshedVuln, analysisState, analysisJustification, analysisResponse, analysisDetails, suppress);

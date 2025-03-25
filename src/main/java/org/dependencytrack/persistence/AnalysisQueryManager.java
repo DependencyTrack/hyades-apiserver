@@ -20,7 +20,6 @@ package org.dependencytrack.persistence;
 
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.model.Analysis;
-import org.dependencytrack.model.AnalysisComment;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -30,10 +29,9 @@ import org.dependencytrack.model.Vulnerability;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.util.Date;
 import java.util.List;
 
-public class FindingsQueryManager extends QueryManager implements IQueryManager {
+public class AnalysisQueryManager extends QueryManager implements IQueryManager {
 
 
     /**
@@ -41,7 +39,7 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
      *
      * @param pm a PersistenceManager object
      */
-    FindingsQueryManager(final PersistenceManager pm) {
+    AnalysisQueryManager(final PersistenceManager pm) {
         super(pm);
     }
 
@@ -51,7 +49,7 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
      * @param pm      a PersistenceManager object
      * @param request an AlpineRequest object
      */
-    FindingsQueryManager(final PersistenceManager pm, final AlpineRequest request) {
+    AnalysisQueryManager(final PersistenceManager pm, final AlpineRequest request) {
         super(pm, request);
     }
 
@@ -61,7 +59,6 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
      * @param project the Project
      * @return a List of Analysis objects, or null if not found
      */
-    // TODO: Move Analysis queries to AnalysisDao
     @SuppressWarnings("unchecked")
     List<Analysis> getAnalyses(Project project) {
         final Query<Analysis> query = pm.newQuery(Analysis.class, "project == :project");
@@ -75,7 +72,6 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
      * @param vulnerability the Vulnerability
      * @return a Analysis object, or null if not found
      */
-    // TODO: Move Analysis queries to AnalysisDao
     public Analysis getAnalysis(Component component, Vulnerability vulnerability) {
         final Query<Analysis> query = pm.newQuery(Analysis.class, "component == :component && vulnerability == :vulnerability");
         query.setRange(0, 1);
@@ -90,7 +86,6 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
      * @param vulnerability the Vulnerability
      * @return an Analysis object
      */
-    // TODO: Move Analysis queries to AnalysisDao
     public Analysis makeAnalysis(Component component, Vulnerability vulnerability, AnalysisState analysisState,
                                  AnalysisJustification analysisJustification, AnalysisResponse analysisResponse,
                                  String analysisDetails, Boolean isSuppressed) {
@@ -125,7 +120,6 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
         return getAnalysis(analysis.getComponent(), analysis.getVulnerability());
     }
 
-    // TODO: Move Analysis queries to AnalysisDao
     public Analysis makeAnalysis(Component component, Vulnerability vulnerability, Analysis transientAnalysis) {
         Analysis analysis = getAnalysis(component, vulnerability);
         if (analysis == null) {
@@ -179,26 +173,5 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
         }
         analysis = persist(analysis);
         return getAnalysis(analysis.getComponent(), analysis.getVulnerability());
-    }
-
-    /**
-     * Adds a new analysis comment to the specified analysis.
-     *
-     * @param analysis  the analysis object to add a comment to
-     * @param comment   the comment to make
-     * @param commenter the name of the principal who wrote the comment
-     * @return a new AnalysisComment object
-     */
-    // TODO: Move Analysis queries to AnalysisDao
-    public AnalysisComment makeAnalysisComment(Analysis analysis, String comment, String commenter) {
-        if (analysis == null || comment == null) {
-            return null;
-        }
-        final AnalysisComment analysisComment = new AnalysisComment();
-        analysisComment.setAnalysis(analysis);
-        analysisComment.setTimestamp(new Date());
-        analysisComment.setComment(comment);
-        analysisComment.setCommenter(commenter);
-        return persist(analysisComment);
     }
 }

@@ -18,7 +18,11 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import org.dependencytrack.model.Analysis;
+import org.dependencytrack.model.AnalysisComment;
+import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
@@ -33,6 +37,24 @@ public interface AnalysisDao {
               (:analysisId, :comment, :commenter, NOW())
             """)
     void createComments(@Bind List<Long> analysisId, @Bind String commenter, @Bind List<String> comment);
+
+    @SqlQuery("""
+            INSERT INTO "ANALYSISCOMMENT"
+              ("ANALYSIS_ID", "COMMENT", "COMMENTER", "TIMESTAMP")
+            VALUES
+              (:analysisId, :comment, :commenter, NOW())
+            RETURNING *
+            """)
+    @GetGeneratedKeys("*")
+    @RegisterBeanMapper(AnalysisComment.class)
+    AnalysisComment createComment(@Bind long analysisId, String comment, String commenter);
+
+    default AnalysisComment makeAnalysisComment(long analysisId, String comment, String commenter) {
+        if (comment == null) {
+            return null;
+        }
+        return createComment(analysisId, comment, commenter);
+    }
 
     @SqlQuery("""
             SELECT EXISTS(

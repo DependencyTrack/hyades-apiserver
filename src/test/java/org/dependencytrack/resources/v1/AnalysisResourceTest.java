@@ -23,6 +23,12 @@ import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
@@ -39,6 +45,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -49,12 +56,6 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -101,7 +102,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Analysis analysis = qm.makeAnalysis(component, vulnerability, AnalysisState.NOT_AFFECTED,
                 AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true);
-        qm.makeAnalysisComment(analysis, "Analysis comment here", "Jane Doe");
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysisComment(analysis.getId(), "Analysis comment here", "Jane Doe"));
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .queryParam("project", project.getUuid())
@@ -530,7 +532,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Analysis analysis = qm.makeAnalysis(component, vulnerability, AnalysisState.NOT_AFFECTED,
                 AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true);
-        qm.makeAnalysisComment(analysis, "Analysis comment here", "Jane Doe");
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysisComment(analysis.getId(), "Analysis comment here", "Jane Doe"));
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 vulnerability.getUuid().toString(), AnalysisState.EXPLOITABLE, AnalysisJustification.NOT_SET,
@@ -608,7 +611,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Analysis analysis = qm.makeAnalysis(component, vulnerability, AnalysisState.NOT_AFFECTED,
                 AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true);
-        qm.makeAnalysisComment(analysis, "Analysis comment here", "Jane Doe");
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysisComment(analysis.getId(), "Analysis comment here", "Jane Doe"));
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 vulnerability.getUuid().toString(), AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
@@ -658,7 +662,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Analysis analysis = qm.makeAnalysis(component, vulnerability, AnalysisState.NOT_AFFECTED,
                 AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true);
-        qm.makeAnalysisComment(analysis, "Analysis comment here", "Jane Doe");
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysisComment(analysis.getId(), "Analysis comment here", "Jane Doe"));
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 vulnerability.getUuid().toString(), null, null, null, null, null, null);

@@ -70,4 +70,31 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
         qm.makeAnalysis(c1, vuln1, NOT_AFFECTED, null, null, null, true);
         assertThat(analysisDao.hasVulnerabilities(project.getId())).isTrue();
     }
+
+    @Test
+    public void testMakeAnalysisComment() {
+        final var project = qm.createProject("acme-app", "Description 1", "1.0.0", null, null, null, null, false);
+
+        final var c1 = new Component();
+        c1.setProject(project);
+        c1.setName("acme-lib");
+        c1.setVersion("2.0.0");
+        qm.persist(c1);
+
+        final var vuln1 = new Vulnerability();
+        vuln1.setVulnId("INT-123");
+        vuln1.setSource(NVD);
+        qm.persist(vuln1);
+
+        var analysis = qm.makeAnalysis(c1, vuln1, NOT_AFFECTED, null, null, null, true);
+
+        assertThat(analysisDao.makeAnalysisComment(analysis.getId(), null, "tester")).isNull();
+
+        var analysisComment = analysisDao.makeAnalysisComment(analysis.getId(), "test-comment", "tester");
+
+        assertThat(analysisComment).isNotNull();
+        assertThat(analysisComment.getComment()).isEqualTo("test-comment");
+        assertThat(analysisComment.getCommenter()).isEqualTo("tester");
+        assertThat(analysisComment.getTimestamp()).isNotNull();
+    }
 }

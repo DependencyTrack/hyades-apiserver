@@ -33,21 +33,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Analysis;
-import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.dependencytrack.resources.v1.vo.AnalysisRequest;
-import org.dependencytrack.util.AnalysisCommentFormatter.AnalysisCommentField;
-import org.dependencytrack.util.AnalysisCommentUtil;
-import org.dependencytrack.util.NotificationUtil;
-
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -57,9 +42,26 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Analysis;
+import org.dependencytrack.model.AnalysisState;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.AnalysisRequest;
+import org.dependencytrack.util.AnalysisCommentFormatter.AnalysisCommentField;
+import org.dependencytrack.util.AnalysisCommentUtil;
+import org.dependencytrack.util.NotificationUtil;
+
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.AnalysisCommentFormatter.formatComment;
 
 /**
@@ -179,7 +181,7 @@ public class AnalysisResource extends AbstractApiResource {
                 return Response.status(Response.Status.NOT_FOUND).entity("The vulnerability could not be found.").build();
             }
 
-            String commenter = null;
+            final String commenter;
             if (getPrincipal() instanceof UserPrincipal principal) {
                 commenter = principal.getUsername();
             } else if (getPrincipal() instanceof ApiKey apiKey) {
@@ -187,28 +189,34 @@ public class AnalysisResource extends AbstractApiResource {
                 List<String> teamNames = new ArrayList<>();
                 teams.forEach(team -> teamNames.add(team.getName()));
                 commenter = String.join(", ", teamNames);
+            } else {
+                commenter = null;
             }
 
-            boolean analysisStateChange = false;
+            boolean analysisStateChange;
             boolean suppressionChange = false;
             Analysis analysis = qm.getAnalysis(component, vulnerability);
             if (analysis != null) {
-                analysisStateChange = AnalysisCommentUtil.makeStateComment(qm, analysis, request.getAnalysisState(), commenter);
-                AnalysisCommentUtil.makeJustificationComment(qm, analysis, request.getAnalysisJustification(), commenter);
-                AnalysisCommentUtil.makeAnalysisResponseComment(qm, analysis, request.getAnalysisResponse(), commenter);
-                AnalysisCommentUtil.makeAnalysisDetailsComment(qm, analysis, request.getAnalysisDetails(), commenter);
-                suppressionChange = AnalysisCommentUtil.makeAnalysisSuppressionComment(qm, analysis, request.isSuppressed(), commenter);
+                analysisStateChange = AnalysisCommentUtil.makeStateComment(analysis, request.getAnalysisState(), commenter);
+                AnalysisCommentUtil.makeJustificationComment(analysis, request.getAnalysisJustification(), commenter);
+                AnalysisCommentUtil.makeAnalysisResponseComment(analysis, request.getAnalysisResponse(), commenter);
+                AnalysisCommentUtil.makeAnalysisDetailsComment(analysis, request.getAnalysisDetails(), commenter);
+                suppressionChange = AnalysisCommentUtil.makeAnalysisSuppressionComment(analysis, request.isSuppressed(), commenter);
                 analysis = qm.makeAnalysis(component, vulnerability, request.getAnalysisState(), request.getAnalysisJustification(), request.getAnalysisResponse(), request.getAnalysisDetails(), request.isSuppressed());
             } else {
                 analysis = qm.makeAnalysis(component, vulnerability, request.getAnalysisState(), request.getAnalysisJustification(), request.getAnalysisResponse(), request.getAnalysisDetails(), request.isSuppressed());
                 analysisStateChange = true; // this is a new analysis - so set to true because it was previously null
                 if (AnalysisState.NOT_SET != request.getAnalysisState()) {
-                    qm.makeAnalysisComment(analysis, formatComment(AnalysisCommentField.STATE, AnalysisState.NOT_SET, request.getAnalysisState()), commenter);
+                    var analysisId = analysis.getId();
+                    withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                            .makeAnalysisComment(analysisId, formatComment(AnalysisCommentField.STATE, AnalysisState.NOT_SET, request.getAnalysisState()), commenter));
                 }
             }
 
             final String comment = StringUtils.trimToNull(request.getComment());
-            qm.makeAnalysisComment(analysis, comment, commenter);
+            var analysisId = analysis.getId();
+            withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                    .makeAnalysisComment(analysisId, comment, commenter));
             analysis = qm.getAnalysis(component, vulnerability);
             NotificationUtil.analyzeNotificationCriteria(qm, analysis, analysisStateChange, suppressionChange);
             return Response.ok(analysis).build();

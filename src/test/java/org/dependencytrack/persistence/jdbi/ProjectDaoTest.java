@@ -59,6 +59,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ProjectDaoTest extends PersistenceCapableTest {
 
@@ -111,7 +112,8 @@ public class ProjectDaoTest extends PersistenceCapableTest {
                 AnalysisJustification.CODE_NOT_REACHABLE,
                 AnalysisResponse.WORKAROUND_AVAILABLE,
                 "analysisDetails", false);
-        qm.makeAnalysisComment(analysis, "someComment", "someCommenter");
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysisComment(analysis.getId(), "someComment", "someCommenter"));
 
         // Create a child component to validate that deletion is indeed recursive.
         final var componentChild = new Component();
