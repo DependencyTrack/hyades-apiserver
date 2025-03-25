@@ -56,31 +56,6 @@ public class FindingsQueryManager extends QueryManager implements IQueryManager 
     }
 
     /**
-     * Returns the number of suppressed vulnerabilities for the specified Component.
-     *
-     * @param component the Component to retrieve suppressed vulnerabilities of
-     * @return the total number of suppressed vulnerabilities for the component
-     */
-    // TODO: Move Analysis queries to AnalysisDao
-    public long getSuppressedCount(Component component) {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "component == :component && suppressed == true");
-        return getCount(query, component);
-    }
-
-    /**
-     * Returns the number of suppressed vulnerabilities for the specified Project / Component.
-     *
-     * @param project   the Project to retrieve suppressed vulnerabilities of
-     * @param component the Component to retrieve suppressed vulnerabilities of
-     * @return the total number of suppressed vulnerabilities for the project / component
-     */
-    // TODO: Move Analysis queries to AnalysisDao
-    public long getSuppressedCount(Project project, Component component) {
-        final Query<Analysis> query = pm.newQuery(Analysis.class, "project == :project && component == :component && suppressed == true");
-        return getCount(query, project, component);
-    }
-
-    /**
      * Returns a List Analysis for the specified Project.
      *
      * @param project the Project

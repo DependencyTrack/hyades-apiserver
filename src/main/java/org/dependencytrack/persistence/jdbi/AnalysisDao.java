@@ -20,6 +20,7 @@ package org.dependencytrack.persistence.jdbi;
 
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
 import java.util.List;
 
@@ -33,4 +34,26 @@ public interface AnalysisDao {
             """)
     void createComments(@Bind List<Long> analysisId, @Bind String commenter, @Bind List<String> comment);
 
+    /**
+     * Returns the number of suppressed vulnerabilities for the specified Component.
+     */
+    @SqlQuery("""
+            SELECT COUNT(*)
+            FROM "ANALYSIS"
+            WHERE "COMPONENT_ID" = :componentId
+            AND "SUPPRESSED" IS TRUE
+            """)
+    long getSuppressedCount(@Bind Long componentId);
+
+    /**
+     * Returns the number of suppressed vulnerabilities for the specified Project / Component.
+     */
+    @SqlQuery("""
+            SELECT COUNT(*)
+            FROM "ANALYSIS"
+            WHERE "PROJECT_ID" = :projectId
+            AND "COMPONENT_ID" = :componentId
+            AND "SUPPRESSED" IS TRUE
+            """)
+    long getSuppressedCount(@Bind Long projectId, @Bind Long componentId);
 }
