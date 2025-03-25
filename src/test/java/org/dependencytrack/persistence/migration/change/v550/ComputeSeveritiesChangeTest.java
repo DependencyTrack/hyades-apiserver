@@ -39,7 +39,7 @@ public class ComputeSeveritiesChangeTest {
     @Before
     @SuppressWarnings("resource")
     public void setUp() {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
+        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
                 .withInitScript("migration/custom/ComputeSeveritiesChangeTest-schema.sql");
         postgresContainer.start();
     }
