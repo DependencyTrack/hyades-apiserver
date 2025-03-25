@@ -52,7 +52,7 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetSuppressedCount() {
+    public void testProjectHasVulnerabilities() {
         final var project = qm.createProject("acme-app", "Description 1", "1.0.0", null, null, null, null, false);
 
         final var c1 = new Component();
@@ -61,53 +61,13 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
         c1.setVersion("2.0.0");
         qm.persist(c1);
 
-        final var c2 = new Component();
-        c2.setProject(project);
-        c2.setName("acme-lib");
-        c2.setVersion("2.0.0");
-        qm.persist(c2);
-
         final var vuln1 = new Vulnerability();
         vuln1.setVulnId("INT-123");
         vuln1.setSource(NVD);
         qm.persist(vuln1);
 
-        final var vuln2 = new Vulnerability();
-        vuln2.setVulnId("INT-456");
-        vuln2.setSource(NVD);
-        qm.persist(vuln2);
-
+        assertThat(analysisDao.hasVulnerabilities(project.getId())).isFalse();
         qm.makeAnalysis(c1, vuln1, NOT_AFFECTED, null, null, null, true);
-        qm.makeAnalysis(c1, vuln2, NOT_AFFECTED, null, null, null, true);
-        qm.makeAnalysis(c2, vuln1, NOT_AFFECTED, null, null, null, false);
-        qm.makeAnalysis(c2, vuln2, NOT_AFFECTED, null, null, null, true);
-
-        assertThat(analysisDao.getSuppressedCount(c1.getId())).isEqualTo(2);
-        assertThat(analysisDao.getSuppressedCount(c2.getId())).isEqualTo(1);
-        assertThat(analysisDao.getSuppressedCount(project.getId(), c1.getId())).isEqualTo(2);
-        assertThat(analysisDao.getSuppressedCount(project.getId(), c2.getId())).isEqualTo(1);
-
-        assertThat(analysisDao.getAnalyses(project.getId())).satisfiesExactlyInAnyOrder(
-                analysis -> {
-                    assertThat(analysis.getComponent().getId()).isEqualTo(c1.getId());
-                    assertThat(analysis.getVulnerability().getId()).isEqualTo(vuln1.getId());
-                    assertThat(analysis.isSuppressed()).isTrue();
-                },
-                analysis -> {
-                    assertThat(analysis.getComponent().getId()).isEqualTo(c1.getId());
-                    assertThat(analysis.getVulnerability().getId()).isEqualTo(vuln2.getId());
-                    assertThat(analysis.isSuppressed()).isTrue();
-                },
-                analysis -> {
-                    assertThat(analysis.getComponent().getId()).isEqualTo(c2.getId());
-                    assertThat(analysis.getVulnerability().getId()).isEqualTo(vuln1.getId());
-                    assertThat(analysis.isSuppressed()).isFalse();
-                },
-                analysis -> {
-                    assertThat(analysis.getComponent().getId()).isEqualTo(c2.getId());
-                    assertThat(analysis.getVulnerability().getId()).isEqualTo(vuln2.getId());
-                    assertThat(analysis.isSuppressed()).isTrue();
-                }
-        );
+        assertThat(analysisDao.hasVulnerabilities(project.getId())).isTrue();
     }
 }

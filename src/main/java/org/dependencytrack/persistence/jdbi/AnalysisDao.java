@@ -18,10 +18,7 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import org.dependencytrack.model.Analysis;
-import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
@@ -38,27 +35,10 @@ public interface AnalysisDao {
     void createComments(@Bind List<Long> analysisId, @Bind String commenter, @Bind List<String> comment);
 
     @SqlQuery("""
-            SELECT COUNT(*)
-            FROM "ANALYSIS"
-            WHERE "COMPONENT_ID" = :componentId
-            AND "SUPPRESSED" IS TRUE
+            SELECT EXISTS(
+                SELECT 1 FROM "ANALYSIS"
+                WHERE "PROJECT_ID" = :projectId
+            )
             """)
-    long getSuppressedCount(@Bind Long componentId);
-
-    @SqlQuery("""
-            SELECT COUNT(*)
-            FROM "ANALYSIS"
-            WHERE "PROJECT_ID" = :projectId
-            AND "COMPONENT_ID" = :componentId
-            AND "SUPPRESSED" IS TRUE
-            """)
-    long getSuppressedCount(@Bind Long projectId, @Bind Long componentId);
-
-    @SqlQuery("""
-            SELECT * FROM "ANALYSIS"
-            WHERE "PROJECT_ID" = :projectId
-            """)
-    @GetGeneratedKeys("*")
-    @RegisterBeanMapper(Analysis.class)
-    List<Analysis> getAnalyses(@Bind Long projectId);
+    boolean hasVulnerabilities(@Bind final long projectId);
 }

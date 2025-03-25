@@ -1024,10 +1024,6 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerabilityQueryManager().getAllVulnerabilities(component, includeSuppressed);
     }
 
-    public long getVulnerabilityCount(Project project, boolean includeSuppressed) {
-        return getVulnerabilityQueryManager().getVulnerabilityCount(project, includeSuppressed);
-    }
-
     public List<Vulnerability> getVulnerabilities(Project project, boolean includeSuppressed) {
         return getVulnerabilityQueryManager().getVulnerabilities(project, includeSuppressed);
     }
