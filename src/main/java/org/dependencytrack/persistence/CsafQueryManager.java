@@ -195,7 +195,7 @@ public class CsafQueryManager extends QueryManager implements IQueryManager {
         String totalSql = "SELECT COUNT(*) FROM public.\"CSAFDOCUMENTENTITY\" ";
         ArrayList<Object> totalQueryParams = new ArrayList<Object>();
         if (!searchText.isBlank()) {
-            totalSql += "WHERE searchvector @@ to_tsquery(?) ";
+            totalSql += "WHERE searchvector @@ websearch_to_tsquery(?) ";
             totalQueryParams.add(searchText);
         }
         var totalQuery = pm.newQuery("javax.jdo.query.SQL", totalSql);
@@ -208,7 +208,7 @@ public class CsafQueryManager extends QueryManager implements IQueryManager {
         StringBuilder docSql = new StringBuilder("SELECT \"ID\",\"NAME\",\"URL\",\"SEEN\",\"LASTFETCHED\",\"PUBLISHERNAMESPACE\",\"TRACKINGID\",\"TRACKINGVERSION\" FROM public.\"CSAFDOCUMENTENTITY\" ");
         ArrayList<Object> docParams = new ArrayList<>();
         if (!searchText.isBlank()) {
-            docSql.append("WHERE searchvector @@ to_tsquery(?) ");
+            docSql.append("WHERE searchvector @@ websearch_to_tsquery(?) ");
             docParams.add(searchText);
         }
         if (!sortName.isBlank() && ALLOWED_SORT_COLUMNS.containsKey(sortName) && !sortOrder.isBlank() && ALLOWED_SORT_ORDERS.containsKey(sortOrder)) {
