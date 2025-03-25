@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
