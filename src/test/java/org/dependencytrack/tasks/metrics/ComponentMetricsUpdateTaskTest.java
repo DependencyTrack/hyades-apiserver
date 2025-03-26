@@ -263,15 +263,14 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         vulnSuppressed.setVulnId("INTERNAL-003");
         vulnSuppressed.setSource(Vulnerability.Source.INTERNAL);
         vulnSuppressed.setSeverity(Severity.MEDIUM);
-        vulnSuppressed = qm.createVulnerability(vulnSuppressed, false);
+        qm.createVulnerability(vulnSuppressed, false);
         qm.addVulnerability(vulnSuppressed, component, AnalyzerIdentity.NONE);
         var analysis = new Analysis();
         analysis.setComponent(component);
         analysis.setSeverity(Severity.LOW);
         analysis.setAnalysisState(AnalysisState.FALSE_POSITIVE);
         analysis.setVulnerability(vulnSuppressed);
-        qm.makeAnalysis(component, vulnSuppressed, analysis);
-
+        qm.persist(analysis);
         var componentMetricsUpdateEvent = new ComponentMetricsUpdateEvent(component.getUuid());
         qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
         new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);

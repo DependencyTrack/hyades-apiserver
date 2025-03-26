@@ -1044,10 +1044,6 @@ public class QueryManager extends AlpineQueryManager {
         return getAnalysisQueryManager().getAnalysis(component, vulnerability);
     }
 
-    public Analysis makeAnalysis(Component component, Vulnerability vulnerability, Analysis analysis) {
-        return getAnalysisQueryManager().makeAnalysis(component, vulnerability, analysis);
-    }
-
     public List<VulnerabilityMetrics> getVulnerabilityMetrics() {
         return getMetricsQueryManager().getVulnerabilityMetrics();
     }
