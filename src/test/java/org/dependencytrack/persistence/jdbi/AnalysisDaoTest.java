@@ -19,7 +19,11 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.model.AnalysisJustification;
+import org.dependencytrack.model.AnalysisResponse;
+import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.jdbi.v3.core.Handle;
 import org.junit.After;
@@ -27,9 +31,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.model.AnalysisState.NOT_AFFECTED;
 import static org.dependencytrack.model.Vulnerability.Source.NVD;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class AnalysisDaoTest extends PersistenceCapableTest {
 
@@ -67,7 +71,9 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
         qm.persist(vuln1);
 
         assertThat(analysisDao.hasVulnerabilities(project.getId())).isFalse();
-        qm.makeAnalysis(c1, vuln1, NOT_AFFECTED, null, null, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), c1.getId(), vuln1.getId(), AnalysisState.NOT_AFFECTED, null, null, null, true));
+
         assertThat(analysisDao.hasVulnerabilities(project.getId())).isTrue();
     }
 
@@ -86,15 +92,119 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
         vuln1.setSource(NVD);
         qm.persist(vuln1);
 
-        var analysis = qm.makeAnalysis(c1, vuln1, NOT_AFFECTED, null, null, null, true);
+        var analysisId = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), c1.getId(), vuln1.getId(), AnalysisState.NOT_AFFECTED, null, null, null, true));
 
-        assertThat(analysisDao.makeAnalysisComment(analysis.getId(), null, "tester")).isNull();
+        assertThat(analysisDao.makeAnalysisComment(analysisId, null, "tester")).isNull();
 
-        var analysisComment = analysisDao.makeAnalysisComment(analysis.getId(), "test-comment", "tester");
+        var analysisComment = analysisDao.makeAnalysisComment(analysisId, "test-comment", "tester");
 
         assertThat(analysisComment).isNotNull();
         assertThat(analysisComment.getComment()).isEqualTo("test-comment");
         assertThat(analysisComment.getCommenter()).isEqualTo("tester");
         assertThat(analysisComment.getTimestamp()).isNotNull();
+    }
+
+    @Test
+    public void testMakeAnalysisNonExisting() {
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("Acme Component");
+        component.setVersion("1.0");
+        qm.createComponent(component, false);
+
+        var vulnerability = new Vulnerability();
+        vulnerability.setVulnId("INT-001");
+        vulnerability.setSource(Vulnerability.Source.INTERNAL);
+        qm.createVulnerability(vulnerability, false);
+
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.NOT_AFFECTED,
+                        AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true));
+        assertThat(qm.getAnalysis(component, vulnerability)).satisfies(analysis -> {
+            assertThat(analysis.getVulnerability()).isEqualTo(vulnerability);
+            assertThat(analysis.getComponent()).isEqualTo(component);
+            assertThat(analysis.getProject()).isEqualTo(project);
+            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+            assertThat(analysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
+            assertThat(analysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+            assertThat(analysis.getAnalysisDetails()).isEqualTo("Analysis details here");
+            assertThat(analysis.isSuppressed()).isTrue();
+        });
+    }
+
+    @Test
+    public void testMakeAnalysisExisting() {
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("Acme Component");
+        component.setVersion("1.0");
+        qm.createComponent(component, false);
+
+        var vulnerability = new Vulnerability();
+        vulnerability.setVulnId("INT-001");
+        vulnerability.setSource(Vulnerability.Source.INTERNAL);
+        qm.createVulnerability(vulnerability, false);
+
+        var analysisIdExisting = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.NOT_AFFECTED, null, null, null, true));
+
+        var analysisIdUpdated = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.NOT_AFFECTED,
+                        AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", false));
+
+        assertThat(analysisIdUpdated).isEqualTo(analysisIdExisting);
+        qm.getPersistenceManager().refresh(qm.getAnalysis(component, vulnerability));
+        assertThat(qm.getAnalysis(component, vulnerability)).satisfies(analysis -> {
+            assertThat(analysis.getVulnerability()).isEqualTo(vulnerability);
+            assertThat(analysis.getComponent()).isEqualTo(component);
+            assertThat(analysis.getProject()).isEqualTo(project);
+            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+            assertThat(analysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
+            assertThat(analysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+            assertThat(analysis.getAnalysisDetails()).isEqualTo("Analysis details here");
+            assertThat(analysis.isSuppressed()).isFalse();
+        });
+    }
+
+    @Test
+    public void testMakeAnalysisExistingByNullValues() {
+        final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("Acme Component");
+        component.setVersion("1.0");
+        qm.createComponent(component, false);
+
+        var vulnerability = new Vulnerability();
+        vulnerability.setVulnId("INT-001");
+        vulnerability.setSource(Vulnerability.Source.INTERNAL);
+        qm.createVulnerability(vulnerability, false);
+
+        var analysisIdExisting = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.NOT_AFFECTED,
+                        AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true));
+
+        var analysisIdUpdated = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), null, null, null, null, false));
+
+
+        assertThat(analysisIdUpdated).isEqualTo(analysisIdExisting);
+        qm.getPersistenceManager().refresh(qm.getAnalysis(component, vulnerability));
+        assertThat(qm.getAnalysis(component, vulnerability)).satisfies(analysis -> {
+            assertThat(analysis.getVulnerability()).isEqualTo(vulnerability);
+            assertThat(analysis.getComponent()).isEqualTo(component);
+            assertThat(analysis.getProject()).isEqualTo(project);
+            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+            assertThat(analysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
+            assertThat(analysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+            assertThat(analysis.getAnalysisDetails()).isEqualTo("Analysis details here");
+            assertThat(analysis.isSuppressed()).isFalse();
+        });
     }
 }

@@ -19,11 +19,16 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.AnalysisComment;
+import org.dependencytrack.model.AnalysisJustification;
+import org.dependencytrack.model.AnalysisResponse;
+import org.dependencytrack.model.AnalysisState;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.util.List;
 
@@ -62,4 +67,38 @@ public interface AnalysisDao {
             )
             """)
     boolean hasVulnerabilities(@Bind final long projectId);
+
+    @SqlUpdate("""
+            INSERT INTO "ANALYSIS"
+               ("PROJECT_ID", "COMPONENT_ID", "VULNERABILITY_ID", "STATE", "JUSTIFICATION", "RESPONSE", "DETAILS", "SUPPRESSED")
+            VALUES
+               (:projectId, :componentId, :vulnId,
+               <#if state>
+                    :state,
+               <#else>
+                    'NOT_SET',
+               </#if>
+               :justification, :response, :details, :suppressed)
+            ON CONFLICT ("PROJECT_ID", "COMPONENT_ID", "VULNERABILITY_ID") DO UPDATE
+            SET
+               "SUPPRESSED" = :suppressed
+               <#if state>
+                    , "STATE" = :state
+               </#if>
+               <#if justification>
+                    , "JUSTIFICATION" = :justification
+               </#if>
+               <#if response>
+                    , "RESPONSE" = :response
+               </#if>
+               <#if details>
+                    , "DETAILS" = :details
+               </#if>
+            RETURNING "ID"
+            """)
+    @GetGeneratedKeys("ID")
+    @DefineNamedBindings
+    Long makeAnalysis(@Bind long projectId, @Bind long componentId, @Bind long vulnId, @Bind AnalysisState state,
+                          @Bind AnalysisJustification justification, @Bind AnalysisResponse response,
+                          @Bind String details, @Bind boolean suppressed);
 }

@@ -39,7 +39,6 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -2447,10 +2446,12 @@ public class ProjectResourceTest extends ResourceTest {
         qm.persist(vuln);
 
         qm.addVulnerability(vuln, componentA, AnalyzerIdentity.INTERNAL_ANALYZER);
-        final Analysis analysis = qm.makeAnalysis(componentA, vuln, AnalysisState.NOT_AFFECTED,
-                AnalysisJustification.REQUIRES_ENVIRONMENT, AnalysisResponse.WILL_NOT_FIX, "details", false);
+
+        final var analysisId = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentA.getId(), vuln.getId(), AnalysisState.NOT_AFFECTED,
+                        AnalysisJustification.REQUIRES_ENVIRONMENT, AnalysisResponse.WILL_NOT_FIX, "details", false));
         withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysisComment(analysis.getId(), "comment", "commenter"));
+                .makeAnalysisComment(analysisId, "comment", "commenter"));
 
         final VulnerabilityPolicy vulnPolicy = withJdbiHandle(handle -> {
             final var policyAnalysis = new VulnerabilityPolicyAnalysis();
@@ -2473,7 +2474,7 @@ public class ProjectResourceTest extends ResourceTest {
                          WHERE "ID" = :analysisId
                         """)
                 .bind("policyName", vulnPolicy.getName())
-                .bind("analysisId", analysis.getId())
+                .bind("analysisId", analysisId)
                 .execute());
 
 
@@ -2581,7 +2582,7 @@ public class ProjectResourceTest extends ResourceTest {
                                 assertThat(qm.getAllVulnerabilities(clonedComponent)).containsOnly(vuln);
 
                                 assertThat(qm.getAnalysis(clonedComponent, vuln)).satisfies(clonedAnalysis -> {
-                                    assertThat(clonedAnalysis.getId()).isNotEqualTo(analysis.getId());
+                                    assertThat(clonedAnalysis.getId()).isNotEqualTo(analysisId);
                                     assertThat(clonedAnalysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
                                     assertThat(clonedAnalysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.REQUIRES_ENVIRONMENT);
                                     assertThat(clonedAnalysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);

@@ -145,33 +145,39 @@ public class CycloneDXVexImporter {
         // The vulnerability object is detached, so refresh it.
         final Vulnerability refreshedVuln = qm.getObjectByUuid(Vulnerability.class, vuln.getUuid());
         Analysis analysis = qm.getAnalysis(component, refreshedVuln);
-        AnalysisState analysisState = null;
-        AnalysisJustification analysisJustification = null;
-        String analysisDetails = null;
-        AnalysisResponse analysisResponse = null;
-        boolean suppress = false;
+        var updatedAnalysis = new Object() {
+            AnalysisState analysisState = null;
+            AnalysisJustification analysisJustification = null;
+            String analysisDetails = null;
+            AnalysisResponse analysisResponse = null;
+            boolean suppress = false;
+        };
         if (analysis == null) {
-            analysis = qm.makeAnalysis(component, refreshedVuln, AnalysisState.NOT_SET, null, null, null, null);
+            withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                    .makeAnalysis(component.getProject().getId(), component.getId(), refreshedVuln.getId(), AnalysisState.NOT_SET, null, null, null, false));
+            analysis = qm.getAnalysis(component, refreshedVuln);
         }
         if (cdxVuln.getAnalysis().getState() != null) {
-            analysisState = ModelConverter.convertCdxVulnAnalysisStateToDtAnalysisState(cdxVuln.getAnalysis().getState());
-            suppress = (AnalysisState.FALSE_POSITIVE == analysisState || AnalysisState.NOT_AFFECTED == analysisState || AnalysisState.RESOLVED == analysisState);
-            AnalysisCommentUtil.makeStateComment(analysis, analysisState, COMMENTER);
+            updatedAnalysis.analysisState = ModelConverter.convertCdxVulnAnalysisStateToDtAnalysisState(cdxVuln.getAnalysis().getState());
+            updatedAnalysis.suppress = (AnalysisState.FALSE_POSITIVE == updatedAnalysis.analysisState || AnalysisState.NOT_AFFECTED == updatedAnalysis.analysisState || AnalysisState.RESOLVED == updatedAnalysis.analysisState);
+            AnalysisCommentUtil.makeStateComment(analysis, updatedAnalysis.analysisState, COMMENTER);
         }
         if (cdxVuln.getAnalysis().getJustification() != null) {
-            analysisJustification = ModelConverter.convertCdxVulnAnalysisJustificationToDtAnalysisJustification(cdxVuln.getAnalysis().getJustification());
-            AnalysisCommentUtil.makeJustificationComment(analysis, analysisJustification, COMMENTER);
+            updatedAnalysis.analysisJustification = ModelConverter.convertCdxVulnAnalysisJustificationToDtAnalysisJustification(cdxVuln.getAnalysis().getJustification());
+            AnalysisCommentUtil.makeJustificationComment(analysis, updatedAnalysis.analysisJustification, COMMENTER);
         }
         if (trimToNull(cdxVuln.getAnalysis().getDetail()) != null) {
-            analysisDetails = cdxVuln.getAnalysis().getDetail().trim();
+            updatedAnalysis.analysisDetails = cdxVuln.getAnalysis().getDetail().trim();
             AnalysisCommentUtil.makeAnalysisDetailsComment(analysis, cdxVuln.getAnalysis().getDetail().trim(), COMMENTER);
         }
         if (cdxVuln.getAnalysis().getResponses() != null) {
             for (org.cyclonedx.model.vulnerability.Vulnerability.Analysis.Response cdxRes : cdxVuln.getAnalysis().getResponses()) {
-                analysisResponse = ModelConverter.convertCdxVulnAnalysisResponseToDtAnalysisResponse(cdxRes);
-                AnalysisCommentUtil.makeAnalysisResponseComment(analysis, analysisResponse, COMMENTER);
+                updatedAnalysis.analysisResponse = ModelConverter.convertCdxVulnAnalysisResponseToDtAnalysisResponse(cdxRes);
+                AnalysisCommentUtil.makeAnalysisResponseComment(analysis, updatedAnalysis.analysisResponse, COMMENTER);
             }
         }
-        qm.makeAnalysis(component, refreshedVuln, analysisState, analysisJustification, analysisResponse, analysisDetails, suppress);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(component.getProject().getId(), component.getId(), refreshedVuln.getId(),
+                        updatedAnalysis.analysisState, updatedAnalysis.analysisJustification, updatedAnalysis.analysisResponse, updatedAnalysis.analysisDetails, updatedAnalysis.suppress));
     }
 }

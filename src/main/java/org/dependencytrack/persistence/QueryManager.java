@@ -43,9 +43,6 @@ import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
-import org.dependencytrack.model.AnalysisJustification;
-import org.dependencytrack.model.AnalysisResponse;
-import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
@@ -1045,12 +1042,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public Analysis getAnalysis(Component component, Vulnerability vulnerability) {
         return getAnalysisQueryManager().getAnalysis(component, vulnerability);
-    }
-
-    public Analysis makeAnalysis(Component component, Vulnerability vulnerability, AnalysisState analysisState,
-                                 AnalysisJustification analysisJustification, AnalysisResponse analysisResponse,
-                                 String analysisDetails, Boolean isSuppressed) {
-        return getAnalysisQueryManager().makeAnalysis(component, vulnerability, analysisState, analysisJustification, analysisResponse, analysisDetails, isSuppressed);
     }
 
     public Analysis makeAnalysis(Component component, Vulnerability vulnerability, Analysis analysis) {
