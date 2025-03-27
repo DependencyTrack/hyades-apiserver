@@ -296,7 +296,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
         LOGGER.debug("Creating user: admin");
         ManagedUser admin = qm.createManagedUser("admin", "Administrator", "admin@localhost",
-                new String(PasswordService.createHash("admin".toCharArray())), false, true, false);
+                new String(PasswordService.createHash("admin".toCharArray())), true, true, false);
 
         for (var name : new String[] { "Administrators", "Portfolio Managers", "Automation", "Badge Viewers" }) {
             LOGGER.debug("Creating team: " + name);
@@ -339,45 +339,6 @@ public class DefaultObjectGenerator implements ServletContextListener {
             LOGGER.debug("Creating role: " + name);
             qm.createRole(name, getPermissionsByName(DEFAULT_ROLE_PERMISSIONS.get(name)));
         }
-
-        ManagedUser user = qm.createManagedUser("testuser", "Test User", "testuser@localhost",
-        new String(PasswordService.createHash("admin".toCharArray())), false, true, false);
-
-        LdapUser ldapuser = qm.createLdapUser("Sadie");
-
-        var project = new Project();
-        var projectAdmin = (qm.getRoles()).get(0);
-        project.setName("test-project");
-        project.setDescription("Project for testing role schemas");
-        project.setVersion("v0.1.0");
-
-        qm.persist(project);
-
-        LOGGER.info("Adding role to user result #1: " + qm.addRoleToUser(user, projectAdmin, project));
-
-        project = new Project();
-        project.setName("test-project");
-        project.setDescription("Project for testing role schemas");
-        project.setVersion("v0.1.1");
-
-        qm.persist(project);
-
-        LOGGER.info("Adding role to user result #2: " + qm.addRoleToUser(user, projectAdmin, project));
-        LOGGER.info("Has project access? " + qm.hasAccess(user, project));
-
-        LOGGER.info("testuser roles: " + qm.getUserRoles(user));
-        LOGGER.info("admin roles: " + qm.getUserRoles(qm.getUserPrincipal("admin")));
-
-        LOGGER.info("Adding role to ldap user: " + qm.addRoleToUser(ldapuser, projectAdmin, project));
-
-        LOGGER.info("ldap user roles: " + qm.getUserRoles(ldapuser));
-        LOGGER.info("admin roles: " + qm.getUserRoles(qm.getUserPrincipal("admin")));
-
-        LOGGER.info("testuser unassigned projects: " + qm.getUnassignedProjects(user));
-        LOGGER.info("admin unassigned projects: " + qm.getUnassignedProjects("admin"));
-
-        var unassigned = qm.getUnassignedRolePermissions(projectAdmin);
-        LOGGER.info("unassigned: " + unassigned.stream().map(Permission::getName).sorted().toList());
     }
 
     public void loadDefaultRepositories() {
