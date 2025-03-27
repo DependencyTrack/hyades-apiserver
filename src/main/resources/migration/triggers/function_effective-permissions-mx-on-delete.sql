@@ -10,8 +10,8 @@ Fired on DELETE FROM one of:
 CREATE OR REPLACE FUNCTION effective_permissions_mx_on_delete()
 RETURNS TRIGGER AS $$
 DECLARE
-  rec record;
-  project_id integer;
+  rec        RECORD;
+  project_id BIGINT;
 BEGIN
   IF TG_TABLE_NAME = 'PROJECT_ACCESS_TEAMS' THEN
     FOR rec IN (SELECT DISTINCT "PROJECT_ID" FROM old_table) LOOP
@@ -29,6 +29,7 @@ BEGIN
       END LOOP;
     END LOOP;
   END IF;
+
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;

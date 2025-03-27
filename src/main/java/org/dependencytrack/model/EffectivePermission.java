@@ -41,9 +41,15 @@ import javax.jdo.annotations.Persistent;
  * @since 5.6.0
  */
 @PersistenceCapable(table = "USER_PROJECT_EFFECTIVE_PERMISSIONS")
-@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX", unique = "true", members = { "project", "role", "ldapUser" })
-@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_IDX", unique = "true", members = { "project", "role", "managedUser" })
-@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_IDX", unique = "true", members = { "project", "role", "oidcUser" })
+@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_UNIQUE_IDX",
+        members = { "project", "permission", "ldapUser" },
+        unique = "true")
+@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_UNIQUE_IDX",
+        members = { "project", "permission", "managedUser" },
+        unique = "true")
+@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_UNIQUE_IDX",
+        members = { "project", "permission", "oidcUser" },
+        unique = "true")
 @FetchGroup(name = "ALL", members = {
         @Persistent(name = "ldapUser"),
         @Persistent(name = "managedUser"),
@@ -83,21 +89,26 @@ public class EffectivePermission implements Serializable {
 
     @Persistent
     @Column(name = "LDAPUSER_ID")
+    @Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX")
     private LdapUser ldapUser;
 
     @Persistent
     @Column(name = "MANAGEDUSER_ID")
+    @Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_IDX")
     private ManagedUser managedUser;
 
     @Persistent
     @Column(name = "OIDCUSER_ID")
+    @Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_IDX")
     private OidcUser oidcUser;
 
     @Persistent
     @Column(name = "PROJECT_ID", allowsNull = "false")
+    @Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECTS_IDX")
     private Project project;
 
     @Persistent
+    @Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSIONS_IDX")
     @Embedded(members = {
             @Persistent(name = "id", column = "PERMISSION_ID"),
             @Persistent(name = "name", column = "PERMISSION_NAME")

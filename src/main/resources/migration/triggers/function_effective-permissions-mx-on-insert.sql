@@ -10,8 +10,8 @@ Fired on INSERT INTO one of:
 CREATE OR REPLACE FUNCTION effective_permissions_mx_on_insert()
 RETURNS TRIGGER AS $$
 DECLARE
-  rec record;
-  project_id integer;
+  rec        RECORD;
+  project_id BIGINT;
 BEGIN
   IF TG_TABLE_NAME = 'PROJECT_ACCESS_TEAMS' THEN
     -- For this table we can get PROJECT_ID directly.
@@ -31,6 +31,7 @@ BEGIN
       END LOOP;
     END LOOP;
   END IF;
+
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;

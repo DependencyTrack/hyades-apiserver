@@ -10,8 +10,8 @@ Fired on UPDATE for one of:
 CREATE OR REPLACE FUNCTION effective_permissions_mx_on_update()
 RETURNS TRIGGER AS $$
 DECLARE
-  rec record;
-  project_id integer;
+  rec        RECORD;
+  project_id BIGINT;
 BEGIN
   IF TG_TABLE_NAME = 'PROJECT_ACCESS_TEAMS' THEN
     FOR rec IN (
@@ -20,7 +20,7 @@ BEGIN
         SELECT "PROJECT_ID" FROM old_table
         UNION
         SELECT "PROJECT_ID" FROM new_table
-      ) t
+      )
     ) LOOP
       PERFORM recalc_user_project_effective_permissions(rec."PROJECT_ID");
     END LOOP;
@@ -32,7 +32,7 @@ BEGIN
         SELECT "TEAM_ID" FROM old_table
         UNION
         SELECT "TEAM_ID" FROM new_table
-      ) t
+      )
     ) LOOP
       FOR project_id IN
         SELECT DISTINCT "PROJECT_ID"
@@ -43,6 +43,7 @@ BEGIN
       END LOOP;
     END LOOP;
   END IF;
+
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
