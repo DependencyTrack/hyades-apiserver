@@ -14,4 +14,5 @@
     <include file="migration/changelog-v5.5.0.xml"/>
     <include file="migration/changelog-v5.6.0.xml"/>
     <include file="migration/changelog-procedures.xml"/>
+    <include file="migration/changelog-triggers.xml"/>
 </databaseChangeLog>
