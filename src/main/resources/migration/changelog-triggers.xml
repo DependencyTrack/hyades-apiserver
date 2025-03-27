@@ -7,19 +7,10 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
                         http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet id="trigger_effective-permissions-mx" author="jhoward-lm" runOnChange="true">
-        <sqlFile path="triggers/function_effective-permissions-mx-on-delete.sql"
-            relativeToChangelogFile="true" splitStatements="false" />
-
-        <sqlFile path="triggers/function_effective-permissions-mx-on-insert.sql"
-            relativeToChangelogFile="true" splitStatements="false" />
-
-        <sqlFile path="triggers/function_effective-permissions-mx-on-update.sql"
-            relativeToChangelogFile="true" splitStatements="false" />
-
-        <sqlFile path="triggers/function_prevent-direct-effective-permissions-writes.sql"
-            relativeToChangelogFile="true" splitStatements="false" />
-
-        <sqlFile path="triggers/trigger_effective-permissions-mx.sql"
-            relativeToChangelogFile="true" splitStatements="true" />
+        <createProcedure path="triggers/function_effective-permissions-mx-on-delete.sql" relativeToChangelogFile="true" />
+        <createProcedure path="triggers/function_effective-permissions-mx-on-insert.sql" relativeToChangelogFile="true" />
+        <createProcedure path="triggers/function_effective-permissions-mx-on-update.sql" relativeToChangelogFile="true" />
+        <createProcedure path="triggers/function_prevent-direct-effective-permissions-writes.sql" relativeToChangelogFile="true" />
+        <sqlFile path="triggers/trigger_effective-permissions-mx.sql" relativeToChangelogFile="true" splitStatements="true" />
     </changeSet>
 </databaseChangeLog>

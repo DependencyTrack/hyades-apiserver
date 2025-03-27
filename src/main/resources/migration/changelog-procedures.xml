@@ -27,7 +27,6 @@
         <createProcedure path="procedures/function_has-project-access.sql" relativeToChangelogFile="true"/>
     </changeSet>
     <changeSet id="function_recalc-user-project-effective-permissions" author="jhoward-lm" runOnChange="true">
-        <sqlFile path="procedures/function_recalc-user-project-effective-permissions.sql"
-            relativeToChangelogFile="true" splitStatements="false" />
+        <createProcedure path="procedures/function_recalc-user-project-effective-permissions.sql" relativeToChangelogFile="true" />
     </changeSet>
 </databaseChangeLog>

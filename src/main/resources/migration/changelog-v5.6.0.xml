@@ -823,4 +823,88 @@
             SELECT parent_id, child_id, depth FROM cte_project_hierarchy;
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-16" author="jhoward-lm">
+        <createTable ifNotExists="true" tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
+            <column name="LDAPUSER_ID" type="BIGINT">
+                <constraints nullable="true"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK"
+                    referencedTableName="LDAPUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="MANAGEDUSER_ID" type="BIGINT">
+                <constraints nullable="true"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK"
+                    referencedTableName="MANAGEDUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="OIDCUSER_ID" type="BIGINT">
+                <constraints nullable="true"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK"
+                    referencedTableName="OIDCUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK"
+                    referencedTableName="PROJECT" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK"
+                    referencedTableName="PERMISSION" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="PERMISSION_NAME" type="VARCHAR(255)">
+                <constraints nullable="false"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK"
+                    referencedTableName="PERMISSION" referencedColumnNames="NAME"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
+                    validateForeignKey="true" />
+            </column>
+        </createTable>
+
+        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX"
+                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                unique="true">
+            <column name="LDAPUSER_ID" />
+            <column name="PROJECT_ID" />
+            <column name="PERMISSION_ID" />
+        </createIndex>
+
+        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_IDX"
+                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                unique="true">
+            <column name="MANAGEDUSER_ID" />
+            <column name="PROJECT_ID" />
+            <column name="PERMISSION_ID" />
+        </createIndex>
+
+        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_IDX"
+                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                unique="true">
+            <column name="OIDCUSER_ID" />
+            <column name="PROJECT_ID" />
+            <column name="PERMISSION_ID" />
+        </createIndex>
+
+        <sql splitStatements="true">
+            ALTER TABLE "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+              ADD CHECK (
+                ("LDAPUSER_ID" IS NOT NULL)::INTEGER +
+                ("MANAGEDUSER_ID" IS NOT NULL)::INTEGER +
+                ("OIDCUSER_ID" IS NOT NULL)::INTEGER = 1);
+        </sql>
+    </changeSet>
 </databaseChangeLog>
