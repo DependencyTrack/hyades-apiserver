@@ -20,7 +20,7 @@ BEGIN
         SELECT "PROJECT_ID" FROM old_table
         UNION
         SELECT "PROJECT_ID" FROM new_table
-      )
+      ) t
     ) LOOP
       PERFORM recalc_user_project_effective_permissions(rec."PROJECT_ID");
     END LOOP;
@@ -32,7 +32,7 @@ BEGIN
         SELECT "TEAM_ID" FROM old_table
         UNION
         SELECT "TEAM_ID" FROM new_table
-      )
+      ) t
     ) LOOP
       FOR project_id IN
         SELECT DISTINCT "PROJECT_ID"
