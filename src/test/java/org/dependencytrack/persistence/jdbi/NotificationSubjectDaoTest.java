@@ -103,7 +103,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         qm.addVulnerability(vulnB, component, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         // Suppress vulnB, it should not appear in the query results.
-        qm.makeAnalysis(component, vulnB, AnalysisState.FALSE_POSITIVE, null, null, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnB.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, true));
 
         final List<NewVulnerabilitySubject> subjects = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
                 .getForNewVulnerabilities(component.getUuid(), List.of(vulnA.getUuid(), vulnB.getUuid()),
@@ -331,7 +332,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         qm.addVulnerability(vulnB, component, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         // Suppress vulnB, it should not appear in the query results.
-        qm.makeAnalysis(component, vulnB, AnalysisState.FALSE_POSITIVE, null, null, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnB.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, true));
 
         final Optional<NewVulnerableDependencySubject> optionalSubject = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
                 .getForNewVulnerableDependency(component.getUuid()));
@@ -526,7 +528,10 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         qm.addVulnerability(vulnA, component, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         // Suppress vulnB, it should not appear in the query results.
-        var policyAnalysis = qm.makeAnalysis(component, vulnA, AnalysisState.NOT_AFFECTED, null, null, null, false);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnA.getId(), AnalysisState.NOT_AFFECTED, null, null, null, false));
+
+        var policyAnalysis = qm.getAnalysis(component, vulnA);
 
         final Optional<VulnerabilityAnalysisDecisionChangeSubject> optionalSubject = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
                 .getForProjectAuditChange(component.getUuid(), vulnA.getUuid(), policyAnalysis.getAnalysisState(), policyAnalysis.isSuppressed()));

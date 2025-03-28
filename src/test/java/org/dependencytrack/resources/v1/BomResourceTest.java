@@ -23,6 +23,11 @@ import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.fasterxml.jackson.core.StreamReadConstraints;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.javacrumbs.jsonunit.core.Option;
@@ -53,6 +58,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.client.ClientConfig;
@@ -68,11 +74,6 @@ import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runner.RunWith;
 
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -103,6 +104,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_VALIDATION_FAILED;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
@@ -195,7 +197,7 @@ public class BomResourceTest extends ResourceTest {
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        qm.createVulnerability(vulnerability, false);
 
         final var projectManufacturer = new OrganizationalEntity();
         projectManufacturer.setName("projectManufacturer");
@@ -212,7 +214,7 @@ public class BomResourceTest extends ResourceTest {
             setName("SampleAuthor");
         }});
         project.setAuthors(authors);
-        project = qm.createProject(project, null, false);
+        qm.createProject(project, null, false);
 
         final var projectProperty = new ProjectProperty();
         projectProperty.setProject(project);
@@ -265,7 +267,7 @@ public class BomResourceTest extends ResourceTest {
         componentWithVuln.setName("acme-lib-b");
         componentWithVuln.setVersion("1.0.0");
         componentWithVuln.setDirectDependencies("[]");
-        componentWithVuln = qm.createComponent(componentWithVuln, false);
+        qm.createComponent(componentWithVuln, false);
         qm.addVulnerability(vulnerability, componentWithVuln, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         var componentWithVulnAndAnalysis = new Component();
@@ -273,9 +275,10 @@ public class BomResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setName("acme-lib-c");
         componentWithVulnAndAnalysis.setVersion("1.0.0");
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
-        componentWithVulnAndAnalysis = qm.createComponent(componentWithVulnAndAnalysis, false);
+        qm.createComponent(componentWithVulnAndAnalysis, false);
         qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
-        qm.makeAnalysis(componentWithVulnAndAnalysis, vulnerability, AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentWithVulnAndAnalysis.getId(), vulnerability.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
 
         // Make componentWithoutVuln (acme-lib-a) depend on componentWithVuln (acme-lib-b)
         componentWithoutVuln.setDirectDependencies("""
@@ -502,19 +505,19 @@ public class BomResourceTest extends ResourceTest {
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        qm.createVulnerability(vulnerability, false);
 
         var project = new Project();
         project.setName("acme-app");
         project.setClassifier(Classifier.APPLICATION);
-        project = qm.createProject(project, null, false);
+        qm.createProject(project, null, false);
 
         var componentWithoutVuln = new Component();
         componentWithoutVuln.setProject(project);
         componentWithoutVuln.setName("acme-lib-a");
         componentWithoutVuln.setVersion("1.0.0");
         componentWithoutVuln.setDirectDependencies("[]");
-        componentWithoutVuln = qm.createComponent(componentWithoutVuln, false);
+        qm.createComponent(componentWithoutVuln, false);
 
         var componentWithVuln = new Component();
         componentWithVuln.setProject(project);
@@ -529,9 +532,10 @@ public class BomResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setName("acme-lib-c");
         componentWithVulnAndAnalysis.setVersion("1.0.0");
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
-        componentWithVulnAndAnalysis = qm.createComponent(componentWithVulnAndAnalysis, false);
+        qm.createComponent(componentWithVulnAndAnalysis, false);
         qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
-        qm.makeAnalysis(componentWithVulnAndAnalysis, vulnerability, AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentWithVulnAndAnalysis.getId(), vulnerability.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
 
         // Make componentWithoutVuln (acme-lib-a) depend on componentWithVuln (acme-lib-b)
         componentWithoutVuln.setDirectDependencies("""
@@ -697,26 +701,26 @@ public class BomResourceTest extends ResourceTest {
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        qm.createVulnerability(vulnerability, false);
 
         var project = new Project();
         project.setName("acme-app");
         project.setClassifier(Classifier.APPLICATION);
-        project = qm.createProject(project, null, false);
+        qm.createProject(project, null, false);
 
         var componentWithoutVuln = new Component();
         componentWithoutVuln.setProject(project);
         componentWithoutVuln.setName("acme-lib-a");
         componentWithoutVuln.setVersion("1.0.0");
         componentWithoutVuln.setDirectDependencies("[]");
-        componentWithoutVuln = qm.createComponent(componentWithoutVuln, false);
+        qm.createComponent(componentWithoutVuln, false);
 
         var componentWithVuln = new Component();
         componentWithVuln.setProject(project);
         componentWithVuln.setName("acme-lib-b");
         componentWithVuln.setVersion("1.0.0");
         componentWithVuln.setDirectDependencies("[]");
-        componentWithVuln = qm.createComponent(componentWithVuln, false);
+        qm.createComponent(componentWithVuln, false);
         qm.addVulnerability(vulnerability, componentWithVuln, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         var componentWithVulnAndAnalysis = new Component();
@@ -724,9 +728,10 @@ public class BomResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setName("acme-lib-c");
         componentWithVulnAndAnalysis.setVersion("1.0.0");
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
-        componentWithVulnAndAnalysis = qm.createComponent(componentWithVulnAndAnalysis, false);
+        qm.createComponent(componentWithVulnAndAnalysis, false);
         qm.addVulnerability(vulnerability, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
-        qm.makeAnalysis(componentWithVulnAndAnalysis, vulnerability, AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentWithVulnAndAnalysis.getId(), vulnerability.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
 
         // Make componentWithoutVuln (acme-lib-a) depend on componentWithVuln (acme-lib-b)
         componentWithoutVuln.setDirectDependencies("""

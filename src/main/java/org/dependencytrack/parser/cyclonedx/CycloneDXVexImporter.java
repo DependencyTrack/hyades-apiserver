@@ -33,6 +33,8 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.jdbi.VulnerabilityDao;
 import org.dependencytrack.util.AnalysisCommentUtil;
 
 import java.util.ArrayList;
@@ -40,6 +42,7 @@ import java.util.List;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class CycloneDXVexImporter {
 
@@ -52,7 +55,8 @@ public class CycloneDXVexImporter {
             LOGGER.info("The uploaded VEX does not contain any vulnerabilities; Skipping VEX import");
             return;
         }
-        if (qm.getVulnerabilityCount(project, true) == 0) {
+        if (withJdbiHandle(handle ->
+                handle.attach(VulnerabilityDao.class).hasVulnerabilities(project.getId()))) {
             LOGGER.info("The project %s does not have any vulnerabilities; Skipping VEX import".formatted(project));
             return;
         }
@@ -142,33 +146,39 @@ public class CycloneDXVexImporter {
         // The vulnerability object is detached, so refresh it.
         final Vulnerability refreshedVuln = qm.getObjectByUuid(Vulnerability.class, vuln.getUuid());
         Analysis analysis = qm.getAnalysis(component, refreshedVuln);
-        AnalysisState analysisState = null;
-        AnalysisJustification analysisJustification = null;
-        String analysisDetails = null;
-        AnalysisResponse analysisResponse = null;
-        boolean suppress = false;
+        var updatedAnalysis = new Object() {
+            AnalysisState analysisState = null;
+            AnalysisJustification analysisJustification = null;
+            String analysisDetails = null;
+            AnalysisResponse analysisResponse = null;
+            boolean suppress = false;
+        };
         if (analysis == null) {
-            analysis = qm.makeAnalysis(component, refreshedVuln, AnalysisState.NOT_SET, null, null, null, null);
+            withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                    .makeAnalysis(component.getProject().getId(), component.getId(), refreshedVuln.getId(), AnalysisState.NOT_SET, null, null, null, false));
+            analysis = qm.getAnalysis(component, refreshedVuln);
         }
         if (cdxVuln.getAnalysis().getState() != null) {
-            analysisState = ModelConverter.convertCdxVulnAnalysisStateToDtAnalysisState(cdxVuln.getAnalysis().getState());
-            suppress = (AnalysisState.FALSE_POSITIVE == analysisState || AnalysisState.NOT_AFFECTED == analysisState || AnalysisState.RESOLVED == analysisState);
-            AnalysisCommentUtil.makeStateComment(qm, analysis, analysisState, COMMENTER);
+            updatedAnalysis.analysisState = ModelConverter.convertCdxVulnAnalysisStateToDtAnalysisState(cdxVuln.getAnalysis().getState());
+            updatedAnalysis.suppress = (AnalysisState.FALSE_POSITIVE == updatedAnalysis.analysisState || AnalysisState.NOT_AFFECTED == updatedAnalysis.analysisState || AnalysisState.RESOLVED == updatedAnalysis.analysisState);
+            AnalysisCommentUtil.makeStateComment(analysis, updatedAnalysis.analysisState, COMMENTER);
         }
         if (cdxVuln.getAnalysis().getJustification() != null) {
-            analysisJustification = ModelConverter.convertCdxVulnAnalysisJustificationToDtAnalysisJustification(cdxVuln.getAnalysis().getJustification());
-            AnalysisCommentUtil.makeJustificationComment(qm, analysis, analysisJustification, COMMENTER);
+            updatedAnalysis.analysisJustification = ModelConverter.convertCdxVulnAnalysisJustificationToDtAnalysisJustification(cdxVuln.getAnalysis().getJustification());
+            AnalysisCommentUtil.makeJustificationComment(analysis, updatedAnalysis.analysisJustification, COMMENTER);
         }
         if (trimToNull(cdxVuln.getAnalysis().getDetail()) != null) {
-            analysisDetails = cdxVuln.getAnalysis().getDetail().trim();
-            AnalysisCommentUtil.makeAnalysisDetailsComment(qm, analysis, cdxVuln.getAnalysis().getDetail().trim(), COMMENTER);
+            updatedAnalysis.analysisDetails = cdxVuln.getAnalysis().getDetail().trim();
+            AnalysisCommentUtil.makeAnalysisDetailsComment(analysis, cdxVuln.getAnalysis().getDetail().trim(), COMMENTER);
         }
         if (cdxVuln.getAnalysis().getResponses() != null) {
             for (org.cyclonedx.model.vulnerability.Vulnerability.Analysis.Response cdxRes : cdxVuln.getAnalysis().getResponses()) {
-                analysisResponse = ModelConverter.convertCdxVulnAnalysisResponseToDtAnalysisResponse(cdxRes);
-                AnalysisCommentUtil.makeAnalysisResponseComment(qm, analysis, analysisResponse, COMMENTER);
+                updatedAnalysis.analysisResponse = ModelConverter.convertCdxVulnAnalysisResponseToDtAnalysisResponse(cdxRes);
+                AnalysisCommentUtil.makeAnalysisResponseComment(analysis, updatedAnalysis.analysisResponse, COMMENTER);
             }
         }
-        qm.makeAnalysis(component, refreshedVuln, analysisState, analysisJustification, analysisResponse, analysisDetails, suppress);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(component.getProject().getId(), component.getId(), refreshedVuln.getId(),
+                        updatedAnalysis.analysisState, updatedAnalysis.analysisJustification, updatedAnalysis.analysisResponse, updatedAnalysis.analysisDetails, updatedAnalysis.suppress));
     }
 }

@@ -123,6 +123,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
         var analyses = (List<Analysis>) query.execute(project);
         // CVE-2020-256[49|50|51] are not audited otherwise analyses.size would have been equal to sources.size()+3
         Assert.assertEquals(sources.size(), analyses.size());
+        qm.getPersistenceManager().refreshAll(analyses);
         Assertions.assertThat(analyses).allSatisfy(analysis -> {
             Assertions.assertThat(analysis.getVulnerability().getVulnId()).isNotEqualTo("CVE-2020-25649");
             Assertions.assertThat(analysis.getVulnerability().getVulnId()).isNotEqualTo("CVE-2020-25650");

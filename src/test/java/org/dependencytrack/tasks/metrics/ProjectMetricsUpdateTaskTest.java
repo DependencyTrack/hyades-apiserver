@@ -30,6 +30,7 @@ import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -39,6 +40,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
 
@@ -115,7 +117,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
     public void testUpdateMetricsVulnerabilities() {
         var project = new Project();
         project.setName("acme-app");
-        project = qm.createProject(project, List.of(), false);
+        qm.createProject(project, List.of(), false);
 
         // Create risk score configproperties
         createTestConfigProperties();
@@ -124,30 +126,32 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         vuln.setVulnId("INTERNAL-001");
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
-        vuln = qm.createVulnerability(vuln, false);
+        qm.createVulnerability(vuln, false);
 
         // Create a component with an unaudited vulnerability.
         var componentUnaudited = new Component();
         componentUnaudited.setProject(project);
         componentUnaudited.setName("acme-lib-a");
-        componentUnaudited = qm.createComponent(componentUnaudited, false);
+        qm.createComponent(componentUnaudited, false);
         qm.addVulnerability(vuln, componentUnaudited, AnalyzerIdentity.NONE);
 
         // Create a project with an audited vulnerability.
         var componentAudited = new Component();
         componentAudited.setProject(project);
         componentAudited.setName("acme-lib-b");
-        componentAudited = qm.createComponent(componentAudited, false);
+        qm.createComponent(componentAudited, false);
         qm.addVulnerability(vuln, componentAudited, AnalyzerIdentity.NONE);
-        qm.makeAnalysis(componentAudited, vuln, AnalysisState.NOT_AFFECTED, null, null, null, false);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentAudited.getId(), vuln.getId(), AnalysisState.NOT_AFFECTED, null, null, null, false));
 
         // Create a project with a suppressed vulnerability.
         var componentSuppressed = new Component();
         componentSuppressed.setProject(project);
         componentSuppressed.setName("acme-lib-c");
-        componentSuppressed = qm.createComponent(componentSuppressed, false);
+        qm.createComponent(componentSuppressed, false);
         qm.addVulnerability(vuln, componentSuppressed, AnalyzerIdentity.NONE);
-        qm.makeAnalysis(componentSuppressed, vuln, AnalysisState.FALSE_POSITIVE, null, null, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentSuppressed.getId(), vuln.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, true));
 
         // Create "old" metrics data points for all three components.
         // When the calculating project metrics, only the latest data point for each component

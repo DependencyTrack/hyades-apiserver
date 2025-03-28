@@ -21,6 +21,9 @@ package org.dependencytrack.resources.v1;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.fasterxml.jackson.core.StreamReadConstraints;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -35,15 +38,13 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -55,6 +56,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 public class VexResourceTest extends ResourceTest {
@@ -78,13 +80,13 @@ public class VexResourceTest extends ResourceTest {
         vulnA.setVulnId("INT-001");
         vulnA.setSource(Vulnerability.Source.INTERNAL);
         vulnA.setSeverity(Severity.HIGH);
-        vulnA = qm.createVulnerability(vulnA, false);
+        qm.createVulnerability(vulnA, false);
 
         var vulnB = new Vulnerability();
         vulnB.setVulnId("INT-002");
         vulnB.setSource(Vulnerability.Source.INTERNAL);
         vulnB.setSeverity(Severity.LOW);
-        vulnB = qm.createVulnerability(vulnB, false);
+        qm.createVulnerability(vulnB, false);
 
         final var project = new Project();
         project.setName("acme-app");
@@ -97,14 +99,14 @@ public class VexResourceTest extends ResourceTest {
         componentWithoutVuln.setName("acme-lib-a");
         componentWithoutVuln.setVersion("1.0.0");
         componentWithoutVuln.setDirectDependencies("[]");
-        componentWithoutVuln = qm.createComponent(componentWithoutVuln, false);
+        qm.createComponent(componentWithoutVuln, false);
 
         var componentWithVuln = new Component();
         componentWithVuln.setProject(project);
         componentWithVuln.setName("acme-lib-b");
         componentWithVuln.setVersion("1.0.0");
         componentWithVuln.setDirectDependencies("[]");
-        componentWithVuln = qm.createComponent(componentWithVuln, false);
+        qm.createComponent(componentWithVuln, false);
         qm.addVulnerability(vulnA, componentWithVuln, AnalyzerIdentity.INTERNAL_ANALYZER);
 
         var componentWithVulnAndAnalysis = new Component();
@@ -112,9 +114,10 @@ public class VexResourceTest extends ResourceTest {
         componentWithVulnAndAnalysis.setName("acme-lib-c");
         componentWithVulnAndAnalysis.setVersion("1.0.0");
         componentWithVulnAndAnalysis.setDirectDependencies("[]");
-        componentWithVulnAndAnalysis = qm.createComponent(componentWithVulnAndAnalysis, false);
+        qm.createComponent(componentWithVulnAndAnalysis, false);
         qm.addVulnerability(vulnB, componentWithVulnAndAnalysis, AnalyzerIdentity.INTERNAL_ANALYZER);
-        qm.makeAnalysis(componentWithVulnAndAnalysis, vulnB, AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentWithVulnAndAnalysis.getId(), vulnB.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
 
         // Make componentWithoutVuln (acme-lib-a) depend on componentWithVuln (acme-lib-b)
         componentWithoutVuln.setDirectDependencies("""
@@ -432,23 +435,26 @@ public class VexResourceTest extends ResourceTest {
         componentAWithVuln.setProject(project);
         componentAWithVuln.setName("acme-lib-a");
         componentAWithVuln.setVersion("1.0.0");
-        componentAWithVuln = qm.createComponent(componentAWithVuln, false);
+        qm.createComponent(componentAWithVuln, false);
 
         var componentBWithVuln = new Component();
         componentBWithVuln.setProject(project);
         componentBWithVuln.setName("acme-lib-b");
         componentBWithVuln.setVersion("1.0.0");
-        componentBWithVuln = qm.createComponent(componentBWithVuln, false);
+        qm.createComponent(componentBWithVuln, false);
 
         var vuln = new Vulnerability();
         vuln.setVulnId("INT-001");
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
-        vuln = qm.createVulnerability(vuln, false);
+        qm.createVulnerability(vuln, false);
         qm.addVulnerability(vuln, componentAWithVuln, AnalyzerIdentity.NONE);
-        qm.makeAnalysis(componentAWithVuln, vuln, AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentAWithVuln.getId(), vuln.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
+
         qm.addVulnerability(vuln, componentBWithVuln, AnalyzerIdentity.NONE);
-        qm.makeAnalysis(componentBWithVuln, vuln, AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentBWithVuln.getId(), vuln.getId(), AnalysisState.RESOLVED, null, AnalysisResponse.UPDATE, null, true));
 
         qm.persist(project);
 
@@ -530,23 +536,26 @@ public class VexResourceTest extends ResourceTest {
         componentAWithVuln.setProject(project);
         componentAWithVuln.setName("acme-lib-a");
         componentAWithVuln.setVersion("1.0.0");
-        componentAWithVuln = qm.createComponent(componentAWithVuln, false);
+        qm.createComponent(componentAWithVuln, false);
 
         var componentBWithVuln = new Component();
         componentBWithVuln.setProject(project);
         componentBWithVuln.setName("acme-lib-b");
         componentBWithVuln.setVersion("1.0.0");
-        componentBWithVuln = qm.createComponent(componentBWithVuln, false);
+        qm.createComponent(componentBWithVuln, false);
 
         var vuln = new Vulnerability();
         vuln.setVulnId("INT-001");
         vuln.setSource(Vulnerability.Source.INTERNAL);
         vuln.setSeverity(Severity.HIGH);
-        vuln = qm.createVulnerability(vuln, false);
+        qm.createVulnerability(vuln, false);
         qm.addVulnerability(vuln, componentAWithVuln, AnalyzerIdentity.NONE);
-        qm.makeAnalysis(componentAWithVuln, vuln, AnalysisState.IN_TRIAGE, null, AnalysisResponse.UPDATE, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentAWithVuln.getId(), vuln.getId(), AnalysisState.IN_TRIAGE, null, AnalysisResponse.UPDATE, null, true));
+
         qm.addVulnerability(vuln, componentBWithVuln, AnalyzerIdentity.NONE);
-        qm.makeAnalysis(componentBWithVuln, vuln, AnalysisState.EXPLOITABLE, null, AnalysisResponse.UPDATE, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentBWithVuln.getId(), vuln.getId(), AnalysisState.EXPLOITABLE, null, AnalysisResponse.UPDATE, null, true));
 
         qm.persist(project);
 
