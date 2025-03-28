@@ -56,28 +56,6 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testProjectHasVulnerabilities() {
-        final var project = qm.createProject("acme-app", "Description 1", "1.0.0", null, null, null, null, false);
-
-        final var c1 = new Component();
-        c1.setProject(project);
-        c1.setName("acme-lib");
-        c1.setVersion("2.0.0");
-        qm.persist(c1);
-
-        final var vuln1 = new Vulnerability();
-        vuln1.setVulnId("INT-123");
-        vuln1.setSource(NVD);
-        qm.persist(vuln1);
-
-        assertThat(analysisDao.hasVulnerabilities(project.getId())).isFalse();
-        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), c1.getId(), vuln1.getId(), AnalysisState.NOT_AFFECTED, null, null, null, true));
-
-        assertThat(analysisDao.hasVulnerabilities(project.getId())).isTrue();
-    }
-
-    @Test
     public void testMakeAnalysisComment() {
         final var project = qm.createProject("acme-app", "Description 1", "1.0.0", null, null, null, null, false);
 
@@ -121,13 +99,13 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
         qm.createVulnerability(vulnerability, false);
 
         withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.NOT_AFFECTED,
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), null,
                         AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true));
         assertThat(qm.getAnalysis(component, vulnerability)).satisfies(analysis -> {
             assertThat(analysis.getVulnerability()).isEqualTo(vulnerability);
             assertThat(analysis.getComponent()).isEqualTo(component);
             assertThat(analysis.getProject()).isEqualTo(project);
-            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_SET);
             assertThat(analysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
             assertThat(analysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
             assertThat(analysis.getAnalysisDetails()).isEqualTo("Analysis details here");

@@ -34,6 +34,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.cyclonedx.util.ModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.jdbi.VulnerabilityDao;
 import org.dependencytrack.util.AnalysisCommentUtil;
 
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ public class CycloneDXVexImporter {
             return;
         }
         if (withJdbiHandle(handle ->
-                handle.attach(AnalysisDao.class).hasVulnerabilities(project.getId()))) {
+                handle.attach(VulnerabilityDao.class).hasVulnerabilities(project.getId()))) {
             LOGGER.info("The project %s does not have any vulnerabilities; Skipping VEX import".formatted(project));
             return;
         }

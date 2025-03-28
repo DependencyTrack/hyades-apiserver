@@ -49,7 +49,6 @@ public interface AnalysisDao {
               (:analysisId, :comment, :commenter, NOW())
             RETURNING *
             """)
-    @GetGeneratedKeys("*")
     @RegisterBeanMapper(AnalysisComment.class)
     AnalysisComment createComment(@Bind long analysisId, String comment, String commenter);
 
@@ -60,24 +59,12 @@ public interface AnalysisDao {
         return createComment(analysisId, comment, commenter);
     }
 
-    @SqlQuery("""
-            SELECT EXISTS(
-                SELECT 1 FROM "ANALYSIS"
-                WHERE "PROJECT_ID" = :projectId
-            )
-            """)
-    boolean hasVulnerabilities(@Bind final long projectId);
-
     @SqlUpdate("""
             INSERT INTO "ANALYSIS"
                ("PROJECT_ID", "COMPONENT_ID", "VULNERABILITY_ID", "STATE", "JUSTIFICATION", "RESPONSE", "DETAILS", "SUPPRESSED")
             VALUES
                (:projectId, :componentId, :vulnId,
-               <#if state>
-                    :state,
-               <#else>
-                    'NOT_SET',
-               </#if>
+               COALESCE(:state, 'NOT_SET'),
                :justification, :response, :details, :suppressed)
             ON CONFLICT ("PROJECT_ID", "COMPONENT_ID", "VULNERABILITY_ID") DO UPDATE
             SET
