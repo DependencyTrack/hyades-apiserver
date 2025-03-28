@@ -57,6 +57,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.FindingDao;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 
@@ -113,6 +114,7 @@ public class FindingResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
+    @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
     public Response getFindingsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                          @PathParam("uuid") @ValidUuid String uuid,
@@ -125,7 +127,7 @@ public class FindingResource extends AbstractApiResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);
-                final List<Finding> findings = withJdbiHandle(getAlpineRequest(), handle ->
+                List<Finding> findings = withJdbiHandle(getAlpineRequest(), handle ->
                         handle.attach(FindingDao.class).getFindings(project.getId(), suppressed));
                 if (acceptHeader != null && acceptHeader.contains(MEDIA_TYPE_SARIF_JSON)) {
                     try {
@@ -137,12 +139,16 @@ public class FindingResource extends AbstractApiResource {
                         return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An error occurred while generating SARIF file").build();
                     }
                 }
+                PaginatedResult result = new PaginatedResult();
                 if (source != null) {
-                    final List<Finding> filteredList = findings.stream().filter(finding -> source.name().equals(finding.getVulnerability().get("source"))).collect(Collectors.toList());
-                    return Response.ok(filteredList).header(TOTAL_COUNT_HEADER, filteredList.size()).build();
-                } else {
-                    return Response.ok(findings).header(TOTAL_COUNT_HEADER, findings.size()).build();
+                    findings = findings.stream().filter(finding -> source.name().equals(finding.getVulnerability().get("source"))).collect(Collectors.toList());
                 }
+                result.setTotal(findings.size());
+                final List<Finding> findingsPage = findings.subList(getAlpineRequest().getPagination().getOffset(),
+                        Math.min(getAlpineRequest().getPagination().getOffset()
+                                + getAlpineRequest().getPagination().getLimit(), findings.size()));
+                result.setObjects(findingsPage);
+                return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
@@ -269,6 +275,7 @@ public class FindingResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
     })
+    @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
     public Response getAllFindings(@Parameter(description = "Show inactive projects")
                                    @QueryParam("showInactive") boolean showInactive,
@@ -300,25 +307,23 @@ public class FindingResource extends AbstractApiResource {
                                    @QueryParam("cvssv3From") String cvssv3From,
                                    @Parameter(description = "Filter CVSSv3 from this Value")
                                    @QueryParam("cvssv3To") String cvssv3To) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final Map<String, String> filters = new HashMap<>();
-            filters.put("severity", severity);
-            filters.put("analysisStatus", analysisStatus);
-            filters.put("vendorResponse", vendorResponse);
-            filters.put("publishDateFrom", publishDateFrom);
-            filters.put("publishDateTo", publishDateTo);
-            filters.put("attributedOnDateFrom", attributedOnDateFrom);
-            filters.put("attributedOnDateTo", attributedOnDateTo);
-            filters.put("textSearchField", textSearchField);
-            filters.put("textSearchInput", textSearchInput);
-            filters.put("cvssv2From", cvssv2From);
-            filters.put("cvssv2To", cvssv2To);
-            filters.put("cvssv3From", cvssv3From);
-            filters.put("cvssv3To", cvssv3To);
-            final PaginatedResult result = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(FindingDao.class)
-                    .getAllFindings(this.getAlpineRequest(), filters, showSuppressed, showInactive));
-            return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-        }
+        final Map<String, String> filters = new HashMap<>();
+        filters.put("severity", severity);
+        filters.put("analysisStatus", analysisStatus);
+        filters.put("vendorResponse", vendorResponse);
+        filters.put("publishDateFrom", publishDateFrom);
+        filters.put("publishDateTo", publishDateTo);
+        filters.put("attributedOnDateFrom", attributedOnDateFrom);
+        filters.put("attributedOnDateTo", attributedOnDateTo);
+        filters.put("textSearchField", textSearchField);
+        filters.put("textSearchInput", textSearchInput);
+        filters.put("cvssv2From", cvssv2From);
+        filters.put("cvssv2To", cvssv2To);
+        filters.put("cvssv3From", cvssv3From);
+        filters.put("cvssv3To", cvssv3To);
+        final PaginatedResult result = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(FindingDao.class)
+                .getAllFindings(this.getAlpineRequest(), filters, showSuppressed, showInactive));
+        return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
     }
 
     @GET
@@ -337,6 +342,7 @@ public class FindingResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
+    @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
     public Response getAllFindings(@Parameter(description = "Show inactive projects")
                                    @QueryParam("showInactive") boolean showInactive,
@@ -362,23 +368,21 @@ public class FindingResource extends AbstractApiResource {
                                    @QueryParam("occurrencesFrom") String occurrencesFrom,
                                    @Parameter(description = "Filter occurrences in projects to this value")
                                    @QueryParam("occurrencesTo") String occurrencesTo) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final Map<String, String> filters = new HashMap<>();
-            filters.put("severity", severity);
-            filters.put("publishDateFrom", publishDateFrom);
-            filters.put("publishDateTo", publishDateTo);
-            filters.put("textSearchField", textSearchField);
-            filters.put("textSearchInput", textSearchInput);
-            filters.put("cvssv2From", cvssv2From);
-            filters.put("cvssv2To", cvssv2To);
-            filters.put("cvssv3From", cvssv3From);
-            filters.put("cvssv3To", cvssv3To);
-            filters.put("occurrencesFrom", occurrencesFrom);
-            filters.put("occurrencesTo", occurrencesTo);
-            final PaginatedResult result = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(FindingDao.class)
-                    .getGroupedFindings(this.getAlpineRequest(), filters, showInactive));
-            return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-        }
+        final Map<String, String> filters = new HashMap<>();
+        filters.put("severity", severity);
+        filters.put("publishDateFrom", publishDateFrom);
+        filters.put("publishDateTo", publishDateTo);
+        filters.put("textSearchField", textSearchField);
+        filters.put("textSearchInput", textSearchInput);
+        filters.put("cvssv2From", cvssv2From);
+        filters.put("cvssv2To", cvssv2To);
+        filters.put("cvssv3From", cvssv3From);
+        filters.put("cvssv3To", cvssv3To);
+        filters.put("occurrencesFrom", occurrencesFrom);
+        filters.put("occurrencesTo", occurrencesTo);
+        final PaginatedResult result = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(FindingDao.class)
+                .getGroupedFindings(this.getAlpineRequest(), filters, showInactive));
+        return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
     }
 
     private String generateSARIF(List<Finding> findings) throws IOException {
