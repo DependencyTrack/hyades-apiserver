@@ -823,4 +823,81 @@
             SELECT parent_id, child_id, depth FROM cte_project_hierarchy;
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-16" author="jhoward-lm">
+        <createTable ifNotExists="true" tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
+            <column name="LDAPUSER_ID" type="BIGINT">
+                <constraints nullable="true"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK"
+                    referencedTableName="LDAPUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="MANAGEDUSER_ID" type="BIGINT">
+                <constraints nullable="true"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK"
+                    referencedTableName="MANAGEDUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="OIDCUSER_ID" type="BIGINT">
+                <constraints nullable="true"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK"
+                    referencedTableName="OIDCUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK"
+                    referencedTableName="PROJECT" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK"
+                    referencedTableName="PERMISSION" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="PERMISSION_NAME" type="VARCHAR(255)">
+                <constraints nullable="false"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK"
+                    referencedTableName="PERMISSION" referencedColumnNames="NAME"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
+                    validateForeignKey="true" />
+            </column>
+        </createTable>
+
+        <sql splitStatements="true">
+            ALTER TABLE "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+              ADD CHECK (
+                ("LDAPUSER_ID" IS NOT NULL)::INTEGER +
+                ("MANAGEDUSER_ID" IS NOT NULL)::INTEGER +
+                ("OIDCUSER_ID" IS NOT NULL)::INTEGER = 1);
+        </sql>
+
+        <sql splitStatements="true">
+            CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX"
+                ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
+             USING btree ("LDAPUSER_ID", "PROJECT_ID", "PERMISSION_ID")
+             WHERE "LDAPUSER_ID" IS NOT NULL;
+
+            CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_IDX"
+                ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
+             USING btree ("MANAGEDUSER_ID", "PROJECT_ID", "PERMISSION_ID")
+             WHERE "MANAGEDUSER_ID" IS NOT NULL;
+
+            CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_IDX"
+                ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
+             USING btree ("OIDCUSER_ID", "PROJECT_ID", "PERMISSION_ID")
+             WHERE "OIDCUSER_ID" IS NOT NULL;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
