@@ -875,61 +875,29 @@
             </column>
         </createTable>
 
-        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX"
-                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
-            <column name="LDAPUSER_ID" />
-        </createIndex>
-
-        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_IDX"
-                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
-            <column name="MANAGEDUSER_ID" />
-        </createIndex>
-
-        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_IDX"
-                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
-            <column name="OIDCUSER_ID" />
-        </createIndex>
-
-        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECTS_IDX"
-                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
-            <column name="PROJECT_ID" />
-        </createIndex>
-
-        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSIONS_IDX"
-                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
-            <column name="PERMISSION_ID" />
-        </createIndex>
-
-        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_UNIQUE_IDX"
-                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS"
-                unique="true">
-            <column name="LDAPUSER_ID" />
-            <column name="PROJECT_ID" />
-            <column name="PERMISSION_ID" />
-        </createIndex>
-
-        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_UNIQUE_IDX"
-                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS"
-                unique="true">
-            <column name="MANAGEDUSER_ID" />
-            <column name="PROJECT_ID" />
-            <column name="PERMISSION_ID" />
-        </createIndex>
-
-        <createIndex indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_UNIQUE_IDX"
-                tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS"
-                unique="true">
-            <column name="OIDCUSER_ID" />
-            <column name="PROJECT_ID" />
-            <column name="PERMISSION_ID" />
-        </createIndex>
-
         <sql splitStatements="true">
             ALTER TABLE "USER_PROJECT_EFFECTIVE_PERMISSIONS"
               ADD CHECK (
                 ("LDAPUSER_ID" IS NOT NULL)::INTEGER +
                 ("MANAGEDUSER_ID" IS NOT NULL)::INTEGER +
                 ("OIDCUSER_ID" IS NOT NULL)::INTEGER = 1);
+        </sql>
+
+        <sql splitStatements="true">
+            CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX"
+                ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
+             USING btree ("LDAPUSER_ID", "PROJECT_ID", "PERMISSION_ID")
+             WHERE "LDAPUSER_ID" IS NOT NULL;
+
+            CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_IDX"
+                ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
+             USING btree ("MANAGEDUSER_ID", "PROJECT_ID", "PERMISSION_ID")
+             WHERE "MANAGEDUSER_ID" IS NOT NULL;
+
+            CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_IDX"
+                ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
+             USING btree ("OIDCUSER_ID", "PROJECT_ID", "PERMISSION_ID")
+             WHERE "OIDCUSER_ID" IS NOT NULL;
         </sql>
     </changeSet>
 </databaseChangeLog>

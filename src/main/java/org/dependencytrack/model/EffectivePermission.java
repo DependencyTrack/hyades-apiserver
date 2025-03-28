@@ -41,13 +41,13 @@ import javax.jdo.annotations.Persistent;
  * @since 5.6.0
  */
 @PersistenceCapable(table = "USER_PROJECT_EFFECTIVE_PERMISSIONS")
-@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_UNIQUE_IDX",
+@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX",
         members = { "project", "permission", "ldapUser" },
         unique = "true")
-@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_UNIQUE_IDX",
+@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_IDX",
         members = { "project", "permission", "managedUser" },
         unique = "true")
-@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_UNIQUE_IDX",
+@Index(name = "USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_IDX",
         members = { "project", "permission", "oidcUser" },
         unique = "true")
 @FetchGroup(name = "ALL", members = {
