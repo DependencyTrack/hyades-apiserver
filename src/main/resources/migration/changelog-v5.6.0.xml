@@ -875,7 +875,7 @@
             </column>
         </createTable>
 
-        <sql splitStatements="true">
+        <sql dbms="postgres">
             ALTER TABLE "USER_PROJECT_EFFECTIVE_PERMISSIONS"
               ADD CHECK (
                 ("LDAPUSER_ID" IS NOT NULL)::INTEGER +
@@ -883,7 +883,7 @@
                 ("OIDCUSER_ID" IS NOT NULL)::INTEGER = 1);
         </sql>
 
-        <sql splitStatements="true">
+        <sql dbms="postgres">
             CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX"
                 ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
              USING btree ("LDAPUSER_ID", "PROJECT_ID", "PERMISSION_ID")
@@ -899,5 +899,19 @@
              USING btree ("OIDCUSER_ID", "PROJECT_ID", "PERMISSION_ID")
              WHERE "OIDCUSER_ID" IS NOT NULL;
         </sql>
+
+        <createProcedure relativeToChangelogFile="true"
+            path="procedures/function_recalc-user-project-effective-permissions.sql" />
+        <createProcedure relativeToChangelogFile="true"
+            path="triggers/function_effective-permissions-mx-on-delete.sql" />
+        <createProcedure relativeToChangelogFile="true"
+            path="triggers/function_effective-permissions-mx-on-insert.sql" />
+        <createProcedure relativeToChangelogFile="true"
+            path="triggers/function_effective-permissions-mx-on-update.sql" />
+        <createProcedure relativeToChangelogFile="true"
+            path="triggers/function_prevent-direct-effective-permissions-writes.sql" />
+        <sqlFile relativeToChangelogFile="true"
+            path="triggers/trigger_effective-permissions-mx.sql"
+            dbms="postgres" />
     </changeSet>
 </databaseChangeLog>

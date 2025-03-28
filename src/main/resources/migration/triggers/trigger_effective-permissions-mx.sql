@@ -87,3 +87,8 @@ CREATE TRIGGER trigger_prevent_direct_effective_permissions_writes
 BEFORE DELETE OR INSERT OR UPDATE ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
 FOR EACH STATEMENT
 EXECUTE FUNCTION prevent_direct_effective_permissions_writes();
+
+-- Backfill the USER_PROJECT_EFFECTIVE_PERMISSIONS table for existing PROJECT_ACCESS_TEAMS entries
+PERFORM recalc_user_project_effective_permissions(
+  ARRAY(SELECT DISTINCT "PROJECT_ID" FROM "PROJECT_ACCESS_TEAMS")
+);
