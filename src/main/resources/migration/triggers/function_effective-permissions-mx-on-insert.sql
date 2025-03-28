@@ -10,26 +10,21 @@ Fired on INSERT INTO one of:
 CREATE OR REPLACE FUNCTION effective_permissions_mx_on_insert()
 RETURNS TRIGGER AS $$
 DECLARE
-  rec        RECORD;
-  project_id BIGINT;
+  project_ids BIGINT[];
 BEGIN
   IF TG_TABLE_NAME = 'PROJECT_ACCESS_TEAMS' THEN
-    -- For this table we can get PROJECT_ID directly.
-    FOR rec IN (SELECT DISTINCT "PROJECT_ID" FROM new_table) LOOP
-      PERFORM recalc_user_project_effective_permissions(rec."PROJECT_ID");
-    END LOOP;
-
+    PERFORM recalc_user_project_effective_permissions(
+      ARRAY(SELECT DISTINCT "PROJECT_ID" FROM new_table)
+    );
   ELSIF TG_TABLE_NAME IN ('LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS') THEN
-    -- For user-team linking tables get the team IDs and then their projects.
-    FOR rec IN (SELECT DISTINCT "TEAM_ID" FROM new_table) LOOP
-      FOR project_id IN
-        SELECT DISTINCT "PROJECT_ID"
-        FROM public."PROJECT_ACCESS_TEAMS"
-        WHERE "TEAM_ID" = rec."TEAM_ID"
-      LOOP
-        PERFORM recalc_user_project_effective_permissions(project_id);
-      END LOOP;
-    END LOOP;
+    PERFORM recalc_user_project_effective_permissions(
+      ARRAY(
+        SELECT DISTINCT pat."PROJECT_ID"
+        FROM "PROJECT_ACCESS_TEAMS" AS pat
+        INNER JOIN new_table
+          ON new_table."TEAM_ID" = pat."TEAM_ID"
+      )
+    );
   END IF;
 
   RETURN NULL;

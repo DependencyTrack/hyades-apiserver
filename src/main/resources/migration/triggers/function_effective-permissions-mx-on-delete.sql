@@ -10,24 +10,21 @@ Fired on DELETE FROM one of:
 CREATE OR REPLACE FUNCTION effective_permissions_mx_on_delete()
 RETURNS TRIGGER AS $$
 DECLARE
-  rec        RECORD;
-  project_id BIGINT;
+  project_ids BIGINT[];
 BEGIN
   IF TG_TABLE_NAME = 'PROJECT_ACCESS_TEAMS' THEN
-    FOR rec IN (SELECT DISTINCT "PROJECT_ID" FROM old_table) LOOP
-      PERFORM recalc_user_project_effective_permissions(rec."PROJECT_ID");
-    END LOOP;
-
+    PERFORM recalc_user_project_effective_permissions(
+      ARRAY(SELECT DISTINCT "PROJECT_ID" FROM old_table)
+    );
   ELSIF TG_TABLE_NAME IN ('LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS') THEN
-    FOR rec IN (SELECT DISTINCT "TEAM_ID" FROM old_table) LOOP
-      FOR project_id IN
-        SELECT DISTINCT "PROJECT_ID"
-        FROM public."PROJECT_ACCESS_TEAMS"
-        WHERE "TEAM_ID" = rec."TEAM_ID"
-      LOOP
-        PERFORM recalc_user_project_effective_permissions(project_id);
-      END LOOP;
-    END LOOP;
+    PERFORM recalc_user_project_effective_permissions(
+      ARRAY(
+        SELECT DISTINCT pat."PROJECT_ID"
+        FROM "PROJECT_ACCESS_TEAMS" AS pat
+        INNER JOIN old_table
+          ON old_table."TEAM_ID" = pat."TEAM_ID"
+      )
+    );
   END IF;
 
   RETURN NULL;
