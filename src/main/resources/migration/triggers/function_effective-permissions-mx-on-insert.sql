@@ -17,14 +17,12 @@ BEGIN
       (SELECT ARRAY_AGG(DISTINCT "PROJECT_ID") FROM new_table)
     );
   ELSIF TG_TABLE_NAME IN ('LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS') THEN
-    PERFORM recalc_user_project_effective_permissions(
-      ARRAY(
-        SELECT DISTINCT pat."PROJECT_ID"
+    PERFORM recalc_user_project_effective_permissions((
+      SELECT ARRAY_AGG(DISTINCT pat."PROJECT_ID")
         FROM "PROJECT_ACCESS_TEAMS" AS pat
         INNER JOIN new_table
           ON new_table."TEAM_ID" = pat."TEAM_ID"
-      )
-    );
+    ));
   END IF;
 
   RETURN NULL;

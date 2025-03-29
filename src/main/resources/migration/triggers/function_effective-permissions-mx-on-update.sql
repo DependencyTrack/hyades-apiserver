@@ -22,9 +22,8 @@ BEGIN
         ) AS combined_projects
     ));
   ELSIF TG_TABLE_NAME IN ('LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS') THEN
-    PERFORM recalc_user_project_effective_permissions(
-      ARRAY(
-        SELECT DISTINCT pat."PROJECT_ID"
+    PERFORM recalc_user_project_effective_permissions((
+      SELECT ARRAY_AGG(DISTINCT pat."PROJECT_ID")
         FROM "PROJECT_ACCESS_TEAMS" pat
         JOIN (
           SELECT "TEAM_ID" FROM old_table
@@ -32,8 +31,7 @@ BEGIN
           SELECT "TEAM_ID" FROM new_table
         ) AS teams
           ON pat."TEAM_ID" = teams."TEAM_ID"
-      )
-    );
+    ));
   END IF;
 
   RETURN NULL;

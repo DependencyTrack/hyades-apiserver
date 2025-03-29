@@ -23,6 +23,7 @@ import alpine.common.util.BooleanUtil;
 import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
+import alpine.model.Permission;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
@@ -94,6 +95,8 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
+import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanStatus;
 import org.dependencytrack.proto.vulnanalysis.v1.ScannerResult;
@@ -1254,6 +1257,11 @@ public class QueryManager extends AlpineQueryManager {
 
     public boolean bind(final NotificationRule notificationRule, final Collection<Tag> tags) {
         return getNotificationQueryManager().bind(notificationRule, tags);
+    }
+
+    public List<Permission> getEffectivePermissions(UserPrincipal userPrincipal, Project project) {
+        return JdbiFactory.withJdbiHandle(request, handle -> handle.attach(EffectivePermissionDao.class)
+                .getEffectivePermissions(userPrincipal.getClass(), userPrincipal.getId(), project.getId()));
     }
 
     public boolean hasAccessManagementPermission(final Object principal) {
