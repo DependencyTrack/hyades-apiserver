@@ -41,7 +41,7 @@ public class MigrationInitializerTest {
 
     @Before
     public void setUp() {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"));
+        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"));
         postgresContainer.start();
 
         jdbi = Jdbi.create(

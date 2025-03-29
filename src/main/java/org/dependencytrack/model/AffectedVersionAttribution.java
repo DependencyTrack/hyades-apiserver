@@ -24,6 +24,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import org.dependencytrack.model.Vulnerability.Source;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
@@ -78,11 +80,13 @@ public class AffectedVersionAttribution implements Serializable {
     private Source source;
 
     @Persistent
+    @ForeignKey(name = "AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "VULNERABILITY", allowsNull = "false")
     @JsonIgnore
     private Vulnerability vulnerability;
 
     @Persistent(defaultFetchGroup = "true")
+    @ForeignKey(name = "AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "VULNERABLE_SOFTWARE", allowsNull = "false")
     @JsonIgnore
     private VulnerableSoftware vulnerableSoftware;

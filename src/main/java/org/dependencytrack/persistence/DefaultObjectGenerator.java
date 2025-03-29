@@ -21,7 +21,6 @@ package org.dependencytrack.persistence;
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
-import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.auth.PasswordService;
@@ -33,7 +32,6 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
-import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
@@ -296,7 +294,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
         LOGGER.debug("Creating user: admin");
         ManagedUser admin = qm.createManagedUser("admin", "Administrator", "admin@localhost",
-                new String(PasswordService.createHash("admin".toCharArray())), true, true, false);
+                new String(PasswordService.createHash("admin".toCharArray())), false, true, false);
 
         for (var name : new String[] { "Administrators", "Portfolio Managers", "Automation", "Badge Viewers" }) {
             LOGGER.debug("Creating team: " + name);

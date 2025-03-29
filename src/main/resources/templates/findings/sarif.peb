@@ -44,7 +44,13 @@
             "group": "{{ finding.component.group }}",
             "version": "{{ finding.component.version }}",
             "source": "{{ finding.vulnerability.source }}",
-            "cwes": "{{ finding.vulnerability.cwes }}",
+            "cwes": [{% for cwe in finding.vulnerability.cwes %}
+                {
+                  "cweId": "{{ cwe.cweId }}",
+                  "name": "{{ cwe.name }}"
+                }
+                {% if not loop.last %},{% endif %}{% endfor %}
+            ],
             "cvssV3BaseScore": "{{ finding.vulnerability.cvssV3BaseScore }}",
             "epssScore": "{{ finding.vulnerability.epssScore }}",
             "epssPercentile": "{{ finding.vulnerability.epssPercentile }}",

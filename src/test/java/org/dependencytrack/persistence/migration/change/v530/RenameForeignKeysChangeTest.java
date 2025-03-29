@@ -37,7 +37,7 @@ public class RenameForeignKeysChangeTest {
     @Before
     @SuppressWarnings("resource")
     public void setUp() {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
+        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
                 .withInitScript("migration/custom/schema-v5.2.0-postgresql.sql");
         postgresContainer.start();
     }

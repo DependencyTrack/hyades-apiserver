@@ -1246,37 +1246,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Fetch the {@link UUID}s of all parents of a given {@link Project}.
-     *
-     * @param project The {@link Project} to fetch the parent {@link UUID}s for
-     * @return A {@link List} of {@link UUID}s
-     */
-    @Override
-    public List<UUID> getParents(final Project project) {
-        return getParents(project.getUuid(), new ArrayList<>());
-    }
-
-    private List<UUID> getParents(final UUID uuid, final List<UUID> parents) {
-        final UUID parentUuid;
-        final Query<Project> query = pm.newQuery(Project.class);
-        try {
-            query.setFilter("uuid == :uuid && parent != null");
-            query.setParameters(uuid);
-            query.setResult("parent.uuid");
-            parentUuid = query.executeResultUnique(UUID.class);
-        } finally {
-            query.closeAll();
-        }
-
-        if (parentUuid == null) {
-            return parents;
-        }
-
-        parents.add(parentUuid);
-        return getParents(parentUuid, parents);
-    }
-
-    /**
      * Check whether a {@link Project} with a given {@code name} and {@code version} exists.
      *
      * @param name    Name of the {@link Project} to check for
@@ -1310,30 +1279,41 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         }
     }
 
-    private static boolean isChildOf(Project project, UUID uuid) {
-        boolean isChild = false;
-        if (project.getParent() != null) {
-            if (project.getParent().getUuid().equals(uuid)) {
-                return true;
-            } else {
-                isChild = isChildOf(project.getParent(), uuid);
-            }
+    private boolean isChildOf(Project project, UUID uuid) {
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT EXISTS (
+                  SELECT 1
+                    FROM "PROJECT_HIERARCHY"
+                   WHERE "PARENT_PROJECT_ID" = (SELECT "ID" FROM "PROJECT" WHERE "UUID" = ?)
+                     AND "CHILD_PROJECT_ID" = ?
+                )
+                """);
+        query.setParameters(uuid, project.getId());
+        try {
+            return (boolean) query.executeUnique();
+        } finally {
+            query.closeAll();
         }
-        return isChild;
     }
 
-    private static boolean hasActiveChild(Project project) {
-        boolean hasActiveChild = false;
-        if (project.getChildren() != null) {
-            for (Project child : project.getChildren()) {
-                if (child.isActive() || hasActiveChild) {
-                    return true;
-                } else {
-                    hasActiveChild = hasActiveChild(child);
-                }
-            }
+    private boolean hasActiveChild(Project project) {
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT EXISTS (
+                  SELECT 1
+                    FROM "PROJECT_HIERARCHY" AS hierarchy
+                   INNER JOIN "PROJECT" AS child_project
+                      ON child_project."ID" = hierarchy."CHILD_PROJECT_ID"
+                   WHERE hierarchy."PARENT_PROJECT_ID" = ?
+                     AND hierarchy."DEPTH" > 0
+                     AND child_project."INACTIVE_SINCE" IS NULL
+                )
+                """);
+        query.setParameters(project.getId());
+        try {
+            return (boolean) query.executeUnique();
+        } finally {
+            query.closeAll();
         }
-        return hasActiveChild;
     }
 
     private List<ProjectVersion> getProjectVersions(Project project) {
