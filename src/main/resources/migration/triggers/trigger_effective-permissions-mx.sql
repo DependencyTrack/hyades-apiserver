@@ -90,5 +90,5 @@ EXECUTE FUNCTION prevent_direct_effective_permissions_writes();
 
 -- Backfill the USER_PROJECT_EFFECTIVE_PERMISSIONS table for existing PROJECT_ACCESS_TEAMS entries
 PERFORM recalc_user_project_effective_permissions(
-  ARRAY(SELECT DISTINCT "PROJECT_ID" FROM "PROJECT_ACCESS_TEAMS")
+  (SELECT ARRAY_AGG(DISTINCT "PROJECT_ID") FROM "PROJECT_ACCESS_TEAMS")
 );

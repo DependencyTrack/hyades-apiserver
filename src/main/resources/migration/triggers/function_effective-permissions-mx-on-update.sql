@@ -13,13 +13,14 @@ DECLARE
   project_ids BIGINT[];
 BEGIN
   IF TG_TABLE_NAME = 'PROJECT_ACCESS_TEAMS' THEN
-    PERFORM recalc_user_project_effective_permissions(
-      ARRAY(
+    PERFORM recalc_user_project_effective_permissions((
+      SELECT ARRAY_AGG("PROJECT_ID")
+      FROM (
         SELECT "PROJECT_ID" FROM old_table
         UNION
         SELECT "PROJECT_ID" FROM new_table
-      )
-    );
+        ) AS combined_projects
+    ));
   ELSIF TG_TABLE_NAME IN ('LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS') THEN
     PERFORM recalc_user_project_effective_permissions(
       ARRAY(

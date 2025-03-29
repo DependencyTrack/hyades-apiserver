@@ -14,7 +14,7 @@ DECLARE
 BEGIN
   IF TG_TABLE_NAME = 'PROJECT_ACCESS_TEAMS' THEN
     PERFORM recalc_user_project_effective_permissions(
-      ARRAY(SELECT DISTINCT "PROJECT_ID" FROM new_table)
+      (SELECT ARRAY_AGG(DISTINCT "PROJECT_ID") FROM new_table)
     );
   ELSIF TG_TABLE_NAME IN ('LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS') THEN
     PERFORM recalc_user_project_effective_permissions(
