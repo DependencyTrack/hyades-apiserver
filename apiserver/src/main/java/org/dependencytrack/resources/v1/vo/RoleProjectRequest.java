@@ -20,26 +20,5 @@ package org.dependencytrack.resources.v1.vo;
 
 import org.dependencytrack.model.validation.ValidUuid;
 
-public class RoleProjectRequest {
-    @ValidUuid
-    private String roleUUID;
-
-    @ValidUuid
-    private String projectUUID;
-
-    public String getRoleUUID() {
-        return roleUUID;
-    }
-
-    public void setRoleUUID(String roleUUID) {
-        this.roleUUID = roleUUID;
-    }
-
-    public String getProjectUUID() {
-        return projectUUID;
-    }
-
-    public void setProjectUUID(String projectUUID) {
-        this.projectUUID = projectUUID;
-    }
+public record RoleProjectRequest(@ValidUuid String roleUUID, @ValidUuid String projectUUID) {
 }
