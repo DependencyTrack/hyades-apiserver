@@ -902,8 +902,57 @@
              WHERE "OIDCUSER_ID" IS NOT NULL;
         </sql>
 
-        <createProcedure relativeToChangelogFile="true"
-            path="procedures/function_recalc-user-project-effective-permissions.sql" />
+        <sql splitStatements="false">
+            -- Helper function to recalculate all user permissions for a project.
+            -- Called by trigger functions to update the values in the USER_PROJECT_EFFECTIVE_PERMISSIONS table.
+            CREATE OR REPLACE FUNCTION recalc_user_project_effective_permissions(project_ids BIGINT[])
+            RETURNS void AS $$
+            BEGIN
+              -- Remove any existing effective permissions for this project.
+              DELETE FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+              WHERE "PROJECT_ID" = ANY(project_ids);
+
+              -- Rebuild effective permissions for LDAP users
+              INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ("LDAPUSER_ID", "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
+              SELECT DISTINCT lt."LDAPUSER_ID", pat."PROJECT_ID", tp."PERMISSION_ID", p."NAME"
+                FROM "PROJECT_ACCESS_TEAMS" pat
+               INNER JOIN "TEAMS_PERMISSIONS" tp
+                  ON tp."TEAM_ID" = pat."TEAM_ID"
+               INNER JOIN "PERMISSION" p
+                  ON p."ID" = tp."PERMISSION_ID"
+               INNER JOIN "LDAPUSERS_TEAMS" lt
+                  ON lt."TEAM_ID" = pat."TEAM_ID"
+               WHERE pat."PROJECT_ID" = ANY(project_ids);
+
+              -- Rebuild effective permissions for managed users
+              INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ("MANAGEDUSER_ID", "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
+              SELECT DISTINCT mt."MANAGEDUSER_ID", pat."PROJECT_ID", tp."PERMISSION_ID", p."NAME"
+                FROM "PROJECT_ACCESS_TEAMS" pat
+               INNER JOIN "TEAMS_PERMISSIONS" tp
+                  ON tp."TEAM_ID" = pat."TEAM_ID"
+               INNER JOIN "PERMISSION" p
+                  ON p."ID" = tp."PERMISSION_ID"
+               INNER JOIN "MANAGEDUSERS_TEAMS" mt
+                  ON mt."TEAM_ID" = pat."TEAM_ID"
+               WHERE pat."PROJECT_ID" = ANY(project_ids);
+
+              -- Rebuild effective permissions for OIDC users
+              INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ("OIDCUSER_ID", "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
+              SELECT DISTINCT ot."OIDCUSERS_ID", pat."PROJECT_ID", tp."PERMISSION_ID", p."NAME"
+                FROM "PROJECT_ACCESS_TEAMS" pat
+               INNER JOIN "TEAMS_PERMISSIONS" tp
+                  ON tp."TEAM_ID" = pat."TEAM_ID"
+               INNER JOIN "PERMISSION" p
+                  ON p."ID" = tp."PERMISSION_ID"
+               INNER JOIN "OIDCUSERS_TEAMS" ot
+                  ON ot."TEAM_ID" = pat."TEAM_ID"
+               WHERE pat."PROJECT_ID" = ANY(project_ids);
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
 
         <sql splitStatements="false">
             CREATE OR REPLACE FUNCTION effective_permissions_mx_on_delete()
@@ -923,7 +972,6 @@
                       ON old_table."TEAM_ID" = pat."TEAM_ID"
                 ));
               END IF;
-
               RETURN NULL;
             END;
             $$ LANGUAGE plpgsql;
@@ -947,7 +995,6 @@
                       ON new_table."TEAM_ID" = pat."TEAM_ID"
                 ));
               END IF;
-
               RETURN NULL;
             END;
             $$ LANGUAGE plpgsql;
@@ -980,7 +1027,6 @@
                       ON pat."TEAM_ID" = teams."TEAM_ID"
                 ));
               END IF;
-
               RETURN NULL;
             END;
             $$ LANGUAGE plpgsql;
@@ -996,7 +1042,6 @@
               IF pg_trigger_depth() &lt; 2 THEN
                 RAISE EXCEPTION 'Direct modifications to USER_PROJECT_EFFECTIVE_PERMISSIONS are not allowed.';
               END IF;
-
               RETURN NEW;
             END;
             $$ LANGUAGE plpgsql;
