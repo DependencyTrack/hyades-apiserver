@@ -885,19 +885,19 @@
 
             -- Composite unique index on "LDAPUSER_ID", "PROJECT_ID", and "PERMISSION_ID" columns
             CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX"
-                ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ON "USER_PROJECT_EFFECTIVE_PERMISSIONS"
              USING btree ("LDAPUSER_ID", "PROJECT_ID", "PERMISSION_ID")
              WHERE "LDAPUSER_ID" IS NOT NULL;
 
             -- Composite unique index on "MANAGEDUSER_ID", "PROJECT_ID", and "PERMISSION_ID" columns
             CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_IDX"
-                ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ON "USER_PROJECT_EFFECTIVE_PERMISSIONS"
              USING btree ("MANAGEDUSER_ID", "PROJECT_ID", "PERMISSION_ID")
              WHERE "MANAGEDUSER_ID" IS NOT NULL;
 
             -- Composite unique index on "OIDCUSER_ID", "PROJECT_ID", and "PERMISSION_ID" columns
             CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_IDX"
-                ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ON "USER_PROJECT_EFFECTIVE_PERMISSIONS"
              USING btree ("OIDCUSER_ID", "PROJECT_ID", "PERMISSION_ID")
              WHERE "OIDCUSER_ID" IS NOT NULL;
         </sql>
@@ -1056,105 +1056,105 @@
         <sql splitStatements="true">
             -- INSERT trigger for PROJECT_ACCESS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_project_access_teams_insert
-            AFTER INSERT ON public."PROJECT_ACCESS_TEAMS"
+            AFTER INSERT ON "PROJECT_ACCESS_TEAMS"
             REFERENCING NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_insert();
 
             -- DELETE trigger for PROJECT_ACCESS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_project_access_teams_delete
-            AFTER DELETE ON public."PROJECT_ACCESS_TEAMS"
+            AFTER DELETE ON "PROJECT_ACCESS_TEAMS"
             REFERENCING OLD TABLE AS old_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_delete();
 
             -- UPDATE trigger for PROJECT_ACCESS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_project_access_teams_update
-            AFTER UPDATE ON public."PROJECT_ACCESS_TEAMS"
+            AFTER UPDATE ON "PROJECT_ACCESS_TEAMS"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_update();
 
             -- INSERT trigger for LDAPUSERS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_ldapusers_teams_insert
-            AFTER INSERT ON public."LDAPUSERS_TEAMS"
+            AFTER INSERT ON "LDAPUSERS_TEAMS"
             REFERENCING NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_insert();
 
             -- DELETE trigger for LDAPUSERS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_ldapusers_teams_delete
-            AFTER DELETE ON public."LDAPUSERS_TEAMS"
+            AFTER DELETE ON "LDAPUSERS_TEAMS"
             REFERENCING OLD TABLE AS old_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_delete();
 
             -- UPDATE trigger for LDAPUSERS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_ldapusers_teams_update
-            AFTER UPDATE ON public."LDAPUSERS_TEAMS"
+            AFTER UPDATE ON "LDAPUSERS_TEAMS"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_update();
 
             -- INSERT trigger for MANAGEDUSERS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_managedusers_teams_insert
-            AFTER INSERT ON public."MANAGEDUSERS_TEAMS"
+            AFTER INSERT ON "MANAGEDUSERS_TEAMS"
             REFERENCING NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_insert();
 
             -- DELETE trigger for MANAGEDUSERS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_managedusers_teams_delete
-            AFTER DELETE ON public."MANAGEDUSERS_TEAMS"
+            AFTER DELETE ON "MANAGEDUSERS_TEAMS"
             REFERENCING OLD TABLE AS old_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_delete();
 
             -- UPDATE trigger for MANAGEDUSERS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_managedusers_teams_update
-            AFTER UPDATE ON public."MANAGEDUSERS_TEAMS"
+            AFTER UPDATE ON "MANAGEDUSERS_TEAMS"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_update();
 
             -- INSERT trigger for OIDCUSERS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_oidcusers_teams_insert
-            AFTER INSERT ON public."OIDCUSERS_TEAMS"
+            AFTER INSERT ON "OIDCUSERS_TEAMS"
             REFERENCING NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_insert();
 
             -- DELETE trigger for OIDCUSERS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_oidcusers_teams_delete
-            AFTER DELETE ON public."OIDCUSERS_TEAMS"
+            AFTER DELETE ON "OIDCUSERS_TEAMS"
             REFERENCING OLD TABLE AS old_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_delete();
 
             -- UPDATE trigger for OIDCUSERS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_oidcusers_teams_update
-            AFTER UPDATE ON public."OIDCUSERS_TEAMS"
+            AFTER UPDATE ON "OIDCUSERS_TEAMS"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_update();
 
             -- INSERT trigger for TEAMS_PERMISSIONS
             CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_insert
-            AFTER INSERT ON public."TEAMS_PERMISSIONS"
+            AFTER INSERT ON "TEAMS_PERMISSIONS"
             REFERENCING NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_insert();
 
             -- DELETE trigger for TEAMS_PERMISSIONS
             CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_delete
-            AFTER DELETE ON public."TEAMS_PERMISSIONS"
+            AFTER DELETE ON "TEAMS_PERMISSIONS"
             REFERENCING OLD TABLE AS old_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_delete();
 
             -- UPDATE trigger for TEAMS_PERMISSIONS
             CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_update
-            AFTER UPDATE ON public."TEAMS_PERMISSIONS"
+            AFTER UPDATE ON "TEAMS_PERMISSIONS"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_update();
@@ -1174,7 +1174,7 @@
         <sql splitStatements="true">
             -- Prevent direct inserts/updates/writes to USER_PROJECT_EFFECTIVE_PERMISSIONS
             CREATE TRIGGER trigger_prevent_direct_effective_permissions_writes
-            BEFORE DELETE OR INSERT OR UPDATE ON public."USER_PROJECT_EFFECTIVE_PERMISSIONS"
+            BEFORE DELETE OR INSERT OR UPDATE ON "USER_PROJECT_EFFECTIVE_PERMISSIONS"
             FOR EACH STATEMENT
             EXECUTE FUNCTION prevent_direct_effective_permissions_writes();
         </sql>

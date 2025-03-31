@@ -302,7 +302,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
             assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), entry.project())))
                     .doesNotContain(getPermissionNames.apply(noAccessTeam.getPermissions()));
 
-            // Add a permission to team and verify effective permissions are updated acordingly
+            // Add a permission to team and verify effective permissions are updated accordingly
             qm.runInTransaction(() -> {
                 var team = qm.getObjectByUuid(Team.class, entry.team().getUuid());
                 team.getPermissions().add(permission);
