@@ -964,7 +964,9 @@
                 PERFORM recalc_user_project_effective_permissions(
                   (SELECT ARRAY_AGG(DISTINCT "PROJECT_ID") FROM old_table)
                 );
-              ELSIF TG_TABLE_NAME IN ('LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS') THEN
+              ELSIF TG_TABLE_NAME IN (
+                'LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS', 'TEAMS_PERMISSIONS'
+              ) THEN
                 PERFORM recalc_user_project_effective_permissions((
                   SELECT ARRAY_AGG(DISTINCT pat."PROJECT_ID")
                     FROM "PROJECT_ACCESS_TEAMS" AS pat
@@ -987,7 +989,9 @@
                 PERFORM recalc_user_project_effective_permissions(
                   (SELECT ARRAY_AGG(DISTINCT "PROJECT_ID") FROM new_table)
                 );
-              ELSIF TG_TABLE_NAME IN ('LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS') THEN
+              ELSIF TG_TABLE_NAME IN (
+                'LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS', 'TEAMS_PERMISSIONS'
+              ) THEN
                 PERFORM recalc_user_project_effective_permissions((
                   SELECT ARRAY_AGG(DISTINCT pat."PROJECT_ID")
                     FROM "PROJECT_ACCESS_TEAMS" AS pat
@@ -1015,7 +1019,9 @@
                       SELECT "PROJECT_ID" FROM new_table
                     ) AS combined_projects
                 ));
-              ELSIF TG_TABLE_NAME IN ('LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS') THEN
+              ELSIF TG_TABLE_NAME IN (
+                'LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS', 'TEAMS_PERMISSIONS'
+              ) THEN
                 PERFORM recalc_user_project_effective_permissions((
                   SELECT ARRAY_AGG(DISTINCT pat."PROJECT_ID")
                     FROM "PROJECT_ACCESS_TEAMS" pat
@@ -1128,6 +1134,27 @@
             -- UPDATE trigger for OIDCUSERS_TEAMS
             CREATE TRIGGER trigger_effective_permissions_mx_on_oidcusers_teams_update
             AFTER UPDATE ON public."OIDCUSERS_TEAMS"
+            REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_update();
+
+            -- INSERT trigger for TEAMS_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_insert
+            AFTER INSERT ON public."TEAMS_PERMISSIONS"
+            REFERENCING NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_insert();
+
+            -- DELETE trigger for TEAMS_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_delete
+            AFTER DELETE ON public."TEAMS_PERMISSIONS"
+            REFERENCING OLD TABLE AS old_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_delete();
+
+            -- UPDATE trigger for TEAMS_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_update
+            AFTER UPDATE ON public."TEAMS_PERMISSIONS"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION effective_permissions_mx_on_update();

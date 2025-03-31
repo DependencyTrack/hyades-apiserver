@@ -284,6 +284,10 @@ public class QueryManagerTest extends PersistenceCapableTest {
             }
         }
 
+        var permission = qm.createPermission(
+                Permissions.POLICY_VIOLATION_ANALYSIS.name(),
+                Permissions.POLICY_VIOLATION_ANALYSIS.getDescription());
+
         for (var entry : new TestMatrixEntry[] {
                 new TestMatrixEntry(ldapUser, project1, team1, List.of(project2, project3)),
                 new TestMatrixEntry(mgdUser, project2, team2, List.of(project1, project3)),
@@ -297,6 +301,16 @@ public class QueryManagerTest extends PersistenceCapableTest {
 
             assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), entry.project())))
                     .doesNotContain(getPermissionNames.apply(noAccessTeam.getPermissions()));
+
+            // Add a permission to team and verify effective permissions are updated acordingly
+            qm.runInTransaction(() -> {
+                var team = qm.getObjectByUuid(Team.class, entry.team().getUuid());
+                team.getPermissions().add(permission);
+                qm.persist(team);
+            });
+
+            assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), entry.project())))
+                    .contains(Permissions.POLICY_VIOLATION_ANALYSIS.name());
         }
     }
 
