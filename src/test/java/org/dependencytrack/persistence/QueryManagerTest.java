@@ -19,6 +19,7 @@
 package org.dependencytrack.persistence;
 
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.FetchStatus;
@@ -26,13 +27,22 @@ import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
+
 import org.junit.Test;
 
+import alpine.model.Permission;
+import alpine.model.Team;
+import alpine.model.UserPrincipal;
+import alpine.server.auth.PasswordService;
+
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -180,6 +190,114 @@ public class QueryManagerTest extends PersistenceCapableTest {
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> qm.tryAcquireAdvisoryLock("foo"))
                 .withMessage("Advisory lock can only be acquired in a transaction");
+    }
+
+    @Test
+    public void testGetEffectivePermissions() {
+        var ldapUser = qm.createLdapUser("ldapuser");
+        var mgdUser = qm.createManagedUser("mgduser", "mgduser", "mgduser@localhost",
+                new String(PasswordService.createHash("mgduser".toCharArray())), true, false, false);
+        var oidcUser = qm.createOidcUser("oidcuser");
+
+        BiFunction<String, List<Permissions>, Team> teamCreator = (name, permissions) -> {
+            return qm.callInTransaction(() -> {
+                var team = qm.createTeam(name, false);
+                team.setPermissions(permissions.stream()
+                        .map(permission -> qm.createPermission(permission.name(), permission.getDescription()))
+                        .toList());
+
+                return qm.persist(team);
+            });
+        };
+
+        var team1 = teamCreator.apply("Effective Permissions Test Team 1", List.of(
+                Permissions.PORTFOLIO_MANAGEMENT,
+                Permissions.VULNERABILITY_ANALYSIS,
+                Permissions.VULNERABILITY_MANAGEMENT,
+                Permissions.ACCESS_MANAGEMENT,
+                Permissions.SYSTEM_CONFIGURATION,
+                Permissions.POLICY_MANAGEMENT));
+
+        var team2 = teamCreator.apply("Effective Permissions Test Team 2", List.of(
+                Permissions.VIEW_PORTFOLIO,
+                Permissions.VIEW_VULNERABILITY,
+                Permissions.VIEW_POLICY_VIOLATION,
+                Permissions.VIEW_BADGES));
+
+        var team3 = teamCreator.apply("Effective Permissions Test Team 3", List.of(
+                Permissions.PORTFOLIO_MANAGEMENT_UPDATE,
+                Permissions.VULNERABILITY_ANALYSIS_UPDATE,
+                Permissions.VULNERABILITY_MANAGEMENT_UPDATE,
+                Permissions.ACCESS_MANAGEMENT_UPDATE,
+                Permissions.SYSTEM_CONFIGURATION_UPDATE,
+                Permissions.POLICY_MANAGEMENT_UPDATE));
+
+        var noAccessTeam = teamCreator.apply("Effective Permissions Test with No Access", List.of(
+                Permissions.BOM_UPLOAD,
+                Permissions.PROJECT_CREATION_UPLOAD));
+
+        qm.addUserToTeam(ldapUser, team1);
+        qm.addUserToTeam(mgdUser, team2);
+        qm.addUserToTeam(oidcUser, team3);
+
+        // Add all users to a team with no entry in PROJECT_ACCESS_TEAMS having
+        // permissions that should not be present during assertion
+        qm.addUserToTeam(ldapUser, noAccessTeam);
+        qm.addUserToTeam(mgdUser, noAccessTeam);
+        qm.addUserToTeam(oidcUser, noAccessTeam);
+
+        BiFunction<String, String, Project> projectCreator = (name, version) -> {
+            return qm.callInTransaction(() -> {
+                var project = new Project();
+                project.setName(name);
+                project.setDescription("Project for testing effective permissions");
+                project.setVersion(version);
+                project.setActive(true);
+                project.setIsLatest(true);
+
+                return qm.persist(project);
+            });
+        };
+
+        var project1 = projectCreator.apply("test-project-1", "v0.1.0");
+        var project2 = projectCreator.apply("test-project-2", "v0.1.1");
+        var project3 = projectCreator.apply("test-project-3", "v0.1.2");
+
+        project1.addAccessTeam(team1);
+        qm.persist(project1);
+        project2.addAccessTeam(team2);
+        qm.persist(project2);
+        project3.addAccessTeam(team3);
+        qm.persist(project3);
+
+        Function<List<Permission>, String[]> getPermissionNames = permissions -> permissions
+                .stream()
+                .map(Permission::getName)
+                .toArray(String[]::new);
+
+        record TestMatrixEntry(UserPrincipal user, Project project, Team team, List<Project> noAccessProjects) {
+            String[] getPermissionNames(List<Permission> permissions) {
+                return permissions
+                        .stream()
+                        .map(Permission::getName)
+                        .toArray(String[]::new);
+            }
+        }
+
+        for (var entry : new TestMatrixEntry[] {
+                new TestMatrixEntry(ldapUser, project1, team1, List.of(project2, project3)),
+                new TestMatrixEntry(mgdUser, project2, team2, List.of(project1, project3)),
+                new TestMatrixEntry(oidcUser, project3, team3, List.of(project1, project2))
+        }) {
+            assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), entry.project())))
+                    .containsExactlyInAnyOrder(entry.getPermissionNames(entry.team().getPermissions()));
+
+            for (var project : entry.noAccessProjects())
+                assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), project))).isEmpty();
+
+            assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), entry.project())))
+                    .doesNotContain(getPermissionNames.apply(noAccessTeam.getPermissions()));
+        }
     }
 
 }
