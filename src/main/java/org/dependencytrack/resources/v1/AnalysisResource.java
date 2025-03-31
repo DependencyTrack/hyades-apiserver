@@ -55,13 +55,13 @@ import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.AnalysisRequest;
 import org.dependencytrack.util.AnalysisCommentFormatter.AnalysisCommentField;
-import org.dependencytrack.util.AnalysisCommentUtil;
 import org.dependencytrack.util.NotificationUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.util.AnalysisCommentFormatter.formatComment;
 
 /**
@@ -193,41 +193,36 @@ public class AnalysisResource extends AbstractApiResource {
                 commenter = null;
             }
 
-            boolean analysisStateChange;
-            final boolean suppressionChange;
-            final var analysisExisting = qm.getAnalysis(component, vulnerability);
-            final Long analysisId;
-            if (analysisExisting != null) {
-                // Existing Analysis
-                analysisStateChange = AnalysisCommentUtil.makeStateComment(analysisExisting, request.getAnalysisState(), commenter);
-                AnalysisCommentUtil.makeJustificationComment(analysisExisting, request.getAnalysisJustification(), commenter);
-                AnalysisCommentUtil.makeAnalysisResponseComment(analysisExisting, request.getAnalysisResponse(), commenter);
-                AnalysisCommentUtil.makeAnalysisDetailsComment(analysisExisting, request.getAnalysisDetails(), commenter);
-                suppressionChange = AnalysisCommentUtil.makeAnalysisSuppressionComment(analysisExisting, request.isSuppressed(), commenter);
-                analysisId = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                        .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), request.getAnalysisState(),
-                                request.getAnalysisJustification(), request.getAnalysisResponse(), request.getAnalysisDetails(),
-                                suppressionChange ? request.isSuppressed() : analysisExisting.isSuppressed()));
-            } else {
-                // New Analysis
-                analysisId = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                        .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), request.getAnalysisState(),
-                                request.getAnalysisJustification(), request.getAnalysisResponse(), request.getAnalysisDetails(),
-                                request.isSuppressed() == null ? false : request.isSuppressed()));
-                suppressionChange = false;
-                analysisStateChange = true; // this is a new analysis - so set to true because it was previously null
-                if (AnalysisState.NOT_SET != request.getAnalysisState()) {
-                    withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                            .makeAnalysisComment(analysisId, formatComment(AnalysisCommentField.STATE, AnalysisState.NOT_SET, request.getAnalysisState()), commenter));
+            AtomicBoolean analysisStateChange = new AtomicBoolean(false);
+            AtomicBoolean suppressionChange = new AtomicBoolean(false);
+            inJdbiTransaction(handle -> {
+                final var dao = handle.attach(AnalysisDao.class);
+                var analysis = dao.getAnalysis(component.getId(), vulnerability.getId());
+                if (analysis != null) {
+                    // Existing Analysis
+                    analysisStateChange.set(dao.makeStateComment(analysis, request.getAnalysisState(), commenter));
+                    dao.makeJustificationComment(analysis, request.getAnalysisJustification(), commenter);
+                    dao.makeAnalysisResponseComment(analysis, request.getAnalysisResponse(), commenter);
+                    dao.makeAnalysisDetailsComment(analysis, request.getAnalysisDetails(), commenter);
+                    suppressionChange.set(dao.makeAnalysisSuppressionComment(analysis, request.isSuppressed(), commenter));
+                    analysis = dao.makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), request.getAnalysisState(),
+                            request.getAnalysisJustification(), request.getAnalysisResponse(), request.getAnalysisDetails(),
+                            suppressionChange.get() ? request.isSuppressed() : analysis.isSuppressed());
+                } else {
+                    // New Analysis
+                    analysis = dao.makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), request.getAnalysisState(),
+                                    request.getAnalysisJustification(), request.getAnalysisResponse(), request.getAnalysisDetails(),
+                                    request.isSuppressed() == null ? false : request.isSuppressed());
+                    analysisStateChange.set(true); // this is a new analysis - so set to true because it was previously null
+                    if (AnalysisState.NOT_SET != request.getAnalysisState()) {
+                        dao.makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentField.STATE, AnalysisState.NOT_SET, request.getAnalysisState()), commenter);
+                    }
                 }
-            }
-            withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                    .makeAnalysisComment(analysisId, StringUtils.trimToNull(request.getComment()), commenter));
-            qm.getPersistenceManager().refresh(analysisExisting);
-            var analysis = qm.getAnalysis(component, vulnerability);
-            NotificationUtil.analyzeNotificationCriteria(qm, analysis, analysisStateChange, suppressionChange);
-            return Response.ok(analysis).build();
+                return dao.makeAnalysisComment(analysis.getId(), StringUtils.trimToNull(request.getComment()), commenter);
+            });
+            Analysis finalAnalysis = qm.getAnalysis(component, vulnerability);
+            NotificationUtil.analyzeNotificationCriteria(qm, finalAnalysis, analysisStateChange.get(), suppressionChange.get());
+            return Response.ok(finalAnalysis).build();
         }
     }
-
 }

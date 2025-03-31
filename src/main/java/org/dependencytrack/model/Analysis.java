@@ -21,6 +21,7 @@ package org.dependencytrack.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Extension;
@@ -32,7 +33,6 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
@@ -76,22 +76,22 @@ public class Analysis implements Serializable {
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "STATE", jdbcType = "VARCHAR", allowsNull = "false")
     @NotNull
-    private AnalysisState analysisState;
+    private AnalysisState state;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "JUSTIFICATION", jdbcType = "VARCHAR", allowsNull = "true")
     @NotNull
-    private AnalysisJustification analysisJustification;
+    private AnalysisJustification justification;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "RESPONSE", jdbcType = "VARCHAR", allowsNull = "true")
     @NotNull
-    private AnalysisResponse analysisResponse;
+    private AnalysisResponse response;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "DETAILS", jdbcType = "CLOB", allowsNull = "true")
     @NotNull
-    private String analysisDetails;
+    private String details;
 
     @Persistent(mappedBy = "analysis", defaultFetchGroup = "true")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "timestamp ASC, id ASC"))
@@ -171,36 +171,36 @@ public class Analysis implements Serializable {
         this.vulnerability = vulnerability;
     }
 
-    public AnalysisState getAnalysisState() {
-        return analysisState;
+    public AnalysisState getState() {
+        return state;
     }
 
-    public void setAnalysisState(AnalysisState analysisState) {
-        this.analysisState = analysisState;
+    public void setState(AnalysisState state) {
+        this.state = state;
     }
 
-    public AnalysisJustification getAnalysisJustification() {
-        return analysisJustification;
+    public AnalysisJustification getJustification() {
+        return justification;
     }
 
-    public void setAnalysisJustification(AnalysisJustification analysisJustification) {
-        this.analysisJustification = analysisJustification;
+    public void setJustification(AnalysisJustification justification) {
+        this.justification = justification;
     }
 
-    public AnalysisResponse getAnalysisResponse() {
-        return analysisResponse;
+    public AnalysisResponse getResponse() {
+        return response;
     }
 
-    public void setAnalysisResponse(AnalysisResponse analysisResponse) {
-        this.analysisResponse = analysisResponse;
+    public void setResponse(AnalysisResponse response) {
+        this.response = response;
     }
 
-    public String getAnalysisDetails() {
-        return analysisDetails;
+    public String getDetails() {
+        return details;
     }
 
-    public void setAnalysisDetails(String analysisDetails) {
-        this.analysisDetails = analysisDetails;
+    public void setDetails(String details) {
+        this.details = details;
     }
 
     public List<AnalysisComment> getAnalysisComments() {

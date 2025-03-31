@@ -226,7 +226,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         final var analysis = new Analysis();
         analysis.setComponent(component);
         analysis.setVulnerability(vuln);
-        analysis.setAnalysisState(AnalysisState.EXPLOITABLE);
+        analysis.setState(AnalysisState.EXPLOITABLE);
         analysis.setSeverity(Severity.CRITICAL);
         analysis.setCvssV3Vector("cvssV3VectorOverwrite");
         analysis.setCvssV3Score(BigDecimal.valueOf(10.0));
@@ -438,7 +438,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         final var analysis = new Analysis();
         analysis.setComponent(component);
         analysis.setVulnerability(vuln);
-        analysis.setAnalysisState(AnalysisState.EXPLOITABLE);
+        analysis.setState(AnalysisState.EXPLOITABLE);
         analysis.setSeverity(Severity.CRITICAL);
         analysis.setCvssV3Vector("cvssV3VectorOverwrite");
         analysis.setCvssV3Score(BigDecimal.valueOf(10.0));
@@ -534,7 +534,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
         var policyAnalysis = qm.getAnalysis(component, vulnA);
 
         final Optional<VulnerabilityAnalysisDecisionChangeSubject> optionalSubject = withJdbiHandle(handle -> handle.attach(NotificationSubjectDao.class)
-                .getForProjectAuditChange(component.getUuid(), vulnA.getUuid(), policyAnalysis.getAnalysisState(), policyAnalysis.isSuppressed()));
+                .getForProjectAuditChange(component.getUuid(), vulnA.getUuid(), policyAnalysis.getState(), policyAnalysis.isSuppressed()));
 
         assertThat(optionalSubject.get()).satisfies(subject ->
                 assertThatJson(JsonFormat.printer().print(subject))

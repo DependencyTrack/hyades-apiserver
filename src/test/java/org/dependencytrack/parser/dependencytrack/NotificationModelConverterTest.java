@@ -675,7 +675,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         final var analysis = new org.dependencytrack.model.Analysis();
         analysis.setComponent(component);
         analysis.setVulnerability(vuln);
-        analysis.setAnalysisState(AnalysisState.FALSE_POSITIVE);
+        analysis.setState(AnalysisState.FALSE_POSITIVE);
         analysis.setSuppressed(true);
         return analysis;
     }

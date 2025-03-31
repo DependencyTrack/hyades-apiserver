@@ -268,7 +268,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var analysis = new Analysis();
         analysis.setComponent(component);
         analysis.setSeverity(Severity.LOW);
-        analysis.setAnalysisState(AnalysisState.FALSE_POSITIVE);
+        analysis.setState(AnalysisState.FALSE_POSITIVE);
         analysis.setVulnerability(vulnSuppressed);
         qm.persist(analysis);
         var componentMetricsUpdateEvent = new ComponentMetricsUpdateEvent(component.getUuid());

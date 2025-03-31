@@ -18,19 +18,21 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
+import org.dependencytrack.util.AnalysisCommentFormatter;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
-import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
-import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.util.List;
+
+import static org.dependencytrack.util.AnalysisCommentFormatter.formatComment;
 
 public interface AnalysisDao {
 
@@ -59,7 +61,17 @@ public interface AnalysisDao {
         return createComment(analysisId, comment, commenter);
     }
 
-    @SqlUpdate("""
+    @SqlQuery("""
+            SELECT *
+            FROM "ANALYSIS"
+            WHERE "COMPONENT_ID" = :componentId
+            AND "VULNERABILITY_ID" = :vulnId
+            LIMIT 1
+            """)
+    @RegisterBeanMapper(Analysis.class)
+    Analysis getAnalysis(@Bind long componentId, @Bind long vulnId);
+
+    @SqlQuery("""
             INSERT INTO "ANALYSIS"
                ("PROJECT_ID", "COMPONENT_ID", "VULNERABILITY_ID", "STATE", "JUSTIFICATION", "RESPONSE", "DETAILS", "SUPPRESSED")
             VALUES
@@ -81,11 +93,55 @@ public interface AnalysisDao {
                <#if details>
                     , "DETAILS" = :details
                </#if>
-            RETURNING "ID"
+            RETURNING *
             """)
-    @GetGeneratedKeys("ID")
     @DefineNamedBindings
-    Long makeAnalysis(@Bind long projectId, @Bind long componentId, @Bind long vulnId, @Bind AnalysisState state,
+    @RegisterBeanMapper(Analysis.class)
+    Analysis makeAnalysis(@Bind long projectId, @Bind long componentId, @Bind long vulnId, @Bind AnalysisState state,
                           @Bind AnalysisJustification justification, @Bind AnalysisResponse response,
                           @Bind String details, @Bind boolean suppressed);
+
+    default boolean makeStateComment(final Analysis analysis, final AnalysisState analysisState, final String commenter) {
+        boolean analysisStateChange = false;
+        if (analysisState != null && analysisState != analysis.getState()) {
+            analysisStateChange = true;
+            makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.STATE, analysis.getState(), analysisState), commenter);
+        }
+        return analysisStateChange;
+    }
+
+    default void makeJustificationComment(final Analysis analysis, final AnalysisJustification analysisJustification, final String commenter) {
+        if (analysisJustification != null) {
+            if (analysis.getJustification() == null && AnalysisJustification.NOT_SET != analysisJustification) {
+                makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.JUSTIFICATION, AnalysisJustification.NOT_SET, analysisJustification), commenter);
+            } else if (analysis.getJustification() != null && analysisJustification != analysis.getJustification()) {
+                makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.JUSTIFICATION, analysis.getJustification(), analysisJustification), commenter);
+            }
+        }
+    }
+
+    default void makeAnalysisResponseComment(final Analysis analysis, final AnalysisResponse analysisResponse, final String commenter) {
+        if (analysisResponse != null) {
+            if (analysis.getResponse() == null && analysis.getResponse() != analysisResponse) {
+                makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.RESPONSE, AnalysisResponse.NOT_SET, analysisResponse), commenter);
+            } else if (analysis.getResponse() != null && analysis.getResponse() != analysisResponse) {
+                makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.RESPONSE, analysis.getResponse(), analysisResponse), commenter);
+            }
+        }
+    }
+
+    default void makeAnalysisDetailsComment(final Analysis analysis, final String analysisDetails, final String commenter) {
+        if (analysisDetails != null && !analysisDetails.equals(analysis.getDetails())) {
+            makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.DETAILS, analysis.getDetails(), analysisDetails), commenter);
+        }
+    }
+
+    default boolean makeAnalysisSuppressionComment(final Analysis analysis, final Boolean suppressed, final String commenter) {
+        boolean suppressionChange = false;
+        if (suppressed != null && analysis.isSuppressed() != suppressed) {
+            suppressionChange = true;
+            makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.SUPPRESSED, analysis.isSuppressed(), suppressed), commenter);
+        }
+        return suppressionChange;
+    }
 }

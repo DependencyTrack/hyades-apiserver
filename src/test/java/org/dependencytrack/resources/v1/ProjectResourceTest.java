@@ -2447,11 +2447,11 @@ public class ProjectResourceTest extends ResourceTest {
 
         qm.addVulnerability(vuln, componentA, AnalyzerIdentity.INTERNAL_ANALYZER);
 
-        final var analysisId = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+        final var analysis = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
                 .makeAnalysis(project.getId(), componentA.getId(), vuln.getId(), AnalysisState.NOT_AFFECTED,
                         AnalysisJustification.REQUIRES_ENVIRONMENT, AnalysisResponse.WILL_NOT_FIX, "details", false));
         withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
-                .makeAnalysisComment(analysisId, "comment", "commenter"));
+                .makeAnalysisComment(analysis.getId(), "comment", "commenter"));
 
         final VulnerabilityPolicy vulnPolicy = withJdbiHandle(handle -> {
             final var policyAnalysis = new VulnerabilityPolicyAnalysis();
@@ -2474,7 +2474,7 @@ public class ProjectResourceTest extends ResourceTest {
                          WHERE "ID" = :analysisId
                         """)
                 .bind("policyName", vulnPolicy.getName())
-                .bind("analysisId", analysisId)
+                .bind("analysisId", analysis.getId())
                 .execute());
 
 
@@ -2582,11 +2582,11 @@ public class ProjectResourceTest extends ResourceTest {
                                 assertThat(qm.getAllVulnerabilities(clonedComponent)).containsOnly(vuln);
 
                                 assertThat(qm.getAnalysis(clonedComponent, vuln)).satisfies(clonedAnalysis -> {
-                                    assertThat(clonedAnalysis.getId()).isNotEqualTo(analysisId);
-                                    assertThat(clonedAnalysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
-                                    assertThat(clonedAnalysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.REQUIRES_ENVIRONMENT);
-                                    assertThat(clonedAnalysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
-                                    assertThat(clonedAnalysis.getAnalysisDetails()).isEqualTo("details");
+                                    assertThat(clonedAnalysis.getId()).isNotEqualTo(analysis.getId());
+                                    assertThat(clonedAnalysis.getState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+                                    assertThat(clonedAnalysis.getJustification()).isEqualTo(AnalysisJustification.REQUIRES_ENVIRONMENT);
+                                    assertThat(clonedAnalysis.getResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+                                    assertThat(clonedAnalysis.getDetails()).isEqualTo("details");
                                     assertThat(clonedAnalysis.isSuppressed()).isFalse();
                                     assertThat(clonedAnalysis.getVulnerabilityPolicyId()).isNotNull();
                                 });

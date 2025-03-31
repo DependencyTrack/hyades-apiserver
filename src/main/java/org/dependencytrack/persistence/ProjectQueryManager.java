@@ -774,7 +774,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 if (analyses != null) {
                     for (final Analysis sourceAnalysis : analyses) {
                         Analysis analysis = new Analysis();
-                        analysis.setAnalysisState(sourceAnalysis.getAnalysisState());
+                        analysis.setState(sourceAnalysis.getState());
                         final Component clonedComponent = clonedComponentBySourceComponentId.get(sourceAnalysis.getComponent().getId());
                         if (clonedComponent == null) {
                             break;
@@ -782,10 +782,10 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                         analysis.setComponent(clonedComponent);
                         analysis.setVulnerability(sourceAnalysis.getVulnerability());
                         analysis.setSuppressed(sourceAnalysis.isSuppressed());
-                        analysis.setAnalysisResponse(sourceAnalysis.getAnalysisResponse());
-                        analysis.setAnalysisJustification(sourceAnalysis.getAnalysisJustification());
-                        analysis.setAnalysisState(sourceAnalysis.getAnalysisState());
-                        analysis.setAnalysisDetails(sourceAnalysis.getAnalysisDetails());
+                        analysis.setResponse(sourceAnalysis.getResponse());
+                        analysis.setJustification(sourceAnalysis.getJustification());
+                        analysis.setState(sourceAnalysis.getState());
+                        analysis.setDetails(sourceAnalysis.getDetails());
                         analysis.setVulnerabilityPolicyId(sourceAnalysis.getVulnerabilityPolicyId());
                         analysis = persist(analysis);
                         if (sourceAnalysis.getAnalysisComments() != null) {
