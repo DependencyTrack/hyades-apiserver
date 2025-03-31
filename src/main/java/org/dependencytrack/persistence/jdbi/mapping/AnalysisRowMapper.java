@@ -49,10 +49,10 @@ public class AnalysisRowMapper implements RowMapper<Analysis> {
             vuln.setId(value);
             analysis.setVulnerability(vuln);
         });
-        maybeSet(rs, "STATE", ResultSet::getString, value -> analysis.setState(AnalysisState.valueOf(value)));
-        maybeSet(rs, "JUSTIFICATION", ResultSet::getString, value -> analysis.setJustification(AnalysisJustification.valueOf(value)));
-        maybeSet(rs, "RESPONSE", ResultSet::getString, value -> analysis.setResponse(AnalysisResponse.valueOf(value)));
-        maybeSet(rs, "DETAILS", ResultSet::getString, analysis::setDetails);
+        maybeSet(rs, "STATE", ResultSet::getString, value -> analysis.setAnalysisState(AnalysisState.valueOf(value)));
+        maybeSet(rs, "JUSTIFICATION", ResultSet::getString, value -> analysis.setAnalysisJustification(AnalysisJustification.valueOf(value)));
+        maybeSet(rs, "RESPONSE", ResultSet::getString, value -> analysis.setAnalysisResponse(AnalysisResponse.valueOf(value)));
+        maybeSet(rs, "DETAILS", ResultSet::getString, analysis::setAnalysisDetails);
         maybeSet(rs, "SUPPRESSED", ResultSet::getBoolean, analysis::setSuppressed);
         maybeSet(rs, "SEVERITY", ResultSet::getString, value -> analysis.setSeverity(Severity.valueOf(value)));
         maybeSet(rs, "CVSSV2VECTOR", ResultSet::getString, analysis::setCvssV2Vector);

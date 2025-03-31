@@ -56,8 +56,8 @@ public class AnalysisTest {
     @Test
     public void testAnalysisState() {
         Analysis analysis = new Analysis();
-        analysis.setState(AnalysisState.EXPLOITABLE);
-        Assert.assertEquals(AnalysisState.EXPLOITABLE, analysis.getState());
+        analysis.setAnalysisState(AnalysisState.EXPLOITABLE);
+        Assert.assertEquals(AnalysisState.EXPLOITABLE, analysis.getAnalysisState());
     }
 
     @Test

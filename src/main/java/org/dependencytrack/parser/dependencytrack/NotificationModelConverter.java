@@ -417,7 +417,7 @@ public final class NotificationModelConverter {
                 .setVulnerability(convert(analysis.getVulnerability()))
                 .setSuppressed(analysis.isSuppressed());
 
-        Optional.ofNullable(analysis.getState()).map(Enum::name).ifPresent(builder::setState);
+        Optional.ofNullable(analysis.getAnalysisState()).map(Enum::name).ifPresent(builder::setState);
 
         return builder.build();
     }

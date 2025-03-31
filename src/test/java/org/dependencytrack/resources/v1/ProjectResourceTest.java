@@ -2583,10 +2583,10 @@ public class ProjectResourceTest extends ResourceTest {
 
                                 assertThat(qm.getAnalysis(clonedComponent, vuln)).satisfies(clonedAnalysis -> {
                                     assertThat(clonedAnalysis.getId()).isNotEqualTo(analysis.getId());
-                                    assertThat(clonedAnalysis.getState()).isEqualTo(AnalysisState.NOT_AFFECTED);
-                                    assertThat(clonedAnalysis.getJustification()).isEqualTo(AnalysisJustification.REQUIRES_ENVIRONMENT);
-                                    assertThat(clonedAnalysis.getResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
-                                    assertThat(clonedAnalysis.getDetails()).isEqualTo("details");
+                                    assertThat(clonedAnalysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+                                    assertThat(clonedAnalysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.REQUIRES_ENVIRONMENT);
+                                    assertThat(clonedAnalysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+                                    assertThat(clonedAnalysis.getAnalysisDetails()).isEqualTo("details");
                                     assertThat(clonedAnalysis.isSuppressed()).isFalse();
                                     assertThat(clonedAnalysis.getVulnerabilityPolicyId()).isNotNull();
                                 });

@@ -74,10 +74,10 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
         var analysis = analysisDao.getAnalysis(component.getId(), vulnerability.getId());
 
         assertThat(analysis).isNotNull();
-        assertThat(analysis.getState()).isEqualTo(AnalysisState.NOT_AFFECTED);
-        assertThat(analysis.getJustification()).isEqualTo(AnalysisJustification.PROTECTED_AT_RUNTIME);
-        assertThat(analysis.getResponse()).isEqualTo(AnalysisResponse.UPDATE);
-        assertThat(analysis.getDetails()).isEqualTo("Analysis details here");
+        assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+        assertThat(analysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.PROTECTED_AT_RUNTIME);
+        assertThat(analysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.UPDATE);
+        assertThat(analysis.getAnalysisDetails()).isEqualTo("Analysis details here");
         assertThat(analysis.isSuppressed()).isTrue();
     }
 
@@ -129,10 +129,10 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
             assertThat(analysis.getVulnerability()).isEqualTo(vulnerability);
             assertThat(analysis.getComponent()).isEqualTo(component);
             assertThat(analysis.getProject()).isEqualTo(project);
-            assertThat(analysis.getState()).isEqualTo(AnalysisState.NOT_SET);
-            assertThat(analysis.getJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
-            assertThat(analysis.getResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
-            assertThat(analysis.getDetails()).isEqualTo("Analysis details here");
+            assertThat(analysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_SET);
+            assertThat(analysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
+            assertThat(analysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+            assertThat(analysis.getAnalysisDetails()).isEqualTo("Analysis details here");
             assertThat(analysis.isSuppressed()).isTrue();
         });
     }
@@ -158,10 +158,10 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
                         AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", false);
 
         assertThat(analysisUpdated.getId()).isEqualTo(analysisExisting.getId());
-        assertThat(analysisUpdated.getState()).isEqualTo(AnalysisState.NOT_AFFECTED);
-        assertThat(analysisUpdated.getJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
-        assertThat(analysisUpdated.getResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
-        assertThat(analysisUpdated.getDetails()).isEqualTo("Analysis details here");
+        assertThat(analysisUpdated.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+        assertThat(analysisUpdated.getAnalysisJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
+        assertThat(analysisUpdated.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+        assertThat(analysisUpdated.getAnalysisDetails()).isEqualTo("Analysis details here");
         assertThat(analysisUpdated.isSuppressed()).isFalse();
     }
 
@@ -183,13 +183,13 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
         var analysisExisting = analysisDao.makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.NOT_AFFECTED,
                         AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true);
 
-        var analysisUpdated = analysisDao.makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), null, null, null, null, false);
+        var analysisUpdated = analysisDao.makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), null, null, null, null, null);
 
         assertThat(analysisUpdated.getId()).isEqualTo(analysisExisting.getId());
-        assertThat(analysisUpdated.getState()).isEqualTo(AnalysisState.NOT_AFFECTED);
-        assertThat(analysisUpdated.getJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
-        assertThat(analysisUpdated.getResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
-        assertThat(analysisUpdated.getDetails()).isEqualTo("Analysis details here");
-        assertThat(analysisUpdated.isSuppressed()).isFalse();
+        assertThat(analysisUpdated.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+        assertThat(analysisUpdated.getAnalysisJustification()).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE);
+        assertThat(analysisUpdated.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+        assertThat(analysisUpdated.getAnalysisDetails()).isEqualTo("Analysis details here");
+        assertThat(analysisUpdated.isSuppressed()).isTrue();
     }
 }

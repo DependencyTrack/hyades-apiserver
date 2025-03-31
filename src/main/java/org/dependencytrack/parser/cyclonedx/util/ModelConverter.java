@@ -1026,21 +1026,21 @@ public class ModelConverter {
             );
             if (analysis != null) {
                 final org.cyclonedx.model.vulnerability.Vulnerability.Analysis cdxAnalysis = new org.cyclonedx.model.vulnerability.Vulnerability.Analysis();
-                if (analysis.getResponse() != null) {
-                    final org.cyclonedx.model.vulnerability.Vulnerability.Analysis.Response response = convertDtVulnAnalysisResponseToCdxAnalysisResponse(analysis.getResponse());
+                if (analysis.getAnalysisResponse() != null) {
+                    final org.cyclonedx.model.vulnerability.Vulnerability.Analysis.Response response = convertDtVulnAnalysisResponseToCdxAnalysisResponse(analysis.getAnalysisResponse());
                     if (response != null) {
                         List<org.cyclonedx.model.vulnerability.Vulnerability.Analysis.Response> responses = new ArrayList<>();
                         responses.add(response);
                         cdxAnalysis.setResponses(responses);
                     }
                 }
-                if (analysis.getState() != null) {
-                    cdxAnalysis.setState(convertDtVulnAnalysisStateToCdxAnalysisState(analysis.getState()));
+                if (analysis.getAnalysisState() != null) {
+                    cdxAnalysis.setState(convertDtVulnAnalysisStateToCdxAnalysisState(analysis.getAnalysisState()));
                 }
-                if (analysis.getJustification() != null) {
-                    cdxAnalysis.setJustification(convertDtVulnAnalysisJustificationToCdxAnalysisJustification(analysis.getJustification()));
+                if (analysis.getAnalysisJustification() != null) {
+                    cdxAnalysis.setJustification(convertDtVulnAnalysisJustificationToCdxAnalysisJustification(analysis.getAnalysisJustification()));
                 }
-                cdxAnalysis.setDetail(StringUtils.trimToNull(analysis.getDetails()));
+                cdxAnalysis.setDetail(StringUtils.trimToNull(analysis.getAnalysisDetails()));
                 cdxVulnerability.setAnalysis(cdxAnalysis);
             }
         }

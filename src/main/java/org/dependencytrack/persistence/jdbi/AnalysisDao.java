@@ -62,7 +62,12 @@ public interface AnalysisDao {
     }
 
     @SqlQuery("""
-            SELECT *
+            SELECT "ID"
+                   , "STATE" AS "analysisState"
+                   , "JUSTIFICATION" AS "analysisJustification"
+                   , "RESPONSE" AS "analysisResponse"
+                   , "DETAILS" AS "analysisDetails"
+                   , "SUPPRESSED"
             FROM "ANALYSIS"
             WHERE "COMPONENT_ID" = :componentId
             AND "VULNERABILITY_ID" = :vulnId
@@ -77,12 +82,16 @@ public interface AnalysisDao {
             VALUES
                (:projectId, :componentId, :vulnId,
                COALESCE(:state, 'NOT_SET'),
-               :justification, :response, :details, :suppressed)
+               :justification, :response, :details,
+               COALESCE(:suppressed, false))
             ON CONFLICT ("PROJECT_ID", "COMPONENT_ID", "VULNERABILITY_ID") DO UPDATE
             SET
-               "SUPPRESSED" = :suppressed
+               "PROJECT_ID" = :projectId
                <#if state>
                     , "STATE" = :state
+               </#if>
+               <#if suppressed>
+                    , "SUPPRESSED" = :suppressed
                </#if>
                <#if justification>
                     , "JUSTIFICATION" = :justification
@@ -93,46 +102,51 @@ public interface AnalysisDao {
                <#if details>
                     , "DETAILS" = :details
                </#if>
-            RETURNING *
+            RETURNING "ID"
+                   , "STATE" AS "analysisState"
+                   , "JUSTIFICATION" AS "analysisJustification"
+                   , "RESPONSE" AS "analysisResponse"
+                   , "DETAILS" AS "analysisDetails"
+                   , "SUPPRESSED"
             """)
     @DefineNamedBindings
     @RegisterBeanMapper(Analysis.class)
     Analysis makeAnalysis(@Bind long projectId, @Bind long componentId, @Bind long vulnId, @Bind AnalysisState state,
                           @Bind AnalysisJustification justification, @Bind AnalysisResponse response,
-                          @Bind String details, @Bind boolean suppressed);
+                          @Bind String details, @Bind Boolean suppressed);
 
     default boolean makeStateComment(final Analysis analysis, final AnalysisState analysisState, final String commenter) {
         boolean analysisStateChange = false;
-        if (analysisState != null && analysisState != analysis.getState()) {
+        if (analysisState != null && analysisState != analysis.getAnalysisState()) {
             analysisStateChange = true;
-            makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.STATE, analysis.getState(), analysisState), commenter);
+            makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.STATE, analysis.getAnalysisState(), analysisState), commenter);
         }
         return analysisStateChange;
     }
 
     default void makeJustificationComment(final Analysis analysis, final AnalysisJustification analysisJustification, final String commenter) {
         if (analysisJustification != null) {
-            if (analysis.getJustification() == null && AnalysisJustification.NOT_SET != analysisJustification) {
+            if (analysis.getAnalysisJustification() == null && AnalysisJustification.NOT_SET != analysisJustification) {
                 makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.JUSTIFICATION, AnalysisJustification.NOT_SET, analysisJustification), commenter);
-            } else if (analysis.getJustification() != null && analysisJustification != analysis.getJustification()) {
-                makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.JUSTIFICATION, analysis.getJustification(), analysisJustification), commenter);
+            } else if (analysis.getAnalysisJustification() != null && analysisJustification != analysis.getAnalysisJustification()) {
+                makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.JUSTIFICATION, analysis.getAnalysisJustification(), analysisJustification), commenter);
             }
         }
     }
 
     default void makeAnalysisResponseComment(final Analysis analysis, final AnalysisResponse analysisResponse, final String commenter) {
         if (analysisResponse != null) {
-            if (analysis.getResponse() == null && analysis.getResponse() != analysisResponse) {
+            if (analysis.getAnalysisResponse() == null && analysis.getAnalysisResponse() != analysisResponse) {
                 makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.RESPONSE, AnalysisResponse.NOT_SET, analysisResponse), commenter);
-            } else if (analysis.getResponse() != null && analysis.getResponse() != analysisResponse) {
-                makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.RESPONSE, analysis.getResponse(), analysisResponse), commenter);
+            } else if (analysis.getAnalysisResponse() != null && analysis.getAnalysisResponse() != analysisResponse) {
+                makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.RESPONSE, analysis.getAnalysisResponse(), analysisResponse), commenter);
             }
         }
     }
 
     default void makeAnalysisDetailsComment(final Analysis analysis, final String analysisDetails, final String commenter) {
-        if (analysisDetails != null && !analysisDetails.equals(analysis.getDetails())) {
-            makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.DETAILS, analysis.getDetails(), analysisDetails), commenter);
+        if (analysisDetails != null && !analysisDetails.equals(analysis.getAnalysisDetails())) {
+            makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentFormatter.AnalysisCommentField.DETAILS, analysis.getAnalysisDetails(), analysisDetails), commenter);
         }
     }
 

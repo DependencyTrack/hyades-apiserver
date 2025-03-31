@@ -76,22 +76,22 @@ public class Analysis implements Serializable {
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "STATE", jdbcType = "VARCHAR", allowsNull = "false")
     @NotNull
-    private AnalysisState state;
+    private AnalysisState analysisState;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "JUSTIFICATION", jdbcType = "VARCHAR", allowsNull = "true")
     @NotNull
-    private AnalysisJustification justification;
+    private AnalysisJustification analysisJustification;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "RESPONSE", jdbcType = "VARCHAR", allowsNull = "true")
     @NotNull
-    private AnalysisResponse response;
+    private AnalysisResponse analysisResponse;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "DETAILS", jdbcType = "CLOB", allowsNull = "true")
     @NotNull
-    private String details;
+    private String analysisDetails;
 
     @Persistent(mappedBy = "analysis", defaultFetchGroup = "true")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "timestamp ASC, id ASC"))
@@ -171,36 +171,36 @@ public class Analysis implements Serializable {
         this.vulnerability = vulnerability;
     }
 
-    public AnalysisState getState() {
-        return state;
+    public AnalysisState getAnalysisState() {
+        return analysisState;
     }
 
-    public void setState(AnalysisState state) {
-        this.state = state;
+    public void setAnalysisState(AnalysisState analysisState) {
+        this.analysisState = analysisState;
     }
 
-    public AnalysisJustification getJustification() {
-        return justification;
+    public AnalysisJustification getAnalysisJustification() {
+        return analysisJustification;
     }
 
-    public void setJustification(AnalysisJustification justification) {
-        this.justification = justification;
+    public void setAnalysisJustification(AnalysisJustification analysisJustification) {
+        this.analysisJustification = analysisJustification;
     }
 
-    public AnalysisResponse getResponse() {
-        return response;
+    public AnalysisResponse getAnalysisResponse() {
+        return analysisResponse;
     }
 
-    public void setResponse(AnalysisResponse response) {
-        this.response = response;
+    public void setAnalysisResponse(AnalysisResponse analysisResponse) {
+        this.analysisResponse = analysisResponse;
     }
 
-    public String getDetails() {
-        return details;
+    public String getAnalysisDetails() {
+        return analysisDetails;
     }
 
-    public void setDetails(String details) {
-        this.details = details;
+    public void setAnalysisDetails(String analysisDetails) {
+        this.analysisDetails = analysisDetails;
     }
 
     public List<AnalysisComment> getAnalysisComments() {

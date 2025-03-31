@@ -137,7 +137,7 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
                 Assertions.assertThat(comment.getCommenter()).isEqualTo("CycloneDX VEX");
                 Assertions.assertThat(comment.getComment()).isEqualTo(String.format("Justification: %s → %s", AnalysisJustification.NOT_SET, AnalysisJustification.PROTECTED_BY_MITIGATING_CONTROL));
             });
-            Assertions.assertThat(analysis.getDetails()).isEqualTo("Unit test");
+            Assertions.assertThat(analysis.getAnalysisDetails()).isEqualTo("Unit test");
         });
     }
 

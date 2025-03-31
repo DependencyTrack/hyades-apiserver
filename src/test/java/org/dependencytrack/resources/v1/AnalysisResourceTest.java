@@ -118,10 +118,10 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final JsonObject responseJson = parseJsonObject(response);
         assertThat(responseJson).isNotNull();
-        assertThat(responseJson.getString("state")).isEqualTo(AnalysisState.NOT_AFFECTED.name());
-        assertThat(responseJson.getString("justification")).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE.name());
-        assertThat(responseJson.getString("response")).isEqualTo(AnalysisResponse.WILL_NOT_FIX.name());
-        assertThat(responseJson.getString("details")).isEqualTo("Analysis details here");
+        assertThat(responseJson.getString("analysisState")).isEqualTo(AnalysisState.NOT_AFFECTED.name());
+        assertThat(responseJson.getString("analysisJustification")).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE.name());
+        assertThat(responseJson.getString("analysisResponse")).isEqualTo(AnalysisResponse.WILL_NOT_FIX.name());
+        assertThat(responseJson.getString("analysisDetails")).isEqualTo("Analysis details here");
         assertThat(responseJson.getJsonArray("analysisComments")).hasSize(1);
         assertThat(responseJson.getJsonArray("analysisComments").getJsonObject(0))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Analysis comment here"))
@@ -376,10 +376,10 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final JsonObject responseJson = parseJsonObject(response);
         assertThat(responseJson).isNotNull();
-        assertThat(responseJson.getString("state")).isEqualTo(AnalysisState.NOT_AFFECTED.name());
-        assertThat(responseJson.getString("justification")).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE.name());
-        assertThat(responseJson.getString("response")).isEqualTo(AnalysisResponse.WILL_NOT_FIX.name());
-        assertThat(responseJson.getString("details")).isEqualTo("Analysis details here");
+        assertThat(responseJson.getString("analysisState")).isEqualTo(AnalysisState.NOT_AFFECTED.name());
+        assertThat(responseJson.getString("analysisJustification")).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE.name());
+        assertThat(responseJson.getString("analysisResponse")).isEqualTo(AnalysisResponse.WILL_NOT_FIX.name());
+        assertThat(responseJson.getString("analysisDetails")).isEqualTo("Analysis details here");
         assertThat(responseJson.getJsonArray("analysisComments")).hasSize(2);
         assertThat(responseJson.getJsonArray("analysisComments").getJsonObject(0))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Analysis: NOT_SET → NOT_AFFECTED"))
@@ -437,10 +437,10 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final JsonObject responseJson = parseJsonObject(response);
         assertThat(responseJson).isNotNull();
-        assertThat(responseJson.getString("state")).isEqualTo(AnalysisState.NOT_AFFECTED.name());
-        assertThat(responseJson.getString("justification")).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE.name());
-        assertThat(responseJson.getString("response")).isEqualTo(AnalysisResponse.WILL_NOT_FIX.name());
-        assertThat(responseJson.getString("details")).isEqualTo("Analysis details here");
+        assertThat(responseJson.getString("analysisState")).isEqualTo(AnalysisState.NOT_AFFECTED.name());
+        assertThat(responseJson.getString("analysisJustification")).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE.name());
+        assertThat(responseJson.getString("analysisResponse")).isEqualTo(AnalysisResponse.WILL_NOT_FIX.name());
+        assertThat(responseJson.getString("analysisDetails")).isEqualTo("Analysis details here");
         assertThat(responseJson.getJsonArray("analysisComments")).hasSize(2);
         assertThat(responseJson.getJsonArray("analysisComments").getJsonObject(0))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Analysis: NOT_SET → NOT_AFFECTED"))
@@ -493,10 +493,10 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final JsonObject responseJson = parseJsonObject(response);
         assertThat(responseJson).isNotNull();
-        assertThat(responseJson.getString("state")).isEqualTo(AnalysisState.NOT_SET.name());
-        assertThat(responseJson.getString("justification")).isEqualTo(AnalysisJustification.NOT_SET.name());
-        assertThat(responseJson.getString("response")).isEqualTo(AnalysisResponse.NOT_SET.name());
-        assertThat(responseJson.getJsonString("details")).isNull();
+        assertThat(responseJson.getString("analysisState")).isEqualTo(AnalysisState.NOT_SET.name());
+        assertThat(responseJson.getString("analysisJustification")).isEqualTo(AnalysisJustification.NOT_SET.name());
+        assertThat(responseJson.getString("analysisResponse")).isEqualTo(AnalysisResponse.NOT_SET.name());
+        assertThat(responseJson.getJsonString("analysisDetails")).isNull();
         assertThat(responseJson.getJsonArray("analysisComments")).isEmpty();
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
@@ -551,10 +551,10 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final JsonObject responseJson = parseJsonObject(response);
         assertThat(responseJson).isNotNull();
-        assertThat(responseJson.getString("state")).isEqualTo(AnalysisState.EXPLOITABLE.name());
-        assertThat(responseJson.getString("justification")).isEqualTo(AnalysisJustification.NOT_SET.name());
-        assertThat(responseJson.getString("response")).isEqualTo(AnalysisResponse.UPDATE.name());
-        assertThat(responseJson.getString("details")).isEqualTo("New analysis details here");
+        assertThat(responseJson.getString("analysisState")).isEqualTo(AnalysisState.EXPLOITABLE.name());
+        assertThat(responseJson.getString("analysisJustification")).isEqualTo(AnalysisJustification.NOT_SET.name());
+        assertThat(responseJson.getString("analysisResponse")).isEqualTo(AnalysisResponse.UPDATE.name());
+        assertThat(responseJson.getString("analysisDetails")).isEqualTo("New analysis details here");
 
         final JsonArray analysisComments = responseJson.getJsonArray("analysisComments");
         assertThat(analysisComments).hasSize(7);
@@ -632,10 +632,10 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final JsonObject responseJson = parseJsonObject(response);
         assertThat(responseJson).isNotNull();
-        assertThat(responseJson.getString("state")).isEqualTo(AnalysisState.NOT_AFFECTED.name());
-        assertThat(responseJson.getString("justification")).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE.name());
-        assertThat(responseJson.getString("response")).isEqualTo(AnalysisResponse.WILL_NOT_FIX.name());
-        assertThat(responseJson.getString("details")).isEqualTo("Analysis details here");
+        assertThat(responseJson.getString("analysisState")).isEqualTo(AnalysisState.NOT_AFFECTED.name());
+        assertThat(responseJson.getString("analysisJustification")).isEqualTo(AnalysisJustification.CODE_NOT_REACHABLE.name());
+        assertThat(responseJson.getString("analysisResponse")).isEqualTo(AnalysisResponse.WILL_NOT_FIX.name());
+        assertThat(responseJson.getString("analysisDetails")).isEqualTo("Analysis details here");
 
         final JsonArray analysisComments = responseJson.getJsonArray("analysisComments");
         assertThat(analysisComments).hasSize(1);
@@ -684,10 +684,10 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final JsonObject responseJson = parseJsonObject(response);
         assertThat(responseJson).isNotNull();
-        assertThat(responseJson.getString("state")).isEqualTo(AnalysisState.NOT_SET.name());
-        assertThat(responseJson.getString("justification")).isEqualTo(AnalysisJustification.NOT_SET.name());
-        assertThat(responseJson.getString("response")).isEqualTo(AnalysisResponse.NOT_SET.name());
-        assertThat(responseJson.getString("details")).isEqualTo("Analysis details here");
+        assertThat(responseJson.getString("analysisState")).isEqualTo(AnalysisState.NOT_SET.name());
+        assertThat(responseJson.getString("analysisJustification")).isEqualTo(AnalysisJustification.NOT_SET.name());
+        assertThat(responseJson.getString("analysisResponse")).isEqualTo(AnalysisResponse.NOT_SET.name());
+        assertThat(responseJson.getString("analysisDetails")).isEqualTo("Analysis details here");
 
         final JsonArray analysisComments = responseJson.getJsonArray("analysisComments");
         assertThat(analysisComments).hasSize(4);
@@ -813,7 +813,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     // Test the scenario where an analysis was created with Dependency-Track <= 4.3.6,
-    // before the additional fields "justification" and "response" were introduced.
+    // before the additional fields "analysisJustification" and "analysisResponse" were introduced.
     // Performing an analysis with those request fields set in >= 4.4.0 then resulted in NPEs,
     // see https://github.com/DependencyTrack/dependency-track/issues/1409
     @Test
@@ -851,10 +851,10 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final JsonObject responseJson = parseJsonObject(response);
         assertThat(responseJson).isNotNull();
-        assertThat(responseJson.getString("state")).isEqualTo(AnalysisState.NOT_AFFECTED.name());
-        assertThat(responseJson.getString("justification")).isEqualTo(AnalysisJustification.PROTECTED_BY_MITIGATING_CONTROL.name());
-        assertThat(responseJson.getString("response")).isEqualTo(AnalysisResponse.UPDATE.name());
-        assertThat(responseJson.getString("details")).isEqualTo("New analysis details here");
+        assertThat(responseJson.getString("analysisState")).isEqualTo(AnalysisState.NOT_AFFECTED.name());
+        assertThat(responseJson.getString("analysisJustification")).isEqualTo(AnalysisJustification.PROTECTED_BY_MITIGATING_CONTROL.name());
+        assertThat(responseJson.getString("analysisResponse")).isEqualTo(AnalysisResponse.UPDATE.name());
+        assertThat(responseJson.getString("analysisDetails")).isEqualTo("New analysis details here");
 
         final JsonArray analysisComments = responseJson.getJsonArray("analysisComments");
         assertThat(analysisComments).hasSize(5);

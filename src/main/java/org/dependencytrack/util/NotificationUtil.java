@@ -96,7 +96,7 @@ public final class NotificationUtil {
         final NotificationGroup notificationGroup;
         notificationGroup = NotificationGroup.PROJECT_AUDIT_CHANGE;
 
-        String title = generateTitle(analysis.getState(), analysis.isSuppressed(), analysisStateChange, suppressionChange);
+        String title = generateTitle(analysis.getAnalysisState(), analysis.isSuppressed(), analysisStateChange, suppressionChange);
 
         Project project = analysis.getComponent().getProject();
 
@@ -518,7 +518,7 @@ public final class NotificationUtil {
         final Analysis analysis = new Analysis();
         analysis.setComponent(component);
         analysis.setVulnerability(vuln);
-        analysis.setState(AnalysisState.FALSE_POSITIVE);
+        analysis.setAnalysisState(AnalysisState.FALSE_POSITIVE);
         analysis.setSuppressed(true);
         return analysis;
     }
