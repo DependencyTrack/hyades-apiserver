@@ -123,19 +123,21 @@ public class NotificationRuleTest {
     }
 
     @Test
-    public void testTeams(){
-        List<Team> teams = new ArrayList<>();
+    public void testTeams() {
+        Set<Team> teams = new HashSet<>();
         Team team = new Team();
         teams.add(team);
         NotificationRule rule = new NotificationRule();
         rule.setTeams(teams);
         Assert.assertEquals(1, rule.getTeams().size());
-        Assert.assertEquals(team, rule.getTeams().get(0));
+        var ruleTeam = rule.getTeams().stream().findFirst().orElse(null);
+        Assert.assertNotNull(ruleTeam);
+        Assert.assertEquals(team, ruleTeam);
     }
 
     @Test
-    public void testManagedUsers(){
-        List<Team> teams = new ArrayList<>();
+    public void testManagedUsers() {
+        Set<Team> teams = new HashSet<>();
         Team team = new Team();
         List<ManagedUser> managedUsers = new ArrayList<>();
         ManagedUser managedUser = new ManagedUser();
@@ -145,13 +147,15 @@ public class NotificationRuleTest {
         NotificationRule rule = new NotificationRule();
         rule.setTeams(teams);
         Assert.assertEquals(1, rule.getTeams().size());
-        Assert.assertEquals(team, rule.getTeams().get(0));
-        Assert.assertEquals(managedUser, rule.getTeams().get(0).getManagedUsers().get(0));
+        var ruleTeam = rule.getTeams().stream().findFirst().orElse(null);
+        Assert.assertNotNull(ruleTeam);
+        Assert.assertEquals(team, ruleTeam);
+        Assert.assertEquals(managedUser, ruleTeam.getManagedUsers().get(0));
     }
 
     @Test
-    public void testLdapUsers(){
-        List<Team> teams = new ArrayList<>();
+    public void testLdapUsers() {
+        Set<Team> teams = new HashSet<>();
         Team team = new Team();
         List<LdapUser> ldapUsers = new ArrayList<>();
         LdapUser ldapUser = new LdapUser();
@@ -161,13 +165,15 @@ public class NotificationRuleTest {
         NotificationRule rule = new NotificationRule();
         rule.setTeams(teams);
         Assert.assertEquals(1, rule.getTeams().size());
-        Assert.assertEquals(team, rule.getTeams().get(0));
-        Assert.assertEquals(ldapUser, rule.getTeams().get(0).getLdapUsers().get(0));
+        var ruleTeam = rule.getTeams().stream().findFirst().orElse(null);
+        Assert.assertNotNull(ruleTeam);
+        Assert.assertEquals(team, ruleTeam);
+        Assert.assertEquals(ldapUser, ruleTeam.getLdapUsers().get(0));
     }
 
     @Test
-    public void testOidcUsers(){
-        List<Team> teams = new ArrayList<>();
+    public void testOidcUsers() {
+        Set<Team> teams = new HashSet<>();
         Team team = new Team();
         List<OidcUser> oidcUsers = new ArrayList<>();
         OidcUser oidcUser = new OidcUser();
@@ -177,8 +183,10 @@ public class NotificationRuleTest {
         NotificationRule rule = new NotificationRule();
         rule.setTeams(teams);
         Assert.assertEquals(1, rule.getTeams().size());
-        Assert.assertEquals(team, rule.getTeams().get(0));
-        Assert.assertEquals(oidcUser, rule.getTeams().get(0).getOidcUsers().get(0));
+        var ruleTeam = rule.getTeams().stream().findFirst().orElse(null);
+        Assert.assertNotNull(ruleTeam);
+        Assert.assertEquals(team, ruleTeam);
+        Assert.assertEquals(oidcUser, ruleTeam.getOidcUsers().get(0));
     }
 
     @Test

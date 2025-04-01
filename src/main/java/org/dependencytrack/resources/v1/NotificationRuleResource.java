@@ -55,6 +55,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
+import java.util.Set;
 
 import static org.dependencytrack.notification.publisher.PublisherClass.SendMailPublisher;
 
@@ -329,7 +330,7 @@ public class NotificationRuleResource extends AbstractApiResource {
             if (team == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
             }
-            final List<Team> teams = rule.getTeams();
+            final Set<Team> teams = rule.getTeams();
             if (teams != null && !teams.contains(team)) {
                 rule.getTeams().add(team);
                 qm.persist(rule);
@@ -374,7 +375,7 @@ public class NotificationRuleResource extends AbstractApiResource {
             if (team == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
             }
-            final List<Team> teams = rule.getTeams();
+            final Set<Team> teams = rule.getTeams();
             if (teams != null && teams.contains(team)) {
                 rule.getTeams().remove(team);
                 qm.persist(rule);

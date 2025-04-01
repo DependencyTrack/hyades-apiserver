@@ -128,7 +128,7 @@ public class NotificationRule implements Serializable {
     @Join(column = "NOTIFICATIONRULE_ID", foreignKey = "NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Element(column = "TEAM_ID", foreignKey = "NOTIFICATIONRULE_TEAMS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    private List<Team> teams;
+    private Set<Team> teams;
 
     @Persistent
     @Column(name = "NOTIFY_ON", length = 1024)
@@ -232,11 +232,11 @@ public class NotificationRule implements Serializable {
         this.tags = tags;
     }
 
-    public List<Team> getTeams() {
+    public Set<Team> getTeams() {
         return teams;
     }
 
-    public void setTeams(List<Team> teams) {
+    public void setTeams(Set<Team> teams) {
         this.teams = teams;
     }
 
