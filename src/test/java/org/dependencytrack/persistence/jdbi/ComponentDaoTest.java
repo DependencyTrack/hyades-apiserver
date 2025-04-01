@@ -160,4 +160,16 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         assertThatNoException().isThrownBy(() -> qm.getObjectById(PolicyCondition.class, policyCondition.getId()));
         assertThatNoException().isThrownBy(() -> qm.getObjectById(Policy.class, policy.getId()));
     }
+
+    @Test
+    public void testGetComponentId() {
+        final var project = qm.createProject("acme-app", "Description 1", "1.0.0", null, null, null, null, false);
+        final var component = new Component();
+        component.setName("acme-lib");
+        component.setVersion("2.0.0");
+        component.setProject(project);
+        assertThat(componentDao.getComponentId(component.getUuid())).isEqualTo(null);
+        qm.persist(component);
+        assertThat(componentDao.getComponentId(component.getUuid())).isEqualTo(component.getId());
+    }
 }

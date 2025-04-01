@@ -192,4 +192,37 @@ public class AnalysisDaoTest extends PersistenceCapableTest {
         assertThat(analysisUpdated.getAnalysisDetails()).isEqualTo("Analysis details here");
         assertThat(analysisUpdated.isSuppressed()).isTrue();
     }
+
+    @Test
+    public void testGetAnalysisComments() {
+        final var project = qm.createProject("acme-app", "Description 1", "1.0.0", null, null, null, null, false);
+
+        final var c1 = new Component();
+        c1.setProject(project);
+        c1.setName("acme-lib");
+        c1.setVersion("2.0.0");
+        qm.persist(c1);
+
+        final var vuln1 = new Vulnerability();
+        vuln1.setVulnId("INT-123");
+        vuln1.setSource(NVD);
+        qm.persist(vuln1);
+
+        final var analysis = analysisDao.makeAnalysis(project.getId(), c1.getId(), vuln1.getId(), null, null, null, null, true);
+
+        assertThat(analysisDao.makeAnalysisComment(analysis.getId(), null, "tester")).isNull();
+
+        analysisDao.makeAnalysisComment(analysis.getId(), "test-comment-1", "tester");
+        analysisDao.makeAnalysisComment(analysis.getId(), "test-comment-2", "tester");
+        analysisDao.makeAnalysisComment(analysis.getId(), "test-comment-3", "tester");
+
+        var comments = analysisDao.getComments(analysis.getId());
+        assertThat(comments).satisfiesExactly(comment -> {
+            assertThat(comment.getComment()).isEqualTo("test-comment-1");
+        }, comment -> {
+            assertThat(comment.getComment()).isEqualTo("test-comment-2");
+        }, comment -> {
+            assertThat(comment.getComment()).isEqualTo("test-comment-3");
+        });
+    }
 }

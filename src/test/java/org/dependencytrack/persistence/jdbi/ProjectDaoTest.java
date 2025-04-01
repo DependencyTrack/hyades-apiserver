@@ -230,4 +230,14 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         qm.getPersistenceManager().refresh(policy);
         assertThat(policy.getProjects()).isEmpty();
     }
+
+    @Test
+    public void testGetProjectId() {
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        assertThat(projectDao.getProjectId(project.getUuid())).isEqualTo(null);
+        qm.persist(project);
+        assertThat(projectDao.getProjectId(project.getUuid())).isEqualTo(project.getId());
+    }
 }

@@ -68,4 +68,8 @@ public interface ComponentDao {
     @RegisterBeanMapper(ComponentOccurrence.class)
     List<ComponentOccurrence> getOccurrences(@Bind UUID componentUuid);
 
+    @SqlQuery("""
+            SELECT "ID" FROM "COMPONENT" WHERE "UUID" = :componentUuid
+            """)
+    Long getComponentId(@Bind UUID componentUuid);
 }

@@ -62,6 +62,14 @@ public interface AnalysisDao {
     }
 
     @SqlQuery("""
+            SELECT * FROM "ANALYSISCOMMENT"
+            WHERE "ANALYSIS_ID" = :analysisId
+            ORDER BY "ID"
+            """)
+    @RegisterBeanMapper(AnalysisComment.class)
+    List<AnalysisComment> getComments(@Bind long analysisId);
+
+    @SqlQuery("""
             SELECT "ID"
                    , "STATE" AS "analysisState"
                    , "JUSTIFICATION" AS "analysisJustification"

@@ -278,4 +278,9 @@ public interface ProjectDao {
               LIMIT :batchSize
             """)
     List<String> getDistinctProjects(@Bind final int versionCountThreshold, @Bind final int batchSize);
+
+    @SqlQuery("""
+            SELECT "ID" FROM "PROJECT" WHERE "UUID" = :projectUuid
+            """)
+    Long getProjectId(@Bind UUID projectUuid);
 }
