@@ -1234,35 +1234,9 @@
               PERFORM remove_duplicate_rows('TEAMS_PERMISSIONS', 'TEAM_ID', 'PERMISSION_ID');
             END
             $$;
-        </sql>
 
-        <addPrimaryKey tableName="APIKEYS_TEAMS"
-            columnNames="TEAM_ID, APIKEY_ID"
-            constraintName="APIKEYS_TEAMS_PK" />
-        <addPrimaryKey tableName="LDAPUSERS_PERMISSIONS"
-            columnNames="LDAPUSER_ID, PERMISSION_ID"
-            constraintName="LDAPUSERS_PERMISSIONS_PK" />
-        <addPrimaryKey tableName="LDAPUSERS_TEAMS"
-            columnNames="TEAM_ID, LDAPUSER_ID"
-            constraintName="LDAPUSERS_TEAMS_PK" />
-        <addPrimaryKey tableName="MANAGEDUSERS_PERMISSIONS"
-            columnNames="MANAGEDUSER_ID, PERMISSION_ID"
-            constraintName="MANAGEDUSERS_PERMISSIONS_PK" />
-        <addPrimaryKey tableName="MANAGEDUSERS_TEAMS"
-            columnNames="TEAM_ID, MANAGEDUSER_ID"
-            constraintName="MANAGEDUSERS_TEAMS_PK" />
-        <addPrimaryKey tableName="OIDCUSERS_PERMISSIONS"
-            columnNames="OIDCUSER_ID, PERMISSION_ID"
-            constraintName="OIDCUSERS_PERMISSIONS_PK" />
-        <addPrimaryKey tableName="OIDCUSERS_TEAMS"
-            columnNames="TEAM_ID, OIDCUSERS_ID"
-            constraintName="OIDCUSERS_TEAMS_PK" />
-        <addPrimaryKey tableName="NOTIFICATIONRULE_TEAMS"
-            columnNames="NOTIFICATIONRULE_ID, TEAM_ID"
-            constraintName="NOTIFICATIONRULE_TEAMS_PK" />
-        <addPrimaryKey tableName="TEAMS_PERMISSIONS"
-            columnNames="TEAM_ID, PERMISSION_ID"
-            constraintName="TEAMS_PERMISSIONS_PK" />
+            DROP FUNCTION remove_duplicate_rows;
+        </sql>
 
         <sql splitStatements="false">
             -- Remove all duplicates from TEAM table, updating foreign
@@ -1303,20 +1277,53 @@
 
                   FOREACH tbl_name IN ARRAY referencing_tables
                   LOOP
-                    EXECUTE format(
-                      'UPDATE %I SET "TEAM_ID" = %s WHERE "TEAM_ID" = %s',
-                      tbl_name, rec.canonical_id, dup_id
-                    );
+                    EXECUTE format($update$
+                      UPDATE %I
+                         SET "TEAM_ID" = %s
+                       WHERE "TEAM_ID" = %s
+                      $update$, tbl_name, rec.canonical_id, dup_id);
                   END LOOP;
 
                   -- After reassigning foreign keys, delete the duplicate row from TEAM
                   RAISE NOTICE 'Deleting duplicate TEAM row with ID % for team "%" ', dup_id, rec.name;
-                  EXECUTE format('DELETE FROM "TEAM" WHERE "ID" = %s', dup_id);
+                  EXECUTE format($delete$
+                    DELETE FROM "TEAM"
+                     WHERE "ID" = %s
+                    $delete$, dup_id);
                 END LOOP;
               END LOOP;
             END $$;
         </sql>
 
-        <addUniqueConstraint tableName="TEAM" columnNames="NAME" constraintName="TEAM_NAME_IDX" />
+        <addPrimaryKey tableName="APIKEYS_TEAMS"
+            columnNames="TEAM_ID, APIKEY_ID"
+            constraintName="APIKEYS_TEAMS_PK" />
+        <addPrimaryKey tableName="LDAPUSERS_PERMISSIONS"
+            columnNames="LDAPUSER_ID, PERMISSION_ID"
+            constraintName="LDAPUSERS_PERMISSIONS_PK" />
+        <addPrimaryKey tableName="LDAPUSERS_TEAMS"
+            columnNames="TEAM_ID, LDAPUSER_ID"
+            constraintName="LDAPUSERS_TEAMS_PK" />
+        <addPrimaryKey tableName="MANAGEDUSERS_PERMISSIONS"
+            columnNames="MANAGEDUSER_ID, PERMISSION_ID"
+            constraintName="MANAGEDUSERS_PERMISSIONS_PK" />
+        <addPrimaryKey tableName="MANAGEDUSERS_TEAMS"
+            columnNames="TEAM_ID, MANAGEDUSER_ID"
+            constraintName="MANAGEDUSERS_TEAMS_PK" />
+        <addPrimaryKey tableName="OIDCUSERS_PERMISSIONS"
+            columnNames="OIDCUSER_ID, PERMISSION_ID"
+            constraintName="OIDCUSERS_PERMISSIONS_PK" />
+        <addPrimaryKey tableName="OIDCUSERS_TEAMS"
+            columnNames="TEAM_ID, OIDCUSERS_ID"
+            constraintName="OIDCUSERS_TEAMS_PK" />
+        <addPrimaryKey tableName="NOTIFICATIONRULE_TEAMS"
+            columnNames="NOTIFICATIONRULE_ID, TEAM_ID"
+            constraintName="NOTIFICATIONRULE_TEAMS_PK" />
+        <addPrimaryKey tableName="TEAMS_PERMISSIONS"
+            columnNames="TEAM_ID, PERMISSION_ID"
+            constraintName="TEAMS_PERMISSIONS_PK" />
+        <addUniqueConstraint tableName="TEAM"
+            columnNames="NAME"
+            constraintName="TEAM_NAME_IDX" />
     </changeSet>
 </databaseChangeLog>

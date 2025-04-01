@@ -125,9 +125,8 @@ public class NotificationRule implements Serializable {
     private List<Tag> tags;
 
     @Persistent(table = "NOTIFICATIONRULE_TEAMS", defaultFetchGroup = "true")
-    @Join(column = "NOTIFICATIONRULE_ID", foreignKey = "NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Join(column = "NOTIFICATIONRULE_ID", primaryKey = "NOTIFICATIONRULE_TEAMS_PK", foreignKey = "NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Element(column = "TEAM_ID", foreignKey = "NOTIFICATIONRULE_TEAMS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private Set<Team> teams;
 
     @Persistent
