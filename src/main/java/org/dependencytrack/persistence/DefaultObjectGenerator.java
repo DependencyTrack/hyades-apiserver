@@ -294,7 +294,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
         LOGGER.debug("Creating user: admin");
         ManagedUser admin = qm.createManagedUser("admin", "Administrator", "admin@localhost",
-                new String(PasswordService.createHash("admin".toCharArray())), false, true, false);
+                new String(PasswordService.createHash("admin".toCharArray())), true, true, false);
 
         for (var name : new String[] { "Administrators", "Portfolio Managers", "Automation", "Badge Viewers" }) {
             LOGGER.debug("Creating team: " + name);
