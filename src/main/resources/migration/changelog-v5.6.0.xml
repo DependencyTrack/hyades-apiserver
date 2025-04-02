@@ -704,6 +704,13 @@
     </changeSet>
 
     <changeSet id="v5.6.0-15" author="nscuro">
+        <!--
+          Previous version of this changeset failed if projects without parent existed.
+          Deployments that successfully executed this changeset are in a valid state though.
+          https://github.com/DependencyTrack/hyades/issues/1737
+        -->
+        <validCheckSum>9:e7ba3d0bcd5751d57ada707ec0ffc449</validCheckSum>
+
         <createTable tableName="PROJECT_HIERARCHY">
             <column name="PARENT_PROJECT_ID" type="BIGINT"/>
             <column name="CHILD_PROJECT_ID" type="BIGINT"/>
@@ -810,6 +817,7 @@
                    , "PARENT_PROJECT_ID" AS parent_id
                    , 1 AS depth
                 FROM "PROJECT"
+               WHERE "PARENT_PROJECT_ID" IS NOT NULL
                UNION ALL
               SELECT child_id
                    , "PARENT_PROJECT_ID" AS parent_id
