@@ -1179,4 +1179,151 @@
             EXECUTE FUNCTION prevent_direct_effective_permissions_writes();
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-17" author="jhoward-lm">
+        <sql splitStatements="false">
+            CREATE OR REPLACE FUNCTION remove_duplicate_rows(
+              table_name TEXT,
+              column_1   TEXT,
+              column_2   TEXT
+            )
+            RETURNS void AS $$
+            BEGIN
+              EXECUTE format($q$
+                DELETE FROM %I a
+                 USING %I b
+                 WHERE a.%I = b.%I
+                   AND a.%I = b.%I
+                   AND a.ctid &lt; b.ctid
+                $q$, table_name, table_name, column_1, column_1, column_2, column_2
+              );
+            END;
+            $$ LANGUAGE plpgsql;    
+        </sql>
+
+        <dropIndex tableName="APIKEYS_TEAMS" indexName="APIKEYS_TEAMS_TEAM_ID_IDX" />
+        <dropIndex tableName="APIKEYS_TEAMS" indexName="APIKEYS_TEAMS_APIKEY_ID_IDX" />
+        <dropIndex tableName="LDAPUSERS_PERMISSIONS" indexName="LDAPUSERS_PERMISSIONS_PERMISSION_ID_IDX" />
+        <dropIndex tableName="LDAPUSERS_PERMISSIONS" indexName="LDAPUSERS_PERMISSIONS_LDAPUSER_ID_IDX" />
+        <dropIndex tableName="LDAPUSERS_TEAMS" indexName="LDAPUSERS_TEAMS_TEAM_ID_IDX" />
+        <dropIndex tableName="LDAPUSERS_TEAMS" indexName="LDAPUSERS_TEAMS_LDAPUSER_ID_IDX" />
+        <dropIndex tableName="MANAGEDUSERS_PERMISSIONS" indexName="MANAGEDUSERS_PERMISSIONS_PERMISSION_ID_IDX" />
+        <dropIndex tableName="MANAGEDUSERS_PERMISSIONS" indexName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_ID_IDX" />
+        <dropIndex tableName="MANAGEDUSERS_TEAMS" indexName="MANAGEDUSERS_TEAMS_TEAM_ID_IDX" />
+        <dropIndex tableName="MANAGEDUSERS_TEAMS" indexName="MANAGEDUSERS_TEAMS_MANAGEDUSER_ID_IDX" />
+        <dropIndex tableName="OIDCUSERS_PERMISSIONS" indexName="OIDCUSERS_PERMISSIONS_PERMISSION_ID_IDX" />
+        <dropIndex tableName="OIDCUSERS_PERMISSIONS" indexName="OIDCUSERS_PERMISSIONS_OIDCUSER_ID_IDX" />
+        <dropIndex tableName="OIDCUSERS_TEAMS" indexName="OIDCUSERS_TEAMS_TEAM_ID_IDX" />
+        <dropIndex tableName="OIDCUSERS_TEAMS" indexName="OIDCUSERS_TEAMS_OIDCUSERS_ID_IDX" />
+        <dropIndex tableName="NOTIFICATIONRULE_TEAMS" indexName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_ID_IDX" />
+        <dropIndex tableName="NOTIFICATIONRULE_TEAMS" indexName="NOTIFICATIONRULE_TEAMS_TEAM_ID_IDX" />
+        <dropIndex tableName="TEAMS_PERMISSIONS" indexName="TEAMS_PERMISSIONS_TEAM_ID_IDX" />
+        <dropIndex tableName="TEAMS_PERMISSIONS" indexName="TEAMS_PERMISSIONS_PERMISSION_ID_IDX" />
+
+        <sql splitStatements="false">
+            DO $$ 
+            BEGIN
+              PERFORM remove_duplicate_rows('APIKEYS_TEAMS', 'TEAM_ID', 'APIKEY_ID');
+              PERFORM remove_duplicate_rows('LDAPUSERS_PERMISSIONS', 'LDAPUSER_ID', 'PERMISSION_ID');
+              PERFORM remove_duplicate_rows('LDAPUSERS_TEAMS', 'TEAM_ID', 'LDAPUSER_ID');
+              PERFORM remove_duplicate_rows('MANAGEDUSERS_PERMISSIONS', 'MANAGEDUSER_ID', 'PERMISSION_ID');
+              PERFORM remove_duplicate_rows('MANAGEDUSERS_TEAMS', 'TEAM_ID', 'MANAGEDUSER_ID');
+              PERFORM remove_duplicate_rows('NOTIFICATIONRULE_TEAMS', 'NOTIFICATIONRULE_ID', 'TEAM_ID');
+              PERFORM remove_duplicate_rows('OIDCUSERS_PERMISSIONS', 'OIDCUSER_ID', 'PERMISSION_ID');
+              PERFORM remove_duplicate_rows('OIDCUSERS_TEAMS', 'TEAM_ID', 'OIDCUSERS_ID');
+              PERFORM remove_duplicate_rows('TEAMS_PERMISSIONS', 'TEAM_ID', 'PERMISSION_ID');
+            END
+            $$;
+
+            DROP FUNCTION remove_duplicate_rows;
+        </sql>
+
+        <sql splitStatements="false">
+            -- Remove all duplicates from TEAM table, updating foreign
+            -- keys in other tables referencing the removed entries
+            DO $$
+            DECLARE
+              referencing_tables TEXT[] := ARRAY[
+                'APIKEYS_TEAMS',
+                'LDAPUSERS_TEAMS',
+                'MANAGEDUSERS_TEAMS',
+                'NOTIFICATIONRULE_TEAMS',
+                'OIDCUSERS_TEAMS',
+                'TEAMS_PERMISSIONS'
+              ];
+              tbl_name TEXT;
+              rec      RECORD;
+              dup_id   INTEGER;
+            BEGIN
+            -- Loop over each team name group that has duplicates.
+              FOR rec IN
+              SELECT
+                  "NAME",
+                  MIN("ID") AS canonical_id,
+                  ARRAY_AGG("ID") AS all_ids
+                FROM "TEAM"
+               GROUP BY "NAME"
+              HAVING COUNT(*) &gt; 1
+              LOOP
+                RAISE NOTICE 'Processing team "%" with canonical ID %', rec.name, rec.canonical_id;
+
+                -- For every duplicate row in the group, update references and delete the duplicate.
+                FOREACH dup_id IN ARRAY rec.all_ids
+                LOOP
+                  -- Skip the chosen canonical row
+                  CONTINUE WHEN dup_id = rec.canonical_id;
+
+                  RAISE NOTICE 'Updating foreign key references from duplicate ID % to canonical ID %', dup_id, rec.canonical_id;
+
+                  FOREACH tbl_name IN ARRAY referencing_tables
+                  LOOP
+                    EXECUTE format($update$
+                      UPDATE %I
+                         SET "TEAM_ID" = %s
+                       WHERE "TEAM_ID" = %s
+                      $update$, tbl_name, rec.canonical_id, dup_id);
+                  END LOOP;
+
+                  -- After reassigning foreign keys, delete the duplicate row from TEAM
+                  RAISE NOTICE 'Deleting duplicate TEAM row with ID % for team "%" ', dup_id, rec.name;
+                  EXECUTE format($delete$
+                    DELETE FROM "TEAM"
+                     WHERE "ID" = %s
+                    $delete$, dup_id);
+                END LOOP;
+              END LOOP;
+            END $$;
+        </sql>
+
+        <addPrimaryKey tableName="APIKEYS_TEAMS"
+            columnNames="TEAM_ID, APIKEY_ID"
+            constraintName="APIKEYS_TEAMS_PK" />
+        <addPrimaryKey tableName="LDAPUSERS_PERMISSIONS"
+            columnNames="LDAPUSER_ID, PERMISSION_ID"
+            constraintName="LDAPUSERS_PERMISSIONS_PK" />
+        <addPrimaryKey tableName="LDAPUSERS_TEAMS"
+            columnNames="TEAM_ID, LDAPUSER_ID"
+            constraintName="LDAPUSERS_TEAMS_PK" />
+        <addPrimaryKey tableName="MANAGEDUSERS_PERMISSIONS"
+            columnNames="MANAGEDUSER_ID, PERMISSION_ID"
+            constraintName="MANAGEDUSERS_PERMISSIONS_PK" />
+        <addPrimaryKey tableName="MANAGEDUSERS_TEAMS"
+            columnNames="TEAM_ID, MANAGEDUSER_ID"
+            constraintName="MANAGEDUSERS_TEAMS_PK" />
+        <addPrimaryKey tableName="OIDCUSERS_PERMISSIONS"
+            columnNames="OIDCUSER_ID, PERMISSION_ID"
+            constraintName="OIDCUSERS_PERMISSIONS_PK" />
+        <addPrimaryKey tableName="OIDCUSERS_TEAMS"
+            columnNames="TEAM_ID, OIDCUSERS_ID"
+            constraintName="OIDCUSERS_TEAMS_PK" />
+        <addPrimaryKey tableName="NOTIFICATIONRULE_TEAMS"
+            columnNames="NOTIFICATIONRULE_ID, TEAM_ID"
+            constraintName="NOTIFICATIONRULE_TEAMS_PK" />
+        <addPrimaryKey tableName="TEAMS_PERMISSIONS"
+            columnNames="TEAM_ID, PERMISSION_ID"
+            constraintName="TEAMS_PERMISSIONS_PK" />
+        <addUniqueConstraint tableName="TEAM"
+            columnNames="NAME"
+            constraintName="TEAM_NAME_IDX" />
+    </changeSet>
 </databaseChangeLog>
