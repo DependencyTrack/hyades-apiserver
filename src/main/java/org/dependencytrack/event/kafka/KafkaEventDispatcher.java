@@ -74,6 +74,15 @@ public class KafkaEventDispatcher {
         return dispatchAll(List.of(kafkaEvent)).getFirst();
     }
 
+    public CompletableFuture<RecordMetadata> dispatchNotificationProto(final org.dependencytrack.proto.notification.v1.Notification notification) {
+        if (notification == null) {
+            return completedFuture(null);
+        }
+
+        final KafkaEvent<?, ?> kafkaEvent = KafkaEventConverter.convert(notification);
+        return dispatchAll(List.of(kafkaEvent)).getFirst();
+    }
+
     public List<CompletableFuture<RecordMetadata>> dispatchAllNotificationProtos(final Collection<org.dependencytrack.proto.notification.v1.Notification> notifications) {
         final List<KafkaEvent<?, ?>> kafkaEvents = KafkaEventConverter.convertAllNotificationProtos(notifications);
         return dispatchAll(kafkaEvents);

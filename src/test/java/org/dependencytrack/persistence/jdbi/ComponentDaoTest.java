@@ -87,12 +87,13 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         vuln.setSource(Vulnerability.Source.INTERNAL);
         qm.persist(vuln);
         qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
-        final Analysis analysis = qm.makeAnalysis(component, vuln,
-                AnalysisState.NOT_AFFECTED,
-                AnalysisJustification.CODE_NOT_REACHABLE,
-                AnalysisResponse.WORKAROUND_AVAILABLE,
-                "analysisDetails", false);
-        qm.makeAnalysisComment(analysis, "someComment", "someCommenter");
+        var analysisDao = jdbiHandle.attach(AnalysisDao.class);
+        analysisDao.makeAnalysis(project.getId(), component.getId(), vuln.getId(), AnalysisState.NOT_AFFECTED,
+                        AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WORKAROUND_AVAILABLE,
+                        "analysisDetails", false);
+
+        final Analysis analysis = qm.getAnalysis(component, vuln);
+        analysisDao.makeAnalysisComment(analysis.getId(), "someComment", "someCommenter");
 
         // Create a child component to validate that deletion is indeed recursive.
         final var componentChild = new Component();
@@ -158,5 +159,17 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         assertThatNoException().isThrownBy(() -> qm.getObjectById(Vulnerability.class, vuln.getId()));
         assertThatNoException().isThrownBy(() -> qm.getObjectById(PolicyCondition.class, policyCondition.getId()));
         assertThatNoException().isThrownBy(() -> qm.getObjectById(Policy.class, policy.getId()));
+    }
+
+    @Test
+    public void testGetComponentId() {
+        final var project = qm.createProject("acme-app", "Description 1", "1.0.0", null, null, null, null, false);
+        final var component = new Component();
+        component.setName("acme-lib");
+        component.setVersion("2.0.0");
+        component.setProject(project);
+        assertThat(componentDao.getComponentId(component.getUuid())).isEqualTo(null);
+        qm.persist(component);
+        assertThat(componentDao.getComponentId(component.getUuid())).isEqualTo(component.getId());
     }
 }

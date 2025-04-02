@@ -31,6 +31,7 @@ import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -42,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 
 public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
@@ -142,7 +144,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     public void testUpdateMetricsVulnerabilities() {
         var project = new Project();
         project.setName("acme-app");
-        project = qm.createProject(project, List.of(), false);
+        qm.createProject(project, List.of(), false);
 
         // Create risk score configproperties
         createTestConfigProperties();
@@ -150,14 +152,14 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
 
         // Create an unaudited vulnerability.
         var vulnUnaudited = new Vulnerability();
         vulnUnaudited.setVulnId("INTERNAL-001");
         vulnUnaudited.setSource(Vulnerability.Source.INTERNAL);
         vulnUnaudited.setSeverity(Severity.HIGH);
-        vulnUnaudited = qm.createVulnerability(vulnUnaudited, false);
+        qm.createVulnerability(vulnUnaudited, false);
         qm.addVulnerability(vulnUnaudited, component, AnalyzerIdentity.NONE);
 
         // Create an audited vulnerability.
@@ -165,18 +167,20 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         vulnAudited.setVulnId("INTERNAL-002");
         vulnAudited.setSource(Vulnerability.Source.INTERNAL);
         vulnAudited.setSeverity(Severity.MEDIUM);
-        vulnAudited = qm.createVulnerability(vulnAudited, false);
+        qm.createVulnerability(vulnAudited, false);
         qm.addVulnerability(vulnAudited, component, AnalyzerIdentity.NONE);
-        qm.makeAnalysis(component, vulnAudited, AnalysisState.NOT_AFFECTED, null, null, null, false);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnAudited.getId(), AnalysisState.NOT_AFFECTED, null, null, null, false));
 
         // Create a suppressed vulnerability.
         var vulnSuppressed = new Vulnerability();
         vulnSuppressed.setVulnId("INTERNAL-003");
         vulnSuppressed.setSource(Vulnerability.Source.INTERNAL);
         vulnSuppressed.setSeverity(Severity.MEDIUM);
-        vulnSuppressed = qm.createVulnerability(vulnSuppressed, false);
+        qm.createVulnerability(vulnSuppressed, false);
         qm.addVulnerability(vulnSuppressed, component, AnalyzerIdentity.NONE);
-        qm.makeAnalysis(component, vulnSuppressed, AnalysisState.FALSE_POSITIVE, null, null, null, true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnSuppressed.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, true));
 
         var componentMetricsUpdateEvent = new ComponentMetricsUpdateEvent(component.getUuid());
         qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
@@ -226,7 +230,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     public void testUpdateMetricsVulnerabilitiesWhenSeverityIsOverridden() {
         var project = new Project();
         project.setName("acme-app");
-        project = qm.createProject(project, List.of(), false);
+        qm.createProject(project, List.of(), false);
 
         // Create risk score configproperties
         createTestConfigProperties();
@@ -234,14 +238,14 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
 
         // Create an unaudited vulnerability.
         var vulnUnaudited = new Vulnerability();
         vulnUnaudited.setVulnId("INTERNAL-001");
         vulnUnaudited.setSource(Vulnerability.Source.INTERNAL);
         vulnUnaudited.setSeverity(Severity.HIGH);
-        vulnUnaudited = qm.createVulnerability(vulnUnaudited, false);
+        qm.createVulnerability(vulnUnaudited, false);
         qm.addVulnerability(vulnUnaudited, component, AnalyzerIdentity.NONE);
 
         // Create an audited vulnerability.
@@ -249,24 +253,24 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         vulnAudited.setVulnId("INTERNAL-002");
         vulnAudited.setSource(Vulnerability.Source.INTERNAL);
         vulnAudited.setSeverity(Severity.MEDIUM);
-        vulnAudited = qm.createVulnerability(vulnAudited, false);
+        qm.createVulnerability(vulnAudited, false);
         qm.addVulnerability(vulnAudited, component, AnalyzerIdentity.NONE);
-        qm.makeAnalysis(component, vulnAudited, AnalysisState.NOT_AFFECTED, null, null, null, false);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnAudited.getId(), AnalysisState.NOT_AFFECTED, null, null, null, false));
 
         // Create an overridden vulnerability.
         var vulnSuppressed = new Vulnerability();
         vulnSuppressed.setVulnId("INTERNAL-003");
         vulnSuppressed.setSource(Vulnerability.Source.INTERNAL);
         vulnSuppressed.setSeverity(Severity.MEDIUM);
-        vulnSuppressed = qm.createVulnerability(vulnSuppressed, false);
+        qm.createVulnerability(vulnSuppressed, false);
         qm.addVulnerability(vulnSuppressed, component, AnalyzerIdentity.NONE);
         var analysis = new Analysis();
         analysis.setComponent(component);
         analysis.setSeverity(Severity.LOW);
         analysis.setAnalysisState(AnalysisState.FALSE_POSITIVE);
         analysis.setVulnerability(vulnSuppressed);
-        qm.makeAnalysis(component, vulnSuppressed, analysis);
-
+        qm.persist(analysis);
         var componentMetricsUpdateEvent = new ComponentMetricsUpdateEvent(component.getUuid());
         qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
         new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);

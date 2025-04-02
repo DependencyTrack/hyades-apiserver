@@ -23,13 +23,18 @@ import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -39,6 +44,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -49,12 +55,6 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -90,18 +90,21 @@ public class AnalysisResourceTest extends ResourceTest {
         component.setProject(project);
         component.setName("Acme Component");
         component.setVersion("1.0");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
 
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        qm.createVulnerability(vulnerability, false);
 
-        final Analysis analysis = qm.makeAnalysis(component, vulnerability, AnalysisState.NOT_AFFECTED,
-                AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true);
-        qm.makeAnalysisComment(analysis, "Analysis comment here", "Jane Doe");
+        var analysis = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.NOT_AFFECTED,
+                        AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true));
+
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysisComment(analysis.getId(), "Analysis comment here", "Jane Doe"));
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .queryParam("project", project.getUuid())
@@ -311,9 +314,9 @@ public class AnalysisResourceTest extends ResourceTest {
         vuln.setSource(Vulnerability.Source.INTERNAL);
         qm.persist(vuln);
 
-        qm.makeAnalysis(
-                component, vuln, AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
-                AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vuln.getId(), AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
+                        AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true));
 
         final Supplier<Response> responseSupplier = () -> jersey
                 .target(V1_ANALYSIS)
@@ -519,18 +522,21 @@ public class AnalysisResourceTest extends ResourceTest {
         component.setProject(project);
         component.setName("Acme Component");
         component.setVersion("1.0");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
 
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        qm.createVulnerability(vulnerability, false);
 
-        final Analysis analysis = qm.makeAnalysis(component, vulnerability, AnalysisState.NOT_AFFECTED,
-                AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true);
-        qm.makeAnalysisComment(analysis, "Analysis comment here", "Jane Doe");
+        var analysis = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
+                        AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true));
+
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysisComment(analysis.getId(), "Analysis comment here", "Jane Doe"));
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 vulnerability.getUuid().toString(), AnalysisState.EXPLOITABLE, AnalysisJustification.NOT_SET,
@@ -597,18 +603,21 @@ public class AnalysisResourceTest extends ResourceTest {
         component.setProject(project);
         component.setName("Acme Component");
         component.setVersion("1.0");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
 
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        qm.createVulnerability(vulnerability, false);
 
-        final Analysis analysis = qm.makeAnalysis(component, vulnerability, AnalysisState.NOT_AFFECTED,
-                AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true);
-        qm.makeAnalysisComment(analysis, "Analysis comment here", "Jane Doe");
+        var analysis = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
+                        AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true));
+
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysisComment(analysis.getId(), "Analysis comment here", "Jane Doe"));
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 vulnerability.getUuid().toString(), AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
@@ -647,18 +656,21 @@ public class AnalysisResourceTest extends ResourceTest {
         component.setProject(project);
         component.setName("Acme Component");
         component.setVersion("1.0");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
 
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        qm.createVulnerability(vulnerability, false);
 
-        final Analysis analysis = qm.makeAnalysis(component, vulnerability, AnalysisState.NOT_AFFECTED,
-                AnalysisJustification.CODE_NOT_REACHABLE, AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true);
-        qm.makeAnalysisComment(analysis, "Analysis comment here", "Jane Doe");
+        var analysis = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.NOT_AFFECTED, AnalysisJustification.CODE_NOT_REACHABLE,
+                        AnalysisResponse.WILL_NOT_FIX, "Analysis details here", true));
+
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysisComment(analysis.getId(), "Analysis comment here", "Jane Doe"));
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 vulnerability.getUuid().toString(), null, null, null, null, null, null);
@@ -801,7 +813,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     // Test the scenario where an analysis was created with Dependency-Track <= 4.3.6,
-    // before the additional fields "justification" and "response" were introduced.
+    // before the additional fields "analysisJustification" and "analysisResponse" were introduced.
     // Performing an analysis with those request fields set in >= 4.4.0 then resulted in NPEs,
     // see https://github.com/DependencyTrack/dependency-track/issues/1409
     @Test
@@ -810,20 +822,21 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
-        var component = new Component();
+        final var component = new Component();
         component.setProject(project);
         component.setName("Acme Component");
         component.setVersion("1.0");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
 
-        var vulnerability = new Vulnerability();
+        final var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
         vulnerability.setSeverity(Severity.HIGH);
         vulnerability.setComponents(List.of(component));
-        vulnerability = qm.createVulnerability(vulnerability, false);
+        qm.createVulnerability(vulnerability, false);
 
-        qm.makeAnalysis(component, vulnerability, AnalysisState.IN_TRIAGE, null, null, null, false);
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vulnerability.getId(), AnalysisState.IN_TRIAGE, null, null, null, false));
 
         final var analysisRequest = new AnalysisRequest(project.getUuid().toString(), component.getUuid().toString(),
                 vulnerability.getUuid().toString(), AnalysisState.NOT_AFFECTED, AnalysisJustification.PROTECTED_BY_MITIGATING_CONTROL,
@@ -958,7 +971,8 @@ public class AnalysisResourceTest extends ResourceTest {
         qm.persist(vuln);
 
         qm.addVulnerability(vuln, component, AnalyzerIdentity.INTERNAL_ANALYZER);
-        final Analysis analysis = qm.makeAnalysis(component, vuln, AnalysisState.NOT_AFFECTED, null, null, null, true);
+        var analysis = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), component.getId(), vuln.getId(), AnalysisState.NOT_AFFECTED, null, null, null, true));
 
         final VulnerabilityPolicy vulnPolicy = withJdbiHandle(handle -> {
             final var policyAnalysis = new VulnerabilityPolicyAnalysis();

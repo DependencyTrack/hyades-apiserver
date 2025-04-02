@@ -44,10 +44,6 @@ import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
-import org.dependencytrack.model.AnalysisComment;
-import org.dependencytrack.model.AnalysisJustification;
-import org.dependencytrack.model.AnalysisResponse;
-import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
@@ -147,7 +143,7 @@ public class QueryManager extends AlpineQueryManager {
     private static final Logger LOGGER = Logger.getLogger(QueryManager.class);
     private BomQueryManager bomQueryManager;
     private ComponentQueryManager componentQueryManager;
-    private FindingsQueryManager findingsQueryManager;
+    private AnalysisQueryManager analysisQueryManager;
     private LicenseQueryManager licenseQueryManager;
     private MetricsQueryManager metricsQueryManager;
     private NotificationQueryManager notificationQueryManager;
@@ -397,15 +393,15 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Lazy instantiation of FindingsQueryManager.
+     * Lazy instantiation of AnalysisQueryManager.
      *
-     * @return a FindingsQueryManager object
+     * @return a AnalysisQueryManager object
      */
-    private FindingsQueryManager getFindingsQueryManager() {
-        if (findingsQueryManager == null) {
-            findingsQueryManager = (request == null) ? new FindingsQueryManager(getPersistenceManager()) : new FindingsQueryManager(getPersistenceManager(), request);
+    private AnalysisQueryManager getAnalysisQueryManager() {
+        if (analysisQueryManager == null) {
+            analysisQueryManager = (request == null) ? new AnalysisQueryManager(getPersistenceManager()) : new AnalysisQueryManager(getPersistenceManager(), request);
         }
-        return findingsQueryManager;
+        return analysisQueryManager;
     }
 
     /**
@@ -1027,20 +1023,8 @@ public class QueryManager extends AlpineQueryManager {
         return getVulnerabilityQueryManager().getAllVulnerabilities(component, includeSuppressed);
     }
 
-    public long getVulnerabilityCount(Project project, boolean includeSuppressed) {
-        return getVulnerabilityQueryManager().getVulnerabilityCount(project, includeSuppressed);
-    }
-
     public List<Vulnerability> getVulnerabilities(Project project, boolean includeSuppressed) {
         return getVulnerabilityQueryManager().getVulnerabilities(project, includeSuppressed);
-    }
-
-    public long getSuppressedCount(Component component) {
-        return getFindingsQueryManager().getSuppressedCount(component);
-    }
-
-    public long getSuppressedCount(Project project, Component component) {
-        return getFindingsQueryManager().getSuppressedCount(project, component);
     }
 
     public VulnerabilityAlias synchronizeVulnerabilityAlias(VulnerabilityAlias alias) {
@@ -1056,25 +1040,11 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     List<Analysis> getAnalyses(Project project) {
-        return getFindingsQueryManager().getAnalyses(project);
+        return getAnalysisQueryManager().getAnalyses(project);
     }
 
     public Analysis getAnalysis(Component component, Vulnerability vulnerability) {
-        return getFindingsQueryManager().getAnalysis(component, vulnerability);
-    }
-
-    public Analysis makeAnalysis(Component component, Vulnerability vulnerability, AnalysisState analysisState,
-                                 AnalysisJustification analysisJustification, AnalysisResponse analysisResponse,
-                                 String analysisDetails, Boolean isSuppressed) {
-        return getFindingsQueryManager().makeAnalysis(component, vulnerability, analysisState, analysisJustification, analysisResponse, analysisDetails, isSuppressed);
-    }
-
-    public Analysis makeAnalysis(Component component, Vulnerability vulnerability, Analysis analysis) {
-        return getFindingsQueryManager().makeAnalysis(component, vulnerability, analysis);
-    }
-
-    public AnalysisComment makeAnalysisComment(Analysis analysis, String comment, String commenter) {
-        return getFindingsQueryManager().makeAnalysisComment(analysis, comment, commenter);
+        return getAnalysisQueryManager().getAnalysis(component, vulnerability);
     }
 
     public List<VulnerabilityMetrics> getVulnerabilityMetrics() {
