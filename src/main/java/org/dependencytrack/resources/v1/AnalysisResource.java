@@ -24,6 +24,8 @@ import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.server.auth.PermissionRequired;
+import com.google.protobuf.Any;
+import com.google.protobuf.util.Timestamps;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,21 +35,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Analysis;
-import org.dependencytrack.model.AnalysisState;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.dependencytrack.resources.v1.vo.AnalysisRequest;
-import org.dependencytrack.util.AnalysisCommentFormatter.AnalysisCommentField;
-import org.dependencytrack.util.AnalysisCommentUtil;
-import org.dependencytrack.util.NotificationUtil;
-
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -57,10 +44,36 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.Analysis;
+import org.dependencytrack.model.AnalysisState;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.jdbi.ComponentDao;
+import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.persistence.jdbi.VulnerabilityDao;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.AnalysisRequest;
+import org.dependencytrack.util.AnalysisCommentFormatter.AnalysisCommentField;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_AUDIT_CHANGE;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.util.AnalysisCommentFormatter.formatComment;
+import static org.dependencytrack.util.NotificationUtil.generateNotificationTitle;
+import static org.dependencytrack.util.NotificationUtil.generateTitle;
 
 /**
  * JAX-RS resources for processing analysis decisions.
@@ -164,22 +177,24 @@ public class AnalysisResource extends AbstractApiResource {
                 validator.validateProperty(request, "analysisDetails"),
                 validator.validateProperty(request, "comment")
         );
-        try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, request.getProject());
-            if (project == null) {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            var projectId = handle.attach(ProjectDao.class).getProjectId(UUID.fromString(request.getProject()));
+            if (projectId == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-            final Component component = qm.getObjectByUuid(Component.class, request.getComponent());
-            if (component == null) {
+            var componentUuid = UUID.fromString(request.getComponent());
+            var componentId = handle.attach(ComponentDao.class).getComponentId(componentUuid);
+            if (componentId == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
-            requireAccess(qm, component.getProject());
-            final Vulnerability vulnerability = qm.getObjectByUuid(Vulnerability.class, request.getVulnerability());
-            if (vulnerability == null) {
+            requireComponentAccess(handle, componentUuid);
+            var vulnUuid = UUID.fromString(request.getVulnerability());
+            var vulnerabilityId = handle.attach(VulnerabilityDao.class).getVulnerabilityId(vulnUuid);
+            if (vulnerabilityId == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The vulnerability could not be found.").build();
             }
 
-            String commenter = null;
+            final String commenter;
             if (getPrincipal() instanceof UserPrincipal principal) {
                 commenter = principal.getUsername();
             } else if (getPrincipal() instanceof ApiKey apiKey) {
@@ -187,32 +202,52 @@ public class AnalysisResource extends AbstractApiResource {
                 List<String> teamNames = new ArrayList<>();
                 teams.forEach(team -> teamNames.add(team.getName()));
                 commenter = String.join(", ", teamNames);
+            } else {
+                commenter = null;
             }
 
-            boolean analysisStateChange = false;
+            boolean analysisStateChange;
             boolean suppressionChange = false;
-            Analysis analysis = qm.getAnalysis(component, vulnerability);
+
+            final var dao = handle.attach(AnalysisDao.class);
+            var analysis = dao.getAnalysis(componentId, vulnerabilityId);
             if (analysis != null) {
-                analysisStateChange = AnalysisCommentUtil.makeStateComment(qm, analysis, request.getAnalysisState(), commenter);
-                AnalysisCommentUtil.makeJustificationComment(qm, analysis, request.getAnalysisJustification(), commenter);
-                AnalysisCommentUtil.makeAnalysisResponseComment(qm, analysis, request.getAnalysisResponse(), commenter);
-                AnalysisCommentUtil.makeAnalysisDetailsComment(qm, analysis, request.getAnalysisDetails(), commenter);
-                suppressionChange = AnalysisCommentUtil.makeAnalysisSuppressionComment(qm, analysis, request.isSuppressed(), commenter);
-                analysis = qm.makeAnalysis(component, vulnerability, request.getAnalysisState(), request.getAnalysisJustification(), request.getAnalysisResponse(), request.getAnalysisDetails(), request.isSuppressed());
+                // Existing Analysis
+                analysisStateChange = dao.makeStateComment(analysis, request.getAnalysisState(), commenter);
+                dao.makeJustificationComment(analysis, request.getAnalysisJustification(), commenter);
+                dao.makeAnalysisResponseComment(analysis, request.getAnalysisResponse(), commenter);
+                dao.makeAnalysisDetailsComment(analysis, request.getAnalysisDetails(), commenter);
+                suppressionChange = dao.makeAnalysisSuppressionComment(analysis, request.isSuppressed(), commenter);
+                analysis = dao.makeAnalysis(projectId, componentId, vulnerabilityId, request.getAnalysisState(),
+                        request.getAnalysisJustification(), request.getAnalysisResponse(), request.getAnalysisDetails(),
+                        suppressionChange ? request.isSuppressed() : analysis.isSuppressed());
             } else {
-                analysis = qm.makeAnalysis(component, vulnerability, request.getAnalysisState(), request.getAnalysisJustification(), request.getAnalysisResponse(), request.getAnalysisDetails(), request.isSuppressed());
+                // New Analysis
+                analysis = dao.makeAnalysis(projectId, componentId, vulnerabilityId, request.getAnalysisState(),
+                        request.getAnalysisJustification(), request.getAnalysisResponse(), request.getAnalysisDetails(),
+                        request.isSuppressed() == null ? false : request.isSuppressed());
                 analysisStateChange = true; // this is a new analysis - so set to true because it was previously null
                 if (AnalysisState.NOT_SET != request.getAnalysisState()) {
-                    qm.makeAnalysisComment(analysis, formatComment(AnalysisCommentField.STATE, AnalysisState.NOT_SET, request.getAnalysisState()), commenter);
+                    dao.makeAnalysisComment(analysis.getId(), formatComment(AnalysisCommentField.STATE, AnalysisState.NOT_SET, request.getAnalysisState()), commenter);
                 }
             }
-
-            final String comment = StringUtils.trimToNull(request.getComment());
-            qm.makeAnalysisComment(analysis, comment, commenter);
-            analysis = qm.getAnalysis(component, vulnerability);
-            NotificationUtil.analyzeNotificationCriteria(qm, analysis, analysisStateChange, suppressionChange);
+            dao.makeAnalysisComment(analysis.getId(), StringUtils.trimToNull(request.getComment()), commenter);
+            if (analysisStateChange || suppressionChange) {
+                var notificationTitle = generateTitle(analysis.getAnalysisState(), analysis.isSuppressed(), analysisStateChange, suppressionChange);
+                handle.attach(NotificationSubjectDao.class).getForProjectAuditChange(componentUuid, vulnUuid, analysis.getAnalysisState(), analysis.isSuppressed())
+                        .map(subject -> org.dependencytrack.proto.notification.v1.Notification.newBuilder()
+                                .setScope(SCOPE_PORTFOLIO)
+                                .setGroup(GROUP_PROJECT_AUDIT_CHANGE)
+                                .setLevel(LEVEL_INFORMATIONAL)
+                                .setTimestamp(Timestamps.now())
+                                .setTitle(generateNotificationTitle(notificationTitle, subject.getProject()))
+                                .setContent("An analysis decision was made to a finding affecting a project")
+                                .setSubject(Any.pack(subject))
+                                .build())
+                        .ifPresent(notification -> new KafkaEventDispatcher().dispatchNotificationProto(notification));
+            }
+            analysis.setAnalysisComments(dao.getComments(analysis.getId()));
             return Response.ok(analysis).build();
-        }
+        });
     }
-
 }

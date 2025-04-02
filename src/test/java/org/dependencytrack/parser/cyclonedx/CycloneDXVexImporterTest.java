@@ -113,7 +113,6 @@ public class CycloneDXVexImporterTest extends PersistenceCapableTest {
         }
         audits.addAll(vex.getVulnerabilities());
         vex.setVulnerabilities(audits);
-        qm.getPersistenceManager().refreshAll();
 
         // Act
         vexImporter.applyVex(qm, vex, project);

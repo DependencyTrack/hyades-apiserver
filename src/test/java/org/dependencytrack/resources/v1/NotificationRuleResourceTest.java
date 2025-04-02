@@ -46,7 +46,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -448,7 +450,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Team team = qm.createTeam("Team Example", false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        List<Team> teams = new ArrayList<>();
+        Set<Team> teams = new HashSet<>();
         teams.add(team);
         rule.setTeams(teams);
         qm.persist(rule);
@@ -522,7 +524,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
         Team team = qm.createTeam("Team Example", false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        List<Team> teams = new ArrayList<>();
+        Set<Team> teams = new HashSet<>();
         teams.add(team);
         rule.setTeams(teams);
         qm.persist(rule);

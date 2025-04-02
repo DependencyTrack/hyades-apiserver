@@ -81,14 +81,6 @@ public final class NotificationUtil {
     private NotificationUtil() {
     }
 
-    public static void analyzeNotificationCriteria(final QueryManager qm, Analysis analysis,
-                                                   final boolean analysisStateChange, final boolean suppressionChange) {
-        if (analysisStateChange || suppressionChange) {
-            var notification = generateAnalysisNotification(qm, analysis, analysisStateChange, suppressionChange);
-            new KafkaEventDispatcher().dispatchNotification(notification);
-        }
-    }
-
     public static Notification generateAnalysisNotification(final QueryManager qm, Analysis analysis,
                                                     final boolean analysisStateChange, final boolean suppressionChange) {
         // TODO: Convert data loading to raw SQL to avoid loading unneeded data and excessive queries.

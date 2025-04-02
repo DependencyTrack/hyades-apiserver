@@ -26,12 +26,19 @@ import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -55,6 +62,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -68,14 +76,6 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonObjectBuilder;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -2446,9 +2446,12 @@ public class ProjectResourceTest extends ResourceTest {
         qm.persist(vuln);
 
         qm.addVulnerability(vuln, componentA, AnalyzerIdentity.INTERNAL_ANALYZER);
-        final Analysis analysis = qm.makeAnalysis(componentA, vuln, AnalysisState.NOT_AFFECTED,
-                AnalysisJustification.REQUIRES_ENVIRONMENT, AnalysisResponse.WILL_NOT_FIX, "details", false);
-        qm.makeAnalysisComment(analysis, "comment", "commenter");
+
+        final var analysis = withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysis(project.getId(), componentA.getId(), vuln.getId(), AnalysisState.NOT_AFFECTED,
+                        AnalysisJustification.REQUIRES_ENVIRONMENT, AnalysisResponse.WILL_NOT_FIX, "details", false));
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
+                .makeAnalysisComment(analysis.getId(), "comment", "commenter"));
 
         final VulnerabilityPolicy vulnPolicy = withJdbiHandle(handle -> {
             final var policyAnalysis = new VulnerabilityPolicyAnalysis();
