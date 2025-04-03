@@ -355,7 +355,8 @@ public interface FindingDao {
             </#if>
             ${apiOffsetLimitClause!}
             """)
-    @AllowApiOrdering(alwaysBy = "attribution.id", by = {
+    @AllowApiOrdering(alwaysBy = "vulnerability.id", by = {
+            @AllowApiOrdering.Column(name = "vulnerability.id", queryName = "\"VULNERABILITY\".\"ID\""),
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
             @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = """ 
@@ -378,7 +379,6 @@ public interface FindingDao {
             @AllowApiOrdering.Column(name = "vulnerability.cvssV3BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV3BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV2BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV2BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "\"VULNERABILITY\".\"PUBLISHED\""),
-            @AllowApiOrdering.Column(name = "attribution.id", queryName = "\"FINDINGATTRIBUTION\".\"ID\""),
             @AllowApiOrdering.Column(name = "attribution.analyzerIdentity", queryName = "\"FINDINGATTRIBUTION\".\"ANALYZERIDENTITY\""),
             @AllowApiOrdering.Column(name = "vulnerability.affectedProjectCount", queryName = "COUNT(DISTINCT \"PROJECT\".\"ID\")")
     })

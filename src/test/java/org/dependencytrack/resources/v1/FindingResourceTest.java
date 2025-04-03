@@ -610,16 +610,16 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals(p1.getName() ,json.getJsonObject(1).getJsonObject("component").getString("projectName"));
         assertEquals(p1.getVersion() ,json.getJsonObject(1).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1.getUuid().toString(), json.getJsonObject(1).getJsonObject("component").getString("project"));
-        assertEquals(date.getTime(), json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
-        assertEquals(p1.getName() ,json.getJsonObject(2).getJsonObject("component").getString("projectName"));
-        assertEquals(p1.getVersion() ,json.getJsonObject(2).getJsonObject("component").getString("projectVersion"));
-        assertEquals(p1.getUuid().toString(), json.getJsonObject(2).getJsonObject("component").getString("project"));
+        assertEquals(date.getTime(), json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(p1.getName() ,json.getJsonObject(3).getJsonObject("component").getString("projectName"));
+        assertEquals(p1.getVersion() ,json.getJsonObject(3).getJsonObject("component").getString("projectVersion"));
+        assertEquals(p1.getUuid().toString(), json.getJsonObject(3).getJsonObject("component").getString("project"));
 
         // Findings of p1_child are returned because team was given access to its parent project p1.
-        assertEquals(date.getTime(), json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
-        assertEquals(p1_child.getName(), json.getJsonObject(3).getJsonObject("component").getString("projectName"));
-        assertEquals(p1_child.getVersion(), json.getJsonObject(3).getJsonObject("component").getString("projectVersion"));
-        assertEquals(p1_child.getUuid().toString(), json.getJsonObject(3).getJsonObject("component").getString("project"));
+        assertEquals(date.getTime(), json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(p1_child.getName(), json.getJsonObject(2).getJsonObject("component").getString("projectName"));
+        assertEquals(p1_child.getVersion(), json.getJsonObject(2).getJsonObject("component").getString("projectVersion"));
+        assertEquals(p1_child.getUuid().toString(), json.getJsonObject(2).getJsonObject("component").getString("project"));
     }
 
     @Test
