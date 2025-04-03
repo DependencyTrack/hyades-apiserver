@@ -18,21 +18,13 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import alpine.persistence.PaginatedResult;
-import alpine.resources.AlpineRequest;
 import alpine.server.util.DbUtil;
-import com.github.packageurl.PackageURL;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Finding;
-import org.dependencytrack.model.GroupedFinding;
-import org.dependencytrack.model.RepositoryMetaComponent;
-import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
-import org.dependencytrack.persistence.RepositoryQueryManager.RepositoryMetaComponentSearch;
-import org.dependencytrack.util.PurlUtil;
 import org.jdbi.v3.json.Json;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
@@ -47,11 +39,9 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.resources.v1.FindingResource.mapComponentLatestVersion;
 
 public interface FindingDao {
 
@@ -91,7 +81,8 @@ public interface FindingDao {
             String alt_id,
             String reference_url,
             AnalysisState analysisState,
-            boolean suppressed
+            boolean suppressed,
+            long totalCount
     ) {
     }
 
@@ -105,11 +96,13 @@ public interface FindingDao {
             Instant vulnPublished,
             List<Integer> cwes,
             AnalyzerIdentity analyzerIdentity,
-            int affectedProjectCount
+            int affectedProjectCount,
+            long totalCount
     ) {
     }
 
-    @SqlQuery("""
+    @SqlQuery(/* language=InjectedFreeMarker */ """
+            <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
             SELECT "PROJECT"."UUID" AS "projectUuid"
                  , "PROJECT"."NAME" AS "projectName"
                  , "PROJECT"."VERSION" AS "projectVersion"
@@ -146,6 +139,7 @@ public interface FindingDao {
                  , "FINDINGATTRIBUTION"."REFERENCE_URL"
                  , "ANALYSIS"."STATE" AS "analysisState"
                  , "ANALYSIS"."SUPPRESSED"
+                 , COUNT(*) OVER() AS "totalCount"
               FROM "COMPONENT"
              INNER JOIN "COMPONENTS_VULNERABILITIES"
                 ON "COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID"
@@ -164,13 +158,14 @@ public interface FindingDao {
                 ON "COMPONENT"."PROJECT_ID" = "PROJECT"."ID"
              WHERE "COMPONENT"."PROJECT_ID" = :projectId
                AND (:includeSuppressed OR "ANALYSIS"."SUPPRESSED" IS NULL OR NOT "ANALYSIS"."SUPPRESSED")
+             ORDER BY "FINDINGATTRIBUTION"."ID"
+             ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(FindingRow.class)
     List<FindingRow> getFindingsByProject(@Bind long projectId, @Bind boolean includeSuppressed);
 
     default List<Finding> getFindings(final long projectId, final boolean includeSuppressed) {
-        List<FindingRow> findingRows = withJdbiHandle(handle ->
-                getFindingsByProject(projectId, includeSuppressed));
+        List<FindingRow> findingRows = getFindingsByProject(projectId, includeSuppressed);
         List<Finding> findings = findingRows.stream().map(Finding::new).toList();
         findings = mapComponentLatestVersion(findings);
         return findings;
@@ -182,6 +177,7 @@ public interface FindingDao {
             <#-- @ftlvariable name="queryFilter" type="String" -->
             <#-- @ftlvariable name="activeFilter" type="Boolean" -->
             <#-- @ftlvariable name="suppressedFilter" type="Boolean" -->
+            <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
             SELECT "PROJECT"."UUID" AS "projectUuid"
                  , "PROJECT"."NAME" AS "projectName"
                  , "PROJECT"."VERSION" AS "projectVersion"
@@ -218,6 +214,7 @@ public interface FindingDao {
                  , "FINDINGATTRIBUTION"."REFERENCE_URL"
                  , "ANALYSIS"."STATE" AS "analysisState"
                  , "ANALYSIS"."SUPPRESSED"
+                 , COUNT(*) OVER() AS "totalCount"
               FROM "COMPONENT"
              INNER JOIN "COMPONENTS_VULNERABILITIES"
                 ON "COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID"
@@ -247,8 +244,9 @@ public interface FindingDao {
              <#if apiOrderByClause??>
               ${apiOrderByClause}
              </#if>
+             ${apiOffsetLimitClause!}
             """)
-    @AllowApiOrdering(by = {
+    @AllowApiOrdering(alwaysBy = "attribution.id", by = {
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
             @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = """ 
@@ -277,6 +275,7 @@ public interface FindingDao {
             @AllowApiOrdering.Column(name = "component.version", queryName = "\"COMPONENT\".\"VERSION\""),
             @AllowApiOrdering.Column(name = "analysis.state", queryName = "\"ANALYSIS\".\"STATE\""),
             @AllowApiOrdering.Column(name = "analysis.isSuppressed", queryName = "\"ANALYSIS\".\"SUPPRESSED\""),
+            @AllowApiOrdering.Column(name = "attribution.id", queryName = "\"FINDINGATTRIBUTION\".\"ID\""),
             @AllowApiOrdering.Column(name = "attribution.attributedOn", queryName = "\"FINDINGATTRIBUTION\".\"ATTRIBUTED_ON\"")
     })
     @DefineNamedBindings
@@ -294,26 +293,18 @@ public interface FindingDao {
      * @param showInactive   determines if inactive projects should be included or not
      * @return a List of Finding objects
      */
-    default PaginatedResult getAllFindings(final AlpineRequest alpineRequest, final Map<String, String> filters, final boolean showSuppressed, final boolean showInactive) {
+    default List<FindingRow> getAllFindings(final Map<String, String> filters, final boolean showSuppressed, final boolean showInactive) {
         StringBuilder queryFilter = new StringBuilder();
         Map<String, Object> params = new HashMap<>();
         processFilters(filters, queryFilter, params);
-        final List<FindingRow> findingRows = withJdbiHandle(handle ->
-                getAllFindings(String.valueOf(queryFilter), showInactive, showSuppressed, params));
-        List<Finding> findings = findingRows.stream().map(Finding::new).toList();
-        PaginatedResult result = new PaginatedResult();
-        result.setTotal(findings.size());
-        List<Finding> findingList = findings.subList(alpineRequest.getPagination().getOffset(),
-                Math.min(alpineRequest.getPagination().getOffset() + alpineRequest.getPagination().getLimit(), findings.size()));
-        findingList = mapComponentLatestVersion(findingList);
-        result.setObjects(findingList);
-        return result;
+        return getAllFindings(String.valueOf(queryFilter), showInactive, showSuppressed, params);
     }
 
     @SqlQuery("""
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
             <#-- @ftlvariable name="apiOrderByClause" type="String" -->
             <#-- @ftlvariable name="activeFilter" type="Boolean" -->
+            <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
             SELECT "VULNERABILITY"."SOURCE" AS "vulnSource"
                 , "VULNERABILITY"."VULNID"
                 , "VULNERABILITY"."TITLE" AS "vulnTitle"
@@ -324,6 +315,7 @@ public interface FindingDao {
                 , CAST(STRING_TO_ARRAY("VULNERABILITY"."CWES", ',') AS INT[]) AS "CWES"
                 , "FINDINGATTRIBUTION"."ANALYZERIDENTITY"
                 , COUNT(DISTINCT "PROJECT"."ID") AS "affectedProjectCount"
+                , COUNT(*) OVER() AS "totalCount"
             FROM "COMPONENT"
                 INNER JOIN "COMPONENTS_VULNERABILITIES"
                     ON ("COMPONENT"."ID" = "COMPONENTS_VULNERABILITIES"."COMPONENT_ID")
@@ -361,8 +353,10 @@ public interface FindingDao {
             <#if apiOrderByClause??>
               ${apiOrderByClause}
             </#if>
+            ${apiOffsetLimitClause!}
             """)
-    @AllowApiOrdering(by = {
+    @AllowApiOrdering(alwaysBy = "vulnerability.id", by = {
+            @AllowApiOrdering.Column(name = "vulnerability.id", queryName = "\"VULNERABILITY\".\"ID\""),
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
             @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = """ 
@@ -403,62 +397,14 @@ public interface FindingDao {
      * @param showInactive  determines if inactive projects should be included or not
      * @return a List of Finding objects
      */
-    default PaginatedResult getGroupedFindings(final AlpineRequest alpineRequest, final Map<String, String> filters, final boolean showInactive) {
+    default List<GroupedFindingRow> getGroupedFindings(final Map<String, String> filters, final boolean showInactive) {
         StringBuilder queryFilter = new StringBuilder();
         Map<String, Object> params = new HashMap<>();
         processFilters(filters, queryFilter, params);
         StringBuilder aggregateFilter = new StringBuilder();
         processAggregateFilters(filters, aggregateFilter, params);
-        final List<GroupedFindingRow> findingRows = withJdbiHandle(alpineRequest, handle ->
-                getGroupedFindings(String.valueOf(queryFilter), showInactive, String.valueOf(aggregateFilter), params));
-        List<GroupedFinding> findings = findingRows.stream().map(GroupedFinding::new).toList();
-        PaginatedResult result = new PaginatedResult();
-        result.setTotal(findings.size());
-        final List<GroupedFinding> findingsList = findings.subList(alpineRequest.getPagination().getOffset(),
-                Math.min(alpineRequest.getPagination().getOffset()
-                        + alpineRequest.getPagination().getLimit(), findings.size()));
-        result.setObjects(findingsList);
-        return result;
+        return getGroupedFindings(String.valueOf(queryFilter), showInactive, String.valueOf(aggregateFilter), params);
     }
-
-    private List<Finding> mapComponentLatestVersion(List<Finding> findingList){
-
-        final Map<RepositoryMetaComponentSearch, List<Finding>> findingsByMetaComponentSearch = findingList.stream()
-                .filter(finding -> finding.getComponent().get("purl") != null)
-                .map(finding -> {
-                    final PackageURL purl = PurlUtil.silentPurl((String) finding.getComponent().get("purl"));
-                    if (purl == null) {
-                        return null;
-                    }
-
-                    final var repositoryType = RepositoryType.resolve(purl);
-                    if (repositoryType == RepositoryType.UNSUPPORTED) {
-                        return null;
-                    }
-
-                    final var search = new RepositoryMetaComponentSearch(repositoryType, purl.getNamespace(), purl.getName());
-                    return Map.entry(search, finding);
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.groupingBy(
-                        Map.Entry::getKey,
-                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())
-                ));
-
-        final List<RepositoryMetaComponent> repositoryMetaComponents = withJdbiHandle(handle ->
-                handle.attach(RepositoryMetaDao.class).getRepositoryMetaComponents(findingsByMetaComponentSearch.keySet()));
-        repositoryMetaComponents.forEach(metaComponent -> {
-            final var search = new RepositoryMetaComponentSearch(metaComponent.getRepositoryType(), metaComponent.getNamespace(), metaComponent.getName());
-            final List<Finding> affectedFindings = findingsByMetaComponentSearch.get(search);
-            if (affectedFindings != null) {
-                for (final Finding finding : affectedFindings) {
-                    finding.getComponent().put("latestVersion", metaComponent.getLatestVersion());
-                }
-            }
-        });
-        return findingList;
-    }
-
 
     private void processFilters(Map<String, String> filters, StringBuilder queryFilter, Map<String, Object> params) {
         for (String filter : filters.keySet()) {

@@ -79,7 +79,7 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
                 "vuln-recommendation", Instant.now(), Severity.CRITICAL, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
                 "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
                 "owasp-vector", null, BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
-                AnalyzerIdentity.OSSINDEX_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
+                AnalyzerIdentity.OSSINDEX_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true, 1);
         Finding findingWithoutAlias = new Finding(findingRow);
 
         var alias = new VulnerabilityAlias();
@@ -108,7 +108,7 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
                 "vuln-recommendation", Instant.now(), Severity.HIGH, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
                 "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
                 "owasp-vector", List.of(alias, other), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
-                AnalyzerIdentity.INTERNAL_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true);
+                AnalyzerIdentity.INTERNAL_ANALYZER, Instant.now(), null, null, AnalysisState.NOT_AFFECTED, true, 1);
         Finding findingWithAlias = new Finding(findingRow);
 
         FindingPackagingFormat fpf = new FindingPackagingFormat(
