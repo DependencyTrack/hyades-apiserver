@@ -128,24 +128,29 @@ public class AccessControlResource extends AlpineResource {
                     headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects",
                             schema = @Schema(format = "integer")),
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))),
+            @ApiResponse(responseCode = "204", description = "No unassigned projects for specified user."),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "No unassigned projects for specified user."),
+            @ApiResponse(responseCode = "404", description = "User not found"),
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
     public Response retrieveUserProjects(
-            @Parameter(description = "The username to retrieve projects for",
-                    required = true) @PathParam("username") String username) {
+            @Parameter(description = "The username to retrieve projects for", required = true) @PathParam("username") String username) {
 
         try (QueryManager qm = new QueryManager()) {
             UserPrincipal principal = qm.getUserPrincipal(username);
+
+            if (principal == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
 
             try (final Handle jdbiHandle = openJdbiHandle()) {
                 var dao = jdbiHandle.attach(RoleDao.class);
                 List<Project> projects = dao.getUserUnassignedProjects(principal.getClass(), principal.getUsername());
 
-                if (projects == null || projects.isEmpty())
-                    return Response.ok(List.of()).entity("No unassigned projects for specified user.").build();
-                
+                if (projects == null || projects.isEmpty()) {
+                    return Response.noContent().build();
+                }
+
                 return Response.ok(projects).header(TOTAL_COUNT_HEADER, projects.size()).build();
             }
         }
