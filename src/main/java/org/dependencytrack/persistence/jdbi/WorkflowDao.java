@@ -151,7 +151,7 @@ public interface WorkflowDao extends SqlObject {
                SET "STATUS" = 'TIMED_OUT'
                  , "UPDATED_AT" = NOW()
              WHERE "STATUS" = 'PENDING'
-               AND NOW() - "UPDATED_AT" > :timeoutDuration
+               AND "UPDATED_AT" < (NOW() - :timeoutDuration)
             """)
     int transitionAllPendingStepsToTimedOutForTimeout(@Bind Duration timeoutDuration);
 
@@ -166,7 +166,7 @@ public interface WorkflowDao extends SqlObject {
                              , "FAILURE_REASON" = 'Timed out'
                              , "UPDATED_AT" = NOW()
                          WHERE "STATUS" = 'TIMED_OUT'
-                           AND NOW() - "UPDATED_AT" > :timeoutDuration
+                           AND "UPDATED_AT" < (NOW() - :timeoutDuration)
                         RETURNING "ID"
                         """)
                 .bind("timeoutDuration", timeoutDuration)
@@ -188,7 +188,7 @@ public interface WorkflowDao extends SqlObject {
                   WHERE "WFS"."TOKEN" = "WFS_PARENT"."TOKEN"
                     AND "WFS"."STATUS" IN ('PENDING', 'TIMED_OUT'))
                GROUP BY "TOKEN"
-              HAVING NOW() - MAX("UPDATED_AT") > :retentionDuration
+              HAVING MAX("UPDATED_AT") < (NOW() - :retentionDuration)
             )
             DELETE
               FROM "WORKFLOW_STATE"
