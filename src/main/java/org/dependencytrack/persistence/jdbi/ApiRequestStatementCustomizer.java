@@ -144,7 +144,7 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
                         .append(orderingColumnAlwaysBy.name())
                         .append("\"");
             } else {
-                orderingBuilder.append(orderingColumnAlwaysBy.queryName());
+                orderingBuilder.append(", " + orderingColumnAlwaysBy.queryName());
             }
 
             if (alwaysByParts.length == 2
