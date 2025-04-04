@@ -23,7 +23,6 @@ import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import io.github.nscuro.versatile.Vers;
 import io.github.nscuro.versatile.VersException;
-import jakarta.annotation.Nullable;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.policy.v1.Component;
@@ -45,6 +44,7 @@ import org.projectnessie.cel.common.types.Types;
 import org.projectnessie.cel.common.types.ref.Val;
 import org.projectnessie.cel.interpreter.functions.Overload;
 
+import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
@@ -63,6 +63,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.substringAfter;
+import static org.dependencytrack.persistence.jdbi.JdbiAttributes.ATTRIBUTE_QUERY_NAME;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_COMPONENT;
 import static org.dependencytrack.policy.cel.definition.CelPolicyTypes.TYPE_PROJECT;
@@ -416,6 +417,7 @@ public class CelCommonPolicyLibrary implements Library {
                           AND ${filters}
                         """);
                 return query
+                        .define(ATTRIBUTE_QUERY_NAME, "%s#dependsOn_withoutInMemoryFilters".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
                         .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                         .bind("projectUuid", UUID.fromString(project.getUuid()))
                         .bindMap(compositeNodeFilter.sqlFilterParams())
@@ -438,6 +440,7 @@ public class CelCommonPolicyLibrary implements Library {
                       AND ${filters}
                     """);
             return query
+                    .define(ATTRIBUTE_QUERY_NAME, "%s#dependsOn_withInMemoryFilters".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                     .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
                     .bind("projectUuid", UUID.fromString(project.getUuid()))
@@ -534,6 +537,7 @@ public class CelCommonPolicyLibrary implements Library {
                         """);
 
                 return query
+                        .define(ATTRIBUTE_QUERY_NAME, "%s#isDependencyOf_withoutInMemoryFilters".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
                         .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                         .bind("leafComponentUuid", UUID.fromString(leafComponent.getUuid()))
                         .bindMap(compositeNodeFilter.sqlFilterParams())
@@ -620,6 +624,7 @@ public class CelCommonPolicyLibrary implements Library {
                     """);
 
             return query
+                    .define(ATTRIBUTE_QUERY_NAME, "%s#isDependencyOf_withInMemoryFilters".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                     .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
                     .bind("leafComponentUuid", UUID.fromString(leafComponent.getUuid()))
@@ -736,6 +741,7 @@ public class CelCommonPolicyLibrary implements Library {
                     """);
 
             final List<DependencyNode> nodes = query
+                    .define(ATTRIBUTE_QUERY_NAME, "%s#isExclusiveDependencyOf".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
                     .define("filters", compositeNodeFilter.sqlFiltersConjunctive())
                     .define("selectColumnNames", compositeNodeFilter.sqlSelectColumns())
                     .bind("leafComponentUuid", UUID.fromString(leafComponent.getUuid()))
@@ -976,6 +982,7 @@ public class CelCommonPolicyLibrary implements Library {
                 """);
 
         return query
+                .define(ATTRIBUTE_QUERY_NAME, "%s#isDirectDependency".formatted(CelCommonPolicyLibrary.class.getSimpleName()))
                 .bind("leafComponentUuid", UUID.fromString(component.getUuid()))
                 .mapTo(Boolean.class)
                 .findOne()
