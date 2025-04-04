@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.dependencytrack.persistence.jdbi.JdbiAttributes.ATTRIBUTE_QUERY_NAME;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
@@ -132,6 +133,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
         return withJdbiHandle(handle -> handle.createQuery("""
                         SELECT EXISTS(SELECT 1 FROM "COMPONENT" WHERE "INTERNAL")
                         """)
+                .define(ATTRIBUTE_QUERY_NAME, "%s#internalComponentsExist".formatted(getClass().getSimpleName()))
                 .mapTo(Boolean.class)
                 .one());
     }
@@ -153,6 +155,7 @@ public class InternalComponentIdentificationTask implements Subscriber {
                         """)
                 // lastId parameter is not bound for first iteration.
                 .configure(SqlStatements.class, cfg -> cfg.setUnusedBindingAllowed(true))
+                .define(ATTRIBUTE_QUERY_NAME, "%s#fetchNextComponentsPage".formatted(getClass().getSimpleName()))
                 .bind("lastId", lastId)
                 .defineNamedBindings()
                 .mapToBean(Component.class)
@@ -177,7 +180,9 @@ public class InternalComponentIdentificationTask implements Subscriber {
                 batch.add();
             });
 
-            batch.execute();
+            batch
+                    .define(ATTRIBUTE_QUERY_NAME, "%s#updateInternalStatuses".formatted(getClass().getSimpleName()))
+                    .execute();
         });
     }
 
