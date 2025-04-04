@@ -130,7 +130,7 @@
         <!-- Maven Plugin Versions -->
         <plugin.checkstyle.version>3.6.0</plugin.checkstyle.version>
         <plugin.protoc-jar.version>3.11.4</plugin.protoc-jar.version>
-        <plugin.jetty.version>12.0.18</plugin.jetty.version>
+        <plugin.jetty.version>12.0.19</plugin.jetty.version>
         <!-- SonarCloud properties -->
         <sonar.exclusions>src/main/webapp/**</sonar.exclusions>
         <!-- Tool Versions -->
