@@ -61,6 +61,11 @@ public enum Permissions {
     POLICY_MANAGEMENT_READ("Allows reading of policies"),
     POLICY_MANAGEMENT_UPDATE("Allows the modification of a policy"),
     POLICY_MANAGEMENT_DELETE("Allows the deletion of a policy"),
+    ROLE_MANAGEMENT("Allows the creation, modification, and deletion of roles"),
+    ROLE_MANAGEMENT_CREATE("Allows the creation of roles"),
+    ROLE_MANAGEMENT_READ("Allows reading of roles"),
+    ROLE_MANAGEMENT_UPDATE("Allows update of roles"),
+    ROLE_MANAGEMENT_DELETE("Allows the deletion of roles"),
     TAG_MANAGEMENT("Allows the modification and deletion of tags"),
     TAG_MANAGEMENT_DELETE("Allows the deletion of a tag"),
     VIEW_BADGES("Provides the ability to view badges");
@@ -111,6 +116,11 @@ public enum Permissions {
         public static final String POLICY_MANAGEMENT_READ = "POLICY_MANAGEMENT_READ";
         public static final String POLICY_MANAGEMENT_UPDATE = "POLICY_MANAGEMENT_UPDATE";
         public static final String POLICY_MANAGEMENT_DELETE = "POLICY_MANAGEMENT_DELETE";
+        public static final String ROLE_MANAGEMENT = "ROLE_MANAGEMENT";
+        public static final String ROLE_MANAGEMENT_CREATE = "ROLE_MANAGEMENT_CREATE";
+        public static final String ROLE_MANAGEMENT_READ = "ROLE_MANAGEMENT_READ";
+        public static final String ROLE_MANAGEMENT_UPDATE = "ROLE_MANAGEMENT_UPDATE";
+        public static final String ROLE_MANAGEMENT_DELETE = "ROLE_MANAGEMENT_DELETE";
         public static final String TAG_MANAGEMENT = "TAG_MANAGEMENT";
         public static final String TAG_MANAGEMENT_DELETE = "TAG_MANAGEMENT_DELETE";
         public static final String VIEW_BADGES = "VIEW_BADGES";
