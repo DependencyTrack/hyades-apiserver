@@ -610,16 +610,16 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals(p1.getName() ,json.getJsonObject(1).getJsonObject("component").getString("projectName"));
         assertEquals(p1.getVersion() ,json.getJsonObject(1).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1.getUuid().toString(), json.getJsonObject(1).getJsonObject("component").getString("project"));
-        assertEquals(date.getTime(), json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
-        assertEquals(p1.getName() ,json.getJsonObject(2).getJsonObject("component").getString("projectName"));
-        assertEquals(p1.getVersion() ,json.getJsonObject(2).getJsonObject("component").getString("projectVersion"));
-        assertEquals(p1.getUuid().toString(), json.getJsonObject(2).getJsonObject("component").getString("project"));
+        assertEquals(date.getTime(), json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(p1.getName() ,json.getJsonObject(3).getJsonObject("component").getString("projectName"));
+        assertEquals(p1.getVersion() ,json.getJsonObject(3).getJsonObject("component").getString("projectVersion"));
+        assertEquals(p1.getUuid().toString(), json.getJsonObject(3).getJsonObject("component").getString("project"));
 
         // Findings of p1_child are returned because team was given access to its parent project p1.
-        assertEquals(date.getTime(), json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
-        assertEquals(p1_child.getName(), json.getJsonObject(3).getJsonObject("component").getString("projectName"));
-        assertEquals(p1_child.getVersion(), json.getJsonObject(3).getJsonObject("component").getString("projectVersion"));
-        assertEquals(p1_child.getUuid().toString(), json.getJsonObject(3).getJsonObject("component").getString("project"));
+        assertEquals(date.getTime(), json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(p1_child.getName(), json.getJsonObject(2).getJsonObject("component").getString("projectName"));
+        assertEquals(p1_child.getVersion(), json.getJsonObject(2).getJsonObject("component").getString("projectVersion"));
+        assertEquals(p1_child.getUuid().toString(), json.getJsonObject(2).getJsonObject("component").getString("project"));
     }
 
     @Test
@@ -950,6 +950,123 @@ public class FindingResourceTest extends ResourceTest {
                         }
                 """)
         );
+    }
+
+    @Test
+    public void getFindingsByProjectWithPaginationTest() {
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+
+        for (int i = 0; i < 5; i++) {
+            Component component = createComponent(p1, "Component "+i, "1.0."+i);
+            Vulnerability vulnerability = createVulnerability("Vuln-"+i, Severity.LOW);
+            qm.addVulnerability(vulnerability, component, AnalyzerIdentity.NONE);
+        }
+
+        Response response = jersey.target(V1_FINDING  + "/project/" + p1.getUuid())
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
+        JsonArray json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(3);
+        assertThat(json.get(0).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-0");
+        assertThat(json.get(1).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-1");
+        assertThat(json.get(2).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-2");
+
+        response = jersey.target(V1_FINDING)
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
+        json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(2);
+        assertThat(json.get(0).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-3");
+        assertThat(json.get(1).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-4");
+
+    }
+
+    @Test
+    public void getAllFindingsWithPaginationTest() {
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+
+        for (int i = 0; i < 5; i++) {
+            Component component = createComponent(p1, "Component "+i, "1.0."+i);
+            Vulnerability vulnerability = createVulnerability("Vuln-"+i, Severity.LOW);
+            qm.addVulnerability(vulnerability, component, AnalyzerIdentity.NONE);
+        }
+
+        Response response = jersey.target(V1_FINDING)
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
+        JsonArray json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(3);
+        assertThat(json.get(0).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-0");
+        assertThat(json.get(1).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-1");
+        assertThat(json.get(2).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-2");
+
+        response = jersey.target(V1_FINDING)
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
+        json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(2);
+        assertThat(json.get(0).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-3");
+        assertThat(json.get(1).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-4");
+
+    }
+
+    @Test
+    public void getAllGroupedFindingsWithPaginationTest() {
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+
+        for (int i = 0; i < 5; i++) {
+            Component component = createComponent(p1, "Component "+i, "1.0."+i);
+            Vulnerability vulnerability = createVulnerability("Vuln-"+i, Severity.LOW);
+            qm.addVulnerability(vulnerability, component, AnalyzerIdentity.NONE);
+        }
+
+        Response response = jersey.target(V1_FINDING + "/grouped")
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
+        JsonArray json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(3);
+        assertThat(json.get(0).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-0");
+        assertThat(json.get(1).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-1");
+        assertThat(json.get(2).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-2");
+
+        response = jersey.target(V1_FINDING)
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("5");
+        json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(2);
+        assertThat(json.get(0).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-3");
+        assertThat(json.get(1).asJsonObject().getJsonObject("vulnerability").getString("vulnId")).isEqualTo("Vuln-4");
+
     }
 
     private Component createComponent(Project project, String name, String version) {

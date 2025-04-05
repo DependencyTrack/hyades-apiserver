@@ -340,6 +340,33 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void testWithAlpineRequestOrderingWithOnlyAlwaysBy() {
+        final var request = new AlpineRequest(
+                /* principal */ null,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ null,
+                /* orderDirection */ null
+        );
+
+        useJdbiHandle(request, handle -> handle
+                .configure(ApiRequestConfig.class, config -> {
+                    config.setOrderingAllowedColumns(Set.of(new OrderingColumn("valueB")));
+                    config.setOrderingAlwaysBy("valueB");
+                })
+                .addCustomizer(inspectStatement(ctx -> {
+                    assertThat(ctx.getRenderedSql()).isEqualToIgnoringWhitespace("""
+                            SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE TRUE ORDER BY "valueB"
+                            """);
+
+                    assertThat(ctx.getBinding()).hasToString("{}");
+                }))
+                .createQuery(TEST_QUERY_TEMPLATE)
+                .mapTo(Integer.class)
+                .findOne());
+    }
+
+    @Test
     public void testWithPortfolioAclDisabled() {
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),

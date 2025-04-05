@@ -96,40 +96,43 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
     }
 
     private void defineOrdering(final StatementContext ctx) {
-        if (apiRequest == null || apiRequest.getOrderBy() == null) {
+        if (apiRequest == null) {
             return;
-        }
-
-        final var config = ctx.getConfig(ApiRequestConfig.class);
-        if (config.orderingAllowedColumns() == null) {
-            return;
-        }
-        if (config.orderingAllowedColumns().isEmpty()) {
-            throw new IllegalArgumentException("Ordering is not allowed");
         }
 
         final var ordering = new Ordering(apiRequest);
-        final OrderingColumn orderingColumn = config.orderingAllowedColumn(ordering.by())
-                .orElseThrow(() -> new IllegalArgumentException("Ordering by column %s is not allowed; Allowed columns are: %s"
-                        .formatted(ordering.by(), config.orderingAllowedColumns().stream().map(OrderingColumn::name).toList())));
+        final var orderingBuilder = new StringBuilder();
+        final var config = ctx.getConfig(ApiRequestConfig.class);
 
-        final var orderingBuilder = new StringBuilder("ORDER BY ");
-        if (orderingColumn.queryName() == null) {
-            orderingBuilder
-                    .append("\"")
-                    .append(ordering.by())
-                    .append("\"");
-        } else {
-            orderingBuilder.append(orderingColumn.queryName());
+        if (apiRequest.getOrderBy() != null) {
+            if (config.orderingAllowedColumns() == null) {
+                return;
+            }
+            if (config.orderingAllowedColumns().isEmpty()) {
+                throw new IllegalArgumentException("Ordering is not allowed");
+            }
+            final OrderingColumn orderingColumn = config.orderingAllowedColumn(ordering.by())
+                    .orElseThrow(() -> new IllegalArgumentException("Ordering by column %s is not allowed; Allowed columns are: %s"
+                            .formatted(ordering.by(), config.orderingAllowedColumns().stream().map(OrderingColumn::name).toList())));
+
+            orderingBuilder.append("ORDER BY ");
+            if (orderingColumn.queryName() == null) {
+                orderingBuilder
+                        .append("\"")
+                        .append(ordering.by())
+                        .append("\"");
+            } else {
+                orderingBuilder.append(orderingColumn.queryName());
+            }
+
+            if (ordering.direction() != null && ordering.direction() != OrderDirection.UNSPECIFIED) {
+                orderingBuilder
+                        .append(" ")
+                        .append(ordering.direction() == OrderDirection.ASCENDING ? "ASC" : "DESC");
+            }
         }
 
-        if (ordering.direction() != null && ordering.direction() != OrderDirection.UNSPECIFIED) {
-            orderingBuilder
-                    .append(" ")
-                    .append(ordering.direction() == OrderDirection.ASCENDING ? "ASC" : "DESC");
-        }
-
-        if (!config.orderingAlwaysBy().isBlank() && !ordering.by().equals(config.orderingAlwaysBy())) {
+        if (!config.orderingAlwaysBy().isBlank() && (ordering.by() == null || !ordering.by().equals(config.orderingAlwaysBy()))) {
             final String[] alwaysByParts = config.orderingAlwaysBy().split("\\s");
             if (alwaysByParts.length > 2) {
                 throw new IllegalArgumentException("alwaysBy must consist of no more than two parts");
@@ -138,13 +141,16 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
             final OrderingColumn orderingColumnAlwaysBy = config.orderingAllowedColumn(alwaysByParts[0])
                     .orElseThrow(() -> new IllegalArgumentException("Ordering by column %s is not allowed; Allowed columns are: %s"
                             .formatted(alwaysByParts[0], config.orderingAllowedColumns().stream().map(OrderingColumn::name).toList())));
+
             if (orderingColumnAlwaysBy.queryName() == null) {
                 orderingBuilder
-                        .append(", \"")
+                        .append(orderingBuilder.isEmpty() ? "ORDER BY \"" : ", \"")
                         .append(orderingColumnAlwaysBy.name())
                         .append("\"");
             } else {
-                orderingBuilder.append(orderingColumnAlwaysBy.queryName());
+                orderingBuilder
+                        .append(orderingBuilder.isEmpty() ? "ORDER BY " : ", ")
+                        .append(orderingColumnAlwaysBy.queryName());
             }
 
             if (alwaysByParts.length == 2
@@ -155,7 +161,9 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
             }
         }
 
-        ctx.define(ATTRIBUTE_API_ORDER_BY_CLAUSE, orderingBuilder.toString());
+        if (!orderingBuilder.isEmpty()) {
+            ctx.define(ATTRIBUTE_API_ORDER_BY_CLAUSE, orderingBuilder.toString());
+        }
     }
 
     private void definePagination(final StatementContext ctx) {
