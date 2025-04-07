@@ -1345,7 +1345,6 @@
                 , 'HIGH'
                 , 'CRITICAL'
             );
-            CREATE CAST (varchar AS severity) WITH INOUT AS IMPLICIT;
             ALTER TABLE public."ANALYSIS" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
             ALTER TABLE public."VULNERABILITY" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
         </sql>
