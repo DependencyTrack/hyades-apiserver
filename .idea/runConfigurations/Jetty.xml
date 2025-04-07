@@ -31,17 +31,16 @@
           </option>
           <option name="goals">
             <list>
+              <option value="-pl" />
+              <option value="apiserver" />
               <option value="jetty:run" />
               <option value="-Dcheckstyle.skip" />
-              <option value="-Dlogback.configurationFile=src/main/docker/logback.xml" />
             </list>
           </option>
           <option name="multimoduleDir" />
           <option name="pomFileName" />
           <option name="profilesMap">
-            <map>
-              <entry key="enhance" value="true" />
-            </map>
+            <map />
           </option>
           <option name="projectsCmdOptionValues">
             <list />

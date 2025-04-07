@@ -21,7 +21,7 @@ on:
     branches:
     - main
     paths:
-    - src/main/resources/application.properties
+    - apiserver/src/main/resources/application.properties
 
 permissions: { }
 

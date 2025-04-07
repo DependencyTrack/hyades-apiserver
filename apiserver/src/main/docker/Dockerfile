@@ -26,7 +26,6 @@ ARG APP_DIR=/opt/owasp/dependency-track/
 ARG DATA_DIR=/data/
 ARG UID=1000
 ARG GID=1000
-ARG WAR_FILENAME=dependency-track-apiserver.jar
 
 ENV TZ=Etc/UTC \
     # Dependency-Track's default logging level
@@ -39,8 +38,6 @@ ENV TZ=Etc/UTC \
     # The web context defaults to the root. To override, supply an alternative context which starts with a / but does not end with one
     # Example: /dtrack
     CONTEXT="/" \
-    # Injects the build-time ARG "WAR_FILENAME" as an environment variable that can be used in the CMD.
-    WAR_FILENAME=${WAR_FILENAME} \
     # Set JAVA_HOME for the copied over JRE
     JAVA_HOME=/opt/java/openjdk \
     PATH="/opt/java/openjdk/bin:${PATH}" \
@@ -69,7 +66,7 @@ RUN mkdir -p ${APP_DIR} ${DATA_DIR} \
 COPY --from=jre-build /opt/java/openjdk $JAVA_HOME
 
 # Copy the compiled WAR to the application directory created above
-COPY ./target/${WAR_FILENAME} ./src/main/docker/logback-json.xml ${APP_DIR}
+COPY ./target/dependency-track-apiserver.jar ./src/main/docker/logback-json.xml ${APP_DIR}
 
 # Specify the user to run as (in numeric format for compatibility with Kubernetes/OpenShift's SCC)
 USER ${UID}
@@ -78,7 +75,7 @@ USER ${UID}
 WORKDIR ${APP_DIR}
 
 # Launch Dependency-Track
-CMD exec java ${JAVA_OPTIONS} ${EXTRA_JAVA_OPTIONS} --add-opens java.base/java.util.concurrent=ALL-UNNAMED -DdependencyTrack.logging.level=${LOGGING_LEVEL} -jar ${WAR_FILENAME} -context ${CONTEXT}
+CMD exec java ${JAVA_OPTIONS} ${EXTRA_JAVA_OPTIONS} --add-opens java.base/java.util.concurrent=ALL-UNNAMED -DdependencyTrack.logging.level=${LOGGING_LEVEL} -jar dependency-track-apiserver.jar -context ${CONTEXT}
 
 # Specify which port Dependency-Track listens on
 EXPOSE 8080
