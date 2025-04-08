@@ -62,8 +62,7 @@ jobs:
         env:
           TESTCONTAINERS_REUSE_ENABLE: "true"
         run: |-
-          mvn -B --no-transfer-progress clean
-          mvn -B --no-transfer-progress test -P enhance
+          mvn -B --no-transfer-progress clean test
 
       # Publishing coverage to Codacy is only possible for builds of push events.
       # PRs from forks do not get access to repository secrets.
@@ -90,4 +89,4 @@ jobs:
           path: |-
             pr-commit.txt
             pr-number.txt
-            target/jacoco-ut/jacoco.xml
+            apiserver/target/jacoco-ut/jacoco.xml

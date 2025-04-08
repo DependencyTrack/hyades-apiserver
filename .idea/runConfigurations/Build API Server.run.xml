@@ -1,7 +1,9 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Build API Server" type="MavenRunConfiguration" factoryName="Maven">
     <MavenSettings>
-      <option name="myGeneralSettings" />
+      <option name="myGeneralSettings">
+        <MavenGeneralSettings />
+      </option>
       <option name="myRunnerSettings" />
       <option name="myRunnerParameters">
         <MavenRunnerParameters>
@@ -10,19 +12,16 @@
           </option>
           <option name="goals">
             <list>
+              <option value="-pl" />
+              <option value="apiserver" />
               <option value="clean" />
               <option value="package" />
               <option value="-DskipTests" />
-              <option value="-Dlogback.configuration.file=src/main/docker/logback.xml" />
             </list>
           </option>
           <option name="pomFileName" />
           <option name="profilesMap">
-            <map>
-              <entry key="embedded-jetty" value="true" />
-              <entry key="clean-exclude-wars" value="true" />
-              <entry key="enhance" value="true" />
-            </map>
+            <map />
           </option>
           <option name="resolveToWorkspace" value="false" />
           <option name="workingDirPath" value="$PROJECT_DIR$" />

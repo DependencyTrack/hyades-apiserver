@@ -45,42 +45,23 @@ Knowing about the core technologies used by the API server may help you with und
 
 ## Building
 
-Build an executable JAR containing just the API server:
+Build an executable JAR:
 
 ```shell
-mvn clean package -P clean-exclude-wars -P enhance -P embedded-jetty -DskipTests -Dlogback.configuration.file=src/main/docker/logback.xml
+mvn clean package -DskipTests
 ```
 
-The resulting file is placed in `./target` as `dependency-track-apiserver.jar`.
+The resulting file is placed in `./apiserver/target` as `dependency-track-apiserver.jar`.
 The JAR ships with 
 an [embedded Jetty server](https://github.com/stevespringett/Alpine/tree/master/alpine-executable-war),
 there's no need to deploy it in an application server like Tomcat or WildFly.
 
 ## Running
 
-In case you want to provide a topic prefix to use in conjunction with hyades application then the environment variable
-to export is DT_KAFKA_TOPIC_PREFIX<br/>
-If the host environment requires ssl configuration then below configurations need to be passed:
-
-| Environment Variable                    | Description                              | Default | Required |
-|:----------------------------------------|:-----------------------------------------|:--------|:--------:|
-| `DT_KAFKA_TOPIC_PREFIX`                 | Prefix for topic names                   | -       |    ✅     |
-| `KAFKA_TLS_ENABLED`                     | Whether tls is enabled                   | false   |    ❌     |
-| `KAFKA_SECURTY_PROTOCOL`                | Security protocol to be used             | -       |    ❌     |
-| `KAFKA_TRUSTSTORE_PATH`                 | Trust store path to be used              | -       |    ❌     |
-| `KAFKA_TRUSTSTORE_PASSWORD`             | Trust store password                     | -       |    ❌     |
-| `KAFKA_MTLS_ENABLED`                    | Whether mtls is enabled                  | false   |    ❌     |
-| `KAFKA_KEYSTORE_PATH`                   | Key store path to be used                | -       |    ❌     |
-| `KAFKA_KEYSTORE_PASSWORD`               | Key store password                       | -       |    ❌     |
-| `KAFKA_STREAMS_METRICS_RECORDING_LEVEL` | Recording level of Kafka Streams metrics | `INFO`  |    ❌     |
-
-(If tls is enabled then the security protocol, truststore path and password would be required properties)
-(If mtls is enabled then additional to truststore, keystore path and password would be required properties)
-
 To run a previously built executable JAR, just invoke it with `java -jar`, e.g.:
 
 ```shell
-java -jar ./target/dependency-track-apiserver.jar
+java -jar ./apiserver/target/dependency-track-apiserver.jar
 ```
 
 The API server will be available at `http://127.0.0.1:8080`.
@@ -94,7 +75,7 @@ the [configuration documentation](https://docs.dependencytrack.org/getting-start
 To build and run the API server in one go, invoke the Jetty Maven plugin as follows:
 
 ```shell
-mvn jetty:run -P enhance -Dlogback.configurationFile=src/main/docker/logback.xml
+mvn -pl apiserver -Dcheckstyle.skip jetty:run
 ```
 
 The above command is also suitable for debugging. For IntelliJ, simply *Debug* the [Jetty](.idea/runConfigurations/Jetty.run.xml) run
@@ -125,7 +106,7 @@ Now visit `http://127.0.0.1:8081` in your browser and use Dependency-Track as us
 To run all tests:
 
 ```shell
-mvn clean verify -P enhance
+mvn clean verify
 ```
 
 Depending on your machine, this will take roughly 10-30min. Unless you modified central parts of the application,
@@ -147,14 +128,14 @@ Enhancement is performed on compiled bytecode and thus has to be performed post-
 in Maven).
 During a Maven build,
 the [DataNucleus Maven plugin](https://www.datanucleus.org/products/accessplatform/jdo/enhancer.html#maven)
-takes care of this (that's also why `-P enhance` is required in all Maven commands).
+takes care of this.
 
 Because most IDEs run their own build when executing tests, effectively bypassing Maven, bytecode enhancement is not
 performed, and exceptions as that shown above are raised. If this happens, you can manually kick off the bytecode
 enhancement like this:
 
 ```shell
-mvn clean process-classes -P enhance
+mvn -pl apiserver process-classes
 ```
 
 Now just execute the test again, and it should just work.
@@ -169,24 +150,8 @@ Ensure you've built the API server JAR.
 To build the API server image:
 
 ```shell
-docker build --build-arg WAR_FILENAME=dependency-track-apiserver.jar -t dependencytrack/apiserver:local -f ./src/main/docker/Dockerfile .
+docker build --build-arg \
+  -t dependencytrack/hyades-apiserver:local \
+  -f ./apiserver/src/main/docker/Dockerfile \
+  ./apiserver
 ```
-
-## Shedlock 
-Shedlock is being used to ensure that scheduled tasks are executed at most once at the same time. 
-If a task is being executed on one node, it acquires a lock which prevents execution of the same task from another node (or thread). 
-Please note, that if one task is already being executed on one node, execution on other nodes does not wait, it is simply skipped.
-
-Lock can be configured using 2 properties:
-lockAtMostFor - specifies how long the lock should be kept in case the executing node dies. 
-                This is just a fallback, under normal circumstances the lock is released as soon the tasks finishes. 
-                Set lockAtMostFor to a value which is much longer than normal execution time. 
-
-lockAtLeastFor - specifies minimum amount of time for which the lock should be kept.
-                  Its main purpose is to prevent execution from multiple nodes in case of really short tasks and clock difference between the nodes.
-
-e.g. For lock held by Portfolio Metrics task, the above properties will be configured
-task.metrics.portfolio.lockAtMostForInMillis
-
-
-
