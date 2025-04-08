@@ -43,11 +43,13 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * JAX-RS resources for processing permissions.
@@ -216,6 +218,94 @@ public class PermissionResource extends AlpineResource {
                 team = qm.persist(team);
                 super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added permission for team: " + team.getName() + " / permission: " + permission.getName());
                 return Response.ok(team).build();
+            }
+            return Response.status(Response.Status.NOT_MODIFIED).build();
+        }
+    }
+
+    @DELETE
+    @Path("/{permission}/role/{uuid}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated role",
+                    content = @Content(schema = @Schema(implementation = Role.class))
+            ),
+            @ApiResponse(responseCode = "304", description = "The role already has the specified permission assigned"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The role could not be found")
+    })
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
+    public Response removePermissionFromRole(
+            @Parameter(description = "A valid role uuid", schema = @Schema(type = "string", format = "uuid"), required = true)
+            @PathParam("uuid") @ValidUuid String uuid,
+            @Parameter(description = "A valid permission", required = true)
+            @PathParam("permission") String permissionName) {
+        try (QueryManager qm = new QueryManager()) {
+            Role role = qm.getObjectByUuid(Role.class, uuid);
+            if (role == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
+            }
+            final Permission permission = qm.getPermission(permissionName);
+            if (permission == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The permission could not be found.").build();
+            }
+            final Set<Permission> permissions = role.getPermissions();
+            if (permissions != null && permissions.contains(permission)) {
+                permissions.remove(permission);
+                role.setPermissions(permissions);
+                role = qm.persist(role);
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed permission for role: " + role.getName() + " / permission: " + permission.getName());
+                return Response.ok(role).build();
+            }
+            return Response.status(Response.Status.NOT_MODIFIED).build();
+        }
+    }
+
+    @POST
+    @Path("/{permission}/role/{uuid}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "The updated role",
+                    content = @Content(schema = @Schema(implementation = Role.class))
+            ),
+            @ApiResponse(responseCode = "304", description = "The role already has the specified permission assigned"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The role could not be found")
+    })
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
+    public Response addPermissionToRole(
+            @Parameter(description = "A valid role uuid", schema = @Schema(type = "string", format = "uuid"), required = true)
+            @PathParam("uuid") @ValidUuid String uuid,
+            @Parameter(description = "A valid permission", required = true)
+            @PathParam("permission") String permissionName) {
+        try (QueryManager qm = new QueryManager()) {
+            Role role = qm.getObjectByUuid(Role.class, uuid);
+            if (role == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
+            }
+            final Permission permission = qm.getPermission(permissionName);
+            if (permission == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The permission could not be found.").build();
+            }
+            final Set<Permission> permissions = role.getPermissions();
+            if (permissions != null && !permissions.contains(permission)) {
+                permissions.add(permission);
+                role.setPermissions(permissions);
+                role = qm.persist(role);
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added permission for role: " + role.getName() + " / permission: " + permission.getName());
+                return Response.ok(role).build();
             }
             return Response.status(Response.Status.NOT_MODIFIED).build();
         }

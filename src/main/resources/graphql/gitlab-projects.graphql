@@ -1,0 +1,24 @@
+query (
+  $cursor: String
+  $archived: ProjectArchived = EXCLUDE
+  $topics: [String!] = []
+) {
+  projects(
+    archived: $archived
+    topics: $topics
+    membership: true
+    first: 100
+    after: $cursor
+  ) {
+    nodes {
+      fullPath
+      maxAccessLevel {
+        stringValue
+      }
+    }
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+  }
+}
