@@ -25,6 +25,7 @@ import jakarta.validation.constraints.NotNull;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.Extensions;
 import javax.jdo.annotations.ForeignKey;
 import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -104,6 +105,10 @@ public class Analysis implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "SEVERITY")
+    @Extensions(value = {
+            @Extension(vendorName = "datanucleus", key = "insert-function", value = "CAST(? AS severity)"),
+            @Extension(vendorName = "datanucleus", key = "update-function", value = "CAST(? AS severity)")
+    })
     @JsonProperty(value = "severity")
     private Severity severity;
 

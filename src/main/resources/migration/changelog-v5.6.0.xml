@@ -1334,4 +1334,19 @@
             columnNames="NAME"
             constraintName="TEAM_NAME_IDX" />
     </changeSet>
+
+    <changeSet id="v5.6.0-18" author="sahibamittal">
+        <sql splitStatements="false">
+            CREATE TYPE severity AS ENUM (
+                'UNASSIGNED'
+                , 'INFO'
+                , 'LOW'
+                , 'MEDIUM'
+                , 'HIGH'
+                , 'CRITICAL'
+            );
+            ALTER TABLE "ANALYSIS" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
+            ALTER TABLE "VULNERABILITY" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
