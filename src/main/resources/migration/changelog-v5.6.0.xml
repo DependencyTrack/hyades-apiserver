@@ -1345,8 +1345,8 @@
                 , 'HIGH'
                 , 'CRITICAL'
             );
-            ALTER TABLE public."ANALYSIS" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
-            ALTER TABLE public."VULNERABILITY" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
+            ALTER TABLE "ANALYSIS" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
+            ALTER TABLE "VULNERABILITY" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
         </sql>
     </changeSet>
 </databaseChangeLog>
