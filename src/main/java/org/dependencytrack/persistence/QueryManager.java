@@ -537,6 +537,10 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getProject(name, version);
     }
 
+    public Project getProject(final String name, final String version, final Project parent) {
+        return getProjectQueryManager().getProject(name, version, parent);
+    }
+
     public PaginatedResult getProjects(final Team team, final boolean excludeInactive, final boolean bypass, final boolean onlyRoot) {
         return getProjectQueryManager().getProjects(team, excludeInactive, bypass, onlyRoot);
     }
@@ -583,6 +587,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public boolean doesProjectExist(final String name, final String version) {
         return getProjectQueryManager().doesProjectExist(name, version);
+    }
+
+    public boolean doesProjectExist(final String name, final String version, final Project parent) {
+        return getProjectQueryManager().doesProjectExist(name, version, parent);
     }
 
     public Tag getTagByName(final String name) {
