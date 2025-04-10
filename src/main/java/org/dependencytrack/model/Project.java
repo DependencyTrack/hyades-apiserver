@@ -128,6 +128,10 @@ import java.util.UUID;
                 @Persistent(name = "parent")
         })
 })
+@Index(unique = "true", name = "PROJECT_NAME_IDX", members = { "name" })
+@Index(unique = "true", name = "PROJECT_NAME_VERSION_PARENT_IDX", members = { "name", "version", "parent" })
+@Index(unique = "true", name = "PROJECT_NAME_VERSION_NULL_PARENT_IDX", members = { "name", "version" })
+@Index(unique = "true", name = "PROJECT_NAME_PARENT_NULL_VERSION_IDX", members = { "name", "parent" })
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Project implements Serializable {
 
@@ -182,7 +186,6 @@ public class Project implements Serializable {
     private String group;
 
     @Persistent
-    @Index(name = "PROJECT_NAME_IDX")
     @Column(name = "NAME", jdbcType = "VARCHAR", allowsNull = "false")
     @NotBlank
     @Size(min = 1, max = 255)
@@ -197,7 +200,6 @@ public class Project implements Serializable {
     private String description;
 
     @Persistent
-    @Index(name = "PROJECT_VERSION_IDX")
     @Column(name = "VERSION", jdbcType = "VARCHAR")
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The version may only contain printable characters")
