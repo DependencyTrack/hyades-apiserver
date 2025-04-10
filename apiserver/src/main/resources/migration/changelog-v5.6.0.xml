@@ -2166,4 +2166,124 @@
         <!-- Step 9: Drop MIGRATE_METRICS_TO_PARTITIONS procedure -->
         <dropProcedure procedureName="MIGRATE_METRICS_TO_PARTITIONS"/>
     </changeSet>
+
+    <changeSet id="v5.6.0-26" author="nscuro">
+        <!--
+          Disable deferred constraint checking during this transaction.
+          Without this, we would not be able to add primary keys after
+          having deleted records from a table before.
+        -->
+        <sql>SET CONSTRAINTS ALL IMMEDIATE</sql>
+
+        <dropIndex tableName="NOTIFICATIONRULE_TAGS" indexName="NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_ID_IDX"/>
+        <dropIndex tableName="NOTIFICATIONRULE_TAGS" indexName="NOTIFICATIONRULE_TAGS_TAG_ID_IDX"/>
+        <dropIndex tableName="POLICY_TAGS" indexName="POLICY_TAGS_POLICY_ID_IDX"/>
+        <dropIndex tableName="POLICY_TAGS" indexName="POLICY_TAGS_TAG_ID_IDX"/>
+        <dropIndex tableName="PROJECTS_TAGS" indexName="PROJECTS_TAGS_PROJECT_ID_IDX"/>
+        <dropIndex tableName="PROJECTS_TAGS" indexName="PROJECTS_TAGS_TAG_ID_IDX"/>
+        <dropIndex tableName="VULNERABILITIES_TAGS" indexName="VULNERABILITIES_TAGS_TAG_ID_IDX"/>
+        <dropIndex tableName="VULNERABILITIES_TAGS" indexName="VULNERABILITIES_TAGS_VULNERABILITY_ID_IDX"/>
+        <sql>DROP INDEX IF EXISTS "TAG_NAME_IDX"</sql> <!-- dropIndex doesn't support IF EXISTS -->
+
+        <!-- Collect all tags with duplicate names into a temporary table for reuse. -->
+        <sql splitStatements="false">
+            CREATE TEMPORARY TABLE tmp_duplicate_tag
+              ON COMMIT DROP
+            AS
+              SELECT "NAME" AS name
+                   , MIN("ID") AS canonical_id
+                FROM "TAG"
+               GROUP BY "NAME"
+              HAVING COUNT(*) &gt; 1;
+        </sql>
+
+        <!--
+          To avoid excessive repetition, define a function to re-wire relationships of
+          duplicate tags, and to ensure that there exist no duplicates in relationship
+          tables either.
+        -->
+        <sql splitStatements="false">
+            CREATE FUNCTION cleanup_duplicate_tag_relationships(
+              table_name         TEXT,
+              relation_id_column TEXT
+            )
+            RETURNS void AS $$
+            BEGIN
+              EXECUTE format($q$
+                UPDATE %1$I AS tag_relationship
+                   SET "TAG_ID" = tmp_duplicate_tag.canonical_id
+                  FROM tmp_duplicate_tag
+                 INNER JOIN "TAG"
+                    ON "TAG"."NAME" = tmp_duplicate_tag.name
+                   AND "TAG"."ID" != tmp_duplicate_tag.canonical_id
+                 WHERE tag_relationship."TAG_ID" = "TAG"."ID";
+                $q$, table_name, relation_id_column
+              );
+
+              EXECUTE format($q$
+                WITH cte_dupe AS (
+                  SELECT "TAG_ID"
+                       , %2$I
+                    FROM %1$I AS tag_relationship
+                   GROUP BY "TAG_ID"
+                          , %2$I
+                  HAVING COUNT(*) &gt; 1
+                ),
+                cte_deleted_dupe AS (
+                  DELETE FROM %1$I AS tag_relationship
+                   USING cte_dupe
+                   WHERE tag_relationship."TAG_ID" = cte_dupe."TAG_ID"
+                     AND tag_relationship.%2$I = cte_dupe.%2$I
+                  RETURNING tag_relationship."TAG_ID"
+                          , tag_relationship.%2$I
+                )
+                INSERT INTO %1$I ("TAG_ID", %2$I)
+                SELECT DISTINCT "TAG_ID", %2$I FROM cte_deleted_dupe;
+              $q$, table_name, relation_id_column
+            );
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            DO $$
+            BEGIN
+              PERFORM cleanup_duplicate_tag_relationships('NOTIFICATIONRULE_TAGS', 'NOTIFICATIONRULE_ID');
+              PERFORM cleanup_duplicate_tag_relationships('POLICY_TAGS', 'POLICY_ID');
+              PERFORM cleanup_duplicate_tag_relationships('PROJECTS_TAGS', 'PROJECT_ID');
+              PERFORM cleanup_duplicate_tag_relationships('VULNERABILITIES_TAGS', 'VULNERABILITY_ID');
+            END
+            $$;
+        </sql>
+
+        <sql splitStatements="true">
+            DROP FUNCTION cleanup_duplicate_tag_relationships;
+
+            DELETE FROM "TAG"
+             USING tmp_duplicate_tag
+             WHERE "TAG"."NAME" = tmp_duplicate_tag.name
+               AND "TAG"."ID" != tmp_duplicate_tag.canonical_id;
+        </sql>
+
+        <!-- Ensure no more duplicates can be introduced. -->
+        <addPrimaryKey
+                tableName="NOTIFICATIONRULE_TAGS"
+                columnNames="NOTIFICATIONRULE_ID, TAG_ID"
+                constraintName="NOTIFICATIONRULE_TAGS_PK"/>
+        <addPrimaryKey
+                tableName="POLICY_TAGS"
+                columnNames="POLICY_ID, TAG_ID"
+                constraintName="POLICY_TAGS_PK"/>
+        <addPrimaryKey
+                tableName="PROJECTS_TAGS"
+                columnNames="PROJECT_ID, TAG_ID"
+                constraintName="PROJECTS_TAGS_PK"/>
+        <addPrimaryKey
+                tableName="VULNERABILITIES_TAGS"
+                columnNames="VULNERABILITY_ID, TAG_ID"
+                constraintName="VULNERABILITIES_TAGS_PK"/>
+        <createIndex tableName="TAG" indexName="TAG_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
