@@ -256,12 +256,12 @@ public class ProjectResource extends AbstractApiResource {
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getProject(uuid);
-            if (project == null)
+            if (project != null) {
+                requireAccess(qm, project);
+                return Response.ok(project).build();
+            } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-
-            requireAccess(qm, project);
-
-            return Response.ok(project).build();
+            }
         }
     }
 
@@ -326,15 +326,18 @@ public class ProjectResource extends AbstractApiResource {
             @Parameter(description = "The name of the project to query on", required = true)
             @QueryParam("name") String name,
             @Parameter(description = "The version of the project to query on", required = true)
-            @QueryParam("version") String version) {
+            @QueryParam("version") String version,
+            @Parameter(description = "The UUID of the parent project to query on", required = false)
+            @QueryParam("parent") @ValidUuid String parentUuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getProject(name, version);
+            final UUID uuid = parentUuid != null ? UUID.fromString(parentUuid) : null;
+            final Project project = qm.getProject(name, version, uuid);
             if (project != null) {
                 requireAccess(qm, project);
                 return Response.ok(project).build();
+            } else {
+                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-
-            return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
         }
     }
 
@@ -924,10 +927,8 @@ public class ProjectResource extends AbstractApiResource {
                             .build());
                 }
                 requireAccess(qm, sourceProject);
-                if (qm.doesProjectExist(
-                        sourceProject.getName(),
-                        StringUtils.trimToNull(jsonRequest.getVersion()),
-                        sourceProject.getParent())) {
+                final UUID uuid = sourceProject.getParent() != null ? sourceProject.getParent().getUuid() : null;
+                if (qm.doesProjectExist(sourceProject.getName(), StringUtils.trimToNull(jsonRequest.getVersion()), uuid)) {
                     throw new ClientErrorException(Response
                             .status(Response.Status.CONFLICT)
                             .entity("A project with the specified name and version already exists.")

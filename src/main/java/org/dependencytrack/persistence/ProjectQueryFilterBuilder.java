@@ -115,9 +115,13 @@ class ProjectQueryFilterBuilder {
     }
 
     ProjectQueryFilterBuilder withParent(UUID uuid){
-        params.put("parentUuid", uuid);
+        if (uuid == null) {
+            filterCriteria.add("(parent == null)");
+        } else {
+            filterCriteria.add("(parent.uuid == :parentUuid)");
+            params.put("parentUuid", uuid);
+        }
 
-        filterCriteria.add("parent.uuid == :parentUuid");
         return this;
     }
 
