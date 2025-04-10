@@ -19,7 +19,6 @@
 package org.dependencytrack.parser.dependencytrack;
 
 import alpine.notification.NotificationLevel;
-import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Bom;
@@ -91,7 +90,7 @@ import static org.dependencytrack.proto.notification.v1.Level.LEVEL_WARNING;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_SYSTEM;
 
-public class NotificationModelConverterTest extends PersistenceCapableTest {
+public class NotificationModelConverterTest {
 
     @Test
     public void testConvertConfigurationNotification() {
@@ -586,7 +585,7 @@ public class NotificationModelConverterTest extends PersistenceCapableTest {
         project.setVersion("projectVersion");
         project.setDescription("projectDescription");
         project.setPurl("pkg:maven/org.acme/acme-app@projectVersion");
-        project.setTags(List.of(projectTag1, projectTag2));
+        project.setTags(Set.of(projectTag1, projectTag2));
         return project;
     }
 

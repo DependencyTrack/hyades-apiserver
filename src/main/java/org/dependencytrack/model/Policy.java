@@ -23,6 +23,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
@@ -35,13 +39,10 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -122,10 +123,9 @@ public class Policy implements Serializable {
      * A list of zero-to-n tags
      */
     @Persistent(table = "POLICY_TAGS", defaultFetchGroup = "true", mappedBy = "policies")
-    @Join(column = "POLICY_ID", foreignKey = "POLICY_TAGS_POLICY_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Join(column = "POLICY_ID", primaryKey = "POLICY_TAGS_PK", foreignKey = "POLICY_TAGS_POLICY_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Element(column = "TAG_ID", foreignKey = "POLICY_TAGS_TAG_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    private List<Tag> tags;
+    private Set<Tag> tags;
 
     /**
      * The unique identifier of the object.
@@ -206,11 +206,11 @@ public class Policy implements Serializable {
         return (projects == null || projects.size() == 0) && (tags == null || tags.size() == 0);
     }
 
-    public List<Tag> getTags() {
+    public Set<Tag> getTags() {
         return tags;
     }
 
-    public void setTags(List<Tag> tags) {
+    public void setTags(Set<Tag> tags) {
         this.tags = tags;
     }
 
