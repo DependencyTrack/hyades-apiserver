@@ -25,6 +25,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.policy.cel.mapping.ComponentProjection;
 import org.dependencytrack.policy.cel.mapping.ComponentsVulnerabilitiesProjection;
@@ -598,12 +599,14 @@ class CelPolicyQueryManager implements AutoCloseable {
         // variables += "org.dependencytrack.model.Tag commonTag";
         if (project.getTags() != null && !project.getTags().isEmpty()) {
             filter += " || (";
-            for (int i = 0; i < project.getTags().size(); i++) {
-                filter += "this.tags.contains(:tag" + i + ")";
-                params.put("tag" + i, project.getTags().get(i));
-                if (i < (project.getTags().size() - 1)) {
+            int tagIndex = 0;
+            for (final Tag tag : project.getTags()) {
+                filter += "this.tags.contains(:tag" + (tagIndex) + ")";
+                params.put("tag" + tagIndex, tag);
+                if (tagIndex < (project.getTags().size() - 1)) {
                     filter += " || ";
                 }
+                tagIndex++;
             }
             filter += ")";
         }

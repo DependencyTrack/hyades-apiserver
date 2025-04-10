@@ -70,6 +70,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -278,7 +279,7 @@ public final class NotificationUtil {
                     tag.setName(tagName);
                     return tag;
                 })
-                .toList());
+                .collect(Collectors.toSet()));
 
         final var component = new Component();
         component.setUuid(UUID.fromString(projection.componentUuid));
