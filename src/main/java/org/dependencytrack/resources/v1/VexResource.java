@@ -65,6 +65,7 @@ import java.io.InputStream;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * JAX-RS resources for processing VEX documents.
@@ -191,10 +192,12 @@ public class VexResource extends AbstractApiResource {
             failOnValidationError(
                     validator.validateProperty(request, "projectName"),
                     validator.validateProperty(request, "projectVersion"),
+                    validator.validateProperty(request, "parent"),
                     validator.validateProperty(request, "vex")
             );
             try (QueryManager qm = new QueryManager()) {
-                Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
+                UUID parentUuid = request.getParent() != null ? UUID.fromString(request.getParent()) : null;
+                Project project = qm.getProject(request.getProjectName(), request.getProjectVersion(), parentUuid);
                 return process(qm, project, request.getVex());
             }
         }
@@ -242,6 +245,7 @@ public class VexResource extends AbstractApiResource {
     public Response uploadVex(@FormDataParam("project") String projectUuid,
                               @FormDataParam("projectName") String projectName,
                               @FormDataParam("projectVersion") String projectVersion,
+                              @Parameter(allowEmptyValue = true, required = false) @FormDataParam("parent") String parentUuid,
                               @Parameter(schema = @Schema(type = "string")) @FormDataParam("vex") final List<FormDataBodyPart> artifactParts) {
         if (projectUuid != null) {
             try (QueryManager qm = new QueryManager()) {
@@ -252,7 +256,8 @@ public class VexResource extends AbstractApiResource {
             try (QueryManager qm = new QueryManager()) {
                 final String trimmedProjectName = StringUtils.trimToNull(projectName);
                 final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
-                Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
+                final UUID uuid = parentUuid != null ? UUID.fromString(parentUuid) : null;
+                Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion, uuid);
                 return process(qm, project, artifactParts);
             }
         }

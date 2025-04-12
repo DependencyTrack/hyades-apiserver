@@ -1142,10 +1142,10 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Project parent = qm.getProject("Acme Parent", "1.0");
         Assert.assertNotNull(parent);
-        String parentUUID = parent.getUuid().toString();
+        UUID parentUUID = parent.getUuid();
 
         // Upload first child, search parent by UUID
-        request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, parentUUID, null, null, false, bomString);
+        request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, parentUUID.toString(), null, null, false, bomString);
         response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -1154,10 +1154,10 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
-        Project child = qm.getProject("Acme Example", "1.0");
+        Project child = qm.getProject("Acme Example", "1.0", parentUUID);
         Assert.assertNotNull(child);
         Assert.assertNotNull(child.getParent());
-        Assert.assertEquals(parentUUID, child.getParent().getUuid().toString());
+        Assert.assertEquals(parentUUID, child.getParent().getUuid());
 
 
         // Upload second child, search parent by name+ver
@@ -1170,13 +1170,13 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
-        child = qm.getProject("Acme Example", "2.0");
+        child = qm.getProject("Acme Example", "2.0", parentUUID);
         Assert.assertNotNull(child);
         Assert.assertNotNull(child.getParent());
-        Assert.assertEquals(parentUUID, child.getParent().getUuid().toString());
+        Assert.assertEquals(parentUUID, child.getParent().getUuid());
 
         // Upload third child, specify parent's UUID, name, ver. Name and ver are ignored when UUID is specified.
-        request = new BomSubmitRequest(null, "Acme Example", "3.0", null, true, parentUUID, "Non-existent parent", "1.0", false, bomString);
+        request = new BomSubmitRequest(null, "Acme Example", "3.0", null, true, parentUUID.toString(), "Non-existent parent", "1.0", false, bomString);
         response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
@@ -1185,10 +1185,10 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
-        child = qm.getProject("Acme Example", "3.0");
+        child = qm.getProject("Acme Example", "3.0", parentUUID);
         Assert.assertNotNull(child);
         Assert.assertNotNull(child.getParent());
-        Assert.assertEquals(parentUUID, child.getParent().getUuid().toString());
+        Assert.assertEquals(parentUUID, child.getParent().getUuid());
     }
 
     @Test
