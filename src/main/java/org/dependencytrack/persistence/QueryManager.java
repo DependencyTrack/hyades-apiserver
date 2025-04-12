@@ -549,6 +549,10 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getLatestProjectVersion(name);
     }
 
+    public Project getLatestProjectVersion(final String name, final UUID parentUuid) {
+        return getProjectQueryManager().getLatestProjectVersion(name, parentUuid);
+    }
+
     public PaginatedResult getProjectsWithoutDescendantsOf(final boolean excludeInactive, final Project project) {
         return getProjectQueryManager().getProjectsWithoutDescendantsOf(excludeInactive, project);
     }

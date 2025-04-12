@@ -91,7 +91,10 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Stream;
 
 import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
@@ -308,46 +311,48 @@ public class BomResource extends AbstractApiResource {
                     validator.validateProperty(request, "bom")
             );
             try (QueryManager qm = new QueryManager()) {
-                Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
-                if (project == null && request.isAutoCreate()) {
-                    if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
-                        Project parent = null;
-                        if (request.getParentUUID() != null || request.getParentName() != null) {
-                            if (request.getParentUUID() != null) {
-                                failOnValidationError(validator.validateProperty(request, "parentUUID"));
-                                parent = qm.getObjectByUuid(Project.class, request.getParentUUID());
-                            } else {
-                                failOnValidationError(
-                                        validator.validateProperty(request, "parentName"),
-                                        validator.validateProperty(request, "parentVersion")
-                                );
-                                final String trimmedParentName = StringUtils.trimToNull(request.getParentName());
-                                final String trimmedParentVersion = StringUtils.trimToNull(request.getParentVersion());
-                                parent = qm.getProject(trimmedParentName, trimmedParentVersion);
-                            }
+                Project parent = null;
+                UUID parentUuid = null;
+                if (request.getParentUUID() != null) {
+                    failOnValidationError(validator.validateProperty(request, "parentUUID"));
+                    parent = qm.getProject(request.getParentUUID());
+                    parentUuid = parent.getUuid();
+                }
 
-                            if (parent == null) { // if parent project is specified but not found
-                                return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
-                            }
-                            requireAccess(qm, parent, "Access to the specified parent project is forbidden");
-                        }
-                        final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
-                        if (request.isLatestProjectVersion()) {
-                            final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if(oldLatest != null) {
-                                requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
-                            }
-                        }
-                        project = qm.createProject(trimmedProjectName, null,
-                                StringUtils.trimToNull(request.getProjectVersion()), request.getProjectTags(), parent,
-                                null, null, request.isLatestProjectVersion(), true);
-                        Principal principal = getPrincipal();
-                        qm.updateNewProjectACL(project, principal);
-                    } else {
+                Project project = qm.getProject(request.getProjectName(), request.getProjectVersion(), parentUuid);
+                if (project == null && request.isAutoCreate()) {
+                    if (Stream.of(Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE, Permissions.Constants.PROJECT_CREATION_UPLOAD).noneMatch(this::hasPermission)) {
                         return Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                     }
+
+                    if (parent == null) {
+                        failOnValidationError(
+                                validator.validateProperty(request, "parentName"),
+                                validator.validateProperty(request, "parentVersion"));
+                        final String trimmedParentName = StringUtils.trimToNull(request.getParentName());
+                        final String trimmedParentVersion = StringUtils.trimToNull(request.getParentVersion());
+                        parent = qm.getProject(trimmedParentName, trimmedParentVersion, parentUuid);
+                    }
+
+                    Objects.requireNonNull(parent);
+                    requireAccess(qm, parent, "Access to the specified parent project is forbidden");
+
+                    final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
+                    if (request.isLatestProjectVersion()) {
+                        final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName, parentUuid);
+                        if(oldLatest != null) {
+                            requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
+                        }
+                    }
+                    project = qm.createProject(trimmedProjectName, null,
+                            StringUtils.trimToNull(request.getProjectVersion()), request.getProjectTags(), parent,
+                            null, null, request.isLatestProjectVersion(), true);
+                    Principal principal = getPrincipal();
+                    qm.updateNewProjectACL(project, principal);
                 }
                 return process(qm, project, request.getBom());
+            } catch (NullPointerException e) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
             }
         }
     }
@@ -419,42 +424,47 @@ public class BomResource extends AbstractApiResource {
             try (QueryManager qm = new QueryManager()) {
                 final String trimmedProjectName = StringUtils.trimToNull(projectName);
                 final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
-                Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
+                Project parent = null;
+                UUID uuid = null;
+                if (parentUUID != null) {
+                    parent = qm.getProject(parentUUID);
+                    uuid = parent.getUuid();
+                }
+                Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion, uuid);
                 if (project == null && autoCreate) {
-                    if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
-                        Project parent = null;
-                        if (parentUUID != null || parentName != null) {
-                            if (parentUUID != null) {
-
-                                parent = qm.getObjectByUuid(Project.class, parentUUID);
-                            } else {
-                                final String trimmedParentName = StringUtils.trimToNull(parentName);
-                                final String trimmedParentVersion = StringUtils.trimToNull(parentVersion);
-                                parent = qm.getProject(trimmedParentName, trimmedParentVersion);
-                            }
-
-                            if (parent == null) { // if parent project is specified but not found
-                                return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
-                            }
-                            requireAccess(qm, parent, "Access to the specified parent project is forbidden");
-                        }
-                        if (isLatest) {
-                            final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if(oldLatest != null) {
-                                requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
-                            }
-                        }
-                        final List<org.dependencytrack.model.Tag> tags = (projectTags != null && !projectTags.isBlank())
-                                ? Arrays.stream(projectTags.split(",")).map(String::trim).filter(not(String::isEmpty)).map(org.dependencytrack.model.Tag::new).toList()
-                                : null;
-                        project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, null, isLatest, true);
-                        Principal principal = getPrincipal();
-                        qm.updateNewProjectACL(project, principal);
-                    } else {
-                        return Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
+                    if (Stream.of(Permissions.Constants.PORTFOLIO_MANAGEMENT,
+                            Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
+                            Permissions.Constants.PROJECT_CREATION_UPLOAD).noneMatch(this::hasPermission)) {
+                        return Response.status(Response.Status.UNAUTHORIZED)
+                                .entity("The principal does not have permission to create project.")
+                                .build();
                     }
+
+                    if (parent == null) {
+                        final String trimmedParentName = StringUtils.trimToNull(parentName);
+                        final String trimmedParentVersion = StringUtils.trimToNull(parentVersion);
+                        parent = qm.getProject(trimmedParentName, trimmedParentVersion, uuid);
+                    }
+
+                    Objects.requireNonNull(parent);
+                    requireAccess(qm, parent, "Access to the specified parent project is forbidden");
+
+                    if (isLatest) {
+                        final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName, uuid);
+                        if(oldLatest != null) {
+                            requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
+                        }
+                    }
+                    final List<org.dependencytrack.model.Tag> tags = (projectTags != null && !projectTags.isBlank())
+                            ? Arrays.stream(projectTags.split(",")).map(String::trim).filter(not(String::isEmpty)).map(org.dependencytrack.model.Tag::new).toList()
+                            : null;
+                    project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, null, isLatest, true);
+                    Principal principal = getPrincipal();
+                    qm.updateNewProjectACL(project, principal);
                 }
                 return process(qm, project, artifactParts);
+            } catch (NullPointerException e) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
             }
         }
     }
