@@ -73,6 +73,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Objects.requireNonNullElse;
+import static org.datanucleus.store.rdbms.RDBMSPropertyNames.PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistentAll;
 
@@ -139,8 +140,19 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
+        // Disable bulk-fetch due to performance concerns.
+        // https://github.com/DependencyTrack/hyades/issues/1754
+        query.addExtension(PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH, "none");
+
         preprocessACLs(query, queryFilter, params, false);
         result = execute(query, params);
+
+        // Compensate for disabled bulk-fetch. Rest assured this hurt to commit.
+        // https://github.com/DependencyTrack/hyades/issues/1754
+        for (final Project project : result.getList(Project.class)) {
+            var ignored = project.getTags();
+        }
+
         if (includeMetrics) {
             // Populate each Project object in the paginated result with transitive related
             // data to minimize the number of round trips a client needs to make, process, and render.
@@ -227,8 +239,20 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
+        // Disable bulk-fetch due to performance concerns.
+        // https://github.com/DependencyTrack/hyades/issues/1754
+        query.addExtension(PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH, "none");
+
         preprocessACLs(query, queryFilter, params, false);
-        return execute(query, params);
+        final PaginatedResult result = execute(query, params);
+
+        // Compensate for disabled bulk-fetch. Rest assured this hurt to commit.
+        // https://github.com/DependencyTrack/hyades/issues/1754
+        for (final Project project : result.getList(Project.class)) {
+            var ignored = project.getTags();
+        }
+
+        return result;
     }
 
     /**
@@ -335,8 +359,20 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
+        // Disable bulk-fetch due to performance concerns.
+        // https://github.com/DependencyTrack/hyades/issues/1754
+        query.addExtension(PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH, "none");
+
         preprocessACLs(query, queryFilter, params, bypass);
-        return execute(query, params);
+        final PaginatedResult result = execute(query, params);
+
+        // Compensate for disabled bulk-fetch. Rest assured this hurt to commit.
+        // https://github.com/DependencyTrack/hyades/issues/1754
+        for (final Project project : result.getList(Project.class)) {
+            var ignored = project.getTags();
+        }
+
+        return result;
     }
 
     /**
@@ -370,8 +406,19 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
+        // Disable bulk-fetch due to performance concerns.
+        // https://github.com/DependencyTrack/hyades/issues/1754
+        query.addExtension(PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH, "none");
+
         preprocessACLs(query, queryFilter, params, false);
         result = execute(query, params);
+
+        // Compensate for disabled bulk-fetch. Rest assured this hurt to commit.
+        // https://github.com/DependencyTrack/hyades/issues/1754
+        for (final Project project : result.getList(Project.class)) {
+            var ignored = project.getTags();
+        }
+
         if (includeMetrics) {
             // Populate each Project object in the paginated result with transitive related
             // data to minimize the number of round trips a client needs to make, process, and render.
@@ -379,6 +426,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 project.setMetrics(getMostRecentProjectMetrics(project));
             }
         }
+
         return result;
     }
 
@@ -408,8 +456,19 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
+        // Disable bulk-fetch due to performance concerns.
+        // https://github.com/DependencyTrack/hyades/issues/1754
+        query.addExtension(PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH, "none");
+
         preprocessACLs(query, queryFilter, params, false);
         result = execute(query, params);
+
+        // Compensate for disabled bulk-fetch. Rest assured this hurt to commit.
+        // https://github.com/DependencyTrack/hyades/issues/1754
+        for (final Project project : result.getList(Project.class)) {
+            var ignored = project.getTags();
+        }
+
         if (includeMetrics) {
             // Populate each Project object in the paginated result with transitive related
             // data to minimize the number of round trips a client needs to make, process, and render.
@@ -417,6 +476,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 project.setMetrics(getMostRecentProjectMetrics(project));
             }
         }
+
         return result;
     }
 
