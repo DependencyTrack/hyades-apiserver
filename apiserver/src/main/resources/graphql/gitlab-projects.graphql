@@ -1,24 +1,44 @@
+fragment projectFields on ProjectConnection {
+  nodes {
+    group {
+      fullPath
+      maxAccessLevel {
+        humanAccess
+      }
+    }
+    fullPath
+    maxAccessLevel {
+      humanAccess
+    }
+  }
+  pageInfo {
+    endCursor
+    hasNextPage
+  }
+}
+
 query (
   $cursor: String
   $archived: ProjectArchived = EXCLUDE
   $topics: [String!] = []
+  $includeTopics: Boolean! = false
 ) {
-  projects(
+  withTopic: projects(
     archived: $archived
     topics: $topics
     membership: true
     first: 100
     after: $cursor
-  ) {
-    nodes {
-      fullPath
-      maxAccessLevel {
-        stringValue
-      }
-    }
-    pageInfo {
-      endCursor
-      hasNextPage
-    }
+  ) @include(if: $includeTopics) {
+    ...projectFields
+  }
+
+  projects(
+    archived: $archived
+    membership: true
+    first: 100
+    after: $cursor
+  ) @skip(if: $includeTopics) {
+    ...projectFields
   }
 }

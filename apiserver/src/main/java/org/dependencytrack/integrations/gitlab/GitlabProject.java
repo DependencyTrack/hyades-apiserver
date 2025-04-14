@@ -28,17 +28,7 @@ import net.minidev.json.JSONValue;
  */
 class GitLabProject {
 
-    class MaxAccessLevel {
-
-        private final GitLabRole stringValue;
-
-        MaxAccessLevel(final GitLabRole role) {
-            this.stringValue = role;
-        }
-
-        GitLabRole getStringValue() {
-            return stringValue;
-        }
+    record MaxAccessLevel(GitLabRole stringValue) {
     }
 
     private final String fullPath;
@@ -72,7 +62,7 @@ class GitLabProject {
         return "%s{fullPath=%s, maxAccessLevel=%s}".formatted(
                 getClass().getSimpleName(),
                 fullPath,
-                maxAccessLevel.getStringValue().toString());
+                maxAccessLevel.stringValue().toString());
     }
 
 }

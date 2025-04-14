@@ -56,6 +56,7 @@ public class GitLabClient {
     private final String accessToken;
     private final URI baseURL;
     private final Config config;
+    private final List<String> topics;
 
     private final Map<GitLabRole, List<Permissions>> rolePermissions = Map.of(
             GitLabRole.GUEST, List.of(
@@ -110,13 +111,18 @@ public class GitLabClient {
                     Permissions.TAG_MANAGEMENT_DELETE));
 
     public GitLabClient(final String accessToken) {
-        this(accessToken, Config.getInstance());
+        this(accessToken, Config.getInstance(), null);
     }
 
-    public GitLabClient(final String accessToken, final Config config) {
+    public GitLabClient(final String accessToken, final List<String> topics) {
+        this(accessToken, Config.getInstance(), topics);
+    }
+
+    public GitLabClient(final String accessToken, final Config config, final List<String> topics) {
         this.config = config;
         this.accessToken = accessToken;
         this.baseURL = URI.create(config.getProperty(Config.AlpineKey.OIDC_ISSUER));
+        this.topics = topics;
     }
 
     public List<GitLabProject> getGitLabProjects() throws IOException, URISyntaxException {
@@ -124,6 +130,11 @@ public class GitLabClient {
 
         JSONObject variables = new JSONObject();
         JSONObject queryObject = new JSONObject();
+
+        if (topics != null && !topics.isEmpty()) {
+            variables.put("includeTopics", true);
+            variables.put("topics", topics);
+        }
 
         queryObject.put("query", resourceToString("/graphql/gitlab-projects.graphql", StandardCharsets.UTF_8));
 

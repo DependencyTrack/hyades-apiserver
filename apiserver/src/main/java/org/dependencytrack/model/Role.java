@@ -102,6 +102,14 @@ public class Role implements Serializable {
     @NotNull
     private UUID uuid;
 
+    public Role() {
+    }
+
+    public Role(String name, Set<Permission> permissions) {
+        this.name = name;
+        this.permissions = permissions;
+    }
+
     public long getId() {
         return id;
     }
@@ -142,16 +150,12 @@ public class Role implements Serializable {
 
     @Override
     public String toString() {
-        var permissionStrings = permissions.stream()
-                .map(permission -> permission.getName())
-                .toList();
-
         return "%s{id=%d, uuid='%s', name='%s', permissions=%s}".formatted(
                 getClass().getSimpleName(),
                 id,
                 uuid,
                 name,
-                permissionStrings);
+                permissions.stream().map(Permission::getName).toList());
     }
 
 }

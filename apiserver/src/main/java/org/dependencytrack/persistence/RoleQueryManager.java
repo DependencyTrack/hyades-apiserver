@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 
+import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.model.ProjectRole;
@@ -90,6 +91,17 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     @Override
     public Role getRole(final String uuid) {
         return getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
+    }
+
+    @Override
+    public Role getRoleByName(final String name) {
+        final String role = StringUtils.lowerCase(StringUtils.trimToNull(name));
+        final Query<Role> query = pm.newQuery(Role.class)
+                .filter("name == :name")
+                .setNamedParameters(Map.of("name", role))
+                .range(0, 1);
+
+        return executeAndCloseUnique(query);
     }
 
     @Override

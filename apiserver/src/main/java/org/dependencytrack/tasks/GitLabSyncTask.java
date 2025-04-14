@@ -23,13 +23,20 @@ import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
 import alpine.model.OidcUser;
+import alpine.model.Permission;
+import net.minidev.json.JSONArray;
+import net.minidev.json.JSONValue;
 
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.GitLabSyncEvent;
 import org.dependencytrack.integrations.gitlab.GitLabClient;
 import org.dependencytrack.integrations.gitlab.GitLabSyncer;
 import org.dependencytrack.persistence.QueryManager;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_TOPICS;
+
+import java.util.List;
 
 public class GitLabSyncTask implements LoggableSubscriber {
 
@@ -72,7 +79,11 @@ public class GitLabSyncTask implements LoggableSubscriber {
         LOGGER.info("Starting GitLab sync task");
 
         try (QueryManager qm = new QueryManager()) {
-            GitLabClient gitLabClient = new GitLabClient(accessToken);
+            String topicsProperty = qm.getConfigProperty(
+                    GITLAB_TOPICS.getGroupName(), GITLAB_TOPICS.getPropertyName()).getPropertyValue();
+            List<String> topics = List.of(JSONValue.parse(topicsProperty, JSONArray.class).toArray(String[]::new));
+
+            GitLabClient gitLabClient = new GitLabClient(accessToken, topics);
             GitLabSyncer syncer = new GitLabSyncer(user, gitLabClient);
             syncer.setQueryManager(qm);
             syncer.synchronize();

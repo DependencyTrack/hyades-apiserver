@@ -36,12 +36,10 @@ import org.mockito.junit.MockitoJUnitRunner;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
 
-import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
-
 
 /**
  * This test suite validates the integration with the GitLab API.
@@ -79,8 +77,7 @@ public class GitLabSyncerTest extends PersistenceCapableTest {
                 GITLAB_ENABLED.getPropertyName(),
                 "true",
                 IConfigProperty.PropertyType.BOOLEAN,
-                null
-        );
+                null);
         GitLabSyncer extension = new GitLabSyncer(user, gitLabClient);
         extension.setQueryManager(qm);
         Assert.assertTrue(extension.isEnabled());
@@ -97,8 +94,7 @@ public class GitLabSyncerTest extends PersistenceCapableTest {
                 GITLAB_ENABLED.getPropertyName(),
                 "false",
                 IConfigProperty.PropertyType.BOOLEAN,
-                null
-        );
+                null);
         GitLabSyncer extension = new GitLabSyncer(user, gitLabClient);
         extension.setQueryManager(qm);
         Assert.assertFalse(extension.isEnabled());
@@ -115,23 +111,22 @@ public class GitLabSyncerTest extends PersistenceCapableTest {
                 GITLAB_ENABLED.getPropertyName(),
                 "true",
                 IConfigProperty.PropertyType.BOOLEAN,
-                null
-        );
-        qm.createOidcUser(
-                "test_user"
-        );
-        OidcUser testUser = new OidcUser();
-        testUser.setUsername("test_user");
+                null);
+
         GitLabClient mockClient = mock(GitLabClient.class);
-        GitLabSyncer extension = new GitLabSyncer(testUser, mockClient);
+        GitLabSyncer extension = new GitLabSyncer(qm.createOidcUser("test_user"), mockClient);
         extension.setQueryManager(qm);
-        try{
-            when(mockClient.getGitLabProjects()).thenReturn(Arrays.asList(new GitLabProject("project1", "this/test/project1", GitLabRole.MAINTAINER),
-                    new GitLabProject("project2", "that/test/project2", GitLabRole.REPORTER)));
-                    extension.synchronize();
-        }catch (IOException | URISyntaxException ex) {
+
+        try {
+            when(mockClient.getGitLabProjects())
+                    .thenReturn(List.of(
+                            new GitLabProject("this/test/project1", GitLabRole.MAINTAINER),
+                            new GitLabProject("that/test/project2", GitLabRole.REPORTER)));
+            extension.synchronize();
+        } catch (IOException | URISyntaxException ex) {
             Assert.fail("Exception " + ex);
         }
+
         Project testProject1 = qm.getProject("this/test/project1", null);
         Assert.assertFalse(testProject1.isActive());
 
@@ -148,7 +143,7 @@ public class GitLabSyncerTest extends PersistenceCapableTest {
         testTeams.add(team2);
         List<Permission> t2perm = team2.getPermissions();
         Assert.assertEquals(t2perm.size(), mockClient.getRolePermissions(GitLabRole.REPORTER).size());
-        
+
         for (Team team : testTeams) {
             List<OidcUser> testTeamUsers = team.getOidcUsers();
             Assert.assertEquals(testTeamUsers.size(), 1);
