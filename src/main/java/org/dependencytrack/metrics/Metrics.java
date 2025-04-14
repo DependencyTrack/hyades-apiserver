@@ -61,6 +61,17 @@ public final class Metrics {
         useJdbiHandle(handle -> handle.createCall("CALL \"UPDATE_PORTFOLIO_METRICS\"()").invoke());
     }
 
+
+    /**
+     * Update historical risk scores for the entire portfolio.
+     * <p>
+     *
+     * @since 5.0.0
+     */
+    public static void updateHistoricalRiskScores() {
+        StoredProcedures.execute(Procedure.UPDATE_HISTORICAL_RISK_SCORES);
+    }
+
     /**
      * Update metrics for a given {@link Project}.
      *
