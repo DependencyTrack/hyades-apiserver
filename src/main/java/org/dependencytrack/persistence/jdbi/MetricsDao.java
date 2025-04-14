@@ -18,10 +18,16 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import org.dependencytrack.model.PortfolioMetrics;
+import org.dependencytrack.model.ProjectMetrics;
+import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.time.Duration;
+import java.util.List;
 
 /**
  * @since 5.6.0
@@ -55,4 +61,24 @@ public interface MetricsDao {
             """)
     int deletePortfolioMetricsForRetentionDuration(@Bind Duration duration);
 
+    @SqlQuery("""
+            SELECT * FROM "PORTFOLIOMETRICS"
+            WHERE "LAST_OCCURRENCE" >= (NOW() - :duration)
+            ORDER BY "LAST_OCCURRENCE" ASC
+            """)
+    @RegisterBeanMapper(PortfolioMetrics.class)
+    List<PortfolioMetrics> getPortfolioMetricsXDays(@Bind Duration duration);
+
+    @SqlQuery(/* language=InjectedFreeMarker */ """
+            <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
+            SELECT * FROM "PROJECTMETRICS"
+            WHERE ${apiProjectAclCondition}
+            AND "PROJECT_ID" = :projectId
+            AND "LAST_OCCURRENCE" >= (NOW() - :duration)
+            ORDER BY "LAST_OCCURRENCE" ASC
+            """)
+    @DefineNamedBindings
+    @DefineApiProjectAclCondition(projectIdColumn = "\"PROJECT_ID\"")
+    @RegisterBeanMapper(ProjectMetrics.class)
+    List<ProjectMetrics> getProjectMetricsXDays(@Bind Long projectId, @Bind Duration duration);
 }

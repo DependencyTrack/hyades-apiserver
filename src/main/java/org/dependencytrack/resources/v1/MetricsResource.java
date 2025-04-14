@@ -30,6 +30,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.time.DateUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
@@ -43,17 +49,20 @@ import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.DateUtil;
 
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
+
+import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_PORTFOLIO;
+import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_PROJECT;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 
 /**
  * JAX-RS resources for processing metrics.
@@ -147,10 +156,10 @@ public class MetricsResource extends AbstractApiResource {
     }
 
     @GET
-    @Path("/portfolio/{days}/days")
+    @Path("/portfolio/days")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
-            summary = "Returns X days of historical metrics for the entire portfolio",
+            summary = "Returns X (30 by default) days of historical metrics for the entire portfolio",
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
@@ -162,15 +171,14 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getPortfolioMetricsXDays(
-            @Parameter(description = "The number of days back to retrieve metrics for", required = true)
-            @PathParam("days") int days) {
-
-        final Date since = DateUtils.addDays(new Date(), -days);
-        try (QueryManager qm = new QueryManager()) {
-            final List<PortfolioMetrics> metrics = qm.getPortfolioMetricsSince(since);
+    public Response getPortfolioMetricsXDays() {
+        return inJdbiTransaction(handle -> {
+            final var configPropertyDao = handle.attach(ConfigPropertyDao.class);
+            final var metricsDao = handle.attach(MetricsDao.class);
+            final Integer metricsDays = configPropertyDao.getValue(METRIC_DAYS_PORTFOLIO, Integer.class);
+            List<PortfolioMetrics> metrics = metricsDao.getPortfolioMetricsXDays(Duration.ofDays(metricsDays));
             return Response.ok(metrics).build();
-        }
+        });
     }
 
     @GET
@@ -260,10 +268,10 @@ public class MetricsResource extends AbstractApiResource {
     }
 
     @GET
-    @Path("/project/{uuid}/days/{days}")
+    @Path("/project/{uuid}/days")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
-            summary = "Returns X days of historical metrics for a specific project",
+            summary = "Returns X (30 by default) days of historical metrics for a specific project",
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
@@ -282,12 +290,17 @@ public class MetricsResource extends AbstractApiResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getProjectMetricsXDays(
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
-            @PathParam("uuid") @ValidUuid String uuid,
-            @Parameter(description = "The number of days back to retrieve metrics for", required = true)
-            @PathParam("days") int days) {
-
-        final Date since = DateUtils.addDays(new Date(), -days);
-        return getProjectMetrics(uuid, since);
+            @PathParam("uuid") @ValidUuid String uuid) {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            var projectId = handle.attach(ProjectDao.class).getProjectId(UUID.fromString(uuid));
+            if (projectId == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+            }
+            requireProjectAccess(handle, UUID.fromString(uuid));
+            final Integer metricsDays = handle.attach(ConfigPropertyDao.class).getValue(METRIC_DAYS_PROJECT, Integer.class);
+            final List<ProjectMetrics> metrics = handle.attach(MetricsDao.class).getProjectMetricsXDays(projectId, Duration.ofDays(metricsDays));
+            return Response.ok(metrics).build();
+        });
     }
 
     @GET
