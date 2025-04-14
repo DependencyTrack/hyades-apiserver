@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import alpine.model.ManagedUser;
-import alpine.resources.AlpineRequest;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.model.Component;
+import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.ProjectMetrics;
 import org.jdbi.v3.core.Handle;
@@ -31,7 +31,6 @@ import org.junit.Test;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
@@ -77,7 +76,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
         qm.persist(metrics);
 
-        List<PortfolioMetrics> portfolioMetrics = metricsDao.getPortfolioMetricsXDays(Duration.ofDays(35));
+        var portfolioMetrics = metricsDao.getPortfolioMetricsXDays(Duration.ofDays(35));
         assertThat(portfolioMetrics.size()).isEqualTo(2);
         assertThat(portfolioMetrics.get(0).getVulnerabilities()).isEqualTo(3);
         assertThat(portfolioMetrics.get(1).getVulnerabilities()).isEqualTo(2);
@@ -86,14 +85,6 @@ public class MetricsDaoTest extends PersistenceCapableTest {
     @Test
     public void testGetProjectMetricsForXDays() {
         final var project = qm.createProject("acme-app", null, "1.0.0", null, null, null, null, false);
-        final ManagedUser managedUser = qm.createManagedUser("username", "passwordHash");
-        final var request = new AlpineRequest(
-                /* principal */ managedUser,
-                /* pagination */ null,
-                /* filter */ null,
-                /* orderBy */ null,
-                /* orderDirection */ null
-        );
 
         var metrics = new ProjectMetrics();
         metrics.setProject(project);
@@ -116,10 +107,49 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
         qm.persist(metrics);
 
-        var projectMetrics = withJdbiHandle(request, handle ->
+        var projectMetrics = withJdbiHandle(handle ->
                 handle.attach(MetricsDao.class).getProjectMetricsXDays(project.getId(), Duration.ofDays(35)));
         assertThat(projectMetrics.size()).isEqualTo(2);
         assertThat(projectMetrics.get(0).getVulnerabilities()).isEqualTo(3);
         assertThat(projectMetrics.get(1).getVulnerabilities()).isEqualTo(2);
+    }
+
+    @Test
+    public void testGetDependencyMetricsForXDays() {
+        final var project = qm.createProject("acme-app", null, "1.0.0", null, null, null, null, false);
+        var component = new Component();
+        component.setProject(project);
+        component.setName("Acme Component");
+        component.setVersion("1.0");
+        qm.createComponent(component, false);
+
+        var metrics = new DependencyMetrics();
+        metrics.setProject(project);
+        metrics.setComponent(component);
+        metrics.setVulnerabilities(4);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(40))));
+        qm.persist(metrics);
+
+        metrics = new DependencyMetrics();
+        metrics.setProject(project);
+        metrics.setComponent(component);
+        metrics.setVulnerabilities(3);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
+        qm.persist(metrics);
+
+        metrics = new DependencyMetrics();
+        metrics.setProject(project);
+        metrics.setComponent(component);
+        metrics.setVulnerabilities(2);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
+        qm.persist(metrics);
+
+        var dependencyMetrics = metricsDao.getDependencyMetricsXDays(component.getId(), Duration.ofDays(35));
+        assertThat(dependencyMetrics.size()).isEqualTo(2);
+        assertThat(dependencyMetrics.get(0).getVulnerabilities()).isEqualTo(3);
+        assertThat(dependencyMetrics.get(1).getVulnerabilities()).isEqualTo(2);
     }
 }

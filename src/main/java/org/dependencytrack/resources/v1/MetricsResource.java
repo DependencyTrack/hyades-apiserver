@@ -36,7 +36,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.apache.commons.lang3.time.DateUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
@@ -49,6 +48,7 @@ import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
@@ -60,6 +60,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_COMPONENT;
 import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_PORTFOLIO;
 import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_PROJECT;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
@@ -408,10 +409,10 @@ public class MetricsResource extends AbstractApiResource {
     }
 
     @GET
-    @Path("/component/{uuid}/days/{days}")
+    @Path("/component/{uuid}/days")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
-            summary = "Returns X days of historical metrics for a specific component",
+            summary = "Returns X (30 by default) days of historical metrics for a specific component",
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
@@ -430,12 +431,17 @@ public class MetricsResource extends AbstractApiResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getComponentMetricsXDays(
             @Parameter(description = "The UUID of the component to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
-            @PathParam("uuid") @ValidUuid String uuid,
-            @Parameter(description = "The number of days back to retrieve metrics for", required = true)
-            @PathParam("days") int days) {
-
-        final Date since = DateUtils.addDays(new Date(), -days);
-        return getComponentMetrics(uuid, since);
+            @PathParam("uuid") @ValidUuid String uuid) {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            var componentId = handle.attach(ComponentDao.class).getComponentId(UUID.fromString(uuid));
+            if (componentId == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
+            }
+            requireComponentAccess(handle, UUID.fromString(uuid));
+            final Integer metricsDays = handle.attach(ConfigPropertyDao.class).getValue(METRIC_DAYS_COMPONENT, Integer.class);
+            final List<DependencyMetrics> metrics = handle.attach(MetricsDao.class).getDependencyMetricsXDays(componentId, Duration.ofDays(metricsDays));
+            return Response.ok(metrics).build();
+        });
     }
 
     @GET

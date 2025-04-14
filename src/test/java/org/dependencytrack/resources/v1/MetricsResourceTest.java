@@ -28,6 +28,7 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
@@ -43,6 +44,7 @@ import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_COMPONENT;
 import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_PORTFOLIO;
 import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_PROJECT;
 
@@ -115,6 +117,85 @@ public class MetricsResourceTest extends ResourceTest {
 
         response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    public void getProjectMetricsXDaysAclTest() {
+        enablePortfolioAccessControl();
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        qm.createConfigProperty(
+                METRIC_DAYS_PROJECT.getGroupName(),
+                METRIC_DAYS_PROJECT.getPropertyName(),
+                String.valueOf(35),
+                METRIC_DAYS_PROJECT.getPropertyType(),
+                METRIC_DAYS_PROJECT.getDescription()
+        );
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_METRICS + "/project/" + project.getUuid() + "/days")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_FORBIDDEN);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        project.addAccessTeam(super.team);
+
+        var metrics = new ProjectMetrics();
+        metrics.setProject(project);
+        metrics.setVulnerabilities(4);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(40))));
+        qm.persist(metrics);
+
+        metrics = new ProjectMetrics();
+        metrics.setProject(project);
+        metrics.setVulnerabilities(3);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
+        qm.persist(metrics);
+
+        metrics = new ProjectMetrics();
+        metrics.setProject(project);
+        metrics.setVulnerabilities(2);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
+        qm.persist(metrics);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        JsonArray json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(2);
+        assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(3);
+        assertThat(json.getJsonObject(1).getInt("vulnerabilities")).isEqualTo(2);
+    }
+
+    @Test
+    public void getProjectMetricsXDays404Test() {
+        enablePortfolioAccessControl();
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_METRICS + "/project/" + UUID.randomUUID() + "/days")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
+        assertThat(getPlainTextBody(response)).isEqualTo("The project could not be found.");
     }
 
     @Test
@@ -224,6 +305,13 @@ public class MetricsResourceTest extends ResourceTest {
     public void getComponentMetricsXDaysAclTest() {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
+        qm.createConfigProperty(
+                METRIC_DAYS_COMPONENT.getGroupName(),
+                METRIC_DAYS_COMPONENT.getPropertyName(),
+                String.valueOf(25),
+                METRIC_DAYS_COMPONENT.getPropertyType(),
+                METRIC_DAYS_COMPONENT.getDescription()
+        );
 
         final var project = new Project();
         project.setName("acme-app");
@@ -234,8 +322,24 @@ public class MetricsResourceTest extends ResourceTest {
         component.setName("acme-lib");
         qm.persist(component);
 
+        var metrics = new DependencyMetrics();
+        metrics.setProject(project);
+        metrics.setComponent(component);
+        metrics.setVulnerabilities(3);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
+        qm.persist(metrics);
+
+        metrics = new DependencyMetrics();
+        metrics.setProject(project);
+        metrics.setComponent(component);
+        metrics.setVulnerabilities(2);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
+        qm.persist(metrics);
+
         final Supplier<Response> responseSupplier = () -> jersey
-                .target(V1_METRICS + "/component/" + component.getUuid() + "/days/666")
+                .target(V1_METRICS + "/component/" + component.getUuid() + "/days")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -254,6 +358,24 @@ public class MetricsResourceTest extends ResourceTest {
 
         response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(200);
+        JsonArray json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(1);
+        assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(2);
+    }
+
+    @Test
+    public void getComponentMetricsXDays404Test() {
+        enablePortfolioAccessControl();
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_METRICS + "/component/" + UUID.randomUUID() + "/days")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
+        assertThat(getPlainTextBody(response)).isEqualTo("The component could not be found.");
     }
 
     @Test
@@ -334,90 +456,5 @@ public class MetricsResourceTest extends ResourceTest {
         assertThat(json.size()).isEqualTo(2);
         assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(3);
         assertThat(json.getJsonObject(1).getInt("vulnerabilities")).isEqualTo(2);
-    }
-
-    @Test
-    public void getProjectMetricsXDaysAclTest() {
-        enablePortfolioAccessControl();
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
-
-        final var project = new Project();
-        project.setName("acme-app");
-        qm.persist(project);
-
-        qm.createConfigProperty(
-                METRIC_DAYS_PROJECT.getGroupName(),
-                METRIC_DAYS_PROJECT.getPropertyName(),
-                String.valueOf(35),
-                METRIC_DAYS_PROJECT.getPropertyType(),
-                METRIC_DAYS_PROJECT.getDescription()
-        );
-
-        Supplier<Response> responseSupplier = () -> jersey
-                .target(V1_METRICS + "/project/" + project.getUuid() + "/days")
-                .request()
-                .header(X_API_KEY, apiKey)
-                .get();
-
-        Response response = responseSupplier.get();
-        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_FORBIDDEN);
-        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
-                {
-                  "status": 403,
-                  "title": "Project access denied",
-                  "detail": "Access to the requested project is forbidden"
-                }
-                """);
-
-        project.addAccessTeam(super.team);
-
-        var metrics = new ProjectMetrics();
-        metrics.setProject(project);
-        metrics.setVulnerabilities(4);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(40))));
-        qm.persist(metrics);
-
-        metrics = new ProjectMetrics();
-        metrics.setProject(project);
-        metrics.setVulnerabilities(3);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
-        qm.persist(metrics);
-
-        metrics = new ProjectMetrics();
-        metrics.setProject(project);
-        metrics.setVulnerabilities(2);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
-        qm.persist(metrics);
-
-        responseSupplier = () -> jersey
-                .target(V1_METRICS + "/project/" + project.getUuid() + "/days")
-                .request()
-                .header(X_API_KEY, apiKey)
-                .get();
-
-        response = responseSupplier.get();
-        assertThat(response.getStatus()).isEqualTo(200);
-        JsonArray json = parseJsonArray(response);
-        assertThat(json.size()).isEqualTo(2);
-        assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(3);
-        assertThat(json.getJsonObject(1).getInt("vulnerabilities")).isEqualTo(2);
-    }
-
-    @Test
-    public void getProjectMetricsXDays404Test() {
-        enablePortfolioAccessControl();
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
-        Supplier<Response> responseSupplier = () -> jersey
-                .target(V1_METRICS + "/project/" + UUID.randomUUID() + "/days")
-                .request()
-                .header(X_API_KEY, apiKey)
-                .get();
-        Response response = responseSupplier.get();
-        assertThat(response.getStatus()).isEqualTo(404);
-        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
-        assertThat(getPlainTextBody(response)).isEqualTo("The project could not be found.");
     }
 }

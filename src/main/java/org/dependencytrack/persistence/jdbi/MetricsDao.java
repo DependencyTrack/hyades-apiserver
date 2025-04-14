@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.ProjectMetrics;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
@@ -69,16 +69,21 @@ public interface MetricsDao {
     @RegisterBeanMapper(PortfolioMetrics.class)
     List<PortfolioMetrics> getPortfolioMetricsXDays(@Bind Duration duration);
 
-    @SqlQuery(/* language=InjectedFreeMarker */ """
-            <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
+    @SqlQuery("""
             SELECT * FROM "PROJECTMETRICS"
-            WHERE ${apiProjectAclCondition}
-            AND "PROJECT_ID" = :projectId
+            WHERE "PROJECT_ID" = :projectId
             AND "LAST_OCCURRENCE" >= (NOW() - :duration)
             ORDER BY "LAST_OCCURRENCE" ASC
             """)
-    @DefineNamedBindings
-    @DefineApiProjectAclCondition(projectIdColumn = "\"PROJECT_ID\"")
     @RegisterBeanMapper(ProjectMetrics.class)
     List<ProjectMetrics> getProjectMetricsXDays(@Bind Long projectId, @Bind Duration duration);
+
+    @SqlQuery("""
+            SELECT * FROM "DEPENDENCYMETRICS"
+            WHERE "COMPONENT_ID" = :componentId
+            AND "LAST_OCCURRENCE" >= (NOW() - :duration)
+            ORDER BY "LAST_OCCURRENCE" ASC
+            """)
+    @RegisterBeanMapper(DependencyMetrics.class)
+    List<DependencyMetrics> getDependencyMetricsXDays(@Bind Long componentId,@Bind Duration duration);
 }
