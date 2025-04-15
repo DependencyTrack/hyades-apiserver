@@ -28,6 +28,7 @@
 
     <modules>
         <module>proto</module>
+        <module>spi</module>
         <module>apiserver</module>
     </modules>
 
@@ -105,6 +106,11 @@
             <dependency>
                 <groupId>org.dependencytrack</groupId>
                 <artifactId>proto</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>spi</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

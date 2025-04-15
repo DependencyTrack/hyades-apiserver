@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.plugin;
 
-import org.dependencytrack.plugin.api.ExtensionFactory;
-import org.dependencytrack.plugin.api.ExtensionPoint;
-import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.spi.plugin.ExtensionFactory;
+import org.dependencytrack.spi.plugin.ExtensionPoint;
+import org.dependencytrack.spi.plugin.Plugin;
 
 import java.util.Collection;
 import java.util.List;

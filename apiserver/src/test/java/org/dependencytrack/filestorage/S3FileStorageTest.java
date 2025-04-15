@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
 import io.minio.GetObjectArgs;
 import io.minio.GetObjectResponse;
@@ -24,7 +24,8 @@ import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.dependencytrack.plugin.MockConfigRegistry;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileStorage;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,16 +34,17 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.URI;
 import java.nio.file.NoSuchFileException;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.storage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
-import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_ACCESS_KEY;
-import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_BUCKET;
-import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_ENDPOINT;
-import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_SECRET_KEY;
+import static org.dependencytrack.filestorage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
+import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_ACCESS_KEY;
+import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_BUCKET;
+import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_ENDPOINT;
+import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_SECRET_KEY;
 
 public class S3FileStorageTest {
 
@@ -134,9 +136,9 @@ public class S3FileStorageTest {
             final FileStorage storage = storageFactory.create();
 
             final FileMetadata fileMetadata = storage.store("foo/bar", "baz".getBytes());
-            assertThat(fileMetadata.getLocation()).isEqualTo("s3://test/foo/bar");
-            assertThat(fileMetadata.getMediaType()).isEqualTo("application/octet-stream");
-            assertThat(fileMetadata.getSha256Digest()).isEqualTo("baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096");
+            assertThat(fileMetadata.location()).asString().isEqualTo("s3://test/foo/bar");
+            assertThat(fileMetadata.mediaType()).isEqualTo("application/octet-stream");
+            assertThat(fileMetadata.sha256Digest()).asHexString().isEqualToIgnoringCase("baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096");
 
             final byte[] fileContent = storage.get(fileMetadata);
             assertThat(fileContent).isNotNull();
@@ -162,13 +164,13 @@ public class S3FileStorageTest {
             final FileStorage storage = storageFactory.create();
 
             final byte[] fileContent = "a".repeat(256).getBytes();
-            final String fileContentDigestHex = DigestUtils.sha256Hex(fileContent);
+            final byte[] fileContentDigest = DigestUtils.sha256(fileContent);
 
             final FileMetadata fileMetadata = storage.store("foo/bar", fileContent);
             assertThat(fileMetadata).isNotNull();
 
             // Digest must be calculated on the compressed file content.
-            assertThat(fileMetadata.getSha256Digest()).isNotEqualTo(fileContentDigestHex);
+            assertThat(fileMetadata.sha256Digest()).isNotEqualTo(fileContentDigest);
 
             // File on disk must in fact be smaller as a result of compression.
             final GetObjectResponse response = s3Client.getObject(
@@ -266,11 +268,7 @@ public class S3FileStorageTest {
             final FileStorage storage = storageFactory.create();
 
             assertThatExceptionOfType(NoSuchFileException.class)
-                    .isThrownBy(() -> storage.get(
-                            FileMetadata.newBuilder()
-                                    .setLocation("s3://test/foo/bar")
-                                    .setSha256Digest("some-digest")
-                                    .build()));
+                    .isThrownBy(() -> storage.get(new FileMetadata(URI.create("s3://test/foo/bar"), null, "some-digest".getBytes(), null)));
         }
     }
 
@@ -310,10 +308,7 @@ public class S3FileStorageTest {
 
             final FileStorage storage = storageFactory.create();
 
-            assertThat(storage.delete(
-                    FileMetadata.newBuilder()
-                            .setLocation("s3://test/foo")
-                            .build())).isTrue();
+            assertThat(storage.delete(new FileMetadata(URI.create("s3://test/foo"), null, null, null))).isTrue();
         }
     }
 

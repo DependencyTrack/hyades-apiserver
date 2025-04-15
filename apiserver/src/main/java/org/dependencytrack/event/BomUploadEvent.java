@@ -20,7 +20,7 @@ package org.dependencytrack.event;
 
 import alpine.event.framework.AbstractChainableEvent;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileMetadata;
 
 /**
  * Defines an event triggered when a bill-of-material (bom) document is submitted.

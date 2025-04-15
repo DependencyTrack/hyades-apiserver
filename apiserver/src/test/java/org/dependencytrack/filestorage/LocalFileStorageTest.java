@@ -16,25 +16,26 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.dependencytrack.plugin.MockConfigRegistry;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileStorage;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.HexFormat;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.storage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
-import static org.dependencytrack.storage.LocalFileStorageFactory.CONFIG_DIRECTORY;
+import static org.dependencytrack.filestorage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
+import static org.dependencytrack.filestorage.LocalFileStorageFactory.CONFIG_DIRECTORY;
 
 public class LocalFileStorageTest {
 
@@ -71,9 +72,9 @@ public class LocalFileStorageTest {
 
         final FileMetadata fileMetadata = storage.store("foo/bar", "baz".getBytes());
         assertThat(fileMetadata).isNotNull();
-        assertThat(fileMetadata.getLocation()).isEqualTo("local:///foo/bar");
-        assertThat(fileMetadata.getMediaType()).isEqualTo("application/octet-stream");
-        assertThat(fileMetadata.getSha256Digest()).isEqualTo("baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096");
+        assertThat(fileMetadata.location()).asString().isEqualTo("local:///foo/bar");
+        assertThat(fileMetadata.mediaType()).isEqualTo("application/octet-stream");
+        assertThat(fileMetadata.sha256Digest()).asHexString().isEqualToIgnoringCase("baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096");
 
         assertThat(tempDirPath.resolve("foo/bar")).exists();
 
@@ -103,7 +104,7 @@ public class LocalFileStorageTest {
         assertThat(fileMetadata).isNotNull();
 
         // Digest must be calculated on the compressed file content.
-        assertThat(fileMetadata.getSha256Digest()).isNotEqualTo(fileContentDigestHex);
+        assertThat(fileMetadata.sha256Digest()).asHexString().isNotEqualTo(fileContentDigestHex);
 
         // File on disk must in fact be smaller as a result of compression.
         final Path filePath = storage.resolveFilePath(fileMetadata);
@@ -176,10 +177,7 @@ public class LocalFileStorageTest {
         final FileStorage storage = storageFactory.create();
 
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> storage.get(
-                        FileMetadata.newBuilder()
-                                .setLocation("foo:///bar")
-                                .build()))
+                .isThrownBy(() -> storage.get(new FileMetadata(URI.create("foo:///bar"), null, null, null)))
                 .withMessage("foo:///bar: Unexpected scheme foo, expected local");
     }
 
@@ -193,11 +191,7 @@ public class LocalFileStorageTest {
         final FileStorage storage = storageFactory.create();
 
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> storage.get(
-                        FileMetadata.newBuilder()
-                                .setLocation("local:///foo/../../../bar")
-                                .setSha256Digest("some-digest")
-                                .build()))
+                .isThrownBy(() -> storage.get(new FileMetadata(URI.create("local:///foo/../../../bar"), null, "some-digest".getBytes(), null)))
                 .withMessage("""
                         The provided filePath foo/../../../bar does not resolve to a path \
                         within the configured base directory (%s)""", tempDirPath);
@@ -213,11 +207,7 @@ public class LocalFileStorageTest {
         final FileStorage storage = storageFactory.create();
 
         assertThatExceptionOfType(NoSuchFileException.class)
-                .isThrownBy(() -> storage.get(
-                        FileMetadata.newBuilder()
-                                .setLocation("local:///foo/bar")
-                                .setSha256Digest("some-digest")
-                                .build()));
+                .isThrownBy(() -> storage.get(new FileMetadata(URI.create("local:///foo/bar"), null, "some-digest".getBytes(), null)));
     }
 
     @Test
@@ -233,9 +223,8 @@ public class LocalFileStorageTest {
 
         // It doesn't matter whether we modify the expected digest, or the actual file content.
         // Modifying the expected digest is easier for testing purposes.
-        final FileMetadata modifiedFileMetadata = fileMetadata.toBuilder()
-                .setSha256Digest(HexFormat.of().formatHex("mismatch".getBytes()))
-                .build();
+        final FileMetadata modifiedFileMetadata = new FileMetadata(
+                fileMetadata.location(), fileMetadata.mediaType(), "mismatch".getBytes(), fileMetadata.additionalMetadata());
 
         assertThatExceptionOfType(IOException.class)
                 .isThrownBy(() -> storage.get(modifiedFileMetadata))
@@ -254,10 +243,7 @@ public class LocalFileStorageTest {
 
         final FileStorage storage = storageFactory.create();
 
-        final boolean deleted = storage.delete(
-                FileMetadata.newBuilder()
-                        .setLocation("local:///foo")
-                        .build());
+        final boolean deleted = storage.delete(new FileMetadata(URI.create("local:///foo"), null, null, null));
         assertThat(deleted).isFalse();
     }
 
@@ -271,10 +257,7 @@ public class LocalFileStorageTest {
         final FileStorage storage = storageFactory.create();
 
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> storage.delete(
-                        FileMetadata.newBuilder()
-                                .setLocation("foo:///bar")
-                                .build()))
+                .isThrownBy(() -> storage.delete(new FileMetadata(URI.create("foo:///bar"), null, null, null)))
                 .withMessage("foo:///bar: Unexpected scheme foo, expected local");
     }
 

@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api;
+package org.dependencytrack.spi.plugin;
 
 /**
  * @param name       Name of the configuration.
@@ -29,6 +29,5 @@ public record ConfigDefinition(
         String name,
         ConfigSource source,
         boolean isRequired,
-        boolean isSecret
-) {
+        boolean isSecret) {
 }

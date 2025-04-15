@@ -16,10 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.spi.filestorage;
 
-import org.dependencytrack.plugin.api.ExtensionPoint;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.spi.plugin.ExtensionPoint;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -98,7 +97,7 @@ public interface FileStorage extends ExtensionPoint {
         }
     }
 
-    class ExtensionPointMetadata implements org.dependencytrack.plugin.api.ExtensionPointMetadata<FileStorage> {
+    class ExtensionPointMetadata implements org.dependencytrack.spi.plugin.ExtensionPointMetadata<FileStorage> {
 
         @Override
         public String name() {

@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
 import com.github.luben.zstd.Zstd;
 import io.minio.GetObjectArgs;
@@ -27,7 +27,8 @@ import io.minio.RemoveObjectArgs;
 import io.minio.errors.ErrorResponseException;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.client.utils.URIBuilder;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,7 @@ import java.util.Arrays;
 import java.util.HexFormat;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.storage.FileStorage.requireValidFileName;
+import static org.dependencytrack.spi.filestorage.FileStorage.requireValidFileName;
 
 /**
  * @since 5.6.0
@@ -69,23 +70,22 @@ final class S3FileStorage implements FileStorage {
     private record S3FileLocation(String bucket, String object) {
 
         private static S3FileLocation from(final FileMetadata fileMetadata) {
-            final URI locationUri = URI.create(fileMetadata.getLocation());
-            if (!EXTENSION_NAME.equals(locationUri.getScheme())) {
+            if (!EXTENSION_NAME.equals(fileMetadata.location().getScheme())) {
                 throw new IllegalArgumentException("%s: Unexpected scheme %s, expected %s".formatted(
-                        locationUri, locationUri.getScheme(), EXTENSION_NAME));
+                        fileMetadata.location(), fileMetadata.location().getScheme(), EXTENSION_NAME));
             }
-            if (locationUri.getHost() == null) {
+            if (fileMetadata.location().getHost() == null) {
                 throw new IllegalArgumentException(
-                        "Host portion of URI %s not set Unable to determine bucket".formatted(locationUri));
+                        "Host portion of URI %s not set Unable to determine bucket".formatted(fileMetadata.location()));
             }
-            if (locationUri.getPath() == null) {
+            if (fileMetadata.location().getPath() == null) {
                 throw new IllegalArgumentException(
-                        "Path portion of URI %s not set; Unable to determine object name".formatted(locationUri));
+                        "Path portion of URI %s not set; Unable to determine object name".formatted(fileMetadata.location()));
             }
 
             // The value returned by URI#getPath always has a leading slash.
             // Remove it to prevent the path from erroneously be interpreted as absolute.
-            return new S3FileLocation(locationUri.getHost(), locationUri.getPath().replaceFirst("^/", ""));
+            return new S3FileLocation(fileMetadata.location().getHost(), fileMetadata.location().getPath().replaceFirst("^/", ""));
         }
 
         private URI asURI() {
@@ -130,11 +130,7 @@ final class S3FileStorage implements FileStorage {
             throw new IOException(e);
         }
 
-        return FileMetadata.newBuilder()
-                .setLocation(locationUri.toString())
-                .setMediaType(mediaType)
-                .setSha256Digest(HexFormat.of().formatHex(contentDigest))
-                .build();
+        return new FileMetadata(locationUri, mediaType, contentDigest, null);
     }
 
     @Override
@@ -155,10 +151,10 @@ final class S3FileStorage implements FileStorage {
         } catch (ErrorResponseException e) {
             // https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList
             if ("NoSuchKey".equalsIgnoreCase(e.errorResponse().code())) {
-                throw new NoSuchFileException(fileMetadata.getLocation());
+                throw new NoSuchFileException(fileMetadata.location().toString());
             }
 
-            throw new IOException("Failed to get file %s".formatted(fileMetadata.getLocation()), e);
+            throw new IOException("Failed to get file %s".formatted(fileMetadata.location()), e);
         } catch (Exception e) {
             if (e instanceof final IOException ioe) {
                 throw ioe;
@@ -168,11 +164,11 @@ final class S3FileStorage implements FileStorage {
         }
 
         final byte[] actualContentDigest = DigestUtils.sha256(maybeCompressedContent);
-        final byte[] expectedContentDigest = HexFormat.of().parseHex(fileMetadata.getSha256Digest());
+        final byte[] expectedContentDigest = fileMetadata.sha256Digest();
 
         if (!Arrays.equals(actualContentDigest, expectedContentDigest)) {
             throw new IOException("SHA256 digest mismatch: actual=%s, expected=%s".formatted(
-                    HexFormat.of().formatHex(actualContentDigest), fileMetadata.getSha256Digest()));
+                    HexFormat.of().formatHex(actualContentDigest), HexFormat.of().formatHex(fileMetadata.sha256Digest())));
         }
 
         final long decompressedSize = Zstd.decompressedSize(maybeCompressedContent);

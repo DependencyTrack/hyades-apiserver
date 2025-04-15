@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.plugin;
 
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigRegistry;
-import org.dependencytrack.plugin.api.ConfigSource;
-import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.spi.plugin.ConfigDefinition;
+import org.dependencytrack.spi.plugin.ConfigRegistry;
+import org.dependencytrack.spi.plugin.ConfigSource;
+import org.dependencytrack.spi.plugin.ExtensionFactory;
 
 public class DummyTestExtensionFactory implements ExtensionFactory<TestExtensionPoint> {
 

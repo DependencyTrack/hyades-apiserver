@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.plugin;
 
-import org.dependencytrack.plugin.api.ExtensionPointMetadata;
+import org.dependencytrack.spi.plugin.ExtensionPointMetadata;
 
 public class TestExtensionPointMetadata implements ExtensionPointMetadata<TestExtensionPoint> {
 

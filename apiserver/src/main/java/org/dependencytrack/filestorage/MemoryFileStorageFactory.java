@@ -16,10 +16,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
-import org.dependencytrack.plugin.api.ConfigRegistry;
-import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.spi.filestorage.FileStorage;
+import org.dependencytrack.spi.plugin.ConfigRegistry;
+import org.dependencytrack.spi.plugin.ExtensionFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

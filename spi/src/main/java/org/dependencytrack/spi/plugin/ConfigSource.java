@@ -16,18 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api;
-
-import java.util.Collection;
+package org.dependencytrack.spi.plugin;
 
 /**
  * @since 5.6.0
  */
-public interface Plugin {
+public enum ConfigSource {
 
-    /**
-     * @return The {@link ExtensionFactory}s provided by the plugin.
-     */
-    Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories();
+    ANY,
+
+    DEPLOYMENT,
+
+    RUNTIME
 
 }

@@ -16,11 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.client.utils.URIBuilder;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileStorage;
 
 import java.io.IOException;
 import java.net.URI;
@@ -32,7 +33,7 @@ import java.util.HexFormat;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.storage.FileStorage.requireValidFileName;
+import static org.dependencytrack.spi.filestorage.FileStorage.requireValidFileName;
 
 /**
  * @since 5.6.0
@@ -69,11 +70,7 @@ final class MemoryFileStorage implements FileStorage {
 
         fileContentByKey.put(fileName, content);
 
-        return FileMetadata.newBuilder()
-                .setLocation(locationUri.toString())
-                .setMediaType(mediaType)
-                .setSha256Digest(HexFormat.of().formatHex(contentDigest))
-                .build();
+        return new FileMetadata(locationUri, mediaType, contentDigest, null);
     }
 
     @Override
@@ -84,15 +81,15 @@ final class MemoryFileStorage implements FileStorage {
 
         final byte[] fileContent = fileContentByKey.get(fileName);
         if (fileContent == null) {
-            throw new NoSuchFileException(fileMetadata.getLocation());
+            throw new NoSuchFileException(fileMetadata.location().toString());
         }
 
         final byte[] actualContentDigest = DigestUtils.sha256(fileContent);
-        final byte[] expectedContentDigest = HexFormat.of().parseHex(fileMetadata.getSha256Digest());
+        final byte[] expectedContentDigest = fileMetadata.sha256Digest();
 
         if (!Arrays.equals(actualContentDigest, expectedContentDigest)) {
             throw new IOException("SHA256 digest mismatch: actual=%s, expected=%s".formatted(
-                    HexFormat.of().formatHex(actualContentDigest), fileMetadata.getSha256Digest()));
+                    HexFormat.of().formatHex(actualContentDigest), HexFormat.of().formatHex(fileMetadata.sha256Digest())));
         }
 
         return fileContent;
@@ -112,23 +109,22 @@ final class MemoryFileStorage implements FileStorage {
     }
 
     private static String resolveFileName(final FileMetadata fileMetadata) {
-        final URI locationUri = URI.create(fileMetadata.getLocation());
-        if (!EXTENSION_NAME.equals(locationUri.getScheme())) {
+        if (!EXTENSION_NAME.equals(fileMetadata.location().getScheme())) {
             throw new IllegalArgumentException("%s: Unexpected scheme %s, expected %s".formatted(
-                    locationUri, locationUri.getScheme(), EXTENSION_NAME));
+                    fileMetadata.location(), fileMetadata.location().getScheme(), EXTENSION_NAME));
         }
-        if (locationUri.getHost() != null) {
+        if (fileMetadata.location().getHost() != null) {
             throw new IllegalArgumentException(
-                    "%s: Host portion is not allowed for scheme %s".formatted(locationUri, EXTENSION_NAME));
+                    "%s: Host portion is not allowed for scheme %s".formatted(fileMetadata.location(), EXTENSION_NAME));
         }
-        if (locationUri.getPath() == null) {
+        if (fileMetadata.location().getPath() == null) {
             throw new IllegalArgumentException(
-                    "%s: Path portion not set; Unable to determine file name".formatted(locationUri));
+                    "%s: Path portion not set; Unable to determine file name".formatted(fileMetadata.location()));
         }
 
         // The value returned by URI#getPath always has a leading slash.
         // Remove it to prevent the path from erroneously be interpreted as absolute.
-        return normalizeFileName(locationUri.getPath().replaceFirst("^/", ""));
+        return normalizeFileName(fileMetadata.location().getPath().replaceFirst("^/", ""));
     }
 
 }

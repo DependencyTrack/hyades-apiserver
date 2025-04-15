@@ -19,7 +19,7 @@
 package org.dependencytrack.event;
 
 import org.dependencytrack.model.Project;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileMetadata;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -28,8 +28,8 @@ public class BomUploadEventTest {
     @Test
     public void testFileConstructor() {
         Project project = new Project();
-        FileMetadata fileMetadata = FileMetadata.getDefaultInstance();
-        BomUploadEvent event = new BomUploadEvent(project, FileMetadata.getDefaultInstance());
+        FileMetadata fileMetadata = new FileMetadata(null, null, null, null);
+        BomUploadEvent event = new BomUploadEvent(project, fileMetadata);
         Assert.assertEquals(project, event.getProject());
         Assert.assertEquals(fileMetadata, event.getFileMetadata());
     }

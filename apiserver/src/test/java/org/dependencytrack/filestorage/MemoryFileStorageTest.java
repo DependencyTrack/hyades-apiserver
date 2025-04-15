@@ -16,13 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
 import org.dependencytrack.plugin.MockConfigRegistry;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileStorage;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.NoSuchFileException;
 import java.util.Collections;
 
@@ -55,9 +57,9 @@ public class MemoryFileStorageTest {
 
         final FileMetadata fileMetadata = storage.store("foo/bar", "baz".getBytes());
         assertThat(fileMetadata).isNotNull();
-        assertThat(fileMetadata.getLocation()).isEqualTo("memory:///foo/bar");
-        assertThat(fileMetadata.getMediaType()).isEqualTo("application/octet-stream");
-        assertThat(fileMetadata.getSha256Digest()).isEqualTo("baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096");
+        assertThat(fileMetadata.location()).asString().isEqualTo("memory:///foo/bar");
+        assertThat(fileMetadata.mediaType()).isEqualTo("application/octet-stream");
+        assertThat(fileMetadata.sha256Digest()).asHexString().isEqualToIgnoringCase("baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096");
 
         final byte[] fileContent = storage.get(fileMetadata);
         assertThat(fileContent).isNotNull();
@@ -111,11 +113,7 @@ public class MemoryFileStorageTest {
         final FileStorage storage = storageFactory.create();
 
         assertThatExceptionOfType(NoSuchFileException.class)
-                .isThrownBy(() -> storage.get(
-                        FileMetadata.newBuilder()
-                                .setLocation("memory:///foo/bar")
-                                .setSha256Digest("some-digest")
-                                .build()));
+                .isThrownBy(() -> storage.get(new FileMetadata(URI.create("memory:///foo/bar"), null, "some-digest".getBytes(), null)));
     }
 
     @Test
@@ -127,10 +125,7 @@ public class MemoryFileStorageTest {
         final FileStorage storage = storageFactory.create();
 
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> storage.get(
-                        FileMetadata.newBuilder()
-                                .setLocation("foo:///bar")
-                                .build()))
+                .isThrownBy(() -> storage.get(new FileMetadata(URI.create("foo:///bar"), null, null, null)))
                 .withMessage("foo:///bar: Unexpected scheme foo, expected memory");
     }
 
@@ -142,10 +137,7 @@ public class MemoryFileStorageTest {
 
         final FileStorage storage = storageFactory.create();
 
-        final boolean deleted = storage.delete(
-                FileMetadata.newBuilder()
-                        .setLocation("memory:///foo")
-                        .build());
+        final boolean deleted = storage.delete(new FileMetadata(URI.create("memory:///foo"), null, null, null));
         assertThat(deleted).isFalse();
     }
 
@@ -158,10 +150,7 @@ public class MemoryFileStorageTest {
         final FileStorage storage = storageFactory.create();
 
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> storage.delete(
-                        FileMetadata.newBuilder()
-                                .setLocation("foo:///bar")
-                                .build()))
+                .isThrownBy(() -> storage.delete(new FileMetadata(URI.create("foo:///bar"), null, null, null)))
                 .withMessage("foo:///bar: Unexpected scheme foo, expected memory");
     }
 

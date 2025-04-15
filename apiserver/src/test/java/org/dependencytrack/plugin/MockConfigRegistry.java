@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.plugin;
 
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigRegistry;
+import org.dependencytrack.spi.plugin.ConfigDefinition;
+import org.dependencytrack.spi.plugin.ConfigRegistry;
 
 import java.util.Map;
 import java.util.Optional;

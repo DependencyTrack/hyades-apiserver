@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api;
+package org.dependencytrack.spi.plugin;
 
 import java.util.NoSuchElementException;
 import java.util.Optional;

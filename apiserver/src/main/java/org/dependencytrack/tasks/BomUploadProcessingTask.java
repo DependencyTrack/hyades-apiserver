@@ -63,7 +63,7 @@ import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.plugin.PluginManager;
-import org.dependencytrack.storage.FileStorage;
+import org.dependencytrack.spi.filestorage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.json.JSONArray;
 import org.slf4j.MDC;
@@ -186,7 +186,7 @@ public class BomUploadProcessingTask implements Subscriber {
                 cdxBomBytes = fileStorage.get(event.getFileMetadata());
             } catch (IOException ex) {
                 LOGGER.error("Failed to retrieve BOM file %s from storage".formatted(
-                        event.getFileMetadata().getLocation()), ex);
+                        event.getFileMetadata().location()), ex);
                 return;
             }
 
@@ -200,7 +200,7 @@ public class BomUploadProcessingTask implements Subscriber {
                     fileStorage.delete(event.getFileMetadata());
                 } catch (IOException ex) {
                     LOGGER.error("Failed to delete BOM file %s from storage".formatted(
-                            event.getFileMetadata().getLocation()), ex);
+                            event.getFileMetadata().location()), ex);
                 }
             }
         }

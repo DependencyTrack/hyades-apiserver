@@ -16,13 +16,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
 import com.github.luben.zstd.Zstd;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.client.utils.URIBuilder;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileMetadata;
+import org.dependencytrack.spi.filestorage.FileStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +37,7 @@ import java.util.Arrays;
 import java.util.HexFormat;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.storage.FileStorage.requireValidFileName;
+import static org.dependencytrack.spi.filestorage.FileStorage.requireValidFileName;
 
 /**
  * @since 5.6.0
@@ -97,11 +98,7 @@ final class LocalFileStorage implements FileStorage {
             bufferedOutputStream.write(maybeCompressedContent);
         }
 
-        return FileMetadata.newBuilder()
-                .setLocation(locationUri.toString())
-                .setMediaType(mediaType)
-                .setSha256Digest(HexFormat.of().formatHex(contentDigest))
-                .build();
+        return new FileMetadata(locationUri, mediaType, contentDigest, null);
     }
 
     @Override
@@ -112,11 +109,11 @@ final class LocalFileStorage implements FileStorage {
 
         final byte[] maybeCompressedContent = Files.readAllBytes(filePath);
         final byte[] actualContentDigest = DigestUtils.sha256(maybeCompressedContent);
-        final byte[] expectedContentDigest = HexFormat.of().parseHex(fileMetadata.getSha256Digest());
+        final byte[] expectedContentDigest = fileMetadata.sha256Digest();
 
         if (!Arrays.equals(actualContentDigest, expectedContentDigest)) {
             throw new IOException("SHA256 digest mismatch: actual=%s, expected=%s".formatted(
-                    HexFormat.of().formatHex(actualContentDigest), fileMetadata.getSha256Digest()));
+                    HexFormat.of().formatHex(actualContentDigest), HexFormat.of().formatHex(fileMetadata.sha256Digest())));
         }
 
         final long decompressedSize = Zstd.decompressedSize(maybeCompressedContent);
@@ -149,23 +146,22 @@ final class LocalFileStorage implements FileStorage {
 
     @VisibleForTesting
     Path resolveFilePath(final FileMetadata fileMetadata) {
-        final URI locationUri = URI.create(fileMetadata.getLocation());
-        if (!EXTENSION_NAME.equals(locationUri.getScheme())) {
+        if (!EXTENSION_NAME.equals(fileMetadata.location().getScheme())) {
             throw new IllegalArgumentException("%s: Unexpected scheme %s, expected %s".formatted(
-                    locationUri, locationUri.getScheme(), EXTENSION_NAME));
+                    fileMetadata.location(), fileMetadata.location().getScheme(), EXTENSION_NAME));
         }
-        if (locationUri.getHost() != null) {
+        if (fileMetadata.location().getHost() != null) {
             throw new IllegalArgumentException(
-                    "%s: Host portion is not allowed for scheme %s".formatted(locationUri, EXTENSION_NAME));
+                    "%s: Host portion is not allowed for scheme %s".formatted(fileMetadata.location(), EXTENSION_NAME));
         }
-        if (locationUri.getPath() == null || locationUri.getPath().equals("/")) {
+        if (fileMetadata.location().getPath() == null || fileMetadata.location().getPath().equals("/")) {
             throw new IllegalArgumentException(
-                    "%s: Path portion not set; Unable to determine file name".formatted(locationUri));
+                    "%s: Path portion not set; Unable to determine file name".formatted(fileMetadata.location()));
         }
 
         // The value returned by URI#getPath always has a leading slash.
         // Remove it to prevent the path from erroneously be interpreted as absolute.
-        return resolveFilePath(locationUri.getPath().replaceFirst("^/", ""));
+        return resolveFilePath(fileMetadata.location().getPath().replaceFirst("^/", ""));
     }
 
 }

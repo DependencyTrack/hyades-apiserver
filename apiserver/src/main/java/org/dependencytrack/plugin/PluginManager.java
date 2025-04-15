@@ -19,12 +19,12 @@
 package org.dependencytrack.plugin;
 
 import alpine.common.logging.Logger;
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigSource;
-import org.dependencytrack.plugin.api.ExtensionFactory;
-import org.dependencytrack.plugin.api.ExtensionPoint;
-import org.dependencytrack.plugin.api.ExtensionPointMetadata;
-import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.spi.plugin.ConfigDefinition;
+import org.dependencytrack.spi.plugin.ConfigSource;
+import org.dependencytrack.spi.plugin.ExtensionFactory;
+import org.dependencytrack.spi.plugin.ExtensionPoint;
+import org.dependencytrack.spi.plugin.ExtensionPointMetadata;
+import org.dependencytrack.spi.plugin.Plugin;
 import org.slf4j.MDC;
 
 import java.lang.reflect.Modifier;
@@ -51,8 +51,8 @@ import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_POINT;
 import static org.dependencytrack.common.MdcKeys.MDC_EXTENSION_POINT_NAME;
 import static org.dependencytrack.common.MdcKeys.MDC_PLUGIN;
-import static org.dependencytrack.plugin.api.ExtensionFactory.PRIORITY_HIGHEST;
-import static org.dependencytrack.plugin.api.ExtensionFactory.PRIORITY_LOWEST;
+import static org.dependencytrack.spi.plugin.ExtensionFactory.PRIORITY_HIGHEST;
+import static org.dependencytrack.spi.plugin.ExtensionFactory.PRIORITY_LOWEST;
 
 /**
  * @since 5.6.0

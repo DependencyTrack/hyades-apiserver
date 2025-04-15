@@ -16,15 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
 import alpine.Config;
 import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigRegistry;
-import org.dependencytrack.plugin.api.ConfigSource;
-import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.spi.filestorage.FileStorage;
+import org.dependencytrack.spi.plugin.ConfigDefinition;
+import org.dependencytrack.spi.plugin.ConfigRegistry;
+import org.dependencytrack.spi.plugin.ConfigSource;
+import org.dependencytrack.spi.plugin.ExtensionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.plugin;
 
-import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.spi.plugin.ExtensionPoint;
 
 public interface TestExtensionPoint extends ExtensionPoint {
 

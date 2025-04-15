@@ -22,9 +22,9 @@ import alpine.Config;
 import alpine.model.ConfigProperty;
 import alpine.model.IConfigProperty.PropertyType;
 import org.apache.commons.lang3.tuple.Pair;
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigRegistry;
-import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.spi.plugin.ConfigDefinition;
+import org.dependencytrack.spi.plugin.ConfigRegistry;
+import org.dependencytrack.spi.plugin.ExtensionPoint;
 import org.dependencytrack.util.DebugDataEncryption;
 import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 
