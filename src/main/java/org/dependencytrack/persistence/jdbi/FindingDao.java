@@ -249,23 +249,7 @@ public interface FindingDao {
     @AllowApiOrdering(alwaysBy = "attribution.id", by = {
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
-            @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = """ 
-                     CASE WHEN "VULNERABILITY"."SEVERITY" = 'UNASSIGNED' 
-                          THEN 0 
-                          WHEN "VULNERABILITY"."SEVERITY" = 'LOW' 
-                          THEN 3 
-                          WHEN "VULNERABILITY"."SEVERITY" = 'MEDIUM' 
-                          THEN 6 
-                          WHEN "VULNERABILITY"."SEVERITY" = 'HIGH' 
-                          THEN 8 
-                          WHEN "VULNERABILITY"."SEVERITY" = 'CRITICAL' 
-                          THEN 10 
-                          ELSE CASE WHEN "VULNERABILITY"."CVSSV3BASESCORE" IS NOT NULL 
-                                    THEN "VULNERABILITY"."CVSSV3BASESCORE" 
-                                    ELSE "VULNERABILITY"."CVSSV2BASESCORE" 
-                               END 
-                     END 
-                     """),
+            @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = "\"VULNERABILITY\".\"SEVERITY\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV3BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV3BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV2BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV2BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "\"VULNERABILITY\".\"PUBLISHED\""),
@@ -359,23 +343,7 @@ public interface FindingDao {
             @AllowApiOrdering.Column(name = "vulnerability.id", queryName = "\"VULNERABILITY\".\"ID\""),
             @AllowApiOrdering.Column(name = "vulnerability.vulnId", queryName = "\"VULNERABILITY\".\"VULNID\""),
             @AllowApiOrdering.Column(name = "vulnerability.title", queryName = "\"VULNERABILITY\".\"TITLE\""),
-            @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = """ 
-                     CASE WHEN "VULNERABILITY"."SEVERITY" = 'UNASSIGNED' 
-                          THEN 0 
-                          WHEN "VULNERABILITY"."SEVERITY" = 'LOW' 
-                          THEN 3 
-                          WHEN "VULNERABILITY"."SEVERITY" = 'MEDIUM' 
-                          THEN 6 
-                          WHEN "VULNERABILITY"."SEVERITY" = 'HIGH' 
-                          THEN 8 
-                          WHEN "VULNERABILITY"."SEVERITY" = 'CRITICAL' 
-                          THEN 10 
-                          ELSE CASE WHEN "VULNERABILITY"."CVSSV3BASESCORE" IS NOT NULL 
-                                    THEN "VULNERABILITY"."CVSSV3BASESCORE" 
-                                    ELSE "VULNERABILITY"."CVSSV2BASESCORE" 
-                               END 
-                     END 
-                     """),
+            @AllowApiOrdering.Column(name = "vulnerability.severity", queryName = "\"VULNERABILITY\".\"SEVERITY\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV3BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV3BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.cvssV2BaseScore", queryName = "\"VULNERABILITY\".\"CVSSV2BASESCORE\""),
             @AllowApiOrdering.Column(name = "vulnerability.published", queryName = "\"VULNERABILITY\".\"PUBLISHED\""),

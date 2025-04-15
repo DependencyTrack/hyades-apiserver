@@ -1334,4 +1334,68 @@
             columnNames="NAME"
             constraintName="TEAM_NAME_IDX" />
     </changeSet>
+
+    <changeSet id="v5.6.0-18" author="sahibamittal">
+        <sql splitStatements="false">
+            CREATE TYPE severity AS ENUM (
+                'UNASSIGNED'
+                , 'INFO'
+                , 'LOW'
+                , 'MEDIUM'
+                , 'HIGH'
+                , 'CRITICAL'
+            );
+            ALTER TABLE "ANALYSIS" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
+            ALTER TABLE "VULNERABILITY" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-19" author="nscuro">
+        <sql>
+            -- Identify OIDC groups with duplicate names.
+            WITH cte_duplicate_group AS (
+              SELECT "NAME" AS name
+                   , MIN("ID") AS canonical_id
+                FROM "OIDCGROUP"
+               GROUP BY "NAME"
+              HAVING COUNT(*) &gt; 1
+            ),
+            -- Delete mappings of duplicate OIDC groups.
+            cte_deleted_mapping AS (
+              DELETE FROM "MAPPEDOIDCGROUP"
+               USING cte_duplicate_group
+                   , "OIDCGROUP"
+               WHERE "MAPPEDOIDCGROUP"."GROUP_ID" = "OIDCGROUP"."ID"
+                 AND "OIDCGROUP"."NAME" = cte_duplicate_group.name
+                 AND "OIDCGROUP"."ID" != cte_duplicate_group.canonical_id
+              RETURNING "OIDCGROUP"."NAME" AS group_name
+                      , "MAPPEDOIDCGROUP"."TEAM_ID" AS team_id
+                      , "MAPPEDOIDCGROUP"."UUID" AS uuid
+            ),
+            -- Delete duplicate OIDC groups.
+            cte_deleted_group AS (
+              DELETE FROM "OIDCGROUP"
+               USING cte_duplicate_group
+               WHERE "OIDCGROUP"."NAME" = cte_duplicate_group.name
+                 AND "OIDCGROUP"."ID" != cte_duplicate_group.canonical_id
+              RETURNING "OIDCGROUP"."ID" AS id
+            )
+            -- Re-create deleted mappings, but using the canonical group ID.
+            INSERT INTO "MAPPEDOIDCGROUP" ("GROUP_ID", "TEAM_ID", "UUID")
+            SELECT "OIDCGROUP"."ID"
+                 , cte_deleted_mapping.team_id
+                 , cte_deleted_mapping.uuid
+              FROM cte_deleted_mapping
+             INNER JOIN "OIDCGROUP"
+                ON "OIDCGROUP"."NAME" = cte_deleted_mapping.group_name
+             -- This condition mostly just forces evaluation of cte_deleted_group.
+             WHERE "OIDCGROUP"."ID" NOT IN (SELECT id FROM cte_deleted_group)
+            -- If the duplicate groups had overlapping mappings, we'll get conflicts here.
+            ON CONFLICT ("TEAM_ID", "GROUP_ID") DO NOTHING
+        </sql>
+
+        <createIndex tableName="OIDCGROUP" indexName="OIDCGROUP_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

@@ -561,6 +561,36 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getAllFindingsSortedBySeverity() {
+        Project p1 = qm.createProject("Acme Example 1", null, "1.0", null, null, null, null, false);
+        Component c1 = createComponent(p1, "Component A", "1.0");
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
+        Vulnerability v2 = createVulnerability("Vuln-2", Severity.MEDIUM);
+        Vulnerability v3 = createVulnerability("Vuln-3", Severity.HIGH);
+        Date date = new Date();
+        v1.setPublished(date);
+        v2.setPublished(date);
+        v3.setPublished(date);
+        qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
+        qm.addVulnerability(v2, c1, AnalyzerIdentity.NONE);
+        qm.addVulnerability(v3, c1, AnalyzerIdentity.NONE);
+        Response response = jersey.target(V1_FINDING)
+                .queryParam("sortName", "vulnerability.severity")
+                .queryParam("sortOrder", "desc")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertEquals(200, response.getStatus(), 0);
+        assertEquals(String.valueOf(3), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray json = parseJsonArray(response);
+        assertNotNull(json);
+        assertEquals(3, json.size());
+        assertEquals(v1.getSeverity().name(), json.getJsonObject(0).getJsonObject("vulnerability").getString("severity"));
+        assertEquals(v3.getSeverity().name(), json.getJsonObject(1).getJsonObject("vulnerability").getString("severity"));
+        assertEquals(v2.getSeverity().name(), json.getJsonObject(2).getJsonObject("vulnerability").getString("severity"));
+    }
+
+    @Test
     public void getAllFindingsWithAclEnabled() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
