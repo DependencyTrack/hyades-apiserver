@@ -32,6 +32,7 @@ import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.util.DateUtil;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -421,18 +422,12 @@ public class MetricsResourceTest extends ResourceTest {
         qm.createConfigProperty(
                 METRIC_DAYS_PORTFOLIO.getGroupName(),
                 METRIC_DAYS_PORTFOLIO.getPropertyName(),
-                String.valueOf(35),
+                String.valueOf(25),
                 METRIC_DAYS_PORTFOLIO.getPropertyType(),
                 METRIC_DAYS_PORTFOLIO.getDescription()
         );
 
         var metrics = new PortfolioMetrics();
-        metrics.setVulnerabilities(4);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(40))));
-        qm.persist(metrics);
-
-        metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(3);
         metrics.setFirstOccurrence(new Date());
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
@@ -453,8 +448,37 @@ public class MetricsResourceTest extends ResourceTest {
         Response response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(200);
         JsonArray json = parseJsonArray(response);
-        assertThat(json.size()).isEqualTo(2);
-        assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(3);
-        assertThat(json.getJsonObject(1).getInt("vulnerabilities")).isEqualTo(2);
+        assertThat(json.size()).isEqualTo(1);
+        assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(2);
+    }
+
+    @Test
+    public void getPortfolioMetricsSinceAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        enablePortfolioAccessControl();
+
+        var metrics = new PortfolioMetrics();
+        metrics.setVulnerabilities(3);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(DateUtil.parseShortDate("20250101"));
+        qm.persist(metrics);
+
+        metrics = new PortfolioMetrics();
+        metrics.setVulnerabilities(2);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(DateUtil.parseShortDate("20250201"));
+        qm.persist(metrics);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_METRICS + "/portfolio/since/20250201")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        JsonArray json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(1);
+        assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(2);
     }
 }

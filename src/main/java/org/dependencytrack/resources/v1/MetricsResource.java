@@ -36,6 +36,7 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.time.DateUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
@@ -55,7 +56,6 @@ import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.DateUtil;
 
-import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -64,6 +64,7 @@ import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_COMP
 import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_PORTFOLIO;
 import static org.dependencytrack.model.ConfigPropertyConstants.METRIC_DAYS_PROJECT;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing metrics.
@@ -150,10 +151,9 @@ public class MetricsResource extends AbstractApiResource {
         if (since == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The specified date format is incorrect.").build();
         }
-        try (QueryManager qm = new QueryManager()) {
-            final List<PortfolioMetrics> metrics = qm.getPortfolioMetricsSince(since);
-            return Response.ok(metrics).build();
-        }
+        List<PortfolioMetrics> metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getPortfolioMetricsSince(since.toInstant()));
+        return Response.ok(metrics).build();
     }
 
     @GET
@@ -177,7 +177,8 @@ public class MetricsResource extends AbstractApiResource {
             final var configPropertyDao = handle.attach(ConfigPropertyDao.class);
             final var metricsDao = handle.attach(MetricsDao.class);
             final Integer metricsDays = configPropertyDao.getValue(METRIC_DAYS_PORTFOLIO, Integer.class);
-            List<PortfolioMetrics> metrics = metricsDao.getPortfolioMetricsXDays(Duration.ofDays(metricsDays));
+            final Date since = DateUtils.addDays(new Date(), -metricsDays);
+            List<PortfolioMetrics> metrics = metricsDao.getPortfolioMetricsSince(since.toInstant());
             return Response.ok(metrics).build();
         });
     }
@@ -263,9 +264,19 @@ public class MetricsResource extends AbstractApiResource {
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "The start date to retrieve metrics for", required = true)
             @PathParam("date") String date) {
-
         final Date since = DateUtil.parseShortDate(date);
-        return getProjectMetrics(uuid, since);
+        if (since == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("The specified date format is incorrect.").build();
+        }
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            var projectId = handle.attach(ProjectDao.class).getProjectId(UUID.fromString(uuid));
+            if (projectId == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+            }
+            requireProjectAccess(handle, UUID.fromString(uuid));
+            final List<ProjectMetrics> metrics = handle.attach(MetricsDao.class).getProjectMetricsSince(projectId, since.toInstant());
+            return Response.ok(metrics).build();
+        });
     }
 
     @GET
@@ -299,7 +310,8 @@ public class MetricsResource extends AbstractApiResource {
             }
             requireProjectAccess(handle, UUID.fromString(uuid));
             final Integer metricsDays = handle.attach(ConfigPropertyDao.class).getValue(METRIC_DAYS_PROJECT, Integer.class);
-            final List<ProjectMetrics> metrics = handle.attach(MetricsDao.class).getProjectMetricsXDays(projectId, Duration.ofDays(metricsDays));
+            final Date since = DateUtils.addDays(new Date(), -metricsDays);
+            final List<ProjectMetrics> metrics = handle.attach(MetricsDao.class).getProjectMetricsSince(projectId, since.toInstant());
             return Response.ok(metrics).build();
         });
     }
@@ -400,12 +412,19 @@ public class MetricsResource extends AbstractApiResource {
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "The start date to retrieve metrics for", required = true)
             @PathParam("date") String date) {
-
         final Date since = DateUtil.parseShortDate(date);
         if (since == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The specified date format is incorrect.").build();
         }
-        return getComponentMetrics(uuid, since);
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            var componentId = handle.attach(ComponentDao.class).getComponentId(UUID.fromString(uuid));
+            if (componentId == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
+            }
+            requireComponentAccess(handle, UUID.fromString(uuid));
+            final List<DependencyMetrics> metrics = handle.attach(MetricsDao.class).getDependencyMetricsSince(componentId, since.toInstant());
+            return Response.ok(metrics).build();
+        });
     }
 
     @GET
@@ -439,7 +458,8 @@ public class MetricsResource extends AbstractApiResource {
             }
             requireComponentAccess(handle, UUID.fromString(uuid));
             final Integer metricsDays = handle.attach(ConfigPropertyDao.class).getValue(METRIC_DAYS_COMPONENT, Integer.class);
-            final List<DependencyMetrics> metrics = handle.attach(MetricsDao.class).getDependencyMetricsXDays(componentId, Duration.ofDays(metricsDays));
+            final Date since = DateUtils.addDays(new Date(), -metricsDays);
+            final List<DependencyMetrics> metrics = handle.attach(MetricsDao.class).getDependencyMetricsSince(componentId, since.toInstant());
             return Response.ok(metrics).build();
         });
     }
@@ -475,45 +495,4 @@ public class MetricsResource extends AbstractApiResource {
             }
         }
     }
-
-    /**
-     * Private method common to retrieving project metrics based on a time period.
-     *
-     * @param uuid  the UUID of the project
-     * @param since the Date to start retrieving metrics from
-     * @return a Response object
-     */
-    private Response getProjectMetrics(String uuid, Date since) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project != null) {
-                requireAccess(qm, project);
-                final List<ProjectMetrics> metrics = qm.getProjectMetricsSince(project, since);
-                return Response.ok(metrics).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
-        }
-    }
-
-    /**
-     * Private method common to retrieving component metrics based on a time period.
-     *
-     * @param uuid  the UUID of the component
-     * @param since the Date to start retrieving metrics from
-     * @return a Response object
-     */
-    private Response getComponentMetrics(String uuid, Date since) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final Component component = qm.getObjectByUuid(Component.class, uuid);
-            if (component != null) {
-                requireAccess(qm, component.getProject());
-                final List<DependencyMetrics> metrics = qm.getDependencyMetricsSince(component, since);
-                return Response.ok(metrics).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
-            }
-        }
-    }
-
 }

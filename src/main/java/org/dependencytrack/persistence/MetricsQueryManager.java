@@ -29,7 +29,6 @@ import org.dependencytrack.model.VulnerabilityMetrics;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.util.Date;
 import java.util.List;
 
 public class MetricsQueryManager extends QueryManager implements IQueryManager {
@@ -88,18 +87,6 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Retrieves PortfolioMetrics in ascending order starting with the oldest since the date specified.
-     *
-     * @return a List of metrics
-     */
-    @SuppressWarnings("unchecked")
-    public List<PortfolioMetrics> getPortfolioMetricsSince(Date since) {
-        final Query<PortfolioMetrics> query = pm.newQuery(PortfolioMetrics.class, "lastOccurrence >= :since");
-        query.setOrdering("lastOccurrence asc");
-        return (List<PortfolioMetrics>) query.execute(since);
-    }
-
-    /**
      * Retrieves the most recent ProjectMetrics.
      *
      * @param project the Project to retrieve metrics for
@@ -122,18 +109,6 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
         final Query<ProjectMetrics> query = pm.newQuery(ProjectMetrics.class, "project == :project");
         query.setOrdering("lastOccurrence desc");
         return execute(query, project);
-    }
-
-    /**
-     * Retrieves ProjectMetrics in ascending order starting with the oldest since the date specified.
-     *
-     * @return a List of metrics
-     */
-    @SuppressWarnings("unchecked")
-    public List<ProjectMetrics> getProjectMetricsSince(Project project, Date since) {
-        final Query<ProjectMetrics> query = pm.newQuery(ProjectMetrics.class, "project == :project && lastOccurrence >= :since");
-        query.setOrdering("lastOccurrence asc");
-        return (List<ProjectMetrics>) query.execute(project, since);
     }
 
     /**
@@ -174,18 +149,6 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
         final Query<DependencyMetrics> query = pm.newQuery(DependencyMetrics.class, "component == :component");
         query.setOrdering("lastOccurrence desc");
         return execute(query, component);
-    }
-
-    /**
-     * Retrieves DependencyMetrics in ascending order starting with the oldest since the date specified.
-     *
-     * @return a List of metrics
-     */
-    @SuppressWarnings("unchecked")
-    public List<DependencyMetrics> getDependencyMetricsSince(Component component, Date since) {
-        final Query<DependencyMetrics> query = pm.newQuery(DependencyMetrics.class, "component == :component && lastOccurrence >= :since");
-        query.setOrdering("lastOccurrence asc");
-        return (List<DependencyMetrics>) query.execute(component, since);
     }
 
     /**

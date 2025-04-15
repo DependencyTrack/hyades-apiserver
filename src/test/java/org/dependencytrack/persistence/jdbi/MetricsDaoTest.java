@@ -76,7 +76,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
         qm.persist(metrics);
 
-        var portfolioMetrics = metricsDao.getPortfolioMetricsXDays(Duration.ofDays(35));
+        var portfolioMetrics = metricsDao.getPortfolioMetricsSince(Instant.now().minus(Duration.ofDays(35)));
         assertThat(portfolioMetrics.size()).isEqualTo(2);
         assertThat(portfolioMetrics.get(0).getVulnerabilities()).isEqualTo(3);
         assertThat(portfolioMetrics.get(1).getVulnerabilities()).isEqualTo(2);
@@ -108,7 +108,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         qm.persist(metrics);
 
         var projectMetrics = withJdbiHandle(handle ->
-                handle.attach(MetricsDao.class).getProjectMetricsXDays(project.getId(), Duration.ofDays(35)));
+                handle.attach(MetricsDao.class).getProjectMetricsSince(project.getId(), Instant.now().minus(Duration.ofDays(35))));
         assertThat(projectMetrics.size()).isEqualTo(2);
         assertThat(projectMetrics.get(0).getVulnerabilities()).isEqualTo(3);
         assertThat(projectMetrics.get(1).getVulnerabilities()).isEqualTo(2);
@@ -147,7 +147,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
         qm.persist(metrics);
 
-        var dependencyMetrics = metricsDao.getDependencyMetricsXDays(component.getId(), Duration.ofDays(35));
+        var dependencyMetrics = metricsDao.getDependencyMetricsSince(component.getId(), Instant.now().minus(Duration.ofDays(35)));
         assertThat(dependencyMetrics.size()).isEqualTo(2);
         assertThat(dependencyMetrics.get(0).getVulnerabilities()).isEqualTo(3);
         assertThat(dependencyMetrics.get(1).getVulnerabilities()).isEqualTo(2);
