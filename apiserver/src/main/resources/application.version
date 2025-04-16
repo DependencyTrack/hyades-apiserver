@@ -1,5 +1,5 @@
 # Automatically populated by Maven build - do not modify
-name=${project.name}
+name=Dependency-Track
 version=${project.version}
-timestamp=${timestamp}
+timestamp=${maven.build.timestamp}
 uuid=${project.build.uuid}
