@@ -20,13 +20,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
-    <parent>
-        <groupId>us.springett</groupId>
-        <artifactId>alpine-parent</artifactId>
-        <version>3.1.2</version>
-    </parent>
-
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dependencytrack</groupId>
     <artifactId>dependency-track-parent</artifactId>
@@ -90,71 +83,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <project.parentBaseDir>.</project.parentBaseDir>
-        <!-- Dependency Versions -->
-        <lib.alpine.version>${project.parent.version}</lib.alpine.version>
-        <lib.awaitility.version>4.2.2</lib.awaitility.version>
-        <lib.cel-tools.version>0.5.1</lib.cel-tools.version>
-        <lib.checkstyle.version>10.20.1</lib.checkstyle.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.21.0</lib.cloud-sql-postgres-socket-factory.version>
-        <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
-        <lib.cpe-parser.version>2.1.0</lib.cpe-parser.version>
-        <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
-        <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
-        <lib.cyclonedx-java.version>9.1.0</lib.cyclonedx-java.version>
-        <lib.datanucleus-postgresql.version>0.3.0</lib.datanucleus-postgresql.version>
-        <lib.gitlab4j-api.version>6.0.0-rc.8</lib.gitlab4j-api.version>
-        <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <!--
-            Downgraded from 2.18.2 due to incompatibility with swagger-core.
-            https://github.com/swagger-api/swagger-core/issues/4755
-        -->
-        <lib.jackson.version>2.17.3</lib.jackson.version>
-        <lib.jackson-databind.version>2.17.3</lib.jackson-databind.version>
-        <lib.jdbi.version>3.47.0</lib.jdbi.version>
-        <lib.json-unit.version>4.1.0</lib.json-unit.version>
-        <lib.junit.version>4.13.2</lib.junit.version>
-        <lib.kafka.version>3.9.0</lib.kafka.version>
-        <lib.liquibase.version>4.30.0</lib.liquibase.version>
-        <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.minio.version>8.5.17</lib.minio.version>
-        <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
-        <lib.wiremock.version>3.12.1</lib.wiremock.version>
-        <lib.packageurl.version>1.5.0</lib.packageurl.version>
-        <lib.parallel-consumer.version>0.5.3.2</lib.parallel-consumer.version>
-        <lib.pebble.version>3.2.2</lib.pebble.version>
-        <lib.protobuf-java.version>4.29.3</lib.protobuf-java.version>
-        <lib.testcontainers.version>1.20.5</lib.testcontainers.version>
-        <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
-        <!--
-            Downgraded from 2.2.26 due to incompatibilities with newer jackson-databind versions.
-            https://github.com/swagger-api/swagger-core/issues/4755
-        -->
-        <lib.swagger.version>2.2.25</lib.swagger.version>
-        <lib.swagger-parser.version>2.1.23</lib.swagger-parser.version>
-        <lib.system-rules.version>1.19.0</lib.system-rules.version>
-        <lib.versatile.version>0.7.0</lib.versatile.version>
-        <lib.woodstox.version>7.1.0</lib.woodstox.version>
-        <lib.junit-params.version>1.1.1</lib.junit-params.version>
-        <lib.log4j-over-slf4j.version>2.0.17</lib.log4j-over-slf4j.version>
-        <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>6.3.0</lib.net.javacrumbs.shedlock.version>
-        <lib.javacron.version>1.4.0</lib.javacron.version>
-        <lib.jdbc-driver.postgresql.version>42.7.4</lib.jdbc-driver.postgresql.version>
-        <!-- Maven Plugin Properties -->
-        <plugin.cyclonedx.projectType>application</plugin.cyclonedx.projectType>
-        <plugin.cyclonedx.outputFormat>json</plugin.cyclonedx.outputFormat>
-        <plugin.retirejs.breakOnFailure>false</plugin.retirejs.breakOnFailure>
-        <!-- Maven Plugin Versions -->
-        <plugin.checkstyle.version>3.6.0</plugin.checkstyle.version>
-        <plugin.protoc-jar.version>3.11.4</plugin.protoc-jar.version>
-        <plugin.jetty.version>12.0.16</plugin.jetty.version>
-        <!-- SonarCloud properties -->
-        <sonar.exclusions>src/main/webapp/**</sonar.exclusions>
-        <!-- Tool Versions -->
-        <tool.protoc.version>com.google.protobuf:protoc:${lib.protobuf-java.version}</tool.protoc.version>
-        <!-- CycloneDX CLI -->
-        <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
-        <services.bom.merge.skip>true</services.bom.merge.skip>
     </properties>
 
     <repositories>
@@ -165,11 +93,6 @@
                 <updatePolicy>always</updatePolicy>
                 <enabled>true</enabled>
             </snapshots>
-        </repository>
-
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
         </repository>
     </repositories>
 
