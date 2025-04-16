@@ -14,6 +14,7 @@
             <list>
               <option value="-pl" />
               <option value="apiserver" />
+              <option value="-am" />
               <option value="clean" />
               <option value="package" />
               <option value="-DskipTests" />
