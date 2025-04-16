@@ -73,7 +73,7 @@ jobs:
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           language: Java
-          coverage-reports: target/jacoco-ut/jacoco.xml
+          coverage-reports: apiserver/target/jacoco-ut/jacoco.xml
 
       - name: Save PR details
         if: ${{ github.event_name == 'pull_request' }}

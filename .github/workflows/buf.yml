@@ -39,9 +39,9 @@ jobs:
     - name: Lint Protobuf
       uses: bufbuild/buf-lint-action@06f9dd823d873146471cfaaf108a993fe00e5325 # tag=v1.1.1
       with:
-        input: apiserver/src/main/proto
+        input: proto/src/main/proto
     - name: Detect Breaking Changes
       uses: bufbuild/buf-breaking-action@c57b3d842a5c3f3b454756ef65305a50a587c5ba # tag=v1.1.4
       with:
-        input: apiserver/src/main/proto
-        against: "https://github.com/${{ github.repository }}.git#branch=${{ github.base_ref }},subdir=apiserver/src/main/proto"
+        input: proto/src/main/proto
+        against: "https://github.com/${{ github.repository }}.git#branch=${{ github.base_ref }},subdir=proto/src/main/proto"
