@@ -462,7 +462,7 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
         final Response responseB = jersey.target(V1_POLICY_VIOLATION)
                 .request()
-                .header(X_API_KEY, team.getApiKeys().getFirst().getKey())
+                .header(X_API_KEY, apiKey)
                 .get();
         assertThat(responseB.getStatus()).isEqualTo(Response.Status.OK.getStatusCode());
         assertThat(responseB.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("3");
