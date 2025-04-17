@@ -1,0 +1,1401 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        objectQuotingStrategy="QUOTE_ALL_OBJECTS"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="v5.6.0-1" author="sahibamittal">
+        <modifyDataType tableName="AFFECTEDVERSIONATTRIBUTION" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="BOM" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="COMPONENT" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="COMPONENT_PROPERTY" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="FINDINGATTRIBUTION" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="LICENSE" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="LICENSEGROUP" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="NOTIFICATIONPUBLISHER" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="NOTIFICATIONRULE" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="POLICY" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="POLICYCONDITION" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="POLICYVIOLATION" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="PROJECT" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="REPOSITORY" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="SERVICECOMPONENT" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="VEX" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABILITY" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABILITYALIAS" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABILITYSCAN" columnName="TARGET_IDENTIFIER" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABILITYSCAN" columnName="TOKEN" newDataType="UUID"/>
+        <modifyDataType tableName="VULNERABLESOFTWARE" columnName="UUID" newDataType="UUID"/>
+        <modifyDataType tableName="WORKFLOW_STATE" columnName="TOKEN" newDataType="UUID"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-2" author="nscuro">
+        <modifyDataType tableName="TEAM" columnName="NAME" newDataType="VARCHAR(255)"/>
+    </changeSet>
+  
+    <changeSet id="v5.6.0-3" author="rossmurphy974@gmail.com">
+        <addColumn tableName="PROJECT">
+            <column name="AUTHORS" type="TEXT"/>
+        </addColumn>
+        <addColumn tableName="COMPONENT">
+            <column name="AUTHORS" type="TEXT"/>
+        </addColumn>
+        
+        <sql>
+            UPDATE "PROJECT"
+            SET "AUTHORS" = JSON_BUILD_ARRAY(JSON_BUILD_OBJECT('name', "AUTHOR"))::TEXT
+            WHERE "AUTHOR" IS NOT NULL;
+        </sql>
+        <sql>
+            UPDATE "COMPONENT"
+            SET "AUTHORS" = JSON_BUILD_ARRAY(JSON_BUILD_OBJECT('name', "AUTHOR"))::TEXT
+            WHERE "AUTHOR" IS NOT NULL;
+        </sql>
+
+        <dropColumn tableName="PROJECT">
+            <column name="AUTHOR"/>
+        </dropColumn>
+        <dropColumn tableName="COMPONENT">
+            <column name="AUTHOR"/>
+        </dropColumn>
+    </changeSet>
+    
+    <changeSet id="v5.6.0-4" author="nscuro">
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_DIRECT_DEPENDENCIES_GIN_IDX"/>
+        <modifyDataType tableName="COMPONENT" columnName="DIRECT_DEPENDENCIES" newDataType="JSONB"/>
+        <modifyDataType tableName="PROJECT" columnName="DIRECT_DEPENDENCIES" newDataType="JSONB"/>
+        <sql splitStatements="true">
+            CREATE
+             INDEX "COMPONENT_DIRECT_DEPENDENCIES_JSONB_IDX"
+                ON "COMPONENT"
+             USING GIN("DIRECT_DEPENDENCIES" JSONB_PATH_OPS);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-5" author="sahibamittal">
+        <sql>
+            DELETE FROM "CONFIGPROPERTY"
+            WHERE "GROUPNAME" = 'artifact'
+            AND "PROPERTYNAME" = 'bom.validation.enabled';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-6" author="sahibamittal">
+        <createTable tableName="NOTIFICATIONRULE_TAGS">
+            <column name="NOTIFICATIONRULE_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TAG_ID" type="BIGINT"/>
+        </createTable>
+
+        <createIndex indexName="NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_ID_IDX" tableName="NOTIFICATIONRULE_TAGS">
+            <column name="NOTIFICATIONRULE_ID"/>
+        </createIndex>
+        <createIndex indexName="NOTIFICATIONRULE_TAGS_TAG_ID_IDX" tableName="NOTIFICATIONRULE_TAGS">
+            <column name="TAG_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_TAGS"
+                                 constraintName="NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="NOTIFICATIONRULE" validate="true"/>
+
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="NOTIFICATIONRULE_TAGS"
+                                 constraintName="NOTIFICATIONRULE_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TAG" validate="true"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-7" author="sahibamittal">
+        <addColumn tableName="PROJECT">
+            <column name="IS_LATEST" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="POLICY">
+            <column name="ONLY_LATEST_PROJECT_VERSION" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <createIndex indexName="PROJECT_IS_LATEST_IDX" tableName="PROJECT">
+            <column name="IS_LATEST"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.6.0-8" author="nscuro">
+        <sql>
+            DELETE
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = 'vuln-source'
+               AND "PROPERTYNAME" = 'nvd.feeds.url';
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-9" author="nscuro">
+        <sql>
+            CREATE INDEX "COMPONENT_PROPERTY_COMPONENT_ID_IDX"
+                ON "COMPONENT_PROPERTY" ("COMPONENT_ID");
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-9" author="sahibamittal">
+        <addColumn tableName="PROJECT">
+            <column name="INACTIVE_SINCE" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    
+        <sql>UPDATE "PROJECT" SET "INACTIVE_SINCE" = NOW() WHERE "ACTIVE" IS FALSE</sql>
+
+        <dropColumn tableName="PROJECT">
+            <column name="ACTIVE" type="BOOLEAN"/>
+        </dropColumn>
+    </changeSet>
+
+    <changeSet id="v5.6.0-10" author="nscuro">
+        <createIndex tableName="PROJECT_METADATA" indexName="PROJECT_METADATA_PROJECT_ID_IDX" unique="true">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.6.0-11" author="nscuro">
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_BLAKE2B_256_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_BLAKE2B_384_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_BLAKE2B_512_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_BLAKE3_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_MD5_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA1_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA3_256_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA3_384_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA3_512_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA256_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA384_IDX"/>
+        <dropIndex tableName="COMPONENT" indexName="COMPONENT_SHA512_IDX"/>
+
+        <sql splitStatements="true">
+            CREATE INDEX "COMPONENT_BLAKE2B_256_IDX" ON "COMPONENT" ("BLAKE2B_256") WHERE "BLAKE2B_256" IS NOT NULL;
+            CREATE INDEX "COMPONENT_BLAKE2B_384_IDX" ON "COMPONENT" ("BLAKE2B_384") WHERE "BLAKE2B_384" IS NOT NULL;
+            CREATE INDEX "COMPONENT_BLAKE2B_512_IDX" ON "COMPONENT" ("BLAKE2B_512") WHERE "BLAKE2B_512" IS NOT NULL;
+            CREATE INDEX "COMPONENT_BLAKE3_IDX" ON "COMPONENT" ("BLAKE3") WHERE "BLAKE3" IS NOT NULL;
+            CREATE INDEX "COMPONENT_MD5_IDX" ON "COMPONENT" ("MD5") WHERE "MD5" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA1_IDX" ON "COMPONENT" ("SHA1") WHERE "SHA1" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA_256_IDX" ON "COMPONENT" ("SHA_256") WHERE "SHA_256" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA_384_IDX" ON "COMPONENT" ("SHA_384") WHERE "SHA_384" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA_512_IDX" ON "COMPONENT" ("SHA_512") WHERE "SHA_512" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA3_256_IDX" ON "COMPONENT" ("SHA3_256") WHERE "SHA3_256" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA3_384_IDX" ON "COMPONENT" ("SHA3_384") WHERE "SHA3_384" IS NOT NULL;
+            CREATE INDEX "COMPONENT_SHA3_512_IDX" ON "COMPONENT" ("SHA3_512") WHERE "SHA3_512" IS NOT NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-12" author="sahibamittal">
+        <dropForeignKeyConstraint baseTableName="AFFECTEDVERSIONATTRIBUTION" constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY" baseTableName="AFFECTEDVERSIONATTRIBUTION"
+             constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK" deferrable="true"
+             initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+             referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="AFFECTEDVERSIONATTRIBUTION" constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK"/>
+        <addForeignKeyConstraint baseColumnNames="VULNERABLE_SOFTWARE" baseTableName="AFFECTEDVERSIONATTRIBUTION"
+                                 constraintName="AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="ANALYSISCOMMENT" constraintName="ANALYSISCOMMENT_ANALYSIS_FK"/>
+        <addForeignKeyConstraint baseColumnNames="ANALYSIS_ID" baseTableName="ANALYSISCOMMENT"
+                                 constraintName="ANALYSISCOMMENT_ANALYSIS_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="ANALYSIS" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="ANALYSIS" constraintName="ANALYSIS_COMPONENT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_COMPONENT_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="ANALYSIS" constraintName="ANALYSIS_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_PROJECT_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+        
+        <dropForeignKeyConstraint baseTableName="ANALYSIS" constraintName="ANALYSIS_VULNERABILITY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="ANALYSIS"
+                                 constraintName="ANALYSIS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="VULNERABILITY" validate="true"/>
+        
+        <dropForeignKeyConstraint baseTableName="APIKEYS_TEAMS" constraintName="APIKEYS_TEAMS_TEAM_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="APIKEYS_TEAMS"
+                                 constraintName="APIKEYS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+        
+        <dropForeignKeyConstraint baseTableName="APIKEYS_TEAMS" constraintName="APIKEYS_TEAMS_APIKEY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="APIKEY_ID" baseTableName="APIKEYS_TEAMS"
+                                 constraintName="APIKEYS_TEAMS_APIKEY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="APIKEY" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="BOM" constraintName="BOM_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="BOM" constraintName="BOM_PROJECT_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="COMPONENTS_VULNERABILITIES" constraintName="COMPONENTS_VULNERABILITIES_COMPONENT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="COMPONENTS_VULNERABILITIES"
+                                 constraintName="COMPONENTS_VULNERABILITIES_COMPONENT_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="COMPONENT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="COMPONENTS_VULNERABILITIES" constraintName="COMPONENTS_VULNERABILITIES_VULNERABILITY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="COMPONENTS_VULNERABILITIES"
+                                 constraintName="COMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="COMPONENT" constraintName="COMPONENT_COMPONENT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PARENT_COMPONENT_ID" baseTableName="COMPONENT"
+                                 constraintName="COMPONENT_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="COMPONENT" constraintName="COMPONENT_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="COMPONENT" constraintName="COMPONENT_PROJECT_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="DEPENDENCYMETRICS" constraintName="DEPENDENCYMETRICS_COMPONENT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="DEPENDENCYMETRICS"
+                                 constraintName="DEPENDENCYMETRICS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="DEPENDENCYMETRICS" constraintName="DEPENDENCYMETRICS_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="DEPENDENCYMETRICS"
+                                 constraintName="DEPENDENCYMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="FINDINGATTRIBUTION" constraintName="FINDINGATTRIBUTION_COMPONENT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="FINDINGATTRIBUTION"
+                                 constraintName="FINDINGATTRIBUTION_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="FINDINGATTRIBUTION" constraintName="FINDINGATTRIBUTION_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="FINDINGATTRIBUTION"
+                                 constraintName="FINDINGATTRIBUTION_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="FINDINGATTRIBUTION" constraintName="FINDINGATTRIBUTION_VULNERABILITY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="FINDINGATTRIBUTION"
+                                 constraintName="FINDINGATTRIBUTION_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="VULNERABILITY" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="INTEGRITY_ANALYSIS" constraintName="INTEGRITY_ANALYSIS_COMPONENT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="INTEGRITY_ANALYSIS"
+                                 constraintName="INTEGRITY_ANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="LDAPUSERS_PERMISSIONS" constraintName="LDAPUSERS_PERMISSIONS_LDAPUSER_FK"/>
+        <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_PERMISSIONS"
+                                 constraintName="LDAPUSERS_PERMISSIONS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="LDAPUSER" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="LDAPUSERS_PERMISSIONS" constraintName="LDAPUSERS_PERMISSIONS_PERMISSION_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="LDAPUSERS_PERMISSIONS"
+                                 constraintName="LDAPUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PERMISSION" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="LDAPUSERS_TEAMS" constraintName="LDAPUSERS_TEAMS_TEAM_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="LDAPUSERS_TEAMS"
+                                 constraintName="LDAPUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="LDAPUSERS_TEAMS" constraintName="LDAPUSERS_TEAMS_LDAPUSER_FK"/>
+        <addForeignKeyConstraint baseColumnNames="LDAPUSER_ID" baseTableName="LDAPUSERS_TEAMS"
+                                 constraintName="LDAPUSERS_TEAMS_LDAPUSER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="LDAPUSER" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="LICENSEGROUP_LICENSE" constraintName="LICENSEGROUP_LICENSE_LICENSEGROUP_FK"/>
+        <addForeignKeyConstraint baseColumnNames="LICENSEGROUP_ID" baseTableName="LICENSEGROUP_LICENSE"
+                                 constraintName="LICENSEGROUP_LICENSE_LICENSEGROUP_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="LICENSEGROUP" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="LICENSEGROUP_LICENSE" constraintName="LICENSEGROUP_LICENSE_LICENSE_FK"/>
+        <addForeignKeyConstraint baseColumnNames="LICENSE_ID" baseTableName="LICENSEGROUP_LICENSE"
+                                 constraintName="LICENSEGROUP_LICENSE_LICENSE_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="LICENSE" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="MANAGEDUSERS_PERMISSIONS" constraintName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK"/>
+        <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_PERMISSIONS"
+                                 constraintName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="MANAGEDUSER" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="MANAGEDUSERS_PERMISSIONS" constraintName="MANAGEDUSERS_PERMISSIONS_PERMISSION_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="MANAGEDUSERS_PERMISSIONS"
+                                 constraintName="MANAGEDUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PERMISSION" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="MANAGEDUSERS_TEAMS" constraintName="MANAGEDUSERS_TEAMS_TEAM_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MANAGEDUSERS_TEAMS"
+                                 constraintName="MANAGEDUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="MANAGEDUSERS_TEAMS" constraintName="MANAGEDUSERS_TEAMS_MANAGEDUSER_FK"/>
+        <addForeignKeyConstraint baseColumnNames="MANAGEDUSER_ID" baseTableName="MANAGEDUSERS_TEAMS"
+                                 constraintName="MANAGEDUSERS_TEAMS_MANAGEDUSER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="MANAGEDUSER" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="MAPPEDLDAPGROUP" constraintName="MAPPEDLDAPGROUP_TEAM_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDLDAPGROUP"
+                                 constraintName="MAPPEDLDAPGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="MAPPEDOIDCGROUP" constraintName="MAPPEDOIDCGROUP_OIDCGROUP_FK"/>
+        <addForeignKeyConstraint baseColumnNames="GROUP_ID" baseTableName="MAPPEDOIDCGROUP"
+                                 constraintName="MAPPEDOIDCGROUP_OIDCGROUP_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="OIDCGROUP" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="MAPPEDOIDCGROUP" constraintName="MAPPEDOIDCGROUP_TEAM_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="MAPPEDOIDCGROUP"
+                                 constraintName="MAPPEDOIDCGROUP_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="NOTIFICATIONRULE" constraintName="NOTIFICATIONRULE_NOTIFICATIONPUBLISHER_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PUBLISHER" baseTableName="NOTIFICATIONRULE"
+                                 constraintName="NOTIFICATIONRULE_NOTIFICATIONPUBLISHER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="NOTIFICATIONPUBLISHER" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="NOTIFICATIONRULE_PROJECTS" constraintName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK"/>
+        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_PROJECTS"
+                                 constraintName="NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="NOTIFICATIONRULE" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="NOTIFICATIONRULE_PROJECTS" constraintName="NOTIFICATIONRULE_PROJECTS_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="NOTIFICATIONRULE_PROJECTS"
+                                 constraintName="NOTIFICATIONRULE_PROJECTS_PROJECT_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="NOTIFICATIONRULE_TAGS" constraintName="NOTIFICATIONRULE_TAGS_TAG_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="NOTIFICATIONRULE_TAGS"
+                                 constraintName="NOTIFICATIONRULE_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TAG" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="NOTIFICATIONRULE_TAGS" constraintName="NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK"/>
+        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_TAGS"
+                                 constraintName="NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="NOTIFICATIONRULE" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="NOTIFICATIONRULE_TEAMS" constraintName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK"/>
+        <addForeignKeyConstraint baseColumnNames="NOTIFICATIONRULE_ID" baseTableName="NOTIFICATIONRULE_TEAMS"
+                                 constraintName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="NOTIFICATIONRULE" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="NOTIFICATIONRULE_TEAMS" constraintName="NOTIFICATIONRULE_TEAMS_TEAM_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="NOTIFICATIONRULE_TEAMS"
+                                 constraintName="NOTIFICATIONRULE_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="OIDCUSERS_PERMISSIONS" constraintName="OIDCUSERS_PERMISSIONS_PERMISSION_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="OIDCUSERS_PERMISSIONS"
+                                 constraintName="OIDCUSERS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PERMISSION" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="OIDCUSERS_PERMISSIONS" constraintName="OIDCUSERS_PERMISSIONS_OIDCUSER_FK"/>
+        <addForeignKeyConstraint baseColumnNames="OIDCUSER_ID" baseTableName="OIDCUSERS_PERMISSIONS"
+                                 constraintName="OIDCUSERS_PERMISSIONS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="OIDCUSER" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="OIDCUSERS_TEAMS" constraintName="OIDCUSERS_TEAMS_OIDCUSER_FK"/>
+        <addForeignKeyConstraint baseColumnNames="OIDCUSERS_ID" baseTableName="OIDCUSERS_TEAMS"
+                                 constraintName="OIDCUSERS_TEAMS_OIDCUSER_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="OIDCUSER" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="OIDCUSERS_TEAMS" constraintName="OIDCUSERS_TEAMS_TEAM_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="OIDCUSERS_TEAMS"
+                                 constraintName="OIDCUSERS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="POLICYCONDITION" constraintName="POLICYCONDITION_POLICY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICYCONDITION"
+                                 constraintName="POLICYCONDITION_POLICY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="POLICY" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="POLICYVIOLATION" constraintName="POLICYVIOLATION_COMPONENT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="POLICYVIOLATION"
+                                 constraintName="POLICYVIOLATION_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="POLICYVIOLATION" constraintName="POLICYVIOLATION_POLICYCONDITION_FK"/>
+        <addForeignKeyConstraint baseColumnNames="POLICYCONDITION_ID" baseTableName="POLICYVIOLATION"
+                                 constraintName="POLICYVIOLATION_POLICYCONDITION_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="POLICYCONDITION" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="POLICYVIOLATION" constraintName="POLICYVIOLATION_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICYVIOLATION"
+                                 constraintName="POLICYVIOLATION_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="POLICY_PROJECTS" constraintName="POLICY_PROJECTS_POLICY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_PROJECTS"
+                                 constraintName="POLICY_PROJECTS_POLICY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="POLICY" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="POLICY_PROJECTS" constraintName="POLICY_PROJECTS_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="POLICY_PROJECTS"
+                                 constraintName="POLICY_PROJECTS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_POLICY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="POLICY_ID" baseTableName="POLICY_TAGS"
+                                 constraintName="POLICY_TAGS_POLICY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="POLICY" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_TAG_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="POLICY_TAGS" constraintName="POLICY_TAGS_TAG_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="TAG" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="PROJECT" constraintName="PROJECT_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PARENT_PROJECT_ID" baseTableName="PROJECT"
+                                 constraintName="PROJECT_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="PROJECTMETRICS" constraintName="PROJECTMETRICS_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTMETRICS"
+                                 constraintName="PROJECTMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="PROJECTS_TAGS" constraintName="PROJECTS_TAGS_TAG_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="PROJECTS_TAGS"
+                                 constraintName="PROJECTS_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TAG" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="PROJECTS_TAGS" constraintName="PROJECTS_TAGS_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTS_TAGS"
+                                 constraintName="PROJECTS_TAGS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="PROJECT_ACCESS_TEAMS" constraintName="PROJECT_ACCESS_TEAMS_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_ACCESS_TEAMS"
+                                 constraintName="PROJECT_ACCESS_TEAMS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="PROJECT_ACCESS_TEAMS" constraintName="PROJECT_ACCESS_TEAMS_TEAM_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="PROJECT_ACCESS_TEAMS"
+                                 constraintName="PROJECT_ACCESS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="PROJECT_METADATA" constraintName="PROJECT_METADATA_PROJECT_ID_FK"/>
+        <addForeignKeyConstraint baseTableName="PROJECT_METADATA" baseColumnNames="PROJECT_ID"
+                                 constraintName="PROJECT_METADATA_PROJECT_ID_FK" deferrable="true" initiallyDeferred="true"
+                                 referencedTableName="PROJECT" referencedColumnNames="ID"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="PROJECT_PROPERTY" constraintName="PROJECT_PROPERTY_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECT_PROPERTY"
+                                 constraintName="PROJECT_PROPERTY_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="SERVICECOMPONENTS_VULNERABILITIES" constraintName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES"
+                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="SERVICECOMPONENTS_VULNERABILITIES" constraintName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENTS_VULNERABILITIES"
+                                 constraintName="SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="SERVICECOMPONENT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="SERVICECOMPONENT" constraintName="SERVICECOMPONENT_SERVICECOMPONENT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PARENT_SERVICECOMPONENT_ID" baseTableName="SERVICECOMPONENT"
+                                 constraintName="SERVICECOMPONENT_SERVICECOMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="SERVICECOMPONENT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="SERVICECOMPONENT" constraintName="SERVICECOMPONENT_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="SERVICECOMPONENT"
+                                 constraintName="SERVICECOMPONENT_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="TEAMS_PERMISSIONS" constraintName="TEAMS_PERMISSIONS_TEAM_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="TEAMS_PERMISSIONS"
+                                 constraintName="TEAMS_PERMISSIONS_TEAM_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TEAM" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="TEAMS_PERMISSIONS" constraintName="TEAMS_PERMISSIONS_PERMISSION_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PERMISSION_ID" baseTableName="TEAMS_PERMISSIONS"
+                                 constraintName="TEAMS_PERMISSIONS_PERMISSION_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PERMISSION" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="VEX" constraintName="VEX_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VEX" constraintName="VEX_PROJECT_FK"
+                                 deferrable="true" initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="VIOLATIONANALYSISCOMMENT" constraintName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK"/>
+        <addForeignKeyConstraint baseColumnNames="VIOLATIONANALYSIS_ID" baseTableName="VIOLATIONANALYSISCOMMENT"
+                                 constraintName="VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VIOLATIONANALYSIS" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="VIOLATIONANALYSIS" constraintName="VIOLATIONANALYSIS_COMPONENT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="VIOLATIONANALYSIS"
+                                 constraintName="VIOLATIONANALYSIS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="VIOLATIONANALYSIS" constraintName="VIOLATIONANALYSIS_POLICYVIOLATION_FK"/>
+        <addForeignKeyConstraint baseColumnNames="POLICYVIOLATION_ID" baseTableName="VIOLATIONANALYSIS"
+                                 constraintName="VIOLATIONANALYSIS_POLICYVIOLATION_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="POLICYVIOLATION" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="VIOLATIONANALYSIS" constraintName="VIOLATIONANALYSIS_PROJECT_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="VIOLATIONANALYSIS"
+                                 constraintName="VIOLATIONANALYSIS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="VULNERABILITIES_TAGS" constraintName="VULNERABILITIES_TAGS_TAG_FK"/>
+        <addForeignKeyConstraint baseColumnNames="TAG_ID" baseTableName="VULNERABILITIES_TAGS"
+                                 constraintName="VULNERABILITIES_TAGS_TAG_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="TAG" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="VULNERABILITIES_TAGS" constraintName="VULNERABILITIES_TAGS_VULNERABILITY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="VULNERABILITIES_TAGS"
+                                 constraintName="VULNERABILITIES_TAGS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="VULNERABILITY" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="VULNERABLESOFTWARE_VULNERABILITIES" constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK"/>
+        <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="VULNERABLESOFTWARE_VULNERABILITIES"
+                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABILITY" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="VULNERABLESOFTWARE_VULNERABILITIES" constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK"/>
+        <addForeignKeyConstraint baseColumnNames="VULNERABLESOFTWARE_ID"
+                                 baseTableName="VULNERABLESOFTWARE_VULNERABILITIES"
+                                 constraintName="VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK" deferrable="true"
+                                 initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
+                                 referencedColumnNames="ID" referencedTableName="VULNERABLESOFTWARE" validate="true"/>
+
+        <dropForeignKeyConstraint baseTableName="WORKFLOW_STATE" constraintName="WORKFLOW_STATE_WORKFLOW_STATE_FK"/>
+        <addForeignKeyConstraint baseColumnNames="PARENT_STEP_ID" baseTableName="WORKFLOW_STATE"
+                                 constraintName="WORKFLOW_STATE_WORKFLOW_STATE_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="WORKFLOW_STATE" validate="true"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-13" author="nscuro">
+        <createTable tableName="COMPONENT_OCCURRENCE">
+            <column name="ID" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="COMPONENT_OCCURRENCE_PK"/>
+            </column>
+            <column name="COMPONENT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LOCATION" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LINE" type="INT"/>
+            <column name="OFFSET" type="INT"/>
+            <column name="SYMBOL" type="TEXT"/>
+            <column name="CREATED_AT" type="TIMESTAMPTZ(3)" defaultValue="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="COMPONENT_OCCURRENCE"
+                baseColumnNames="COMPONENT_ID"
+                constraintName="COMPONENT_OCCURRENCE_COMPONENT_FK"
+                referencedTableName="COMPONENT"
+                referencedColumnNames="ID"
+                deferrable="true"
+                initiallyDeferred="true"
+                onDelete="CASCADE"
+                onUpdate="NO ACTION"
+                validate="true"/>
+
+        <createIndex
+                tableName="COMPONENT_OCCURRENCE"
+                indexName="COMPONENT_OCCURRENCE_COMPONENT_ID_IDX">
+            <column name="COMPONENT_ID"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.6.0-14" author="nscuro">
+        <dropIndex tableName="PROJECT_ACCESS_TEAMS" indexName="PROJECT_ACCESS_TEAMS_PROJECT_ID_IDX"/>
+        <dropIndex tableName="PROJECT_ACCESS_TEAMS" indexName="PROJECT_ACCESS_TEAMS_TEAM_ID_IDX"/>
+        <sql>
+            WITH
+            cte_duplicate AS (
+               SELECT "PROJECT_ID"
+                    , "TEAM_ID"
+                 FROM "PROJECT_ACCESS_TEAMS"
+                GROUP BY "PROJECT_ID"
+                       , "TEAM_ID"
+               HAVING COUNT(*) > 1
+            ),
+            cte_deleted_duplicate AS (
+              DELETE FROM "PROJECT_ACCESS_TEAMS"
+               USING cte_duplicate
+               WHERE cte_duplicate."PROJECT_ID" = "PROJECT_ACCESS_TEAMS"."PROJECT_ID"
+                 AND cte_duplicate."TEAM_ID" = "PROJECT_ACCESS_TEAMS"."TEAM_ID"
+            )
+            INSERT INTO "PROJECT_ACCESS_TEAMS" ("PROJECT_ID", "TEAM_ID")
+            SELECT "PROJECT_ID", "TEAM_ID" FROM cte_duplicate
+        </sql>
+        <addPrimaryKey
+                tableName="PROJECT_ACCESS_TEAMS"
+                columnNames="PROJECT_ID, TEAM_ID"
+                constraintName="PROJECT_ACCESS_TEAMS_PK"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-15" author="nscuro">
+        <!--
+          Previous version of this changeset failed if projects without parent existed.
+          Deployments that successfully executed this changeset are in a valid state though.
+          https://github.com/DependencyTrack/hyades/issues/1737
+        -->
+        <validCheckSum>9:e7ba3d0bcd5751d57ada707ec0ffc449</validCheckSum>
+
+        <createTable tableName="PROJECT_HIERARCHY">
+            <column name="PARENT_PROJECT_ID" type="BIGINT"/>
+            <column name="CHILD_PROJECT_ID" type="BIGINT"/>
+            <column name="DEPTH" type="SMALLINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="PROJECT_HIERARCHY"
+                columnNames="PARENT_PROJECT_ID, CHILD_PROJECT_ID"
+                constraintName="PROJECT_HIERARCHY_PK"/>
+        <addForeignKeyConstraint
+                baseTableName="PROJECT_HIERARCHY"
+                baseColumnNames="PARENT_PROJECT_ID"
+                constraintName="PROJECT_HIERARCHY_PARENT_PROJECT_FK"
+                referencedTableName="PROJECT"
+                referencedColumnNames="ID"
+                deferrable="true"
+                initiallyDeferred="true"/>
+        <addForeignKeyConstraint
+                baseTableName="PROJECT_HIERARCHY"
+                baseColumnNames="CHILD_PROJECT_ID"
+                constraintName="PROJECT_HIERARCHY_CHILD_PROJECT_FK"
+                referencedTableName="PROJECT"
+                referencedColumnNames="ID"
+                deferrable="true"
+                initiallyDeferred="true"/>
+
+        <sql splitStatements="false">
+            CREATE FUNCTION project_hierarchy_maintenance_on_project_insert()
+            RETURNS TRIGGER AS $$
+            BEGIN
+              INSERT INTO "PROJECT_HIERARCHY" ("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+              VALUES(NEW."ID", NEW."ID", 0);
+
+              INSERT INTO "PROJECT_HIERARCHY" ("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+              SELECT "PARENT_PROJECT_ID", NEW."ID", "DEPTH" + 1
+                FROM "PROJECT_HIERARCHY"
+               WHERE "CHILD_PROJECT_ID" = NEW."PARENT_PROJECT_ID";
+
+              RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            CREATE FUNCTION project_hierarchy_maintenance_on_project_update()
+            RETURNS TRIGGER AS $$
+            BEGIN
+              DELETE FROM "PROJECT_HIERARCHY" WHERE "CHILD_PROJECT_ID" = old."ID";
+
+              INSERT INTO "PROJECT_HIERARCHY" ("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+              VALUES (NEW."ID", NEW."ID", 0);
+
+              INSERT INTO "PROJECT_HIERARCHY" ("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+              SELECT "PARENT_PROJECT_ID", NEW."ID", "DEPTH" + 1
+                FROM "PROJECT_HIERARCHY"
+               WHERE "CHILD_PROJECT_ID" = NEW."PARENT_PROJECT_ID";
+
+              RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            CREATE FUNCTION project_hierarchy_maintenance_on_project_delete()
+            RETURNS TRIGGER AS $$
+            BEGIN
+              DELETE FROM "PROJECT_HIERARCHY"
+               WHERE "PARENT_PROJECT_ID" IN (SELECT "ID" FROM old_table)
+                  OR "CHILD_PROJECT_ID" IN (SELECT "ID" FROM old_table);
+
+              RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+
+        <sql splitStatements="true">
+            CREATE TRIGGER trigger_project_hierarchy_maintenance_on_project_insert
+              AFTER INSERT ON "PROJECT"
+              FOR EACH ROW
+              EXECUTE FUNCTION project_hierarchy_maintenance_on_project_insert();
+
+            CREATE TRIGGER trigger_project_hierarchy_maintenance_on_project_update
+              AFTER UPDATE OF "PARENT_PROJECT_ID" ON "PROJECT"
+              FOR EACH ROW
+              WHEN (OLD."PARENT_PROJECT_ID" IS DISTINCT FROM NEW."PARENT_PROJECT_ID")
+              EXECUTE FUNCTION project_hierarchy_maintenance_on_project_update();
+
+            CREATE TRIGGER trigger_project_hierarchy_maintenance_on_project_delete
+              AFTER DELETE ON "PROJECT"
+              REFERENCING OLD TABLE AS old_table
+              FOR EACH STATEMENT
+              EXECUTE FUNCTION project_hierarchy_maintenance_on_project_delete();
+        </sql>
+
+        <sql splitStatements="true">
+            INSERT INTO "PROJECT_HIERARCHY" ("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+            SELECT "ID", "ID", 0 FROM "PROJECT";
+
+            WITH RECURSIVE cte_project_hierarchy AS (
+              SELECT "ID" AS child_id
+                   , "PARENT_PROJECT_ID" AS parent_id
+                   , 1 AS depth
+                FROM "PROJECT"
+               WHERE "PARENT_PROJECT_ID" IS NOT NULL
+               UNION ALL
+              SELECT child_id
+                   , "PARENT_PROJECT_ID" AS parent_id
+                   , depth + 1 AS depth
+                FROM cte_project_hierarchy
+               INNER JOIN "PROJECT"
+                  ON "PROJECT"."ID" = cte_project_hierarchy.parent_id
+               WHERE "PROJECT"."PARENT_PROJECT_ID" IS NOT NULL
+            )
+            INSERT INTO "PROJECT_HIERARCHY" ("PARENT_PROJECT_ID", "CHILD_PROJECT_ID", "DEPTH")
+            SELECT parent_id, child_id, depth FROM cte_project_hierarchy;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-16" author="jhoward-lm">
+        <createTable ifNotExists="true" tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
+            <column name="LDAPUSER_ID" type="BIGINT">
+                <constraints nullable="true"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK"
+                    referencedTableName="LDAPUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="MANAGEDUSER_ID" type="BIGINT">
+                <constraints nullable="true"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK"
+                    referencedTableName="MANAGEDUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="OIDCUSER_ID" type="BIGINT">
+                <constraints nullable="true"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK"
+                    referencedTableName="OIDCUSER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="PROJECT_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK"
+                    referencedTableName="PROJECT" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK"
+                    referencedTableName="PERMISSION" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
+                    validateForeignKey="true" />
+            </column>
+
+            <column name="PERMISSION_NAME" type="VARCHAR(255)">
+                <constraints nullable="false"
+                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK"
+                    referencedTableName="PERMISSION" referencedColumnNames="NAME"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
+                    validateForeignKey="true" />
+            </column>
+        </createTable>
+
+        <sql splitStatements="true">
+            -- Constraint to ensure one and only one of "LDAPUSER_ID", "MANAGEDUSER_ID", and "OIDCUSER_ID" is set
+            ALTER TABLE "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+              ADD CHECK (
+                ("LDAPUSER_ID" IS NOT NULL)::INTEGER +
+                ("MANAGEDUSER_ID" IS NOT NULL)::INTEGER +
+                ("OIDCUSER_ID" IS NOT NULL)::INTEGER = 1);
+
+            -- Composite unique index on "LDAPUSER_ID", "PROJECT_ID", and "PERMISSION_ID" columns
+            CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX"
+                ON "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+             USING btree ("LDAPUSER_ID", "PROJECT_ID", "PERMISSION_ID")
+             WHERE "LDAPUSER_ID" IS NOT NULL;
+
+            -- Composite unique index on "MANAGEDUSER_ID", "PROJECT_ID", and "PERMISSION_ID" columns
+            CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_IDX"
+                ON "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+             USING btree ("MANAGEDUSER_ID", "PROJECT_ID", "PERMISSION_ID")
+             WHERE "MANAGEDUSER_ID" IS NOT NULL;
+
+            -- Composite unique index on "OIDCUSER_ID", "PROJECT_ID", and "PERMISSION_ID" columns
+            CREATE UNIQUE INDEX "USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_IDX"
+                ON "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+             USING btree ("OIDCUSER_ID", "PROJECT_ID", "PERMISSION_ID")
+             WHERE "OIDCUSER_ID" IS NOT NULL;
+        </sql>
+
+        <sql splitStatements="false">
+            -- Helper function to recalculate all user permissions for a project.
+            -- Called by trigger functions to update the values in the USER_PROJECT_EFFECTIVE_PERMISSIONS table.
+            CREATE OR REPLACE FUNCTION recalc_user_project_effective_permissions(project_ids BIGINT[])
+            RETURNS void AS $$
+            BEGIN
+              -- Remove any existing effective permissions for this project.
+              DELETE FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+              WHERE "PROJECT_ID" = ANY(project_ids);
+
+              -- Rebuild effective permissions for LDAP users
+              INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ("LDAPUSER_ID", "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
+              SELECT DISTINCT lt."LDAPUSER_ID", pat."PROJECT_ID", tp."PERMISSION_ID", p."NAME"
+                FROM "PROJECT_ACCESS_TEAMS" pat
+               INNER JOIN "TEAMS_PERMISSIONS" tp
+                  ON tp."TEAM_ID" = pat."TEAM_ID"
+               INNER JOIN "PERMISSION" p
+                  ON p."ID" = tp."PERMISSION_ID"
+               INNER JOIN "LDAPUSERS_TEAMS" lt
+                  ON lt."TEAM_ID" = pat."TEAM_ID"
+               WHERE pat."PROJECT_ID" = ANY(project_ids);
+
+              -- Rebuild effective permissions for managed users
+              INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ("MANAGEDUSER_ID", "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
+              SELECT DISTINCT mt."MANAGEDUSER_ID", pat."PROJECT_ID", tp."PERMISSION_ID", p."NAME"
+                FROM "PROJECT_ACCESS_TEAMS" pat
+               INNER JOIN "TEAMS_PERMISSIONS" tp
+                  ON tp."TEAM_ID" = pat."TEAM_ID"
+               INNER JOIN "PERMISSION" p
+                  ON p."ID" = tp."PERMISSION_ID"
+               INNER JOIN "MANAGEDUSERS_TEAMS" mt
+                  ON mt."TEAM_ID" = pat."TEAM_ID"
+               WHERE pat."PROJECT_ID" = ANY(project_ids);
+
+              -- Rebuild effective permissions for OIDC users
+              INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ("OIDCUSER_ID", "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
+              SELECT DISTINCT ot."OIDCUSERS_ID", pat."PROJECT_ID", tp."PERMISSION_ID", p."NAME"
+                FROM "PROJECT_ACCESS_TEAMS" pat
+               INNER JOIN "TEAMS_PERMISSIONS" tp
+                  ON tp."TEAM_ID" = pat."TEAM_ID"
+               INNER JOIN "PERMISSION" p
+                  ON p."ID" = tp."PERMISSION_ID"
+               INNER JOIN "OIDCUSERS_TEAMS" ot
+                  ON ot."TEAM_ID" = pat."TEAM_ID"
+               WHERE pat."PROJECT_ID" = ANY(project_ids);
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            CREATE OR REPLACE FUNCTION effective_permissions_mx_on_delete()
+            RETURNS TRIGGER AS $$
+            DECLARE
+              project_ids BIGINT[];
+            BEGIN
+              IF TG_TABLE_NAME = 'PROJECT_ACCESS_TEAMS' THEN
+                PERFORM recalc_user_project_effective_permissions(
+                  (SELECT ARRAY_AGG(DISTINCT "PROJECT_ID") FROM old_table)
+                );
+              ELSIF TG_TABLE_NAME IN (
+                'LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS', 'TEAMS_PERMISSIONS'
+              ) THEN
+                PERFORM recalc_user_project_effective_permissions((
+                  SELECT ARRAY_AGG(DISTINCT pat."PROJECT_ID")
+                    FROM "PROJECT_ACCESS_TEAMS" AS pat
+                   INNER JOIN old_table
+                      ON old_table."TEAM_ID" = pat."TEAM_ID"
+                ));
+              END IF;
+              RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            CREATE OR REPLACE FUNCTION effective_permissions_mx_on_insert()
+            RETURNS TRIGGER AS $$
+            DECLARE
+              project_ids BIGINT[];
+            BEGIN
+              IF TG_TABLE_NAME = 'PROJECT_ACCESS_TEAMS' THEN
+                PERFORM recalc_user_project_effective_permissions(
+                  (SELECT ARRAY_AGG(DISTINCT "PROJECT_ID") FROM new_table)
+                );
+              ELSIF TG_TABLE_NAME IN (
+                'LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS', 'TEAMS_PERMISSIONS'
+              ) THEN
+                PERFORM recalc_user_project_effective_permissions((
+                  SELECT ARRAY_AGG(DISTINCT pat."PROJECT_ID")
+                    FROM "PROJECT_ACCESS_TEAMS" AS pat
+                   INNER JOIN new_table
+                      ON new_table."TEAM_ID" = pat."TEAM_ID"
+                ));
+              END IF;
+              RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            CREATE OR REPLACE FUNCTION effective_permissions_mx_on_update()
+            RETURNS TRIGGER AS $$
+            DECLARE
+              project_ids BIGINT[];
+            BEGIN
+              IF TG_TABLE_NAME = 'PROJECT_ACCESS_TEAMS' THEN
+                PERFORM recalc_user_project_effective_permissions((
+                  SELECT ARRAY_AGG("PROJECT_ID")
+                    FROM (
+                      SELECT "PROJECT_ID" FROM old_table
+                      UNION
+                      SELECT "PROJECT_ID" FROM new_table
+                    ) AS combined_projects
+                ));
+              ELSIF TG_TABLE_NAME IN (
+                'LDAPUSERS_TEAMS', 'MANAGEDUSERS_TEAMS', 'OIDCUSERS_TEAMS', 'TEAMS_PERMISSIONS'
+              ) THEN
+                PERFORM recalc_user_project_effective_permissions((
+                  SELECT ARRAY_AGG(DISTINCT pat."PROJECT_ID")
+                    FROM "PROJECT_ACCESS_TEAMS" pat
+                    JOIN (
+                      SELECT "TEAM_ID" FROM old_table
+                      UNION
+                      SELECT "TEAM_ID" FROM new_table
+                    ) AS teams
+                      ON pat."TEAM_ID" = teams."TEAM_ID"
+                ));
+              END IF;
+              RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            CREATE OR REPLACE FUNCTION prevent_direct_effective_permissions_writes()
+            RETURNS TRIGGER AS $$
+            BEGIN
+              -- Depth of 1 means this trigger was fired by an attempted direct
+              -- insert, update, or delete on USER_PROJECT_EFFECTIVE_PERMISSIONS.
+              -- Depth should be 2, meaning this trigger was fired from another trigger.
+              IF pg_trigger_depth() &lt; 2 THEN
+                RAISE EXCEPTION 'Direct modifications to USER_PROJECT_EFFECTIVE_PERMISSIONS are not allowed.';
+              END IF;
+              RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+
+        <sql splitStatements="true">
+            -- INSERT trigger for PROJECT_ACCESS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_project_access_teams_insert
+            AFTER INSERT ON "PROJECT_ACCESS_TEAMS"
+            REFERENCING NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_insert();
+
+            -- DELETE trigger for PROJECT_ACCESS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_project_access_teams_delete
+            AFTER DELETE ON "PROJECT_ACCESS_TEAMS"
+            REFERENCING OLD TABLE AS old_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_delete();
+
+            -- UPDATE trigger for PROJECT_ACCESS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_project_access_teams_update
+            AFTER UPDATE ON "PROJECT_ACCESS_TEAMS"
+            REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_update();
+
+            -- INSERT trigger for LDAPUSERS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_ldapusers_teams_insert
+            AFTER INSERT ON "LDAPUSERS_TEAMS"
+            REFERENCING NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_insert();
+
+            -- DELETE trigger for LDAPUSERS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_ldapusers_teams_delete
+            AFTER DELETE ON "LDAPUSERS_TEAMS"
+            REFERENCING OLD TABLE AS old_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_delete();
+
+            -- UPDATE trigger for LDAPUSERS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_ldapusers_teams_update
+            AFTER UPDATE ON "LDAPUSERS_TEAMS"
+            REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_update();
+
+            -- INSERT trigger for MANAGEDUSERS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_managedusers_teams_insert
+            AFTER INSERT ON "MANAGEDUSERS_TEAMS"
+            REFERENCING NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_insert();
+
+            -- DELETE trigger for MANAGEDUSERS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_managedusers_teams_delete
+            AFTER DELETE ON "MANAGEDUSERS_TEAMS"
+            REFERENCING OLD TABLE AS old_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_delete();
+
+            -- UPDATE trigger for MANAGEDUSERS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_managedusers_teams_update
+            AFTER UPDATE ON "MANAGEDUSERS_TEAMS"
+            REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_update();
+
+            -- INSERT trigger for OIDCUSERS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_oidcusers_teams_insert
+            AFTER INSERT ON "OIDCUSERS_TEAMS"
+            REFERENCING NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_insert();
+
+            -- DELETE trigger for OIDCUSERS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_oidcusers_teams_delete
+            AFTER DELETE ON "OIDCUSERS_TEAMS"
+            REFERENCING OLD TABLE AS old_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_delete();
+
+            -- UPDATE trigger for OIDCUSERS_TEAMS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_oidcusers_teams_update
+            AFTER UPDATE ON "OIDCUSERS_TEAMS"
+            REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_update();
+
+            -- INSERT trigger for TEAMS_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_insert
+            AFTER INSERT ON "TEAMS_PERMISSIONS"
+            REFERENCING NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_insert();
+
+            -- DELETE trigger for TEAMS_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_delete
+            AFTER DELETE ON "TEAMS_PERMISSIONS"
+            REFERENCING OLD TABLE AS old_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_delete();
+
+            -- UPDATE trigger for TEAMS_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_update
+            AFTER UPDATE ON "TEAMS_PERMISSIONS"
+            REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_update();
+        </sql>
+
+        <sql splitStatements="false">
+            -- Backfill the USER_PROJECT_EFFECTIVE_PERMISSIONS table for existing PROJECT_ACCESS_TEAMS entries
+            DO $$
+            BEGIN
+              PERFORM recalc_user_project_effective_permissions(
+                (SELECT ARRAY_AGG(DISTINCT "PROJECT_ID") FROM "PROJECT_ACCESS_TEAMS")
+              );
+            END;
+            $$;
+        </sql>
+
+        <sql splitStatements="true">
+            -- Prevent direct inserts/updates/writes to USER_PROJECT_EFFECTIVE_PERMISSIONS
+            CREATE TRIGGER trigger_prevent_direct_effective_permissions_writes
+            BEFORE DELETE OR INSERT OR UPDATE ON "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION prevent_direct_effective_permissions_writes();
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-17" author="jhoward-lm">
+        <sql splitStatements="false">
+            CREATE OR REPLACE FUNCTION remove_duplicate_rows(
+              table_name TEXT,
+              column_1   TEXT,
+              column_2   TEXT
+            )
+            RETURNS void AS $$
+            BEGIN
+              EXECUTE format($q$
+                DELETE FROM %I a
+                 USING %I b
+                 WHERE a.%I = b.%I
+                   AND a.%I = b.%I
+                   AND a.ctid &lt; b.ctid
+                $q$, table_name, table_name, column_1, column_1, column_2, column_2
+              );
+            END;
+            $$ LANGUAGE plpgsql;    
+        </sql>
+
+        <dropIndex tableName="APIKEYS_TEAMS" indexName="APIKEYS_TEAMS_TEAM_ID_IDX" />
+        <dropIndex tableName="APIKEYS_TEAMS" indexName="APIKEYS_TEAMS_APIKEY_ID_IDX" />
+        <dropIndex tableName="LDAPUSERS_PERMISSIONS" indexName="LDAPUSERS_PERMISSIONS_PERMISSION_ID_IDX" />
+        <dropIndex tableName="LDAPUSERS_PERMISSIONS" indexName="LDAPUSERS_PERMISSIONS_LDAPUSER_ID_IDX" />
+        <dropIndex tableName="LDAPUSERS_TEAMS" indexName="LDAPUSERS_TEAMS_TEAM_ID_IDX" />
+        <dropIndex tableName="LDAPUSERS_TEAMS" indexName="LDAPUSERS_TEAMS_LDAPUSER_ID_IDX" />
+        <dropIndex tableName="MANAGEDUSERS_PERMISSIONS" indexName="MANAGEDUSERS_PERMISSIONS_PERMISSION_ID_IDX" />
+        <dropIndex tableName="MANAGEDUSERS_PERMISSIONS" indexName="MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_ID_IDX" />
+        <dropIndex tableName="MANAGEDUSERS_TEAMS" indexName="MANAGEDUSERS_TEAMS_TEAM_ID_IDX" />
+        <dropIndex tableName="MANAGEDUSERS_TEAMS" indexName="MANAGEDUSERS_TEAMS_MANAGEDUSER_ID_IDX" />
+        <dropIndex tableName="OIDCUSERS_PERMISSIONS" indexName="OIDCUSERS_PERMISSIONS_PERMISSION_ID_IDX" />
+        <dropIndex tableName="OIDCUSERS_PERMISSIONS" indexName="OIDCUSERS_PERMISSIONS_OIDCUSER_ID_IDX" />
+        <dropIndex tableName="OIDCUSERS_TEAMS" indexName="OIDCUSERS_TEAMS_TEAM_ID_IDX" />
+        <dropIndex tableName="OIDCUSERS_TEAMS" indexName="OIDCUSERS_TEAMS_OIDCUSERS_ID_IDX" />
+        <dropIndex tableName="NOTIFICATIONRULE_TEAMS" indexName="NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_ID_IDX" />
+        <dropIndex tableName="NOTIFICATIONRULE_TEAMS" indexName="NOTIFICATIONRULE_TEAMS_TEAM_ID_IDX" />
+        <dropIndex tableName="TEAMS_PERMISSIONS" indexName="TEAMS_PERMISSIONS_TEAM_ID_IDX" />
+        <dropIndex tableName="TEAMS_PERMISSIONS" indexName="TEAMS_PERMISSIONS_PERMISSION_ID_IDX" />
+
+        <sql splitStatements="false">
+            DO $$ 
+            BEGIN
+              PERFORM remove_duplicate_rows('APIKEYS_TEAMS', 'TEAM_ID', 'APIKEY_ID');
+              PERFORM remove_duplicate_rows('LDAPUSERS_PERMISSIONS', 'LDAPUSER_ID', 'PERMISSION_ID');
+              PERFORM remove_duplicate_rows('LDAPUSERS_TEAMS', 'TEAM_ID', 'LDAPUSER_ID');
+              PERFORM remove_duplicate_rows('MANAGEDUSERS_PERMISSIONS', 'MANAGEDUSER_ID', 'PERMISSION_ID');
+              PERFORM remove_duplicate_rows('MANAGEDUSERS_TEAMS', 'TEAM_ID', 'MANAGEDUSER_ID');
+              PERFORM remove_duplicate_rows('NOTIFICATIONRULE_TEAMS', 'NOTIFICATIONRULE_ID', 'TEAM_ID');
+              PERFORM remove_duplicate_rows('OIDCUSERS_PERMISSIONS', 'OIDCUSER_ID', 'PERMISSION_ID');
+              PERFORM remove_duplicate_rows('OIDCUSERS_TEAMS', 'TEAM_ID', 'OIDCUSERS_ID');
+              PERFORM remove_duplicate_rows('TEAMS_PERMISSIONS', 'TEAM_ID', 'PERMISSION_ID');
+            END
+            $$;
+
+            DROP FUNCTION remove_duplicate_rows;
+        </sql>
+
+        <sql splitStatements="false">
+            -- Remove all duplicates from TEAM table, updating foreign
+            -- keys in other tables referencing the removed entries
+            DO $$
+            DECLARE
+              referencing_tables TEXT[] := ARRAY[
+                'APIKEYS_TEAMS',
+                'LDAPUSERS_TEAMS',
+                'MANAGEDUSERS_TEAMS',
+                'NOTIFICATIONRULE_TEAMS',
+                'OIDCUSERS_TEAMS',
+                'TEAMS_PERMISSIONS'
+              ];
+              tbl_name TEXT;
+              rec      RECORD;
+              dup_id   INTEGER;
+            BEGIN
+            -- Loop over each team name group that has duplicates.
+              FOR rec IN
+              SELECT
+                  "NAME",
+                  MIN("ID") AS canonical_id,
+                  ARRAY_AGG("ID") AS all_ids
+                FROM "TEAM"
+               GROUP BY "NAME"
+              HAVING COUNT(*) &gt; 1
+              LOOP
+                RAISE NOTICE 'Processing team "%" with canonical ID %', rec.name, rec.canonical_id;
+
+                -- For every duplicate row in the group, update references and delete the duplicate.
+                FOREACH dup_id IN ARRAY rec.all_ids
+                LOOP
+                  -- Skip the chosen canonical row
+                  CONTINUE WHEN dup_id = rec.canonical_id;
+
+                  RAISE NOTICE 'Updating foreign key references from duplicate ID % to canonical ID %', dup_id, rec.canonical_id;
+
+                  FOREACH tbl_name IN ARRAY referencing_tables
+                  LOOP
+                    EXECUTE format($update$
+                      UPDATE %I
+                         SET "TEAM_ID" = %s
+                       WHERE "TEAM_ID" = %s
+                      $update$, tbl_name, rec.canonical_id, dup_id);
+                  END LOOP;
+
+                  -- After reassigning foreign keys, delete the duplicate row from TEAM
+                  RAISE NOTICE 'Deleting duplicate TEAM row with ID % for team "%" ', dup_id, rec.name;
+                  EXECUTE format($delete$
+                    DELETE FROM "TEAM"
+                     WHERE "ID" = %s
+                    $delete$, dup_id);
+                END LOOP;
+              END LOOP;
+            END $$;
+        </sql>
+
+        <addPrimaryKey tableName="APIKEYS_TEAMS"
+            columnNames="TEAM_ID, APIKEY_ID"
+            constraintName="APIKEYS_TEAMS_PK" />
+        <addPrimaryKey tableName="LDAPUSERS_PERMISSIONS"
+            columnNames="LDAPUSER_ID, PERMISSION_ID"
+            constraintName="LDAPUSERS_PERMISSIONS_PK" />
+        <addPrimaryKey tableName="LDAPUSERS_TEAMS"
+            columnNames="TEAM_ID, LDAPUSER_ID"
+            constraintName="LDAPUSERS_TEAMS_PK" />
+        <addPrimaryKey tableName="MANAGEDUSERS_PERMISSIONS"
+            columnNames="MANAGEDUSER_ID, PERMISSION_ID"
+            constraintName="MANAGEDUSERS_PERMISSIONS_PK" />
+        <addPrimaryKey tableName="MANAGEDUSERS_TEAMS"
+            columnNames="TEAM_ID, MANAGEDUSER_ID"
+            constraintName="MANAGEDUSERS_TEAMS_PK" />
+        <addPrimaryKey tableName="OIDCUSERS_PERMISSIONS"
+            columnNames="OIDCUSER_ID, PERMISSION_ID"
+            constraintName="OIDCUSERS_PERMISSIONS_PK" />
+        <addPrimaryKey tableName="OIDCUSERS_TEAMS"
+            columnNames="TEAM_ID, OIDCUSERS_ID"
+            constraintName="OIDCUSERS_TEAMS_PK" />
+        <addPrimaryKey tableName="NOTIFICATIONRULE_TEAMS"
+            columnNames="NOTIFICATIONRULE_ID, TEAM_ID"
+            constraintName="NOTIFICATIONRULE_TEAMS_PK" />
+        <addPrimaryKey tableName="TEAMS_PERMISSIONS"
+            columnNames="TEAM_ID, PERMISSION_ID"
+            constraintName="TEAMS_PERMISSIONS_PK" />
+        <addUniqueConstraint tableName="TEAM"
+            columnNames="NAME"
+            constraintName="TEAM_NAME_IDX" />
+    </changeSet>
+
+    <changeSet id="v5.6.0-18" author="sahibamittal">
+        <sql splitStatements="false">
+            CREATE TYPE severity AS ENUM (
+                'UNASSIGNED'
+                , 'INFO'
+                , 'LOW'
+                , 'MEDIUM'
+                , 'HIGH'
+                , 'CRITICAL'
+            );
+            ALTER TABLE "ANALYSIS" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
+            ALTER TABLE "VULNERABILITY" ALTER COLUMN "SEVERITY" TYPE severity USING "SEVERITY"::severity;
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-19" author="nscuro">
+        <sql>
+            -- Identify OIDC groups with duplicate names.
+            WITH cte_duplicate_group AS (
+              SELECT "NAME" AS name
+                   , MIN("ID") AS canonical_id
+                FROM "OIDCGROUP"
+               GROUP BY "NAME"
+              HAVING COUNT(*) &gt; 1
+            ),
+            -- Delete mappings of duplicate OIDC groups.
+            cte_deleted_mapping AS (
+              DELETE FROM "MAPPEDOIDCGROUP"
+               USING cte_duplicate_group
+                   , "OIDCGROUP"
+               WHERE "MAPPEDOIDCGROUP"."GROUP_ID" = "OIDCGROUP"."ID"
+                 AND "OIDCGROUP"."NAME" = cte_duplicate_group.name
+                 AND "OIDCGROUP"."ID" != cte_duplicate_group.canonical_id
+              RETURNING "OIDCGROUP"."NAME" AS group_name
+                      , "MAPPEDOIDCGROUP"."TEAM_ID" AS team_id
+                      , "MAPPEDOIDCGROUP"."UUID" AS uuid
+            ),
+            -- Delete duplicate OIDC groups.
+            cte_deleted_group AS (
+              DELETE FROM "OIDCGROUP"
+               USING cte_duplicate_group
+               WHERE "OIDCGROUP"."NAME" = cte_duplicate_group.name
+                 AND "OIDCGROUP"."ID" != cte_duplicate_group.canonical_id
+              RETURNING "OIDCGROUP"."ID" AS id
+            )
+            -- Re-create deleted mappings, but using the canonical group ID.
+            INSERT INTO "MAPPEDOIDCGROUP" ("GROUP_ID", "TEAM_ID", "UUID")
+            SELECT "OIDCGROUP"."ID"
+                 , cte_deleted_mapping.team_id
+                 , cte_deleted_mapping.uuid
+              FROM cte_deleted_mapping
+             INNER JOIN "OIDCGROUP"
+                ON "OIDCGROUP"."NAME" = cte_deleted_mapping.group_name
+             -- This condition mostly just forces evaluation of cte_deleted_group.
+             WHERE "OIDCGROUP"."ID" NOT IN (SELECT id FROM cte_deleted_group)
+            -- If the duplicate groups had overlapping mappings, we'll get conflicts here.
+            ON CONFLICT ("TEAM_ID", "GROUP_ID") DO NOTHING
+        </sql>
+
+        <createIndex tableName="OIDCGROUP" indexName="OIDCGROUP_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>
