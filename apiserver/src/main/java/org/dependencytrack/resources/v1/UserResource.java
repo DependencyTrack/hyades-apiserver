@@ -18,6 +18,24 @@
  */
 package org.dependencytrack.resources.v1;
 
+import java.security.Principal;
+import java.util.List;
+import java.util.Optional;
+
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.IdentifiableObject;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Role;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.notification.v1.UserSubject;
+import org.dependencytrack.resources.v1.vo.RoleProjectRequest;
+import org.owasp.security.logging.SecurityMarkers;
+
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
@@ -59,20 +77,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.model.IdentifiableObject;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.notification.v1.UserSubject;
-import org.owasp.security.logging.SecurityMarkers;
-
-import java.security.Principal;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * JAX-RS resources for processing users.
@@ -775,4 +779,102 @@ public class UserResource extends AlpineResource {
         Optional.ofNullable(email).ifPresent(userBuilder::setEmail);
         return userBuilder.build();
     }
+
+    @POST
+    @Path("/{username}/role")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Adds role to specific user.",
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Updated user with a specific role",
+                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))
+            ),
+            @ApiResponse(responseCode = "304", description = "The user has already been assigned to this role."),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The user or role could not be found")
+    })
+    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
+    public Response addRoleToUser(
+            @Parameter(description = "A valid username", required = true)
+            @PathParam("username") String username,
+            @Parameter(description = "Role and project information", required = true)
+            RoleProjectRequest roleProjectRequest) {
+        try (QueryManager qm = new QueryManager()) {
+            final Role role = qm.getObjectByUuid(Role.class, roleProjectRequest.roleUUID());
+            if (role == null)
+                return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
+
+            UserPrincipal principal = qm.getUserPrincipal(username);
+            if (principal == null)
+                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+
+            Project project = qm.getProject(roleProjectRequest.projectUUID());
+            if (project == null)
+                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+
+            final boolean modified = qm.addRoleToUser(principal, role, project);
+            if (!modified)
+                return Response.notModified().entity("The user is already a member of the specified role.").build();
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Added role membership for: %s / role: %s / project: %s"
+                            .formatted(principal.getName(), role.getName(), project.getName()));
+
+            return Response.ok(principal).build();
+        }
+    }
+
+    @DELETE
+    @Path("/{username}/role")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Removes role from specific user.",
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
+)
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Updated user with a specific role removed",
+                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(responseCode = "204", description = "The role has been successfully removed from the user"),
+            @ApiResponse(responseCode = "304", description = "The user is not a member of the specified role"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The user or role could not be found")
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    public Response removeRoleFromUser(
+            @Parameter(description = "A valid username", required = true) @PathParam("username") String username,
+            @Parameter(description = "Role and project information", required = true) RoleProjectRequest roleProjectRequest) {
+        try (QueryManager qm = new QueryManager()) {
+            final Role role = qm.getObjectByUuid(Role.class, roleProjectRequest.roleUUID());
+            if (role == null)
+                return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
+
+            UserPrincipal principal = qm.getUserPrincipal(username);
+            if (principal == null)
+                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+
+            Project project = qm.getProject(roleProjectRequest.projectUUID());
+            if (project == null)
+                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+
+            final boolean modified = qm.removeRoleFromUser(principal, role, project);
+            if (!modified)
+                return Response.notModified().entity("The user is not a member of the specified role.").build();
+
+            principal = qm.getObjectById(principal.getClass(), principal.getId());
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Removed role membership for: %s / role: %s / project: %s"
+                            .formatted(principal.getName(), role.getName(), project.getName()));
+
+            return Response.noContent().build();
+        }
+    }
+
 }
