@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
@@ -27,6 +28,7 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.resources.v1.vo.PermissionSetRequest;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,7 +40,9 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class PermissionResourceTest extends ResourceTest {
 
@@ -288,4 +292,34 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertEquals(304, response.getStatus(), 0);
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
+
+    @Test
+    public void setUserTeamTest() {
+        qm.createLdapUser("user1");
+        List<Permission> testPermissions = List.of(
+                qm.getPermission("ACCESS_MANAGEMENT"),
+                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
+                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
+
+        System.out.println(testPermissions);
+        PermissionSetRequest requestBody = new PermissionSetRequest(
+            testPermissions.stream()
+            .map(Permission::toString)
+            .collect(Collectors.toSet())
+        );
+
+        Response response = jersey.target(V1_PERMISSION + "/user/user1")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
+
+        LdapUser user = qm.getLdapUser("user1");
+        Assert.assertNotNull(user);
+        List<Permission> userPermissions = user.getPermissions();
+
+        Assert.assertEquals(200, response.getStatus());
+        Assert.assertEquals(userPermissions.size(), 3);
+        Assert.assertTrue(userPermissions.equals(testPermissions));
+    }
+
 }
