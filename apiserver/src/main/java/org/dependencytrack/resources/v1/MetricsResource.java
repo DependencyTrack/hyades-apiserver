@@ -156,7 +156,7 @@ public class MetricsResource extends AbstractApiResource {
     @Path("/portfolio/{days}/days")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
-            summary = "Returns X (30 by default) days of historical metrics for the entire portfolio",
+            summary = "Returns X days of historical metrics for the entire portfolio",
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
@@ -266,7 +266,7 @@ public class MetricsResource extends AbstractApiResource {
     @Path("/project/{uuid}/days/{days}")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
-            summary = "Returns X (30 by default) days of historical metrics for a specific project",
+            summary = "Returns X days of historical metrics for a specific project",
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
@@ -399,7 +399,7 @@ public class MetricsResource extends AbstractApiResource {
     @Path("/component/{uuid}/days/{days}")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
-            summary = "Returns X (30 by default) days of historical metrics for a specific component",
+            summary = "Returns X days of historical metrics for a specific component",
             description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
