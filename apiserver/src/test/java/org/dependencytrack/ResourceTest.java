@@ -122,8 +122,8 @@ public abstract class ResourceTest {
         this.qm = new QueryManager();
         PluginManagerTestUtil.loadPlugins();
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
-        team = qm.createTeam("Test Users", true);
-        this.apiKey = team.getApiKeys().get(0).getKey();
+        team = qm.createTeam("Test Users");
+        this.apiKey = qm.createApiKey(team).getKey();
     }
 
     @After

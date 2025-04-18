@@ -403,7 +403,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addTeamToRuleTest(){
-        Team team = qm.createTeam("Team Example", false);
+        Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
@@ -420,7 +420,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addTeamToRuleInvalidRuleTest(){
-        Team team = qm.createTeam("Team Example", false);
+        Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
@@ -447,7 +447,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addTeamToRuleDuplicateTeamTest() {
-        Team team = qm.createTeam("Team Example", false);
+        Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Set<Team> teams = new HashSet<>();
@@ -463,7 +463,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addTeamToRuleInvalidPublisherTest(){
-        Team team = qm.createTeam("Team Example", false);
+        Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
@@ -477,7 +477,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addTeamToRuleWithCustomEmailPublisherTest() {
-        final Team team = qm.createTeam("Team Example", false);
+        final Team team = qm.createTeam("Team Example");
         final NotificationPublisher publisher = qm.createNotificationPublisher("foo", "description", SendMailPublisher.name(), "template", "templateMimeType", false);
         final NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         final Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid() + "/team/" + team.getUuid()).request()
@@ -521,7 +521,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeTeamFromRuleTest() {
-        Team team = qm.createTeam("Team Example", false);
+        Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Set<Team> teams = new HashSet<>();
@@ -537,7 +537,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeTeamFromRuleInvalidRuleTest() {
-        Team team = qm.createTeam("Team Example", false);
+        Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/team/" + team.getUuid().toString()).request()
                 .header(X_API_KEY, apiKey)
@@ -563,7 +563,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeTeamFromRuleDuplicateTeamTest() {
-        Team team = qm.createTeam("Team Example", false);
+        Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()
@@ -575,7 +575,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeTeamToRuleInvalidPublisherTest(){
-        Team team = qm.createTeam("Team Example", false);
+        Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + team.getUuid().toString()).request()

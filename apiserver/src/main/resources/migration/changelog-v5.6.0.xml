@@ -1398,4 +1398,31 @@
             <column name="NAME"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-20" author="nscuro">
+        <!-- Create new columns, leaving them nullable to allow for migration. -->
+        <addColumn tableName="APIKEY">
+            <column name="SECRET_HASH" type="VARCHAR(64)"/>
+            <column name="PUBLIC_ID" type="VARCHAR(8)"/>
+            <column name="IS_LEGACY" type="BOOL" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <!-- Migrate API keys by assigning public IDs and hashing their secrets. -->
+        <customChange class="org.dependencytrack.persistence.migration.change.v560.ApiKeyMigrationChange"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-21" author="nscuro">
+        <!--
+          These must run in a separate transaction from the key migration to avoid
+          "cannot ALTER TABLE because it is being used by active queries in this session" errors.
+        -->
+        <dropColumn tableName="APIKEY" columnName="APIKEY"/>
+        <addNotNullConstraint tableName="APIKEY" columnName="SECRET_HASH"/>
+        <addNotNullConstraint tableName="APIKEY" columnName="PUBLIC_ID"/>
+        <createIndex tableName="APIKEY" indexName="APIKEY_PUBLIC_ID_IDX" unique="true">
+            <column name="PUBLIC_ID"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

@@ -20,15 +20,11 @@ package org.dependencytrack.resources.v1;
 
 import alpine.Config;
 import alpine.model.About;
+import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -46,6 +42,11 @@ import org.json.JSONObject;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
@@ -595,7 +596,8 @@ public class FindingResourceTest extends ResourceTest {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
-        Team team = qm.createTeam("Team Acme", true);
+        Team team = qm.createTeam("Team Acme");
+        ApiKey apiKey = qm.createApiKey(team);
         p1.addAccessTeam(team);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
@@ -625,7 +627,7 @@ public class FindingResourceTest extends ResourceTest {
             qm.persist(aclToggle);
         }
         Response response = jersey.target(V1_FINDING).request()
-                .header(X_API_KEY, team.getApiKeys().get(0).getKey())
+                .header(X_API_KEY, apiKey.getKey())
                 .get(Response.class);
         assertEquals(200, response.getStatus(), 0);
         assertEquals(String.valueOf(4), response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -733,7 +735,8 @@ public class FindingResourceTest extends ResourceTest {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
-        Team team = qm.createTeam("Team Acme", true);
+        Team team = qm.createTeam("Team Acme");
+        ApiKey apiKey = qm.createApiKey(team);
         p1.addAccessTeam(team);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
@@ -765,7 +768,7 @@ public class FindingResourceTest extends ResourceTest {
             qm.persist(aclToggle);
         }
         Response response = jersey.target(V1_FINDING + "/grouped").request()
-                .header(X_API_KEY, team.getApiKeys().get(0).getKey())
+                .header(X_API_KEY, apiKey.getKey())
                 .get(Response.class);
         assertEquals(200, response.getStatus(), 0);
         assertEquals(String.valueOf(3), response.getHeaderString(TOTAL_COUNT_HEADER));
