@@ -44,5 +44,5 @@ jobs:
         bash <(curl -Ls https://coverage.codacy.com/get.sh) report \
           --project-token ${{ secrets.CODACY_PROJECT_TOKEN }} \
           --commit-uuid ${{ github.event.workflow_run.head_sha }} \
-          --coverage-reports ./apiserver/target/jacoco-ut/jacoco.xml \
+          --coverage-reports ./coverage-report/target/site/jacoco-aggregate/jacoco.xml \
           --language Java

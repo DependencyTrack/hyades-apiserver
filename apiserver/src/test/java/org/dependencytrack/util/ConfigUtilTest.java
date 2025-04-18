@@ -22,6 +22,7 @@ import alpine.Config;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
@@ -34,6 +35,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Ignore // Dirties the JVM which doesn't play nicely with Maven Surefire reusing a JVM for all tests.
 public class ConfigUtilTest {
 
     @Rule
