@@ -23,8 +23,8 @@ import alpine.common.util.BooleanUtil;
 import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
-import alpine.model.Permission;
 import alpine.model.IConfigProperty.PropertyType;
+import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.notification.NotificationLevel;
@@ -1059,20 +1059,12 @@ public class QueryManager extends AlpineQueryManager {
         return getMetricsQueryManager().getPortfolioMetrics();
     }
 
-    public List<PortfolioMetrics> getPortfolioMetricsSince(Date since) {
-        return getMetricsQueryManager().getPortfolioMetricsSince(since);
-    }
-
     public ProjectMetrics getMostRecentProjectMetrics(Project project) {
         return getMetricsQueryManager().getMostRecentProjectMetrics(project);
     }
 
     public PaginatedResult getProjectMetrics(Project project) {
         return getMetricsQueryManager().getProjectMetrics(project);
-    }
-
-    public List<ProjectMetrics> getProjectMetricsSince(Project project, Date since) {
-        return getMetricsQueryManager().getProjectMetricsSince(project, since);
     }
 
     public DependencyMetrics getMostRecentDependencyMetrics(Component component) {
@@ -1085,10 +1077,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public PaginatedResult getDependencyMetrics(Component component) {
         return getMetricsQueryManager().getDependencyMetrics(component);
-    }
-
-    public List<DependencyMetrics> getDependencyMetricsSince(Component component, Date since) {
-        return getMetricsQueryManager().getDependencyMetricsSince(component, since);
     }
 
     public void synchronizeVulnerabilityMetrics(List<VulnerabilityMetrics> metrics) {
