@@ -22,6 +22,7 @@ import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.model.Team;
+import alpine.model.UserPrincipal;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
@@ -30,6 +31,7 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
@@ -42,7 +44,10 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
 import java.time.Duration;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -75,7 +80,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void getManagedUsersTest() {
-        for (int i=0; i<1000; i++) {
+        for (int i = 0; i < 1000; i++) {
             qm.createManagedUser("managed-user-" + i, TEST_USER_PASSWORD_HASH);
         }
         Response response = jersey.target(V1_USER + "/managed").request()
@@ -91,7 +96,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void getLdapUsersTest() {
-        for (int i=0; i<1000; i++) {
+        for (int i = 0; i < 1000; i++) {
             qm.createLdapUser("ldap-user-" + i);
         }
         Response response = jersey.target(V1_USER + "/ldap").request()
@@ -229,7 +234,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals("blackbeard", json.getString("username"));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(
+                KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         assertThat(userNotification).isNotNull();
         assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_CREATED);
@@ -277,7 +283,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals(204, response.getStatus(), 0);
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(
+                KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         assertThat(userNotification).isNotNull();
         assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_DELETED);
@@ -306,7 +313,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals("blackbeard", json.getString("username"));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(
+                KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         assertThat(userNotification).isNotNull();
         assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_CREATED);
@@ -420,7 +428,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void updateManagedUserTest() {
-        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH,
+                false, false, false);
         ManagedUser user = new ManagedUser();
         user.setUsername("blackbeard");
         user.setFullname("Dr BlackBeard, Ph.D.");
@@ -444,7 +453,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void updateManagedUserInvalidFullnameTest() {
-        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH,
+                false, false, false);
         ManagedUser user = new ManagedUser();
         user.setUsername("blackbeard");
         user.setFullname("");
@@ -463,7 +473,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void updateManagedUserInvalidEmailTest() {
-        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH,
+                false, false, false);
         ManagedUser user = new ManagedUser();
         user.setUsername("blackbeard");
         user.setFullname("Captain BlackBeard");
@@ -482,7 +493,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void updateManagedUserInvalidUsernameTest() {
-        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH,
+                false, false, false);
         ManagedUser user = new ManagedUser();
         user.setUsername("");
         user.setFullname("Captain BlackBeard");
@@ -501,7 +513,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void deleteManagedUserTest() throws InterruptedException {
-        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH,
+                false, false, false);
         ManagedUser user = new ManagedUser();
         user.setUsername("blackbeard");
         Response response = jersey.target(V1_USER + "/managed").request()
@@ -512,7 +525,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals(204, response.getStatus(), 0);
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(
+                KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         assertThat(userNotification).isNotNull();
         assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_DELETED);
@@ -535,7 +549,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertEquals("blackbeard", json.getString("username"));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 1, Duration.ofSeconds(5));
-        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
+        final org.dependencytrack.proto.notification.v1.Notification userNotification = deserializeValue(
+                KafkaTopics.NOTIFICATION_USER, kafkaMockProducer.history().get(0));
         assertThat(userNotification).isNotNull();
         assertThat(userNotification.getScope()).isEqualTo(SCOPE_SYSTEM);
         assertThat(userNotification.getGroup()).isEqualTo(GROUP_USER_CREATED);
@@ -572,7 +587,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addTeamToUserTest() {
-        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH,
+                false, false, false);
         Team team = qm.createTeam("Pirates", false);
         IdentifiableObject ido = new IdentifiableObject();
         ido.setUuid(team.getUuid().toString());
@@ -594,7 +610,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addTeamToUserInvalidTeamTest() {
-        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH,
+                false, false, false);
         IdentifiableObject ido = new IdentifiableObject();
         ido.setUuid(UUID.randomUUID().toString());
         ManagedUser user = new ManagedUser();
@@ -627,7 +644,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     @Test
     public void addTeamToUserDuplicateMembershipTest() {
         Team team = qm.createTeam("Pirates", false);
-        ManagedUser user = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
+        ManagedUser user = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
+                TEST_USER_PASSWORD_HASH, false, false, false);
         qm.addUserToTeam(user, team);
         IdentifiableObject ido = new IdentifiableObject();
         ido.setUuid(team.getUuid().toString());
@@ -644,7 +662,8 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     @Test
     public void removeTeamFromUserTest() {
         Team team = qm.createTeam("Pirates", false);
-        ManagedUser user = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
+        ManagedUser user = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
+                TEST_USER_PASSWORD_HASH, false, false, false);
         qm.addUserToTeam(user, team);
         IdentifiableObject ido = new IdentifiableObject();
         ido.setUuid(team.getUuid().toString());
@@ -654,5 +673,38 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .method("DELETE", Entity.entity(ido, MediaType.APPLICATION_JSON)); // HACK
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
         Assert.assertEquals(200, response.getStatus(), 0);
+    }
+
+    @Test
+    public void setUserTeamsTest() {
+        Team team1 = qm.createTeam("Pirates", false);
+        Team team2 = qm.createTeam("Penguins", false);
+        Team team3 = qm.createTeam("Steelers", false);
+
+        /* ManagedUser user =  */
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
+                TEST_USER_PASSWORD_HASH, false, false, false);
+
+        TeamsSetRequest requestBody = new TeamsSetRequest(
+                Set.of(
+                        team1.getUuid().toString(),
+                        team2.getUuid().toString(),
+                        team3.getUuid().toString()));
+
+        Response response = jersey.target(V1_USER + "/blackbeard/membership").request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .put(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
+
+        Assert.assertEquals(200, response.getStatus(), 0);
+
+        UserPrincipal user = qm.getUserPrincipal("blackbeard");
+        Assert.assertNotNull(user);
+
+        List<Team> userTeams = user.getTeams();
+        Assert.assertEquals(userTeams.size(), 3);
+        Assert.assertTrue(userTeams.contains(team1));
+        Assert.assertTrue(userTeams.contains(team2));
+        Assert.assertTrue(userTeams.contains(team3));
     }
 }
