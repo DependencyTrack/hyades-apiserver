@@ -28,6 +28,7 @@
 
     <modules>
         <module>alpine</module>
+        <module>workflow</module>
         <module>proto</module>
         <module>apiserver</module>
         <module>coverage-report</module>
@@ -134,6 +135,11 @@
             <dependency>
                 <groupId>org.dependencytrack</groupId>
                 <artifactId>proto</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>workflow-engine</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
