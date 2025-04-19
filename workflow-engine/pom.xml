@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.dependencytrack</groupId>
+        <artifactId>dependency-track-parent</artifactId>
+        <version>5.6.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>workflow-engine</artifactId>
+    <packaging>jar</packaging>
+
+    <properties>
+        <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
+
+        <lib.assertj.version>3.27.3</lib.assertj.version>
+        <lib.awaitility.version>4.3.0</lib.awaitility.version>
+        <lib.jakarta-annotation-api.version>3.0.0</lib.jakarta-annotation-api.version>
+        <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
+        <lib.javacron.version>1.4.0</lib.javacron.version>
+        <lib.jdbi.version>3.49.0</lib.jdbi.version>
+        <lib.liquibase.version>4.30.0</lib.liquibase.version>
+        <lib.micrometer.version>1.14.6</lib.micrometer.version>
+        <lib.postgresql.version>42.7.5</lib.postgresql.version>
+        <lib.protobuf-java.version>4.30.2</lib.protobuf-java.version>
+        <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
+        <lib.slf4j.version>2.0.17</lib.slf4j.version>
+        <lib.testcontainers.version>1.20.6</lib.testcontainers.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${lib.assertj.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${lib.awaitility.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.uuid</groupId>
+            <artifactId>java-uuid-generator</artifactId>
+            <version>${lib.java-uuid-generator.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.asahaf.javacron</groupId>
+            <artifactId>javacron</artifactId>
+            <version>${lib.javacron.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-core</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-jackson2</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi3-postgres</artifactId>
+            <version>${lib.jdbi.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+            <version>${lib.jakarta-annotation-api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <version>${lib.liquibase.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <version>${lib.micrometer.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${lib.postgresql.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${lib.testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${lib.protobuf-java.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>${lib.protobuf-java.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-core</artifactId>
+            <version>${lib.resilience4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.17</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${lib.slf4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.github.os72</groupId>
+                <artifactId>protoc-jar-maven-plugin</artifactId>
+                <version>3.11.4</version>
+                <executions>
+                    <execution>
+                        <id>protobuf</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <includeMavenTypes>direct</includeMavenTypes>
+                            <inputDirectories>
+                                <inputDirectory>src/main/proto</inputDirectory>
+                            </inputDirectories>
+                            <includeDirectories>
+                                <includeDirectory>src/main/proto</includeDirectory>
+                            </includeDirectories>
+                            <protocArtifact>com.google.protobuf:protoc:${lib.protobuf-java.version}</protocArtifact>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
