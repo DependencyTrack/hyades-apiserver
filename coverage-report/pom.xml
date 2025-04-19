@@ -69,6 +69,11 @@
             <artifactId>persistence-migration</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>workflow-engine</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
