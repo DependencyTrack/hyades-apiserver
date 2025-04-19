@@ -28,6 +28,7 @@
 
     <modules>
         <module>alpine</module>
+        <module>workflow</module>
         <module>proto</module>
         <module>persistence-migration</module>
         <module>persistence-jooq</module>
@@ -155,6 +156,11 @@
                 <artifactId>proto</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>workflow-engine</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.assertj</groupId>
@@ -267,6 +273,26 @@
                         <reuseForks>true</reuseForks>
                         <forkCount>${unitTestForkCount}</forkCount>
                     </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>io.github.ascopes</groupId>
+                    <artifactId>protobuf-maven-plugin</artifactId>
+                    <version>3.1.2</version>
+                    <!--
+                      https://github.com/ascopes/protobuf-maven-plugin/issues/472
+                      https://issues.apache.org/jira/browse/MBUILDCACHE-115
+                    -->
+                    <configuration>
+                        <protocVersion>${lib.protobuf-java.version}</protocVersion>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.codehaus.plexus</groupId>
+                            <artifactId>plexus-utils</artifactId>
+                            <version>4.0.2</version>
+                        </dependency>
+                    </dependencies>
                 </plugin>
 
                 <plugin>
