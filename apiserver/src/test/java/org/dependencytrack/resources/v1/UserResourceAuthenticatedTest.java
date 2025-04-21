@@ -22,6 +22,7 @@ import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.model.Team;
+import alpine.model.UserPrincipal;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
@@ -30,6 +31,7 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
@@ -43,6 +45,8 @@ import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.Duration;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -654,5 +658,78 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .method("DELETE", Entity.entity(ido, MediaType.APPLICATION_JSON)); // HACK
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
         Assert.assertEquals(200, response.getStatus(), 0);
+    }
+
+    @Test
+    public void setUserTeamsTest() {
+        Team team1 = qm.createTeam("Pirates", false);
+        Team team2 = qm.createTeam("Penguins", false);
+        Team team3 = qm.createTeam("Steelers", false);
+
+        /* ManagedUser user =  */
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
+                TEST_USER_PASSWORD_HASH, false, false, false);
+
+        TeamsSetRequest requestBody = new TeamsSetRequest(
+                Set.of(
+                        team1.getUuid().toString(),
+                        team2.getUuid().toString(),
+                        team3.getUuid().toString()));
+
+        Response response = jersey.target(V1_USER + "/blackbeard/membership").request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .put(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
+
+        Assert.assertEquals(200, response.getStatus(), 0);
+
+        UserPrincipal user = qm.getUserPrincipal("blackbeard");
+        Assert.assertNotNull(user);
+
+        List<Team> userTeams = user.getTeams();
+        Assert.assertEquals(userTeams.size(), 3);
+        Assert.assertTrue(userTeams.contains(team1));
+        Assert.assertTrue(userTeams.contains(team2));
+        Assert.assertTrue(userTeams.contains(team3));
+    }
+
+    @Test
+    public void setUserTeamsInvalidTeamsTest() {
+        /* ManagedUser user =  */
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
+                TEST_USER_PASSWORD_HASH, false, false, false);
+
+        Team validTeam = qm.createTeam("Pirates", false);
+        TeamsSetRequest requestBody = new TeamsSetRequest(
+                // 1 valid, 2 invalid
+                Set.of(
+                        validTeam.getUuid().toString(),
+                        "b3ed3497-8f50-41c5-b754-ab31853b07",
+                        "9f4851-9bac-4ad9-b23f-209943cda7"));
+
+        Response response = jersey.target(V1_USER + "/blackbeard/membership").request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .put(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(400, response.getStatus());
+
+        JsonObject jsonResponse = parseJsonObject(response);
+        Assert.assertNotNull(jsonResponse);
+
+        JsonArray invalidTeamsArray = jsonResponse.getJsonArray("teams");
+        Assert.assertEquals(2, invalidTeamsArray.size());
+    }
+    @Test
+    public void setUserTeamsInvalidUuidTest() {
+        /* ManagedUser user =  */
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
+                TEST_USER_PASSWORD_HASH, false, false, false);
+        TeamsSetRequest requestBody = new TeamsSetRequest(Set.of("Not a Uuid"));
+
+        Response response = jersey.target(V1_USER + "/blackbeard/membership").request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .put(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(400, response.getStatus());
     }
 }
