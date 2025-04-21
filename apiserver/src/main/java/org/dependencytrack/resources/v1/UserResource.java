@@ -1,3 +1,4 @@
+/*
  * This file is part of Dependency-Track.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,25 +78,12 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.model.IdentifiableObject;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
-import org.owasp.security.logging.SecurityMarkers;
 
-import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
