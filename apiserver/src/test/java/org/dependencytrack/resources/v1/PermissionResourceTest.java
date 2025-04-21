@@ -293,17 +293,16 @@ public class PermissionResourceTest extends ResourceTest {
     }
 
     @Test
-    public void setUserTeamTest() {
+    public void setUserPermissionsTest() {
         qm.createManagedUser("user2", TEST_USER_PASSWORD_HASH);
+
         List<Permission> testPermissions = List.of(
-            qm.getPermission("ACCESS_MANAGEMENT"),
-            qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
-            qm.getPermission("ACCESS_MANAGEMENT_DELETE")
-            );
+                qm.getPermission("ACCESS_MANAGEMENT"),
+                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
+                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
 
         PermissionsSetRequest requestBody = new PermissionsSetRequest(
-            Set.of("ACCESS_MANAGEMENT","ACCESS_MANAGEMENT_CREATE","ACCESS_MANAGEMENT_DELETE")
-        );
+                Set.of("ACCESS_MANAGEMENT", "ACCESS_MANAGEMENT_CREATE", "ACCESS_MANAGEMENT_DELETE"));
 
         Response response = jersey.target(V1_PERMISSION + "/user/user2")
                 .request()
@@ -314,21 +313,38 @@ public class PermissionResourceTest extends ResourceTest {
         JsonObject jsonResponse = parseJsonObject(response);
         Assert.assertNotNull(jsonResponse);
 
-
         ManagedUser user = qm.getManagedUser("user2");
         Assert.assertNotNull(user);
         List<Permission> userPermissions = user.getPermissions();
 
         Assert.assertEquals(userPermissions.size(), 3);
         Assert.assertTrue(userPermissions.equals(testPermissions));
+
+        Permission test_1 = qm.createPermission("TEST_PERMISSION_1", "TEST PERMISSION");
+        Permission test_2 = qm.createPermission("TEST_PERMISSION_2", "TEST PERMISSION");
+
+        requestBody = new PermissionsSetRequest(Set.of(test_1.getName(), test_2.getName()));
+
+        response = jersey.target(V1_PERMISSION + "/user/user2")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+
+        // refresh
+        user = qm.getManagedUser("user2");
+        userPermissions = user.getPermissions();
+
+        Assert.assertTrue(userPermissions.contains(test_1));
+        Assert.assertTrue(userPermissions.contains(test_2));
+
     }
 
     @Test
-    public void setUserTeamsInvalidPermissionsTest() {
+    public void setUserPermissionsInvalidPermissionsTest() {
         qm.createManagedUser("user2", TEST_USER_PASSWORD_HASH);
         PermissionsSetRequest badRequestBody = new PermissionsSetRequest(
-            Set.of("Invalid", "Permission", "List", "Four")
-        );
+                Set.of("Invalid", "Permission", "List", "Four"));
 
         Response response = jersey.target(V1_PERMISSION + "/user/user2")
                 .request()

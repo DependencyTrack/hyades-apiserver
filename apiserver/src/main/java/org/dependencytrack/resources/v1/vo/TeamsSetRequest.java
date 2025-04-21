@@ -21,25 +21,9 @@ package org.dependencytrack.resources.v1.vo;
 
 import java.util.Set;
 
-import org.dependencytrack.model.validation.ValidUuidList;
+import org.dependencytrack.model.validation.ValidUuid;
 
 import jakarta.validation.constraints.NotNull;
 
-public class TeamsSetRequest {
-
-    @NotNull
-    @ValidUuidList
-    private Set<String> teams;
-
-    public TeamsSetRequest() {
-        // Default constructor for deserialization
-    }
-
-    public TeamsSetRequest(Set<String> teams) {
-        this.teams = teams;
-    }
-
-    public Set<String> getTeams() {
-        return teams;
-    }
+public record TeamsSetRequest(@NotNull Set<@ValidUuid String> teams) {
 }

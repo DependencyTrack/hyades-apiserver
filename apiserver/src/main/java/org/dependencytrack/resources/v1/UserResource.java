@@ -17,7 +17,6 @@
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.resources.v1;
-
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
@@ -69,19 +68,20 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.notification.v1.UserSubject;
+import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.security.Principal;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
+
+import javax.jdo.Query;
 
 /**
  * JAX-RS resources for processing users.
@@ -793,6 +793,7 @@ public class UserResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
             @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team(s)"),
+            @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
     })
@@ -806,36 +807,34 @@ public class UserResource extends AlpineResource {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
 
-            // Compare given team uuids against current user teams
-            final Set<String> currentUserTeams = principal.getTeams() == null ? Collections.emptySet()
-                    : principal.getTeams().stream()
-                            .map(Team::getUuid)
-                            .map(UUID::toString)
-                            .collect(Collectors.toSet());
+            final Query<Team> query = qm.getPersistenceManager().newQuery(Team.class)
+                    .filter(":uuids.contains(uuid)")
+                    .setNamedParameters(Map.of("uuids", request.teams()));
 
+            final List<Team> requestedTeams;
+            try {
+                requestedTeams = List.copyOf(query.executeList());
+            } finally {
+                query.closeAll();
+            }
 
-            if (currentUserTeams.equals(request.getTeams())) {
+            if(requestedTeams.size() != request.teams().size()) {
+                List<String> current = new ArrayList<String>(request.teams());
+                final List<String> differences = requestedTeams.stream().map(Team::getUuid).map(UUID::toString).toList();
+                current.removeAll(differences);
+
+                ProblemDetails problem = new AccessManagementProblemDetails(
+                        Response.Status.BAD_REQUEST.getStatusCode(),
+                        "Invalid team",
+                        "One or more teams could not be found",
+                        current);
+
+                return problem.toResponse();
+            }
+
+            final List<Team> currentUserTeams = Objects.requireNonNullElse(principal.getTeams(), List.<Team>of());
+            if (currentUserTeams.equals(requestedTeams)) {
                 return Response.notModified().entity("The user is already a member of the selected team(s)").build();
-            }
-
-            List<Team> requestedTeams = request.getTeams()
-                    .stream()
-                    .map(uuid -> qm.getObjectByUuid(Team.class, uuid))
-                    .toList();
-
-            // check that all requested teams exist
-            List<String> notFound = new ArrayList<>();
-            for (int i = 0; i < requestedTeams.size(); i++) {
-                if(requestedTeams.get(i) == null)
-                    notFound.add(request.getTeams().stream().toList().get(i));
-            }
-
-            if (notFound.size() > 0) {
-                // String msg = String.format("One or more teams could not be found:\n%s", );
-                Map<String, Object> response = new HashMap<>();
-                response.put("error", "One or more teams could not be found");
-                response.put("teams", notFound);
-                return Response.status(Response.Status.BAD_REQUEST).entity(response).build();
             }
 
             principal.setTeams(requestedTeams);

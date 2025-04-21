@@ -46,12 +46,14 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.PermissionsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import javax.jdo.Query;
 import java.util.Map;
 
 /**
@@ -274,47 +276,54 @@ public class PermissionResource extends AlpineResource {
     @Path("/user/{username}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>")
+    @Operation(description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = Team.class))),
+            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(responseCode = "304", description = "The user is already has the specified permission(s)"),
+            @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response setUserPermissions(
-            @Parameter(description = "A valid user uuid", schema = @Schema(type = "string", format = "uuid"), required = true) @PathParam("username") String username,
-            @Parameter(description = "A valid permission", required = true) PermissionsSetRequest request) {
+            @Parameter(description = "A valid username", required = true) @PathParam("username") String username,
+            @Parameter(description = "A valid list permission", required = true) PermissionsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
             UserPrincipal user = qm.getUserPrincipal(username);
             if (user == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
 
-            final List<Permission> requestedPermissions = request.permissions()
-                    .stream()
-                    .map(qm::getPermission)
-                    .toList();
+            final Query<Permission> query = qm.getPersistenceManager().newQuery(Permission.class)
+                    .filter(":permissions.contains(name)")
+                    .setNamedParameters(Map.of("permissions", request.permissions()))
+                    .orderBy("name asc");
 
-            // check that all requested teams exist
-            List<String> notFound = new ArrayList<>();
-            for (int i = 0; i < requestedPermissions.size(); i++) {
-                if (requestedPermissions.get(i) == null) {
-                    notFound.add(request.permissions().stream().toList().get(i));
-                }
+            final List<Permission> requestedPermissions;
+            try {
+                requestedPermissions = List.copyOf(query.executeList());
+            } finally {
+                query.closeAll();
             }
 
-            if(notFound.size() > 0){
-                Map<String, Object> response = new HashMap<>();
-                response.put("error", "One or more permissions could not be found");
-                response.put("permissions", notFound);
-                return Response.status(Response.Status.BAD_REQUEST).entity(response).build();
+            if (requestedPermissions.size() != request.permissions().size()) {
+                List<String> current = new ArrayList<String>(request.permissions());
+                List<String> existing = requestedPermissions.stream().map(Permission::getName).toList();
+                current.removeAll(existing);
+
+                ProblemDetails problem = new AccessManagementProblemDetails(
+                        Response.Status.BAD_REQUEST.getStatusCode(),
+                        "Invalid permissions",
+                        "One or more permissions could not be found",
+                        current);
+
+                return problem.toResponse();
             }
 
-            final List<Permission> currentPermissions = user.getPermissions();
-
-            if (currentPermissions.equals(requestedPermissions)) {
-                return Response.notModified().entity("User already has selected permission(s).").build();
-            }
+            if (user.getPermissions().equals(requestedPermissions))
+                return Response.notModified()
+                        .entity("User already has selected permission(s).")
+                        .build();
 
             user.setPermissions(requestedPermissions);
             user = qm.persist(user);

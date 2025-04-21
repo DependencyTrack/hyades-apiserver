@@ -666,22 +666,20 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Team team2 = qm.createTeam("Penguins", false);
         Team team3 = qm.createTeam("Steelers", false);
 
-        /* ManagedUser user =  */
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
                 TEST_USER_PASSWORD_HASH, false, false, false);
 
-        TeamsSetRequest requestBody = new TeamsSetRequest(
-                Set.of(
-                        team1.getUuid().toString(),
-                        team2.getUuid().toString(),
-                        team3.getUuid().toString()));
+        TeamsSetRequest requestBody = new TeamsSetRequest(Set.of(
+                team1.getUuid().toString(),
+                team2.getUuid().toString(),
+                team3.getUuid().toString()));
 
         Response response = jersey.target(V1_USER + "/blackbeard/membership").request()
                 .header(X_API_KEY, apiKey)
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
 
-        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertEquals(200, response.getStatus());
 
         UserPrincipal user = qm.getUserPrincipal("blackbeard");
         Assert.assertNotNull(user);
@@ -691,11 +689,33 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Assert.assertTrue(userTeams.contains(team1));
         Assert.assertTrue(userTeams.contains(team2));
         Assert.assertTrue(userTeams.contains(team3));
+
+        Team team4 = qm.createTeam("Strawhats", false);
+        Team team5 = qm.createTeam("Cowboys", false);
+
+        requestBody = new TeamsSetRequest(Set.of(
+                team4.getUuid().toString(),
+                team5.getUuid().toString()));
+
+        response = jersey.target(V1_USER + "/blackbeard/membership").request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .put(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
+
+        user = qm.getUserPrincipal("blackbeard");
+        userTeams = user.getTeams();
+
+        Assert.assertEquals(200, response.getStatus());
+
+        Assert.assertFalse(userTeams.contains(team1));
+        Assert.assertFalse(userTeams.contains(team2));
+        Assert.assertFalse(userTeams.contains(team3));
+        Assert.assertTrue(userTeams.contains(team4));
+        Assert.assertTrue(userTeams.contains(team5));
     }
 
     @Test
     public void setUserTeamsInvalidTeamsTest() {
-        /* ManagedUser user =  */
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
                 TEST_USER_PASSWORD_HASH, false, false, false);
 
@@ -719,9 +739,9 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         JsonArray invalidTeamsArray = jsonResponse.getJsonArray("teams");
         Assert.assertEquals(2, invalidTeamsArray.size());
     }
+
     @Test
     public void setUserTeamsInvalidUuidTest() {
-        /* ManagedUser user =  */
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
                 TEST_USER_PASSWORD_HASH, false, false, false);
         TeamsSetRequest requestBody = new TeamsSetRequest(Set.of("Not a Uuid"));
