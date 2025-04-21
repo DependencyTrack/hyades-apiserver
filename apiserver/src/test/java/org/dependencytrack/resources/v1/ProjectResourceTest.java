@@ -1413,7 +1413,6 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectByInvalidUuidTest() {
-        qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID())
                 .request()
                 .header(X_API_KEY, apiKey)

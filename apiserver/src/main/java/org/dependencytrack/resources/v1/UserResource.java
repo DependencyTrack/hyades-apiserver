@@ -1,4 +1,3 @@
-/*
  * This file is part of Dependency-Track.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,6 +65,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.FormParam;
@@ -77,6 +77,28 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.IdentifiableObject;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.notification.v1.UserSubject;
+import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
+import org.owasp.security.logging.SecurityMarkers;
+
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * JAX-RS resources for processing users.
@@ -157,7 +179,7 @@ public class UserResource extends AlpineResource {
     @AuthenticationNotRequired
     public Response validateOidcAccessToken(@Parameter(description = "An OAuth2 access token", required = true)
                                             @FormParam("idToken") final String idToken,
-                                            @FormParam("accessToken") final String accessToken) {
+            @FormParam("accessToken") final String accessToken) {
         final OidcAuthenticationService authService = new OidcAuthenticationService(idToken, accessToken);
 
         if (!authService.isSpecified()) {
@@ -198,7 +220,7 @@ public class UserResource extends AlpineResource {
     })
     @AuthenticationNotRequired
     public Response forceChangePassword(@FormParam("username") String username, @FormParam("password") String password,
-                                        @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
+            @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
         final Authenticator auth = new Authenticator(username, password);
         Principal principal;
         try (QueryManager qm = new QueryManager()) {
@@ -877,4 +899,63 @@ public class UserResource extends AlpineResource {
         }
     }
 
+    @PUT
+    @Path("/{username}/membership")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Adds the username to the specified team.", description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team(s)"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    public Response setUserTeams(
+            @Parameter(description = "A valid username", required = true) @PathParam("username") String username,
+            @Parameter(description = "The UUID(s) of the team(s) to associate username with", required = true) @Valid TeamsSetRequest request) {
+        try (QueryManager qm = new QueryManager()) {
+            UserPrincipal principal = qm.getUserPrincipal(username);
+            if (principal == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+            }
+
+            // Compare given team uuids against current user teams
+            final Set<String> currentUserTeams = principal.getTeams() == null ? Collections.emptySet()
+                    : principal.getTeams().stream()
+                            .map(Team::getUuid)
+                            .map(UUID::toString)
+                            .collect(Collectors.toSet());
+
+            if (currentUserTeams.equals(request.getTeams())) {
+                return Response.notModified().entity("The user is already a member of the selected team(s)").build();
+            }
+
+            List<Team> requestedTeams = request.getTeams()
+                    .stream()
+                    .map(uuid -> qm.getObjectByUuid(Team.class, uuid))
+                    .toList();
+
+            // check that all requested teams exist
+            List<String> notFound = new ArrayList<>();
+            for (int i = 0; i < requestedTeams.size(); i++) {
+                if (requestedTeams.get(i) == null)
+                    notFound.add(request.getTeams().stream().toList().get(i));
+            }
+
+            if (notFound.size() > 0) {
+                // String msg = String.format("One or more teams could not be found:\n%s", );
+                Map<String, Object> response = new HashMap<>();
+                response.put("error", "One or more teams could not be found");
+                response.put("teams", notFound);
+                return Response.status(Response.Status.BAD_REQUEST).entity(response).build();
+            }
+
+            principal.setTeams(requestedTeams);
+            qm.persist(principal);
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
+            return Response.ok(principal).build();
+        }
+    }
 }

@@ -21,20 +21,27 @@ package org.dependencytrack.resources.v1;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
+import jakarta.json.JsonArray;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import jakarta.ws.rs.core.Response;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.util.DateUtil.parseShortDate;
 
 public class MetricsResourceTest extends ResourceTest {
 
@@ -313,4 +320,63 @@ public class MetricsResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
     }
 
+    @Test
+    public void getPortfolioMetricsXDaysAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        enablePortfolioAccessControl();
+
+        var metrics = new PortfolioMetrics();
+        metrics.setVulnerabilities(3);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
+        qm.persist(metrics);
+
+        metrics = new PortfolioMetrics();
+        metrics.setVulnerabilities(2);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
+        qm.persist(metrics);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_METRICS + "/portfolio/25/days")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        JsonArray json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(1);
+        assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(2);
+    }
+
+    @Test
+    public void getPortfolioMetricsSinceAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        enablePortfolioAccessControl();
+
+        var metrics = new PortfolioMetrics();
+        metrics.setVulnerabilities(3);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(parseShortDate("20250101"));
+        qm.persist(metrics);
+
+        metrics = new PortfolioMetrics();
+        metrics.setVulnerabilities(2);
+        metrics.setFirstOccurrence(new Date());
+        metrics.setLastOccurrence(parseShortDate("20250201"));
+        qm.persist(metrics);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_METRICS + "/portfolio/since/20250201")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        JsonArray json = parseJsonArray(response);
+        assertThat(json.size()).isEqualTo(1);
+        assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(2);
+    }
 }
