@@ -813,7 +813,6 @@ public class UserResource extends AlpineResource {
                             .map(UUID::toString)
                             .collect(Collectors.toSet());
 
-
             if (currentUserTeams.equals(request.getTeams())) {
                 return Response.notModified().entity("The user is already a member of the selected team(s)").build();
             }
@@ -826,7 +825,7 @@ public class UserResource extends AlpineResource {
             // check that all requested teams exist
             List<String> notFound = new ArrayList<>();
             for (int i = 0; i < requestedTeams.size(); i++) {
-                if(requestedTeams.get(i) == null)
+                if (requestedTeams.get(i) == null)
                     notFound.add(request.getTeams().stream().toList().get(i));
             }
 

@@ -303,7 +303,7 @@ public class PermissionResource extends AlpineResource {
                 }
             }
 
-            if(notFound.size() > 0){
+            if (notFound.size() > 0) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("error", "One or more permissions could not be found");
                 response.put("permissions", notFound);
