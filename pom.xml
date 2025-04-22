@@ -27,7 +27,9 @@
     <version>5.6.0-SNAPSHOT</version>
 
     <modules>
+        <module>proto</module>
         <module>apiserver</module>
+        <module>coverage-report</module>
     </modules>
 
     <name>Dependency-Track</name>
@@ -83,6 +85,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <project.parentBaseDir>.</project.parentBaseDir>
+
+        <!-- Dependency versions -->
+        <lib.protobuf-java.version>4.30.2</lib.protobuf-java.version>
     </properties>
 
     <repositories>
@@ -95,6 +100,33 @@
             </snapshots>
         </repository>
     </repositories>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>apiserver</artifactId>
+                <classifier>classes</classifier>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>proto</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>${lib.protobuf-java.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java-util</artifactId>
+                <version>${lib.protobuf-java.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <pluginManagement>
@@ -120,8 +152,8 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.5.3</version>
                     <configuration>
-                        <argLine>--add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED</argLine>
-                        <reuseForks>false</reuseForks>
+                        <argLine>@{argLine} --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+                        <reuseForks>true</reuseForks>
                         <forkCount>1</forkCount>
                     </configuration>
                     <dependencies>
@@ -131,6 +163,12 @@
                             <version>3.5.3</version>
                         </dependency>
                     </dependencies>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>3.1.4</version>
                 </plugin>
 
                 <plugin>
@@ -151,6 +189,9 @@
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <includeResources>false</includeResources>
                     <includeTestResources>false</includeTestResources>
+                    <propertyExpansion>
+                        parentBaseDir=${project.parentBaseDir}
+                    </propertyExpansion>
                 </configuration>
                 <executions>
                     <execution>
@@ -167,6 +208,18 @@
                         <version>10.21.4</version>
                     </dependency>
                 </dependencies>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

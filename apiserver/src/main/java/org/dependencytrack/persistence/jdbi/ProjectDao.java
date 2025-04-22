@@ -283,4 +283,12 @@ public interface ProjectDao {
             SELECT "ID" FROM "PROJECT" WHERE "UUID" = :projectUuid
             """)
     Long getProjectId(@Bind UUID projectUuid);
+
+    @SqlQuery(/* language=InjectedFreeMarker */ """
+            <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
+            SELECT ${apiProjectAclCondition}
+              FROM "PROJECT"
+             WHERE "UUID" = :projectUuid
+            """)
+    Boolean isAccessible(@Bind UUID projectUuid);
 }

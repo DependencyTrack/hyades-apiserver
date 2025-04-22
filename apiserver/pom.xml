@@ -17,7 +17,7 @@
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
 
         <!-- Dependency Versions -->
-        <lib.alpine.version>3.1.2</lib.alpine.version>
+        <lib.alpine.version>3.2.0</lib.alpine.version>
         <lib.assertj.version>3.26.3</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.cel-tools.version>0.5.1</lib.cel-tools.version>
@@ -44,7 +44,6 @@
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.3.2</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.4</lib.pebble.version>
-        <lib.protobuf-java.version>4.30.2</lib.protobuf-java.version>
         <lib.testcontainers.version>1.20.6</lib.testcontainers.version>
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
         <lib.swagger.version>2.2.29</lib.swagger.version>
@@ -59,8 +58,6 @@
         <lib.javacron.version>1.4.0</lib.javacron.version>
         <lib.jdbc-driver.postgresql.version>42.7.5</lib.jdbc-driver.postgresql.version>
 
-        <!-- Tool Versions -->
-        <tool.protoc.version>com.google.protobuf:protoc:${lib.protobuf-java.version}</tool.protoc.version>
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
         <services.bom.merge.skip>true</services.bom.merge.skip>
@@ -86,6 +83,11 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>proto</artifactId>
+        </dependency>
+
         <!-- Alpine -->
         <dependency>
             <groupId>us.springett</groupId>
@@ -295,13 +297,7 @@
         <!-- Protobuf -->
         <dependency>
             <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>${lib.protobuf-java.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java-util</artifactId>
-            <version>${lib.protobuf-java.version}</version>
         </dependency>
 
         <dependency>
@@ -550,14 +546,10 @@
             </plugin>
 
             <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
                 <configuration>
-                    <excludes>
-                        <exclude>org/cyclonedx/proto/**/*</exclude>
-                        <exclude>org/dependencytrack/dev/**/*</exclude>
-                        <exclude>org/dependencytrack/proto/**/*</exclude>
-                    </excludes>
+                    <skip>true</skip>
                 </configuration>
             </plugin>
 
@@ -575,31 +567,6 @@
                         <configuration>
                             <sourceFile>${project.basedir}/src/main/resources/logback.xml</sourceFile>
                             <destinationFile>${project.build.directory}/${project.build.finalName}/logback.xml</destinationFile>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>com.github.os72</groupId>
-                <artifactId>protoc-jar-maven-plugin</artifactId>
-                <version>3.11.4</version>
-                <executions>
-                    <execution>
-                        <id>protobuf</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <includeMavenTypes>direct</includeMavenTypes>
-                            <inputDirectories>
-                                <inputDirectory>src/main/proto</inputDirectory>
-                            </inputDirectories>
-                            <includeDirectories>
-                                <includeDirectory>src/main/proto</includeDirectory>
-                            </includeDirectories>
-                            <protocArtifact>${tool.protoc.version}</protocArtifact>
                         </configuration>
                     </execution>
                 </executions>
@@ -735,6 +702,7 @@
                             <mainClass>alpine.embedded.EmbeddedJettyServer</mainClass>
                         </manifest>
                     </archive>
+                    <attachClasses>true</attachClasses>
                     <packagingExcludes>WEB-INF/lib/executable-war-*.jar</packagingExcludes>
                     <dependentWarExcludes>WEB-INF/lib/*log4j*.jar,WEB-INF/lib/*slf4j*.jar</dependentWarExcludes>
                     <overlays>

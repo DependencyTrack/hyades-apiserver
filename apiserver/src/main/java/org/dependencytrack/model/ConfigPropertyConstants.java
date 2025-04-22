@@ -122,8 +122,8 @@ public enum ConfigPropertyConstants {
     CUSTOM_RISK_SCORE_MEDIUM("risk-score", "weight.medium", "3", PropertyType.INTEGER, "Medium severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_LOW("risk-score", "weight.low", "1", PropertyType.INTEGER, "Low severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_UNASSIGNED("risk-score", "weight.unassigned", "5", PropertyType.INTEGER, "Unassigned severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
-    WELCOME_MESSAGE("general", "welcome.message.html", "%20%3Chtml%3E%3Ch1%3EYour%20Welcome%20Message%3C%2Fh1%3E%3C%2Fhtml%3E", PropertyType.STRING, "Custom HTML Code that is displayed before login", ConfigPropertyAccessMode.READ_WRITE, true),
-    IS_WELCOME_MESSAGE("general", "welcome.message.enabled", "false", PropertyType.BOOLEAN, "Bool that says wheter to show the welcome message or not", ConfigPropertyAccessMode.READ_WRITE, true),
+    WELCOME_MESSAGE("general", "welcome.message.html", "%3Chtml%3E%3Ch1%3EYour%20Welcome%20Message%3C%2Fh1%3E%3C%2Fhtml%3E", PropertyType.STRING, "Custom HTML Code that is displayed before login", ConfigPropertyAccessMode.READ_WRITE, true),
+    IS_WELCOME_MESSAGE("general", "welcome.message.enabled", "false", PropertyType.BOOLEAN, "Bool that says whether to show the welcome message or not", ConfigPropertyAccessMode.READ_WRITE, true),
     DEFAULT_LANGUAGE("general", "default.locale", null, PropertyType.STRING, "Determine the default Language to use", ConfigPropertyAccessMode.READ_WRITE, true);
 
     private final String groupName;

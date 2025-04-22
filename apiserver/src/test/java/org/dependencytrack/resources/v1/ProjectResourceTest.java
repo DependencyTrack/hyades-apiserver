@@ -1413,7 +1413,6 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectByInvalidUuidTest() {
-        qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID())
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -3490,7 +3489,7 @@ public class ProjectResourceTest extends ResourceTest {
 
         final String userJwt = new JsonWebToken().createToken(testUser);
 
-        final Team otherTeam = qm.createTeam("otherTeam", false);
+        final Team otherTeam = qm.createTeam("otherTeam");
 
         final Response response = jersey.target(V1_PROJECT)
                 .request()

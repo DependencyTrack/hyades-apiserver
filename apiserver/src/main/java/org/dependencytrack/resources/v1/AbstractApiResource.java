@@ -25,6 +25,7 @@ import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.jdbi.v3.core.Handle;
 import org.owasp.security.logging.SecurityMarkers;
 
@@ -104,4 +105,23 @@ abstract class AbstractApiResource extends AlpineResource {
         }
     }
 
+    /**
+     * Asserts that the authenticated {@link java.security.Principal} has access to the project with a given {@link UUID}.
+     *
+     * @param jdbiHandle    The {@link Handle} to use.
+     * @param projectUuid {@link UUID} of the project to verify access permission for.
+     * @throws NoSuchElementException       When no project with the given {@link UUID} exists.
+     * @throws ProjectAccessDeniedException When the authenticated {@link java.security.Principal}
+     *                                      does not have access to the given {@link Project}.
+     */
+    void requireProjectAccess(final Handle jdbiHandle, final UUID projectUuid) {
+        final var dao = jdbiHandle.attach(ProjectDao.class);
+        final Boolean isAccessible = dao.isAccessible(projectUuid);
+        if (!isAccessible) {
+            try (var ignored = new MdcScope(Map.of(MDC_PROJECT_UUID, projectUuid.toString()))) {
+                logSecurityEvent(logger, SecurityMarkers.SECURITY_FAILURE, "Unauthorized project access attempt");
+            }
+            throw new ProjectAccessDeniedException("Access to the requested project is forbidden");
+        }
+    }
 }

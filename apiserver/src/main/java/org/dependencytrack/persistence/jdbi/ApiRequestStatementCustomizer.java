@@ -18,10 +18,6 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import alpine.model.ApiKey;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
 import alpine.persistence.OrderDirection;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.auth.Permissions;
@@ -32,9 +28,7 @@ import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.core.statement.StatementCustomizer;
 
 import javax.jdo.Query;
-import java.security.Principal;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.Set;
@@ -180,7 +174,7 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
         if (apiRequest == null
             || apiRequest.getPrincipal() == null
             || !isAclEnabled(ctx)
-            || hasAccessManagementPermission(ctx, apiRequest.getPrincipal())) {
+            || apiRequest.getEffectivePermissions().contains(Permissions.ACCESS_MANAGEMENT.name())) {
             ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION, "TRUE");
             return;
         }
@@ -212,149 +206,6 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
             ps.setString(1, ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName());
             ps.setString(2, ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName());
             return ps.executeQuery().next();
-        }
-    }
-
-    private boolean hasAccessManagementPermission(final StatementContext ctx, final Principal principal) throws SQLException {
-        // TODO: After upgrading to Alpine >= 3.2.0, this should become:
-        //   apiRequest.getEffectivePermission().contains(Permissions.ACCESS_MANAGEMENT.name())
-        // https://github.com/stevespringett/Alpine/pull/764
-
-        return switch (principal) {
-            case ApiKey apiKey -> hasAccessManagementPermission(ctx, apiKey);
-            case LdapUser ldapUser -> hasAccessManagementPermission(ctx, ldapUser);
-            case ManagedUser managedUser -> hasAccessManagementPermission(ctx, managedUser);
-            case OidcUser oidcUser -> hasAccessManagementPermission(ctx, oidcUser);
-            default -> false;
-        };
-    }
-
-    private boolean hasAccessManagementPermission(final StatementContext ctx, final ApiKey apiKey) throws SQLException {
-        try (final PreparedStatement ps = ctx.getConnection().prepareStatement("""
-                SELECT EXISTS(
-                  SELECT 1
-                    FROM "APIKEY"
-                   INNER JOIN "APIKEYS_TEAMS"
-                      ON "APIKEYS_TEAMS"."APIKEY_ID" = "APIKEY"."ID"
-                   INNER JOIN "TEAM"
-                      ON "TEAM"."ID" = "APIKEYS_TEAMS"."TEAM_ID"
-                   INNER JOIN "TEAMS_PERMISSIONS"
-                      ON "TEAMS_PERMISSIONS"."TEAM_ID" = "TEAM"."ID"
-                   INNER JOIN "PERMISSION"
-                      ON "PERMISSION"."ID" = "TEAMS_PERMISSIONS"."PERMISSION_ID"
-                   WHERE "APIKEY"."ID" = ?
-                     AND "PERMISSION"."NAME" = ?
-                )""")) {
-            ps.setLong(1, apiKey.getId());
-            ps.setString(2, Permissions.Constants.ACCESS_MANAGEMENT);
-
-            final ResultSet rs = ps.executeQuery();
-            return rs.next() && rs.getBoolean(1);
-        }
-    }
-
-    private boolean hasAccessManagementPermission(final StatementContext ctx, final LdapUser user) throws SQLException {
-        try (final PreparedStatement ps = ctx.getConnection().prepareStatement("""
-                SELECT EXISTS(
-                  SELECT 1
-                    FROM "LDAPUSER"
-                   INNER JOIN "LDAPUSERS_TEAMS"
-                      ON "LDAPUSERS_TEAMS"."LDAPUSER_ID" = "LDAPUSER"."ID"
-                   INNER JOIN "TEAM"
-                      ON "TEAM"."ID" = "LDAPUSERS_TEAMS"."TEAM_ID"
-                   INNER JOIN "TEAMS_PERMISSIONS"
-                      ON "TEAMS_PERMISSIONS"."TEAM_ID" = "TEAM"."ID"
-                   INNER JOIN "PERMISSION"
-                      ON "PERMISSION"."ID" = "TEAMS_PERMISSIONS"."PERMISSION_ID"
-                   WHERE "LDAPUSER"."ID" = ?
-                     AND "PERMISSION"."NAME" = ?
-                   UNION
-                  SELECT 1
-                    FROM "LDAPUSER"
-                   INNER JOIN "LDAPUSERS_PERMISSIONS"
-                      ON "LDAPUSERS_PERMISSIONS"."LDAPUSER_ID" = "LDAPUSER"."ID"
-                   INNER JOIN "PERMISSION"
-                      ON "PERMISSION"."ID" = "LDAPUSERS_PERMISSIONS"."PERMISSION_ID"
-                   WHERE "LDAPUSER"."ID" = ?
-                     AND "PERMISSION"."NAME" = ?
-                )""")) {
-            ps.setLong(1, user.getId());
-            ps.setString(2, Permissions.Constants.ACCESS_MANAGEMENT);
-            ps.setLong(3, user.getId());
-            ps.setString(4, Permissions.Constants.ACCESS_MANAGEMENT);
-
-            final ResultSet rs = ps.executeQuery();
-            return rs.next() && rs.getBoolean(1);
-        }
-    }
-
-    private boolean hasAccessManagementPermission(final StatementContext ctx, final ManagedUser user) throws SQLException {
-        try (final PreparedStatement ps = ctx.getConnection().prepareStatement("""
-                SELECT EXISTS(
-                  SELECT 1
-                    FROM "MANAGEDUSER"
-                   INNER JOIN "MANAGEDUSERS_TEAMS"
-                      ON "MANAGEDUSERS_TEAMS"."MANAGEDUSER_ID" = "MANAGEDUSER"."ID"
-                   INNER JOIN "TEAM"
-                      ON "TEAM"."ID" = "MANAGEDUSERS_TEAMS"."TEAM_ID"
-                   INNER JOIN "TEAMS_PERMISSIONS"
-                      ON "TEAMS_PERMISSIONS"."TEAM_ID" = "TEAM"."ID"
-                   INNER JOIN "PERMISSION"
-                      ON "PERMISSION"."ID" = "TEAMS_PERMISSIONS"."PERMISSION_ID"
-                   WHERE "MANAGEDUSER"."ID" = ?
-                     AND "PERMISSION"."NAME" = ?
-                   UNION
-                  SELECT 1
-                    FROM "MANAGEDUSER"
-                   INNER JOIN "MANAGEDUSERS_PERMISSIONS"
-                      ON "MANAGEDUSERS_PERMISSIONS"."MANAGEDUSER_ID" = "MANAGEDUSER"."ID"
-                   INNER JOIN "PERMISSION"
-                      ON "PERMISSION"."ID" = "MANAGEDUSERS_PERMISSIONS"."PERMISSION_ID"
-                   WHERE "MANAGEDUSER"."ID" = ?
-                     AND "PERMISSION"."NAME" = ?
-                )""")) {
-            ps.setLong(1, user.getId());
-            ps.setString(2, Permissions.Constants.ACCESS_MANAGEMENT);
-            ps.setLong(3, user.getId());
-            ps.setString(4, Permissions.Constants.ACCESS_MANAGEMENT);
-
-            final ResultSet rs = ps.executeQuery();
-            return rs.next() && rs.getBoolean(1);
-        }
-    }
-
-    private boolean hasAccessManagementPermission(final StatementContext ctx, final OidcUser user) throws SQLException {
-        try (final PreparedStatement ps = ctx.getConnection().prepareStatement("""
-                SELECT EXISTS(
-                  SELECT 1
-                    FROM "OIDCUSER"
-                   INNER JOIN "OIDCUSERS_TEAMS"
-                      ON "OIDCUSERS_TEAMS"."OIDCUSERS_ID" = "OIDCUSER"."ID"
-                   INNER JOIN "TEAM"
-                      ON "TEAM"."ID" = "OIDCUSERS_TEAMS"."TEAM_ID"
-                   INNER JOIN "TEAMS_PERMISSIONS"
-                      ON "TEAMS_PERMISSIONS"."TEAM_ID" = "TEAM"."ID"
-                   INNER JOIN "PERMISSION"
-                      ON "PERMISSION"."ID" = "TEAMS_PERMISSIONS"."PERMISSION_ID"
-                   WHERE "OIDCUSER"."ID" = ?
-                     AND "PERMISSION"."NAME" = ?
-                   UNION
-                  SELECT 1
-                    FROM "OIDCUSER"
-                   INNER JOIN "OIDCUSERS_PERMISSIONS"
-                      ON "OIDCUSERS_PERMISSIONS"."OIDCUSER_ID" = "OIDCUSER"."ID"
-                   INNER JOIN "PERMISSION"
-                      ON "PERMISSION"."ID" = "OIDCUSERS_PERMISSIONS"."PERMISSION_ID"
-                   WHERE "OIDCUSER"."ID" = ?
-                     AND "PERMISSION"."NAME" = ?
-                )""")) {
-            ps.setLong(1, user.getId());
-            ps.setString(2, Permissions.Constants.ACCESS_MANAGEMENT);
-            ps.setLong(3, user.getId());
-            ps.setString(4, Permissions.Constants.ACCESS_MANAGEMENT);
-
-            final ResultSet rs = ps.executeQuery();
-            return rs.next() && rs.getBoolean(1);
         }
     }
 

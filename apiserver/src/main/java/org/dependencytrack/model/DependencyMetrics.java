@@ -262,7 +262,7 @@ public class DependencyMetrics implements Serializable {
         this.unassigned = unassigned;
     }
 
-    public long getVulnerabilities() {
+    public int getVulnerabilities() {
         return vulnerabilities;
     }
 
