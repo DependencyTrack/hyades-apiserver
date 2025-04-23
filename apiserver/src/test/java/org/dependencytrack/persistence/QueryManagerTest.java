@@ -201,7 +201,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
 
         BiFunction<String, List<Permissions>, Team> teamCreator = (name, permissions) -> {
             return qm.callInTransaction(() -> {
-                var team = qm.createTeam(name, false);
+                var team = qm.createTeam(name);
                 team.setPermissions(permissions.stream()
                         .map(permission -> qm.createPermission(permission.name(), permission.getDescription()))
                         .toList());

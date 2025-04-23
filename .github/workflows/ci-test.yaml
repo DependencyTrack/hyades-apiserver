@@ -62,7 +62,7 @@ jobs:
         env:
           TESTCONTAINERS_REUSE_ENABLE: "true"
         run: |-
-          mvn -B --no-transfer-progress clean test
+          mvn -B --no-transfer-progress clean verify
 
       # Publishing coverage to Codacy is only possible for builds of push events.
       # PRs from forks do not get access to repository secrets.
@@ -73,7 +73,7 @@ jobs:
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           language: Java
-          coverage-reports: target/jacoco-ut/jacoco.xml
+          coverage-reports: coverage-report/target/site/jacoco-aggregate/jacoco.xml
 
       - name: Save PR details
         if: ${{ github.event_name == 'pull_request' }}
@@ -89,4 +89,4 @@ jobs:
           path: |-
             pr-commit.txt
             pr-number.txt
-            apiserver/target/jacoco-ut/jacoco.xml
+            coverage-report/target/site/jacoco-aggregate

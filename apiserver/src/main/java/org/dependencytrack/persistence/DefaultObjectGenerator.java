@@ -24,10 +24,6 @@ import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.auth.PasswordService;
-
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
-
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -38,8 +34,9 @@ import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.WaitingLockConfiguration;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import java.io.IOException;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
@@ -264,10 +261,21 @@ public class DefaultObjectGenerator implements ServletContextListener {
     private void loadDefaultPermissions(final QueryManager qm) {
         LOGGER.info("Synchronizing permissions to datastore");
 
-        List<String> existing = Objects.requireNonNullElse(qm.getPermissions(), Collections.<Permission>emptyList())
-                .stream()
-                .map(Permission::getName)
-                .toList();
+        for (final Permissions permission : Permissions.values()) {
+            if (qm.getPermission(permission.name()) == null) {
+                LOGGER.debug("Creating permission: " + permission.name());
+                permissionsMap.put(permission.name(),
+                        qm.createPermission(permission.name(), permission.getDescription()));
+            }
+        }
+    }
+
+    private void createTeam(final QueryManager qm, final String name, final List<Permission> permissions) {
+        LOGGER.debug("Creating team: " + name);
+        var team = qm.createTeam(name);
+
+        LOGGER.debug("Assigning default permissions for team: " + name);
+        team.setPermissions(permissions);
 
         for (final Permissions value : Permissions.values())
             if (!existing.contains(value.name())) {
@@ -296,15 +304,10 @@ public class DefaultObjectGenerator implements ServletContextListener {
         ManagedUser admin = qm.createManagedUser("admin", "Administrator", "admin@localhost",
                 new String(PasswordService.createHash("admin".toCharArray())), true, true, false);
 
-        for (var name : new String[] { "Administrators", "Portfolio Managers", "Automation", "Badge Viewers" }) {
-            LOGGER.debug("Creating team: " + name);
-            var team = qm.createTeam(name);
-
-            LOGGER.debug("Assigning default permissions for team: " + name);
-            team.setPermissions(getPermissionsByName(DEFAULT_TEAM_PERMISSIONS.get(name)));
-
-            qm.persist(team);
-        }
+        createTeam(qm, "Administrators", List.copyOf(permissionsMap.values()));
+        createTeam(qm, "Portfolio Managers", getPortfolioManagersPermissions());
+        createTeam(qm, "Automation", getAutomationPermissions());
+        createTeam(qm, "Badge Viewers", getBadgesPermissions());
 
         LOGGER.debug("Adding admin user to System Administrators");
         qm.addUserToTeam(admin, qm.getTeam("Administrators"));

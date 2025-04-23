@@ -577,7 +577,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     @Test
     public void addTeamToUserTest() {
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
-        Team team = qm.createTeam("Pirates", false);
+        Team team = qm.createTeam("Pirates");
         IdentifiableObject ido = new IdentifiableObject();
         ido.setUuid(team.getUuid().toString());
         ManagedUser user = new ManagedUser();
@@ -614,7 +614,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addTeamToUserInvalidUserTest() {
-        Team team = qm.createTeam("Pirates", false);
+        Team team = qm.createTeam("Pirates");
         IdentifiableObject ido = new IdentifiableObject();
         ido.setUuid(team.getUuid().toString());
         ManagedUser user = new ManagedUser();
@@ -630,7 +630,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addTeamToUserDuplicateMembershipTest() {
-        Team team = qm.createTeam("Pirates", false);
+        Team team = qm.createTeam("Pirates");
         ManagedUser user = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         qm.addUserToTeam(user, team);
         IdentifiableObject ido = new IdentifiableObject();
@@ -647,7 +647,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void removeTeamFromUserTest() {
-        Team team = qm.createTeam("Pirates", false);
+        Team team = qm.createTeam("Pirates");
         ManagedUser user = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         qm.addUserToTeam(user, team);
         IdentifiableObject ido = new IdentifiableObject();
