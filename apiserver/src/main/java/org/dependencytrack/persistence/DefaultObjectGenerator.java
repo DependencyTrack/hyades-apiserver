@@ -24,10 +24,6 @@ import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.auth.PasswordService;
-
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
-
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -38,11 +34,11 @@ import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.WaitingLockConfiguration;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import java.io.IOException;
-
 import java.time.Duration;
 import java.time.Instant;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -223,9 +219,9 @@ public class DefaultObjectGenerator implements ServletContextListener {
         }
     }
 
-    private void createTeam(final QueryManager qm, final String name, final List<Permission> permissions, final boolean createApiKey) {
+    private void createTeam(final QueryManager qm, final String name, final List<Permission> permissions) {
         LOGGER.debug("Creating team: " + name);
-        var team = qm.createTeam(name, createApiKey);
+        var team = qm.createTeam(name);
 
         LOGGER.debug("Assigning default permissions for team: " + name);
         team.setPermissions(permissions);
@@ -252,10 +248,10 @@ public class DefaultObjectGenerator implements ServletContextListener {
         ManagedUser admin = qm.createManagedUser("admin", "Administrator", "admin@localhost",
                 new String(PasswordService.createHash("admin".toCharArray())), true, true, false);
 
-        createTeam(qm, "Administrators", List.copyOf(permissionsMap.values()), false);
-        createTeam(qm, "Portfolio Managers", getPortfolioManagersPermissions(), false);
-        createTeam(qm, "Automation", getAutomationPermissions(), true);
-        createTeam(qm, "Badge Viewers", getBadgesPermissions(), true);
+        createTeam(qm, "Administrators", List.copyOf(permissionsMap.values()));
+        createTeam(qm, "Portfolio Managers", getPortfolioManagersPermissions());
+        createTeam(qm, "Automation", getAutomationPermissions());
+        createTeam(qm, "Badge Viewers", getBadgesPermissions());
 
         LOGGER.debug("Adding admin user to System Administrators");
         qm.addUserToTeam(admin, qm.getTeam("Administrators"));

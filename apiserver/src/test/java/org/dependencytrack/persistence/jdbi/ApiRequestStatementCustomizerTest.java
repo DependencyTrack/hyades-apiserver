@@ -22,7 +22,6 @@ import alpine.model.ApiKey;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
-import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.persistence.OrderDirection;
 import alpine.persistence.Pagination;
@@ -36,7 +35,6 @@ import org.junit.Test;
 
 import java.sql.PreparedStatement;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -442,20 +440,16 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                 ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
         );
 
-        final Team team = qm.createTeam("team", true);
-        final Permission accessManagementPermission = qm.createPermission(
-                Permissions.ACCESS_MANAGEMENT.name(),
-                Permissions.ACCESS_MANAGEMENT.getDescription()
-        );
-        team.setPermissions(List.of(accessManagementPermission));
-        qm.persist(team);
+        final Team team = qm.createTeam("team");
+        final ApiKey apiKey = qm.createApiKey(team);
 
         final var request = new AlpineRequest(
-                /* principal */ team.getApiKeys().getFirst(),
+                /* principal */ apiKey,
                 /* pagination */ null,
                 /* filter */ null,
                 /* orderBy */ null,
-                /* orderDirection */ null
+                /* orderDirection */ null,
+                /* effectivePermissions */ Set.of(Permissions.ACCESS_MANAGEMENT.name())
         );
 
         useJdbiHandle(request, handle -> handle
@@ -482,19 +476,14 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
         );
 
         final ManagedUser managedUser = qm.createManagedUser("username", "passwordHash");
-        final Permission accessManagementPermission = qm.createPermission(
-                Permissions.ACCESS_MANAGEMENT.name(),
-                Permissions.ACCESS_MANAGEMENT.getDescription()
-        );
-        managedUser.setPermissions(List.of(accessManagementPermission));
-        qm.persist(managedUser);
 
         final var request = new AlpineRequest(
                 /* principal */ managedUser,
                 /* pagination */ null,
                 /* filter */ null,
                 /* orderBy */ null,
-                /* orderDirection */ null
+                /* orderDirection */ null,
+                /* effectivePermissions */ Set.of(Permissions.ACCESS_MANAGEMENT.name())
         );
 
         useJdbiHandle(request, handle -> handle
@@ -521,19 +510,14 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
         );
 
         final LdapUser ldapUser = qm.createLdapUser("username");
-        final Permission accessManagementPermission = qm.createPermission(
-                Permissions.ACCESS_MANAGEMENT.name(),
-                Permissions.ACCESS_MANAGEMENT.getDescription()
-        );
-        ldapUser.setPermissions(List.of(accessManagementPermission));
-        qm.persist(ldapUser);
 
         final var request = new AlpineRequest(
                 /* principal */ ldapUser,
                 /* pagination */ null,
                 /* filter */ null,
                 /* orderBy */ null,
-                /* orderDirection */ null
+                /* orderDirection */ null,
+                /* effectivePermissions */ Set.of(Permissions.ACCESS_MANAGEMENT.name())
         );
 
         useJdbiHandle(request, handle -> handle
@@ -560,19 +544,14 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
         );
 
         final OidcUser oidcUser = qm.createOidcUser("username");
-        final Permission accessManagementPermission = qm.createPermission(
-                Permissions.ACCESS_MANAGEMENT.name(),
-                Permissions.ACCESS_MANAGEMENT.getDescription()
-        );
-        oidcUser.setPermissions(List.of(accessManagementPermission));
-        qm.persist(oidcUser);
 
         final var request = new AlpineRequest(
                 /* principal */ oidcUser,
                 /* pagination */ null,
                 /* filter */ null,
                 /* orderBy */ null,
-                /* orderDirection */ null
+                /* orderDirection */ null,
+                /* effectivePermissions */ Set.of(Permissions.ACCESS_MANAGEMENT.name())
         );
 
         useJdbiHandle(request, handle -> handle
@@ -598,7 +577,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                 ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
         );
 
-        final Team team = qm.createTeam("team", true);
+        final Team team = qm.createTeam("team");
         final ApiKey apiKey = qm.createApiKey(team);
 
         final var request = new AlpineRequest(
