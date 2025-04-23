@@ -6,19 +6,6 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <changeSet id="v5.6.0-roles-dev" author="pkwiatkowski1">
-        <addColumn tableName="APIKEY">
-            <column name="IS_LEGACY" type="BOOLEAN" defaultValueBoolean="false">
-                <constraints nullable="false"/>
-            </column>
-            <column name="PUBLIC_ID" type="VARCHAR(255)">
-                <constraints nullable="true"/>
-            </column>
-        </addColumn>
-
-        <addUniqueConstraint columnNames="PUBLIC_ID" constraintName="APIKEY_PUBLIC_IDX" tableName="APIKEY"/>
-    </changeSet>
-
     <changeSet id="v5.6.0-roles" author="jhoward-lm">
         <createTable ifNotExists="true" tableName="ROLE">
             <column autoIncrement="true" name="ID" type="BIGINT">
