@@ -26,4 +26,7 @@
     <changeSet id="function_has-project-access" author="nscuro" runOnChange="true">
         <createProcedure path="procedures/function_has-project-access.sql" relativeToChangelogFile="true"/>
     </changeSet>
+    <changeSet id="function_migrate_metrics_to_partitions" author="sahibamittal" runOnChange="true">
+        <createProcedure path="procedures/function_migrate_metrics_to_partitions.sql" relativeToChangelogFile="true"/>
+    </changeSet>
 </databaseChangeLog>
