@@ -1,6 +1,9 @@
-CREATE OR REPLACE FUNCTION "MIGRATE_METRICS_TO_PARTITIONS"(target_table TEXT)
-    RETURNS void
-    LANGUAGE plpgsql
+CREATE OR REPLACE FUNCTION "MIGRATE_METRICS_TO_PARTITIONS"(
+    target_table TEXT,
+    source_table TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
 AS
 $$
 DECLARE
@@ -21,15 +24,26 @@ BEGIN
     start_date := current_date - retention_days;
     partition_date := start_date;
 
+    -- Create partitions for each day starting from retention period
     WHILE partition_date < end_date LOOP
         next_day := partition_date + INTERVAL '1 day';
         partition_name := format('%I_%s', target_table, to_char(partition_date, 'YYYYMMDD'));
 
+        -- Create partition if it doesn't exist
         EXECUTE format(
             'CREATE TABLE IF NOT EXISTS %I PARTITION OF %I
              FOR VALUES FROM (%L) TO (%L);',
             partition_name,
             target_table,
+            partition_date,
+            next_day
+        );
+
+        -- Insert data from existing table into this partition
+        EXECUTE format(
+            'INSERT INTO %I SELECT * FROM %I WHERE "LAST_OCCURRENCE" >= %L AND "LAST_OCCURRENCE" < %L;',
+            target_table,
+            source_table,
             partition_date,
             next_day
         );
