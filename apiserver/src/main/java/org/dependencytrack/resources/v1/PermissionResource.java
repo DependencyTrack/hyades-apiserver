@@ -47,11 +47,9 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.PermissionsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
-import java.util.ArrayList;
 import java.util.List;
 import javax.jdo.Query;
 import java.util.Map;
@@ -287,16 +285,21 @@ public class PermissionResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response setUserPermissions(
             @Parameter(description = "A valid username", required = true) @PathParam("username") String username,
-            @Parameter(description = "A valid list permission", required = true) PermissionsSetRequest request) {
+            @Parameter(description = "A valid list permission") PermissionsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
             UserPrincipal user = qm.getUserPrincipal(username);
             if (user == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
 
+            List<String> permissionNames = request.permissions()
+                    .stream()
+                    .map(Permissions::name)
+                    .toList();
+
             final Query<Permission> query = qm.getPersistenceManager().newQuery(Permission.class)
                     .filter(":permissions.contains(name)")
-                    .setNamedParameters(Map.of("permissions", request.permissions()))
+                    .setNamedParameters(Map.of("permissions", permissionNames))
                     .orderBy("name asc");
 
             final List<Permission> requestedPermissions;
@@ -304,20 +307,6 @@ public class PermissionResource extends AlpineResource {
                 requestedPermissions = List.copyOf(query.executeList());
             } finally {
                 query.closeAll();
-            }
-
-            if (requestedPermissions.size() != request.permissions().size()) {
-                List<String> current = new ArrayList<String>(request.permissions());
-                List<String> existing = requestedPermissions.stream().map(Permission::getName).toList();
-                current.removeAll(existing);
-
-                ProblemDetails problem = new AccessManagementProblemDetails(
-                        Response.Status.BAD_REQUEST.getStatusCode(),
-                        "Invalid permissions",
-                        "One or more permissions could not be found",
-                        current);
-
-                return problem.toResponse();
             }
 
             if (user.getPermissions().equals(requestedPermissions))
@@ -329,10 +318,9 @@ public class PermissionResource extends AlpineResource {
             user = qm.persist(user);
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
                     "Set permissions for user: %s / permissions: %s"
-                            .formatted(user.getName(), request.permissions()));
+                            .formatted(user.getName(), permissionNames));
 
             return Response.ok(user).build();
         }
     }
-
 }
