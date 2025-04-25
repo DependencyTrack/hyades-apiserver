@@ -23,7 +23,11 @@ import java.util.Set;
 
 import org.dependencytrack.model.validation.ValidUuid;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.validation.constraints.NotNull;
 
-public record TeamsSetRequest(@NotNull Set<@ValidUuid String> teams) {
+public record TeamsSetRequest(
+        @JsonProperty(value = "username", required = true) String username,
+        @JsonProperty(value = "teams", required = true) @NotNull Set<@ValidUuid String> teams) {
 }

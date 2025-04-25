@@ -162,7 +162,7 @@ public class UserResource extends AlpineResource {
     @AuthenticationNotRequired
     public Response validateOidcAccessToken(@Parameter(description = "An OAuth2 access token", required = true)
                                             @FormParam("idToken") final String idToken,
-            @FormParam("accessToken") final String accessToken) {
+                                            @FormParam("accessToken") final String accessToken) {
         final OidcAuthenticationService authService = new OidcAuthenticationService(idToken, accessToken);
 
         if (!authService.isSpecified()) {
@@ -759,6 +759,66 @@ public class UserResource extends AlpineResource {
         }
     }
 
+    @PUT
+    @Path("/membership")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Sets specified teams to a user.", description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team(s)"),
+            @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    public Response setUserTeams(
+            /* @Parameter(description = "A valid username", required = true) @PathParam("username") String username, */
+            @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
+        try (QueryManager qm = new QueryManager()) {
+            UserPrincipal principal = qm.getUserPrincipal(request.username());
+            if (principal == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+            }
+
+            final Query<Team> query = qm.getPersistenceManager().newQuery(Team.class)
+                    .filter(":uuids.contains(uuid)")
+                    .setNamedParameters(Map.of("uuids", request.teams()));
+
+            final List<Team> requestedTeams;
+            try {
+                requestedTeams = List.copyOf(query.executeList());
+            } finally {
+                query.closeAll();
+            }
+
+            if(requestedTeams.size() != request.teams().size()) {
+                List<String> notFound = new ArrayList<String>(request.teams());
+                final List<String> differences = requestedTeams.stream().map(Team::getUuid).map(UUID::toString).toList();
+                notFound.removeAll(differences);
+
+                ProblemDetails problem = new AccessManagementProblemDetails(
+                        Response.Status.BAD_REQUEST.getStatusCode(),
+                        "Invalid team",
+                        "One or more teams could not be found",
+                        notFound);
+
+                return problem.toResponse();
+            }
+
+            final List<Team> currentUserTeams = Objects.requireNonNullElse(principal.getTeams(), List.<Team>of());
+            if (currentUserTeams.equals(requestedTeams)) {
+                return Response.notModified().entity("The user is already a member of the selected team(s)").build();
+            }
+
+            principal.setTeams(requestedTeams);
+            qm.persist(principal);
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
+            return Response.ok(principal).build();
+        }
+    }
+
     private void dispatchUserCreatedNotification(final String content, final UserSubject subject) {
         eventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.SYSTEM)
@@ -783,65 +843,5 @@ public class UserResource extends AlpineResource {
         var userBuilder = UserSubject.newBuilder().setUsername(username);
         Optional.ofNullable(email).ifPresent(userBuilder::setEmail);
         return userBuilder.build();
-    }
-
-    @PUT
-    @Path("/{username}/membership")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Adds the username to the specified team.", description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
-            @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team(s)"),
-            @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
-    })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
-    public Response setUserTeams(
-            @Parameter(description = "A valid username", required = true) @PathParam("username") String username,
-            @Parameter(description = "The UUID(s) of the team(s) to associate username with", required = true) @Valid TeamsSetRequest request) {
-        try (QueryManager qm = new QueryManager()) {
-            UserPrincipal principal = qm.getUserPrincipal(username);
-            if (principal == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
-
-            final Query<Team> query = qm.getPersistenceManager().newQuery(Team.class)
-                    .filter(":uuids.contains(uuid)")
-                    .setNamedParameters(Map.of("uuids", request.teams()));
-
-            final List<Team> requestedTeams;
-            try {
-                requestedTeams = List.copyOf(query.executeList());
-            } finally {
-                query.closeAll();
-            }
-
-            if(requestedTeams.size() != request.teams().size()) {
-                List<String> current = new ArrayList<String>(request.teams());
-                final List<String> differences = requestedTeams.stream().map(Team::getUuid).map(UUID::toString).toList();
-                current.removeAll(differences);
-
-                ProblemDetails problem = new AccessManagementProblemDetails(
-                        Response.Status.BAD_REQUEST.getStatusCode(),
-                        "Invalid team",
-                        "One or more teams could not be found",
-                        current);
-
-                return problem.toResponse();
-            }
-
-            final List<Team> currentUserTeams = Objects.requireNonNullElse(principal.getTeams(), List.<Team>of());
-            if (currentUserTeams.equals(requestedTeams)) {
-                return Response.notModified().entity("The user is already a member of the selected team(s)").build();
-            }
-
-            principal.setTeams(requestedTeams);
-            qm.persist(principal);
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                    "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
-            return Response.ok(principal).build();
-        }
     }
 }

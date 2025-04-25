@@ -46,7 +46,6 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
 import org.dependencytrack.resources.v1.vo.PermissionsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
@@ -334,7 +333,7 @@ public class PermissionResource extends AlpineResource {
     @Operation(description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "The updated team", content = @Content(schema = @Schema(implementation = Team.class))),
-            @ApiResponse(responseCode = "304", description = "The Team is already has the specified permission(s)"),
+            @ApiResponse(responseCode = "304", description = "The team already has the specified permission(s)"),
             @ApiResponse(responseCode = "400", description = "Bad request"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The team could not be found")

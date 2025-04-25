@@ -308,12 +308,12 @@ public class PermissionResourceTest extends ResourceTest {
                 qm.getPermission("PORTFOLIO_MANAGEMENT"),
                 qm.getPermission("PORTFOLIO_MANAGEMENT_CREATE"));
 
-        JsonObject permissionRequet1 = Json.createObjectBuilder()
+        JsonObject permissionRequest1 = Json.createObjectBuilder()
                 .add("username", username)
                 .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Permission::getName).toList()))
                 .build();
 
-        JsonObject permissionRequet2 = Json.createObjectBuilder()
+        JsonObject permissionRequest2 = Json.createObjectBuilder()
                 .add("username", username)
                 .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Permission::getName).toList()))
                 .build();
@@ -322,7 +322,7 @@ public class PermissionResourceTest extends ResourceTest {
         Response response = jersey.target(endpoint)
                 .request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.entity(permissionRequet1.toString(), MediaType.APPLICATION_JSON));
+                .put(Entity.entity(permissionRequest1.toString(), MediaType.APPLICATION_JSON));
         Assert.assertEquals(200, response.getStatus());
 
         JsonObject jsonResponse = parseJsonObject(response);
@@ -341,7 +341,7 @@ public class PermissionResourceTest extends ResourceTest {
         response = jersey.target(endpoint)
                 .request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.entity(permissionRequet2.toString(), MediaType.APPLICATION_JSON));
+                .put(Entity.entity(permissionRequest2.toString(), MediaType.APPLICATION_JSON));
         Assert.assertEquals(200, response.getStatus());
 
         // refresh
