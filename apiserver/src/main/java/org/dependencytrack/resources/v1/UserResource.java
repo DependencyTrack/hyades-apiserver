@@ -19,8 +19,15 @@
 package org.dependencytrack.resources.v1;
 
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
@@ -34,6 +41,8 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.resources.v1.vo.RoleProjectRequest;
+import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
+
 import org.owasp.security.logging.SecurityMarkers;
 
 import alpine.Config;
@@ -55,6 +64,7 @@ import alpine.server.auth.OidcAuthenticationService;
 import alpine.server.auth.PasswordService;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -66,6 +76,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.FormParam;
@@ -878,4 +890,63 @@ public class UserResource extends AlpineResource {
         }
     }
 
+    @PUT
+    @Path("/{username}/membership")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Adds the username to the specified team.", description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team(s)"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    public Response setUserTeams(
+            @Parameter(description = "A valid username", required = true) @PathParam("username") String username,
+            @Parameter(description = "The UUID(s) of the team(s) to associate username with", required = true) @Valid TeamsSetRequest request) {
+        try (QueryManager qm = new QueryManager()) {
+            UserPrincipal principal = qm.getUserPrincipal(username);
+            if (principal == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+            }
+
+            // Compare given team uuids against current user teams
+            final Set<String> currentUserTeams = principal.getTeams() == null ? Collections.emptySet()
+                    : principal.getTeams().stream()
+                            .map(Team::getUuid)
+                            .map(UUID::toString)
+                            .collect(Collectors.toSet());
+
+            if (currentUserTeams.equals(request.getTeams())) {
+                return Response.notModified().entity("The user is already a member of the selected team(s)").build();
+            }
+
+            List<Team> requestedTeams = request.getTeams()
+                    .stream()
+                    .map(uuid -> qm.getObjectByUuid(Team.class, uuid))
+                    .toList();
+
+            // check that all requested teams exist
+            List<String> notFound = new ArrayList<>();
+            for (int i = 0; i < requestedTeams.size(); i++) {
+                if (requestedTeams.get(i) == null)
+                    notFound.add(request.getTeams().stream().toList().get(i));
+            }
+
+            if (notFound.size() > 0) {
+                // String msg = String.format("One or more teams could not be found:\n%s", );
+                Map<String, Object> response = new HashMap<>();
+                response.put("error", "One or more teams could not be found");
+                response.put("teams", notFound);
+                return Response.status(Response.Status.BAD_REQUEST).entity(response).build();
+            }
+
+            principal.setTeams(requestedTeams);
+            qm.persist(principal);
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
+            return Response.ok(principal).build();
+        }
+    }
 }

@@ -37,6 +37,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -46,9 +47,13 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.vo.PermissionsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -354,4 +359,61 @@ public class PermissionResource extends AlpineResource {
             return Response.status(Response.Status.NOT_MODIFIED).build();
         }
     }
+
+    @PUT
+    @Path("/user/{username}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = Team.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The user could not be found")
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE })
+    public Response setUserPermissions(
+            @Parameter(description = "A valid user uuid", schema = @Schema(type = "string", format = "uuid"), required = true) @PathParam("username") String username,
+            @Parameter(description = "A valid permission", required = true) PermissionsSetRequest request) {
+        try (QueryManager qm = new QueryManager()) {
+            UserPrincipal user = qm.getUserPrincipal(username);
+            if (user == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+            }
+
+            final List<Permission> requestedPermissions = request.permissions()
+                    .stream()
+                    .map(qm::getPermission)
+                    .toList();
+
+            // check that all requested teams exist
+            List<String> notFound = new ArrayList<>();
+            for (int i = 0; i < requestedPermissions.size(); i++) {
+                if (requestedPermissions.get(i) == null) {
+                    notFound.add(request.permissions().stream().toList().get(i));
+                }
+            }
+
+            if (notFound.size() > 0) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("error", "One or more permissions could not be found");
+                response.put("permissions", notFound);
+                return Response.status(Response.Status.BAD_REQUEST).entity(response).build();
+            }
+
+            final List<Permission> currentPermissions = user.getPermissions();
+
+            if (currentPermissions.equals(requestedPermissions)) {
+                return Response.notModified().entity("User already has selected permission(s).").build();
+            }
+
+            user.setPermissions(requestedPermissions);
+            user = qm.persist(user);
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Set permissions for user: %s / permissions: %s"
+                            .formatted(user.getName(), request.permissions()));
+
+            return Response.ok(user).build();
+        }
+    }
+
 }

@@ -27,6 +27,7 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.resources.v1.vo.PermissionsSetRequest;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,6 +39,8 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class PermissionResourceTest extends ResourceTest {
@@ -287,5 +290,74 @@ public class PermissionResourceTest extends ResourceTest {
                 .delete();
         Assert.assertEquals(304, response.getStatus(), 0);
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+    }
+
+    @Test
+    public void setUserPermissionsTest() {
+        qm.createManagedUser("user2", TEST_USER_PASSWORD_HASH);
+
+        List<Permission> testPermissions = List.of(
+                qm.getPermission("ACCESS_MANAGEMENT"),
+                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
+                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
+
+        PermissionsSetRequest requestBody = new PermissionsSetRequest(
+                Set.of("ACCESS_MANAGEMENT", "ACCESS_MANAGEMENT_CREATE", "ACCESS_MANAGEMENT_DELETE"));
+
+        Response response = jersey.target(V1_PERMISSION + "/user/user2")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+
+        JsonObject jsonResponse = parseJsonObject(response);
+        Assert.assertNotNull(jsonResponse);
+
+        ManagedUser user = qm.getManagedUser("user2");
+        Assert.assertNotNull(user);
+        List<Permission> userPermissions = user.getPermissions();
+
+        Assert.assertEquals(userPermissions.size(), 3);
+        Assert.assertTrue(userPermissions.equals(testPermissions));
+
+        Permission test_1 = qm.createPermission("TEST_PERMISSION_1", "TEST PERMISSION");
+        Permission test_2 = qm.createPermission("TEST_PERMISSION_2", "TEST PERMISSION");
+
+        requestBody = new PermissionsSetRequest(Set.of(test_1.getName(), test_2.getName()));
+
+        response = jersey.target(V1_PERMISSION + "/user/user2")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(requestBody, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+
+        // refresh
+        user = qm.getManagedUser("user2");
+        userPermissions = user.getPermissions();
+
+        Assert.assertTrue(userPermissions.contains(test_1));
+        Assert.assertTrue(userPermissions.contains(test_2));
+
+    }
+
+    @Test
+    public void setUserPermissionsInvalidPermissionsTest() {
+        qm.createManagedUser("user2", TEST_USER_PASSWORD_HASH);
+        PermissionsSetRequest badRequestBody = new PermissionsSetRequest(
+                Set.of("Invalid", "Permission", "List", "Four"));
+
+        Response response = jersey.target(V1_PERMISSION + "/user/user2")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(badRequestBody, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(400, response.getStatus());
+
+        JsonObject jsonResponse = parseJsonObject(response);
+        Assert.assertNotNull(jsonResponse);
+
+        JsonArray permissionsArray = jsonResponse.getJsonArray("permissions");
+        Assert.assertNotNull(permissionsArray);
+
+        Assert.assertEquals(permissionsArray.size(), 4);
     }
 }
