@@ -26,7 +26,7 @@ BEGIN
     -- Create partitions for each day starting from retention period
     WHILE partition_date < end_date LOOP
         next_day := partition_date + INTERVAL '1 day';
-        partition_name := format('%I_%s', target_table, to_char(partition_date, 'YYYYMMDD'));
+        partition_name := format('%s_%s', source_table, to_char(partition_date, 'YYYYMMDD'));
 
         -- Create partition if it doesn't exist
         EXECUTE format(

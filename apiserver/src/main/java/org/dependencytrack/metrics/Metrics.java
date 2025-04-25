@@ -87,4 +87,47 @@ public final class Metrics {
                 .invoke());
     }
 
+    public static void createMetricsPartitions() {
+        String SQL_QUERY = """
+                    DO $$
+                    DECLARE
+                        today DATE := current_date;
+                        tomorrow DATE := current_date + INTERVAL '1 day';
+                        partition_suffix TEXT := to_char(today, 'YYYYMMDD');
+                        partition_name TEXT;
+                    BEGIN
+                        -- PORTFOLIOMETRICS
+                        partition_name := format('PORTFOLIOMETRICS_%s', partition_suffix);
+                        EXECUTE format(
+                            'CREATE TABLE IF NOT EXISTS %I PARTITION OF "PORTFOLIOMETRICS"
+                             FOR VALUES FROM (%L) TO (%L);',
+                            partition_name,
+                            today,
+                            tomorrow
+                        );
+                    
+                        -- PROJECTMETRICS
+                        partition_name := format('PROJECTMETRICS_%s', partition_suffix);
+                        EXECUTE format(
+                            'CREATE TABLE IF NOT EXISTS %I PARTITION OF "PROJECTMETRICS"
+                             FOR VALUES FROM (%L) TO (%L);',
+                            partition_name,
+                            today,
+                            tomorrow
+                        );
+                    
+                        -- DEPENDENCYMETRICS
+                        partition_name := format('DEPENDENCYMETRICS_%s', partition_suffix);
+                        EXECUTE format(
+                            'CREATE TABLE IF NOT EXISTS %I PARTITION OF "DEPENDENCYMETRICS"
+                             FOR VALUES FROM (%L) TO (%L);',
+                            partition_name,
+                            today,
+                            tomorrow
+                        );
+                    END;
+                    $$;
+                    """;
+        useJdbiHandle(handle -> handle.createUpdate(SQL_QUERY).execute());
+    }
 }
