@@ -22,11 +22,14 @@ package org.dependencytrack.resources.v1.vo;
 import java.util.Set;
 
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.validation.ValidUuid;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.validation.constraints.NotNull;
 
 public record PermissionsSetRequest(
-        @NotNull @JsonProperty(value = "permissions", required = true) Set<Permissions> permissions) {
+        @JsonProperty(value = "username") String username,
+        @JsonProperty(value = "team") @ValidUuid String team,
+        @JsonProperty(value = "permissions", required = true) @NotNull Set<Permissions> permissions) {
 }

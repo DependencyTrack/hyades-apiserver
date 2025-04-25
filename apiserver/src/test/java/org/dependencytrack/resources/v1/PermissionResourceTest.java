@@ -293,8 +293,9 @@ public class PermissionResourceTest extends ResourceTest {
     }
 
     @Test
-    public void bulkPermissionsTest() {
+    public void setUserPermissionsTest() {
         String username = qm.createManagedUser("user2", TEST_USER_PASSWORD_HASH).getUsername();
+        String endpoint = V1_PERMISSION + "/user";
 
         List<Permission> permissionSet1 = List.of(
                 qm.getPermission("ACCESS_MANAGEMENT"),
@@ -308,15 +309,17 @@ public class PermissionResourceTest extends ResourceTest {
                 qm.getPermission("PORTFOLIO_MANAGEMENT_CREATE"));
 
         JsonObject permissionRequet1 = Json.createObjectBuilder()
+                .add("username", username)
                 .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Permission::getName).toList()))
                 .build();
 
         JsonObject permissionRequet2 = Json.createObjectBuilder()
+                .add("username", username)
                 .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Permission::getName).toList()))
                 .build();
 
         // test initial assignment
-        Response response = jersey.target(String.format("%s/user/%s", V1_PERMISSION, username))
+        Response response = jersey.target(endpoint)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(permissionRequet1.toString(), MediaType.APPLICATION_JSON));
@@ -335,7 +338,7 @@ public class PermissionResourceTest extends ResourceTest {
                 userPermissions.equals(permissionSet1));
 
         // test replacement
-        response = jersey.target(String.format("%s/user/%s", V1_PERMISSION, username))
+        response = jersey.target(endpoint)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(permissionRequet2.toString(), MediaType.APPLICATION_JSON));
@@ -353,11 +356,12 @@ public class PermissionResourceTest extends ResourceTest {
     }
 
     @Test
-    public void bulkPermissionsInvalidTest() {
+    public void setUserPermissionsInvalidTest() {
         qm.createManagedUser("user2", TEST_USER_PASSWORD_HASH);
 
         // Create a raw JSON payload with invalid permissions
         JsonObject requestBody = Json.createObjectBuilder()
+                .add("username", "user2")
                 .add("permissions", Json.createArrayBuilder()
                         .add("Invalid")
                         .add("Permission")
@@ -365,7 +369,7 @@ public class PermissionResourceTest extends ResourceTest {
                         .add("Four"))
                 .build();
 
-        Response response = jersey.target(V1_PERMISSION + "/user/user2")
+        Response response = jersey.target(V1_PERMISSION + "/user")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(requestBody.toString(), MediaType.APPLICATION_JSON));
@@ -381,5 +385,68 @@ public class PermissionResourceTest extends ResourceTest {
 
         // Verify that the request was parsed correctly but contained invalid permissions
         Assert.assertTrue(allPerms.stream().allMatch(perm -> detail.contains(perm)));
+    }
+
+    @Test
+    public void setTeamPermissionsTest() {
+        UUID teamUuid = qm.createTeam("team1").getUuid();
+        String endpoint = V1_PERMISSION + "/team";
+
+        List<Permission> permissionSet1 = List.of(
+                qm.getPermission("ACCESS_MANAGEMENT"),
+                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
+                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
+
+        List<Permission> permissionSet2 = List.of(
+                qm.getPermission("BOM_UPLOAD"),
+                qm.getPermission("VIEW_PORTFOLIO"),
+                qm.getPermission("PORTFOLIO_MANAGEMENT"),
+                qm.getPermission("PORTFOLIO_MANAGEMENT_CREATE"));
+
+        JsonObject permissionRequet1 = Json.createObjectBuilder()
+                .add("team", teamUuid.toString())
+                .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Permission::getName).toList()))
+                .build();
+
+        JsonObject permissionRequet2 = Json.createObjectBuilder()
+                .add("team", teamUuid.toString())
+                .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Permission::getName).toList()))
+                .build();
+
+        // test initial assignment
+        Response response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(permissionRequet1.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+
+        JsonObject jsonResponse = parseJsonObject(response);
+
+        Assert.assertNotNull("JSON response should not be null", jsonResponse);
+        Assert.assertEquals(permissionSet1.size(), jsonResponse.getJsonArray("permissions").size());
+
+        Team team = qm.getObjectByUuid(Team.class, teamUuid);
+        List<Permission> userPermissions = team.getPermissions();
+
+        Assert.assertEquals("User should have 3 permissions assigned", userPermissions.size(), 3);
+        Assert.assertTrue("User should have all permissions assigned: " + userPermissions,
+                userPermissions.equals(permissionSet1));
+
+        // test replacement
+        response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(permissionRequet2.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+
+        // refresh
+        team = qm.getObjectByUuid(Team.class, teamUuid);
+        userPermissions = team.getPermissions();
+
+        Assert.assertTrue("User should not have any of the old permissions assigned",
+                Collections.disjoint(userPermissions, permissionSet1));
+        Assert.assertTrue("User should have all new permissions assigned: " + userPermissions,
+                userPermissions.containsAll(permissionSet2));
+
     }
 }
