@@ -1425,4 +1425,189 @@
             <column name="PUBLIC_ID"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-22" author="sahibamittal">
+        <createProcedure path="procedures/procedure_migrate_metrics_to_partitions.sql" relativeToChangelogFile="true"/>
+        <!--Migration for "PORTFOLIOMETRICS"-->
+        <sql>
+            -- create new partitioned table with new PK
+            CREATE TABLE "PORTFOLIOMETRICS_NEW"
+            (
+                "ID" BIGSERIAL,
+                "COMPONENTS" int4 NOT NULL,
+                "CRITICAL" int4 NOT NULL,
+                "FINDINGS_AUDITED" int4 NULL,
+                "FINDINGS_TOTAL" int4 NULL,
+                "FINDINGS_UNAUDITED" int4 NULL,
+                "FIRST_OCCURRENCE" timestamptz NOT NULL,
+                "HIGH" int4 NOT NULL,
+                "RISKSCORE" float8 NOT NULL,
+                "LAST_OCCURRENCE" timestamptz NOT NULL,
+                "LOW" int4 NOT NULL,
+                "MEDIUM" int4 NOT NULL,
+                "POLICYVIOLATIONS_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_FAIL" int4 NULL,
+                "POLICYVIOLATIONS_INFO" int4 NULL,
+                "POLICYVIOLATIONS_LICENSE_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_LICENSE_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_LICENSE_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_OPERATIONAL_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_OPERATIONAL_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_SECURITY_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_SECURITY_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_SECURITY_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_WARN" int4 NULL,
+                "PROJECTS" int4 NOT NULL,
+                "SUPPRESSED" int4 NOT NULL,
+                "UNASSIGNED_SEVERITY" int4 NULL,
+                "VULNERABILITIES" int4 NOT NULL,
+                "VULNERABLECOMPONENTS" int4 NOT NULL,
+                "VULNERABLEPROJECTS" int4 NOT NULL,
+                CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" PRIMARY KEY ("ID", "LAST_OCCURRENCE")
+            ) PARTITION BY RANGE ("LAST_OCCURRENCE");
+
+            -- create new indexes
+            CREATE INDEX "PORTFOLIOMETRICS_NEW_FIRST_OCCURRENCE_IDX" ON "PORTFOLIOMETRICS_NEW" ("FIRST_OCCURRENCE");
+            CREATE INDEX "PORTFOLIOMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "PORTFOLIOMETRICS_NEW" ("LAST_OCCURRENCE");
+
+            -- call the migration procedure
+            CALL "MIGRATE_METRICS_TO_PARTITIONS"('PORTFOLIOMETRICS_NEW'::TEXT, 'PORTFOLIOMETRICS'::TEXT);
+
+            -- drop old table
+            DROP TABLE "PORTFOLIOMETRICS";
+
+            -- rename partitioned table
+            ALTER TABLE "PORTFOLIOMETRICS_NEW" RENAME TO "PORTFOLIOMETRICS";
+
+            -- rename PK
+            ALTER TABLE "PORTFOLIOMETRICS" RENAME CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" TO "PORTFOLIOMETRICS_PK";
+
+            -- rename indexes
+            ALTER INDEX "PORTFOLIOMETRICS_NEW_FIRST_OCCURRENCE_IDX" RENAME TO "PORTFOLIOMETRICS_FIRST_OCCURRENCE_IDX";
+            ALTER INDEX "PORTFOLIOMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "PORTFOLIOMETRICS_LAST_OCCURRENCE_IDX";
+        </sql>
+        <!--Migration for "PROJECTMETRICS"-->
+        <sql>
+            -- create new partitioned table with new PK
+            CREATE TABLE "PROJECTMETRICS_NEW"
+            (
+                "ID" BIGSERIAL,
+                "COMPONENTS" int4 NOT NULL,
+                "CRITICAL" int4 NOT NULL,
+                "FINDINGS_AUDITED" int4 NULL,
+                "FINDINGS_TOTAL" int4 NULL,
+                "FINDINGS_UNAUDITED" int4 NULL,
+                "FIRST_OCCURRENCE" timestamptz NOT NULL,
+                "HIGH" int4 NOT NULL,
+                "RISKSCORE" float8 NOT NULL,
+                "LAST_OCCURRENCE" timestamptz NOT NULL,
+                "LOW" int4 NOT NULL,
+                "MEDIUM" int4 NOT NULL,
+                "POLICYVIOLATIONS_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_FAIL" int4 NULL,
+                "POLICYVIOLATIONS_INFO" int4 NULL,
+                "POLICYVIOLATIONS_LICENSE_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_LICENSE_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_LICENSE_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_OPERATIONAL_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_OPERATIONAL_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_SECURITY_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_SECURITY_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_SECURITY_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_WARN" int4 NULL,
+                "PROJECT_ID" int8 NOT NULL,
+                "SUPPRESSED" int4 NOT NULL,
+                "UNASSIGNED_SEVERITY" int4 NULL,
+                "VULNERABILITIES" int4 NOT NULL,
+                "VULNERABLECOMPONENTS" int4 NOT NULL,
+                CONSTRAINT "PROJECTMETRICS_NEW_PK" PRIMARY KEY ("ID", "LAST_OCCURRENCE")
+            ) PARTITION BY RANGE ("LAST_OCCURRENCE");
+
+            -- create new indexes
+            CREATE INDEX "PROJECTMETRICS_NEW_FIRST_OCCURRENCE_IDX" ON "PROJECTMETRICS_NEW" ("FIRST_OCCURRENCE");
+            CREATE INDEX "PROJECTMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "PROJECTMETRICS_NEW" ("LAST_OCCURRENCE");
+
+            -- call the migration procedure
+            CALL "MIGRATE_METRICS_TO_PARTITIONS"('PROJECTMETRICS_NEW'::TEXT, 'PROJECTMETRICS'::TEXT);
+
+            -- drop old table
+            DROP TABLE "PROJECTMETRICS";
+
+            -- rename partitioned table
+            ALTER TABLE "PROJECTMETRICS_NEW" RENAME TO "PROJECTMETRICS";
+
+            -- rename PK
+            ALTER TABLE "PROJECTMETRICS" RENAME CONSTRAINT "PROJECTMETRICS_NEW_PK" TO "PROJECTMETRICS_PK";
+
+            -- rename indexes
+            ALTER INDEX "PROJECTMETRICS_NEW_FIRST_OCCURRENCE_IDX" RENAME TO "PROJECTMETRICS_FIRST_OCCURRENCE_IDX";
+            ALTER INDEX "PROJECTMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "PROJECTMETRICS_LAST_OCCURRENCE_IDX";
+        </sql>
+        <!--Migration for "COMPONENTMETRICS"-->
+        <sql>
+            -- create new partitioned table with new PK
+            CREATE TABLE "DEPENDENCYMETRICS_NEW"
+            (
+                "ID" BIGSERIAL,
+                "COMPONENT_ID" int8 NOT NULL,
+                "CRITICAL" int4 NOT NULL,
+                "FINDINGS_AUDITED" int4 NULL,
+                "FINDINGS_TOTAL" int4 NULL,
+                "FINDINGS_UNAUDITED" int4 NULL,
+                "FIRST_OCCURRENCE" timestamptz NOT NULL,
+                "HIGH" int4 NOT NULL,
+                "RISKSCORE" float8 NOT NULL,
+                "LAST_OCCURRENCE" timestamptz NOT NULL,
+                "LOW" int4 NOT NULL,
+                "MEDIUM" int4 NOT NULL,
+                "POLICYVIOLATIONS_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_FAIL" int4 NULL,
+                "POLICYVIOLATIONS_INFO" int4 NULL,
+                "POLICYVIOLATIONS_LICENSE_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_LICENSE_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_LICENSE_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_OPERATIONAL_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_OPERATIONAL_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_SECURITY_AUDITED" int4 NULL,
+                "POLICYVIOLATIONS_SECURITY_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_SECURITY_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_TOTAL" int4 NULL,
+                "POLICYVIOLATIONS_UNAUDITED" int4 NULL,
+                "POLICYVIOLATIONS_WARN" int4 NULL,
+                "PROJECT_ID" int8 NOT NULL,
+                "SUPPRESSED" int4 NOT NULL,
+                "UNASSIGNED_SEVERITY" int4 NULL,
+                "VULNERABILITIES" int4 NOT NULL,
+                CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" PRIMARY KEY ("ID", "LAST_OCCURRENCE")
+            ) PARTITION BY RANGE ("LAST_OCCURRENCE");
+
+            -- create new indexes
+            CREATE INDEX "DEPENDENCYMETRICS_NEW_FIRST_OCCURRENCE_IDX" ON "DEPENDENCYMETRICS_NEW" ("FIRST_OCCURRENCE");
+            CREATE INDEX "DEPENDENCYMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "DEPENDENCYMETRICS_NEW" ("LAST_OCCURRENCE");
+
+            -- call the migration procedure
+            CALL "MIGRATE_METRICS_TO_PARTITIONS"('DEPENDENCYMETRICS_NEW'::TEXT, 'DEPENDENCYMETRICS'::TEXT);
+
+            -- drop old table
+            DROP TABLE "DEPENDENCYMETRICS";
+
+            -- rename partitioned table
+            ALTER TABLE "DEPENDENCYMETRICS_NEW" RENAME TO "DEPENDENCYMETRICS";
+
+            -- rename PK
+            ALTER TABLE "DEPENDENCYMETRICS" RENAME CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" TO "DEPENDENCYMETRICS_PK";
+
+            -- rename indexes
+            ALTER INDEX "DEPENDENCYMETRICS_NEW_FIRST_OCCURRENCE_IDX" RENAME TO "DEPENDENCYMETRICS_FIRST_OCCURRENCE_IDX";
+            ALTER INDEX "DEPENDENCYMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "DEPENDENCYMETRICS_LAST_OCCURRENCE_IDX";
+        </sql>
+        <dropProcedure procedureName="MIGRATE_METRICS_TO_PARTITIONS"/>
+    </changeSet>
 </databaseChangeLog>
