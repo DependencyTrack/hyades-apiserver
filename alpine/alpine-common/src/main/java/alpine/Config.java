@@ -102,6 +102,7 @@ public class Config {
     }
 
     public enum AlpineKey implements Key {
+        // @formatter:off
         WORKER_THREADS                         ("alpine.worker.threads",             0),
         WORKER_THREAD_MULTIPLIER               ("alpine.worker.thread.multiplier",   4),
         DATA_DIRECTORY                         ("alpine.data.directory",             "~/.alpine"),
@@ -168,6 +169,7 @@ public class Config {
         OIDC_TEAM_SYNCHRONIZATION              ("alpine.oidc.team.synchronization", false),
         OIDC_TEAMS_CLAIM                       ("alpine.oidc.teams.claim",       "groups"),
         OIDC_TEAMS_DEFAULT                     ("alpine.oidc.teams.default",         null),
+        OIDC_AUTH_CUSTOMIZER                   ("alpine.oidc.auth.customizer",       "alpine.server.auth.DefaultOidcAuthenticationCustomizer"),
         HTTP_PROXY_ADDRESS                     ("alpine.http.proxy.address",         null),
         HTTP_PROXY_PORT                        ("alpine.http.proxy.port",            null),
         HTTP_PROXY_USERNAME                    ("alpine.http.proxy.username",        null),
@@ -187,10 +189,11 @@ public class Config {
         WATCHDOG_LOGGING_INTERVAL              ("alpine.watchdog.logging.interval",  0),
         API_KEY_PREFIX                         ("alpine.api.key.prefix",             "alpine_"),
         AUTH_JWT_TTL_SECONDS                   ("alpine.auth.jwt.ttl.seconds",       7 * 24 * 60 * 60);
-
+        // @formatter:on
 
         private String propertyName;
         private Object defaultValue;
+
         AlpineKey(String item, Object defaultValue) {
             this.propertyName = item;
             this.defaultValue = defaultValue;
