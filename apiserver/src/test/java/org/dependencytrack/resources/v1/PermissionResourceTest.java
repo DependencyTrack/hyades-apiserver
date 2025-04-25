@@ -33,11 +33,14 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public class PermissionResourceTest extends ResourceTest {
@@ -287,5 +290,163 @@ public class PermissionResourceTest extends ResourceTest {
                 .delete();
         Assert.assertEquals(304, response.getStatus(), 0);
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
+    }
+
+    @Test
+    public void setUserPermissionsTest() {
+        String username = qm.createManagedUser("user2", TEST_USER_PASSWORD_HASH).getUsername();
+        String endpoint = V1_PERMISSION + "/user";
+
+        List<Permission> permissionSet1 = List.of(
+                qm.getPermission("ACCESS_MANAGEMENT"),
+                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
+                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
+
+        List<Permission> permissionSet2 = List.of(
+                qm.getPermission("BOM_UPLOAD"),
+                qm.getPermission("VIEW_PORTFOLIO"),
+                qm.getPermission("PORTFOLIO_MANAGEMENT"),
+                qm.getPermission("PORTFOLIO_MANAGEMENT_CREATE"));
+
+        JsonObject permissionRequest1 = Json.createObjectBuilder()
+                .add("username", username)
+                .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Permission::getName).toList()))
+                .build();
+
+        JsonObject permissionRequest2 = Json.createObjectBuilder()
+                .add("username", username)
+                .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Permission::getName).toList()))
+                .build();
+
+        // Test initial assignment.
+        Response response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(permissionRequest1.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+
+        JsonObject jsonResponse = parseJsonObject(response);
+
+        Assert.assertNotNull("JSON response should not be null", jsonResponse);
+        Assert.assertEquals(permissionSet1.size(), jsonResponse.getJsonArray("permissions").size());
+
+        ManagedUser user = qm.getManagedUser(username);
+        List<Permission> userPermissions = user.getPermissions();
+
+        Assert.assertEquals("User should have 3 permissions assigned", userPermissions.size(), 3);
+        Assert.assertTrue("User should have all permissions assigned: " + userPermissions,
+                userPermissions.equals(permissionSet1));
+
+        // Test replacement.
+        response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(permissionRequest2.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+
+        // Refresh
+        user = qm.getManagedUser(username);
+        userPermissions = user.getPermissions();
+
+        Assert.assertTrue("User should not have any of the old permissions assigned",
+                Collections.disjoint(userPermissions, permissionSet1));
+        Assert.assertTrue("User should have all new permissions assigned: " + userPermissions,
+                userPermissions.containsAll(permissionSet2));
+
+    }
+
+    @Test
+    public void setUserPermissionsInvalidTest() {
+        qm.createManagedUser("user2", TEST_USER_PASSWORD_HASH);
+
+        // Create a raw JSON payload with invalid permissions.
+        JsonObject requestBody = Json.createObjectBuilder()
+                .add("username", "user2")
+                .add("permissions", Json.createArrayBuilder()
+                        .add("Invalid")
+                        .add("Permission")
+                        .add("List")
+                        .add("Four"))
+                .build();
+
+        Response response = jersey.target(V1_PERMISSION + "/user")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(requestBody.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(400, response.getStatus());
+
+        JsonObject jsonResponse = parseJsonObject(response);
+        String detail = jsonResponse.get("detail").toString();
+        Assert.assertNotNull(jsonResponse);
+
+        List<String> allPerms = qm.getPermissions().stream()
+                .map(Permission::getName)
+                .toList();
+
+        // Verify that the request was parsed correctly but contained invalid permissions.
+        Assert.assertTrue(allPerms.stream().allMatch(perm -> detail.contains(perm)));
+    }
+
+    @Test
+    public void setTeamPermissionsTest() {
+        UUID teamUuid = qm.createTeam("team1").getUuid();
+        String endpoint = V1_PERMISSION + "/team";
+
+        List<Permission> permissionSet1 = List.of(
+                qm.getPermission("ACCESS_MANAGEMENT"),
+                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
+                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
+
+        List<Permission> permissionSet2 = List.of(
+                qm.getPermission("BOM_UPLOAD"),
+                qm.getPermission("VIEW_PORTFOLIO"),
+                qm.getPermission("PORTFOLIO_MANAGEMENT"),
+                qm.getPermission("PORTFOLIO_MANAGEMENT_CREATE"));
+
+        JsonObject permissionRequet1 = Json.createObjectBuilder()
+                .add("team", teamUuid.toString())
+                .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Permission::getName).toList()))
+                .build();
+
+        JsonObject permissionRequet2 = Json.createObjectBuilder()
+                .add("team", teamUuid.toString())
+                .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Permission::getName).toList()))
+                .build();
+
+        // Test initial assignment.
+        Response response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(permissionRequet1.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+
+        JsonObject jsonResponse = parseJsonObject(response);
+
+        Assert.assertNotNull("JSON response should not be null", jsonResponse);
+        Assert.assertEquals(permissionSet1.size(), jsonResponse.getJsonArray("permissions").size());
+
+        Team team = qm.getObjectByUuid(Team.class, teamUuid);
+        List<Permission> userPermissions = team.getPermissions();
+
+        Assert.assertEquals("User should have 3 permissions assigned", userPermissions.size(), 3);
+        Assert.assertTrue("User should have all permissions assigned: " + userPermissions,
+                userPermissions.equals(permissionSet1));
+
+        // Test replacement.
+        response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(permissionRequet2.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+
+        // Refresh.
+        team = qm.getObjectByUuid(Team.class, teamUuid);
+        userPermissions = team.getPermissions();
+
+        Assert.assertTrue("User should not have any of the old permissions assigned",
+                Collections.disjoint(userPermissions, permissionSet1));
+        Assert.assertTrue("User should have all new permissions assigned: " + userPermissions,
+                userPermissions.containsAll(permissionSet2));
+
     }
 }
