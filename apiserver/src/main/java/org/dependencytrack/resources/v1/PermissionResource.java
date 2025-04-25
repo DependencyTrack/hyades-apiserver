@@ -33,6 +33,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -46,7 +47,8 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.vo.PermissionsSetRequest;
+import org.dependencytrack.resources.v1.vo.TeamPermissionsSetRequest;
+import org.dependencytrack.resources.v1.vo.UserPermissionsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.util.List;
@@ -282,17 +284,11 @@ public class PermissionResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
-    public Response setUserPermissions(
-            @Parameter(description = "A username and valid list permission") PermissionsSetRequest request) {
-        if (request.username() == null || request.username().isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("'username' is required.").build();
-        }
-
+    public Response setUserPermissions(@Parameter(description = "A username and valid list permission") @Valid UserPermissionsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
             UserPrincipal user = qm.getUserPrincipal(request.username());
-            if (user == null) {
+            if (user == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
 
             List<String> permissionNames = request.permissions()
                     .stream()
@@ -339,18 +335,11 @@ public class PermissionResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The team could not be found")
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
-    public Response setTeamPermissions(
-            @Parameter(description = "Team UUID and requested permissions") PermissionsSetRequest request) {
-        if (request.team() == null || request.team().isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("'team' is required.").build();
-        }
-
+    public Response setTeamPermissions(@Parameter(description = "Team UUID and requested permissions") @Valid TeamPermissionsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
-
             Team team = qm.getObjectByUuid(Team.class, request.team());
-            if (team == null) {
+            if (team == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
-            }
 
             List<String> permissionNames = request.permissions()
                     .stream()
@@ -369,9 +358,8 @@ public class PermissionResource extends AlpineResource {
                 query.closeAll();
             }
 
-            if (team.getPermissions().equals(requestedPermissions)) {
+            if (team.getPermissions().equals(requestedPermissions))
                 return Response.notModified().entity("Team already has selected permission(s).").build();
-            }
 
             team.setPermissions(requestedPermissions);
             qm.persist(team);
@@ -381,7 +369,6 @@ public class PermissionResource extends AlpineResource {
                             .formatted(team.getName(), permissionNames));
             return Response.ok(team).build();
         }
-
     }
 
 }

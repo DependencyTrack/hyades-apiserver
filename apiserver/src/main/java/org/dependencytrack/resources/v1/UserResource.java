@@ -773,7 +773,6 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response setUserTeams(
-            /* @Parameter(description = "A valid username", required = true) @PathParam("username") String username, */
             @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
             UserPrincipal principal = qm.getUserPrincipal(request.username());

@@ -21,27 +21,21 @@ package org.dependencytrack.resources.v1.vo;
 
 import java.util.Set;
 
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
-
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-
-import alpine.common.validation.RegexSequence;
-import alpine.server.json.TrimmedStringDeserializer;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 
-public record TeamsSetRequest(
+public record TeamPermissionsSetRequest(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank
-        @JsonDeserialize(using = TrimmedStringDeserializer.class)
-        @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS_PLUS, message = "The username may only contain printable characters")
-        String username,
+        @ValidUuid
+        String team,
 
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         @NotNull
-        Set<@ValidUuid String> teams) {
+        Set<Permissions> permissions) {
 }

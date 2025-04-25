@@ -318,7 +318,7 @@ public class PermissionResourceTest extends ResourceTest {
                 .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Permission::getName).toList()))
                 .build();
 
-        // test initial assignment
+        // Test initial assignment.
         Response response = jersey.target(endpoint)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -337,14 +337,14 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertTrue("User should have all permissions assigned: " + userPermissions,
                 userPermissions.equals(permissionSet1));
 
-        // test replacement
+        // Test replacement.
         response = jersey.target(endpoint)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(permissionRequest2.toString(), MediaType.APPLICATION_JSON));
         Assert.assertEquals(200, response.getStatus());
 
-        // refresh
+        // Refresh
         user = qm.getManagedUser(username);
         userPermissions = user.getPermissions();
 
@@ -359,7 +359,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void setUserPermissionsInvalidTest() {
         qm.createManagedUser("user2", TEST_USER_PASSWORD_HASH);
 
-        // Create a raw JSON payload with invalid permissions
+        // Create a raw JSON payload with invalid permissions.
         JsonObject requestBody = Json.createObjectBuilder()
                 .add("username", "user2")
                 .add("permissions", Json.createArrayBuilder()
@@ -383,7 +383,7 @@ public class PermissionResourceTest extends ResourceTest {
                 .map(Permission::getName)
                 .toList();
 
-        // Verify that the request was parsed correctly but contained invalid permissions
+        // Verify that the request was parsed correctly but contained invalid permissions.
         Assert.assertTrue(allPerms.stream().allMatch(perm -> detail.contains(perm)));
     }
 
@@ -413,7 +413,7 @@ public class PermissionResourceTest extends ResourceTest {
                 .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Permission::getName).toList()))
                 .build();
 
-        // test initial assignment
+        // Test initial assignment.
         Response response = jersey.target(endpoint)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -432,14 +432,14 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertTrue("User should have all permissions assigned: " + userPermissions,
                 userPermissions.equals(permissionSet1));
 
-        // test replacement
+        // Test replacement.
         response = jersey.target(endpoint)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(permissionRequet2.toString(), MediaType.APPLICATION_JSON));
         Assert.assertEquals(200, response.getStatus());
 
-        // refresh
+        // Refresh.
         team = qm.getObjectByUuid(Team.class, teamUuid);
         userPermissions = team.getPermissions();
 
