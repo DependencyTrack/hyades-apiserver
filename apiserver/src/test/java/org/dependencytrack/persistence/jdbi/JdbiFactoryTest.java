@@ -22,6 +22,7 @@ import alpine.server.persistence.PersistenceManagerFactory;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.jdbi.v3.core.ConnectionException;
 import org.jdbi.v3.core.Jdbi;
 import org.junit.Test;
 
@@ -70,10 +71,9 @@ public class JdbiFactoryTest extends PersistenceCapableTest {
 
         // Close the PMF and ensure that the JDBI instance is no longer usable.
         PersistenceManagerFactory.tearDown();
-        assertThatExceptionOfType(IllegalStateException.class)
+        assertThatExceptionOfType(ConnectionException.class)
                 .isThrownBy(() -> jdbi.withHandle(handle ->
-                        handle.createQuery("SELECT 666").mapTo(Integer.class).one()))
-                .withMessage("Pool not open");
+                        handle.createQuery("SELECT 666").mapTo(Integer.class).one()));
 
         // Create a new QueryManager.
         configurePmf(postgresContainer);
