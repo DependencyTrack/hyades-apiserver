@@ -18,81 +18,155 @@
  */
 package alpine.model;
 
+import java.io.Serializable;
+import java.security.Principal;
 import java.util.List;
 
-/**
- * Defines Alpine UserPrincipal.
- *
- * @author Steve Springett
- * @since 1.0.0
- */
-public interface UserPrincipal {
+import javax.jdo.annotations.Column;
+import javax.jdo.annotations.Discriminator;
+import javax.jdo.annotations.DiscriminatorStrategy;
+import javax.jdo.annotations.Element;
+import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.IdGeneratorStrategy;
+import javax.jdo.annotations.Inheritance;
+import javax.jdo.annotations.InheritanceStrategy;
+import javax.jdo.annotations.Join;
+import javax.jdo.annotations.Order;
+import javax.jdo.annotations.PersistenceCapable;
+import javax.jdo.annotations.Persistent;
+import javax.jdo.annotations.PrimaryKey;
+import javax.jdo.annotations.Unique;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+@PersistenceCapable
+@Discriminator(column = "TYPE", strategy = DiscriminatorStrategy.VALUE_MAP, value = "USER")
+@Inheritance(strategy = InheritanceStrategy.NEW_TABLE)
+public abstract class UserPrincipal implements Serializable, Principal {
+
+    @PrimaryKey
+    @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
+    @JsonIgnore
+    private long id;
+
+    @Persistent(table = "USERPRINCIPALS_TEAMS", defaultFetchGroup = "true")
+    @Join(column = "USERPRINCIPAL_ID")
+    @Element(column = "TEAM_ID")
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
+    private List<Team> teams;
+
+    @Persistent(table = "USERPRINCIPALS_PERMISSIONS", defaultFetchGroup = "true")
+    @Join(column = "USERPRINCIPAL_ID")
+    @Element(column = "PERMISSION_ID")
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
+    private List<Permission> permissions;
+
+    @Persistent
+    @Unique(name = "USERPRINCIPAL_USERNAME_IDX")
+    @Column(name = "USERNAME")
+    @NotBlank
+    @Size(min = 1, max = 255)
+    @Pattern(regexp = "[\\P{Cc}]+", message = "The username must not contain control characters")
+    private String username;
+
+    @Persistent
+    @Column(name = "EMAIL", allowsNull = "true")
+    @Size(max = 255)
+    @Pattern(regexp = "[\\P{Cc}]+", message = "The email address must not contain control characters")
+    private String email;
 
     /**
      * The database id of the principal.
      * @return a long of the unique id
      */
-    long getId();
+    public long getId() {
+        return id;
+    }
 
     /**
      * Specifies the database id of the principal.
      * @param id a long of the unique id
      */
-    void setId(long id);
+    public void setId(long id) {
+        this.id = id;
+    }
 
     /**
      * The username of the principal.
      * @return a String of the username
      */
-    String getUsername();
+    public String getUsername() {
+        return username;
+    }
 
     /**
      * Specifies the username of the principal.
      * @param username the username of the principal
      */
-    void setUsername(String username);
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
     /**
      * The email address of the principal.
      * @return a String of the email address
      */
-    String getEmail();
+    public String getEmail() {
+        return email;
+    }
 
     /**
      * Specifies the email address of the principal.
      * @param email the email address of the principal
      */
-    void setEmail(String email);
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
     /**
      * A list of teams the principal is a member of.
      * @return a List of Team objects
      */
-    List<Team> getTeams();
+    public List<Team> getTeams() {
+        return teams;
+    }
 
     /**
      * Specifies the teams the principal is a member of.
      * @param teams a List of Team objects
      */
-    void setTeams(List<Team> teams);
+    public void setTeams(List<Team> teams) {
+        this.teams = teams;
+    }
 
     /**
      * A list of permissions the principal has.
      * @return a List of Permissions objects
      */
-    List<Permission> getPermissions();
+    public List<Permission> getPermissions() {
+        return permissions;
+    }
 
     /**
      * Specifies the permissions the principal should have.
      * @param permissions a List of Permission objects
      */
-    void setPermissions(List<Permission> permissions);
+    public void setPermissions(List<Permission> permissions) {
+        this.permissions = permissions;
+    }
 
     /**
-     * Use of this method may be necessary to satisfy {@link java.security.Principal}
-     * requirements, but the implementation should not be used and should return
-     * the same value as {@link #getUsername}.
-     * @return a String of the username
+     * Do not use - only here to satisfy Principal implementation requirement.
+     * @deprecated use {@link #getUsername()}
+     * @return the value of {@link #getUsername()}
      */
-    String getName();
+    @Deprecated
+    @JsonIgnore
+    public String getName() {
+        return getUsername();
+    }
+
 }
