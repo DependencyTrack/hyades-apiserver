@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import jakarta.validation.constraints.NotNull;
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
@@ -48,11 +50,13 @@ public class MappedOidcGroup {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "TEAM_ID", allowsNull = "false")
+    @ForeignKey(name = "MAPPEDOIDCGROUP_TEAM_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE)
     @JsonIgnore
     private Team team;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "GROUP_ID", allowsNull = "false")
+    @ForeignKey(name = "MAPPEDOIDCGROUP_OIDCGROUP_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE)
     private OidcGroup group;
 
     @Persistent(customValueStrategy = "uuid")

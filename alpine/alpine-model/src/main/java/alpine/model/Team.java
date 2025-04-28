@@ -30,7 +30,9 @@ import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.FetchGroup;
 import javax.jdo.annotations.FetchGroups;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
+import javax.jdo.annotations.Index;
 import javax.jdo.annotations.Join;
 import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
@@ -86,6 +88,7 @@ public class Team implements Serializable {
 
     @Persistent
     @Column(name = "NAME", jdbcType = "VARCHAR", length = 255, allowsNull = "false")
+    @Index(name = "TEAM_NAME_IDX", unique = "true")
     @NotBlank
     @Size(min = 1, max = 255)
     @Pattern(regexp = "[\\P{Cc}]+", message = "The team name must not contain control characters")
@@ -116,8 +119,8 @@ public class Team implements Serializable {
     private List<MappedOidcGroup> mappedOidcGroups;
 
     @Persistent(table = "TEAMS_PERMISSIONS", defaultFetchGroup = "true")
-    @Join(column = "TEAM_ID")
-    @Element(column = "PERMISSION_ID")
+    @Join(column = "TEAM_ID", primaryKey = "TEAMS_PERMISSIONS_PK", foreignKey = "TEAMS_PERMISSIONS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "PERMISSION_ID", foreignKey = "TEAMS_PERMISSIONS_PERMISSION_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Permission> permissions;
 
