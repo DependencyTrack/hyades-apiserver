@@ -32,6 +32,7 @@
         <class>alpine.model.MappedOidcGroup</class>
         <class>alpine.model.Permission</class>
         <class>alpine.model.Team</class>
+        <class>alpine.model.UserPrincipal</class>
 
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
     </persistence-unit>

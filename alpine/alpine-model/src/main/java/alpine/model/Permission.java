@@ -34,7 +34,9 @@ import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Persistable object representing a Permission.
@@ -73,17 +75,7 @@ public class Permission implements Serializable {
     @Persistent(mappedBy = "permissions")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
     @JsonIgnore
-    private List<OidcUser> oidcUsers;
-
-    @Persistent(mappedBy = "permissions")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
-    @JsonIgnore
-    private List<LdapUser> ldapUsers;
-
-    @Persistent(mappedBy = "permissions")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
-    @JsonIgnore
-    private List<ManagedUser> managedUsers;
+    private List<UserPrincipal> users;
 
     public long getId() {
         return id;
@@ -118,27 +110,46 @@ public class Permission implements Serializable {
     }
 
     public List<OidcUser> getOidcUsers() {
-        return oidcUsers;
+        return users.stream()
+                .filter(user -> user instanceof OidcUser)
+                .map(user -> (OidcUser) user)
+                .toList();
     }
 
     public void setOidcUsers(List<OidcUser> oidcUsers) {
-        this.oidcUsers = oidcUsers;
+        this.users = Objects.requireNonNullElse(this.users, new ArrayList<>());
+        this.users.addAll(oidcUsers);
     }
 
     public List<LdapUser> getLdapUsers() {
-        return ldapUsers;
+        return users.stream()
+                .filter(user -> user instanceof LdapUser)
+                .map(user -> (LdapUser) user)
+                .toList();
     }
 
     public void setLdapUsers(List<LdapUser> ldapUsers) {
-        this.ldapUsers = ldapUsers;
+        this.users = Objects.requireNonNullElse(this.users, new ArrayList<>());
+        this.users.addAll(ldapUsers);
     }
 
     public List<ManagedUser> getManagedUsers() {
-        return managedUsers;
+        return users.stream()
+                .filter(user -> user instanceof ManagedUser)
+                .map(user -> (ManagedUser) user)
+                .toList();
     }
 
     public void setManagedUsers(List<ManagedUser> managedUsers) {
-        this.managedUsers = managedUsers;
+        this.users = Objects.requireNonNullElse(this.users, new ArrayList<>());
+        this.users.addAll(managedUsers);
+    }
+
+    public List<UserPrincipal> getUsers() {
+        return users;
+    }
+
+    public void setUsers(List<UserPrincipal> users) {
+        this.users = users;
     }
 }
-

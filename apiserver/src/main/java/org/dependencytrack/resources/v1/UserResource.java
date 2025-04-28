@@ -79,6 +79,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.jdo.Query;
@@ -123,7 +124,8 @@ public class UserResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Principal principal = auth.authenticate();
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful user login / username: " + username);
-            final List<Permission> permissions = qm.getEffectivePermissions((UserPrincipal) principal);
+            final Set<String> permissionNames = qm.getEffectivePermissions(principal);
+            final List<Permission> permissions = qm.getPermissionsByName(permissionNames);
             final KeyManager km = KeyManager.getInstance();
             final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
             final String token = jwt.createToken(principal, permissions);
@@ -173,7 +175,8 @@ public class UserResource extends AlpineResource {
         try (final QueryManager qm = new QueryManager()) {
             final Principal principal = authService.authenticate();
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful OpenID Connect login / username: " + principal.getName());
-            final List<Permission> permissions = qm.getEffectivePermissions((UserPrincipal) principal);
+            final Set<String> permissionNames = qm.getEffectivePermissions(principal);
+            final List<Permission> permissions = qm.getPermissionsByName(permissionNames);
             final KeyManager km = KeyManager.getInstance();
             final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
             final String token = jwt.createToken(principal, permissions);
