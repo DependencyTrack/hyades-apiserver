@@ -89,6 +89,9 @@
 
         <!-- Dependency versions -->
         <lib.protobuf-java.version>4.30.2</lib.protobuf-java.version>
+
+        <!-- Number of JVM processes to use for unit test parallelization -->
+        <unitTestForkCount>2</unitTestForkCount>
     </properties>
 
     <dependencyManagement>
@@ -175,7 +178,7 @@
                             --add-opens java.base/java.lang=ALL-UNNAMED
                         </argLine>
                         <reuseForks>true</reuseForks>
-                        <forkCount>2</forkCount>
+                        <forkCount>${unitTestForkCount}</forkCount>
                     </configuration>
                 </plugin>
 
@@ -249,6 +252,19 @@
             <properties>
                 <checkstyle.skip>true</checkstyle.skip>
                 <maven.test.skip>true</maven.test.skip>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>github-actions</id>
+            <activation>
+                <property>
+                    <name>env.GITHUB_ACTIONS</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <unitTestForkCount>4</unitTestForkCount>
             </properties>
         </profile>
     </profiles>

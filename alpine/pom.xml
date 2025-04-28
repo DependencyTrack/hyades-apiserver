@@ -448,7 +448,6 @@
                     </argLine>
                     <!-- Some Alpine tests leave the JVM behind in a dirty state. -->
                     <reuseForks>false</reuseForks>
-                    <forkCount>4</forkCount>
                 </configuration>
             </plugin>
 
