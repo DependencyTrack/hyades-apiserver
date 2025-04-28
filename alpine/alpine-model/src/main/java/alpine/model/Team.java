@@ -40,6 +40,7 @@ import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -146,7 +147,7 @@ public class Team implements Serializable {
     }
 
     public List<LdapUser> getLdapUsers() {
-        return users.stream()
+        return (users != null ? users : Collections.emptyList()).stream()
                 .filter(user -> user instanceof LdapUser)
                 .map(user -> (LdapUser) user)
                 .toList();
@@ -158,7 +159,7 @@ public class Team implements Serializable {
     }
 
     public List<ManagedUser> getManagedUsers() {
-        return users.stream()
+        return (users != null ? users : Collections.emptyList()).stream()
                 .filter(user -> user instanceof ManagedUser)
                 .map(user -> (ManagedUser) user)
                 .toList();
@@ -170,7 +171,7 @@ public class Team implements Serializable {
     }
 
     public List<OidcUser> getOidcUsers() {
-        return users.stream()
+        return (users != null ? users : Collections.emptyList()).stream()
                 .filter(user -> user instanceof OidcUser)
                 .map(user -> (OidcUser) user)
                 .toList();
