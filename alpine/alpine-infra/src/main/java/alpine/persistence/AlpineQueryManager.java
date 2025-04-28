@@ -831,36 +831,16 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * @since 1.0.0
      */
     public boolean hasPermission(final UserPrincipal user, String permissionName, boolean includeTeams) {
-        Query<?> query;
-        if (user instanceof final ManagedUser managedUser) {
-            query = pm.newQuery(Permission.class, "name == :permissionName && managedUsers.contains(user) && user.id == :userId");
-            query.declareVariables("alpine.model.ManagedUser user");
-            query.setParameters(permissionName, managedUser.getId());
-        } else if (user instanceof final LdapUser ldapUser) {
-            query = pm.newQuery(Permission.class, "name == :permissionName && ldapUsers.contains(user) && user.id == :userId");
-            query.declareVariables("alpine.model.LdapUser user");
-            query.setParameters(permissionName, ldapUser.getId());
-        } else if (user instanceof final OidcUser oidcUser) {
-            query = pm.newQuery(Permission.class, "name == :permissionName && oidcUsers.contains(user) && user.id == :userId");
-            query.declareVariables("alpine.model.OidcUser user");
-            query.setParameters(permissionName, oidcUser.getId());
-        } else {
-            LOGGER.warn("Unrecognized principal class %s; Unable to verify permissions".formatted(user.getClass()));
-            return false;
-        }
-        query.setResult("count(id)");
+        Query<Permission> query = pm.newQuery(Permission.class)
+                .filter("name == :permissionName && users.contains(user) && user.id == :userId")
+                .variables("alpine.model.UserPrincipal user")
+                .setParameters(permissionName, user.getId())
+                .result("count(id)");
+
         final long count = query.executeResultUnique(Long.class);
-        if (count > 0) {
-            return true;
-        }
-        if (includeTeams) {
-            for (final Team team: user.getTeams()) {
-                if (hasPermission(team, permissionName)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+
+        return count > 0 || (includeTeams && user.getTeams().stream()
+                .anyMatch(team -> hasPermission(team, permissionName)));
     }
 
     /**
