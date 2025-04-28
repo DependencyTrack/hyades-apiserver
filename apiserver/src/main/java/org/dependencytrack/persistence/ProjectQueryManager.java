@@ -20,7 +20,6 @@ package org.dependencytrack.persistence;
 
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
-import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.UserPrincipal;
 import alpine.notification.Notification;
@@ -1127,12 +1126,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean hasAccessManagementPermission(final UserPrincipal userPrincipal) {
-        for (Permission permission : getEffectivePermissions(userPrincipal)) {
-            if (Permissions.ACCESS_MANAGEMENT.name().equals(permission.getName())) {
-                return true;
-            }
-        }
-        return false;
+        return hasPermission(userPrincipal, Permissions.Constants.ACCESS_MANAGEMENT, true);
     }
 
     @Override
