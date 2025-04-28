@@ -28,6 +28,7 @@ import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Join;
 import javax.jdo.annotations.Order;
@@ -74,14 +75,14 @@ public class OidcUser implements Serializable, Principal, UserPrincipal {
     private String email;
 
     @Persistent(table = "OIDCUSERS_TEAMS", defaultFetchGroup = "true")
-    @Join(column = "OIDCUSERS_ID")
-    @Element(column = "TEAM_ID")
+    @Join(column = "OIDCUSERS_ID", primaryKey = "OIDCUSERS_TEAMS_PK", foreignKey = "OIDCUSERS_TEAMS_OIDCUSER_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "TEAM_ID", foreignKey = "OIDCUSERS_TEAMS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Team> teams;
 
     @Persistent(table = "OIDCUSERS_PERMISSIONS", defaultFetchGroup = "true")
-    @Join(column = "OIDCUSER_ID")
-    @Element(column = "PERMISSION_ID")
+    @Join(column = "OIDCUSER_ID", primaryKey = "OIDCUSERS_PERMISSIONS_PK", foreignKey = "OIDCUSERS_PERMISSIONS_OIDCUSER_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "PERMISSION_ID", foreignKey = "OIDCUSERS_PERMISSIONS_PERMISSION_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Permission> permissions;
 

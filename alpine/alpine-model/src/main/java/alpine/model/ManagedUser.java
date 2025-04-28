@@ -28,6 +28,7 @@ import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Join;
 import javax.jdo.annotations.Order;
@@ -111,14 +112,14 @@ public class ManagedUser implements Serializable, Principal, UserPrincipal {
     private boolean nonExpiryPassword;
 
     @Persistent(table = "MANAGEDUSERS_TEAMS", defaultFetchGroup = "true")
-    @Join(column = "MANAGEDUSER_ID")
-    @Element(column = "TEAM_ID")
+    @Join(column = "MANAGEDUSER_ID", primaryKey = "MANAGEDUSERS_TEAMS_PK", foreignKey = "MANAGEDUSERS_TEAMS_MANAGEDUSER_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "TEAM_ID", foreignKey = "MANAGEDUSERS_TEAMS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Team> teams;
 
     @Persistent(table = "MANAGEDUSERS_PERMISSIONS", defaultFetchGroup = "true")
-    @Join(column = "MANAGEDUSER_ID")
-    @Element(column = "PERMISSION_ID")
+    @Join(column = "MANAGEDUSER_ID", primaryKey = "MANAGEDUSERS_PERMISSIONS_PK", foreignKey = "MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "PERMISSION_ID", foreignKey = "MANAGEDUSERS_PERMISSIONS_PERMISSION_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Permission> permissions;
 

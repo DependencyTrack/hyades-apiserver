@@ -26,6 +26,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.ForeignKey;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
@@ -52,6 +54,7 @@ public class MappedLdapGroup implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "TEAM_ID", allowsNull = "false")
+    @ForeignKey(name = "MAPPEDLDAPGROUP_TEAM_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE)
     @JsonIgnore
     private Team team;
 

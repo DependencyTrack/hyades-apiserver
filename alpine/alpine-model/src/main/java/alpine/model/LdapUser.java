@@ -27,6 +27,7 @@ import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Join;
 import javax.jdo.annotations.Order;
@@ -71,8 +72,8 @@ public class LdapUser implements Serializable, Principal, UserPrincipal {
     private String dn;
 
     @Persistent(table = "LDAPUSERS_TEAMS", defaultFetchGroup = "true")
-    @Join(column = "LDAPUSER_ID")
-    @Element(column = "TEAM_ID")
+    @Join(column = "LDAPUSER_ID", primaryKey = "LDAPUSERS_TEAMS_PK", foreignKey = "LDAPUSERS_TEAMS_LDAPUSER_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "TEAM_ID", foreignKey = "LDAPUSERS_TEAMS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Team> teams;
 
@@ -83,8 +84,8 @@ public class LdapUser implements Serializable, Principal, UserPrincipal {
     private String email;
 
     @Persistent(table = "LDAPUSERS_PERMISSIONS", defaultFetchGroup = "true")
-    @Join(column = "LDAPUSER_ID")
-    @Element(column = "PERMISSION_ID")
+    @Join(column = "LDAPUSER_ID", primaryKey = "LDAPUSERS_PERMISSIONS_PK", foreignKey = "LDAPUSERS_PERMISSIONS_LDAPUSER_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "PERMISSION_ID", foreignKey = "LDAPUSERS_PERMISSIONS_PERMISSION_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Permission> permissions;
 

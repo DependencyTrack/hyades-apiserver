@@ -27,6 +27,7 @@ import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Join;
 import javax.jdo.annotations.Order;
@@ -96,8 +97,8 @@ public class ApiKey implements Serializable, Principal {
     private Date lastUsed;
 
     @Persistent(table = "APIKEYS_TEAMS", defaultFetchGroup = "true")
-    @Join(column = "APIKEY_ID")
-    @Element(column = "TEAM_ID")
+    @Join(column = "APIKEY_ID", primaryKey = "APIKEYS_TEAMS_PK", foreignKey = "APIKEYS_TEAMS_APIKEY_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "TEAM_ID", foreignKey = "APIKEYS_TEAMS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     @JsonIgnore
     private List<Team> teams;
