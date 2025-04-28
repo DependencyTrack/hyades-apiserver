@@ -39,7 +39,7 @@ public class MetricsPartitionCreateTask implements Subscriber {
 
     @Override
     public void inform(final Event e) {
-        if (e instanceof final MetricsPartitionCreateEvent event) {
+        if (e instanceof MetricsPartitionCreateEvent) {
             try {
                 executeWithLock(
                         getLockConfigForTask(MetricsPartitionCreateTask.class),
