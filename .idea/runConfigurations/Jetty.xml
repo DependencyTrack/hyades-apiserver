@@ -34,7 +34,7 @@
               <option value="-pl" />
               <option value="apiserver" />
               <option value="jetty:run" />
-              <option value="-Dcheckstyle.skip" />
+              <option value="-Dquickly" />
             </list>
           </option>
           <option name="multimoduleDir" />

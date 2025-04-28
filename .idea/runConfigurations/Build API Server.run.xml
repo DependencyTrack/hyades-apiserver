@@ -17,7 +17,7 @@
               <option value="-am" />
               <option value="clean" />
               <option value="package" />
-              <option value="-DskipTests" />
+              <option value="-Dquickly" />
             </list>
           </option>
           <option name="pomFileName" />

@@ -21,7 +21,7 @@ instructions.
 
 There are a few things you'll need on your journey:
 
-* JDK 17+ ([Temurin](https://adoptium.net/temurin/releases) distribution recommended)
+* JDK 21+ ([Temurin](https://adoptium.net/temurin/releases) distribution recommended)
 * Maven (comes bundled with IntelliJ and Eclipse)
 * A Java IDE of your preference (we recommend IntelliJ, but any other IDE is fine as well)
 * Docker (optional)
@@ -48,7 +48,7 @@ Knowing about the core technologies used by the API server may help you with und
 Build an executable JAR:
 
 ```shell
-mvn clean package -DskipTests
+mvn -Dquickly clean package
 ```
 
 The resulting file is placed in `./apiserver/target` as `dependency-track-apiserver.jar`.
@@ -75,7 +75,7 @@ the [configuration documentation](https://docs.dependencytrack.org/getting-start
 To build and run the API server in one go, invoke the Jetty Maven plugin as follows:
 
 ```shell
-mvn -pl apiserver -Dcheckstyle.skip jetty:run
+mvn -pl apiserver -Dquickly jetty:run
 ```
 
 The above command is also suitable for debugging. For IntelliJ, simply *Debug* the [Jetty](.idea/runConfigurations/Jetty.run.xml) run
@@ -135,7 +135,7 @@ performed, and exceptions as that shown above are raised. If this happens, you c
 enhancement like this:
 
 ```shell
-mvn -pl apiserver process-classes
+mvn -pl apiserver -Dquickly process-classes
 ```
 
 Now just execute the test again, and it should just work.
