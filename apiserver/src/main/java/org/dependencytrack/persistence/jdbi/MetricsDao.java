@@ -87,4 +87,25 @@ public interface MetricsDao {
             """)
     @RegisterBeanMapper(DependencyMetrics.class)
     List<DependencyMetrics> getDependencyMetricsSince(@Bind Long componentId,@Bind Instant since);
+
+    @SqlQuery("""
+            SELECT inhrelid::regclass AS partition_name
+            FROM pg_inherits
+            WHERE inhparent = '"PORTFOLIOMETRICS"'::regclass;
+            """)
+    List<String> getPortfolioMetricsPartitions();
+
+    @SqlQuery("""
+            SELECT inhrelid::regclass AS partition_name
+            FROM pg_inherits
+            WHERE inhparent = '"PROJECTMETRICS"'::regclass;
+            """)
+    List<String> getProjectMetricsPartitions();
+
+    @SqlQuery("""
+            SELECT inhrelid::regclass AS partition_name
+            FROM pg_inherits
+            WHERE inhparent = '"DEPENDENCYMETRICS"'::regclass;
+            """)
+    List<String> getDependencyMetricsPartitions();
 }
