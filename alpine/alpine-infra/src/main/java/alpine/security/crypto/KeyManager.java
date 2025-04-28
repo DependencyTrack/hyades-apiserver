@@ -93,8 +93,7 @@ public final class KeyManager {
             try {
                 loadKeyPair();
             } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
-                LOGGER.error("An error occurred loading key pair");
-                LOGGER.error(e.getMessage());
+                LOGGER.error("An error occurred loading key pair", e);
             }
         }
         if (secretKey == null) {
@@ -105,8 +104,7 @@ public final class KeyManager {
                     loadEncodedSecretKey();
                 }
             } catch (IOException | ClassNotFoundException e) {
-                LOGGER.error("An error occurred loading secret key");
-                LOGGER.error(e.getMessage());
+                LOGGER.error("An error occurred loading secret key", e);
             }
         }
     }
