@@ -19,6 +19,7 @@
 package alpine.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -41,6 +42,7 @@ import javax.jdo.annotations.Persistent;
 @Inheritance(strategy = InheritanceStrategy.SUPERCLASS_TABLE)
 @Discriminator(value = "LDAP")
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder(value = { "username", "dn", "email", "teams", "permissions" })
 public class LdapUser extends UserPrincipal {
 
     private static final long serialVersionUID = 261924579887470488L;

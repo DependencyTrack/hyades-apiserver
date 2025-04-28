@@ -20,6 +20,7 @@
 package alpine.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -40,6 +41,7 @@ import javax.jdo.annotations.Persistent;
 @Inheritance(strategy = InheritanceStrategy.SUPERCLASS_TABLE)
 @Discriminator(value = "OIDC")
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder(value = { "username", "subjectIdentifier", "email", "teams", "permissions" })
 public class OidcUser extends UserPrincipal {
 
     private static final long serialVersionUID = -6852825148699565269L;
