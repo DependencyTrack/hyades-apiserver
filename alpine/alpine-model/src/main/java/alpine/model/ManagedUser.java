@@ -20,6 +20,7 @@ package alpine.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -45,6 +46,16 @@ import java.util.Date;
 @Inheritance(strategy = InheritanceStrategy.SUPERCLASS_TABLE)
 @Discriminator(value = "MANAGED")
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder(value = {
+        "username",
+        "lastPasswordChange",
+        "fullname",
+        "email",
+        "suspended",
+        "forcePasswordChange",
+        "nonExpiryPassword",
+        "teams",
+        "permissions" })
 public class ManagedUser extends UserPrincipal {
 
     private static final long serialVersionUID = 7944779964068911025L;
