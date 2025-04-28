@@ -22,7 +22,6 @@ import java.util.List;
 
 import org.jdbi.v3.sqlobject.config.RegisterFieldMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
@@ -35,8 +34,6 @@ import alpine.model.UserPrincipal;
 public interface EffectivePermissionDao {
 
     @SqlQuery(/* language=sql */ """
-            <#-- @ftlvariable name="userClass" type="java.lang.Class<? extends alpine.model.UserPrincipal>" -->
-            <#assign prefix = userClass.getSimpleName()?upper_case>
             SELECT
                 p."ID",
                 p."NAME",
@@ -44,14 +41,11 @@ public interface EffectivePermissionDao {
               FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" upep
              INNER JOIN "PERMISSION" p
                 ON upep."PERMISSION_ID" = p."ID"
-             WHERE upep."${prefix}_ID" = :userId
+             WHERE upep."USERPRINCIPAL_ID" = :userId
                AND upep."PROJECT_ID" = :projectId
             """)
     @DefineNamedBindings
     @RegisterFieldMapper(Permission.class)
-    <T extends UserPrincipal> List<Permission> getEffectivePermissions(
-            @Define Class<T> userClass,
-            @Bind Long userId,
-            @Bind Long projectId);
+    <T extends UserPrincipal> List<Permission> getEffectivePermissions(@Bind Long userId, @Bind Long projectId);
 
 }

@@ -1219,7 +1219,7 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<Permission> getEffectivePermissions(UserPrincipal userPrincipal, Project project) {
         return JdbiFactory.withJdbiHandle(request, handle -> handle.attach(EffectivePermissionDao.class)
-                .getEffectivePermissions(userPrincipal.getClass(), userPrincipal.getId(), project.getId()));
+                .getEffectivePermissions(userPrincipal.getId(), project.getId()));
     }
 
     public boolean hasAccessManagementPermission(final Object principal) {

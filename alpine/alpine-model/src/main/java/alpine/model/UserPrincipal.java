@@ -43,7 +43,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 @PersistenceCapable
-@Discriminator(column = "TYPE", strategy = DiscriminatorStrategy.VALUE_MAP, value = "USER")
+@Discriminator(column = "TYPE", strategy = DiscriminatorStrategy.VALUE_MAP)
 @Inheritance(strategy = InheritanceStrategy.NEW_TABLE)
 public abstract class UserPrincipal implements Serializable, Principal {
 
