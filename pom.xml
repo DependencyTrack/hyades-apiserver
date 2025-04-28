@@ -170,11 +170,12 @@
                     <configuration>
                         <argLine>
                             @{argLine}
+                            -Xmx512m
                             --add-opens java.base/java.util=ALL-UNNAMED
                             --add-opens java.base/java.lang=ALL-UNNAMED
                         </argLine>
                         <reuseForks>true</reuseForks>
-                        <forkCount>1</forkCount>
+                        <forkCount>2</forkCount>
                     </configuration>
                 </plugin>
 
