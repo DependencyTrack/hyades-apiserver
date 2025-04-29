@@ -81,6 +81,14 @@ mvn -pl apiserver -Dquickly jetty:run
 The above command is also suitable for debugging. For IntelliJ, simply *Debug* the [Jetty](.idea/runConfigurations/Jetty.run.xml) run
 configuration.
 
+> [!NOTE]
+> In order for the API server module to "see" changes in other modules, you may need to install
+> the other modules to your local Maven repository first:
+> 
+> ```shell
+> mvn -Dquickly install
+> ```
+
 ## Debugging with Frontend
 
 Start the API server via the Jetty Maven plugin (see [Debugging](#debugging) above). The API server will listen on
@@ -100,6 +108,23 @@ unused port (typically `8081`). Due to this behavior, it is important to always 
 you want to fiddle with default configurations of both API server and frontend.
 
 Now visit `http://127.0.0.1:8081` in your browser and use Dependency-Track as usual.
+
+## Debugging with Dev Services
+
+To launch the API server with Dev Services, execute the following command:
+
+```shell
+mvn -pl apiserver -Dquickly -Pdev-services jetty:run
+```
+
+In this mode, the application will automatically launch containers for:
+
+* Frontend
+* Kafka
+* PostgreSQL
+
+on startup and configure itself to use them. The containers are disposed of when the application stops. 
+The containers are exposed on randomized ports, which will be logged during startup.
 
 ## Testing
 
