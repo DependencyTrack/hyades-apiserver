@@ -264,7 +264,7 @@
                 </property>
             </activation>
             <properties>
-                <unitTestForkCount>4</unitTestForkCount>
+                <unitTestForkCount>1C</unitTestForkCount>
             </properties>
         </profile>
     </profiles>
