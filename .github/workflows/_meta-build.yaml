@@ -63,7 +63,7 @@ jobs:
 
       - name: Build with Maven
         run: |-
-          mvn -B -Dquickly -Dservices.bom.merge.skip=false package
+          mvn -B -Pquick -Dservices.bom.merge.skip=false package
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4.6.2

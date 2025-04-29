@@ -13,7 +13,8 @@
             <list>
               <option value="-pl" />
               <option value="apiserver" />
-              <option value="jetty:run" />
+              <option value="-am" />
+              <option value="test" />
             </list>
           </option>
           <option name="multimoduleDir" />
@@ -32,8 +33,6 @@
         </MavenRunnerParameters>
       </option>
     </MavenSettings>
-    <method v="2">
-      <option name="RunConfigurationTask" enabled="true" run_configuration_name="Install" run_configuration_type="MavenRunConfiguration" />
-    </method>
+    <method v="2" />
   </configuration>
 </component>

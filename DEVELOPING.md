@@ -48,7 +48,7 @@ Knowing about the core technologies used by the API server may help you with und
 Build an executable JAR:
 
 ```shell
-mvn -Dquickly clean package
+mvn -Pquick clean package
 ```
 
 The resulting file is placed in `./apiserver/target` as `dependency-track-apiserver.jar`.
@@ -75,7 +75,7 @@ the [configuration documentation](https://docs.dependencytrack.org/getting-start
 To build and run the API server in one go, invoke the Jetty Maven plugin as follows:
 
 ```shell
-mvn -pl apiserver -Dquickly jetty:run
+mvn -pl apiserver -Pquick jetty:run
 ```
 
 The above command is also suitable for debugging. For IntelliJ, simply *Debug* the [Jetty](.idea/runConfigurations/Jetty.run.xml) run
@@ -86,7 +86,7 @@ configuration.
 > the other modules to your local Maven repository first:
 > 
 > ```shell
-> mvn -Dquickly install
+> mvn -Pquick install
 > ```
 
 ## Debugging with Frontend
@@ -114,7 +114,7 @@ Now visit `http://127.0.0.1:8081` in your browser and use Dependency-Track as us
 To launch the API server with Dev Services, execute the following command:
 
 ```shell
-mvn -pl apiserver -Dquickly -Pdev-services jetty:run
+mvn -pl apiserver -am -Pquick -Pdev-services test
 ```
 
 In this mode, the application will automatically launch containers for:
@@ -160,7 +160,7 @@ performed, and exceptions as that shown above are raised. If this happens, you c
 enhancement like this:
 
 ```shell
-mvn -pl apiserver -Dquickly process-classes
+mvn -pl apiserver -Pquick process-classes
 ```
 
 Now just execute the test again, and it should just work.
