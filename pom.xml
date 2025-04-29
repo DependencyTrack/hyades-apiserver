@@ -92,6 +92,9 @@
 
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
+
+        <!-- Log level to use for unit tests -->
+        <unitTestLogLevel>WARN</unitTestLogLevel>
     </properties>
 
     <dependencyManagement>
@@ -265,6 +268,7 @@
             </activation>
             <properties>
                 <unitTestForkCount>1C</unitTestForkCount>
+                <unitTestLogLevel>OFF</unitTestLogLevel>
             </properties>
         </profile>
     </profiles>
