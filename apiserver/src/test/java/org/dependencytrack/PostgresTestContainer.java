@@ -37,7 +37,7 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
         withUsername("dtrack");
         withPassword("dtrack");
         withDatabaseName("dtrack");
-        withLabel("owner", "hyades-apiserver-" + ManagementFactory.getRuntimeMXBean().getName());
+        withLabel("owner", "hyades-apiserver-" + /* JVM name */ ManagementFactory.getRuntimeMXBean().getName());
         withUrlParam("reWriteBatchedInserts", "true");
 
         // Uncomment this to see queries executed by Postgres:
