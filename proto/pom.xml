@@ -26,26 +26,21 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>com.github.os72</groupId>
-                <artifactId>protoc-jar-maven-plugin</artifactId>
-                <version>3.11.4</version>
+                <groupId>io.github.ascopes</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>3.1.2</version>
+                <configuration>
+                    <protocVersion>${lib.protobuf-java.version}</protocVersion>
+                    <sourceDirectories>
+                        <sourceDirectory>${project.basedir}/src/main/proto</sourceDirectory>
+                    </sourceDirectories>
+                </configuration>
                 <executions>
                     <execution>
-                        <id>protobuf</id>
                         <phase>generate-sources</phase>
                         <goals>
-                            <goal>run</goal>
+                            <goal>generate</goal>
                         </goals>
-                        <configuration>
-                            <includeMavenTypes>direct</includeMavenTypes>
-                            <inputDirectories>
-                                <inputDirectory>src/main/proto</inputDirectory>
-                            </inputDirectories>
-                            <includeDirectories>
-                                <includeDirectory>src/main/proto</includeDirectory>
-                            </includeDirectories>
-                            <protocArtifact>com.google.protobuf:protoc:${lib.protobuf-java.version}</protocArtifact>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
