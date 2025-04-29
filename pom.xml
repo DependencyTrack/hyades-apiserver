@@ -262,6 +262,7 @@
             </activation>
             <properties>
                 <checkstyle.skip>true</checkstyle.skip>
+                <jacoco.skip>true</jacoco.skip>
                 <maven.test.skip>true</maven.test.skip>
             </properties>
         </profile>
