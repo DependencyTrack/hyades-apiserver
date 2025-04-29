@@ -15,6 +15,7 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
+        <maven.install.skip>true</maven.install.skip>
 
         <!-- Dependency Versions -->
         <lib.assertj.version>3.26.3</lib.assertj.version>
@@ -545,14 +546,6 @@
             </plugin>
 
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
-
-            <plugin>
                 <groupId>com.coderplus.maven.plugins</groupId>
                 <artifactId>copy-rename-maven-plugin</artifactId>
                 <version>1.0.1</version>
@@ -679,7 +672,7 @@
                         <phase>package</phase>
                         <configuration>
                             <target>
-                                <move file="${project.build.directory}/${project.build.finalName}.war"
+                                <copy file="${project.build.directory}/${project.build.finalName}.war"
                                       tofile="${project.build.directory}/${project.build.finalName}.jar" />
                             </target>
                         </configuration>
