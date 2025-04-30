@@ -27,6 +27,7 @@ permissions: { }
 jobs:
   read-version:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.parse.outputs.version }}
     steps:
@@ -62,6 +63,7 @@ jobs:
 
   update-github-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs:
       - read-version
       - call-build
