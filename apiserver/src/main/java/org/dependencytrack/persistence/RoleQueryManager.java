@@ -8,6 +8,8 @@ import javax.jdo.PersistenceManager;
 
 import org.dependencytrack.model.Role;
 
+import org.apache.commons.lang3.StringUtils;
+
 import alpine.common.logging.Logger;
 import alpine.resources.AlpineRequest;
 
@@ -33,9 +35,20 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
         return Collections.emptyList();
     }
 
-    public Role getRole(String uuid) {
-        // TODO:Implement role retrieval logic
-        return null;
+    @Override
+    public Role getRoleByName(final String name) {
+        final String role = StringUtils.lowerCase(StringUtils.trimToNull(name));
+        final Query<Role> query = pm.newQuery(Role.class)
+                .filter("name.toLowerCase().trim() == :name")
+                .setNamedParameters(Map.of("name", role))
+                .range(0, 1);
+
+        return executeAndCloseUnique(query);
+    }
+
+    @Override
+    public Role getRole(final String uuid) {
+        return getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
     }
 
     public Role updateRole(Role role) {
