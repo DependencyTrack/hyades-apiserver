@@ -33,7 +33,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -51,14 +51,20 @@ import org.dependencytrack.model.Role;
 import org.dependencytrack.model.ProjectRole;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.RoleDao;
+import org.dependencytrack.resources.v1.vo.CreateRoleRequest;
+
 import org.jdbi.v3.core.Handle;
 import org.owasp.security.logging.SecurityMarkers;
 
+import alpine.model.Permission;
 import alpine.model.UserPrincipal;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 import java.util.List;
+import java.util.Map;
+
+import javax.jdo.Query;
 
 /**
  * JAX-RS resources for processing roles.
@@ -131,22 +137,41 @@ public class RoleResource extends AlpineResource {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = "Creates a new role",
-            description = "<p>Requires permission <strong>ROLE_MANAGEMENT</strong> or <strong>ROLE_MANAGEMENT_CREATE</strong></p>")
+    @Operation(summary = "Creates a new role", description = "<p>Requires permission <strong>ROLE_MANAGEMENT</strong> or <strong>ROLE_MANAGEMENT_CREATE</strong></p>")
     @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "201",
-                    description = "The created role",
-                    content = @Content(schema = @Schema(implementation = Role.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(responseCode = "201", description = "The created role", content = @Content(schema = @Schema(implementation = Role.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "409", description = "The Role already exists"),
     })
     @PermissionRequired({ Permissions.Constants.ROLE_MANAGEMENT, Permissions.Constants.ROLE_MANAGEMENT_CREATE })
-    public Response createRole(Role jsonRole) {
-        failOnValidationError(super.getValidator().validateProperty(jsonRole, "name"));
-
+    public Response createRole(@Valid CreateRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            final Role role = qm.createRole(jsonRole.getName(), jsonRole.getPermissions().stream().toList());
+            boolean roleExists = qm.getRoleByName(request.name()) != null;
+
+            if (roleExists) {
+                return Response.status(Response.Status.CONFLICT)
+                        .entity(String.format("Role '%s' already exists", request.name()))
+                        .build();
+            }
+
+            List<String> permissionNames = request.permissions()
+                    .stream()
+                    .map(Permissions::name)
+                    .toList();
+
+            final Query<Permission> query = qm.getPersistenceManager().newQuery(Permission.class)
+                    .filter(":permissions.contains(name)")
+                    .setNamedParameters(Map.of("permissions", permissionNames))
+                    .orderBy("name asc");
+
+            final List<Permission> requestedPermissions;
+            try {
+                requestedPermissions = List.copyOf(query.executeList());
+            } finally {
+                query.closeAll();
+            }
+
+            final Role role = qm.createRole(request.name(), requestedPermissions);
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role created: " + role.getName());
 
             return Response.status(Response.Status.CREATED).entity(role).build();
@@ -239,7 +264,7 @@ public class RoleResource extends AlpineResource {
                 LOGGER.info("No roles found for user: " + username);
                 return Response.ok(List.of()).build();
             }
-            
+
             return Response.ok(roles).build();
         }
     }

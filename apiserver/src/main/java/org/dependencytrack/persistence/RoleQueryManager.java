@@ -33,6 +33,8 @@ import org.dependencytrack.model.ProjectRole;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.persistence.jdbi.RoleDao;
 
+import org.apache.commons.lang3.StringUtils;
+
 import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
@@ -85,6 +87,17 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
             query.setOrdering("name asc");
 
         return query.executeList();
+    }
+
+    @Override
+    public Role getRoleByName(final String name) {
+        final String role = StringUtils.lowerCase(StringUtils.trimToNull(name));
+        final Query<Role> query = pm.newQuery(Role.class)
+                .filter("name.toLowerCase().trim() == :name")
+                .setNamedParameters(Map.of("name", role))
+                .range(0, 1);
+
+        return executeAndCloseUnique(query);
     }
 
     @Override
