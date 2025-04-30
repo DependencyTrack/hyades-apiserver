@@ -28,7 +28,6 @@ import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;

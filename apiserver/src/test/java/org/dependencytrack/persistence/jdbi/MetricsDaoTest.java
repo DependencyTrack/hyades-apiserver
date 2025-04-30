@@ -174,11 +174,11 @@ public class MetricsDaoTest extends PersistenceCapableTest {
     private void createPartitionForDate(final String tableName, final LocalDate targetDate) throws Exception {
         LocalDate nextDay = targetDate.plusDays(1);
         String partitionSuffix = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String partitionName = "\"" + tableName + "_" + partitionSuffix + "\"";
+        String partitionName = tableName + "_" + partitionSuffix;
         String sql = String.format("""
-                                    CREATE TABLE IF NOT EXISTS %s PARTITION OF %s
-                                    FOR VALUES FROM ('%s') TO ('%s')
-                                """, partitionName, "\"" +tableName + "\"" , targetDate, nextDay);
+                CREATE TABLE IF NOT EXISTS "%s" PARTITION OF "%s"
+                FOR VALUES FROM ('%s') TO ('%s')
+            """, partitionName, tableName, targetDate, nextDay);
 
         final var dataSource = new PGSimpleDataSource();
         dataSource.setUrl(postgresContainer.getJdbcUrl());

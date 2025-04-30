@@ -137,6 +137,7 @@ public interface MetricsDao {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
         int deletedCount = 0;
         for (String partition : metricsPartitions) {
+            partition = partition.replace("\"", "");
             String[] parts = partition.split("_");
             LocalDate partitionDate = LocalDate.parse(parts[1], formatter);
             if (partitionDate.isBefore(cutoffDate)) {
