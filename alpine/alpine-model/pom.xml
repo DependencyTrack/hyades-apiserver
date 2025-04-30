@@ -72,6 +72,11 @@
             <artifactId>jackson-databind</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-nop</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -82,7 +87,7 @@
                 <configuration>
                     <api>JDO</api>
                     <persistenceUnitName>Alpine</persistenceUnitName>
-                    <verbose>true</verbose>
+                    <quiet>true</quiet>
                     <fork>false</fork>
                 </configuration>
                 <executions>

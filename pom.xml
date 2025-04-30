@@ -89,6 +89,12 @@
 
         <!-- Dependency versions -->
         <lib.protobuf-java.version>4.30.2</lib.protobuf-java.version>
+
+        <!-- Number of JVM processes to use for unit test parallelization -->
+        <unitTestForkCount>2</unitTestForkCount>
+
+        <!-- Log level to use for unit tests -->
+        <unitTestLogLevel>WARN</unitTestLogLevel>
     </properties>
 
     <dependencyManagement>
@@ -145,6 +151,14 @@
     </dependencyManagement>
 
     <build>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.extensions</groupId>
+                <artifactId>maven-build-cache-extension</artifactId>
+                <version>1.2.0</version>
+            </extension>
+        </extensions>
+
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -160,6 +174,11 @@
                             <arg>-Xlint:-serial</arg>
                             <arg>-parameters</arg>
                         </compilerArgs>
+                        <!--
+                          https://stackoverflow.com/a/76392489
+                          https://issues.apache.org/jira/browse/MCOMPILER-209
+                        -->
+                        <useIncrementalCompilation>false</useIncrementalCompilation>
                     </configuration>
                 </plugin>
 
@@ -168,16 +187,15 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.5.3</version>
                     <configuration>
-                        <argLine>@{argLine} --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+                        <argLine>
+                            @{argLine}
+                            -Xmx512m
+                            --add-opens java.base/java.util=ALL-UNNAMED
+                            --add-opens java.base/java.lang=ALL-UNNAMED
+                        </argLine>
                         <reuseForks>true</reuseForks>
-                        <forkCount>1</forkCount>
+                        <forkCount>${unitTestForkCount}</forkCount>
                     </configuration>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-install-plugin</artifactId>
-                    <version>3.1.4</version>
                 </plugin>
 
                 <plugin>
@@ -232,4 +250,34 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>quick</id>
+            <activation>
+                <property>
+                    <name>quickly</name>
+                </property>
+            </activation>
+            <properties>
+                <checkstyle.skip>true</checkstyle.skip>
+                <jacoco.skip>true</jacoco.skip>
+                <maven.test.skip>true</maven.test.skip>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>github-actions</id>
+            <activation>
+                <property>
+                    <name>env.GITHUB_ACTIONS</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <unitTestForkCount>1C</unitTestForkCount>
+                <unitTestLogLevel>OFF</unitTestLogLevel>
+            </properties>
+        </profile>
+    </profiles>
 </project>

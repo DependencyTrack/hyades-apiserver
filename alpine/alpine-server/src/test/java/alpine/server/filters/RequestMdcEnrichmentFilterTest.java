@@ -21,6 +21,7 @@ package alpine.server.filters;
 import alpine.server.resources.AlpineResource;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
+import org.glassfish.jersey.test.TestProperties;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 
@@ -66,6 +67,7 @@ public class RequestMdcEnrichmentFilterTest extends JerseyTest {
 
     @Override
     protected Application configure() {
+        forceSet(TestProperties.CONTAINER_PORT, "0");
         return new ResourceConfig(TestResource.class)
                 .register(RequestMdcEnrichmentFilter.class);
     }

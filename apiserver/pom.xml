@@ -15,6 +15,7 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
+        <maven.install.skip>true</maven.install.skip>
 
         <!-- Dependency Versions -->
         <lib.assertj.version>3.26.3</lib.assertj.version>
@@ -530,12 +531,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <systemProperties>
-                        <property>
-                            <name>java.util.logging.config.file</name>
-                            <value>${project.basedir}/src/test/resources/logging.properties</value>
-                        </property>
-                    </systemProperties>
+                    <systemPropertyVariables>
+                        <dependencyTrack.logging.level>${unitTestLogLevel}</dependencyTrack.logging.level>
+                        <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
+                    </systemPropertyVariables>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -544,14 +543,6 @@
                         <version>3.5.3</version>
                     </dependency>
                 </dependencies>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
             </plugin>
 
             <plugin>
@@ -580,7 +571,7 @@
                 <configuration>
                     <api>JDO</api>
                     <persistenceUnitName>Alpine</persistenceUnitName>
-                    <verbose>true</verbose>
+                    <quiet>true</quiet>
                     <fork>false</fork>
                 </configuration>
                 <executions>
@@ -681,7 +672,7 @@
                         <phase>package</phase>
                         <configuration>
                             <target>
-                                <move file="${project.build.directory}/${project.build.finalName}.war"
+                                <copy file="${project.build.directory}/${project.build.finalName}.war"
                                       tofile="${project.build.directory}/${project.build.finalName}.jar" />
                             </target>
                         </configuration>
@@ -771,7 +762,8 @@
         <profile>
             <id>dev-services</id>
             <properties>
-                <!-- Don't compile test classes, we only want to run Jetty. -->
+                <checkstyle.skip>true</checkstyle.skip>
+                <jacoco.skip>true</jacoco.skip>
                 <maven.test.skip>true</maven.test.skip>
             </properties>
             <dependencies>
@@ -803,6 +795,14 @@
                     <plugin>
                         <groupId>org.eclipse.jetty.ee10</groupId>
                         <artifactId>jetty-ee10-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                         <configuration>
                             <systemProperties>
                                 <dev.services.enabled>true</dev.services.enabled>

@@ -32,6 +32,7 @@ import alpine.server.resources.AlpineResource;
 import net.javacrumbs.jsonunit.core.Option;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
+import org.glassfish.jersey.test.TestProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -76,6 +77,7 @@ public class AuthorizationFilterTest extends JerseyTest {
 
     @Override
     protected Application configure() {
+        forceSet(TestProperties.CONTAINER_PORT, "0");
         return new ResourceConfig(TestResource.class)
                 .register(AuthenticationFilter.class)
                 .register(AuthorizationFilter.class)
