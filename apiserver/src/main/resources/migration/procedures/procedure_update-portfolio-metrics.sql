@@ -105,50 +105,7 @@ BEGIN
 
   "v_risk_score" = "CALC_RISK_SCORE"("v_critical", "v_high", "v_medium", "v_low", "v_unassigned");
 
-  WITH "CTE_LATEST_METRICS" AS (
-    SELECT *
-      FROM "PORTFOLIOMETRICS"
-     ORDER BY "LAST_OCCURRENCE" DESC
-     LIMIT 1)
-  SELECT "ID"
-  FROM "CTE_LATEST_METRICS"
-  WHERE "PROJECTS" = "v_projects"
-    AND "VULNERABLEPROJECTS" = "v_vulnerable_projects"
-    AND "COMPONENTS" = "v_components"
-    AND "VULNERABLECOMPONENTS" = "v_vulnerable_components"
-    AND "VULNERABILITIES" = "v_vulnerabilities"
-    AND "CRITICAL" = "v_critical"
-    AND "HIGH" = "v_high"
-    AND "MEDIUM" = "v_medium"
-    AND "LOW" = "v_low"
-    AND "UNASSIGNED_SEVERITY" = "v_unassigned"
-    AND "RISKSCORE" = "v_risk_score"
-    AND "FINDINGS_TOTAL" = "v_findings_total"
-    AND "FINDINGS_AUDITED" = "v_findings_audited"
-    AND "FINDINGS_UNAUDITED" = "v_findings_unaudited"
-    AND "SUPPRESSED" = "v_findings_suppressed"
-    AND "POLICYVIOLATIONS_TOTAL" = "v_policy_violations_total"
-    AND "POLICYVIOLATIONS_FAIL" = "v_policy_violations_fail"
-    AND "POLICYVIOLATIONS_WARN" = "v_policy_violations_warn"
-    AND "POLICYVIOLATIONS_INFO" = "v_policy_violations_info"
-    AND "POLICYVIOLATIONS_AUDITED" = "v_policy_violations_audited"
-    AND "POLICYVIOLATIONS_UNAUDITED" = "v_policy_violations_unaudited"
-    AND "POLICYVIOLATIONS_LICENSE_TOTAL" = "v_policy_violations_license_total"
-    AND "POLICYVIOLATIONS_LICENSE_AUDITED" = "v_policy_violations_license_audited"
-    AND "POLICYVIOLATIONS_LICENSE_UNAUDITED" = "v_policy_violations_license_unaudited"
-    AND "POLICYVIOLATIONS_OPERATIONAL_TOTAL" = "v_policy_violations_operational_total"
-    AND "POLICYVIOLATIONS_OPERATIONAL_AUDITED" = "v_policy_violations_operational_audited"
-    AND "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" = "v_policy_violations_operational_unaudited"
-    AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
-    AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
-    AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
-  LIMIT 1
-  INTO "v_existing_id";
-
-  IF "v_existing_id" IS NOT NULL THEN
-    UPDATE "PORTFOLIOMETRICS" SET "LAST_OCCURRENCE" = NOW() WHERE "ID" = "v_existing_id";
-  ELSE
-    INSERT INTO "PORTFOLIOMETRICS" ("PROJECTS",
+   INSERT INTO "PORTFOLIOMETRICS" ("PROJECTS",
                                     "VULNERABLEPROJECTS",
                                     "COMPONENTS",
                                     "VULNERABLECOMPONENTS",
@@ -180,7 +137,7 @@ BEGIN
                                     "POLICYVIOLATIONS_SECURITY_UNAUDITED",
                                     "FIRST_OCCURRENCE",
                                     "LAST_OCCURRENCE")
-    VALUES ("v_projects",
+   VALUES ("v_projects",
             "v_vulnerable_projects",
             "v_components",
             "v_vulnerable_components",
@@ -212,6 +169,5 @@ BEGIN
             "v_policy_violations_security_unaudited",
             NOW(),
             NOW());
-  END IF;
 END;
 $$;

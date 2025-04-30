@@ -57,9 +57,9 @@ public class MetricsPartitionCreateTaskTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testUpdateMetricsUnchanged() throws Exception {
+    public void testCreateMetricsExistingPartition() throws Exception {
 
-        // Record initial metrics partition for today
+        // Create initial metrics partition for today
         new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
 
         //sleep for the least duration lock held for, so lock could be released
