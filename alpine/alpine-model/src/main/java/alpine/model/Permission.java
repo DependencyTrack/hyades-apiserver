@@ -75,7 +75,7 @@ public class Permission implements Serializable {
     @Persistent(mappedBy = "permissions")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
     @JsonIgnore
-    private List<UserPrincipal> users;
+    private List<User> users;
 
     public long getId() {
         return id;
@@ -154,11 +154,11 @@ public class Permission implements Serializable {
         this.users.addAll(managedUsers);
     }
 
-    public List<UserPrincipal> getUsers() {
+    public List<User> getUsers() {
         return users;
     }
 
-    public void setUsers(List<UserPrincipal> users) {
+    public void setUsers(List<User> users) {
         this.users = users;
     }
 }

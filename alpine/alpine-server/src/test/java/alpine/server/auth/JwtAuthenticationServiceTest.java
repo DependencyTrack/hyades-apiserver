@@ -23,7 +23,7 @@ import alpine.Config;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.assertj.core.api.Assertions;
@@ -188,7 +188,7 @@ public class JwtAuthenticationServiceTest {
 
         final JwtAuthenticationService authService = new JwtAuthenticationService(containerRequestMock);
 
-        final UserPrincipal authenticatedUser = (UserPrincipal) authService.authenticate();
+        final User authenticatedUser = (User) authService.authenticate();
         Assertions.assertThat(authenticatedUser).isNotNull();
         Assertions.assertThat(authenticatedUser).isInstanceOf(ManagedUser.class);
     }
@@ -209,7 +209,7 @@ public class JwtAuthenticationServiceTest {
 
         final JwtAuthenticationService authService = new JwtAuthenticationService(containerRequestMock);
 
-        final UserPrincipal authenticatedUser = (UserPrincipal) authService.authenticate();
+        final User authenticatedUser = (User) authService.authenticate();
         Assertions.assertThat(authenticatedUser).isNotNull();
         Assertions.assertThat(authenticatedUser).isInstanceOf(LdapUser.class);
     }
@@ -230,7 +230,7 @@ public class JwtAuthenticationServiceTest {
 
         final JwtAuthenticationService authService = new JwtAuthenticationService(containerRequestMock);
 
-        final UserPrincipal authenticatedUser = (UserPrincipal) authService.authenticate();
+        final User authenticatedUser = (User) authService.authenticate();
         Assertions.assertThat(authenticatedUser).isNotNull();
         Assertions.assertThat(authenticatedUser).isInstanceOf(OidcUser.class);
     }

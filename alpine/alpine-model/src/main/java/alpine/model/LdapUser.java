@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Discriminator;
 import javax.jdo.annotations.Inheritance;
@@ -43,7 +42,7 @@ import javax.jdo.annotations.Persistent;
 @Discriminator(value = "LDAP")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder(value = { "username", "dn", "email", "teams", "permissions" })
-public class LdapUser extends UserPrincipal {
+public class LdapUser extends User {
 
     private static final long serialVersionUID = 261924579887470488L;
 

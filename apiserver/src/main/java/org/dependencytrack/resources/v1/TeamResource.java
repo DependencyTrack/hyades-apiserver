@@ -22,7 +22,7 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.security.ApiKeyDecoder;
 import alpine.security.InvalidApiKeyFormatException;
 import alpine.server.auth.PermissionRequired;
@@ -58,7 +58,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -242,15 +241,14 @@ public class TeamResource extends AlpineResource {
     })
     public Response availableTeams() {
         try (QueryManager qm = new QueryManager()) {
-            Principal user = getPrincipal();
-            boolean isAllTeams = qm.hasAccessManagementPermission(user);
+            boolean isAllTeams = qm.hasAccessManagementPermission(getPrincipal());
             List<Team> teams = new ArrayList<>();
             if (isAllTeams) {
                 teams = qm.getTeams();
             } else {
-                if (user instanceof final UserPrincipal userPrincipal) {
-                    teams = userPrincipal.getTeams();
-                } else if (user instanceof final ApiKey apiKey) {
+                if (getPrincipal() instanceof final User user) {
+                    teams = user.getTeams();
+                } else if (getPrincipal() instanceof final ApiKey apiKey) {
                     teams = apiKey.getTeams();
                 }
             }

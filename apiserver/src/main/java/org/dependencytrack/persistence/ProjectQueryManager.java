@@ -21,7 +21,7 @@ package org.dependencytrack.persistence;
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.persistence.PaginatedResult;
@@ -1100,7 +1100,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     /**
      * Updates a Project ACL to add the principals Team to the AccessTeams
      * This only happens if Portfolio Access Control is enabled and the @param principal is an ApyKey
-     * For a UserPrincipal we don't know which Team(s) to add to the ACL,
+     * For a User we don't know which Team(s) to add to the ACL,
      * See https://github.com/DependencyTrack/dependency-track/issues/1435
      *
      * @param project
@@ -1125,8 +1125,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public boolean hasAccessManagementPermission(final UserPrincipal userPrincipal) {
-        return hasPermission(userPrincipal, Permissions.Constants.ACCESS_MANAGEMENT, true);
+    public boolean hasAccessManagementPermission(final User user) {
+        return hasPermission(user, Permissions.Constants.ACCESS_MANAGEMENT, true);
     }
 
     @Override

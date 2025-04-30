@@ -26,14 +26,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Discriminator;
 import javax.jdo.annotations.Inheritance;
 import javax.jdo.annotations.InheritanceStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
-
 import java.util.Date;
 
 /**
@@ -56,7 +54,7 @@ import java.util.Date;
         "nonExpiryPassword",
         "teams",
         "permissions" })
-public class ManagedUser extends UserPrincipal {
+public class ManagedUser extends User {
 
     private static final long serialVersionUID = 7944779964068911025L;
 

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Discriminator;
 import javax.jdo.annotations.Inheritance;
@@ -42,7 +41,7 @@ import javax.jdo.annotations.Persistent;
 @Discriminator(value = "OIDC")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder(value = { "username", "subjectIdentifier", "email", "teams", "permissions" })
-public class OidcUser extends UserPrincipal {
+public class OidcUser extends User {
 
     private static final long serialVersionUID = -6852825148699565269L;
 

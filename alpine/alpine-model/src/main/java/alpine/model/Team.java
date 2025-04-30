@@ -97,7 +97,7 @@ public class Team implements Serializable {
 
     @Persistent(mappedBy = "teams")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
-    private List<UserPrincipal> users;
+    private List<User> users;
 
     @Persistent(mappedBy = "team")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "dn ASC"))
@@ -190,11 +190,11 @@ public class Team implements Serializable {
         this.users.addAll(oidcUsers);
     }
 
-    public List<UserPrincipal> getUsers() {
+    public List<User> getUsers() {
         return users;
     }
 
-    public void setUsers(List<UserPrincipal> users) {
+    public void setUsers(List<User> users) {
         this.users = users;
     }
 

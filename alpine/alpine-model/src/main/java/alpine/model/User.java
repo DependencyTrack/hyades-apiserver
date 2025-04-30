@@ -18,15 +18,17 @@
  */
 package alpine.model;
 
-import java.io.Serializable;
-import java.security.Principal;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Discriminator;
 import javax.jdo.annotations.DiscriminatorStrategy;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
+import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Inheritance;
 import javax.jdo.annotations.InheritanceStrategy;
@@ -36,36 +38,34 @@ import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
+import java.io.Serializable;
+import java.security.Principal;
+import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
-
-@PersistenceCapable
+@PersistenceCapable(table = "USER")
 @Discriminator(column = "TYPE", strategy = DiscriminatorStrategy.VALUE_MAP)
 @Inheritance(strategy = InheritanceStrategy.NEW_TABLE)
-public abstract class UserPrincipal implements Serializable, Principal {
+public abstract class User implements Serializable, Principal {
 
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore
     private long id;
 
-    @Persistent(table = "USERPRINCIPALS_TEAMS", defaultFetchGroup = "true")
-    @Join(column = "USERPRINCIPAL_ID")
-    @Element(column = "TEAM_ID")
+    @Persistent(table = "USERS_TEAMS", defaultFetchGroup = "true")
+    @Join(column = "USER_ID", primaryKey = "USERS_TEAMS_PK", foreignKey = "USERS_TEAMS_USER_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "TEAM_ID", foreignKey = "USERS_TEAMS_TEAM_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Team> teams;
 
-    @Persistent(table = "USERPRINCIPALS_PERMISSIONS", defaultFetchGroup = "true")
-    @Join(column = "USERPRINCIPAL_ID")
-    @Element(column = "PERMISSION_ID")
+    @Persistent(table = "USERS_PERMISSIONS", defaultFetchGroup = "true")
+    @Join(column = "USER_ID", primaryKey = "USERS_PERMISSIONS_PK", foreignKey = "USERS_PERMISSIONS_USER_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Element(column = "PERMISSION_ID", foreignKey = "USERS_PERMISSIONS_PERMISSION_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE)
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private List<Permission> permissions;
 
     @Persistent
-    @Unique(name = "USERPRINCIPAL_USERNAME_IDX")
+    @Unique(name = "USER_USERNAME_IDX")
     @Column(name = "USERNAME")
     @NotBlank
     @Size(min = 1, max = 255)

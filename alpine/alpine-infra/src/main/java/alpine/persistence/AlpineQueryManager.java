@@ -34,7 +34,7 @@ import alpine.model.OidcGroup;
 import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.resources.AlpineRequest;
 import alpine.security.ApiKeyGenerator;
 
@@ -531,23 +531,15 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Resolves a UserPrincipal. Default order resolution is to first match
-     * on ManagedUser then on LdapUser and finally on OidcUser. This may be
-     * configurable in a future release.
+     * Resolves a User.
      * @param username the username of the principal to retrieve
-     * @return a UserPrincipal if found, null if not found
+     * @return a User if found, null if not found
      * @since 1.0.0
      */
-    public UserPrincipal getUserPrincipal(String username) {
-        UserPrincipal principal = getManagedUser(username);
-        if (principal != null) {
-            return principal;
-        }
-        principal = getLdapUser(username);
-        if (principal != null) {
-            return principal;
-        }
-        return getOidcUser(username);
+    public User getUser(String username) {
+        final Query<User> query = pm.newQuery(User.class, "username == :username");
+        query.setParameters(username);
+        return executeAndCloseUnique(query);
     }
 
     /**
@@ -621,7 +613,7 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Associates a UserPrincipal to a Team.
+     * Associates a User to a Team.
      * @param user The user to bind
      * @param team The team to bind
      * @return true if operation was successful, false if not. This is not an indication of team association,
@@ -629,7 +621,7 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * exists between the two.
      * @since 1.0.0
      */
-    public boolean addUserToTeam(final UserPrincipal user, final Team team) {
+    public boolean addUserToTeam(final User user, final Team team) {
         return callInTransaction(() -> {
             List<Team> teams = user.getTeams();
             boolean found = false;
@@ -651,14 +643,14 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Removes the association of a UserPrincipal to a Team.
+     * Removes the association of a User to a Team.
      * @param user The user to unbind
      * @param team The team to unbind
      * @return true if operation was successful, false if not. This is not an indication of team disassociation,
      * an unsuccessful return value may be due to the team or user not existing, or a binding that may not exist.
      * @since 1.0.0
      */
-    public boolean removeUserFromTeam(final UserPrincipal user, final Team team) {
+    public boolean removeUserFromTeam(final User user, final Team team) {
         return callInTransaction(() -> {
             final List<Team> teams = user.getTeams();
             if (teams == null) {
@@ -713,17 +705,7 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * @return a list of {@link Permission}s
      * @since 5.6.0
      */
-    public List<Permission> getPermissionsByName(final String... names) {
-        return getPermissionsByName(List.of(names));
-    }
-
-    /**
-     * Retrieves a list of {@link Permission}s having the given {@code names}.
-     * @param names The permission names
-     * @return a list of {@link Permission}s
-     * @since 5.6.0
-     */
-    public <C extends Collection<String>> List<Permission> getPermissionsByName(final C names) {
+    public List<Permission> getPermissionsByName(final Collection<String> names) {
         final Query<Permission> query = pm.newQuery(Permission.class)
                 .filter(":permissions.contains(name)")
                 .setNamedParameters(Map.of("permissions", names))
@@ -753,7 +735,7 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     public Set<String> getEffectivePermissions(final Principal principal) {
         return switch (principal) {
             case ApiKey apiKey -> getEffectivePermissions(apiKey);
-            case UserPrincipal user -> getEffectivePermissions(user);
+            case User user -> getEffectivePermissions(user);
             default -> Collections.emptySet();
         };
     }
@@ -780,15 +762,15 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * Determines the effective permissions for the specified user by collecting
      * a List of all permissions assigned to the user either directly, or through
      * team membership.
-     * @param user the {@link UserPrincipal} to retrieve permissions for
+     * @param user the {@link User} to retrieve permissions for
      * @return Set of permission names
      */
-    private Set<String> getEffectivePermissions(final UserPrincipal user) {
+    private Set<String> getEffectivePermissions(final User user) {
         final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
                 SELECT p."NAME"
-                  FROM "USERPRINCIPAL" u
-                 INNER JOIN "USERPRINCIPALS_TEAMS" ut
-                    ON ut."USERPRINCIPAL_ID" = u."ID"
+                  FROM "USER" u
+                 INNER JOIN "USERS_TEAMS" ut
+                    ON ut."USER_ID" = u."ID"
                  INNER JOIN "TEAM" t
                     ON t."ID" = ut."TEAM_ID"
                  INNER JOIN "TEAMS_PERMISSIONS" tp
@@ -798,9 +780,9 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
                  WHERE u."ID" = :userId
                  UNION ALL
                 SELECT p."NAME"
-                  FROM "USERPRINCIPAL" u
-                 INNER JOIN "USERPRINCIPALS_PERMISSIONS" up
-                    ON up."USERPRINCIPAL_ID" = u."ID"
+                  FROM "USER" u
+                 INNER JOIN "USERS_PERMISSIONS" up
+                    ON up."USER_ID" = u."ID"
                  INNER JOIN "PERMISSION" p
                     ON p."ID" = up."PERMISSION_ID"
                  WHERE u."ID" = :userId
@@ -812,28 +794,17 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Determines if the specified UserPrincipal has been assigned the specified permission.
-     * @param user the UserPrincipal to query
-     * @param permissionName the name of the permission
-     * @return true if the user has the permission assigned, false if not
-     * @since 1.0.0
-     */
-    public boolean hasPermission(final UserPrincipal user, String permissionName) {
-        return hasPermission(user, permissionName, false);
-    }
-
-    /**
-     * Determines if the specified UserPrincipal has been assigned the specified permission.
-     * @param user the UserPrincipal to query
+     * Determines if the specified User has been assigned the specified permission.
+     * @param user the User to query
      * @param permissionName the name of the permission
      * @param includeTeams if true, will query all Team membership assigned to the user for the specified permission
      * @return true if the user has the permission assigned, false if not
      * @since 1.0.0
      */
-    public boolean hasPermission(final UserPrincipal user, String permissionName, boolean includeTeams) {
+    public boolean hasPermission(final User user, String permissionName, boolean includeTeams) {
         Query<Permission> query = pm.newQuery(Permission.class)
                 .filter("name == :permissionName && users.contains(user) && user.id == :userId")
-                .variables("alpine.model.UserPrincipal user")
+                .variables("alpine.model.User user")
                 .setParameters(permissionName, user.getId())
                 .result("count(id)");
 

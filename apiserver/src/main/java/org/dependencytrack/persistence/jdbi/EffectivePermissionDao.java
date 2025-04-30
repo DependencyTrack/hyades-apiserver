@@ -18,15 +18,13 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import java.util.List;
-
+import alpine.model.Permission;
 import org.jdbi.v3.sqlobject.config.RegisterFieldMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
-import alpine.model.Permission;
-import alpine.model.UserPrincipal;
+import java.util.List;
 
 /**
  * @since 5.6.0
@@ -41,11 +39,11 @@ public interface EffectivePermissionDao {
               FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" upep
              INNER JOIN "PERMISSION" p
                 ON upep."PERMISSION_ID" = p."ID"
-             WHERE upep."USERPRINCIPAL_ID" = :userId
+             WHERE upep."USER_ID" = :userId
                AND upep."PROJECT_ID" = :projectId
             """)
     @DefineNamedBindings
     @RegisterFieldMapper(Permission.class)
-    <T extends UserPrincipal> List<Permission> getEffectivePermissions(@Bind Long userId, @Bind Long projectId);
+    List<Permission> getEffectivePermissions(@Bind Long userId, @Bind Long projectId);
 
 }

@@ -158,7 +158,7 @@ public class ApiKey implements Serializable, Principal {
      * Do not use - only here to satisfy Principal implementation requirement.
      *
      * @return a String presentation of the username
-     * @deprecated use {@link UserPrincipal#getUsername()}
+     * @deprecated use {@link #getMaskedKey()}
      */
     @Deprecated
     @JsonIgnore

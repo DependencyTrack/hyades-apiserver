@@ -17,6 +17,7 @@
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.resources.v1;
+
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
@@ -24,7 +25,7 @@ import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.security.crypto.KeyManager;
@@ -47,18 +48,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.FormParam;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -73,6 +62,19 @@ import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
+import jakarta.validation.Valid;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.FormParam;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import javax.jdo.Query;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
@@ -81,8 +83,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import javax.jdo.Query;
 
 /**
  * JAX-RS resources for processing users.
@@ -338,7 +338,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(
                     responseCode = "200",
                     description = "Information about the current logged in user",
-                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))
+                    content = @Content(schema = @Schema(implementation = User.class))
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
@@ -684,7 +684,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(
                     responseCode = "200",
                     description = "The updated user",
-                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))
+                    content = @Content(schema = @Schema(implementation = User.class))
             ),
             @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -701,7 +701,7 @@ public class UserResource extends AlpineResource {
             if (team == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
             }
-            UserPrincipal principal = qm.getUserPrincipal(username);
+            User principal = qm.getUser(username);
             if (principal == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
@@ -728,7 +728,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(
                     responseCode = "200",
                     description = "The updated user",
-                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))
+                    content = @Content(schema = @Schema(implementation = User.class))
             ),
             @ApiResponse(responseCode = "304", description = "The user was not a member of the specified team"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -745,7 +745,7 @@ public class UserResource extends AlpineResource {
             if (team == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
             }
-            UserPrincipal principal = qm.getUserPrincipal(username);
+            User principal = qm.getUser(username);
             if (principal == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
@@ -768,7 +768,7 @@ public class UserResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Sets specified teams to a user.", description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = User.class))),
             @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team(s)"),
             @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -778,7 +778,7 @@ public class UserResource extends AlpineResource {
     public Response setUserTeams(
             @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            UserPrincipal principal = qm.getUserPrincipal(request.username());
+            User principal = qm.getUser(request.username());
             if (principal == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
