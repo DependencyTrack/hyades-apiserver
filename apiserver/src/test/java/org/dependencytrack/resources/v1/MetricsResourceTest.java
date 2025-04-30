@@ -22,6 +22,7 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
 import jakarta.json.JsonArray;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -31,11 +32,13 @@ import org.dependencytrack.model.Project;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.postgresql.ds.PGSimpleDataSource;
 
-import jakarta.ws.rs.core.Response;
-
+import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.function.Supplier;
 
@@ -321,16 +324,18 @@ public class MetricsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getPortfolioMetricsXDaysAclTest() {
+    public void getPortfolioMetricsXDaysAclTest() throws Exception {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
+        createPartitionForXDaysBefore("PORTFOLIOMETRICS", 30);
         var metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(3);
         metrics.setFirstOccurrence(new Date());
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
         qm.persist(metrics);
 
+        createPartitionForXDaysBefore("PORTFOLIOMETRICS", 20);
         metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(2);
         metrics.setFirstOccurrence(new Date());
@@ -351,16 +356,18 @@ public class MetricsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getPortfolioMetricsSinceAclTest() {
+    public void getPortfolioMetricsSinceAclTest() throws Exception {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
+        createPartitionForDate("PORTFOLIOMETRICS", LocalDate.of(2025, 1, 1));
         var metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(3);
         metrics.setFirstOccurrence(new Date());
         metrics.setLastOccurrence(parseShortDate("20250101"));
         qm.persist(metrics);
 
+        createPartitionForDate("PORTFOLIOMETRICS", LocalDate.of(2025, 2, 1));
         metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(2);
         metrics.setFirstOccurrence(new Date());
@@ -378,5 +385,28 @@ public class MetricsResourceTest extends ResourceTest {
         JsonArray json = parseJsonArray(response);
         assertThat(json.size()).isEqualTo(1);
         assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(2);
+    }
+
+    private void createPartitionForXDaysBefore(final String tableName, final int daysBefore) throws Exception {
+        LocalDate targetDate = LocalDate.now().minusDays(daysBefore);
+        createPartitionForDate(tableName, targetDate);
+    }
+
+    private void createPartitionForDate(final String tableName, final LocalDate targetDate) throws Exception {
+        LocalDate nextDay = targetDate.plusDays(1);
+        String partitionSuffix = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String partitionName = "\"" + tableName + "_" + partitionSuffix + "\"";
+        String sql = String.format("""
+                                    CREATE TABLE IF NOT EXISTS %s PARTITION OF %s
+                                    FOR VALUES FROM ('%s') TO ('%s')
+                                """, partitionName, "\"" +tableName + "\"" , targetDate, nextDay);
+
+        final var dataSource = new PGSimpleDataSource();
+        dataSource.setUrl(postgresContainer.getJdbcUrl());
+        dataSource.setUser(postgresContainer.getUsername());
+        dataSource.setPassword(postgresContainer.getPassword());
+        try (final PreparedStatement ps = dataSource.getConnection().prepareStatement(sql)) {
+            ps.execute();
+        }
     }
 }

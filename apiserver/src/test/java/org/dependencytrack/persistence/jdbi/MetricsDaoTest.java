@@ -168,6 +168,10 @@ public class MetricsDaoTest extends PersistenceCapableTest {
 
     private void createPartitionForXDaysBefore(final String tableName, final int daysBefore) throws Exception {
         LocalDate targetDate = LocalDate.now().minusDays(daysBefore);
+        createPartitionForDate(tableName, targetDate);
+    }
+
+    private void createPartitionForDate(final String tableName, final LocalDate targetDate) throws Exception {
         LocalDate nextDay = targetDate.plusDays(1);
         String partitionSuffix = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String partitionName = "\"" + tableName + "_" + partitionSuffix + "\"";

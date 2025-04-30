@@ -31,7 +31,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
@@ -64,6 +63,35 @@ public interface MetricsDao {
             """)
     @RegisterBeanMapper(DependencyMetrics.class)
     List<DependencyMetrics> getDependencyMetricsSince(@Bind Long componentId,@Bind Instant since);
+
+    @SqlQuery("""
+            SELECT *, "RISKSCORE" AS "inheritedRiskScore"
+            FROM "PORTFOLIOMETRICS"
+            ORDER BY "LAST_OCCURRENCE" DESC
+            LIMIT 1
+            """)
+    @RegisterBeanMapper(PortfolioMetrics.class)
+    PortfolioMetrics getMostRecentPortfolioMetrics();
+
+    @SqlQuery("""
+            SELECT *, "RISKSCORE" AS "inheritedRiskScore"
+            FROM "PROJECTMETRICS"
+            WHERE "PROJECT_ID" = :projectId
+            ORDER BY "LAST_OCCURRENCE" DESC
+            LIMIT 1
+            """)
+    @RegisterBeanMapper(ProjectMetrics.class)
+    ProjectMetrics getMostRecentProjectMetrics(@Bind final long projectId);
+
+    @SqlQuery("""
+            SELECT *, "RISKSCORE" AS "inheritedRiskScore"
+            FROM "DEPENDENCYMETRICS"
+            WHERE "COMPONENT_ID" = :componentId
+            ORDER BY "LAST_OCCURRENCE" DESC
+            LIMIT 1
+            """)
+    @RegisterBeanMapper(DependencyMetrics.class)
+    DependencyMetrics getMostRecentDependencyMetrics(@Bind final long componentId);
 
     @SqlQuery("""
             SELECT inhrelid::regclass AS partition_name

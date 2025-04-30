@@ -54,6 +54,7 @@ import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -74,6 +75,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Objects.requireNonNullElse;
 import static org.datanucleus.store.rdbms.RDBMSPropertyNames.PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistentAll;
 
@@ -157,7 +159,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             // Populate each Project object in the paginated result with transitive related
             // data to minimize the number of round trips a client needs to make, process, and render.
             for (Project project : result.getList(Project.class)) {
-                project.setMetrics(getMostRecentProjectMetrics(project));
+                project.setMetrics(withJdbiHandle(handle ->
+                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
             }
         }
         return result;
@@ -265,7 +268,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Project project = getObjectByUuid(Project.class, uuid, Project.FetchGroup.ALL.name());
         if (project != null) {
             // set Metrics to minimize the number of round trips a client needs to make
-            project.setMetrics(getMostRecentProjectMetrics(project));
+            project.setMetrics(withJdbiHandle(handle ->
+                    handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
             // set ProjectVersions to minimize the number of round trips a client needs to make
             project.setVersions(getProjectVersions(project));
         }
@@ -296,7 +300,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Project project = singleResult(query.executeWithMap(params));
         if (project != null) {
             // set Metrics to prevent extra round trip
-            project.setMetrics(getMostRecentProjectMetrics(project));
+            project.setMetrics(withJdbiHandle(handle ->
+                    handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
             // set ProjectVersions to prevent extra round trip
             project.setVersions(getProjectVersions(project));
         }
@@ -327,7 +332,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Project project = singleResult(query.executeWithMap(params));
         if (project != null) {
             // set Metrics to prevent extra round trip
-            project.setMetrics(getMostRecentProjectMetrics(project));
+            project.setMetrics(withJdbiHandle(handle ->
+                    handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
             // set ProjectVersions to prevent extra round trip
             project.setVersions(getProjectVersions(project));
         }
@@ -423,7 +429,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             // Populate each Project object in the paginated result with transitive related
             // data to minimize the number of round trips a client needs to make, process, and render.
             for (Project project : result.getList(Project.class)) {
-                project.setMetrics(getMostRecentProjectMetrics(project));
+                project.setMetrics(withJdbiHandle(handle ->
+                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
             }
         }
 
@@ -473,7 +480,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             // Populate each Project object in the paginated result with transitive related
             // data to minimize the number of round trips a client needs to make, process, and render.
             for (Project project : result.getList(Project.class)) {
-                project.setMetrics(getMostRecentProjectMetrics(project));
+                project.setMetrics(withJdbiHandle(handle ->
+                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
             }
         }
 
@@ -1174,7 +1182,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             // Populate each Project object in the paginated result with transitive related
             // data to minimize the number of round trips a client needs to make, process, and render.
             for (Project project : result.getList(Project.class)) {
-                project.setMetrics(getMostRecentProjectMetrics(project));
+                project.setMetrics(withJdbiHandle(handle ->
+                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
             }
         }
         return result;
@@ -1203,7 +1212,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             // Populate each Project object in the paginated result with transitive related
             // data to minimize the number of round trips a client needs to make, process, and render.
             for (Project project : result.getList(Project.class)) {
-                project.setMetrics(getMostRecentProjectMetrics(project));
+                project.setMetrics(withJdbiHandle(handle ->
+                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
             }
         }
         return result;
@@ -1236,7 +1246,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             // Populate each Project object in the paginated result with transitive related
             // data to minimize the number of round trips a client needs to make, process, and render.
             for (Project project : result.getList(Project.class)) {
-                project.setMetrics(getMostRecentProjectMetrics(project));
+                project.setMetrics(withJdbiHandle(handle ->
+                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
             }
         }
         return result;
