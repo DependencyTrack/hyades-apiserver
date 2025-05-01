@@ -21,10 +21,17 @@ package org.dependencytrack.metrics;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * Helper class for enhancing metrics.
@@ -33,6 +40,8 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
  * @since 3.0.0
  */
 public final class Metrics {
+
+    static final Logger LOGGER = LoggerFactory.getLogger(Metrics.class);
 
     private Metrics() {
     }
@@ -129,5 +138,46 @@ public final class Metrics {
                     $$;
                     """;
         useJdbiHandle(handle -> handle.createUpdate(SQL_QUERY).execute());
+    }
+
+    public static int dropOldPartitions(final List<String> metricsPartitions, final Duration retentionDuration) {
+        LocalDate cutoffDate = LocalDate.now().minusDays(retentionDuration.toDays());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        int deletedCount = 0;
+        for (String partition : metricsPartitions) {
+            String[] parts = partition.replace("\"", "").split("_");
+            LocalDate partitionDate = LocalDate.parse(parts[1], formatter);
+            if (partitionDate.isBefore(cutoffDate) || partitionDate.isEqual(cutoffDate)) {
+                try {
+                    String sql = String.format("DROP TABLE IF EXISTS %s CASCADE;", partition);
+                    withJdbiHandle(handle -> handle.execute(sql));
+                    deletedCount ++;
+                } catch (Exception e) {
+                    LOGGER.debug("Partition %s failed to be dropped.", partition, e);
+                }
+            }
+        }
+        return deletedCount;
+    }
+
+    public static void createPartitionForDaysAgo(String tableName, int daysAgo) {
+        LocalDate targetDate = LocalDate.now().minusDays(daysAgo);
+        createPartitionForDate(tableName, targetDate);
+    }
+
+    public static void createPartitionForDate(String tableName, LocalDate targetDate) {
+        LocalDate nextDay = targetDate.plusDays(1);
+        String partitionSuffix = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String partitionName = tableName + "_" + partitionSuffix;
+        String sql = String.format("""
+            CREATE TABLE IF NOT EXISTS %s PARTITION OF %s
+            FOR VALUES FROM ('%s') TO ('%s');
+        """,
+                "\"" + partitionName + "\"",
+                "\"" + tableName + "\"",
+                targetDate,
+                nextDay
+        );
+        withJdbiHandle(handle -> handle.execute(sql));
     }
 }

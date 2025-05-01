@@ -23,17 +23,15 @@ import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.ProjectMetrics;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
-import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
+
+import static org.dependencytrack.metrics.Metrics.dropOldPartitions;
 
 /**
  * @since 5.6.0
@@ -118,9 +116,6 @@ public interface MetricsDao {
             """)
     List<String> getDependencyMetricsPartitions();
 
-    @SqlUpdate("DROP TABLE IF EXISTS \"<partitionName>\" CASCADE")
-    void dropPartition(@Define("partitionName") String partitionName);
-
     default int deletePortfolioMetricsForRetentionDuration(Duration retentionDuration) {
         List<String> metricsPartitions = getPortfolioMetricsPartitions();
         return dropOldPartitions(metricsPartitions, retentionDuration);
@@ -134,24 +129,5 @@ public interface MetricsDao {
     default int deleteComponentMetricsForRetentionDuration(Duration retentionDuration) {
         List<String> metricsPartitions = getDependencyMetricsPartitions();
         return dropOldPartitions(metricsPartitions, retentionDuration);
-    }
-
-    default int dropOldPartitions(final List<String> metricsPartitions, final Duration retentionDuration) {
-        LocalDate cutoffDate = LocalDate.now().minusDays(retentionDuration.toDays());
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-        int deletedCount = 0;
-        for (String partition : metricsPartitions) {
-            String[] parts = partition.replace("\"", "").split("_");
-            LocalDate partitionDate = LocalDate.parse(parts[1], formatter);
-            if (partitionDate.isBefore(cutoffDate) || partitionDate.isEqual(cutoffDate)) {
-                try {
-                    dropPartition(partition);
-                    deletedCount ++;
-                } catch (Exception e) {
-                    LOGGER.debug("Partition %s failed to be dropped.", partition, e);
-                }
-            }
-        }
-        return deletedCount;
     }
 }

@@ -25,22 +25,17 @@ import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
-import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.junit.Test;
-import org.postgresql.ds.PGSimpleDataSource;
 
-import java.sql.PreparedStatement;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.function.BiConsumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.metrics.Metrics.createPartitionForDaysAgo;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
@@ -119,12 +114,8 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         createPortfolioMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createPortfolioMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
 
-        var p1 = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getPortfolioMetricsPartitions());
-
         final var task = new MetricsMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new MetricsMaintenanceEvent()));
-
-        var p2 = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getPortfolioMetricsPartitions());
 
         assertThat(qm.getDependencyMetrics(component).getList(DependencyMetrics.class)).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
@@ -134,22 +125,5 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
         assertThat(qm.getPortfolioMetrics().getList(PortfolioMetrics.class)).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
-    }
-
-    public void createPartitionForDaysAgo(String tableName, int daysAgo) {
-        LocalDate targetDate = LocalDate.now().minusDays(daysAgo);
-        LocalDate nextDay = targetDate.plusDays(1);
-        String partitionSuffix = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String partitionName = tableName + "_" + partitionSuffix;
-        String sql = String.format("""
-            CREATE TABLE IF NOT EXISTS %s PARTITION OF %s
-            FOR VALUES FROM ('%s') TO ('%s');
-        """,
-                "\"" + partitionName + "\"",
-                "\"" + tableName + "\"",
-                targetDate,
-                nextDay
-        );
-        withJdbiHandle(handle -> handle.execute(sql));
     }
 }

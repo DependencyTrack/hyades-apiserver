@@ -32,19 +32,17 @@ import org.dependencytrack.model.Project;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
-import org.postgresql.ds.PGSimpleDataSource;
 
-import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.metrics.Metrics.createPartitionForDate;
+import static org.dependencytrack.metrics.Metrics.createPartitionForDaysAgo;
 import static org.dependencytrack.util.DateUtil.parseShortDate;
 
 public class MetricsResourceTest extends ResourceTest {
@@ -386,26 +384,5 @@ public class MetricsResourceTest extends ResourceTest {
         JsonArray json = parseJsonArray(response);
         assertThat(json.size()).isEqualTo(1);
         assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(2);
-    }
-
-    public void createPartitionForDaysAgo(String tableName, int daysAgo) {
-        LocalDate targetDate = LocalDate.now().minusDays(daysAgo);
-        createPartitionForDate(tableName, targetDate);
-    }
-
-    private void createPartitionForDate(String tableName, LocalDate targetDate) {
-        LocalDate nextDay = targetDate.plusDays(1);
-        String partitionSuffix = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String partitionName = tableName + "_" + partitionSuffix;
-        String sql = String.format("""
-            CREATE TABLE IF NOT EXISTS %s PARTITION OF %s
-            FOR VALUES FROM ('%s') TO ('%s');
-        """,
-                "\"" + partitionName + "\"",
-                "\"" + tableName + "\"",
-                targetDate,
-                nextDay
-        );
-        withJdbiHandle(handle -> handle.execute(sql));
     }
 }

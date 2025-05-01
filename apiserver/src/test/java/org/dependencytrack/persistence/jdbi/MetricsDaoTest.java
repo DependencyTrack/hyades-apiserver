@@ -30,11 +30,10 @@ import org.junit.Test;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.metrics.Metrics.createPartitionForDaysAgo;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -162,22 +161,5 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         assertThat(dependencyMetrics.size()).isEqualTo(2);
         assertThat(dependencyMetrics.get(0).getVulnerabilities()).isEqualTo(3);
         assertThat(dependencyMetrics.get(1).getVulnerabilities()).isEqualTo(2);
-    }
-
-    public void createPartitionForDaysAgo(String tableName, int daysAgo) {
-        LocalDate targetDate = LocalDate.now().minusDays(daysAgo);
-        LocalDate nextDay = targetDate.plusDays(1);
-        String partitionSuffix = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String partitionName = tableName + "_" + partitionSuffix;
-        String sql = String.format("""
-            CREATE TABLE IF NOT EXISTS %s PARTITION OF %s
-            FOR VALUES FROM ('%s') TO ('%s');
-        """,
-                "\"" + partitionName + "\"",
-                "\"" + tableName + "\"",
-                targetDate,
-                nextDay
-        );
-        jdbiHandle.execute(sql);
     }
 }
