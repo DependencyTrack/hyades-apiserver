@@ -44,6 +44,7 @@ import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.DateUtil.parseShortDate;
 
 public class MetricsResourceTest extends ResourceTest {
@@ -328,14 +329,14 @@ public class MetricsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
-        createPartitionForXDaysBefore("PORTFOLIOMETRICS", 30);
+        createPartitionForDaysAgo("PORTFOLIOMETRICS", 30);
         var metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(3);
         metrics.setFirstOccurrence(new Date());
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
         qm.persist(metrics);
 
-        createPartitionForXDaysBefore("PORTFOLIOMETRICS", 20);
+        createPartitionForDaysAgo("PORTFOLIOMETRICS", 20);
         metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(2);
         metrics.setFirstOccurrence(new Date());
@@ -387,26 +388,24 @@ public class MetricsResourceTest extends ResourceTest {
         assertThat(json.getJsonObject(0).getInt("vulnerabilities")).isEqualTo(2);
     }
 
-    private void createPartitionForXDaysBefore(final String tableName, final int daysBefore) throws Exception {
-        LocalDate targetDate = LocalDate.now().minusDays(daysBefore);
+    public void createPartitionForDaysAgo(String tableName, int daysAgo) {
+        LocalDate targetDate = LocalDate.now().minusDays(daysAgo);
         createPartitionForDate(tableName, targetDate);
     }
 
-    private void createPartitionForDate(final String tableName, final LocalDate targetDate) throws Exception {
+    private void createPartitionForDate(String tableName, LocalDate targetDate) {
         LocalDate nextDay = targetDate.plusDays(1);
         String partitionSuffix = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String partitionName = tableName + "_" + partitionSuffix;
         String sql = String.format("""
-                CREATE TABLE IF NOT EXISTS "%s" PARTITION OF "%s"
-                FOR VALUES FROM ('%s') TO ('%s')
-            """, partitionName, tableName, targetDate, nextDay);
-
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
-        try (final PreparedStatement ps = dataSource.getConnection().prepareStatement(sql)) {
-            ps.execute();
-        }
+            CREATE TABLE IF NOT EXISTS %s PARTITION OF %s
+            FOR VALUES FROM ('%s') TO ('%s');
+        """,
+                "\"" + partitionName + "\"",
+                "\"" + tableName + "\"",
+                targetDate,
+                nextDay
+        );
+        withJdbiHandle(handle -> handle.execute(sql));
     }
 }

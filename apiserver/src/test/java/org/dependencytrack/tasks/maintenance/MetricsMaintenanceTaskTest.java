@@ -25,6 +25,7 @@ import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.junit.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 
@@ -39,6 +40,7 @@ import java.util.function.BiConsumer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
@@ -91,38 +93,38 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         final Instant now = Instant.now();
 
         // Create component metrics partitions for dates required
-        createPartitionForXDaysBefore("DEPENDENCYMETRICS", 91);
-        createPartitionForXDaysBefore("DEPENDENCYMETRICS", 90);
-        createPartitionForXDaysBefore("DEPENDENCYMETRICS", 89);
+        createPartitionForDaysAgo("DEPENDENCYMETRICS", 91);
+        createPartitionForDaysAgo("DEPENDENCYMETRICS", 90);
+        createPartitionForDaysAgo("DEPENDENCYMETRICS", 89);
 
         createComponentMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createComponentMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createComponentMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
 
         // Create project metrics partitions for dates required
-        createPartitionForXDaysBefore("PROJECTMETRICS", 91);
-        createPartitionForXDaysBefore("PROJECTMETRICS", 90);
-        createPartitionForXDaysBefore("PROJECTMETRICS", 89);
+        createPartitionForDaysAgo("PROJECTMETRICS", 91);
+        createPartitionForDaysAgo("PROJECTMETRICS", 90);
+        createPartitionForDaysAgo("PROJECTMETRICS", 89);
 
         createProjectMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createProjectMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createProjectMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
 
         // Create portfolio metrics partitions for dates required
-        createPartitionForXDaysBefore("PORTFOLIOMETRICS", 91);
-        createPartitionForXDaysBefore("PORTFOLIOMETRICS", 90);
-        createPartitionForXDaysBefore("PORTFOLIOMETRICS", 89);
+        createPartitionForDaysAgo("PORTFOLIOMETRICS", 91);
+        createPartitionForDaysAgo("PORTFOLIOMETRICS", 90);
+        createPartitionForDaysAgo("PORTFOLIOMETRICS", 89);
 
         createPortfolioMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createPortfolioMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createPortfolioMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
 
-//        var p1 = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getPortfolioMetricsPartitions());
+        var p1 = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getPortfolioMetricsPartitions());
 
         final var task = new MetricsMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new MetricsMaintenanceEvent()));
 
-//        var p2 = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getPortfolioMetricsPartitions());
+        var p2 = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getPortfolioMetricsPartitions());
 
         assertThat(qm.getDependencyMetrics(component).getList(DependencyMetrics.class)).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
@@ -134,26 +136,20 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
     }
 
-    private void createPartitionForXDaysBefore(final String tableName, final int daysBefore) throws Exception {
-        LocalDate targetDate = LocalDate.now().minusDays(daysBefore);
-        createPartitionForDate(tableName, targetDate);
-    }
-
-    private void createPartitionForDate(final String tableName, final LocalDate targetDate) throws Exception {
+    public void createPartitionForDaysAgo(String tableName, int daysAgo) {
+        LocalDate targetDate = LocalDate.now().minusDays(daysAgo);
         LocalDate nextDay = targetDate.plusDays(1);
         String partitionSuffix = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String partitionName = tableName + "_" + partitionSuffix;
         String sql = String.format("""
-                CREATE TABLE IF NOT EXISTS "%s" PARTITION OF "%s"
-                FOR VALUES FROM ('%s') TO ('%s')
-            """, partitionName, tableName, targetDate, nextDay);
-
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
-        try (final PreparedStatement ps = dataSource.getConnection().prepareStatement(sql)) {
-            ps.execute();
-        }
+            CREATE TABLE IF NOT EXISTS %s PARTITION OF %s
+            FOR VALUES FROM ('%s') TO ('%s');
+        """,
+                "\"" + partitionName + "\"",
+                "\"" + tableName + "\"",
+                targetDate,
+                nextDay
+        );
+        withJdbiHandle(handle -> handle.execute(sql));
     }
 }

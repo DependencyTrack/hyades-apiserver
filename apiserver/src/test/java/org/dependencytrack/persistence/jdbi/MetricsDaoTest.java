@@ -27,9 +27,7 @@ import org.jdbi.v3.core.Handle;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.postgresql.ds.PGSimpleDataSource;
 
-import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -62,21 +60,21 @@ public class MetricsDaoTest extends PersistenceCapableTest {
 
     @Test
     public void testGetPortfolioMetricsForXDays() throws Exception {
-        createPartitionForXDaysBefore("PORTFOLIOMETRICS", 40);
+        createPartitionForDaysAgo("PORTFOLIOMETRICS", 40);
         var metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(4);
         metrics.setFirstOccurrence(new Date());
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(40))));
         qm.persist(metrics);
 
-        createPartitionForXDaysBefore("PORTFOLIOMETRICS", 30);
+        createPartitionForDaysAgo("PORTFOLIOMETRICS", 30);
         metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(3);
         metrics.setFirstOccurrence(new Date());
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
         qm.persist(metrics);
 
-        createPartitionForXDaysBefore("PORTFOLIOMETRICS", 20);
+        createPartitionForDaysAgo("PORTFOLIOMETRICS", 20);
         metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(2);
         metrics.setFirstOccurrence(new Date());
@@ -93,7 +91,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
     public void testGetProjectMetricsForXDays() throws Exception {
         final var project = qm.createProject("acme-app", null, "1.0.0", null, null, null, null, false);
 
-        createPartitionForXDaysBefore("PROJECTMETRICS", 40);
+        createPartitionForDaysAgo("PROJECTMETRICS", 40);
         var metrics = new ProjectMetrics();
         metrics.setProject(project);
         metrics.setVulnerabilities(4);
@@ -101,7 +99,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(40))));
         qm.persist(metrics);
 
-        createPartitionForXDaysBefore("PROJECTMETRICS", 30);
+        createPartitionForDaysAgo("PROJECTMETRICS", 30);
         metrics = new ProjectMetrics();
         metrics.setProject(project);
         metrics.setVulnerabilities(3);
@@ -109,7 +107,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
         qm.persist(metrics);
 
-        createPartitionForXDaysBefore("PROJECTMETRICS", 20);
+        createPartitionForDaysAgo("PROJECTMETRICS", 20);
         metrics = new ProjectMetrics();
         metrics.setProject(project);
         metrics.setVulnerabilities(2);
@@ -133,7 +131,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         component.setVersion("1.0");
         qm.createComponent(component, false);
 
-        createPartitionForXDaysBefore("DEPENDENCYMETRICS", 40);
+        createPartitionForDaysAgo("DEPENDENCYMETRICS", 40);
         var metrics = new DependencyMetrics();
         metrics.setProject(project);
         metrics.setComponent(component);
@@ -142,7 +140,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(40))));
         qm.persist(metrics);
 
-        createPartitionForXDaysBefore("DEPENDENCYMETRICS", 30);
+        createPartitionForDaysAgo("DEPENDENCYMETRICS", 30);
         metrics = new DependencyMetrics();
         metrics.setProject(project);
         metrics.setComponent(component);
@@ -151,7 +149,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
         qm.persist(metrics);
 
-        createPartitionForXDaysBefore("DEPENDENCYMETRICS", 20);
+        createPartitionForDaysAgo("DEPENDENCYMETRICS", 20);
         metrics = new DependencyMetrics();
         metrics.setProject(project);
         metrics.setComponent(component);
@@ -166,26 +164,20 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         assertThat(dependencyMetrics.get(1).getVulnerabilities()).isEqualTo(2);
     }
 
-    private void createPartitionForXDaysBefore(final String tableName, final int daysBefore) throws Exception {
-        LocalDate targetDate = LocalDate.now().minusDays(daysBefore);
-        createPartitionForDate(tableName, targetDate);
-    }
-
-    private void createPartitionForDate(final String tableName, final LocalDate targetDate) throws Exception {
+    public void createPartitionForDaysAgo(String tableName, int daysAgo) {
+        LocalDate targetDate = LocalDate.now().minusDays(daysAgo);
         LocalDate nextDay = targetDate.plusDays(1);
         String partitionSuffix = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String partitionName = tableName + "_" + partitionSuffix;
         String sql = String.format("""
-                CREATE TABLE IF NOT EXISTS "%s" PARTITION OF "%s"
-                FOR VALUES FROM ('%s') TO ('%s')
-            """, partitionName, tableName, targetDate, nextDay);
-
-        final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(postgresContainer.getJdbcUrl());
-        dataSource.setUser(postgresContainer.getUsername());
-        dataSource.setPassword(postgresContainer.getPassword());
-        try (final PreparedStatement ps = dataSource.getConnection().prepareStatement(sql)) {
-            ps.execute();
-        }
+            CREATE TABLE IF NOT EXISTS %s PARTITION OF %s
+            FOR VALUES FROM ('%s') TO ('%s');
+        """,
+                "\"" + partitionName + "\"",
+                "\"" + tableName + "\"",
+                targetDate,
+                nextDay
+        );
+        jdbiHandle.execute(sql);
     }
 }
