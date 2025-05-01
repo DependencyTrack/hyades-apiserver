@@ -26,6 +26,8 @@ import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -37,6 +39,8 @@ import java.util.List;
  * @since 5.6.0
  */
 public interface MetricsDao {
+
+    static final Logger LOGGER = LoggerFactory.getLogger(MetricsDao.class);
 
     @SqlQuery("""
             SELECT * FROM "PORTFOLIOMETRICS"
@@ -137,12 +141,15 @@ public interface MetricsDao {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
         int deletedCount = 0;
         for (String partition : metricsPartitions) {
-            partition = partition.replace("\"", "");
-            String[] parts = partition.split("_");
+            String[] parts = partition.replace("\"", "").split("_");
             LocalDate partitionDate = LocalDate.parse(parts[1], formatter);
-            if (partitionDate.isBefore(cutoffDate)) {
-                dropPartition(partition);
-                deletedCount ++;
+            if (partitionDate.isBefore(cutoffDate) || partitionDate.isEqual(cutoffDate)) {
+                try {
+                    dropPartition(partition);
+                    deletedCount ++;
+                } catch (Exception e) {
+                    LOGGER.debug("Partition %s failed to be dropped.", partition, e);
+                }
             }
         }
         return deletedCount;
