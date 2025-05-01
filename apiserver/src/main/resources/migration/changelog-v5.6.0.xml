@@ -1425,4 +1425,9 @@
             <column name="PUBLIC_ID"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-22" author="nscuro">
+        <dropTable tableName="INSTALLEDUPGRADES"/>
+        <dropTable tableName="SCHEMAVERSION"/>
+    </changeSet>
 </databaseChangeLog>

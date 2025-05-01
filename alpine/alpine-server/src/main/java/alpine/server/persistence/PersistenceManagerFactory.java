@@ -21,27 +21,21 @@ package alpine.server.persistence;
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.common.metrics.Metrics;
-import alpine.model.InstalledUpgrades;
-import alpine.model.SchemaVersion;
 import alpine.persistence.IPersistenceManagerFactory;
 import alpine.persistence.JdoProperties;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.Gauge;
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
-import org.datanucleus.PersistenceNucleusContext;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
-import org.datanucleus.store.schema.SchemaAwareStoreManager;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import javax.jdo.JDOHelper;
 import javax.jdo.PersistenceManager;
 import javax.sql.DataSource;
-import java.util.HashSet;
 import java.util.Properties;
-import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -63,18 +57,11 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
 
         final var dnProps = new Properties();
 
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.DATABASE_MIGRATION_ENABLED)) {
-            dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_DATABASE, "true");
-            dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_TABLES, "true");
-            dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_COLUMNS, "true");
-            dnProps.put(PropertyNames.PROPERTY_SCHEMA_AUTOCREATE_CONSTRAINTS, "true");
-            dnProps.put(PropertyNames.PROPERTY_SCHEMA_GENERATE_DATABASE_MODE, "create");
-        }
-
         // Apply pass-through properties.
         dnProps.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
 
         // Apply settings that are required by Alpine and shouldn't be customized.
+        dnProps.put(PropertyNames.PROPERTY_CACHE_L2_TYPE, "none");
         dnProps.put(PropertyNames.PROPERTY_QUERY_JDOQL_ALLOWALL, "true");
         dnProps.put(PropertyNames.PROPERTY_RETAIN_VALUES, "true");
 
@@ -123,15 +110,6 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
             LOGGER.info("Registering DataNucleus metrics");
             registerDataNucleusMetrics(pmf);
-        }
-
-        if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.DATABASE_MIGRATION_ENABLED)) {
-            // Ensure that the UpgradeMetaProcessor and SchemaVersion tables are created NOW, not dynamically at runtime.
-            final PersistenceNucleusContext ctx = pmf.getNucleusContext();
-            final Set<String> classNames = new HashSet<>();
-            classNames.add(InstalledUpgrades.class.getCanonicalName());
-            classNames.add(SchemaVersion.class.getCanonicalName());
-            ((SchemaAwareStoreManager) ctx.getStoreManager()).createSchemaForClasses(classNames, new Properties());
         }
     }
 

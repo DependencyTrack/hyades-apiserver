@@ -136,6 +136,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <scope>test</scope>
         </dependency>
         <!-- Authentication and Authorization -->
         <dependency>
