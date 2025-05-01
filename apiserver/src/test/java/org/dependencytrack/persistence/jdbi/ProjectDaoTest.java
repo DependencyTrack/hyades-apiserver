@@ -20,6 +20,7 @@ package org.dependencytrack.persistence.jdbi;
 
 import alpine.notification.NotificationLevel;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.event.MetricsPartitionCreateEvent;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -45,6 +46,7 @@ import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.tasks.metrics.MetricsPartitionCreateTask;
 import org.jdbi.v3.core.Handle;
 import org.junit.After;
 import org.junit.Before;
@@ -156,6 +158,9 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
         integrityAnalysis.setUpdatedAt(new Date());
         qm.persist(integrityAnalysis);
+
+        // Create partitions for today
+        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
 
         // Create metrics for component.
         final var componentMetrics = new DependencyMetrics();

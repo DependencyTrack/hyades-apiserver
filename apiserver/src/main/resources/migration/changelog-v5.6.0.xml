@@ -1608,6 +1608,18 @@
             ALTER INDEX "DEPENDENCYMETRICS_NEW_FIRST_OCCURRENCE_IDX" RENAME TO "DEPENDENCYMETRICS_FIRST_OCCURRENCE_IDX";
             ALTER INDEX "DEPENDENCYMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "DEPENDENCYMETRICS_LAST_OCCURRENCE_IDX";
         </sql>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTMETRICS"
+                                 constraintName="PROJECTMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="DEPENDENCYMETRICS"
+                                 constraintName="DEPENDENCYMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="DEPENDENCYMETRICS"
+                                 constraintName="DEPENDENCYMETRICS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
         <dropProcedure procedureName="MIGRATE_METRICS_TO_PARTITIONS"/>
     </changeSet>
 </databaseChangeLog>
