@@ -36,7 +36,6 @@
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.9.0</lib.kafka.version>
-        <lib.liquibase.version>4.31.1</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.17</lib.minio.version>
         <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
@@ -121,6 +120,10 @@
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-executable-war</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>persistence-migration</artifactId>
         </dependency>
         <!-- Common Expression Language (CEL) -->
         <dependency>
@@ -339,12 +342,6 @@
             <groupId>com.google.cloud.sql</groupId>
             <artifactId>postgres-socket-factory</artifactId>
             <version>${lib.cloud-sql-postgres-socket-factory.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.liquibase</groupId>
-            <artifactId>liquibase-core</artifactId>
-            <version>${lib.liquibase.version}</version>
         </dependency>
 
         <!-- Commons Compress -->

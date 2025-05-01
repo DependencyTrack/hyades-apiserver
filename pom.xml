@@ -28,6 +28,8 @@
 
     <modules>
         <module>alpine</module>
+        <module>persistence-migration</module>
+        <module>persistence-jooq</module>
         <module>proto</module>
         <module>apiserver</module>
         <module>coverage-report</module>
@@ -88,7 +90,10 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
+        <lib.liquibase.version>4.31.1</lib.liquibase.version>
+        <lib.postgresql.version>42.7.5</lib.postgresql.version>
         <lib.protobuf-java.version>4.30.2</lib.protobuf-java.version>
+        <lib.testcontainers.version>1.21.0</lib.testcontainers.version>
 
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
@@ -133,8 +138,19 @@
             </dependency>
             <dependency>
                 <groupId>org.dependencytrack</groupId>
+                <artifactId>persistence-migration</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
                 <artifactId>proto</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.liquibase</groupId>
+                <artifactId>liquibase-core</artifactId>
+                <version>${lib.liquibase.version}</version>
             </dependency>
 
             <dependency>

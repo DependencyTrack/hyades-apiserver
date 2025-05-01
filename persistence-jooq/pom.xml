@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.dependencytrack</groupId>
+        <artifactId>dependency-track-parent</artifactId>
+        <version>5.6.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>persistence-jooq</artifactId>
+    <packaging>jar</packaging>
+
+    <properties>
+        <project.parentBaseDir>../</project.parentBaseDir>
+
+        <lib.jooq.version>3.20.3</lib.jooq.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>persistence-migration</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq</artifactId>
+            <version>${lib.jooq.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-jooq-codegen-maven-plugin</artifactId>
+                <version>0.0.4</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jooq</groupId>
+                        <artifactId>jooq-codegen</artifactId>
+                        <version>${lib.jooq.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.liquibase</groupId>
+                        <artifactId>liquibase-core</artifactId>
+                        <version>${lib.liquibase.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.dependencytrack</groupId>
+                        <artifactId>persistence-migration</artifactId>
+                        <version>${project.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.testcontainers</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>${lib.testcontainers.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>${lib.postgresql.version}</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>generate-jooq-sources</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <database>
+                                <type>POSTGRES</type>
+                                <containerImage>postgres:13-alpine</containerImage>
+                                <username>test</username>
+                                <password>test</password>
+                                <databaseName>test</databaseName>
+                            </database>
+                            <liquibase>
+                                <changeLogPath>changelog-main.xml</changeLogPath>
+                                <changeLogDirectory>${project.parentBaseDir}/persistence-migration/src/main/resources/</changeLogDirectory>
+                                <liquibaseSchemaName>public</liquibaseSchemaName>
+                                <defaultSchemaName>public</defaultSchemaName>
+                            </liquibase>
+                            <jooq>
+                                <generator>
+                                    <database>
+                                        <includes>.*</includes>
+                                        <excludes>
+                                            databasechangelog
+                                            | databasechangeloglock
+                                            | eventservicelog
+                                            | shedlock
+                                        </excludes>
+                                        <inputSchema>public</inputSchema>
+                                    </database>
+                                    <target>
+                                        <packageName>org.dependencytrack.persistence.jooq.generated</packageName>
+                                        <directory>${project.basedir}/src/main/java</directory>
+                                    </target>
+                                </generator>
+                            </jooq>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
