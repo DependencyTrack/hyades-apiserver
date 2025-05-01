@@ -30,6 +30,7 @@ permissions: { }
 jobs:
   prepare-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.variables.outputs.version }}
       next-version: ${{ steps.variables.outputs.next-version }}
@@ -54,6 +55,7 @@ jobs:
 
   create-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       # Required for pushing changes via git command (rather than via GitHub API).
       # TODO: Use bot credentials for git, or rewrite the "Commit Version" step to use API instead.
@@ -106,6 +108,7 @@ jobs:
 
   post-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
     needs:
