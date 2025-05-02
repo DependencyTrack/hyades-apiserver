@@ -1522,38 +1522,38 @@
 
         <sql splitStatements="true">
             ALTER TABLE "USER"
-                ADD CONSTRAINT check_user_type
-                    CHECK ("TYPE" IN ('MANAGED', 'LDAP', 'OIDC'));
+              ADD CONSTRAINT user_type_check
+            CHECK ("TYPE" IN ('MANAGED', 'LDAP', 'OIDC'));
 
             ALTER TABLE "USER"
-                ADD CONSTRAINT check_managed_columns
-                    CHECK (
-                        ("TYPE" = 'MANAGED'
-                            AND "FORCE_PASSWORD_CHANGE" IS NOT NULL
-                            AND "LAST_PASSWORD_CHANGE" IS NOT NULL
-                            AND "NON_EXPIRY_PASSWORD" IS NOT NULL
-                            AND "PASSWORD" IS NOT NULL
-                            AND "SUSPENDED" IS NOT NULL)
-                            OR
-                        ("TYPE" != 'MANAGED'
+              ADD CONSTRAINT user_managed_check
+            CHECK (
+                ("TYPE" = 'MANAGED'
+                    AND "FORCE_PASSWORD_CHANGE" IS NOT NULL
+                    AND "LAST_PASSWORD_CHANGE" IS NOT NULL
+                    AND "NON_EXPIRY_PASSWORD" IS NOT NULL
+                    AND "PASSWORD" IS NOT NULL
+                    AND "SUSPENDED" IS NOT NULL)
+                OR
+                ("TYPE" != 'MANAGED'
                     AND "FORCE_PASSWORD_CHANGE" IS NULL
                     AND "FULLNAME" IS NULL
                     AND "LAST_PASSWORD_CHANGE" IS NULL
                     AND "NON_EXPIRY_PASSWORD" IS NULL
                     AND "PASSWORD" IS NULL
                     AND "SUSPENDED" IS NULL)
-                        );
+            );
 
             ALTER TABLE "USER"
-                ADD CONSTRAINT check_ldap_columns
-                    CHECK (
-                        ("TYPE" = 'LDAP' AND "DN" IS NOT NULL)
-                            OR ("TYPE" != 'LDAP' AND "DN" IS NULL)
-                        );
+              ADD CONSTRAINT user_ldap_check
+            CHECK (
+                ("TYPE" = 'LDAP' AND "DN" IS NOT NULL)
+                OR ("TYPE" != 'LDAP' AND "DN" IS NULL)
+            );
 
             ALTER TABLE "USER"
-                ADD CONSTRAINT check_oidc_columns
-                    CHECK ("TYPE" = 'OIDC' OR "SUBJECT_IDENTIFIER" IS NULL);
+              ADD CONSTRAINT user_oidc_check
+            CHECK ("TYPE" = 'OIDC' OR "SUBJECT_IDENTIFIER" IS NULL);
         </sql>
 
         <!-- Migrate existing managed users. -->
