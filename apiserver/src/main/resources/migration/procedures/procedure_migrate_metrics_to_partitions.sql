@@ -14,11 +14,13 @@ DECLARE
     next_day DATE;
 BEGIN
     -- Fetch retention value from config
-    SELECT COALESCE(cp."PROPERTYVALUE"::INTEGER, 90)
-    INTO retention_days
-    FROM "CONFIGPROPERTY" cp
-    WHERE cp."GROUPNAME" = 'maintenance'
-      AND cp."PROPERTYNAME" = 'metrics.retention.days';
+    SELECT COALESCE((
+        SELECT cp."PROPERTYVALUE"::INTEGER
+        FROM "CONFIGPROPERTY" cp
+        WHERE cp."GROUPNAME" = 'maintenance'
+          AND cp."PROPERTYNAME" = 'metrics.retention.days'
+    ), 90)
+    INTO retention_days;
 
     start_date := current_date - retention_days;
     partition_date := start_date;

@@ -128,7 +128,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         }
 
         LOGGER.info("Checking the metrics partitions for today");
-        checkMetricsPartitions();
+//        checkMetricsPartitions();
     }
 
     /**

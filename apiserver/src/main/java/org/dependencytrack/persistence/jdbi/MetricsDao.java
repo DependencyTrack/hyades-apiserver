@@ -24,8 +24,7 @@ import org.dependencytrack.model.ProjectMetrics;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -37,8 +36,6 @@ import static org.dependencytrack.metrics.Metrics.dropOldPartitions;
  * @since 5.6.0
  */
 public interface MetricsDao {
-
-    static final Logger LOGGER = LoggerFactory.getLogger(MetricsDao.class);
 
     @SqlQuery("""
             SELECT * FROM "PORTFOLIOMETRICS"
@@ -115,6 +112,48 @@ public interface MetricsDao {
             WHERE inhparent = '"DEPENDENCYMETRICS"'::regclass;
             """)
     List<String> getDependencyMetricsPartitions();
+
+    @SqlUpdate("""
+            DO $$
+            DECLARE
+                today DATE := current_date;
+                tomorrow DATE := current_date + INTERVAL '1 day';
+                partition_suffix TEXT := to_char(today, 'YYYYMMDD');
+                partition_name TEXT;
+            BEGIN
+                -- PORTFOLIOMETRICS
+                partition_name := format('PORTFOLIOMETRICS_%s', partition_suffix);
+                EXECUTE format(
+                    'CREATE TABLE IF NOT EXISTS %I PARTITION OF "PORTFOLIOMETRICS"
+                     FOR VALUES FROM (%L) TO (%L);',
+                    partition_name,
+                    today,
+                    tomorrow
+                );
+            
+                -- PROJECTMETRICS
+                partition_name := format('PROJECTMETRICS_%s', partition_suffix);
+                EXECUTE format(
+                    'CREATE TABLE IF NOT EXISTS %I PARTITION OF "PROJECTMETRICS"
+                     FOR VALUES FROM (%L) TO (%L);',
+                    partition_name,
+                    today,
+                    tomorrow
+                );
+            
+                -- DEPENDENCYMETRICS
+                partition_name := format('DEPENDENCYMETRICS_%s', partition_suffix);
+                EXECUTE format(
+                    'CREATE TABLE IF NOT EXISTS %I PARTITION OF "DEPENDENCYMETRICS"
+                     FOR VALUES FROM (%L) TO (%L);',
+                    partition_name,
+                    today,
+                    tomorrow
+                );
+            END;
+            $$;
+            """)
+    void createMetricsPartitionsForToday();
 
     default int deletePortfolioMetricsForRetentionDuration(Duration retentionDuration) {
         List<String> metricsPartitions = getPortfolioMetricsPartitions();

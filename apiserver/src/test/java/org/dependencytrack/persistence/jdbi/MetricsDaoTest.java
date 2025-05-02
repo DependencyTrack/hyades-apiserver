@@ -58,7 +58,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetPortfolioMetricsForXDays() throws Exception {
+    public void testGetPortfolioMetricsForXDays() {
         createPartitionForDaysAgo("PORTFOLIOMETRICS", 40);
         var metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(4);
@@ -87,7 +87,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetProjectMetricsForXDays() throws Exception {
+    public void testGetProjectMetricsForXDays() {
         final var project = qm.createProject("acme-app", null, "1.0.0", null, null, null, null, false);
 
         createPartitionForDaysAgo("PROJECTMETRICS", 40);
@@ -122,7 +122,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testGetDependencyMetricsForXDays() throws Exception {
+    public void testGetDependencyMetricsForXDays() {
         final var project = qm.createProject("acme-app", null, "1.0.0", null, null, null, null, false);
         var component = new Component();
         component.setProject(project);
@@ -161,5 +161,20 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         assertThat(dependencyMetrics.size()).isEqualTo(2);
         assertThat(dependencyMetrics.get(0).getVulnerabilities()).isEqualTo(3);
         assertThat(dependencyMetrics.get(1).getVulnerabilities()).isEqualTo(2);
+    }
+
+    @Test
+    public void testCreateMetricsPartitionsForToday() {
+        metricsDao.createMetricsPartitionsForToday();
+        assertThat(metricsDao.getPortfolioMetricsPartitions().size()).isEqualTo(1);
+        assertThat(metricsDao.getProjectMetricsPartitions().size()).isEqualTo(1);
+        assertThat(metricsDao.getDependencyMetricsPartitions().size()).isEqualTo(1);
+
+        // If called again on the same day with partitions already created,
+        // It won't create more.
+        metricsDao.createMetricsPartitionsForToday();
+        assertThat(metricsDao.getPortfolioMetricsPartitions().size()).isEqualTo(1);
+        assertThat(metricsDao.getProjectMetricsPartitions().size()).isEqualTo(1);
+        assertThat(metricsDao.getDependencyMetricsPartitions().size()).isEqualTo(1);
     }
 }

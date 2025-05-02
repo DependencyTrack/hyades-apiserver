@@ -23,10 +23,11 @@ import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.MetricsPartitionCreateEvent;
-import org.dependencytrack.metrics.Metrics;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 
 import java.time.Duration;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
@@ -54,7 +55,7 @@ public class MetricsPartitionCreateTask implements Subscriber {
         LOGGER.info("Executing creation of partitions for Portfolio, Project and Dependency metrics");
         final long startTimeNs = System.nanoTime();
         try {
-            Metrics.createMetricsPartitions();
+            useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
         } finally {
             LOGGER.info("Completed creating metrics partitions in " + Duration.ofNanos(System.nanoTime() - startTimeNs));
         }
