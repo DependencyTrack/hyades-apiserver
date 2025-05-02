@@ -30,6 +30,9 @@ import org.junit.Test;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -166,15 +169,21 @@ public class MetricsDaoTest extends PersistenceCapableTest {
     @Test
     public void testCreateMetricsPartitionsForToday() {
         metricsDao.createMetricsPartitionsForToday();
-        assertThat(metricsDao.getPortfolioMetricsPartitions().size()).isEqualTo(1);
-        assertThat(metricsDao.getProjectMetricsPartitions().size()).isEqualTo(1);
-        assertThat(metricsDao.getDependencyMetricsPartitions().size()).isEqualTo(1);
+        var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        var metricsPartition = metricsDao.getPortfolioMetricsPartitions();
+        assertThat(metricsPartition.getLast()).isEqualTo("\"PORTFOLIOMETRICS_%s\"".formatted(today));
+
+        metricsPartition = metricsDao.getProjectMetricsPartitions();
+        assertThat(metricsPartition.getLast()).isEqualTo("\"PROJECTMETRICS_%s\"".formatted(today));
+
+        metricsPartition = metricsDao.getDependencyMetricsPartitions();
+        assertThat(metricsPartition.getLast()).isEqualTo("\"DEPENDENCYMETRICS_%s\"".formatted(today));
 
         // If called again on the same day with partitions already created,
         // It won't create more.
         metricsDao.createMetricsPartitionsForToday();
-        assertThat(metricsDao.getPortfolioMetricsPartitions().size()).isEqualTo(1);
-        assertThat(metricsDao.getProjectMetricsPartitions().size()).isEqualTo(1);
-        assertThat(metricsDao.getDependencyMetricsPartitions().size()).isEqualTo(1);
+        assertThat(Collections.frequency(metricsDao.getPortfolioMetricsPartitions(), "\"PORTFOLIOMETRICS_%s\"".formatted(today))).isEqualTo(1);
+        assertThat(Collections.frequency(metricsDao.getProjectMetricsPartitions(), "\"PROJECTMETRICS_%s\"".formatted(today))).isEqualTo(1);
+        assertThat(Collections.frequency(metricsDao.getDependencyMetricsPartitions(), "\"DEPENDENCYMETRICS_%s\"".formatted(today))).isEqualTo(1);
     }
 }

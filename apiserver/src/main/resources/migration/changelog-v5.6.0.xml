@@ -1432,7 +1432,66 @@
     </changeSet>
 
     <changeSet id="v5.6.0-23" author="sahibamittal">
-        <createProcedure path="procedures/procedure_migrate_metrics_to_partitions.sql" relativeToChangelogFile="true"/>
+        <!--Create procedure to migrate metrics to partitions-->
+        <sql splitStatements="false">
+            <![CDATA[
+            CREATE OR REPLACE PROCEDURE "MIGRATE_METRICS_TO_PARTITIONS"(
+                target_table TEXT,
+                source_table TEXT
+            )
+            LANGUAGE plpgsql
+            AS $$
+            DECLARE
+                retention_days INTEGER := 90;
+
+                start_date DATE;
+                end_date DATE := current_date + '1 day'::interval;
+                partition_date DATE;
+                partition_name TEXT;
+                next_day DATE;
+            BEGIN
+                -- Fetch retention value from config
+                SELECT COALESCE((
+                    SELECT cp."PROPERTYVALUE"::INTEGER
+                    FROM "CONFIGPROPERTY" cp
+                    WHERE cp."GROUPNAME" = 'maintenance'
+                    AND cp."PROPERTYNAME" = 'metrics.retention.days'
+                ), 90)
+                INTO retention_days;
+
+                start_date := current_date - (retention_days * '1 day'::interval);
+                partition_date := start_date;
+
+                -- Create partitions for each day starting from retention period
+                WHILE partition_date < end_date LOOP
+                    next_day := partition_date + INTERVAL '1 day';
+                    partition_name := format('%s_%s', source_table, to_char(partition_date, 'YYYYMMDD'));
+
+                    -- Create partition if it doesn't exist
+                    EXECUTE format(
+                        'CREATE TABLE IF NOT EXISTS %I PARTITION OF %I
+                        FOR VALUES FROM (%L) TO (%L);',
+                        partition_name,
+                        target_table,
+                        partition_date,
+                        next_day
+                    );
+
+                    -- Insert data from existing table into this partition
+                    EXECUTE format(
+                        'INSERT INTO %I SELECT * FROM %I WHERE "LAST_OCCURRENCE" >= %L AND "LAST_OCCURRENCE" < %L;',
+                        target_table,
+                        source_table,
+                        partition_date,
+                        next_day
+                    );
+
+                    partition_date := next_day;
+                END LOOP;
+            END;
+            $$;
+            ]]>
+        </sql>
         <!--Migration for "PORTFOLIOMETRICS"-->
         <sql>
             -- create new partitioned table with new PK
@@ -1474,8 +1533,7 @@
                 CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" PRIMARY KEY ("ID", "LAST_OCCURRENCE")
             ) PARTITION BY RANGE ("LAST_OCCURRENCE");
 
-            -- create new indexes
-            CREATE INDEX "PORTFOLIOMETRICS_NEW_FIRST_OCCURRENCE_IDX" ON "PORTFOLIOMETRICS_NEW" ("FIRST_OCCURRENCE");
+            -- create new index
             CREATE INDEX "PORTFOLIOMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "PORTFOLIOMETRICS_NEW" ("LAST_OCCURRENCE");
 
             -- call the migration procedure
@@ -1489,9 +1547,9 @@
 
             -- rename PK
             ALTER TABLE "PORTFOLIOMETRICS" RENAME CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" TO "PORTFOLIOMETRICS_PK";
+            ALTER SEQUENCE "PORTFOLIOMETRICS_NEW_ID_seq" RENAME TO "PORTFOLIOMETRICS_ID_seq";
 
-            -- rename indexes
-            ALTER INDEX "PORTFOLIOMETRICS_NEW_FIRST_OCCURRENCE_IDX" RENAME TO "PORTFOLIOMETRICS_FIRST_OCCURRENCE_IDX";
+            -- rename index
             ALTER INDEX "PORTFOLIOMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "PORTFOLIOMETRICS_LAST_OCCURRENCE_IDX";
         </sql>
         <!--Migration for "PROJECTMETRICS"-->
@@ -1534,8 +1592,7 @@
                 CONSTRAINT "PROJECTMETRICS_NEW_PK" PRIMARY KEY ("ID", "LAST_OCCURRENCE")
             ) PARTITION BY RANGE ("LAST_OCCURRENCE");
 
-            -- create new indexes
-            CREATE INDEX "PROJECTMETRICS_NEW_FIRST_OCCURRENCE_IDX" ON "PROJECTMETRICS_NEW" ("FIRST_OCCURRENCE");
+            -- create new index
             CREATE INDEX "PROJECTMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "PROJECTMETRICS_NEW" ("LAST_OCCURRENCE");
 
             -- call the migration procedure
@@ -1549,9 +1606,9 @@
 
             -- rename PK
             ALTER TABLE "PROJECTMETRICS" RENAME CONSTRAINT "PROJECTMETRICS_NEW_PK" TO "PROJECTMETRICS_PK";
+            ALTER SEQUENCE "PROJECTMETRICS_NEW_ID_seq" RENAME TO "PROJECTMETRICS_ID_seq";
 
-            -- rename indexes
-            ALTER INDEX "PROJECTMETRICS_NEW_FIRST_OCCURRENCE_IDX" RENAME TO "PROJECTMETRICS_FIRST_OCCURRENCE_IDX";
+            -- rename index
             ALTER INDEX "PROJECTMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "PROJECTMETRICS_LAST_OCCURRENCE_IDX";
         </sql>
         <!--Migration for "DEPENDENCYMETRICS"-->
@@ -1593,8 +1650,7 @@
                 CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" PRIMARY KEY ("ID", "LAST_OCCURRENCE")
             ) PARTITION BY RANGE ("LAST_OCCURRENCE");
 
-            -- create new indexes
-            CREATE INDEX "DEPENDENCYMETRICS_NEW_FIRST_OCCURRENCE_IDX" ON "DEPENDENCYMETRICS_NEW" ("FIRST_OCCURRENCE");
+            -- create new index
             CREATE INDEX "DEPENDENCYMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "DEPENDENCYMETRICS_NEW" ("LAST_OCCURRENCE");
 
             -- call the migration procedure
@@ -1608,9 +1664,9 @@
 
             -- rename PK
             ALTER TABLE "DEPENDENCYMETRICS" RENAME CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" TO "DEPENDENCYMETRICS_PK";
+            ALTER SEQUENCE "DEPENDENCYMETRICS_NEW_ID_seq" RENAME TO "DEPENDENCYMETRICS_ID_seq";
 
-            -- rename indexes
-            ALTER INDEX "DEPENDENCYMETRICS_NEW_FIRST_OCCURRENCE_IDX" RENAME TO "DEPENDENCYMETRICS_FIRST_OCCURRENCE_IDX";
+            -- rename index
             ALTER INDEX "DEPENDENCYMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "DEPENDENCYMETRICS_LAST_OCCURRENCE_IDX";
         </sql>
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTMETRICS"

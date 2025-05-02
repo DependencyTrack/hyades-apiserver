@@ -21,7 +21,6 @@ package org.dependencytrack.tasks.metrics;
 import alpine.event.framework.EventService;
 import net.jcip.annotations.NotThreadSafe;
 import org.dependencytrack.event.CallbackEvent;
-import org.dependencytrack.event.MetricsPartitionCreateEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.AnalysisState;
@@ -49,6 +48,7 @@ import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask.partition;
 
@@ -73,7 +73,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         createTestConfigProperties();
 
         // Create partitions for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
         final PortfolioMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
@@ -115,7 +115,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         createTestConfigProperties();
 
         // Create partitions for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         // Record initial portfolio metrics
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
@@ -143,7 +143,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         createTestConfigProperties();
 
         // Create partitions for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         // Record initial portfolio metrics
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
@@ -161,7 +161,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     @Test
     public void testUpdateMetricsVulnerabilities() {
         // Create initial metrics partition for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         var vuln = new Vulnerability();
         vuln.setVulnId("INTERNAL-001");
@@ -279,7 +279,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     @Test
     public void testUpdateMetricsPolicyViolations() {
         // Create initial metrics partition for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         // Create a project with an unaudited violation.
         var projectUnaudited = new Project();

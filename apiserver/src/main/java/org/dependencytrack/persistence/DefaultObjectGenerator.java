@@ -24,20 +24,19 @@ import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.auth.PasswordService;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.event.MetricsPartitionCreateEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
-import org.dependencytrack.tasks.metrics.MetricsPartitionCreateTask;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.WaitingLockConfiguration;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
@@ -49,6 +48,7 @@ import java.util.stream.Stream;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_DEFAULT_OBJECTS_VERSION;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 
 /**
@@ -128,7 +128,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         }
 
         LOGGER.info("Checking the metrics partitions for today");
-//        checkMetricsPartitions();
+        checkMetricsPartitions();
     }
 
     /**
@@ -372,6 +372,6 @@ public class DefaultObjectGenerator implements ServletContextListener {
      * Checks if metrics partitions exist for today and create if they don't exist.
      */
     private void checkMetricsPartitions() {
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
     }
 }

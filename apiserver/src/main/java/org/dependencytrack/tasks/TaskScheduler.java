@@ -29,7 +29,6 @@ import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
 import org.dependencytrack.event.IntegrityMetaInitializerEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
-import org.dependencytrack.event.MetricsPartitionCreateEvent;
 import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
@@ -53,7 +52,6 @@ import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityScanMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.WorkflowMaintenanceTask;
-import org.dependencytrack.tasks.metrics.MetricsPartitionCreateTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
 import org.dependencytrack.tasks.vulnerabilitypolicy.VulnerabilityPolicyFetchTask;
@@ -88,7 +86,6 @@ public final class TaskScheduler extends BaseTaskScheduler {
                 Map.entry(new OsvMirrorEvent(null), getCronScheduleForTask(OsvMirrorTask.class)),
                 Map.entry(new GitHubAdvisoryMirrorEvent(), getCronScheduleForTask(GitHubAdvisoryMirrorTask.class)),
                 Map.entry(new EpssMirrorEvent(), getCronScheduleForTask(EpssMirrorTask.class)),
-                Map.entry(new MetricsPartitionCreateEvent(), getCronScheduleForTask(MetricsPartitionCreateTask.class)),
                 Map.entry(new PortfolioMetricsUpdateEvent(), getCronScheduleForTask(PortfolioMetricsUpdateTask.class)),
                 Map.entry(new VulnerabilityMetricsUpdateEvent(), getCronScheduleForTask(VulnerabilityMetricsUpdateTask.class)),
                 Map.entry(new InternalComponentIdentificationEvent(), getCronScheduleForTask(InternalComponentIdentificationTask.class)),

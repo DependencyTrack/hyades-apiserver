@@ -19,7 +19,6 @@
 package org.dependencytrack.tasks.metrics;
 
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
-import org.dependencytrack.event.MetricsPartitionCreateEvent;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -45,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 
@@ -53,7 +53,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     @Test
     public void testUpdateCMetricsEmpty() {
         // Create partitions for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         var project = new Project();
         project.setName("acme-app");
@@ -119,7 +119,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     @Test
     public void testUpdateMetricsUnchanged() {
         // Create partitions for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         var project = new Project();
         project.setName("acme-app");
@@ -151,7 +151,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     @Test
     public void testUpdateMetricsVulnerabilities() {
         // Create partitions for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         var project = new Project();
         project.setName("acme-app");
@@ -240,7 +240,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     @Test
     public void testUpdateMetricsVulnerabilitiesWhenSeverityIsOverridden() {
         // Create partitions for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         var project = new Project();
         project.setName("acme-app");
@@ -333,7 +333,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     @Test
     public void testUpdateMetricsPolicyViolations() {
         // Create partitions for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         var project = new Project();
         project.setName("acme-app");
@@ -395,7 +395,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     @Test
     public void testUpdateMetricsWithDuplicateAliases() {
         // Create partitions for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         var project = new Project();
         project.setName("acme-app");

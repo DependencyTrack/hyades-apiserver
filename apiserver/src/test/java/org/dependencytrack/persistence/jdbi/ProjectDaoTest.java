@@ -20,7 +20,6 @@ package org.dependencytrack.persistence.jdbi;
 
 import alpine.notification.NotificationLevel;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.event.MetricsPartitionCreateEvent;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -46,7 +45,6 @@ import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.tasks.metrics.MetricsPartitionCreateTask;
 import org.jdbi.v3.core.Handle;
 import org.junit.After;
 import org.junit.Before;
@@ -61,6 +59,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ProjectDaoTest extends PersistenceCapableTest {
@@ -160,7 +159,7 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         qm.persist(integrityAnalysis);
 
         // Create partitions for today
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         // Create metrics for component.
         final var componentMetrics = new DependencyMetrics();

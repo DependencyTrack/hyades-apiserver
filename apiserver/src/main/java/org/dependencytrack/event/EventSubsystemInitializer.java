@@ -59,7 +59,6 @@ import org.dependencytrack.tasks.maintenance.TagMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityDatabaseMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.VulnerabilityScanMaintenanceTask;
 import org.dependencytrack.tasks.maintenance.WorkflowMaintenanceTask;
-import org.dependencytrack.tasks.metrics.MetricsPartitionCreateTask;
 import org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.ProjectMetricsUpdateTask;
 import org.dependencytrack.tasks.metrics.VulnerabilityMetricsUpdateTask;
@@ -102,7 +101,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(PortfolioVulnerabilityAnalysisEvent.class, VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.subscribe(ProjectRepositoryMetaAnalysisEvent.class, RepositoryMetaAnalysisTask.class);
         EVENT_SERVICE.subscribe(PortfolioRepositoryMetaAnalysisEvent.class, RepositoryMetaAnalysisTask.class);
-        EVENT_SERVICE.subscribe(MetricsPartitionCreateEvent.class, MetricsPartitionCreateTask.class);
         EVENT_SERVICE.subscribe(ProjectMetricsUpdateEvent.class, ProjectMetricsUpdateTask.class);
         EVENT_SERVICE.subscribe(PortfolioMetricsUpdateEvent.class, PortfolioMetricsUpdateTask.class);
         EVENT_SERVICE.subscribe(VulnerabilityMetricsUpdateEvent.class, VulnerabilityMetricsUpdateTask.class);
@@ -148,7 +146,6 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(OsvMirrorTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(RepositoryMetaAnalysisTask.class);
-        EVENT_SERVICE.unsubscribe(MetricsPartitionCreateTask.class);
         EVENT_SERVICE.unsubscribe(ProjectMetricsUpdateTask.class);
         EVENT_SERVICE.unsubscribe(PortfolioMetricsUpdateTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityMetricsUpdateTask.class);

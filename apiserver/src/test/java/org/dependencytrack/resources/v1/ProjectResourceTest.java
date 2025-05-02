@@ -38,7 +38,6 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
-import org.dependencytrack.event.MetricsPartitionCreateEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -64,11 +63,11 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
 import org.dependencytrack.tasks.CloneProjectTask;
-import org.dependencytrack.tasks.metrics.MetricsPartitionCreateTask;
 import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.hamcrest.CoreMatchers;
@@ -759,7 +758,7 @@ public class ProjectResourceTest extends ResourceTest {
         final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);
         final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
 
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         final var projectMetricsOld = new ProjectMetrics();
         projectMetricsOld.setProject(project);
@@ -1240,7 +1239,7 @@ public class ProjectResourceTest extends ResourceTest {
         childProject.setName("acme-child-app");
         qm.persist(childProject);
 
-        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         final Instant now = Instant.now();
         final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);

@@ -25,9 +25,12 @@ import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.junit.Test;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.function.BiConsumer;
@@ -36,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.metrics.Metrics.createPartitionForDaysAgo;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
@@ -125,5 +129,24 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
         assertThat(qm.getPortfolioMetrics().getList(PortfolioMetrics.class)).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
+    }
+
+    @Test
+    public void testCreateMetricsPartitions() {
+
+        new MetricsMaintenanceTask().inform(new MetricsMaintenanceEvent());
+        withJdbiHandle(handle -> {
+            var metricsHandle = handle.attach(MetricsDao.class);
+            var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+            var metricsPartition = metricsHandle.getPortfolioMetricsPartitions();
+            assertThat(metricsPartition.getLast()).isEqualTo("\"PORTFOLIOMETRICS_%s\"".formatted(today));
+
+            metricsPartition = metricsHandle.getProjectMetricsPartitions();
+            assertThat(metricsPartition.getLast()).isEqualTo("\"PROJECTMETRICS_%s\"".formatted(today));
+
+            metricsPartition = metricsHandle.getDependencyMetricsPartitions();
+            assertThat(metricsPartition.getLast()).isEqualTo("\"DEPENDENCYMETRICS_%s\"".formatted(today));
+            return null;
+        });
     }
 }
