@@ -26,7 +26,6 @@ import org.junit.Test;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -64,9 +63,7 @@ public class MetricsPartitionCreateTaskTest extends PersistenceCapableTest {
 
         //sleep for the least duration lock held for, so lock could be released
         Thread.sleep(2000);
-
-        // Run the task a second time, with partition for today already created
-        final var beforeSecondRun = new Date();
+        
         new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
 
         // Ensure that only 1 partition exists for today
