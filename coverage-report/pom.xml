@@ -14,6 +14,7 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
+        <maven.install.skip>true</maven.install.skip>
     </properties>
 
     <!--
@@ -21,6 +22,27 @@
       https://github.com/jacoco/jacoco/wiki/MavenMultiModule
     -->
     <dependencies>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>alpine-common</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>alpine-model</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>alpine-infra</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>alpine-server</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>apiserver</artifactId>

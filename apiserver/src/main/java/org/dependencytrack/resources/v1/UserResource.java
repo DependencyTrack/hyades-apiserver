@@ -17,7 +17,6 @@
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
 package org.dependencytrack.resources.v1;
-
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
@@ -48,6 +47,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.FormParam;
@@ -68,11 +68,20 @@ import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.notification.v1.UserSubject;
+import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+
+import javax.jdo.Query;
 
 /**
  * JAX-RS resources for processing users.
@@ -194,7 +203,7 @@ public class UserResource extends AlpineResource {
     })
     @AuthenticationNotRequired
     public Response forceChangePassword(@FormParam("username") String username, @FormParam("password") String password,
-                                        @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
+            @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
         final Authenticator auth = new Authenticator(username, password);
         Principal principal;
         try (QueryManager qm = new QueryManager()) {
@@ -747,6 +756,65 @@ public class UserResource extends AlpineResource {
                         .entity("The user was not a member of the specified team.")
                         .build();
             }
+        }
+    }
+
+    @PUT
+    @Path("/membership")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Sets specified teams to a user.", description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team(s)"),
+            @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    public Response setUserTeams(
+            @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
+        try (QueryManager qm = new QueryManager()) {
+            UserPrincipal principal = qm.getUserPrincipal(request.username());
+            if (principal == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+            }
+
+            final Query<Team> query = qm.getPersistenceManager().newQuery(Team.class)
+                    .filter(":uuids.contains(uuid)")
+                    .setNamedParameters(Map.of("uuids", request.teams()));
+
+            final List<Team> requestedTeams;
+            try {
+                requestedTeams = List.copyOf(query.executeList());
+            } finally {
+                query.closeAll();
+            }
+
+            if(requestedTeams.size() != request.teams().size()) {
+                List<String> notFound = new ArrayList<String>(request.teams());
+                final List<String> differences = requestedTeams.stream().map(Team::getUuid).map(UUID::toString).toList();
+                notFound.removeAll(differences);
+
+                ProblemDetails problem = new AccessManagementProblemDetails(
+                        Response.Status.BAD_REQUEST.getStatusCode(),
+                        "Invalid team",
+                        "One or more teams could not be found",
+                        notFound);
+
+                return problem.toResponse();
+            }
+
+            final List<Team> currentUserTeams = Objects.requireNonNullElse(principal.getTeams(), List.<Team>of());
+            if (currentUserTeams.equals(requestedTeams)) {
+                return Response.notModified().entity("The user is already a member of the selected team(s)").build();
+            }
+
+            principal.setTeams(requestedTeams);
+            qm.persist(principal);
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
+            return Response.ok(principal).build();
         }
     }
 

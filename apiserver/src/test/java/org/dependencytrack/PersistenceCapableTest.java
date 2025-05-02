@@ -101,6 +101,7 @@ public abstract class PersistenceCapableTest {
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_DRIVER_NAME, postgresContainer.getDriverClassName());
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_USER_NAME, postgresContainer.getUsername());
         dnProps.put(PropertyNames.PROPERTY_CONNECTION_PASSWORD, postgresContainer.getPassword());
+        dnProps.put(PropertyNames.PROPERTY_CONNECTION_POOLINGTYPE, "HikariCP");
         dnProps.putAll(Config.getInstance().getPassThroughProperties("datanucleus"));
 
         final var pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(dnProps, "Alpine");

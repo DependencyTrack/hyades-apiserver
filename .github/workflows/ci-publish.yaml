@@ -27,6 +27,7 @@ permissions: { }
 jobs:
   read-version:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.parse.outputs.version }}
     steps:
@@ -62,6 +63,7 @@ jobs:
 
   update-github-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs:
       - read-version
       - call-build
@@ -70,7 +72,7 @@ jobs:
         uses: actions/checkout@v4.2.2
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v4.2.1
+        uses: actions/download-artifact@v4.3.0
         with:
           name: assembled-wars
           path: target

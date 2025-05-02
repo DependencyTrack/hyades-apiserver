@@ -26,6 +26,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.TestcontainersConfiguration;
 
+import java.lang.management.ManagementFactory;
 import java.sql.Connection;
 
 public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestContainer> {
@@ -36,7 +37,7 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
         withUsername("dtrack");
         withPassword("dtrack");
         withDatabaseName("dtrack");
-        withLabel("owner", "hyades-apiserver");
+        withLabel("owner", "hyades-apiserver-" + /* JVM name */ ManagementFactory.getRuntimeMXBean().getName());
         withUrlParam("reWriteBatchedInserts", "true");
 
         // Uncomment this to see queries executed by Postgres:

@@ -15,13 +15,13 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
+        <maven.install.skip>true</maven.install.skip>
 
         <!-- Dependency Versions -->
-        <lib.alpine.version>3.2.0</lib.alpine.version>
         <lib.assertj.version>3.26.3</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.cel-tools.version>0.5.1</lib.cel-tools.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.23.1</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.24.2</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
@@ -29,24 +29,24 @@
         <lib.cyclonedx-java.version>10.2.1</lib.cyclonedx-java.version>
         <lib.datanucleus-postgresql.version>0.3.0</lib.datanucleus-postgresql.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.jackson.version>2.18.3</lib.jackson.version>
+        <lib.jackson.version>2.19.0</lib.jackson.version>
         <lib.jackson-databind.version>2.18.3</lib.jackson-databind.version>
-        <lib.jersey.version>3.1.9</lib.jersey.version>
-        <lib.jdbi.version>3.47.0</lib.jdbi.version>
+        <lib.jersey.version>3.1.10</lib.jersey.version>
+        <lib.jdbi.version>3.49.2</lib.jdbi.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.9.0</lib.kafka.version>
-        <lib.liquibase.version>4.30.0</lib.liquibase.version>
+        <lib.liquibase.version>4.31.1</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.17</lib.minio.version>
         <lib.kotlin-stdlib.version>2.0.0</lib.kotlin-stdlib.version>
-        <lib.wiremock.version>3.12.1</lib.wiremock.version>
+        <lib.wiremock.version>3.13.0</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.3.2</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.4</lib.pebble.version>
-        <lib.testcontainers.version>1.20.6</lib.testcontainers.version>
-        <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
-        <lib.swagger.version>2.2.29</lib.swagger.version>
+        <lib.testcontainers.version>1.21.0</lib.testcontainers.version>
+        <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
+        <lib.swagger.version>2.2.30</lib.swagger.version>
         <lib.swagger-parser.version>2.1.25</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
@@ -54,7 +54,7 @@
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.17</lib.log4j-over-slf4j.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>6.3.1</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>6.5.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
         <lib.jdbc-driver.postgresql.version>42.7.5</lib.jdbc-driver.postgresql.version>
 
@@ -66,9 +66,9 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>us.springett</groupId>
+                <groupId>org.dependencytrack</groupId>
                 <artifactId>alpine-parent</artifactId>
-                <version>${lib.alpine.version}</version>
+                <version>${project.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -90,24 +90,20 @@
 
         <!-- Alpine -->
         <dependency>
-            <groupId>us.springett</groupId>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-common</artifactId>
-            <version>${lib.alpine.version}</version>
         </dependency>
         <dependency>
-            <groupId>us.springett</groupId>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-model</artifactId>
-            <version>${lib.alpine.version}</version>
         </dependency>
         <dependency>
-            <groupId>us.springett</groupId>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-infra</artifactId>
-            <version>${lib.alpine.version}</version>
         </dependency>
         <dependency>
-            <groupId>us.springett</groupId>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-server</artifactId>
-            <version>${lib.alpine.version}</version>
             <exclusions>
                 <!-- this exclusion done to get rid of vulnerability in the project as this transitive dependency is not being used in the project
                 Vulnerability : CVE-2022-1471 (https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-1471 ) -->
@@ -122,9 +118,8 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>us.springett</groupId>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-executable-war</artifactId>
-            <version>${lib.alpine.version}</version>
             <scope>provided</scope>
         </dependency>
         <!-- Common Expression Language (CEL) -->
@@ -536,21 +531,18 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <systemProperties>
-                        <property>
-                            <name>java.util.logging.config.file</name>
-                            <value>${project.basedir}/src/test/resources/logging.properties</value>
-                        </property>
-                    </systemProperties>
+                    <systemPropertyVariables>
+                        <dependencyTrack.logging.level>${unitTestLogLevel}</dependencyTrack.logging.level>
+                        <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
+                    </systemPropertyVariables>
                 </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit4</artifactId>
+                        <version>3.5.3</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <plugin>
@@ -579,7 +571,7 @@
                 <configuration>
                     <api>JDO</api>
                     <persistenceUnitName>Alpine</persistenceUnitName>
-                    <verbose>true</verbose>
+                    <quiet>true</quiet>
                     <fork>false</fork>
                 </configuration>
                 <executions>
@@ -680,7 +672,7 @@
                         <phase>package</phase>
                         <configuration>
                             <target>
-                                <move file="${project.build.directory}/${project.build.finalName}.war"
+                                <copy file="${project.build.directory}/${project.build.finalName}.war"
                                       tofile="${project.build.directory}/${project.build.finalName}.jar" />
                             </target>
                         </configuration>
@@ -707,7 +699,7 @@
                     <dependentWarExcludes>WEB-INF/lib/*log4j*.jar,WEB-INF/lib/*slf4j*.jar</dependentWarExcludes>
                     <overlays>
                         <overlay>
-                            <groupId>us.springett</groupId>
+                            <groupId>org.dependencytrack</groupId>
                             <artifactId>alpine-executable-war</artifactId>
                             <type>jar</type>
                         </overlay>
@@ -770,7 +762,8 @@
         <profile>
             <id>dev-services</id>
             <properties>
-                <!-- Don't compile test classes, we only want to run Jetty. -->
+                <checkstyle.skip>true</checkstyle.skip>
+                <jacoco.skip>true</jacoco.skip>
                 <maven.test.skip>true</maven.test.skip>
             </properties>
             <dependencies>
@@ -802,6 +795,14 @@
                     <plugin>
                         <groupId>org.eclipse.jetty.ee10</groupId>
                         <artifactId>jetty-ee10-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                         <configuration>
                             <systemProperties>
                                 <dev.services.enabled>true</dev.services.enabled>

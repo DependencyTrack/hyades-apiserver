@@ -1426,7 +1426,12 @@
         </createIndex>
     </changeSet>
 
-    <changeSet id="v5.6.0-22" author="sahibamittal">
+    <changeSet id="v5.6.0-22" author="nscuro">
+        <dropTable tableName="INSTALLEDUPGRADES"/>
+        <dropTable tableName="SCHEMAVERSION"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-23" author="sahibamittal">
         <createProcedure path="procedures/procedure_migrate_metrics_to_partitions.sql" relativeToChangelogFile="true"/>
         <!--Migration for "PORTFOLIOMETRICS"-->
         <sql>

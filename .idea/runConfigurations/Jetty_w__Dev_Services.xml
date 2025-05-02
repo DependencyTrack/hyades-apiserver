@@ -1,27 +1,11 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Jetty w/ Dev Services" type="MavenRunConfiguration" factoryName="Maven">
     <MavenSettings>
-      <option name="myGeneralSettings">
-        <MavenGeneralSettings />
-      </option>
-      <option name="myRunnerSettings">
-        <MavenRunnerSettings>
-          <option name="delegateBuildToMaven" value="false" />
-          <option name="environmentProperties">
-            <map />
-          </option>
-          <option name="jreName" value="#USE_PROJECT_JDK" />
-          <option name="mavenProperties">
-            <map />
-          </option>
-          <option name="passParentEnv" value="true" />
-          <option name="runMavenInBackground" value="true" />
-          <option name="skipTests" value="false" />
-          <option name="vmOptions" value="" />
-        </MavenRunnerSettings>
-      </option>
+      <option name="myGeneralSettings" />
+      <option name="myRunnerSettings" />
       <option name="myRunnerParameters">
         <MavenRunnerParameters>
+          <option name="cmdOptions" />
           <option name="profiles">
             <set />
           </option>
@@ -29,15 +13,20 @@
             <list>
               <option value="-pl" />
               <option value="apiserver" />
-              <option value="jetty:run" />
-              <option value="-Dcheckstyle.skip" />
+              <option value="-am" />
+              <option value="test" />
             </list>
           </option>
+          <option name="multimoduleDir" />
           <option name="pomFileName" />
           <option name="profilesMap">
             <map>
+              <entry key="quick" value="true" />
               <entry key="dev-services" value="true" />
             </map>
+          </option>
+          <option name="projectsCmdOptionValues">
+            <list />
           </option>
           <option name="resolveToWorkspace" value="false" />
           <option name="workingDirPath" value="$PROJECT_DIR$" />
