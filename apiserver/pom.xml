@@ -765,6 +765,8 @@
                 <checkstyle.skip>true</checkstyle.skip>
                 <jacoco.skip>true</jacoco.skip>
                 <maven.test.skip>true</maven.test.skip>
+                <maven.war.skip>true</maven.war.skip>
+                <cyclonedx.skip>true</cyclonedx.skip>
             </properties>
             <dependencies>
                 <dependency>
@@ -797,7 +799,7 @@
                         <artifactId>jetty-ee10-maven-plugin</artifactId>
                         <executions>
                             <execution>
-                                <phase>test</phase>
+                                <phase>verify</phase>
                                 <goals>
                                     <goal>run</goal>
                                 </goals>
