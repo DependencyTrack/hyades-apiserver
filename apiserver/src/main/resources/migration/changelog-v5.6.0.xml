@@ -1443,9 +1443,10 @@
             AS $$
             DECLARE
                 retention_days INTEGER := 90;
-
+                configured_start_date DATE;
+                actual_data_start_date DATE;
                 start_date DATE;
-                end_date DATE := current_date + '1 day'::interval;
+                end_date DATE := current_date + INTERVAL '1 day';
                 partition_date DATE;
                 partition_name TEXT;
                 next_day DATE;
@@ -1459,7 +1460,20 @@
                 ), 90)
                 INTO retention_days;
 
-                start_date := current_date - (retention_days * '1 day'::interval);
+                -- Calculate configured start date
+                configured_start_date := current_date - (retention_days * INTERVAL '1 day');
+
+                -- Get earliest date in source_table
+                EXECUTE format('SELECT MIN("LAST_OCCURRENCE") FROM %I', source_table)
+                INTO actual_data_start_date;
+
+                -- If no data exists, exit early
+                IF actual_data_start_date IS NULL THEN
+                    RETURN;
+                END IF;
+
+                -- Use the later of the configured or actual data start date
+                start_date := GREATEST(configured_start_date, actual_data_start_date);
                 partition_date := start_date;
 
                 -- Create partitions for each day starting from retention period
