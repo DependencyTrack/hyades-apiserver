@@ -25,6 +25,7 @@ import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,6 +35,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
 
@@ -160,5 +162,20 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
         method.setAccessible(true);
         method.invoke(generator);
         Assert.assertEquals(DefaultNotificationPublishers.values().length, qm.getAllNotificationPublishers().size());
+    }
+
+    @Test
+    public void testMetricsPartitionsForToday() throws Exception {
+        DefaultObjectGenerator generator = new DefaultObjectGenerator();
+        Method method = generator.getClass().getDeclaredMethod("checkMetricsPartitions");
+        method.setAccessible(true);
+        method.invoke(generator);
+        withJdbiHandle(handle -> {
+            var metricsHandle = handle.attach(MetricsDao.class);
+            assertThat(metricsHandle.getPortfolioMetricsPartitions().size()).isEqualTo(1);
+            assertThat(metricsHandle.getProjectMetricsPartitions().size()).isEqualTo(1);
+            assertThat(metricsHandle.getDependencyMetricsPartitions().size()).isEqualTo(1);
+            return null;
+        });
     }
 }

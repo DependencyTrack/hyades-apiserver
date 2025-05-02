@@ -26,11 +26,13 @@ import alpine.model.Permission;
 import alpine.server.auth.PasswordService;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.event.MetricsPartitionCreateEvent;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
+import org.dependencytrack.tasks.metrics.MetricsPartitionCreateTask;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.WaitingLockConfiguration;
 
@@ -124,6 +126,9 @@ public class DefaultObjectGenerator implements ServletContextListener {
             loadDefaultNotificationPublishers(qm);
             recordDefaultObjectsVersion(qm);
         }
+
+        LOGGER.info("Checking the metrics partitions for today");
+        checkMetricsPartitions();
     }
 
     /**
@@ -361,5 +366,12 @@ public class DefaultObjectGenerator implements ServletContextListener {
         } catch (IOException e) {
             LOGGER.error("An error occurred while synchronizing a default notification publisher", e);
         }
+    }
+
+    /**
+     * Checks if metrics partitions exist for today and create if they don't exist.
+     */
+    private void checkMetricsPartitions() {
+        new MetricsPartitionCreateTask().inform(new MetricsPartitionCreateEvent());
     }
 }
