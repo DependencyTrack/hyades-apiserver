@@ -21,7 +21,7 @@
         <lib.assertj.version>3.26.3</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.cel-tools.version>0.5.1</lib.cel-tools.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.24.2</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.25.0</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
