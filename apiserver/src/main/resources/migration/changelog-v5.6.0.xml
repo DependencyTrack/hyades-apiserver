@@ -1644,7 +1644,7 @@
                 ON "OIDCUSER"."ID" = "OIDCUSERS_PERMISSIONS"."OIDCUSER_ID"
              INNER JOIN "USER"
                 ON "USER"."USERNAME" = "OIDCUSER"."USERNAME"
-               AND "USER"."TYPE" = 'LDAP'
+               AND "USER"."TYPE" = 'OIDC'
             ON CONFLICT ("PERMISSION_ID", "USER_ID") DO NOTHING;
 
             INSERT INTO "USERS_TEAMS" ("TEAM_ID", "USER_ID")
@@ -1655,7 +1655,7 @@
                 ON "OIDCUSER"."ID" = "OIDCUSERS_TEAMS"."OIDCUSERS_ID"
              INNER JOIN "USER"
                 ON "USER"."USERNAME" = "OIDCUSER"."USERNAME"
-               AND "USER"."TYPE" = 'LDAP'
+               AND "USER"."TYPE" = 'OIDC'
             ON CONFLICT ("TEAM_ID", "USER_ID") DO NOTHING;
         </sql>
 
