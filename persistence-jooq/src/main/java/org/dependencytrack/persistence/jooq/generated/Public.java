@@ -7,78 +7,78 @@ package org.dependencytrack.persistence.jooq.generated;
 import java.util.Arrays;
 import java.util.List;
 
-import org.dependencytrack.persistence.jooq.generated.tables.Affectedversionattribution;
+import org.dependencytrack.persistence.jooq.generated.tables.AffectedVersionAttribution;
 import org.dependencytrack.persistence.jooq.generated.tables.Analysis;
-import org.dependencytrack.persistence.jooq.generated.tables.Analysiscomment;
-import org.dependencytrack.persistence.jooq.generated.tables.Apikey;
-import org.dependencytrack.persistence.jooq.generated.tables.ApikeysTeams;
+import org.dependencytrack.persistence.jooq.generated.tables.AnalysisComment;
+import org.dependencytrack.persistence.jooq.generated.tables.ApiKey;
+import org.dependencytrack.persistence.jooq.generated.tables.ApiKeysTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.Bom;
 import org.dependencytrack.persistence.jooq.generated.tables.Component;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentOccurrence;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentProperty;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentsVulnerabilities;
-import org.dependencytrack.persistence.jooq.generated.tables.Configproperty;
-import org.dependencytrack.persistence.jooq.generated.tables.Dependencymetrics;
+import org.dependencytrack.persistence.jooq.generated.tables.ConfigProperty;
+import org.dependencytrack.persistence.jooq.generated.tables.DependencyMetrics;
 import org.dependencytrack.persistence.jooq.generated.tables.Epss;
-import org.dependencytrack.persistence.jooq.generated.tables.Findingattribution;
-import org.dependencytrack.persistence.jooq.generated.tables.Installedupgrades;
+import org.dependencytrack.persistence.jooq.generated.tables.FindingAttribution;
+import org.dependencytrack.persistence.jooq.generated.tables.InstalledUpgrades;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityAnalysis;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityMetaComponent;
-import org.dependencytrack.persistence.jooq.generated.tables.Ldapuser;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapusersPermissions;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapusersTeams;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUser;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersPermissions;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.License;
-import org.dependencytrack.persistence.jooq.generated.tables.Licensegroup;
-import org.dependencytrack.persistence.jooq.generated.tables.LicensegroupLicense;
-import org.dependencytrack.persistence.jooq.generated.tables.Manageduser;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedusersPermissions;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedusersTeams;
-import org.dependencytrack.persistence.jooq.generated.tables.Mappedldapgroup;
-import org.dependencytrack.persistence.jooq.generated.tables.Mappedoidcgroup;
-import org.dependencytrack.persistence.jooq.generated.tables.Notificationpublisher;
-import org.dependencytrack.persistence.jooq.generated.tables.Notificationrule;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationruleProjects;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationruleTags;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationruleTeams;
-import org.dependencytrack.persistence.jooq.generated.tables.Oidcgroup;
-import org.dependencytrack.persistence.jooq.generated.tables.Oidcuser;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcusersPermissions;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcusersTeams;
+import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroup;
+import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroupLicense;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersPermissions;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersTeams;
+import org.dependencytrack.persistence.jooq.generated.tables.MappedLdapGroup;
+import org.dependencytrack.persistence.jooq.generated.tables.MappedOidcGroup;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationPublisher;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleProjects;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTags;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTeams;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcGroup;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUser;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersPermissions;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission;
 import org.dependencytrack.persistence.jooq.generated.tables.Policy;
+import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyProjects;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyTags;
-import org.dependencytrack.persistence.jooq.generated.tables.Policycondition;
-import org.dependencytrack.persistence.jooq.generated.tables.Policyviolation;
-import org.dependencytrack.persistence.jooq.generated.tables.Portfoliometrics;
+import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation;
+import org.dependencytrack.persistence.jooq.generated.tables.PortfolioMetrics;
 import org.dependencytrack.persistence.jooq.generated.tables.Project;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectAccessTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectHierarchy;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectMetadata;
+import org.dependencytrack.persistence.jooq.generated.tables.ProjectMetrics;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectProperty;
-import org.dependencytrack.persistence.jooq.generated.tables.Projectmetrics;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectsTags;
 import org.dependencytrack.persistence.jooq.generated.tables.Repository;
 import org.dependencytrack.persistence.jooq.generated.tables.RepositoryMetaComponent;
-import org.dependencytrack.persistence.jooq.generated.tables.Schemaversion;
-import org.dependencytrack.persistence.jooq.generated.tables.Servicecomponent;
-import org.dependencytrack.persistence.jooq.generated.tables.ServicecomponentsVulnerabilities;
+import org.dependencytrack.persistence.jooq.generated.tables.SchemaVersion;
+import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponent;
+import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponentsVulnerabilities;
 import org.dependencytrack.persistence.jooq.generated.tables.Tag;
 import org.dependencytrack.persistence.jooq.generated.tables.Team;
 import org.dependencytrack.persistence.jooq.generated.tables.TeamsPermissions;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions;
 import org.dependencytrack.persistence.jooq.generated.tables.Vex;
-import org.dependencytrack.persistence.jooq.generated.tables.Violationanalysis;
-import org.dependencytrack.persistence.jooq.generated.tables.Violationanalysiscomment;
+import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis;
+import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysisComment;
 import org.dependencytrack.persistence.jooq.generated.tables.VulnerabilitiesTags;
 import org.dependencytrack.persistence.jooq.generated.tables.Vulnerability;
+import org.dependencytrack.persistence.jooq.generated.tables.VulnerabilityAlias;
+import org.dependencytrack.persistence.jooq.generated.tables.VulnerabilityMetrics;
 import org.dependencytrack.persistence.jooq.generated.tables.VulnerabilityPolicy;
 import org.dependencytrack.persistence.jooq.generated.tables.VulnerabilityPolicyBundle;
-import org.dependencytrack.persistence.jooq.generated.tables.Vulnerabilityalias;
-import org.dependencytrack.persistence.jooq.generated.tables.Vulnerabilitymetrics;
-import org.dependencytrack.persistence.jooq.generated.tables.Vulnerabilityscan;
-import org.dependencytrack.persistence.jooq.generated.tables.Vulnerablesoftware;
-import org.dependencytrack.persistence.jooq.generated.tables.VulnerablesoftwareVulnerabilities;
+import org.dependencytrack.persistence.jooq.generated.tables.VulnerabilityScan;
+import org.dependencytrack.persistence.jooq.generated.tables.VulnerableSoftware;
+import org.dependencytrack.persistence.jooq.generated.tables.VulnerableSoftwareVulnerabilities;
 import org.dependencytrack.persistence.jooq.generated.tables.WorkflowState;
 import org.jooq.Catalog;
 import org.jooq.Table;
@@ -102,7 +102,7 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.AFFECTEDVERSIONATTRIBUTION</code>.
      */
-    public final Affectedversionattribution AFFECTEDVERSIONATTRIBUTION = Affectedversionattribution.AFFECTEDVERSIONATTRIBUTION;
+    public final AffectedVersionAttribution AFFECTEDVERSIONATTRIBUTION = AffectedVersionAttribution.AFFECTEDVERSIONATTRIBUTION;
 
     /**
      * The table <code>public.ANALYSIS</code>.
@@ -112,17 +112,17 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.ANALYSISCOMMENT</code>.
      */
-    public final Analysiscomment ANALYSISCOMMENT = Analysiscomment.ANALYSISCOMMENT;
+    public final AnalysisComment ANALYSISCOMMENT = AnalysisComment.ANALYSISCOMMENT;
 
     /**
      * The table <code>public.APIKEY</code>.
      */
-    public final Apikey APIKEY = Apikey.APIKEY;
+    public final ApiKey APIKEY = ApiKey.APIKEY;
 
     /**
      * The table <code>public.APIKEYS_TEAMS</code>.
      */
-    public final ApikeysTeams APIKEYS_TEAMS = ApikeysTeams.APIKEYS_TEAMS;
+    public final ApiKeysTeams APIKEYS_TEAMS = ApiKeysTeams.APIKEYS_TEAMS;
 
     /**
      * The table <code>public.BOM</code>.
@@ -152,12 +152,12 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.CONFIGPROPERTY</code>.
      */
-    public final Configproperty CONFIGPROPERTY = Configproperty.CONFIGPROPERTY;
+    public final ConfigProperty CONFIGPROPERTY = ConfigProperty.CONFIGPROPERTY;
 
     /**
      * The table <code>public.DEPENDENCYMETRICS</code>.
      */
-    public final Dependencymetrics DEPENDENCYMETRICS = Dependencymetrics.DEPENDENCYMETRICS;
+    public final DependencyMetrics DEPENDENCYMETRICS = DependencyMetrics.DEPENDENCYMETRICS;
 
     /**
      * The table <code>public.EPSS</code>.
@@ -167,12 +167,12 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.FINDINGATTRIBUTION</code>.
      */
-    public final Findingattribution FINDINGATTRIBUTION = Findingattribution.FINDINGATTRIBUTION;
+    public final FindingAttribution FINDINGATTRIBUTION = FindingAttribution.FINDINGATTRIBUTION;
 
     /**
      * The table <code>public.INSTALLEDUPGRADES</code>.
      */
-    public final Installedupgrades INSTALLEDUPGRADES = Installedupgrades.INSTALLEDUPGRADES;
+    public final InstalledUpgrades INSTALLEDUPGRADES = InstalledUpgrades.INSTALLEDUPGRADES;
 
     /**
      * The table <code>public.INTEGRITY_ANALYSIS</code>.
@@ -187,17 +187,17 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.LDAPUSER</code>.
      */
-    public final Ldapuser LDAPUSER = Ldapuser.LDAPUSER;
+    public final LdapUser LDAPUSER = LdapUser.LDAPUSER;
 
     /**
      * The table <code>public.LDAPUSERS_PERMISSIONS</code>.
      */
-    public final LdapusersPermissions LDAPUSERS_PERMISSIONS = LdapusersPermissions.LDAPUSERS_PERMISSIONS;
+    public final LdapUsersPermissions LDAPUSERS_PERMISSIONS = LdapUsersPermissions.LDAPUSERS_PERMISSIONS;
 
     /**
      * The table <code>public.LDAPUSERS_TEAMS</code>.
      */
-    public final LdapusersTeams LDAPUSERS_TEAMS = LdapusersTeams.LDAPUSERS_TEAMS;
+    public final LdapUsersTeams LDAPUSERS_TEAMS = LdapUsersTeams.LDAPUSERS_TEAMS;
 
     /**
      * The table <code>public.LICENSE</code>.
@@ -207,82 +207,82 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.LICENSEGROUP</code>.
      */
-    public final Licensegroup LICENSEGROUP = Licensegroup.LICENSEGROUP;
+    public final LicenseGroup LICENSEGROUP = LicenseGroup.LICENSEGROUP;
 
     /**
      * The table <code>public.LICENSEGROUP_LICENSE</code>.
      */
-    public final LicensegroupLicense LICENSEGROUP_LICENSE = LicensegroupLicense.LICENSEGROUP_LICENSE;
+    public final LicenseGroupLicense LICENSEGROUP_LICENSE = LicenseGroupLicense.LICENSEGROUP_LICENSE;
 
     /**
      * The table <code>public.MANAGEDUSER</code>.
      */
-    public final Manageduser MANAGEDUSER = Manageduser.MANAGEDUSER;
+    public final ManagedUser MANAGEDUSER = ManagedUser.MANAGEDUSER;
 
     /**
      * The table <code>public.MANAGEDUSERS_PERMISSIONS</code>.
      */
-    public final ManagedusersPermissions MANAGEDUSERS_PERMISSIONS = ManagedusersPermissions.MANAGEDUSERS_PERMISSIONS;
+    public final ManagedUsersPermissions MANAGEDUSERS_PERMISSIONS = ManagedUsersPermissions.MANAGEDUSERS_PERMISSIONS;
 
     /**
      * The table <code>public.MANAGEDUSERS_TEAMS</code>.
      */
-    public final ManagedusersTeams MANAGEDUSERS_TEAMS = ManagedusersTeams.MANAGEDUSERS_TEAMS;
+    public final ManagedUsersTeams MANAGEDUSERS_TEAMS = ManagedUsersTeams.MANAGEDUSERS_TEAMS;
 
     /**
      * The table <code>public.MAPPEDLDAPGROUP</code>.
      */
-    public final Mappedldapgroup MAPPEDLDAPGROUP = Mappedldapgroup.MAPPEDLDAPGROUP;
+    public final MappedLdapGroup MAPPEDLDAPGROUP = MappedLdapGroup.MAPPEDLDAPGROUP;
 
     /**
      * The table <code>public.MAPPEDOIDCGROUP</code>.
      */
-    public final Mappedoidcgroup MAPPEDOIDCGROUP = Mappedoidcgroup.MAPPEDOIDCGROUP;
+    public final MappedOidcGroup MAPPEDOIDCGROUP = MappedOidcGroup.MAPPEDOIDCGROUP;
 
     /**
      * The table <code>public.NOTIFICATIONPUBLISHER</code>.
      */
-    public final Notificationpublisher NOTIFICATIONPUBLISHER = Notificationpublisher.NOTIFICATIONPUBLISHER;
+    public final NotificationPublisher NOTIFICATIONPUBLISHER = NotificationPublisher.NOTIFICATIONPUBLISHER;
 
     /**
      * The table <code>public.NOTIFICATIONRULE</code>.
      */
-    public final Notificationrule NOTIFICATIONRULE = Notificationrule.NOTIFICATIONRULE;
+    public final NotificationRule NOTIFICATIONRULE = NotificationRule.NOTIFICATIONRULE;
 
     /**
      * The table <code>public.NOTIFICATIONRULE_PROJECTS</code>.
      */
-    public final NotificationruleProjects NOTIFICATIONRULE_PROJECTS = NotificationruleProjects.NOTIFICATIONRULE_PROJECTS;
+    public final NotificationRuleProjects NOTIFICATIONRULE_PROJECTS = NotificationRuleProjects.NOTIFICATIONRULE_PROJECTS;
 
     /**
      * The table <code>public.NOTIFICATIONRULE_TAGS</code>.
      */
-    public final NotificationruleTags NOTIFICATIONRULE_TAGS = NotificationruleTags.NOTIFICATIONRULE_TAGS;
+    public final NotificationRuleTags NOTIFICATIONRULE_TAGS = NotificationRuleTags.NOTIFICATIONRULE_TAGS;
 
     /**
      * The table <code>public.NOTIFICATIONRULE_TEAMS</code>.
      */
-    public final NotificationruleTeams NOTIFICATIONRULE_TEAMS = NotificationruleTeams.NOTIFICATIONRULE_TEAMS;
+    public final NotificationRuleTeams NOTIFICATIONRULE_TEAMS = NotificationRuleTeams.NOTIFICATIONRULE_TEAMS;
 
     /**
      * The table <code>public.OIDCGROUP</code>.
      */
-    public final Oidcgroup OIDCGROUP = Oidcgroup.OIDCGROUP;
+    public final OidcGroup OIDCGROUP = OidcGroup.OIDCGROUP;
 
     /**
      * The table <code>public.OIDCUSER</code>.
      */
-    public final Oidcuser OIDCUSER = Oidcuser.OIDCUSER;
+    public final OidcUser OIDCUSER = OidcUser.OIDCUSER;
 
     /**
      * The table <code>public.OIDCUSERS_PERMISSIONS</code>.
      */
-    public final OidcusersPermissions OIDCUSERS_PERMISSIONS = OidcusersPermissions.OIDCUSERS_PERMISSIONS;
+    public final OidcUsersPermissions OIDCUSERS_PERMISSIONS = OidcUsersPermissions.OIDCUSERS_PERMISSIONS;
 
     /**
      * The table <code>public.OIDCUSERS_TEAMS</code>.
      */
-    public final OidcusersTeams OIDCUSERS_TEAMS = OidcusersTeams.OIDCUSERS_TEAMS;
+    public final OidcUsersTeams OIDCUSERS_TEAMS = OidcUsersTeams.OIDCUSERS_TEAMS;
 
     /**
      * The table <code>public.PERMISSION</code>.
@@ -307,17 +307,17 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.POLICYCONDITION</code>.
      */
-    public final Policycondition POLICYCONDITION = Policycondition.POLICYCONDITION;
+    public final PolicyCondition POLICYCONDITION = PolicyCondition.POLICYCONDITION;
 
     /**
      * The table <code>public.POLICYVIOLATION</code>.
      */
-    public final Policyviolation POLICYVIOLATION = Policyviolation.POLICYVIOLATION;
+    public final PolicyViolation POLICYVIOLATION = PolicyViolation.POLICYVIOLATION;
 
     /**
      * The table <code>public.PORTFOLIOMETRICS</code>.
      */
-    public final Portfoliometrics PORTFOLIOMETRICS = Portfoliometrics.PORTFOLIOMETRICS;
+    public final PortfolioMetrics PORTFOLIOMETRICS = PortfolioMetrics.PORTFOLIOMETRICS;
 
     /**
      * The table <code>public.PROJECT</code>.
@@ -347,7 +347,7 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.PROJECTMETRICS</code>.
      */
-    public final Projectmetrics PROJECTMETRICS = Projectmetrics.PROJECTMETRICS;
+    public final ProjectMetrics PROJECTMETRICS = ProjectMetrics.PROJECTMETRICS;
 
     /**
      * The table <code>public.PROJECTS_TAGS</code>.
@@ -367,17 +367,17 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.SCHEMAVERSION</code>.
      */
-    public final Schemaversion SCHEMAVERSION = Schemaversion.SCHEMAVERSION;
+    public final SchemaVersion SCHEMAVERSION = SchemaVersion.SCHEMAVERSION;
 
     /**
      * The table <code>public.SERVICECOMPONENT</code>.
      */
-    public final Servicecomponent SERVICECOMPONENT = Servicecomponent.SERVICECOMPONENT;
+    public final ServiceComponent SERVICECOMPONENT = ServiceComponent.SERVICECOMPONENT;
 
     /**
      * The table <code>public.SERVICECOMPONENTS_VULNERABILITIES</code>.
      */
-    public final ServicecomponentsVulnerabilities SERVICECOMPONENTS_VULNERABILITIES = ServicecomponentsVulnerabilities.SERVICECOMPONENTS_VULNERABILITIES;
+    public final ServiceComponentsVulnerabilities SERVICECOMPONENTS_VULNERABILITIES = ServiceComponentsVulnerabilities.SERVICECOMPONENTS_VULNERABILITIES;
 
     /**
      * The table <code>public.TAG</code>.
@@ -407,12 +407,12 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.VIOLATIONANALYSIS</code>.
      */
-    public final Violationanalysis VIOLATIONANALYSIS = Violationanalysis.VIOLATIONANALYSIS;
+    public final ViolationAnalysis VIOLATIONANALYSIS = ViolationAnalysis.VIOLATIONANALYSIS;
 
     /**
      * The table <code>public.VIOLATIONANALYSISCOMMENT</code>.
      */
-    public final Violationanalysiscomment VIOLATIONANALYSISCOMMENT = Violationanalysiscomment.VIOLATIONANALYSISCOMMENT;
+    public final ViolationAnalysisComment VIOLATIONANALYSISCOMMENT = ViolationAnalysisComment.VIOLATIONANALYSISCOMMENT;
 
     /**
      * The table <code>public.VULNERABILITIES_TAGS</code>.
@@ -437,27 +437,27 @@ public class Public extends SchemaImpl {
     /**
      * The table <code>public.VULNERABILITYALIAS</code>.
      */
-    public final Vulnerabilityalias VULNERABILITYALIAS = Vulnerabilityalias.VULNERABILITYALIAS;
+    public final VulnerabilityAlias VULNERABILITYALIAS = VulnerabilityAlias.VULNERABILITYALIAS;
 
     /**
      * The table <code>public.VULNERABILITYMETRICS</code>.
      */
-    public final Vulnerabilitymetrics VULNERABILITYMETRICS = Vulnerabilitymetrics.VULNERABILITYMETRICS;
+    public final VulnerabilityMetrics VULNERABILITYMETRICS = VulnerabilityMetrics.VULNERABILITYMETRICS;
 
     /**
      * The table <code>public.VULNERABILITYSCAN</code>.
      */
-    public final Vulnerabilityscan VULNERABILITYSCAN = Vulnerabilityscan.VULNERABILITYSCAN;
+    public final VulnerabilityScan VULNERABILITYSCAN = VulnerabilityScan.VULNERABILITYSCAN;
 
     /**
      * The table <code>public.VULNERABLESOFTWARE</code>.
      */
-    public final Vulnerablesoftware VULNERABLESOFTWARE = Vulnerablesoftware.VULNERABLESOFTWARE;
+    public final VulnerableSoftware VULNERABLESOFTWARE = VulnerableSoftware.VULNERABLESOFTWARE;
 
     /**
      * The table <code>public.VULNERABLESOFTWARE_VULNERABILITIES</code>.
      */
-    public final VulnerablesoftwareVulnerabilities VULNERABLESOFTWARE_VULNERABILITIES = VulnerablesoftwareVulnerabilities.VULNERABLESOFTWARE_VULNERABILITIES;
+    public final VulnerableSoftwareVulnerabilities VULNERABLESOFTWARE_VULNERABILITIES = VulnerableSoftwareVulnerabilities.VULNERABLESOFTWARE_VULNERABILITIES;
 
     /**
      * The table <code>public.WORKFLOW_STATE</code>.
@@ -480,78 +480,78 @@ public class Public extends SchemaImpl {
     @Override
     public final List<Table<?>> getTables() {
         return Arrays.asList(
-            Affectedversionattribution.AFFECTEDVERSIONATTRIBUTION,
+            AffectedVersionAttribution.AFFECTEDVERSIONATTRIBUTION,
             Analysis.ANALYSIS,
-            Analysiscomment.ANALYSISCOMMENT,
-            Apikey.APIKEY,
-            ApikeysTeams.APIKEYS_TEAMS,
+            AnalysisComment.ANALYSISCOMMENT,
+            ApiKey.APIKEY,
+            ApiKeysTeams.APIKEYS_TEAMS,
             Bom.BOM,
             Component.COMPONENT,
             ComponentOccurrence.COMPONENT_OCCURRENCE,
             ComponentProperty.COMPONENT_PROPERTY,
             ComponentsVulnerabilities.COMPONENTS_VULNERABILITIES,
-            Configproperty.CONFIGPROPERTY,
-            Dependencymetrics.DEPENDENCYMETRICS,
+            ConfigProperty.CONFIGPROPERTY,
+            DependencyMetrics.DEPENDENCYMETRICS,
             Epss.EPSS,
-            Findingattribution.FINDINGATTRIBUTION,
-            Installedupgrades.INSTALLEDUPGRADES,
+            FindingAttribution.FINDINGATTRIBUTION,
+            InstalledUpgrades.INSTALLEDUPGRADES,
             IntegrityAnalysis.INTEGRITY_ANALYSIS,
             IntegrityMetaComponent.INTEGRITY_META_COMPONENT,
-            Ldapuser.LDAPUSER,
-            LdapusersPermissions.LDAPUSERS_PERMISSIONS,
-            LdapusersTeams.LDAPUSERS_TEAMS,
+            LdapUser.LDAPUSER,
+            LdapUsersPermissions.LDAPUSERS_PERMISSIONS,
+            LdapUsersTeams.LDAPUSERS_TEAMS,
             License.LICENSE,
-            Licensegroup.LICENSEGROUP,
-            LicensegroupLicense.LICENSEGROUP_LICENSE,
-            Manageduser.MANAGEDUSER,
-            ManagedusersPermissions.MANAGEDUSERS_PERMISSIONS,
-            ManagedusersTeams.MANAGEDUSERS_TEAMS,
-            Mappedldapgroup.MAPPEDLDAPGROUP,
-            Mappedoidcgroup.MAPPEDOIDCGROUP,
-            Notificationpublisher.NOTIFICATIONPUBLISHER,
-            Notificationrule.NOTIFICATIONRULE,
-            NotificationruleProjects.NOTIFICATIONRULE_PROJECTS,
-            NotificationruleTags.NOTIFICATIONRULE_TAGS,
-            NotificationruleTeams.NOTIFICATIONRULE_TEAMS,
-            Oidcgroup.OIDCGROUP,
-            Oidcuser.OIDCUSER,
-            OidcusersPermissions.OIDCUSERS_PERMISSIONS,
-            OidcusersTeams.OIDCUSERS_TEAMS,
+            LicenseGroup.LICENSEGROUP,
+            LicenseGroupLicense.LICENSEGROUP_LICENSE,
+            ManagedUser.MANAGEDUSER,
+            ManagedUsersPermissions.MANAGEDUSERS_PERMISSIONS,
+            ManagedUsersTeams.MANAGEDUSERS_TEAMS,
+            MappedLdapGroup.MAPPEDLDAPGROUP,
+            MappedOidcGroup.MAPPEDOIDCGROUP,
+            NotificationPublisher.NOTIFICATIONPUBLISHER,
+            NotificationRule.NOTIFICATIONRULE,
+            NotificationRuleProjects.NOTIFICATIONRULE_PROJECTS,
+            NotificationRuleTags.NOTIFICATIONRULE_TAGS,
+            NotificationRuleTeams.NOTIFICATIONRULE_TEAMS,
+            OidcGroup.OIDCGROUP,
+            OidcUser.OIDCUSER,
+            OidcUsersPermissions.OIDCUSERS_PERMISSIONS,
+            OidcUsersTeams.OIDCUSERS_TEAMS,
             Permission.PERMISSION,
             Policy.POLICY,
             PolicyProjects.POLICY_PROJECTS,
             PolicyTags.POLICY_TAGS,
-            Policycondition.POLICYCONDITION,
-            Policyviolation.POLICYVIOLATION,
-            Portfoliometrics.PORTFOLIOMETRICS,
+            PolicyCondition.POLICYCONDITION,
+            PolicyViolation.POLICYVIOLATION,
+            PortfolioMetrics.PORTFOLIOMETRICS,
             Project.PROJECT,
             ProjectAccessTeams.PROJECT_ACCESS_TEAMS,
             ProjectHierarchy.PROJECT_HIERARCHY,
             ProjectMetadata.PROJECT_METADATA,
             ProjectProperty.PROJECT_PROPERTY,
-            Projectmetrics.PROJECTMETRICS,
+            ProjectMetrics.PROJECTMETRICS,
             ProjectsTags.PROJECTS_TAGS,
             Repository.REPOSITORY,
             RepositoryMetaComponent.REPOSITORY_META_COMPONENT,
-            Schemaversion.SCHEMAVERSION,
-            Servicecomponent.SERVICECOMPONENT,
-            ServicecomponentsVulnerabilities.SERVICECOMPONENTS_VULNERABILITIES,
+            SchemaVersion.SCHEMAVERSION,
+            ServiceComponent.SERVICECOMPONENT,
+            ServiceComponentsVulnerabilities.SERVICECOMPONENTS_VULNERABILITIES,
             Tag.TAG,
             Team.TEAM,
             TeamsPermissions.TEAMS_PERMISSIONS,
             UserProjectEffectivePermissions.USER_PROJECT_EFFECTIVE_PERMISSIONS,
             Vex.VEX,
-            Violationanalysis.VIOLATIONANALYSIS,
-            Violationanalysiscomment.VIOLATIONANALYSISCOMMENT,
+            ViolationAnalysis.VIOLATIONANALYSIS,
+            ViolationAnalysisComment.VIOLATIONANALYSISCOMMENT,
             VulnerabilitiesTags.VULNERABILITIES_TAGS,
             Vulnerability.VULNERABILITY,
             VulnerabilityPolicy.VULNERABILITY_POLICY,
             VulnerabilityPolicyBundle.VULNERABILITY_POLICY_BUNDLE,
-            Vulnerabilityalias.VULNERABILITYALIAS,
-            Vulnerabilitymetrics.VULNERABILITYMETRICS,
-            Vulnerabilityscan.VULNERABILITYSCAN,
-            Vulnerablesoftware.VULNERABLESOFTWARE,
-            VulnerablesoftwareVulnerabilities.VULNERABLESOFTWARE_VULNERABILITIES,
+            VulnerabilityAlias.VULNERABILITYALIAS,
+            VulnerabilityMetrics.VULNERABILITYMETRICS,
+            VulnerabilityScan.VULNERABILITYSCAN,
+            VulnerableSoftware.VULNERABLESOFTWARE,
+            VulnerableSoftwareVulnerabilities.VULNERABLESOFTWARE_VULNERABILITIES,
             WorkflowState.WORKFLOW_STATE
         );
     }

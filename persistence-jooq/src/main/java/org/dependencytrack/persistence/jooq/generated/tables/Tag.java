@@ -8,7 +8,7 @@ import java.util.Collection;
 
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationruleTags.NotificationruleTagsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTags.NotificationruleTagsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyTags.PolicyTagsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectsTags.ProjectsTagsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.VulnerabilitiesTags.VulnerabilitiesTagsPath;

@@ -16,13 +16,13 @@ import org.dependencytrack.persistence.jooq.generated.tables.Component.Component
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentOccurrence.ComponentOccurrencePath;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentProperty.ComponentPropertyPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentsVulnerabilities.ComponentsVulnerabilitiesPath;
-import org.dependencytrack.persistence.jooq.generated.tables.Dependencymetrics.DependencymetricsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.Findingattribution.FindingattributionPath;
+import org.dependencytrack.persistence.jooq.generated.tables.DependencyMetrics.DependencymetricsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.FindingAttribution.FindingattributionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityAnalysis.IntegrityAnalysisPath;
 import org.dependencytrack.persistence.jooq.generated.tables.License.LicensePath;
-import org.dependencytrack.persistence.jooq.generated.tables.Policyviolation.PolicyviolationPath;
+import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation.PolicyviolationPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
-import org.dependencytrack.persistence.jooq.generated.tables.Violationanalysis.ViolationanalysisPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis.ViolationanalysisPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ComponentRecord;
 import org.jooq.Check;
 import org.jooq.Condition;

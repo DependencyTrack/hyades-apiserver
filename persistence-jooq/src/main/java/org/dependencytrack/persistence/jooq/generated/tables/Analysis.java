@@ -13,7 +13,7 @@ import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.enums.Severity;
-import org.dependencytrack.persistence.jooq.generated.tables.Analysiscomment.AnalysiscommentPath;
+import org.dependencytrack.persistence.jooq.generated.tables.AnalysisComment.AnalysiscommentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Vulnerability.VulnerabilityPath;
