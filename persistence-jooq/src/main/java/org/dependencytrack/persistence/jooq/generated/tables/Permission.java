@@ -10,12 +10,12 @@ import java.util.List;
 
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.Ldapuser.LdapuserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapusersPermissions.LdapusersPermissionsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.Manageduser.ManageduserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedusersPermissions.ManagedusersPermissionsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.Oidcuser.OidcuserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcusersPermissions.OidcusersPermissionsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapuserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersPermissions.LdapusersPermissionsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManageduserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersPermissions.ManagedusersPermissionsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUser.OidcuserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersPermissions.OidcusersPermissionsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.TeamsPermissions.TeamsPermissionsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions.UserProjectEffectivePermissionsPath;

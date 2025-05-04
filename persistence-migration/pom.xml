@@ -12,7 +12,7 @@
     <artifactId>persistence-migration</artifactId>
 
     <properties>
-        <project.parentBaseDir>../</project.parentBaseDir>
+        <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
     </properties>
 
     <dependencies>
