@@ -74,6 +74,9 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ProjectRole;
+import org.dependencytrack.model.ProjectRole.LdapUserProjectRole;
+import org.dependencytrack.model.ProjectRole.ManagedUserProjectRole;
+import org.dependencytrack.model.ProjectRole.OidcUserProjectRole;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -518,7 +521,7 @@ public class QueryManager extends AlpineQueryManager {
             default -> {
                 return Collections.emptySet();
             }
-        };
+        }
 
         Query<? extends ProjectRole> query = pm.newQuery(cls)
                 .filter("project.id == :projectId && %s.contains(:principal)".formatted(usersField))
@@ -899,10 +902,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<Role> getRoles() {
         return getRoleQueryManager().getRoles();
-    }
-
-    public Role getRoleByName(String name) {
-        return getRoleQueryManager().getRoleByName(name);
     }
 
     public Role getRole(String uuid) {

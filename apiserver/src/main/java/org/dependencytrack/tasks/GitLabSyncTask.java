@@ -23,11 +23,10 @@ import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
 import alpine.model.OidcUser;
-import alpine.model.Permission;
+
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONValue;
 
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.GitLabSyncEvent;
 import org.dependencytrack.integrations.gitlab.GitLabClient;
 import org.dependencytrack.integrations.gitlab.GitLabSyncer;
