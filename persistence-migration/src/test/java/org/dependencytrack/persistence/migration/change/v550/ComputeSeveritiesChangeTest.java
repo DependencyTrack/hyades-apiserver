@@ -18,11 +18,12 @@
  */
 package org.dependencytrack.persistence.migration.change.v550;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.dependencytrack.persistence.migration.MigrationExecutor;
+import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.sql.Connection;
@@ -30,26 +31,15 @@ import java.sql.PreparedStatement;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.persistence.migration.MigrationInitializer.runMigration;
 
-public class ComputeSeveritiesChangeTest {
+@Testcontainers
+class ComputeSeveritiesChangeTest {
 
-    private PostgreSQLContainer<?> postgresContainer;
-
-    @Before
+    @Container
     @SuppressWarnings("resource")
-    public void setUp() {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
-                .withInitScript("migration/custom/ComputeSeveritiesChangeTest-schema.sql");
-        postgresContainer.start();
-    }
-
-    @After
-    public void tearDown() {
-        if (postgresContainer != null) {
-            postgresContainer.stop();
-        }
-    }
+    private final PostgreSQLContainer<?> postgresContainer =
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
+                    .withInitScript("org/dependencytrack/persistence/migration/change/ComputeSeveritiesChangeTest-schema.sql");
 
     @Test
     public void test() throws Exception {
@@ -77,7 +67,7 @@ public class ComputeSeveritiesChangeTest {
 
         assertThat(hasVulnsWithoutSeverity(dataSource.getConnection())).isTrue();
 
-        runMigration(dataSource, "migration/custom/ComputeSeveritiesChangeTest-changelog.xml");
+        new MigrationExecutor(dataSource, "org/dependencytrack/persistence/migration/change/ComputeSeveritiesChangeTest-changelog.xml").executeMigration();
 
         assertThat(hasVulnsWithoutSeverity(dataSource.getConnection())).isFalse();
     }
