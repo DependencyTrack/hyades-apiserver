@@ -86,7 +86,7 @@ public class RoleResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all roles",
-            description = "<p>Requires permission <strong>ROLE_MANAGEMENT</strong> or <strong>ROLE_MANAGEMENT_READ</strong></p>")
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -98,7 +98,7 @@ public class RoleResource extends AlpineResource {
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = Role.class)))),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({ Permissions.Constants.ROLE_MANAGEMENT, Permissions.Constants.ROLE_MANAGEMENT_READ })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
     public Response getRoles() {
         try (QueryManager qm = new QueryManager()) {
             return Response.ok(qm.getRoles()).header(TOTAL_COUNT_HEADER, qm.getCount(Role.class)).build();
@@ -110,7 +110,7 @@ public class RoleResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a specific role",
-            description = "<p>Requires permission <strong>ROLE_MANAGEMENT</strong> or <strong>ROLE_MANAGEMENT_READ</strong></p>")
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -119,7 +119,7 @@ public class RoleResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The role could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.ROLE_MANAGEMENT, Permissions.Constants.ROLE_MANAGEMENT_READ })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
     public Response getRole(
             @Parameter(
                     description = "The UUID of the role to retrieve",
@@ -137,13 +137,15 @@ public class RoleResource extends AlpineResource {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Creates a new role", description = "<p>Requires permission <strong>ROLE_MANAGEMENT</strong> or <strong>ROLE_MANAGEMENT_CREATE</strong></p>")
+    @Operation(
+            summary = "Creates a new role",
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "The created role", content = @Content(schema = @Schema(implementation = Role.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "The Role already exists"),
     })
-    @PermissionRequired({ Permissions.Constants.ROLE_MANAGEMENT, Permissions.Constants.ROLE_MANAGEMENT_CREATE })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE })
     public Response createRole(@Valid CreateRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
             boolean roleExists = qm.getRoleByName(request.name()) != null;
@@ -183,7 +185,7 @@ public class RoleResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Updates a role's fields",
-            description = "<p>Requires permission <strong>ROLE_MANAGEMENT</strong> or <strong>ROLE_MANAGEMENT_UPDATE</strong></p>")
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -192,7 +194,7 @@ public class RoleResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The role could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.ROLE_MANAGEMENT, Permissions.Constants.ROLE_MANAGEMENT_UPDATE })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response updateRole(Role jsonRole) {
         failOnValidationError(super.getValidator().validateProperty(jsonRole, "name"));
 
@@ -212,13 +214,13 @@ public class RoleResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a role",
-            description = "<p>Requires permission <strong>ROLE_MANAGEMENT</strong> or <strong>ROLE_MANAGEMENT_DELETE</strong></p>")
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Role removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The role could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.ROLE_MANAGEMENT, Permissions.Constants.ROLE_MANAGEMENT_DELETE })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE })
     public Response deleteRole(Role jsonRole) {
         try (QueryManager qm = new QueryManager()) {
             final Role role = qm.getObjectByUuid(Role.class, jsonRole.getUuid(), Role.FetchGroup.ALL.name());
