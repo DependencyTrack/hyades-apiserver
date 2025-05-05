@@ -33,8 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A task to synchronize LDAP users. This should be added to a concrete class that
- * extends {@link AlpineTaskScheduler}.
+ * A task to synchronize LDAP users.
  *
  * @author Steve Springett
  * @since 1.0.0

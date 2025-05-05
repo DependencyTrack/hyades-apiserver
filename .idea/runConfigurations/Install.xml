@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="DataNucleus Enhance" type="MavenRunConfiguration" factoryName="Maven">
+  <configuration default="false" name="Install" type="MavenRunConfiguration" factoryName="Maven">
     <MavenSettings>
       <option name="myGeneralSettings" />
       <option name="myRunnerSettings" />
@@ -11,9 +11,7 @@
           </option>
           <option name="goals">
             <list>
-              <option value="-pl" />
-              <option value="apiserver" />
-              <option value="process-classes" />
+              <option value="install" />
             </list>
           </option>
           <option name="multimoduleDir" />

@@ -15,12 +15,13 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
+        <maven.install.skip>true</maven.install.skip>
 
         <!-- Dependency Versions -->
         <lib.assertj.version>3.26.3</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.cel-tools.version>0.5.1</lib.cel-tools.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.23.1</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.25.0</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
@@ -31,7 +32,7 @@
         <lib.jackson.version>2.19.0</lib.jackson.version>
         <lib.jackson-databind.version>2.18.3</lib.jackson-databind.version>
         <lib.jersey.version>3.1.10</lib.jersey.version>
-        <lib.jdbi.version>3.49.1</lib.jdbi.version>
+        <lib.jdbi.version>3.49.3</lib.jdbi.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.9.0</lib.kafka.version>
@@ -45,7 +46,7 @@
         <lib.pebble.version>3.2.4</lib.pebble.version>
         <lib.testcontainers.version>1.21.0</lib.testcontainers.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
-        <lib.swagger.version>2.2.29</lib.swagger.version>
+        <lib.swagger.version>2.2.30</lib.swagger.version>
         <lib.swagger-parser.version>2.1.25</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
@@ -53,7 +54,7 @@
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.17</lib.log4j-over-slf4j.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>6.4.0</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>6.5.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
         <lib.jdbc-driver.postgresql.version>42.7.5</lib.jdbc-driver.postgresql.version>
 
@@ -530,12 +531,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <systemProperties>
-                        <property>
-                            <name>java.util.logging.config.file</name>
-                            <value>${project.basedir}/src/test/resources/logging.properties</value>
-                        </property>
-                    </systemProperties>
+                    <systemPropertyVariables>
+                        <dependencyTrack.logging.level>${unitTestLogLevel}</dependencyTrack.logging.level>
+                        <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
+                    </systemPropertyVariables>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -544,14 +543,6 @@
                         <version>3.5.3</version>
                     </dependency>
                 </dependencies>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
             </plugin>
 
             <plugin>
@@ -580,7 +571,7 @@
                 <configuration>
                     <api>JDO</api>
                     <persistenceUnitName>Alpine</persistenceUnitName>
-                    <verbose>true</verbose>
+                    <quiet>true</quiet>
                     <fork>false</fork>
                 </configuration>
                 <executions>
@@ -681,7 +672,7 @@
                         <phase>package</phase>
                         <configuration>
                             <target>
-                                <move file="${project.build.directory}/${project.build.finalName}.war"
+                                <copy file="${project.build.directory}/${project.build.finalName}.war"
                                       tofile="${project.build.directory}/${project.build.finalName}.jar" />
                             </target>
                         </configuration>
@@ -749,7 +740,7 @@
             <plugin>
                 <groupId>org.eclipse.jetty.ee10</groupId>
                 <artifactId>jetty-ee10-maven-plugin</artifactId>
-                <version>12.0.19</version>
+                <version>12.0.20</version>
                 <configuration>
                     <webApp>
                         <!-- Disable classpath scanning. -->
@@ -771,7 +762,8 @@
         <profile>
             <id>dev-services</id>
             <properties>
-                <!-- Don't compile test classes, we only want to run Jetty. -->
+                <checkstyle.skip>true</checkstyle.skip>
+                <jacoco.skip>true</jacoco.skip>
                 <maven.test.skip>true</maven.test.skip>
             </properties>
             <dependencies>
@@ -803,6 +795,14 @@
                     <plugin>
                         <groupId>org.eclipse.jetty.ee10</groupId>
                         <artifactId>jetty-ee10-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                         <configuration>
                             <systemProperties>
                                 <dev.services.enabled>true</dev.services.enabled>

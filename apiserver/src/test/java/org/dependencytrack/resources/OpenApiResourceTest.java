@@ -44,7 +44,7 @@ public class OpenApiResourceTest extends ResourceTest {
     public void testOpenApiJson() {
         final Response response = jersey.target("/openapi.json")
                 // NB: Initial generation of the OpenAPI spec can take a while in CI.
-                .property(ClientProperties.READ_TIMEOUT, "60000")
+                .property(ClientProperties.READ_TIMEOUT, "90000")
                 .request()
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(200);
@@ -63,7 +63,7 @@ public class OpenApiResourceTest extends ResourceTest {
     public void testOpenApiYaml() {
         final Response response = jersey.target("/openapi.yaml")
                 // NB: Initial generation of the OpenAPI spec can take a while in CI.
-                .property(ClientProperties.READ_TIMEOUT, "60000")
+                .property(ClientProperties.READ_TIMEOUT, "90000")
                 .request()
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(200);
