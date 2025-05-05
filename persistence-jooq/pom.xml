@@ -13,7 +13,7 @@
     <packaging>jar</packaging>
 
     <properties>
-        <project.parentBaseDir>../</project.parentBaseDir>
+        <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
 
         <lib.jooq.version>3.20.3</lib.jooq.version>
     </properties>
@@ -103,6 +103,48 @@
                                         <packageName>org.dependencytrack.persistence.jooq.generated</packageName>
                                         <directory>${project.basedir}/src/main/java</directory>
                                     </target>
+                                    <strategy>
+                                        <matchers>
+                                            <tables>
+                                                <!-- Matcher to fix casing of generated classes for 2-word entity tables -->
+                                                <table>
+                                                    <expression>
+                                                        ^(ANALYSIS|API|CONFIG|DEPENDENCY|FINDING|INSTALLED|LDAP|LICENSE|MANAGED|NOTIFICATION|OIDC|POLICY|PORTFOLIO|PROJECT|SCHEMA|SERVICE|VIOLATION|VULNERABILITY|VULNERABLE)
+                                                        (ALIAS|ANALYSIS|ATTRIBUTION|COMMENT|COMPONENT|CONDITION|GROUP|KEY|METRICS|PROPERTY|PUBLISHER|RULE|SCAN|SOFTWARE|UPGRADES|USER|VERSION|VIOLATION)$
+                                                    </expression>
+
+                                                    <tableClass>
+                                                        <transform>PASCAL</transform>
+                                                        <expression>$1_$2</expression>
+                                                    </tableClass>
+
+                                                    <recordClass>
+                                                        <transform>PASCAL</transform>
+                                                        <expression>$1_$2_RECORD</expression>
+                                                    </recordClass>
+                                                </table>
+
+                                                <!-- Matcher to fix casing of generated classes for 3-word entity tables -->
+                                                <table>
+                                                    <expression>
+                                                        ^(AFFECTED|API|LDAP|LICENSE|MANAGED|MAPPED|NOTIFICATION|OIDC|SERVICE|VIOLATION|VULNERABLE)
+                                                        (ANALYSIS|COMPONENTS|GROUP|KEYS|LDAP|OIDC|RULE|SOFTWARE|USERS|VERSION)
+                                                        _?(ATTRIBUTION|COMMENT|GROUP|LICENSE|PERMISSIONS|PROJECTS|TAGS|TEAMS|VULNERABILITIES)$
+                                                    </expression>
+
+                                                    <tableClass>
+                                                        <transform>PASCAL</transform>
+                                                        <expression>$1_$2_$3</expression>
+                                                    </tableClass>
+
+                                                    <recordClass>
+                                                        <transform>PASCAL</transform>
+                                                        <expression>$1_$2_$3_RECORD</expression>
+                                                    </recordClass>
+                                                </table>
+                                            </tables>
+                                        </matchers>
+                                    </strategy>
                                 </generator>
                             </jooq>
                         </configuration>

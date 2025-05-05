@@ -12,7 +12,7 @@ import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
-import org.dependencytrack.persistence.jooq.generated.tables.LicensegroupLicense.LicensegroupLicensePath;
+import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroupLicense.LicensegroupLicensePath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.LicenseRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
