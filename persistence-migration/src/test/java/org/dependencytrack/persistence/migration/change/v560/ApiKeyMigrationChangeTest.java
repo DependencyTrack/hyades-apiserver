@@ -18,10 +18,12 @@
  */
 package org.dependencytrack.persistence.migration.change.v560;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.dependencytrack.persistence.migration.MigrationExecutor;
+import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.sql.Connection;
@@ -32,17 +34,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.persistence.migration.MigrationInitializer.runMigration;
 
-public class ApiKeyMigrationChangeTest {
+@Testcontainers
+class ApiKeyMigrationChangeTest {
 
-    @Rule
+    @Container
     @SuppressWarnings("resource")
-    public final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
-            .withInitScript("migration/custom/ApiKeyMigrationChangeTest-schema.sql");
+    private final PostgreSQLContainer<?> postgresContainer =
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
+                    .withInitScript("org/dependencytrack/persistence/migration/change/ApiKeyMigrationChangeTest-schema.sql");
 
     @Test
-    public void test() throws Exception {
+    void test() throws Exception {
         final var dataSource = new PGSimpleDataSource();
         dataSource.setUrl(postgresContainer.getJdbcUrl());
         dataSource.setUser(postgresContainer.getUsername());
@@ -77,7 +80,7 @@ public class ApiKeyMigrationChangeTest {
                 }
         );
 
-        runMigration(dataSource, "migration/custom/ApiKeyMigrationChangeTest-changelog.xml");
+        new MigrationExecutor(dataSource, "org/dependencytrack/persistence/migration/change/ApiKeyMigrationChangeTest-changelog.xml").executeMigration();
 
         // NB: The apiKey column is dropped in another change and is expected to remain unchanged here.
         assertThat(getApiKeys(dataSource.getConnection())).satisfiesExactly(

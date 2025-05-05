@@ -16,38 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.persistence.migration;
+package org.dependencytrack.persistence;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.server.util.DbUtil;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import liquibase.Liquibase;
-import liquibase.Scope;
-import liquibase.UpdateSummaryOutputEnum;
-import liquibase.analytics.configuration.AnalyticsArgs;
-import liquibase.command.CommandScope;
-import liquibase.command.core.UpdateCommandStep;
-import liquibase.command.core.helpers.DbUrlConnectionArgumentsCommandStep;
-import liquibase.command.core.helpers.ShowSummaryArgument;
-import liquibase.database.Database;
-import liquibase.database.DatabaseFactory;
-import liquibase.database.jvm.JdbcConnection;
-import liquibase.resource.ClassLoaderResourceAccessor;
-import liquibase.ui.LoggerUIService;
 import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.persistence.migration.MigrationExecutor;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import javax.sql.DataSource;
 import java.sql.Connection;
-import java.util.HashMap;
 import java.util.Optional;
 
 public class MigrationInitializer implements ServletContextListener {
 
-    private static final Logger LOGGER = Logger.getLogger(MigrationInitializer.class);
+    private static final Logger LOGGER = Logger.getLogger(MigrationExecutor.class);
 
     private final Config config;
 
@@ -85,7 +71,7 @@ public class MigrationInitializer implements ServletContextListener {
                 DbUtil.initPlatformName(connection);
             }
 
-            runMigration(dataSource);
+            new MigrationExecutor(dataSource).executeMigration();
         } catch (Exception e) {
             if (config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS_ONLY)
                 || config.getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
@@ -102,28 +88,6 @@ public class MigrationInitializer implements ServletContextListener {
             LOGGER.info("Exiting because %s is enabled".formatted(ConfigKey.DATABASE_RUN_MIGRATIONS.getPropertyName()));
             System.exit(0);
         }
-    }
-
-    public static void runMigration(final DataSource dataSource) throws Exception {
-        runMigration(dataSource, "migration/changelog-main.xml");
-    }
-
-    public static void runMigration(final DataSource dataSource, final String changelogResourcePath) throws Exception {
-        final var scopeAttributes = new HashMap<String, Object>();
-        scopeAttributes.put(AnalyticsArgs.ENABLED.getKey(), false);
-        scopeAttributes.put(Scope.Attr.logService.name(), new LiquibaseLogger.LogService());
-        scopeAttributes.put(Scope.Attr.ui.name(), new LoggerUIService());
-
-        Scope.child(scopeAttributes, () -> {
-            final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
-            final var liquibase = new Liquibase(changelogResourcePath, new ClassLoaderResourceAccessor(), database);
-
-            final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);
-            updateCommand.addArgumentValue(DbUrlConnectionArgumentsCommandStep.DATABASE_ARG, liquibase.getDatabase());
-            updateCommand.addArgumentValue(UpdateCommandStep.CHANGELOG_FILE_ARG, liquibase.getChangeLogFile());
-            updateCommand.addArgumentValue(ShowSummaryArgument.SHOW_SUMMARY_OUTPUT, UpdateSummaryOutputEnum.LOG);
-            updateCommand.execute();
-        });
     }
 
     private HikariDataSource createDataSource() {
