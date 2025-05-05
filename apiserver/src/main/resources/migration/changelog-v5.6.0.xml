@@ -1467,6 +1467,8 @@
             <column name="USER_ID" type="BIGINT">
                 <constraints
                         nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="USERS_PERMISSIONS_PK"
                         foreignKeyName="USERS_PERMISSIONS_USER_FK"
                         referencedTableName="USER"
                         referencedColumnNames="ID"
@@ -1478,6 +1480,8 @@
             <column name="PERMISSION_ID" type="BIGINT">
                 <constraints
                         nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="USERS_PERMISSIONS_PK"
                         foreignKeyName="USERS_PERMISSIONS_PERMISSION_FK"
                         referencedTableName="PERMISSION"
                         referencedColumnNames="ID"
@@ -1491,6 +1495,8 @@
             <column name="USER_ID" type="BIGINT">
                 <constraints
                         nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="USERS_TEAMS_PK"
                         foreignKeyName="USERS_TEAMS_USER_FK"
                         referencedTableName="USER"
                         referencedColumnNames="ID"
@@ -1502,6 +1508,8 @@
             <column name="TEAM_ID" type="BIGINT">
                 <constraints
                         nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="USERS_TEAMS_PK"
                         foreignKeyName="USERS_TEAMS_TEAM_FK"
                         referencedTableName="TEAM"
                         referencedColumnNames="ID"
@@ -1510,15 +1518,6 @@
                         deleteCascade="true"/>
             </column>
         </createTable>
-
-        <addPrimaryKey
-                tableName="USERS_PERMISSIONS"
-                columnNames="USER_ID, PERMISSION_ID"
-                constraintName="USERS_PERMISSIONS_PK"/>
-        <addPrimaryKey
-                tableName="USERS_TEAMS"
-                columnNames="USER_ID, TEAM_ID"
-                constraintName="USERS_TEAMS_PK"/>
 
         <sql splitStatements="true">
             ALTER TABLE "USER"
@@ -1675,43 +1674,59 @@
 
         <createTable ifNotExists="true" tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
             <column name="USER_ID" type="BIGINT">
-                <constraints nullable="true"
-                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK"
-                    referencedTableName="USER" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
-                    validateForeignKey="true" />
+                <constraints
+                        nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PK"
+                        foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK"
+                        referencedTableName="USER"
+                        referencedColumnNames="ID"
+                        deferrable="true"
+                        initiallyDeferred="true"
+                        deleteCascade="true"
+                        validateForeignKey="true"/>
             </column>
 
             <column name="PROJECT_ID" type="BIGINT">
-                <constraints nullable="false"
-                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK"
-                    referencedTableName="PROJECT" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateForeignKey="true" />
+                <constraints
+                        nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PK"
+                        foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK"
+                        referencedTableName="PROJECT"
+                        referencedColumnNames="ID"
+                        deferrable="true"
+                        initiallyDeferred="true"
+                        deleteCascade="true"
+                        validateForeignKey="true"/>
             </column>
 
             <column name="PERMISSION_ID" type="BIGINT">
-                <constraints nullable="false"
-                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK"
-                    referencedTableName="PERMISSION" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateForeignKey="true" />
+                <constraints
+                        nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PK"
+                        foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK"
+                        referencedTableName="PERMISSION"
+                        referencedColumnNames="ID"
+                        deferrable="true"
+                        initiallyDeferred="true"
+                        deleteCascade="true"
+                        validateForeignKey="true"/>
             </column>
 
             <column name="PERMISSION_NAME" type="VARCHAR(255)">
-                <constraints nullable="false"
-                    foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK"
-                    referencedTableName="PERMISSION" referencedColumnNames="NAME"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateForeignKey="true" />
+                <constraints
+                        nullable="false"
+                        foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK"
+                        referencedTableName="PERMISSION"
+                        referencedColumnNames="NAME"
+                        deferrable="true"
+                        initiallyDeferred="true"
+                        deleteCascade="true"
+                        validateForeignKey="true"/>
             </column>
         </createTable>
-
-        <createIndex unique="true" tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS" indexName="USER_PROJECT_EFFECTIVE_PERMISSIONS_COMPOSITE_IDX">
-            <column name="USER_ID" />
-            <column name="PROJECT_ID" />
-            <column name="PERMISSION_ID" />
-        </createIndex>
 
         <sql splitStatements="false">
             -- Helper function to recalculate all user permissions for a project.
