@@ -21,7 +21,7 @@ package org.dependencytrack.resources.v1.vo;
 
 import java.util.Set;
 
-import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.auth.Permissions;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
@@ -34,7 +34,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
-public record TeamsSetRequest(
+public record UserPermissionsSetRequest(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank
         @JsonDeserialize(using = TrimmedStringDeserializer.class)
@@ -43,5 +43,5 @@ public record TeamsSetRequest(
 
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         @NotNull
-        Set<@ValidUuid String> teams) {
+        Set<Permissions> permissions) {
 }

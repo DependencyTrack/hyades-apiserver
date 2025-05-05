@@ -25,6 +25,7 @@ permissions: { }
 jobs:
   action:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       issues: write # Required to lock issues
       pull-requests: write # Required to lock PRs

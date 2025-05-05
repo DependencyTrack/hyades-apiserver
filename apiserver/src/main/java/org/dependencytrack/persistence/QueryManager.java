@@ -901,6 +901,10 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getRoles();
     }
 
+    public Role getRoleByName(String name) {
+        return getRoleQueryManager().getRoleByName(name);
+    }
+
     public Role getRole(String uuid) {
         return getRoleQueryManager().getRole(uuid);
     }

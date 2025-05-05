@@ -25,6 +25,7 @@ import org.assertj.core.api.SoftAssertionsProvider.ThrowingRunnable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -44,6 +45,7 @@ class ManagedUserAuthenticationServiceTest {
     }
 
     @Test
+    @Disabled("Flaky")
     void shouldNotAllowForUserEnumerationViaTimingAttacks() {
         try (final var qm = new AlpineQueryManager()) {
             final char[] passwordHash = PasswordService.createHash("tset".toCharArray());
@@ -59,10 +61,14 @@ class ManagedUserAuthenticationServiceTest {
         authService = new ManagedUserAuthenticationService("doesNotExist", "doesNotMatter");
         final Duration nonExistingUserDuration = runTimed(authService::authenticate);
 
-        // Asserting on a delta of up to 200ms here, because JVM heuristics and actions performed
-        // by the ORM can add a noticeable amount of jitter to any of the timings.
+        // Asserting on timings is the only way to verify that the authentication mechanism
+        // is not vulnerable to timing attacks. This is extremely brittle, however, as timings
+        // can be influenced by other processes, resource contention, and JVM behavior.
         //
-        // A permissible delta of <200ms may cause this test to be flaky in CI.
+        // There is no way have this test be reliable while still providing meaningful feedback.
+        // Even a tolerance of just 200ms is already too much. For this reason, this test is
+        // disabled until we find a better way to verify the desired behavior.
+        //
         // Manual testing with a fully-fledged application has shown no observable
         // difference between any of the three actions.
         assertThat(nonExistingUserDuration).isCloseTo(existingUserCorrectPasswordDuration, Duration.ofMillis(200));

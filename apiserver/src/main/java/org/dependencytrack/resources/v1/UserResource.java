@@ -18,33 +18,6 @@
  */
 package org.dependencytrack.resources.v1;
 
-import java.security.Principal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.model.IdentifiableObject;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Role;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.notification.v1.UserSubject;
-import org.dependencytrack.resources.v1.vo.RoleProjectRequest;
-import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
-
-import org.owasp.security.logging.SecurityMarkers;
-
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.LdapUser;
@@ -89,6 +62,36 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.IdentifiableObject;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Role;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.notification.v1.UserSubject;
+import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.RoleProjectRequest;
+import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
+import org.owasp.security.logging.SecurityMarkers;
+
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import javax.jdo.Query;
 
 /**
  * JAX-RS resources for processing users.
@@ -767,6 +770,65 @@ public class UserResource extends AlpineResource {
         }
     }
 
+    @PUT
+    @Path("/membership")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Sets specified teams to a user.", description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team(s)"),
+            @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    public Response setUserTeams(
+            @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
+        try (QueryManager qm = new QueryManager()) {
+            UserPrincipal principal = qm.getUserPrincipal(request.username());
+            if (principal == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+            }
+
+            final Query<Team> query = qm.getPersistenceManager().newQuery(Team.class)
+                    .filter(":uuids.contains(uuid)")
+                    .setNamedParameters(Map.of("uuids", request.teams()));
+
+            final List<Team> requestedTeams;
+            try {
+                requestedTeams = List.copyOf(query.executeList());
+            } finally {
+                query.closeAll();
+            }
+
+            if(requestedTeams.size() != request.teams().size()) {
+                List<String> notFound = new ArrayList<String>(request.teams());
+                final List<String> differences = requestedTeams.stream().map(Team::getUuid).map(UUID::toString).toList();
+                notFound.removeAll(differences);
+
+                ProblemDetails problem = new AccessManagementProblemDetails(
+                        Response.Status.BAD_REQUEST.getStatusCode(),
+                        "Invalid team",
+                        "One or more teams could not be found",
+                        notFound);
+
+                return problem.toResponse();
+            }
+
+            final List<Team> currentUserTeams = Objects.requireNonNullElse(principal.getTeams(), List.<Team>of());
+            if (currentUserTeams.equals(requestedTeams)) {
+                return Response.notModified().entity("The user is already a member of the selected team(s)").build();
+            }
+
+            principal.setTeams(requestedTeams);
+            qm.persist(principal);
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
+            return Response.ok(principal).build();
+        }
+    }
+
     private void dispatchUserCreatedNotification(final String content, final UserSubject subject) {
         eventDispatcher.dispatchNotification(new Notification()
                 .scope(NotificationScope.SYSTEM)
@@ -918,11 +980,11 @@ public class UserResource extends AlpineResource {
                             .map(UUID::toString)
                             .collect(Collectors.toSet());
 
-            if (currentUserTeams.equals(request.getTeams())) {
+            if (currentUserTeams.equals(request.teams())) {
                 return Response.notModified().entity("The user is already a member of the selected team(s)").build();
             }
 
-            List<Team> requestedTeams = request.getTeams()
+            List<Team> requestedTeams = request.teams()
                     .stream()
                     .map(uuid -> qm.getObjectByUuid(Team.class, uuid))
                     .toList();
@@ -931,7 +993,7 @@ public class UserResource extends AlpineResource {
             List<String> notFound = new ArrayList<>();
             for (int i = 0; i < requestedTeams.size(); i++) {
                 if (requestedTeams.get(i) == null)
-                    notFound.add(request.getTeams().stream().toList().get(i));
+                    notFound.add(request.teams().stream().toList().get(i));
             }
 
             if (notFound.size() > 0) {
