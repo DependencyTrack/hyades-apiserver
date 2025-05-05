@@ -1673,20 +1673,6 @@
         <dropTable tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS" cascadeConstraints="true" />
 
         <createTable ifNotExists="true" tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
-            <column name="USER_ID" type="BIGINT">
-                <constraints
-                        nullable="false"
-                        primaryKey="true"
-                        primaryKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PK"
-                        foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK"
-                        referencedTableName="USER"
-                        referencedColumnNames="ID"
-                        deferrable="true"
-                        initiallyDeferred="true"
-                        deleteCascade="true"
-                        validateForeignKey="true"/>
-            </column>
-
             <column name="PROJECT_ID" type="BIGINT">
                 <constraints
                         nullable="false"
@@ -1694,6 +1680,20 @@
                         primaryKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PK"
                         foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK"
                         referencedTableName="PROJECT"
+                        referencedColumnNames="ID"
+                        deferrable="true"
+                        initiallyDeferred="true"
+                        deleteCascade="true"
+                        validateForeignKey="true"/>
+            </column>
+
+            <column name="USER_ID" type="BIGINT">
+                <constraints
+                        nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PK"
+                        foreignKeyName="USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK"
+                        referencedTableName="USER"
                         referencedColumnNames="ID"
                         deferrable="true"
                         initiallyDeferred="true"
