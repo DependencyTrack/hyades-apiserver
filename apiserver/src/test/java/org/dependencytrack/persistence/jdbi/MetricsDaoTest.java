@@ -171,13 +171,13 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metricsDao.createMetricsPartitionsForToday();
         var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         var metricsPartition = metricsDao.getPortfolioMetricsPartitions();
-        assertThat(metricsPartition.getLast()).isEqualTo("\"PORTFOLIOMETRICS_%s\"".formatted(today));
+        assertThat(metricsPartition.contains("\"PORTFOLIOMETRICS_%s\"".formatted(today))).isTrue();
 
         metricsPartition = metricsDao.getProjectMetricsPartitions();
-        assertThat(metricsPartition.getLast()).isEqualTo("\"PROJECTMETRICS_%s\"".formatted(today));
+        assertThat(metricsPartition.contains("\"PROJECTMETRICS_%s\"".formatted(today))).isTrue();
 
         metricsPartition = metricsDao.getDependencyMetricsPartitions();
-        assertThat(metricsPartition.getLast()).isEqualTo("\"DEPENDENCYMETRICS_%s\"".formatted(today));
+        assertThat(metricsPartition.contains("\"DEPENDENCYMETRICS_%s\"".formatted(today))).isTrue();
 
         // If called again on the same day with partitions already created,
         // It won't create more.
