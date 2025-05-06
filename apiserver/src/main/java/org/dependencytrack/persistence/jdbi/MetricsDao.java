@@ -120,36 +120,73 @@ public interface MetricsDao {
                 tomorrow DATE := current_date + INTERVAL '1 day';
                 partition_suffix TEXT := to_char(today, 'YYYYMMDD');
                 partition_name TEXT;
+                partition_exists BOOLEAN;
             BEGIN
                 -- PORTFOLIOMETRICS
-                partition_name := format('PORTFOLIOMETRICS_%s', partition_suffix);
-                EXECUTE format(
-                    'CREATE TABLE IF NOT EXISTS %I PARTITION OF "PORTFOLIOMETRICS"
-                     FOR VALUES FROM (%L) TO (%L);',
-                    partition_name,
-                    today,
-                    tomorrow
-                );
+                BEGIN
+                    partition_name := format('PORTFOLIOMETRICS_%s', partition_suffix);
             
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_class WHERE relname = partition_name
+                    ) INTO partition_exists;
+            
+                    IF NOT partition_exists THEN
+                        EXECUTE format(
+                              'CREATE TABLE IF NOT EXISTS %I (LIKE "PORTFOLIOMETRICS" INCLUDING ALL);',
+                              partition_name
+                        );
+                        EXECUTE format(
+                              'ALTER TABLE "PORTFOLIOMETRICS" ATTACH PARTITION %I FOR VALUES FROM (%L) TO (%L);',
+                              partition_name,
+                              today,
+                              tomorrow
+                        );
+                    END IF;
+                END;
+
                 -- PROJECTMETRICS
-                partition_name := format('PROJECTMETRICS_%s', partition_suffix);
-                EXECUTE format(
-                    'CREATE TABLE IF NOT EXISTS %I PARTITION OF "PROJECTMETRICS"
-                     FOR VALUES FROM (%L) TO (%L);',
-                    partition_name,
-                    today,
-                    tomorrow
-                );
+                BEGIN
+                    partition_name := format('PROJECTMETRICS_%s', partition_suffix);
             
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_class WHERE relname = partition_name
+                    ) INTO partition_exists;
+            
+                    IF NOT partition_exists THEN
+                        EXECUTE format(
+                              'CREATE TABLE IF NOT EXISTS %I (LIKE "PROJECTMETRICS" INCLUDING ALL);',
+                              partition_name
+                        );
+                        EXECUTE format(
+                              'ALTER TABLE "PROJECTMETRICS" ATTACH PARTITION %I FOR VALUES FROM (%L) TO (%L);',
+                              partition_name,
+                              today,
+                              tomorrow
+                        );
+                    END IF;
+                END;
+
                 -- DEPENDENCYMETRICS
-                partition_name := format('DEPENDENCYMETRICS_%s', partition_suffix);
-                EXECUTE format(
-                    'CREATE TABLE IF NOT EXISTS %I PARTITION OF "DEPENDENCYMETRICS"
-                     FOR VALUES FROM (%L) TO (%L);',
-                    partition_name,
-                    today,
-                    tomorrow
-                );
+                BEGIN
+                    partition_name := format('DEPENDENCYMETRICS_%s', partition_suffix);
+            
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_class WHERE relname = partition_name
+                    ) INTO partition_exists;
+            
+                    IF NOT partition_exists THEN
+                        EXECUTE format(
+                              'CREATE TABLE IF NOT EXISTS %I (LIKE "DEPENDENCYMETRICS" INCLUDING ALL);',
+                              partition_name
+                        );
+                        EXECUTE format(
+                              'ALTER TABLE "DEPENDENCYMETRICS" ATTACH PARTITION %I FOR VALUES FROM (%L) TO (%L);',
+                              partition_name,
+                              today,
+                              tomorrow
+                        );
+                    END IF;
+                END;
             END;
             $$;
             """)
