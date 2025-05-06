@@ -60,7 +60,7 @@ import java.util.UUID;
         @Persistent(name = "mappedOidcGroups"),
         @Persistent(name = "permissions")
 })
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class Team implements Serializable {
 
     private static final long serialVersionUID = 6938424919898277944L;
@@ -146,8 +146,9 @@ public class Team implements Serializable {
     }
 
     public List<LdapUser> getLdapUsers() {
-        if (users == null || users.isEmpty())
+        if (users == null) {
             return null;
+        }
 
         return users.stream()
                 .filter(user -> user instanceof LdapUser)
@@ -156,13 +157,14 @@ public class Team implements Serializable {
     }
 
     public void setLdapUsers(List<LdapUser> ldapUsers) {
-        this.users = Objects.requireNonNullElse(this.users, new ArrayList<>());
+        this.users = Objects.requireNonNullElseGet(this.users, ArrayList::new);
         this.users.addAll(ldapUsers);
     }
 
     public List<ManagedUser> getManagedUsers() {
-        if (users == null || users.isEmpty())
+        if (users == null) {
             return null;
+        }
 
         return users.stream()
                 .filter(user -> user instanceof ManagedUser)
@@ -171,13 +173,14 @@ public class Team implements Serializable {
     }
 
     public void setManagedUsers(List<ManagedUser> managedUsers) {
-        this.users = Objects.requireNonNullElse(this.users, new ArrayList<>());
+        this.users = Objects.requireNonNullElseGet(this.users, ArrayList::new);
         this.users.addAll(managedUsers);
     }
 
     public List<OidcUser> getOidcUsers() {
-        if (users == null || users.isEmpty())
+        if (users == null) {
             return null;
+        }
 
         return users.stream()
                 .filter(user -> user instanceof OidcUser)
@@ -186,7 +189,7 @@ public class Team implements Serializable {
     }
 
     public void setOidcUsers(List<OidcUser> oidcUsers) {
-        this.users = Objects.requireNonNullElse(this.users, new ArrayList<>());
+        this.users = Objects.requireNonNullElseGet(this.users, ArrayList::new);
         this.users.addAll(oidcUsers);
     }
 

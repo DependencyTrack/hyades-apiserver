@@ -45,7 +45,7 @@ import java.util.Objects;
  * @since 1.0.0
  */
 @PersistenceCapable
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class Permission implements Serializable {
 
     private static final long serialVersionUID = 1420020753285692448L;
@@ -110,8 +110,9 @@ public class Permission implements Serializable {
     }
 
     public List<OidcUser> getOidcUsers() {
-        if (users == null || users.isEmpty())
+        if (users == null) {
             return null;
+        }
 
         return users.stream()
                 .filter(user -> user instanceof OidcUser)
@@ -120,13 +121,14 @@ public class Permission implements Serializable {
     }
 
     public void setOidcUsers(List<OidcUser> oidcUsers) {
-        this.users = Objects.requireNonNullElse(this.users, new ArrayList<>());
+        this.users = Objects.requireNonNullElseGet(this.users, ArrayList::new);
         this.users.addAll(oidcUsers);
     }
 
     public List<LdapUser> getLdapUsers() {
-        if (users == null || users.isEmpty())
+        if (users == null) {
             return null;
+        }
 
         return users.stream()
                 .filter(user -> user instanceof LdapUser)
@@ -135,13 +137,14 @@ public class Permission implements Serializable {
     }
 
     public void setLdapUsers(List<LdapUser> ldapUsers) {
-        this.users = Objects.requireNonNullElse(this.users, new ArrayList<>());
+        this.users = Objects.requireNonNullElseGet(this.users, ArrayList::new);
         this.users.addAll(ldapUsers);
     }
 
     public List<ManagedUser> getManagedUsers() {
-        if (users == null || users.isEmpty())
+        if (users == null) {
             return null;
+        }
 
         return users.stream()
                 .filter(user -> user instanceof ManagedUser)
@@ -150,7 +153,7 @@ public class Permission implements Serializable {
     }
 
     public void setManagedUsers(List<ManagedUser> managedUsers) {
-        this.users = Objects.requireNonNullElse(this.users, new ArrayList<>());
+        this.users = Objects.requireNonNullElseGet(this.users, ArrayList::new);
         this.users.addAll(managedUsers);
     }
 
