@@ -23,6 +23,9 @@ import alpine.common.util.BooleanUtil;
 import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
+import alpine.model.LdapUser;
+import alpine.model.ManagedUser;
+import alpine.model.OidcUser;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Permission;
 import alpine.model.Team;
@@ -70,9 +73,11 @@ import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.ProjectRole;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vex;
@@ -117,7 +122,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -150,6 +154,7 @@ public class QueryManager extends AlpineQueryManager {
     private PolicyQueryManager policyQueryManager;
     private ProjectQueryManager projectQueryManager;
     private RepositoryQueryManager repositoryQueryManager;
+    private RoleQueryManager roleQueryManager;
     private ServiceComponentQueryManager serviceComponentQueryManager;
     private VexQueryManager vexQueryManager;
     private VulnerabilityQueryManager vulnerabilityQueryManager;
@@ -428,6 +433,13 @@ public class QueryManager extends AlpineQueryManager {
         return repositoryQueryManager;
     }
 
+    private RoleQueryManager getRoleQueryManager(){
+        if (roleQueryManager == null) {
+            roleQueryManager = (request ==null) ? new RoleQueryManager(getPersistenceManager()) : new RoleQueryManager(getPersistenceManager(), request);
+        }
+        return roleQueryManager;
+    }
+
     /**
      * Lazy instantiation of NotificationQueryManager.
      *
@@ -482,24 +494,57 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
+     * Get the IDs of the {@link ProjectRole}s a given {@link Principal} is a member of.
+     *
+     * @return A {@link Set} of {@link ProjectRole} IDs
+     */
+    protected Set<Long> getRoleIds(final Principal principal, final Project project) {
+        String usersField;
+        Class<? extends ProjectRole> cls;
+
+        switch (principal) {
+            case LdapUser ldapUser -> {
+                usersField = "ldapUsers";
+                cls = ProjectRole.LdapUserProjectRole.class;
+            }
+            case ManagedUser managedUser -> {
+                usersField = "managedUsers";
+                cls = ProjectRole.ManagedUserProjectRole.class;
+            }
+            case OidcUser oidcUser -> {
+                usersField = "oidcUsers";
+                cls = ProjectRole.OidcUserProjectRole.class;
+            }
+            default -> {
+                return Collections.emptySet();
+            }
+        }
+
+        Query<? extends ProjectRole> query = pm.newQuery(cls)
+                .filter("project.id == :projectId && %s.contains(:principal)".formatted(usersField))
+                .setNamedParameters(Map.ofEntries(
+                    Map.entry("principal", principal),
+                    Map.entry("projectId", project.getId())));
+
+        return Set.of(executeAndCloseList(query).stream()
+                .map(ProjectRole::getRole)
+                .map(Role::getId)
+                .toArray(Long[]::new));
+    }
+
+    /**
      * Get the IDs of the {@link Team}s a given {@link Principal} is a member of.
      *
      * @return A {@link Set} of {@link Team} IDs
      */
     protected Set<Long> getTeamIds(final Principal principal) {
-        final var principalTeamIds = new HashSet<Long>();
-        if (principal instanceof final UserPrincipal userPrincipal
-                && userPrincipal.getTeams() != null) {
-            for (final Team userInTeam : userPrincipal.getTeams()) {
-                principalTeamIds.add(userInTeam.getId());
-            }
-        } else if (principal instanceof final ApiKey apiKey
-                && apiKey.getTeams() != null) {
-            for (final Team userInTeam : apiKey.getTeams()) {
-                principalTeamIds.add(userInTeam.getId());
-            }
-        }
-        return principalTeamIds;
+        List<Team> teams = switch (principal) {
+            case UserPrincipal user -> user.getTeams();
+            case ApiKey apiKey -> apiKey.getTeams();
+            default -> Collections.emptyList();
+        };
+
+        return Set.copyOf(teams.stream().map(Team::getId).toList());
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -848,6 +893,26 @@ public class QueryManager extends AlpineQueryManager {
         getPolicyQueryManager().deletePolicyCondition(policyCondition);
     }
 
+    public Role createRole(final String name, final List<Permission> permissions) {
+        return getRoleQueryManager().createRole(name, permissions);
+    }
+
+    public List<Role> getRoles() {
+        return getRoleQueryManager().getRoles();
+    }
+
+    public Role getRole(String uuid) {
+        return getRoleQueryManager().getRole(uuid);
+    }
+
+    public Role getRoleByName(String name) {
+        return getRoleQueryManager().getRoleByName(name);
+    }
+
+    public Role updateRole(Role transientRole) {
+        return getRoleQueryManager().updateRole(transientRole);
+    }
+
     public Vulnerability createVulnerability(Vulnerability vulnerability, boolean commitIndex) {
         return getVulnerabilityQueryManager().createVulnerability(vulnerability, commitIndex);
     }
@@ -1125,6 +1190,34 @@ public class QueryManager extends AlpineQueryManager {
 
     public synchronized RepositoryMetaComponent synchronizeRepositoryMetaComponent(final RepositoryMetaComponent transientRepositoryMetaComponent) {
         return getRepositoryQueryManager().synchronizeRepositoryMetaComponent(transientRepositoryMetaComponent);
+    }
+
+    public boolean addRoleToUser(UserPrincipal principal, Role role, Project project){
+        return getRoleQueryManager().addRoleToUser(principal, role, project);
+    }
+
+    public List<Project> getUnassignedProjects(final String username) {
+        return getRoleQueryManager().getUnassignedProjects(username);
+    }
+
+    public List<Project> getUnassignedProjects(final UserPrincipal user) {
+        return getRoleQueryManager().getUnassignedProjects(user);
+    }
+
+    public List<Permission> getUnassignedRolePermissions(final Role role) {
+        return getRoleQueryManager().getUnassignedRolePermissions(role);
+    }
+
+    public List<? extends ProjectRole> getUserRoles(final UserPrincipal user) {
+        return getRoleQueryManager().getUserRoles(user);
+    }
+
+    public List<Permission> getUserProjectPermissions(final String username, final String projectName) {
+        return getRoleQueryManager().getUserProjectPermissions(username, projectName);
+    }
+
+    public boolean removeRoleFromUser(final UserPrincipal user, final Role role, final Project project) {
+        return getRoleQueryManager().removeRoleFromUser(user, role, project);
     }
 
     public NotificationRule createNotificationRule(String name, NotificationScope scope, NotificationLevel level, NotificationPublisher publisher) {
