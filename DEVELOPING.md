@@ -114,7 +114,7 @@ Now visit `http://127.0.0.1:8081` in your browser and use Dependency-Track as us
 To launch the API server with Dev Services, execute the following command:
 
 ```shell
-mvn -pl apiserver -am -Pquick -Pdev-services test
+mvn -pl apiserver -am -Pquick -Pdev-services verify
 ```
 
 In this mode, the application will automatically launch containers for:
