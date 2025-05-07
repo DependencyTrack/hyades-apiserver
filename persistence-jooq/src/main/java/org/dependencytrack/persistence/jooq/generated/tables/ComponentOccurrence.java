@@ -10,9 +10,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ComponentOccurrenceRecord;
 import org.jooq.Condition;
@@ -47,7 +47,7 @@ public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.COMPONENT_OCCURRENCE</code>
+     * The reference instance of <code>COMPONENT_OCCURRENCE</code>
      */
     public static final ComponentOccurrence COMPONENT_OCCURRENCE = new ComponentOccurrence();
 
@@ -60,37 +60,37 @@ public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
     }
 
     /**
-     * The column <code>public.COMPONENT_OCCURRENCE.ID</code>.
+     * The column <code>COMPONENT_OCCURRENCE.ID</code>.
      */
     public final TableField<ComponentOccurrenceRecord, UUID> ID = createField(DSL.name("ID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.COMPONENT_OCCURRENCE.COMPONENT_ID</code>.
+     * The column <code>COMPONENT_OCCURRENCE.COMPONENT_ID</code>.
      */
     public final TableField<ComponentOccurrenceRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.COMPONENT_OCCURRENCE.LOCATION</code>.
+     * The column <code>COMPONENT_OCCURRENCE.LOCATION</code>.
      */
     public final TableField<ComponentOccurrenceRecord, String> LOCATION = createField(DSL.name("LOCATION"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
-     * The column <code>public.COMPONENT_OCCURRENCE.LINE</code>.
+     * The column <code>COMPONENT_OCCURRENCE.LINE</code>.
      */
     public final TableField<ComponentOccurrenceRecord, Integer> LINE = createField(DSL.name("LINE"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.COMPONENT_OCCURRENCE.OFFSET</code>.
+     * The column <code>COMPONENT_OCCURRENCE.OFFSET</code>.
      */
     public final TableField<ComponentOccurrenceRecord, Integer> OFFSET = createField(DSL.name("OFFSET"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.COMPONENT_OCCURRENCE.SYMBOL</code>.
+     * The column <code>COMPONENT_OCCURRENCE.SYMBOL</code>.
      */
     public final TableField<ComponentOccurrenceRecord, String> SYMBOL = createField(DSL.name("SYMBOL"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.COMPONENT_OCCURRENCE.CREATED_AT</code>.
+     * The column <code>COMPONENT_OCCURRENCE.CREATED_AT</code>.
      */
     public final TableField<ComponentOccurrenceRecord, OffsetDateTime> CREATED_AT = createField(DSL.name("CREATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(3).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
 
@@ -103,23 +103,21 @@ public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
     }
 
     /**
-     * Create an aliased <code>public.COMPONENT_OCCURRENCE</code> table
-     * reference
+     * Create an aliased <code>COMPONENT_OCCURRENCE</code> table reference
      */
     public ComponentOccurrence(String alias) {
         this(DSL.name(alias), COMPONENT_OCCURRENCE);
     }
 
     /**
-     * Create an aliased <code>public.COMPONENT_OCCURRENCE</code> table
-     * reference
+     * Create an aliased <code>COMPONENT_OCCURRENCE</code> table reference
      */
     public ComponentOccurrence(Name alias) {
         this(alias, COMPONENT_OCCURRENCE);
     }
 
     /**
-     * Create a <code>public.COMPONENT_OCCURRENCE</code> table reference
+     * Create a <code>COMPONENT_OCCURRENCE</code> table reference
      */
     public ComponentOccurrence() {
         this(DSL.name("COMPONENT_OCCURRENCE"), null);
@@ -160,7 +158,7 @@ public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -181,7 +179,7 @@ public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit join path to the <code>public.COMPONENT</code> table.
+     * Get the implicit join path to the <code>COMPONENT</code> table.
      */
     public ComponentPath component() {
         if (_component == null)

@@ -8,12 +8,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapuserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManageduserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUser.OidcuserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapUserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManagedUserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUser.OidcUserPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission.PermissionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.UserProjectEffectivePermissionsRecord;
@@ -50,8 +50,7 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code>
+     * The reference instance of <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code>
      */
     public static final UserProjectEffectivePermissions USER_PROJECT_EFFECTIVE_PERMISSIONS = new UserProjectEffectivePermissions();
 
@@ -64,38 +63,34 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
     }
 
     /**
-     * The column
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.LDAPUSER_ID</code>.
+     * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.LDAPUSER_ID</code>.
      */
     public final TableField<UserProjectEffectivePermissionsRecord, Long> LDAPUSER_ID = createField(DSL.name("LDAPUSER_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.MANAGEDUSER_ID</code>.
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.MANAGEDUSER_ID</code>.
      */
     public final TableField<UserProjectEffectivePermissionsRecord, Long> MANAGEDUSER_ID = createField(DSL.name("MANAGEDUSER_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.OIDCUSER_ID</code>.
+     * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.OIDCUSER_ID</code>.
      */
     public final TableField<UserProjectEffectivePermissionsRecord, Long> OIDCUSER_ID = createField(DSL.name("OIDCUSER_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.PROJECT_ID</code>.
+     * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PROJECT_ID</code>.
      */
     public final TableField<UserProjectEffectivePermissionsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_ID</code>.
+     * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_ID</code>.
      */
     public final TableField<UserProjectEffectivePermissionsRecord, Long> PERMISSION_ID = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_NAME</code>.
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_NAME</code>.
      */
     public final TableField<UserProjectEffectivePermissionsRecord, String> PERMISSION_NAME = createField(DSL.name("PERMISSION_NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
@@ -108,24 +103,23 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
     }
 
     /**
-     * Create an aliased <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code>
-     * table reference
+     * Create an aliased <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
+     * reference
      */
     public UserProjectEffectivePermissions(String alias) {
         this(DSL.name(alias), USER_PROJECT_EFFECTIVE_PERMISSIONS);
     }
 
     /**
-     * Create an aliased <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code>
-     * table reference
+     * Create an aliased <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
+     * reference
      */
     public UserProjectEffectivePermissions(Name alias) {
         this(alias, USER_PROJECT_EFFECTIVE_PERMISSIONS);
     }
 
     /**
-     * Create a <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
-     * reference
+     * Create a <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table reference
      */
     public UserProjectEffectivePermissions() {
         this(DSL.name("USER_PROJECT_EFFECTIVE_PERMISSIONS"), null);
@@ -166,7 +160,7 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -176,51 +170,50 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
 
     @Override
     public List<ForeignKey<UserProjectEffectivePermissionsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK);
+        return Arrays.asList(Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK);
     }
 
-    private transient LdapuserPath _ldapuser;
+    private transient LdapUserPath _ldapUser;
 
     /**
-     * Get the implicit join path to the <code>public.LDAPUSER</code> table.
+     * Get the implicit join path to the <code>LDAPUSER</code> table.
      */
-    public LdapuserPath ldapuser() {
-        if (_ldapuser == null)
-            _ldapuser = new LdapuserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK, null);
+    public LdapUserPath ldapUser() {
+        if (_ldapUser == null)
+            _ldapUser = new LdapUserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK, null);
 
-        return _ldapuser;
+        return _ldapUser;
     }
 
-    private transient ManageduserPath _manageduser;
+    private transient ManagedUserPath _managedUser;
 
     /**
-     * Get the implicit join path to the <code>public.MANAGEDUSER</code> table.
+     * Get the implicit join path to the <code>MANAGEDUSER</code> table.
      */
-    public ManageduserPath manageduser() {
-        if (_manageduser == null)
-            _manageduser = new ManageduserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK, null);
+    public ManagedUserPath managedUser() {
+        if (_managedUser == null)
+            _managedUser = new ManagedUserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK, null);
 
-        return _manageduser;
+        return _managedUser;
     }
 
-    private transient OidcuserPath _oidcuser;
+    private transient OidcUserPath _oidcUser;
 
     /**
-     * Get the implicit join path to the <code>public.OIDCUSER</code> table.
+     * Get the implicit join path to the <code>OIDCUSER</code> table.
      */
-    public OidcuserPath oidcuser() {
-        if (_oidcuser == null)
-            _oidcuser = new OidcuserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK, null);
+    public OidcUserPath oidcUser() {
+        if (_oidcUser == null)
+            _oidcUser = new OidcUserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK, null);
 
-        return _oidcuser;
+        return _oidcUser;
     }
 
     private transient PermissionPath _userProjectEffectivePermissionsPermissionIdFk;
 
     /**
-     * Get the implicit join path to the <code>public.PERMISSION</code> table,
-     * via the <code>USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK</code>
-     * key.
+     * Get the implicit join path to the <code>PERMISSION</code> table, via the
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK</code> key.
      */
     public PermissionPath userProjectEffectivePermissionsPermissionIdFk() {
         if (_userProjectEffectivePermissionsPermissionIdFk == null)
@@ -232,8 +225,7 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
     private transient PermissionPath _userProjectEffectivePermissionsPermissionNameFk;
 
     /**
-     * Get the implicit join path to the <code>public.PERMISSION</code> table,
-     * via the
+     * Get the implicit join path to the <code>PERMISSION</code> table, via the
      * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK</code> key.
      */
     public PermissionPath userProjectEffectivePermissionsPermissionNameFk() {
@@ -246,7 +238,7 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)

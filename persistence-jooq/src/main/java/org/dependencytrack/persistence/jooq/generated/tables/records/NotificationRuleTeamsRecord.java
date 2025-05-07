@@ -18,30 +18,30 @@ public class NotificationRuleTeamsRecord extends UpdatableRecordImpl<Notificatio
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for
-     * <code>public.NOTIFICATIONRULE_TEAMS.NOTIFICATIONRULE_ID</code>.
+     * Setter for <code>NOTIFICATIONRULE_TEAMS.NOTIFICATIONRULE_ID</code>.
      */
-    public void setNotificationruleId(Long value) {
+    public NotificationRuleTeamsRecord setNotificationruleId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.NOTIFICATIONRULE_TEAMS.NOTIFICATIONRULE_ID</code>.
+     * Getter for <code>NOTIFICATIONRULE_TEAMS.NOTIFICATIONRULE_ID</code>.
      */
     public Long getNotificationruleId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE_TEAMS.TEAM_ID</code>.
+     * Setter for <code>NOTIFICATIONRULE_TEAMS.TEAM_ID</code>.
      */
-    public void setTeamId(Long value) {
+    public NotificationRuleTeamsRecord setTeamId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE_TEAMS.TEAM_ID</code>.
+     * Getter for <code>NOTIFICATIONRULE_TEAMS.TEAM_ID</code>.
      */
     public Long getTeamId() {
         return (Long) get(1);

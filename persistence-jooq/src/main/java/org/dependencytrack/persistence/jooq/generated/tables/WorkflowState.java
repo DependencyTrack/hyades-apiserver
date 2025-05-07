@@ -10,9 +10,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.WorkflowState.WorkflowStatePath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.WorkflowStateRecord;
 import org.jooq.Check;
@@ -50,7 +50,7 @@ public class WorkflowState extends TableImpl<WorkflowStateRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.WORKFLOW_STATE</code>
+     * The reference instance of <code>WORKFLOW_STATE</code>
      */
     public static final WorkflowState WORKFLOW_STATE = new WorkflowState();
 
@@ -63,42 +63,42 @@ public class WorkflowState extends TableImpl<WorkflowStateRecord> {
     }
 
     /**
-     * The column <code>public.WORKFLOW_STATE.ID</code>.
+     * The column <code>WORKFLOW_STATE.ID</code>.
      */
     public final TableField<WorkflowStateRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.WORKFLOW_STATE.FAILURE_REASON</code>.
+     * The column <code>WORKFLOW_STATE.FAILURE_REASON</code>.
      */
     public final TableField<WorkflowStateRecord, String> FAILURE_REASON = createField(DSL.name("FAILURE_REASON"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.WORKFLOW_STATE.PARENT_STEP_ID</code>.
+     * The column <code>WORKFLOW_STATE.PARENT_STEP_ID</code>.
      */
     public final TableField<WorkflowStateRecord, Long> PARENT_STEP_ID = createField(DSL.name("PARENT_STEP_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column <code>public.WORKFLOW_STATE.STARTED_AT</code>.
+     * The column <code>WORKFLOW_STATE.STARTED_AT</code>.
      */
     public final TableField<WorkflowStateRecord, OffsetDateTime> STARTED_AT = createField(DSL.name("STARTED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
-     * The column <code>public.WORKFLOW_STATE.STATUS</code>.
+     * The column <code>WORKFLOW_STATE.STATUS</code>.
      */
     public final TableField<WorkflowStateRecord, String> STATUS = createField(DSL.name("STATUS"), SQLDataType.VARCHAR(64).nullable(false), this, "");
 
     /**
-     * The column <code>public.WORKFLOW_STATE.STEP</code>.
+     * The column <code>WORKFLOW_STATE.STEP</code>.
      */
     public final TableField<WorkflowStateRecord, String> STEP = createField(DSL.name("STEP"), SQLDataType.VARCHAR(64).nullable(false), this, "");
 
     /**
-     * The column <code>public.WORKFLOW_STATE.TOKEN</code>.
+     * The column <code>WORKFLOW_STATE.TOKEN</code>.
      */
     public final TableField<WorkflowStateRecord, UUID> TOKEN = createField(DSL.name("TOKEN"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.WORKFLOW_STATE.UPDATED_AT</code>.
+     * The column <code>WORKFLOW_STATE.UPDATED_AT</code>.
      */
     public final TableField<WorkflowStateRecord, OffsetDateTime> UPDATED_AT = createField(DSL.name("UPDATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
@@ -111,21 +111,21 @@ public class WorkflowState extends TableImpl<WorkflowStateRecord> {
     }
 
     /**
-     * Create an aliased <code>public.WORKFLOW_STATE</code> table reference
+     * Create an aliased <code>WORKFLOW_STATE</code> table reference
      */
     public WorkflowState(String alias) {
         this(DSL.name(alias), WORKFLOW_STATE);
     }
 
     /**
-     * Create an aliased <code>public.WORKFLOW_STATE</code> table reference
+     * Create an aliased <code>WORKFLOW_STATE</code> table reference
      */
     public WorkflowState(Name alias) {
         this(alias, WORKFLOW_STATE);
     }
 
     /**
-     * Create a <code>public.WORKFLOW_STATE</code> table reference
+     * Create a <code>WORKFLOW_STATE</code> table reference
      */
     public WorkflowState() {
         this(DSL.name("WORKFLOW_STATE"), null);
@@ -166,7 +166,7 @@ public class WorkflowState extends TableImpl<WorkflowStateRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -197,8 +197,7 @@ public class WorkflowState extends TableImpl<WorkflowStateRecord> {
     private transient WorkflowStatePath _workflowState;
 
     /**
-     * Get the implicit join path to the <code>public.WORKFLOW_STATE</code>
-     * table.
+     * Get the implicit join path to the <code>WORKFLOW_STATE</code> table.
      */
     public WorkflowStatePath workflowState() {
         if (_workflowState == null)

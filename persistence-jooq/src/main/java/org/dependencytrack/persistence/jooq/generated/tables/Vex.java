@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.VexRecord;
 import org.jooq.Condition;
@@ -47,7 +47,7 @@ public class Vex extends TableImpl<VexRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.VEX</code>
+     * The reference instance of <code>VEX</code>
      */
     public static final Vex VEX = new Vex();
 
@@ -60,42 +60,42 @@ public class Vex extends TableImpl<VexRecord> {
     }
 
     /**
-     * The column <code>public.VEX.ID</code>.
+     * The column <code>VEX.ID</code>.
      */
     public final TableField<VexRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.VEX.IMPORTED</code>.
+     * The column <code>VEX.IMPORTED</code>.
      */
     public final TableField<VexRecord, OffsetDateTime> IMPORTED = createField(DSL.name("IMPORTED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.VEX.PROJECT_ID</code>.
+     * The column <code>VEX.PROJECT_ID</code>.
      */
     public final TableField<VexRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.VEX.SERIAL_NUMBER</code>.
+     * The column <code>VEX.SERIAL_NUMBER</code>.
      */
     public final TableField<VexRecord, String> SERIAL_NUMBER = createField(DSL.name("SERIAL_NUMBER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VEX.SPEC_VERSION</code>.
+     * The column <code>VEX.SPEC_VERSION</code>.
      */
     public final TableField<VexRecord, String> SPEC_VERSION = createField(DSL.name("SPEC_VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VEX.UUID</code>.
+     * The column <code>VEX.UUID</code>.
      */
     public final TableField<VexRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.VEX.VEX_FORMAT</code>.
+     * The column <code>VEX.VEX_FORMAT</code>.
      */
     public final TableField<VexRecord, String> VEX_FORMAT = createField(DSL.name("VEX_FORMAT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VEX.VEX_VERSION</code>.
+     * The column <code>VEX.VEX_VERSION</code>.
      */
     public final TableField<VexRecord, Integer> VEX_VERSION = createField(DSL.name("VEX_VERSION"), SQLDataType.INTEGER, this, "");
 
@@ -108,21 +108,21 @@ public class Vex extends TableImpl<VexRecord> {
     }
 
     /**
-     * Create an aliased <code>public.VEX</code> table reference
+     * Create an aliased <code>VEX</code> table reference
      */
     public Vex(String alias) {
         this(DSL.name(alias), VEX);
     }
 
     /**
-     * Create an aliased <code>public.VEX</code> table reference
+     * Create an aliased <code>VEX</code> table reference
      */
     public Vex(Name alias) {
         this(alias, VEX);
     }
 
     /**
-     * Create a <code>public.VEX</code> table reference
+     * Create a <code>VEX</code> table reference
      */
     public Vex() {
         this(DSL.name("VEX"), null);
@@ -163,7 +163,7 @@ public class Vex extends TableImpl<VexRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -194,7 +194,7 @@ public class Vex extends TableImpl<VexRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)

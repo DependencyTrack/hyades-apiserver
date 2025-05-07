@@ -18,42 +18,45 @@ public class TeamRecord extends UpdatableRecordImpl<TeamRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.TEAM.ID</code>.
+     * Setter for <code>TEAM.ID</code>.
      */
-    public void setId(Long value) {
+    public TeamRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.TEAM.ID</code>.
+     * Getter for <code>TEAM.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.TEAM.NAME</code>.
+     * Setter for <code>TEAM.NAME</code>.
      */
-    public void setName(String value) {
+    public TeamRecord setName(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.TEAM.NAME</code>.
+     * Getter for <code>TEAM.NAME</code>.
      */
     public String getName() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.TEAM.UUID</code>.
+     * Setter for <code>TEAM.UUID</code>.
      */
-    public void setUuid(String value) {
+    public TeamRecord setUuid(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.TEAM.UUID</code>.
+     * Getter for <code>TEAM.UUID</code>.
      */
     public String getUuid() {
         return (String) get(2);

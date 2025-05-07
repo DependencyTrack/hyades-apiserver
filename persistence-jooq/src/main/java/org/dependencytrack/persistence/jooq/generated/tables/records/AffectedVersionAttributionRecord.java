@@ -21,100 +21,105 @@ public class AffectedVersionAttributionRecord extends UpdatableRecordImpl<Affect
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.AFFECTEDVERSIONATTRIBUTION.ID</code>.
+     * Setter for <code>AFFECTEDVERSIONATTRIBUTION.ID</code>.
      */
-    public void setId(Long value) {
+    public AffectedVersionAttributionRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.AFFECTEDVERSIONATTRIBUTION.ID</code>.
+     * Getter for <code>AFFECTEDVERSIONATTRIBUTION.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.AFFECTEDVERSIONATTRIBUTION.FIRST_SEEN</code>.
+     * Setter for <code>AFFECTEDVERSIONATTRIBUTION.FIRST_SEEN</code>.
      */
-    public void setFirstSeen(OffsetDateTime value) {
+    public AffectedVersionAttributionRecord setFirstSeen(OffsetDateTime value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.AFFECTEDVERSIONATTRIBUTION.FIRST_SEEN</code>.
+     * Getter for <code>AFFECTEDVERSIONATTRIBUTION.FIRST_SEEN</code>.
      */
     public OffsetDateTime getFirstSeen() {
         return (OffsetDateTime) get(1);
     }
 
     /**
-     * Setter for <code>public.AFFECTEDVERSIONATTRIBUTION.LAST_SEEN</code>.
+     * Setter for <code>AFFECTEDVERSIONATTRIBUTION.LAST_SEEN</code>.
      */
-    public void setLastSeen(OffsetDateTime value) {
+    public AffectedVersionAttributionRecord setLastSeen(OffsetDateTime value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.AFFECTEDVERSIONATTRIBUTION.LAST_SEEN</code>.
+     * Getter for <code>AFFECTEDVERSIONATTRIBUTION.LAST_SEEN</code>.
      */
     public OffsetDateTime getLastSeen() {
         return (OffsetDateTime) get(2);
     }
 
     /**
-     * Setter for <code>public.AFFECTEDVERSIONATTRIBUTION.SOURCE</code>.
+     * Setter for <code>AFFECTEDVERSIONATTRIBUTION.SOURCE</code>.
      */
-    public void setSource(String value) {
+    public AffectedVersionAttributionRecord setSource(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.AFFECTEDVERSIONATTRIBUTION.SOURCE</code>.
+     * Getter for <code>AFFECTEDVERSIONATTRIBUTION.SOURCE</code>.
      */
     public String getSource() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.AFFECTEDVERSIONATTRIBUTION.UUID</code>.
+     * Setter for <code>AFFECTEDVERSIONATTRIBUTION.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public AffectedVersionAttributionRecord setUuid(UUID value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.AFFECTEDVERSIONATTRIBUTION.UUID</code>.
+     * Getter for <code>AFFECTEDVERSIONATTRIBUTION.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(4);
     }
 
     /**
-     * Setter for <code>public.AFFECTEDVERSIONATTRIBUTION.VULNERABILITY</code>.
+     * Setter for <code>AFFECTEDVERSIONATTRIBUTION.VULNERABILITY</code>.
      */
-    public void setVulnerability(Long value) {
+    public AffectedVersionAttributionRecord setVulnerability(Long value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.AFFECTEDVERSIONATTRIBUTION.VULNERABILITY</code>.
+     * Getter for <code>AFFECTEDVERSIONATTRIBUTION.VULNERABILITY</code>.
      */
     public Long getVulnerability() {
         return (Long) get(5);
     }
 
     /**
-     * Setter for
-     * <code>public.AFFECTEDVERSIONATTRIBUTION.VULNERABLE_SOFTWARE</code>.
+     * Setter for <code>AFFECTEDVERSIONATTRIBUTION.VULNERABLE_SOFTWARE</code>.
      */
-    public void setVulnerableSoftware(Long value) {
+    public AffectedVersionAttributionRecord setVulnerableSoftware(Long value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.AFFECTEDVERSIONATTRIBUTION.VULNERABLE_SOFTWARE</code>.
+     * Getter for <code>AFFECTEDVERSIONATTRIBUTION.VULNERABLE_SOFTWARE</code>.
      */
     public Long getVulnerableSoftware() {
         return (Long) get(6);

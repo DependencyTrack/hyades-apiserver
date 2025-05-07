@@ -17,28 +17,30 @@ public class PolicyProjectsRecord extends TableRecordImpl<PolicyProjectsRecord> 
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.POLICY_PROJECTS.POLICY_ID</code>.
+     * Setter for <code>POLICY_PROJECTS.POLICY_ID</code>.
      */
-    public void setPolicyId(Long value) {
+    public PolicyProjectsRecord setPolicyId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY_PROJECTS.POLICY_ID</code>.
+     * Getter for <code>POLICY_PROJECTS.POLICY_ID</code>.
      */
     public Long getPolicyId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.POLICY_PROJECTS.PROJECT_ID</code>.
+     * Setter for <code>POLICY_PROJECTS.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public PolicyProjectsRecord setProjectId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY_PROJECTS.PROJECT_ID</code>.
+     * Getter for <code>POLICY_PROJECTS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(1);

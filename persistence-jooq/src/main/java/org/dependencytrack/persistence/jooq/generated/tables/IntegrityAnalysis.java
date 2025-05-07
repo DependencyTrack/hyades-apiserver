@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.IntegrityAnalysisRecord;
 import org.jooq.Condition;
@@ -47,7 +47,7 @@ public class IntegrityAnalysis extends TableImpl<IntegrityAnalysisRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.INTEGRITY_ANALYSIS</code>
+     * The reference instance of <code>INTEGRITY_ANALYSIS</code>
      */
     public static final IntegrityAnalysis INTEGRITY_ANALYSIS = new IntegrityAnalysis();
 
@@ -60,44 +60,42 @@ public class IntegrityAnalysis extends TableImpl<IntegrityAnalysisRecord> {
     }
 
     /**
-     * The column <code>public.INTEGRITY_ANALYSIS.ID</code>.
+     * The column <code>INTEGRITY_ANALYSIS.ID</code>.
      */
     public final TableField<IntegrityAnalysisRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_ANALYSIS.COMPONENT_ID</code>.
+     * The column <code>INTEGRITY_ANALYSIS.COMPONENT_ID</code>.
      */
     public final TableField<IntegrityAnalysisRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_ANALYSIS.INTEGRITY_CHECK_STATUS</code>.
+     * The column <code>INTEGRITY_ANALYSIS.INTEGRITY_CHECK_STATUS</code>.
      */
     public final TableField<IntegrityAnalysisRecord, String> INTEGRITY_CHECK_STATUS = createField(DSL.name("INTEGRITY_CHECK_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_ANALYSIS.MD5_HASH_MATCH_STATUS</code>.
+     * The column <code>INTEGRITY_ANALYSIS.MD5_HASH_MATCH_STATUS</code>.
      */
     public final TableField<IntegrityAnalysisRecord, String> MD5_HASH_MATCH_STATUS = createField(DSL.name("MD5_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_ANALYSIS.SHA1_HASH_MATCH_STATUS</code>.
+     * The column <code>INTEGRITY_ANALYSIS.SHA1_HASH_MATCH_STATUS</code>.
      */
     public final TableField<IntegrityAnalysisRecord, String> SHA1_HASH_MATCH_STATUS = createField(DSL.name("SHA1_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column
-     * <code>public.INTEGRITY_ANALYSIS.SHA256_HASH_MATCH_STATUS</code>.
+     * The column <code>INTEGRITY_ANALYSIS.SHA256_HASH_MATCH_STATUS</code>.
      */
     public final TableField<IntegrityAnalysisRecord, String> SHA256_HASH_MATCH_STATUS = createField(DSL.name("SHA256_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column
-     * <code>public.INTEGRITY_ANALYSIS.SHA512_HASH_MATCH_STATUS</code>.
+     * The column <code>INTEGRITY_ANALYSIS.SHA512_HASH_MATCH_STATUS</code>.
      */
     public final TableField<IntegrityAnalysisRecord, String> SHA512_HASH_MATCH_STATUS = createField(DSL.name("SHA512_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_ANALYSIS.UPDATED_AT</code>.
+     * The column <code>INTEGRITY_ANALYSIS.UPDATED_AT</code>.
      */
     public final TableField<IntegrityAnalysisRecord, OffsetDateTime> UPDATED_AT = createField(DSL.name("UPDATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
@@ -110,21 +108,21 @@ public class IntegrityAnalysis extends TableImpl<IntegrityAnalysisRecord> {
     }
 
     /**
-     * Create an aliased <code>public.INTEGRITY_ANALYSIS</code> table reference
+     * Create an aliased <code>INTEGRITY_ANALYSIS</code> table reference
      */
     public IntegrityAnalysis(String alias) {
         this(DSL.name(alias), INTEGRITY_ANALYSIS);
     }
 
     /**
-     * Create an aliased <code>public.INTEGRITY_ANALYSIS</code> table reference
+     * Create an aliased <code>INTEGRITY_ANALYSIS</code> table reference
      */
     public IntegrityAnalysis(Name alias) {
         this(alias, INTEGRITY_ANALYSIS);
     }
 
     /**
-     * Create a <code>public.INTEGRITY_ANALYSIS</code> table reference
+     * Create a <code>INTEGRITY_ANALYSIS</code> table reference
      */
     public IntegrityAnalysis() {
         this(DSL.name("INTEGRITY_ANALYSIS"), null);
@@ -165,7 +163,7 @@ public class IntegrityAnalysis extends TableImpl<IntegrityAnalysisRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -191,7 +189,7 @@ public class IntegrityAnalysis extends TableImpl<IntegrityAnalysisRecord> {
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit join path to the <code>public.COMPONENT</code> table.
+     * Get the implicit join path to the <code>COMPONENT</code> table.
      */
     public ComponentPath component() {
         if (_component == null)

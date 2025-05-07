@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.enums;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Catalog;
 import org.jooq.EnumType;
 import org.jooq.Schema;
@@ -41,7 +41,7 @@ public enum Severity implements EnumType {
 
     @Override
     public Schema getSchema() {
-        return Public.PUBLIC;
+        return DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override

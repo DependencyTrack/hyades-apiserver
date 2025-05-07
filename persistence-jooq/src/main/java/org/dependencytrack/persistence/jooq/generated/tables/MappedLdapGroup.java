@@ -8,8 +8,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.MappedLdapGroupRecord;
 import org.jooq.Condition;
@@ -44,7 +44,7 @@ public class MappedLdapGroup extends TableImpl<MappedLdapGroupRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.MAPPEDLDAPGROUP</code>
+     * The reference instance of <code>MAPPEDLDAPGROUP</code>
      */
     public static final MappedLdapGroup MAPPEDLDAPGROUP = new MappedLdapGroup();
 
@@ -57,22 +57,22 @@ public class MappedLdapGroup extends TableImpl<MappedLdapGroupRecord> {
     }
 
     /**
-     * The column <code>public.MAPPEDLDAPGROUP.ID</code>.
+     * The column <code>MAPPEDLDAPGROUP.ID</code>.
      */
     public final TableField<MappedLdapGroupRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.MAPPEDLDAPGROUP.DN</code>.
+     * The column <code>MAPPEDLDAPGROUP.DN</code>.
      */
     public final TableField<MappedLdapGroupRecord, String> DN = createField(DSL.name("DN"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
 
     /**
-     * The column <code>public.MAPPEDLDAPGROUP.TEAM_ID</code>.
+     * The column <code>MAPPEDLDAPGROUP.TEAM_ID</code>.
      */
     public final TableField<MappedLdapGroupRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.MAPPEDLDAPGROUP.UUID</code>.
+     * The column <code>MAPPEDLDAPGROUP.UUID</code>.
      */
     public final TableField<MappedLdapGroupRecord, String> UUID = createField(DSL.name("UUID"), SQLDataType.VARCHAR(36).nullable(false), this, "");
 
@@ -85,21 +85,21 @@ public class MappedLdapGroup extends TableImpl<MappedLdapGroupRecord> {
     }
 
     /**
-     * Create an aliased <code>public.MAPPEDLDAPGROUP</code> table reference
+     * Create an aliased <code>MAPPEDLDAPGROUP</code> table reference
      */
     public MappedLdapGroup(String alias) {
         this(DSL.name(alias), MAPPEDLDAPGROUP);
     }
 
     /**
-     * Create an aliased <code>public.MAPPEDLDAPGROUP</code> table reference
+     * Create an aliased <code>MAPPEDLDAPGROUP</code> table reference
      */
     public MappedLdapGroup(Name alias) {
         this(alias, MAPPEDLDAPGROUP);
     }
 
     /**
-     * Create a <code>public.MAPPEDLDAPGROUP</code> table reference
+     * Create a <code>MAPPEDLDAPGROUP</code> table reference
      */
     public MappedLdapGroup() {
         this(DSL.name("MAPPEDLDAPGROUP"), null);
@@ -112,35 +112,35 @@ public class MappedLdapGroup extends TableImpl<MappedLdapGroupRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class MappedldapgroupPath extends MappedLdapGroup implements Path<MappedLdapGroupRecord> {
+    public static class MappedLdapGroupPath extends MappedLdapGroup implements Path<MappedLdapGroupRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> MappedldapgroupPath(Table<O> path, ForeignKey<O, MappedLdapGroupRecord> childPath, InverseForeignKey<O, MappedLdapGroupRecord> parentPath) {
+        public <O extends Record> MappedLdapGroupPath(Table<O> path, ForeignKey<O, MappedLdapGroupRecord> childPath, InverseForeignKey<O, MappedLdapGroupRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private MappedldapgroupPath(Name alias, Table<MappedLdapGroupRecord> aliased) {
+        private MappedLdapGroupPath(Name alias, Table<MappedLdapGroupRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public MappedldapgroupPath as(String alias) {
-            return new MappedldapgroupPath(DSL.name(alias), this);
+        public MappedLdapGroupPath as(String alias) {
+            return new MappedLdapGroupPath(DSL.name(alias), this);
         }
 
         @Override
-        public MappedldapgroupPath as(Name alias) {
-            return new MappedldapgroupPath(alias, this);
+        public MappedLdapGroupPath as(Name alias) {
+            return new MappedLdapGroupPath(alias, this);
         }
 
         @Override
-        public MappedldapgroupPath as(Table<?> alias) {
-            return new MappedldapgroupPath(alias.getQualifiedName(), this);
+        public MappedLdapGroupPath as(Table<?> alias) {
+            return new MappedLdapGroupPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -160,17 +160,17 @@ public class MappedLdapGroup extends TableImpl<MappedLdapGroupRecord> {
 
     @Override
     public List<ForeignKey<MappedLdapGroupRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.MAPPEDLDAPGROUP__MAPPEDLDAPGROUP_TEAM_FK);
+        return Arrays.asList(Keys.MAPPEDLDAPGROUP_TEAM_FK);
     }
 
     private transient TeamPath _team;
 
     /**
-     * Get the implicit join path to the <code>public.TEAM</code> table.
+     * Get the implicit join path to the <code>TEAM</code> table.
      */
     public TeamPath team() {
         if (_team == null)
-            _team = new TeamPath(this, Keys.MAPPEDLDAPGROUP__MAPPEDLDAPGROUP_TEAM_FK, null);
+            _team = new TeamPath(this, Keys.MAPPEDLDAPGROUP_TEAM_FK, null);
 
         return _team;
     }

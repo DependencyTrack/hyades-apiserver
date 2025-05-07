@@ -18,28 +18,30 @@ public class ProjectAccessTeamsRecord extends UpdatableRecordImpl<ProjectAccessT
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.PROJECT_ACCESS_TEAMS.PROJECT_ID</code>.
+     * Setter for <code>PROJECT_ACCESS_TEAMS.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public ProjectAccessTeamsRecord setProjectId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_ACCESS_TEAMS.PROJECT_ID</code>.
+     * Getter for <code>PROJECT_ACCESS_TEAMS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.PROJECT_ACCESS_TEAMS.TEAM_ID</code>.
+     * Setter for <code>PROJECT_ACCESS_TEAMS.TEAM_ID</code>.
      */
-    public void setTeamId(Long value) {
+    public ProjectAccessTeamsRecord setTeamId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_ACCESS_TEAMS.TEAM_ID</code>.
+     * Getter for <code>PROJECT_ACCESS_TEAMS.TEAM_ID</code>.
      */
     public Long getTeamId() {
         return (Long) get(1);

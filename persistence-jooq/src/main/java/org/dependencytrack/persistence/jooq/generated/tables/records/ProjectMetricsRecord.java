@@ -20,242 +20,255 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.ID</code>.
+     * Setter for <code>PROJECTMETRICS.ID</code>.
      */
-    public void setId(Long value) {
+    public ProjectMetricsRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.ID</code>.
+     * Getter for <code>PROJECTMETRICS.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.COMPONENTS</code>.
+     * Setter for <code>PROJECTMETRICS.COMPONENTS</code>.
      */
-    public void setComponents(Integer value) {
+    public ProjectMetricsRecord setComponents(Integer value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.COMPONENTS</code>.
+     * Getter for <code>PROJECTMETRICS.COMPONENTS</code>.
      */
     public Integer getComponents() {
         return (Integer) get(1);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.CRITICAL</code>.
+     * Setter for <code>PROJECTMETRICS.CRITICAL</code>.
      */
-    public void setCritical(Integer value) {
+    public ProjectMetricsRecord setCritical(Integer value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.CRITICAL</code>.
+     * Getter for <code>PROJECTMETRICS.CRITICAL</code>.
      */
     public Integer getCritical() {
         return (Integer) get(2);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.FINDINGS_AUDITED</code>.
+     * Setter for <code>PROJECTMETRICS.FINDINGS_AUDITED</code>.
      */
-    public void setFindingsAudited(Integer value) {
+    public ProjectMetricsRecord setFindingsAudited(Integer value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.FINDINGS_AUDITED</code>.
+     * Getter for <code>PROJECTMETRICS.FINDINGS_AUDITED</code>.
      */
     public Integer getFindingsAudited() {
         return (Integer) get(3);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.FINDINGS_TOTAL</code>.
+     * Setter for <code>PROJECTMETRICS.FINDINGS_TOTAL</code>.
      */
-    public void setFindingsTotal(Integer value) {
+    public ProjectMetricsRecord setFindingsTotal(Integer value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.FINDINGS_TOTAL</code>.
+     * Getter for <code>PROJECTMETRICS.FINDINGS_TOTAL</code>.
      */
     public Integer getFindingsTotal() {
         return (Integer) get(4);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.FINDINGS_UNAUDITED</code>.
+     * Setter for <code>PROJECTMETRICS.FINDINGS_UNAUDITED</code>.
      */
-    public void setFindingsUnaudited(Integer value) {
+    public ProjectMetricsRecord setFindingsUnaudited(Integer value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.FINDINGS_UNAUDITED</code>.
+     * Getter for <code>PROJECTMETRICS.FINDINGS_UNAUDITED</code>.
      */
     public Integer getFindingsUnaudited() {
         return (Integer) get(5);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.FIRST_OCCURRENCE</code>.
+     * Setter for <code>PROJECTMETRICS.FIRST_OCCURRENCE</code>.
      */
-    public void setFirstOccurrence(OffsetDateTime value) {
+    public ProjectMetricsRecord setFirstOccurrence(OffsetDateTime value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.FIRST_OCCURRENCE</code>.
+     * Getter for <code>PROJECTMETRICS.FIRST_OCCURRENCE</code>.
      */
     public OffsetDateTime getFirstOccurrence() {
         return (OffsetDateTime) get(6);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.HIGH</code>.
+     * Setter for <code>PROJECTMETRICS.HIGH</code>.
      */
-    public void setHigh(Integer value) {
+    public ProjectMetricsRecord setHigh(Integer value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.HIGH</code>.
+     * Getter for <code>PROJECTMETRICS.HIGH</code>.
      */
     public Integer getHigh() {
         return (Integer) get(7);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.RISKSCORE</code>.
+     * Setter for <code>PROJECTMETRICS.RISKSCORE</code>.
      */
-    public void setRiskscore(Double value) {
+    public ProjectMetricsRecord setRiskscore(Double value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.RISKSCORE</code>.
+     * Getter for <code>PROJECTMETRICS.RISKSCORE</code>.
      */
     public Double getRiskscore() {
         return (Double) get(8);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.LAST_OCCURRENCE</code>.
+     * Setter for <code>PROJECTMETRICS.LAST_OCCURRENCE</code>.
      */
-    public void setLastOccurrence(OffsetDateTime value) {
+    public ProjectMetricsRecord setLastOccurrence(OffsetDateTime value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.LAST_OCCURRENCE</code>.
+     * Getter for <code>PROJECTMETRICS.LAST_OCCURRENCE</code>.
      */
     public OffsetDateTime getLastOccurrence() {
         return (OffsetDateTime) get(9);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.LOW</code>.
+     * Setter for <code>PROJECTMETRICS.LOW</code>.
      */
-    public void setLow(Integer value) {
+    public ProjectMetricsRecord setLow(Integer value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.LOW</code>.
+     * Getter for <code>PROJECTMETRICS.LOW</code>.
      */
     public Integer getLow() {
         return (Integer) get(10);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.MEDIUM</code>.
+     * Setter for <code>PROJECTMETRICS.MEDIUM</code>.
      */
-    public void setMedium(Integer value) {
+    public ProjectMetricsRecord setMedium(Integer value) {
         set(11, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.MEDIUM</code>.
+     * Getter for <code>PROJECTMETRICS.MEDIUM</code>.
      */
     public Integer getMedium() {
         return (Integer) get(11);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_AUDITED</code>.
+     * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
-    public void setPolicyviolationsAudited(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsAudited(Integer value) {
         set(12, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_AUDITED</code>.
+     * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
     public Integer getPolicyviolationsAudited() {
         return (Integer) get(12);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_FAIL</code>.
+     * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
-    public void setPolicyviolationsFail(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsFail(Integer value) {
         set(13, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_FAIL</code>.
+     * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
     public Integer getPolicyviolationsFail() {
         return (Integer) get(13);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_INFO</code>.
+     * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
-    public void setPolicyviolationsInfo(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsInfo(Integer value) {
         set(14, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_INFO</code>.
+     * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
     public Integer getPolicyviolationsInfo() {
         return (Integer) get(14);
     }
 
     /**
-     * Setter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
+     * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
-    public void setPolicyviolationsLicenseAudited(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsLicenseAudited(Integer value) {
         set(15, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
+     * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
     public Integer getPolicyviolationsLicenseAudited() {
         return (Integer) get(15);
     }
 
     /**
-     * Setter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
+     * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
-    public void setPolicyviolationsLicenseTotal(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsLicenseTotal(Integer value) {
         set(16, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
+     * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
     public Integer getPolicyviolationsLicenseTotal() {
         return (Integer) get(16);
@@ -263,15 +276,16 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
 
     /**
      * Setter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
-    public void setPolicyviolationsLicenseUnaudited(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsLicenseUnaudited(Integer value) {
         set(17, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsLicenseUnaudited() {
         return (Integer) get(17);
@@ -279,15 +293,16 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
 
     /**
      * Setter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
-    public void setPolicyviolationsOperationalAudited(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsOperationalAudited(Integer value) {
         set(18, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
     public Integer getPolicyviolationsOperationalAudited() {
         return (Integer) get(18);
@@ -295,15 +310,16 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
 
     /**
      * Setter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
-    public void setPolicyviolationsOperationalTotal(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsOperationalTotal(Integer value) {
         set(19, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
     public Integer getPolicyviolationsOperationalTotal() {
         return (Integer) get(19);
@@ -311,47 +327,46 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
 
     /**
      * Setter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
-    public void setPolicyviolationsOperationalUnaudited(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsOperationalUnaudited(Integer value) {
         set(20, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsOperationalUnaudited() {
         return (Integer) get(20);
     }
 
     /**
-     * Setter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
+     * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
-    public void setPolicyviolationsSecurityAudited(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsSecurityAudited(Integer value) {
         set(21, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
+     * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
     public Integer getPolicyviolationsSecurityAudited() {
         return (Integer) get(21);
     }
 
     /**
-     * Setter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
+     * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
-    public void setPolicyviolationsSecurityTotal(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsSecurityTotal(Integer value) {
         set(22, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
+     * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
     public Integer getPolicyviolationsSecurityTotal() {
         return (Integer) get(22);
@@ -359,127 +374,136 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
 
     /**
      * Setter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
-    public void setPolicyviolationsSecurityUnaudited(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsSecurityUnaudited(Integer value) {
         set(23, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsSecurityUnaudited() {
         return (Integer) get(23);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_TOTAL</code>.
+     * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
-    public void setPolicyviolationsTotal(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsTotal(Integer value) {
         set(24, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_TOTAL</code>.
+     * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
     public Integer getPolicyviolationsTotal() {
         return (Integer) get(24);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
+     * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
-    public void setPolicyviolationsUnaudited(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsUnaudited(Integer value) {
         set(25, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
+     * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsUnaudited() {
         return (Integer) get(25);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_WARN</code>.
+     * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
-    public void setPolicyviolationsWarn(Integer value) {
+    public ProjectMetricsRecord setPolicyviolationsWarn(Integer value) {
         set(26, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.POLICYVIOLATIONS_WARN</code>.
+     * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
     public Integer getPolicyviolationsWarn() {
         return (Integer) get(26);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.PROJECT_ID</code>.
+     * Setter for <code>PROJECTMETRICS.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public ProjectMetricsRecord setProjectId(Long value) {
         set(27, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.PROJECT_ID</code>.
+     * Getter for <code>PROJECTMETRICS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(27);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.SUPPRESSED</code>.
+     * Setter for <code>PROJECTMETRICS.SUPPRESSED</code>.
      */
-    public void setSuppressed(Integer value) {
+    public ProjectMetricsRecord setSuppressed(Integer value) {
         set(28, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.SUPPRESSED</code>.
+     * Getter for <code>PROJECTMETRICS.SUPPRESSED</code>.
      */
     public Integer getSuppressed() {
         return (Integer) get(28);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.UNASSIGNED_SEVERITY</code>.
+     * Setter for <code>PROJECTMETRICS.UNASSIGNED_SEVERITY</code>.
      */
-    public void setUnassignedSeverity(Integer value) {
+    public ProjectMetricsRecord setUnassignedSeverity(Integer value) {
         set(29, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.UNASSIGNED_SEVERITY</code>.
+     * Getter for <code>PROJECTMETRICS.UNASSIGNED_SEVERITY</code>.
      */
     public Integer getUnassignedSeverity() {
         return (Integer) get(29);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.VULNERABILITIES</code>.
+     * Setter for <code>PROJECTMETRICS.VULNERABILITIES</code>.
      */
-    public void setVulnerabilities(Integer value) {
+    public ProjectMetricsRecord setVulnerabilities(Integer value) {
         set(30, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.VULNERABILITIES</code>.
+     * Getter for <code>PROJECTMETRICS.VULNERABILITIES</code>.
      */
     public Integer getVulnerabilities() {
         return (Integer) get(30);
     }
 
     /**
-     * Setter for <code>public.PROJECTMETRICS.VULNERABLECOMPONENTS</code>.
+     * Setter for <code>PROJECTMETRICS.VULNERABLECOMPONENTS</code>.
      */
-    public void setVulnerablecomponents(Integer value) {
+    public ProjectMetricsRecord setVulnerablecomponents(Integer value) {
         set(31, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTMETRICS.VULNERABLECOMPONENTS</code>.
+     * Getter for <code>PROJECTMETRICS.VULNERABLECOMPONENTS</code>.
      */
     public Integer getVulnerablecomponents() {
         return (Integer) get(31);

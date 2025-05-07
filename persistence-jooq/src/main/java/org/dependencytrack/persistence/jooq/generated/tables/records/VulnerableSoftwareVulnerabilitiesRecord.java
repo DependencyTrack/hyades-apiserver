@@ -18,15 +18,16 @@ public class VulnerableSoftwareVulnerabilitiesRecord extends TableRecordImpl<Vul
 
     /**
      * Setter for
-     * <code>public.VULNERABLESOFTWARE_VULNERABILITIES.VULNERABILITY_ID</code>.
+     * <code>VULNERABLESOFTWARE_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
-    public void setVulnerabilityId(Long value) {
+    public VulnerableSoftwareVulnerabilitiesRecord setVulnerabilityId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.VULNERABLESOFTWARE_VULNERABILITIES.VULNERABILITY_ID</code>.
+     * <code>VULNERABLESOFTWARE_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
     public Long getVulnerabilityId() {
         return (Long) get(0);
@@ -34,15 +35,16 @@ public class VulnerableSoftwareVulnerabilitiesRecord extends TableRecordImpl<Vul
 
     /**
      * Setter for
-     * <code>public.VULNERABLESOFTWARE_VULNERABILITIES.VULNERABLESOFTWARE_ID</code>.
+     * <code>VULNERABLESOFTWARE_VULNERABILITIES.VULNERABLESOFTWARE_ID</code>.
      */
-    public void setVulnerablesoftwareId(Long value) {
+    public VulnerableSoftwareVulnerabilitiesRecord setVulnerablesoftwareId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.VULNERABLESOFTWARE_VULNERABILITIES.VULNERABLESOFTWARE_ID</code>.
+     * <code>VULNERABLESOFTWARE_VULNERABILITIES.VULNERABLESOFTWARE_ID</code>.
      */
     public Long getVulnerablesoftwareId() {
         return (Long) get(1);

@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Field;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
@@ -75,7 +75,7 @@ public class GtrgmPenalty extends AbstractRoutine<Object> {
      * Create a new routine call instance
      */
     public GtrgmPenalty() {
-        super("gtrgm_penalty", Public.PUBLIC, DSL.comment(""), DefaultDataType.getDefaultDataType("\"pg_catalog\".\"internal\""));
+        super("gtrgm_penalty", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""), DefaultDataType.getDefaultDataType("\"pg_catalog\".\"internal\""));
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(_1);
@@ -94,8 +94,9 @@ public class GtrgmPenalty extends AbstractRoutine<Object> {
      * Set the <code>_1</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__1(Field<Object> field) {
+    public GtrgmPenalty set__1(Field<Object> field) {
         setField(_1, field);
+        return this;
     }
 
     /**
@@ -109,8 +110,9 @@ public class GtrgmPenalty extends AbstractRoutine<Object> {
      * Set the <code>_2</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__2(Field<Object> field) {
+    public GtrgmPenalty set__2(Field<Object> field) {
         setField(_2, field);
+        return this;
     }
 
     /**
@@ -124,7 +126,8 @@ public class GtrgmPenalty extends AbstractRoutine<Object> {
      * Set the <code>_3</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__3(Field<Object> field) {
+    public GtrgmPenalty set__3(Field<Object> field) {
         setField(_3, field);
+        return this;
     }
 }

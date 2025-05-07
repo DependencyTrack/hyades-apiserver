@@ -8,21 +8,21 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Analysis.AnalysisPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentOccurrence.ComponentOccurrencePath;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentProperty.ComponentPropertyPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentsVulnerabilities.ComponentsVulnerabilitiesPath;
-import org.dependencytrack.persistence.jooq.generated.tables.DependencyMetrics.DependencymetricsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.FindingAttribution.FindingattributionPath;
+import org.dependencytrack.persistence.jooq.generated.tables.DependencyMetrics.DependencyMetricsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.FindingAttribution.FindingAttributionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityAnalysis.IntegrityAnalysisPath;
 import org.dependencytrack.persistence.jooq.generated.tables.License.LicensePath;
-import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation.PolicyviolationPath;
+import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation.PolicyViolationPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis.ViolationanalysisPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis.ViolationAnalysisPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ComponentRecord;
 import org.jooq.Check;
 import org.jooq.Condition;
@@ -60,7 +60,7 @@ public class Component extends TableImpl<ComponentRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.COMPONENT</code>
+     * The reference instance of <code>COMPONENT</code>
      */
     public static final Component COMPONENT = new Component();
 
@@ -73,202 +73,202 @@ public class Component extends TableImpl<ComponentRecord> {
     }
 
     /**
-     * The column <code>public.COMPONENT.ID</code>.
+     * The column <code>COMPONENT.ID</code>.
      */
     public final TableField<ComponentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.COMPONENT.BLAKE2B_256</code>.
+     * The column <code>COMPONENT.BLAKE2B_256</code>.
      */
     public final TableField<ComponentRecord, String> BLAKE2B_256 = createField(DSL.name("BLAKE2B_256"), SQLDataType.VARCHAR(64), this, "");
 
     /**
-     * The column <code>public.COMPONENT.BLAKE2B_384</code>.
+     * The column <code>COMPONENT.BLAKE2B_384</code>.
      */
     public final TableField<ComponentRecord, String> BLAKE2B_384 = createField(DSL.name("BLAKE2B_384"), SQLDataType.VARCHAR(96), this, "");
 
     /**
-     * The column <code>public.COMPONENT.BLAKE2B_512</code>.
+     * The column <code>COMPONENT.BLAKE2B_512</code>.
      */
     public final TableField<ComponentRecord, String> BLAKE2B_512 = createField(DSL.name("BLAKE2B_512"), SQLDataType.VARCHAR(128), this, "");
 
     /**
-     * The column <code>public.COMPONENT.BLAKE3</code>.
+     * The column <code>COMPONENT.BLAKE3</code>.
      */
     public final TableField<ComponentRecord, String> BLAKE3 = createField(DSL.name("BLAKE3"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.CLASSIFIER</code>.
+     * The column <code>COMPONENT.CLASSIFIER</code>.
      */
     public final TableField<ComponentRecord, String> CLASSIFIER = createField(DSL.name("CLASSIFIER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.COPYRIGHT</code>.
+     * The column <code>COMPONENT.COPYRIGHT</code>.
      */
     public final TableField<ComponentRecord, String> COPYRIGHT = createField(DSL.name("COPYRIGHT"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
-     * The column <code>public.COMPONENT.CPE</code>.
+     * The column <code>COMPONENT.CPE</code>.
      */
     public final TableField<ComponentRecord, String> CPE = createField(DSL.name("CPE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.DESCRIPTION</code>.
+     * The column <code>COMPONENT.DESCRIPTION</code>.
      */
     public final TableField<ComponentRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
-     * The column <code>public.COMPONENT.DIRECT_DEPENDENCIES</code>.
+     * The column <code>COMPONENT.DIRECT_DEPENDENCIES</code>.
      */
     public final TableField<ComponentRecord, JSONB> DIRECT_DEPENDENCIES = createField(DSL.name("DIRECT_DEPENDENCIES"), SQLDataType.JSONB, this, "");
 
     /**
-     * The column <code>public.COMPONENT.EXTENSION</code>.
+     * The column <code>COMPONENT.EXTENSION</code>.
      */
     public final TableField<ComponentRecord, String> EXTENSION = createField(DSL.name("EXTENSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.EXTERNAL_REFERENCES</code>.
+     * The column <code>COMPONENT.EXTERNAL_REFERENCES</code>.
      */
     public final TableField<ComponentRecord, byte[]> EXTERNAL_REFERENCES = createField(DSL.name("EXTERNAL_REFERENCES"), SQLDataType.BLOB, this, "");
 
     /**
-     * The column <code>public.COMPONENT.FILENAME</code>.
+     * The column <code>COMPONENT.FILENAME</code>.
      */
     public final TableField<ComponentRecord, String> FILENAME = createField(DSL.name("FILENAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.GROUP</code>.
+     * The column <code>COMPONENT.GROUP</code>.
      */
     public final TableField<ComponentRecord, String> GROUP = createField(DSL.name("GROUP"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.INTERNAL</code>.
+     * The column <code>COMPONENT.INTERNAL</code>.
      */
     public final TableField<ComponentRecord, Boolean> INTERNAL = createField(DSL.name("INTERNAL"), SQLDataType.BOOLEAN, this, "");
 
     /**
-     * The column <code>public.COMPONENT.LAST_RISKSCORE</code>.
+     * The column <code>COMPONENT.LAST_RISKSCORE</code>.
      */
     public final TableField<ComponentRecord, Double> LAST_RISKSCORE = createField(DSL.name("LAST_RISKSCORE"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>public.COMPONENT.LICENSE</code>.
+     * The column <code>COMPONENT.LICENSE</code>.
      */
     public final TableField<ComponentRecord, String> LICENSE = createField(DSL.name("LICENSE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.LICENSE_EXPRESSION</code>.
+     * The column <code>COMPONENT.LICENSE_EXPRESSION</code>.
      */
     public final TableField<ComponentRecord, String> LICENSE_EXPRESSION = createField(DSL.name("LICENSE_EXPRESSION"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.COMPONENT.LICENSE_URL</code>.
+     * The column <code>COMPONENT.LICENSE_URL</code>.
      */
     public final TableField<ComponentRecord, String> LICENSE_URL = createField(DSL.name("LICENSE_URL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.MD5</code>.
+     * The column <code>COMPONENT.MD5</code>.
      */
     public final TableField<ComponentRecord, String> MD5 = createField(DSL.name("MD5"), SQLDataType.VARCHAR(32), this, "");
 
     /**
-     * The column <code>public.COMPONENT.NAME</code>.
+     * The column <code>COMPONENT.NAME</code>.
      */
     public final TableField<ComponentRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.COMPONENT.TEXT</code>.
+     * The column <code>COMPONENT.TEXT</code>.
      */
     public final TableField<ComponentRecord, String> TEXT = createField(DSL.name("TEXT"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.COMPONENT.PARENT_COMPONENT_ID</code>.
+     * The column <code>COMPONENT.PARENT_COMPONENT_ID</code>.
      */
     public final TableField<ComponentRecord, Long> PARENT_COMPONENT_ID = createField(DSL.name("PARENT_COMPONENT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column <code>public.COMPONENT.PROJECT_ID</code>.
+     * The column <code>COMPONENT.PROJECT_ID</code>.
      */
     public final TableField<ComponentRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.COMPONENT.PUBLISHER</code>.
+     * The column <code>COMPONENT.PUBLISHER</code>.
      */
     public final TableField<ComponentRecord, String> PUBLISHER = createField(DSL.name("PUBLISHER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.PURL</code>.
+     * The column <code>COMPONENT.PURL</code>.
      */
     public final TableField<ComponentRecord, String> PURL = createField(DSL.name("PURL"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
-     * The column <code>public.COMPONENT.PURLCOORDINATES</code>.
+     * The column <code>COMPONENT.PURLCOORDINATES</code>.
      */
     public final TableField<ComponentRecord, String> PURLCOORDINATES = createField(DSL.name("PURLCOORDINATES"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.LICENSE_ID</code>.
+     * The column <code>COMPONENT.LICENSE_ID</code>.
      */
     public final TableField<ComponentRecord, Long> LICENSE_ID = createField(DSL.name("LICENSE_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column <code>public.COMPONENT.SHA1</code>.
+     * The column <code>COMPONENT.SHA1</code>.
      */
     public final TableField<ComponentRecord, String> SHA1 = createField(DSL.name("SHA1"), SQLDataType.VARCHAR(40), this, "");
 
     /**
-     * The column <code>public.COMPONENT.SHA_256</code>.
+     * The column <code>COMPONENT.SHA_256</code>.
      */
     public final TableField<ComponentRecord, String> SHA_256 = createField(DSL.name("SHA_256"), SQLDataType.VARCHAR(64), this, "");
 
     /**
-     * The column <code>public.COMPONENT.SHA_384</code>.
+     * The column <code>COMPONENT.SHA_384</code>.
      */
     public final TableField<ComponentRecord, String> SHA_384 = createField(DSL.name("SHA_384"), SQLDataType.VARCHAR(96), this, "");
 
     /**
-     * The column <code>public.COMPONENT.SHA3_256</code>.
+     * The column <code>COMPONENT.SHA3_256</code>.
      */
     public final TableField<ComponentRecord, String> SHA3_256 = createField(DSL.name("SHA3_256"), SQLDataType.VARCHAR(64), this, "");
 
     /**
-     * The column <code>public.COMPONENT.SHA3_384</code>.
+     * The column <code>COMPONENT.SHA3_384</code>.
      */
     public final TableField<ComponentRecord, String> SHA3_384 = createField(DSL.name("SHA3_384"), SQLDataType.VARCHAR(96), this, "");
 
     /**
-     * The column <code>public.COMPONENT.SHA3_512</code>.
+     * The column <code>COMPONENT.SHA3_512</code>.
      */
     public final TableField<ComponentRecord, String> SHA3_512 = createField(DSL.name("SHA3_512"), SQLDataType.VARCHAR(128), this, "");
 
     /**
-     * The column <code>public.COMPONENT.SHA_512</code>.
+     * The column <code>COMPONENT.SHA_512</code>.
      */
     public final TableField<ComponentRecord, String> SHA_512 = createField(DSL.name("SHA_512"), SQLDataType.VARCHAR(128), this, "");
 
     /**
-     * The column <code>public.COMPONENT.SWIDTAGID</code>.
+     * The column <code>COMPONENT.SWIDTAGID</code>.
      */
     public final TableField<ComponentRecord, String> SWIDTAGID = createField(DSL.name("SWIDTAGID"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.UUID</code>.
+     * The column <code>COMPONENT.UUID</code>.
      */
     public final TableField<ComponentRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.COMPONENT.VERSION</code>.
+     * The column <code>COMPONENT.VERSION</code>.
      */
     public final TableField<ComponentRecord, String> VERSION = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT.SUPPLIER</code>.
+     * The column <code>COMPONENT.SUPPLIER</code>.
      */
     public final TableField<ComponentRecord, String> SUPPLIER = createField(DSL.name("SUPPLIER"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.COMPONENT.AUTHORS</code>.
+     * The column <code>COMPONENT.AUTHORS</code>.
      */
     public final TableField<ComponentRecord, String> AUTHORS = createField(DSL.name("AUTHORS"), SQLDataType.CLOB, this, "");
 
@@ -281,21 +281,21 @@ public class Component extends TableImpl<ComponentRecord> {
     }
 
     /**
-     * Create an aliased <code>public.COMPONENT</code> table reference
+     * Create an aliased <code>COMPONENT</code> table reference
      */
     public Component(String alias) {
         this(DSL.name(alias), COMPONENT);
     }
 
     /**
-     * Create an aliased <code>public.COMPONENT</code> table reference
+     * Create an aliased <code>COMPONENT</code> table reference
      */
     public Component(Name alias) {
         this(alias, COMPONENT);
     }
 
     /**
-     * Create a <code>public.COMPONENT</code> table reference
+     * Create a <code>COMPONENT</code> table reference
      */
     public Component() {
         this(DSL.name("COMPONENT"), null);
@@ -336,7 +336,7 @@ public class Component extends TableImpl<ComponentRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -367,7 +367,7 @@ public class Component extends TableImpl<ComponentRecord> {
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit join path to the <code>public.COMPONENT</code> table.
+     * Get the implicit join path to the <code>COMPONENT</code> table.
      */
     public ComponentPath component() {
         if (_component == null)
@@ -379,7 +379,7 @@ public class Component extends TableImpl<ComponentRecord> {
     private transient LicensePath _license;
 
     /**
-     * Get the implicit join path to the <code>public.LICENSE</code> table.
+     * Get the implicit join path to the <code>LICENSE</code> table.
      */
     public LicensePath license() {
         if (_license == null)
@@ -391,7 +391,7 @@ public class Component extends TableImpl<ComponentRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
@@ -403,8 +403,7 @@ public class Component extends TableImpl<ComponentRecord> {
     private transient AnalysisPath _analysis;
 
     /**
-     * Get the implicit to-many join path to the <code>public.ANALYSIS</code>
-     * table
+     * Get the implicit to-many join path to the <code>ANALYSIS</code> table
      */
     public AnalysisPath analysis() {
         if (_analysis == null)
@@ -417,7 +416,7 @@ public class Component extends TableImpl<ComponentRecord> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.COMPONENT_OCCURRENCE</code> table
+     * <code>COMPONENT_OCCURRENCE</code> table
      */
     public ComponentOccurrencePath componentOccurrence() {
         if (_componentOccurrence == null)
@@ -429,8 +428,8 @@ public class Component extends TableImpl<ComponentRecord> {
     private transient ComponentPropertyPath _componentProperty;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.COMPONENT_PROPERTY</code> table
+     * Get the implicit to-many join path to the <code>COMPONENT_PROPERTY</code>
+     * table
      */
     public ComponentPropertyPath componentProperty() {
         if (_componentProperty == null)
@@ -443,7 +442,7 @@ public class Component extends TableImpl<ComponentRecord> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.COMPONENTS_VULNERABILITIES</code> table
+     * <code>COMPONENTS_VULNERABILITIES</code> table
      */
     public ComponentsVulnerabilitiesPath componentsVulnerabilities() {
         if (_componentsVulnerabilities == null)
@@ -452,37 +451,37 @@ public class Component extends TableImpl<ComponentRecord> {
         return _componentsVulnerabilities;
     }
 
-    private transient DependencymetricsPath _dependencymetrics;
+    private transient DependencyMetricsPath _dependencyMetrics;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.DEPENDENCYMETRICS</code> table
+     * Get the implicit to-many join path to the <code>DEPENDENCYMETRICS</code>
+     * table
      */
-    public DependencymetricsPath dependencymetrics() {
-        if (_dependencymetrics == null)
-            _dependencymetrics = new DependencymetricsPath(this, null, Keys.DEPENDENCYMETRICS__DEPENDENCYMETRICS_COMPONENT_FK.getInverseKey());
+    public DependencyMetricsPath dependencyMetrics() {
+        if (_dependencyMetrics == null)
+            _dependencyMetrics = new DependencyMetricsPath(this, null, Keys.DEPENDENCYMETRICS_COMPONENT_FK.getInverseKey());
 
-        return _dependencymetrics;
+        return _dependencyMetrics;
     }
 
-    private transient FindingattributionPath _findingattribution;
+    private transient FindingAttributionPath _findingAttribution;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.FINDINGATTRIBUTION</code> table
+     * Get the implicit to-many join path to the <code>FINDINGATTRIBUTION</code>
+     * table
      */
-    public FindingattributionPath findingattribution() {
-        if (_findingattribution == null)
-            _findingattribution = new FindingattributionPath(this, null, Keys.FINDINGATTRIBUTION__FINDINGATTRIBUTION_COMPONENT_FK.getInverseKey());
+    public FindingAttributionPath findingAttribution() {
+        if (_findingAttribution == null)
+            _findingAttribution = new FindingAttributionPath(this, null, Keys.FINDINGATTRIBUTION_COMPONENT_FK.getInverseKey());
 
-        return _findingattribution;
+        return _findingAttribution;
     }
 
     private transient IntegrityAnalysisPath _integrityAnalysis;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.INTEGRITY_ANALYSIS</code> table
+     * Get the implicit to-many join path to the <code>INTEGRITY_ANALYSIS</code>
+     * table
      */
     public IntegrityAnalysisPath integrityAnalysis() {
         if (_integrityAnalysis == null)
@@ -491,30 +490,30 @@ public class Component extends TableImpl<ComponentRecord> {
         return _integrityAnalysis;
     }
 
-    private transient PolicyviolationPath _policyviolation;
+    private transient PolicyViolationPath _policyViolation;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.POLICYVIOLATION</code> table
+     * Get the implicit to-many join path to the <code>POLICYVIOLATION</code>
+     * table
      */
-    public PolicyviolationPath policyviolation() {
-        if (_policyviolation == null)
-            _policyviolation = new PolicyviolationPath(this, null, Keys.POLICYVIOLATION__POLICYVIOLATION_COMPONENT_FK.getInverseKey());
+    public PolicyViolationPath policyViolation() {
+        if (_policyViolation == null)
+            _policyViolation = new PolicyViolationPath(this, null, Keys.POLICYVIOLATION_COMPONENT_FK.getInverseKey());
 
-        return _policyviolation;
+        return _policyViolation;
     }
 
-    private transient ViolationanalysisPath _violationanalysis;
+    private transient ViolationAnalysisPath _violationAnalysis;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.VIOLATIONANALYSIS</code> table
+     * Get the implicit to-many join path to the <code>VIOLATIONANALYSIS</code>
+     * table
      */
-    public ViolationanalysisPath violationanalysis() {
-        if (_violationanalysis == null)
-            _violationanalysis = new ViolationanalysisPath(this, null, Keys.VIOLATIONANALYSIS__VIOLATIONANALYSIS_COMPONENT_FK.getInverseKey());
+    public ViolationAnalysisPath violationAnalysis() {
+        if (_violationAnalysis == null)
+            _violationAnalysis = new ViolationAnalysisPath(this, null, Keys.VIOLATIONANALYSIS_COMPONENT_FK.getInverseKey());
 
-        return _violationanalysis;
+        return _violationAnalysis;
     }
 
     @Override

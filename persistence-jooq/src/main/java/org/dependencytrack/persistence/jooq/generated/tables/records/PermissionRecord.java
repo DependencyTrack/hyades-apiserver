@@ -18,42 +18,45 @@ public class PermissionRecord extends UpdatableRecordImpl<PermissionRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.PERMISSION.ID</code>.
+     * Setter for <code>PERMISSION.ID</code>.
      */
-    public void setId(Long value) {
+    public PermissionRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PERMISSION.ID</code>.
+     * Getter for <code>PERMISSION.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.PERMISSION.DESCRIPTION</code>.
+     * Setter for <code>PERMISSION.DESCRIPTION</code>.
      */
-    public void setDescription(String value) {
+    public PermissionRecord setDescription(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PERMISSION.DESCRIPTION</code>.
+     * Getter for <code>PERMISSION.DESCRIPTION</code>.
      */
     public String getDescription() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.PERMISSION.NAME</code>.
+     * Setter for <code>PERMISSION.NAME</code>.
      */
-    public void setName(String value) {
+    public PermissionRecord setName(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PERMISSION.NAME</code>.
+     * Getter for <code>PERMISSION.NAME</code>.
      */
     public String getName() {
         return (String) get(2);

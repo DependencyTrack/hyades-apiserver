@@ -17,16 +17,15 @@ public class UserProjectEffectivePermissionsRecord extends TableRecordImpl<UserP
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.LDAPUSER_ID</code>.
+     * Setter for <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.LDAPUSER_ID</code>.
      */
-    public void setLdapuserId(Long value) {
+    public UserProjectEffectivePermissionsRecord setLdapuserId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.LDAPUSER_ID</code>.
+     * Getter for <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.LDAPUSER_ID</code>.
      */
     public Long getLdapuserId() {
         return (Long) get(0);
@@ -34,63 +33,61 @@ public class UserProjectEffectivePermissionsRecord extends TableRecordImpl<UserP
 
     /**
      * Setter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.MANAGEDUSER_ID</code>.
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.MANAGEDUSER_ID</code>.
      */
-    public void setManageduserId(Long value) {
+    public UserProjectEffectivePermissionsRecord setManageduserId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.MANAGEDUSER_ID</code>.
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.MANAGEDUSER_ID</code>.
      */
     public Long getManageduserId() {
         return (Long) get(1);
     }
 
     /**
-     * Setter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.OIDCUSER_ID</code>.
+     * Setter for <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.OIDCUSER_ID</code>.
      */
-    public void setOidcuserId(Long value) {
+    public UserProjectEffectivePermissionsRecord setOidcuserId(Long value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.OIDCUSER_ID</code>.
+     * Getter for <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.OIDCUSER_ID</code>.
      */
     public Long getOidcuserId() {
         return (Long) get(2);
     }
 
     /**
-     * Setter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.PROJECT_ID</code>.
+     * Setter for <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public UserProjectEffectivePermissionsRecord setProjectId(Long value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.PROJECT_ID</code>.
+     * Getter for <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(3);
     }
 
     /**
-     * Setter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_ID</code>.
+     * Setter for <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_ID</code>.
      */
-    public void setPermissionId(Long value) {
+    public UserProjectEffectivePermissionsRecord setPermissionId(Long value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_ID</code>.
+     * Getter for <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_ID</code>.
      */
     public Long getPermissionId() {
         return (Long) get(4);
@@ -98,15 +95,16 @@ public class UserProjectEffectivePermissionsRecord extends TableRecordImpl<UserP
 
     /**
      * Setter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_NAME</code>.
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_NAME</code>.
      */
-    public void setPermissionName(String value) {
+    public UserProjectEffectivePermissionsRecord setPermissionName(String value) {
         set(5, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_NAME</code>.
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_NAME</code>.
      */
     public String getPermissionName() {
         return (String) get(5);

@@ -20,72 +20,75 @@ public class ViolationAnalysisCommentRecord extends UpdatableRecordImpl<Violatio
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.VIOLATIONANALYSISCOMMENT.ID</code>.
+     * Setter for <code>VIOLATIONANALYSISCOMMENT.ID</code>.
      */
-    public void setId(Long value) {
+    public ViolationAnalysisCommentRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VIOLATIONANALYSISCOMMENT.ID</code>.
+     * Getter for <code>VIOLATIONANALYSISCOMMENT.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.VIOLATIONANALYSISCOMMENT.COMMENT</code>.
+     * Setter for <code>VIOLATIONANALYSISCOMMENT.COMMENT</code>.
      */
-    public void setComment(String value) {
+    public ViolationAnalysisCommentRecord setComment(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VIOLATIONANALYSISCOMMENT.COMMENT</code>.
+     * Getter for <code>VIOLATIONANALYSISCOMMENT.COMMENT</code>.
      */
     public String getComment() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.VIOLATIONANALYSISCOMMENT.COMMENTER</code>.
+     * Setter for <code>VIOLATIONANALYSISCOMMENT.COMMENTER</code>.
      */
-    public void setCommenter(String value) {
+    public ViolationAnalysisCommentRecord setCommenter(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VIOLATIONANALYSISCOMMENT.COMMENTER</code>.
+     * Getter for <code>VIOLATIONANALYSISCOMMENT.COMMENTER</code>.
      */
     public String getCommenter() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.VIOLATIONANALYSISCOMMENT.TIMESTAMP</code>.
+     * Setter for <code>VIOLATIONANALYSISCOMMENT.TIMESTAMP</code>.
      */
-    public void setTimestamp(OffsetDateTime value) {
+    public ViolationAnalysisCommentRecord setTimestamp(OffsetDateTime value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VIOLATIONANALYSISCOMMENT.TIMESTAMP</code>.
+     * Getter for <code>VIOLATIONANALYSISCOMMENT.TIMESTAMP</code>.
      */
     public OffsetDateTime getTimestamp() {
         return (OffsetDateTime) get(3);
     }
 
     /**
-     * Setter for
-     * <code>public.VIOLATIONANALYSISCOMMENT.VIOLATIONANALYSIS_ID</code>.
+     * Setter for <code>VIOLATIONANALYSISCOMMENT.VIOLATIONANALYSIS_ID</code>.
      */
-    public void setViolationanalysisId(Long value) {
+    public ViolationAnalysisCommentRecord setViolationanalysisId(Long value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.VIOLATIONANALYSISCOMMENT.VIOLATIONANALYSIS_ID</code>.
+     * Getter for <code>VIOLATIONANALYSISCOMMENT.VIOLATIONANALYSIS_ID</code>.
      */
     public Long getViolationanalysisId() {
         return (Long) get(4);

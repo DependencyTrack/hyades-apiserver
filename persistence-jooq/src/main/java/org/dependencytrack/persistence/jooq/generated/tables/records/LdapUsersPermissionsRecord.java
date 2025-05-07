@@ -18,28 +18,30 @@ public class LdapUsersPermissionsRecord extends UpdatableRecordImpl<LdapUsersPer
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.LDAPUSERS_PERMISSIONS.LDAPUSER_ID</code>.
+     * Setter for <code>LDAPUSERS_PERMISSIONS.LDAPUSER_ID</code>.
      */
-    public void setLdapuserId(Long value) {
+    public LdapUsersPermissionsRecord setLdapuserId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LDAPUSERS_PERMISSIONS.LDAPUSER_ID</code>.
+     * Getter for <code>LDAPUSERS_PERMISSIONS.LDAPUSER_ID</code>.
      */
     public Long getLdapuserId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.LDAPUSERS_PERMISSIONS.PERMISSION_ID</code>.
+     * Setter for <code>LDAPUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
-    public void setPermissionId(Long value) {
+    public LdapUsersPermissionsRecord setPermissionId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LDAPUSERS_PERMISSIONS.PERMISSION_ID</code>.
+     * Getter for <code>LDAPUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
     public Long getPermissionId() {
         return (Long) get(1);

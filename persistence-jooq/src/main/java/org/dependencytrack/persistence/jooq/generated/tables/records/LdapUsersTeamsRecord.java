@@ -18,28 +18,30 @@ public class LdapUsersTeamsRecord extends UpdatableRecordImpl<LdapUsersTeamsReco
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.LDAPUSERS_TEAMS.TEAM_ID</code>.
+     * Setter for <code>LDAPUSERS_TEAMS.TEAM_ID</code>.
      */
-    public void setTeamId(Long value) {
+    public LdapUsersTeamsRecord setTeamId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LDAPUSERS_TEAMS.TEAM_ID</code>.
+     * Getter for <code>LDAPUSERS_TEAMS.TEAM_ID</code>.
      */
     public Long getTeamId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.LDAPUSERS_TEAMS.LDAPUSER_ID</code>.
+     * Setter for <code>LDAPUSERS_TEAMS.LDAPUSER_ID</code>.
      */
-    public void setLdapuserId(Long value) {
+    public LdapUsersTeamsRecord setLdapuserId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LDAPUSERS_TEAMS.LDAPUSER_ID</code>.
+     * Getter for <code>LDAPUSERS_TEAMS.LDAPUSER_ID</code>.
      */
     public Long getLdapuserId() {
         return (Long) get(1);

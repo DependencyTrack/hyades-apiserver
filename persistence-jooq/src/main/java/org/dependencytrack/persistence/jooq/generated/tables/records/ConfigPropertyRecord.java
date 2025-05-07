@@ -18,84 +18,90 @@ public class ConfigPropertyRecord extends UpdatableRecordImpl<ConfigPropertyReco
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.CONFIGPROPERTY.ID</code>.
+     * Setter for <code>CONFIGPROPERTY.ID</code>.
      */
-    public void setId(Long value) {
+    public ConfigPropertyRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.CONFIGPROPERTY.ID</code>.
+     * Getter for <code>CONFIGPROPERTY.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.CONFIGPROPERTY.DESCRIPTION</code>.
+     * Setter for <code>CONFIGPROPERTY.DESCRIPTION</code>.
      */
-    public void setDescription(String value) {
+    public ConfigPropertyRecord setDescription(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.CONFIGPROPERTY.DESCRIPTION</code>.
+     * Getter for <code>CONFIGPROPERTY.DESCRIPTION</code>.
      */
     public String getDescription() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.CONFIGPROPERTY.GROUPNAME</code>.
+     * Setter for <code>CONFIGPROPERTY.GROUPNAME</code>.
      */
-    public void setGroupname(String value) {
+    public ConfigPropertyRecord setGroupname(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.CONFIGPROPERTY.GROUPNAME</code>.
+     * Getter for <code>CONFIGPROPERTY.GROUPNAME</code>.
      */
     public String getGroupname() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.CONFIGPROPERTY.PROPERTYNAME</code>.
+     * Setter for <code>CONFIGPROPERTY.PROPERTYNAME</code>.
      */
-    public void setPropertyname(String value) {
+    public ConfigPropertyRecord setPropertyname(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.CONFIGPROPERTY.PROPERTYNAME</code>.
+     * Getter for <code>CONFIGPROPERTY.PROPERTYNAME</code>.
      */
     public String getPropertyname() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.CONFIGPROPERTY.PROPERTYTYPE</code>.
+     * Setter for <code>CONFIGPROPERTY.PROPERTYTYPE</code>.
      */
-    public void setPropertytype(String value) {
+    public ConfigPropertyRecord setPropertytype(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.CONFIGPROPERTY.PROPERTYTYPE</code>.
+     * Getter for <code>CONFIGPROPERTY.PROPERTYTYPE</code>.
      */
     public String getPropertytype() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.CONFIGPROPERTY.PROPERTYVALUE</code>.
+     * Setter for <code>CONFIGPROPERTY.PROPERTYVALUE</code>.
      */
-    public void setPropertyvalue(String value) {
+    public ConfigPropertyRecord setPropertyvalue(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.CONFIGPROPERTY.PROPERTYVALUE</code>.
+     * Getter for <code>CONFIGPROPERTY.PROPERTYVALUE</code>.
      */
     public String getPropertyvalue() {
         return (String) get(5);

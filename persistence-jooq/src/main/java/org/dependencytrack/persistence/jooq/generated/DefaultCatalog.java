@@ -28,7 +28,7 @@ public class DefaultCatalog extends CatalogImpl {
     /**
      * standard public schema
      */
-    public final Public PUBLIC = Public.PUBLIC;
+    public final DefaultSchema DEFAULT_SCHEMA = DefaultSchema.DEFAULT_SCHEMA;
 
     /**
      * No further instances allowed
@@ -40,7 +40,7 @@ public class DefaultCatalog extends CatalogImpl {
     @Override
     public final List<Schema> getSchemas() {
         return Arrays.asList(
-            Public.PUBLIC
+            DefaultSchema.DEFAULT_SCHEMA
         );
     }
 

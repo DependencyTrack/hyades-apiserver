@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Tag.TagPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectsTagsRecord;
@@ -45,7 +45,7 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.PROJECTS_TAGS</code>
+     * The reference instance of <code>PROJECTS_TAGS</code>
      */
     public static final ProjectsTags PROJECTS_TAGS = new ProjectsTags();
 
@@ -58,12 +58,12 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
     }
 
     /**
-     * The column <code>public.PROJECTS_TAGS.TAG_ID</code>.
+     * The column <code>PROJECTS_TAGS.TAG_ID</code>.
      */
     public final TableField<ProjectsTagsRecord, Long> TAG_ID = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTS_TAGS.PROJECT_ID</code>.
+     * The column <code>PROJECTS_TAGS.PROJECT_ID</code>.
      */
     public final TableField<ProjectsTagsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -76,21 +76,21 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.PROJECTS_TAGS</code> table reference
+     * Create an aliased <code>PROJECTS_TAGS</code> table reference
      */
     public ProjectsTags(String alias) {
         this(DSL.name(alias), PROJECTS_TAGS);
     }
 
     /**
-     * Create an aliased <code>public.PROJECTS_TAGS</code> table reference
+     * Create an aliased <code>PROJECTS_TAGS</code> table reference
      */
     public ProjectsTags(Name alias) {
         this(alias, PROJECTS_TAGS);
     }
 
     /**
-     * Create a <code>public.PROJECTS_TAGS</code> table reference
+     * Create a <code>PROJECTS_TAGS</code> table reference
      */
     public ProjectsTags() {
         this(DSL.name("PROJECTS_TAGS"), null);
@@ -131,7 +131,7 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -147,7 +147,7 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
@@ -159,7 +159,7 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
     private transient TagPath _tag;
 
     /**
-     * Get the implicit join path to the <code>public.TAG</code> table.
+     * Get the implicit join path to the <code>TAG</code> table.
      */
     public TagPath tag() {
         if (_tag == null)

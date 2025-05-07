@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Vulnerability.VulnerabilityPath;
@@ -49,7 +49,7 @@ public class FindingAttribution extends TableImpl<FindingAttributionRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.FINDINGATTRIBUTION</code>
+     * The reference instance of <code>FINDINGATTRIBUTION</code>
      */
     public static final FindingAttribution FINDINGATTRIBUTION = new FindingAttribution();
 
@@ -62,47 +62,47 @@ public class FindingAttribution extends TableImpl<FindingAttributionRecord> {
     }
 
     /**
-     * The column <code>public.FINDINGATTRIBUTION.ID</code>.
+     * The column <code>FINDINGATTRIBUTION.ID</code>.
      */
     public final TableField<FindingAttributionRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.FINDINGATTRIBUTION.ALT_ID</code>.
+     * The column <code>FINDINGATTRIBUTION.ALT_ID</code>.
      */
     public final TableField<FindingAttributionRecord, String> ALT_ID = createField(DSL.name("ALT_ID"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.FINDINGATTRIBUTION.ANALYZERIDENTITY</code>.
+     * The column <code>FINDINGATTRIBUTION.ANALYZERIDENTITY</code>.
      */
     public final TableField<FindingAttributionRecord, String> ANALYZERIDENTITY = createField(DSL.name("ANALYZERIDENTITY"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.FINDINGATTRIBUTION.ATTRIBUTED_ON</code>.
+     * The column <code>FINDINGATTRIBUTION.ATTRIBUTED_ON</code>.
      */
     public final TableField<FindingAttributionRecord, OffsetDateTime> ATTRIBUTED_ON = createField(DSL.name("ATTRIBUTED_ON"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.FINDINGATTRIBUTION.COMPONENT_ID</code>.
+     * The column <code>FINDINGATTRIBUTION.COMPONENT_ID</code>.
      */
     public final TableField<FindingAttributionRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.FINDINGATTRIBUTION.PROJECT_ID</code>.
+     * The column <code>FINDINGATTRIBUTION.PROJECT_ID</code>.
      */
     public final TableField<FindingAttributionRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.FINDINGATTRIBUTION.REFERENCE_URL</code>.
+     * The column <code>FINDINGATTRIBUTION.REFERENCE_URL</code>.
      */
     public final TableField<FindingAttributionRecord, String> REFERENCE_URL = createField(DSL.name("REFERENCE_URL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.FINDINGATTRIBUTION.UUID</code>.
+     * The column <code>FINDINGATTRIBUTION.UUID</code>.
      */
     public final TableField<FindingAttributionRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.FINDINGATTRIBUTION.VULNERABILITY_ID</code>.
+     * The column <code>FINDINGATTRIBUTION.VULNERABILITY_ID</code>.
      */
     public final TableField<FindingAttributionRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -115,21 +115,21 @@ public class FindingAttribution extends TableImpl<FindingAttributionRecord> {
     }
 
     /**
-     * Create an aliased <code>public.FINDINGATTRIBUTION</code> table reference
+     * Create an aliased <code>FINDINGATTRIBUTION</code> table reference
      */
     public FindingAttribution(String alias) {
         this(DSL.name(alias), FINDINGATTRIBUTION);
     }
 
     /**
-     * Create an aliased <code>public.FINDINGATTRIBUTION</code> table reference
+     * Create an aliased <code>FINDINGATTRIBUTION</code> table reference
      */
     public FindingAttribution(Name alias) {
         this(alias, FINDINGATTRIBUTION);
     }
 
     /**
-     * Create a <code>public.FINDINGATTRIBUTION</code> table reference
+     * Create a <code>FINDINGATTRIBUTION</code> table reference
      */
     public FindingAttribution() {
         this(DSL.name("FINDINGATTRIBUTION"), null);
@@ -142,35 +142,35 @@ public class FindingAttribution extends TableImpl<FindingAttributionRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class FindingattributionPath extends FindingAttribution implements Path<FindingAttributionRecord> {
+    public static class FindingAttributionPath extends FindingAttribution implements Path<FindingAttributionRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> FindingattributionPath(Table<O> path, ForeignKey<O, FindingAttributionRecord> childPath, InverseForeignKey<O, FindingAttributionRecord> parentPath) {
+        public <O extends Record> FindingAttributionPath(Table<O> path, ForeignKey<O, FindingAttributionRecord> childPath, InverseForeignKey<O, FindingAttributionRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private FindingattributionPath(Name alias, Table<FindingAttributionRecord> aliased) {
+        private FindingAttributionPath(Name alias, Table<FindingAttributionRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public FindingattributionPath as(String alias) {
-            return new FindingattributionPath(DSL.name(alias), this);
+        public FindingAttributionPath as(String alias) {
+            return new FindingAttributionPath(DSL.name(alias), this);
         }
 
         @Override
-        public FindingattributionPath as(Name alias) {
-            return new FindingattributionPath(alias, this);
+        public FindingAttributionPath as(Name alias) {
+            return new FindingAttributionPath(alias, this);
         }
 
         @Override
-        public FindingattributionPath as(Table<?> alias) {
-            return new FindingattributionPath(alias.getQualifiedName(), this);
+        public FindingAttributionPath as(Table<?> alias) {
+            return new FindingAttributionPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -195,17 +195,17 @@ public class FindingAttribution extends TableImpl<FindingAttributionRecord> {
 
     @Override
     public List<ForeignKey<FindingAttributionRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.FINDINGATTRIBUTION__FINDINGATTRIBUTION_COMPONENT_FK, Keys.FINDINGATTRIBUTION__FINDINGATTRIBUTION_PROJECT_FK, Keys.FINDINGATTRIBUTION__FINDINGATTRIBUTION_VULNERABILITY_FK);
+        return Arrays.asList(Keys.FINDINGATTRIBUTION_COMPONENT_FK, Keys.FINDINGATTRIBUTION_PROJECT_FK, Keys.FINDINGATTRIBUTION_VULNERABILITY_FK);
     }
 
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit join path to the <code>public.COMPONENT</code> table.
+     * Get the implicit join path to the <code>COMPONENT</code> table.
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, Keys.FINDINGATTRIBUTION__FINDINGATTRIBUTION_COMPONENT_FK, null);
+            _component = new ComponentPath(this, Keys.FINDINGATTRIBUTION_COMPONENT_FK, null);
 
         return _component;
     }
@@ -213,11 +213,11 @@ public class FindingAttribution extends TableImpl<FindingAttributionRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.FINDINGATTRIBUTION__FINDINGATTRIBUTION_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.FINDINGATTRIBUTION_PROJECT_FK, null);
 
         return _project;
     }
@@ -225,12 +225,11 @@ public class FindingAttribution extends TableImpl<FindingAttributionRecord> {
     private transient VulnerabilityPath _vulnerability;
 
     /**
-     * Get the implicit join path to the <code>public.VULNERABILITY</code>
-     * table.
+     * Get the implicit join path to the <code>VULNERABILITY</code> table.
      */
     public VulnerabilityPath vulnerability() {
         if (_vulnerability == null)
-            _vulnerability = new VulnerabilityPath(this, Keys.FINDINGATTRIBUTION__FINDINGATTRIBUTION_VULNERABILITY_FK, null);
+            _vulnerability = new VulnerabilityPath(this, Keys.FINDINGATTRIBUTION_VULNERABILITY_FK, null);
 
         return _vulnerability;
     }

@@ -51,13 +51,14 @@ import org.jooq.JSONB;
 
 
 /**
- * Convenience access to all stored procedures and functions in public.
+ * Convenience access to all stored procedures and functions in the default
+ * schema.
  */
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Routines {
 
     /**
-     * Call <code>public.CALC_RISK_SCORE</code>
+     * Call <code>CALC_RISK_SCORE</code>
      */
     public static BigDecimal calcRiskScore(
           Configuration configuration
@@ -79,7 +80,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.CALC_RISK_SCORE</code> as a field.
+     * Get <code>CALC_RISK_SCORE</code> as a field.
      */
     public static Field<BigDecimal> calcRiskScore(
           Integer critical
@@ -99,7 +100,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.CALC_RISK_SCORE</code> as a field.
+     * Get <code>CALC_RISK_SCORE</code> as a field.
      */
     public static Field<BigDecimal> calcRiskScore(
           Field<Integer> critical
@@ -1126,7 +1127,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.has_project_access</code>
+     * Call <code>has_project_access</code>
      */
     public static Boolean hasProjectAccess(
           Configuration configuration
@@ -1142,7 +1143,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.has_project_access</code> as a field.
+     * Get <code>has_project_access</code> as a field.
      */
     public static Field<Boolean> hasProjectAccess(
           Long projectId
@@ -1156,7 +1157,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.has_project_access</code> as a field.
+     * Get <code>has_project_access</code> as a field.
      */
     public static Field<Boolean> hasProjectAccess(
           Field<Long> projectId
@@ -1170,7 +1171,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.jsonb_vuln_aliases</code>
+     * Call <code>jsonb_vuln_aliases</code>
      */
     public static JSONB jsonbVulnAliases(
           Configuration configuration
@@ -1186,7 +1187,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.jsonb_vuln_aliases</code> as a field.
+     * Get <code>jsonb_vuln_aliases</code> as a field.
      */
     public static Field<JSONB> jsonbVulnAliases(
           String vulnSource
@@ -1200,7 +1201,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.jsonb_vuln_aliases</code> as a field.
+     * Get <code>jsonb_vuln_aliases</code> as a field.
      */
     public static Field<JSONB> jsonbVulnAliases(
           Field<String> vulnSource
@@ -1214,7 +1215,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.recalc_user_project_effective_permissions</code>
+     * Call <code>recalc_user_project_effective_permissions</code>
      */
     public static void recalcUserProjectEffectivePermissions(
           Configuration configuration
@@ -1227,7 +1228,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.set_limit</code>
+     * Call <code>set_limit</code>
      */
     public static Float setLimit(
           Configuration configuration
@@ -1241,7 +1242,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.set_limit</code> as a field.
+     * Get <code>set_limit</code> as a field.
      */
     public static Field<Float> setLimit(
           Float __1
@@ -1253,7 +1254,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.set_limit</code> as a field.
+     * Get <code>set_limit</code> as a field.
      */
     public static Field<Float> setLimit(
           Field<Float> __1
@@ -1265,7 +1266,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.show_limit</code>
+     * Call <code>show_limit</code>
      */
     public static Float showLimit(
           Configuration configuration
@@ -1277,7 +1278,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.show_limit</code> as a field.
+     * Get <code>show_limit</code> as a field.
      */
     public static Field<Float> showLimit() {
         ShowLimit f = new ShowLimit();
@@ -1286,7 +1287,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.show_trgm</code>
+     * Call <code>show_trgm</code>
      */
     public static String[] showTrgm(
           Configuration configuration
@@ -1300,7 +1301,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.show_trgm</code> as a field.
+     * Get <code>show_trgm</code> as a field.
      */
     public static Field<String[]> showTrgm(
           String __1
@@ -1312,7 +1313,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.show_trgm</code> as a field.
+     * Get <code>show_trgm</code> as a field.
      */
     public static Field<String[]> showTrgm(
           Field<String> __1
@@ -1324,7 +1325,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.similarity</code>
+     * Call <code>similarity</code>
      */
     public static Float similarity(
           Configuration configuration
@@ -1340,7 +1341,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.similarity</code> as a field.
+     * Get <code>similarity</code> as a field.
      */
     public static Field<Float> similarity(
           String __1
@@ -1354,7 +1355,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.similarity</code> as a field.
+     * Get <code>similarity</code> as a field.
      */
     public static Field<Float> similarity(
           Field<String> __1
@@ -1368,7 +1369,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.similarity_dist</code>
+     * Call <code>similarity_dist</code>
      */
     public static Float similarityDist(
           Configuration configuration
@@ -1384,7 +1385,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.similarity_dist</code> as a field.
+     * Get <code>similarity_dist</code> as a field.
      */
     public static Field<Float> similarityDist(
           String __1
@@ -1398,7 +1399,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.similarity_dist</code> as a field.
+     * Get <code>similarity_dist</code> as a field.
      */
     public static Field<Float> similarityDist(
           Field<String> __1
@@ -1412,7 +1413,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.similarity_op</code>
+     * Call <code>similarity_op</code>
      */
     public static Boolean similarityOp(
           Configuration configuration
@@ -1428,7 +1429,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.similarity_op</code> as a field.
+     * Get <code>similarity_op</code> as a field.
      */
     public static Field<Boolean> similarityOp(
           String __1
@@ -1442,7 +1443,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.similarity_op</code> as a field.
+     * Get <code>similarity_op</code> as a field.
      */
     public static Field<Boolean> similarityOp(
           Field<String> __1
@@ -1456,7 +1457,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.strict_word_similarity</code>
+     * Call <code>strict_word_similarity</code>
      */
     public static Float strictWordSimilarity(
           Configuration configuration
@@ -1472,7 +1473,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.strict_word_similarity</code> as a field.
+     * Get <code>strict_word_similarity</code> as a field.
      */
     public static Field<Float> strictWordSimilarity(
           String __1
@@ -1486,7 +1487,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.strict_word_similarity</code> as a field.
+     * Get <code>strict_word_similarity</code> as a field.
      */
     public static Field<Float> strictWordSimilarity(
           Field<String> __1
@@ -1500,7 +1501,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.strict_word_similarity_commutator_op</code>
+     * Call <code>strict_word_similarity_commutator_op</code>
      */
     public static Boolean strictWordSimilarityCommutatorOp(
           Configuration configuration
@@ -1516,7 +1517,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.strict_word_similarity_commutator_op</code> as a field.
+     * Get <code>strict_word_similarity_commutator_op</code> as a field.
      */
     public static Field<Boolean> strictWordSimilarityCommutatorOp(
           String __1
@@ -1530,7 +1531,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.strict_word_similarity_commutator_op</code> as a field.
+     * Get <code>strict_word_similarity_commutator_op</code> as a field.
      */
     public static Field<Boolean> strictWordSimilarityCommutatorOp(
           Field<String> __1
@@ -1544,7 +1545,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.strict_word_similarity_dist_commutator_op</code>
+     * Call <code>strict_word_similarity_dist_commutator_op</code>
      */
     public static Float strictWordSimilarityDistCommutatorOp(
           Configuration configuration
@@ -1560,8 +1561,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.strict_word_similarity_dist_commutator_op</code> as a
-     * field.
+     * Get <code>strict_word_similarity_dist_commutator_op</code> as a field.
      */
     public static Field<Float> strictWordSimilarityDistCommutatorOp(
           String __1
@@ -1575,8 +1575,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.strict_word_similarity_dist_commutator_op</code> as a
-     * field.
+     * Get <code>strict_word_similarity_dist_commutator_op</code> as a field.
      */
     public static Field<Float> strictWordSimilarityDistCommutatorOp(
           Field<String> __1
@@ -1590,7 +1589,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.strict_word_similarity_dist_op</code>
+     * Call <code>strict_word_similarity_dist_op</code>
      */
     public static Float strictWordSimilarityDistOp(
           Configuration configuration
@@ -1606,7 +1605,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.strict_word_similarity_dist_op</code> as a field.
+     * Get <code>strict_word_similarity_dist_op</code> as a field.
      */
     public static Field<Float> strictWordSimilarityDistOp(
           String __1
@@ -1620,7 +1619,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.strict_word_similarity_dist_op</code> as a field.
+     * Get <code>strict_word_similarity_dist_op</code> as a field.
      */
     public static Field<Float> strictWordSimilarityDistOp(
           Field<String> __1
@@ -1634,7 +1633,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.strict_word_similarity_op</code>
+     * Call <code>strict_word_similarity_op</code>
      */
     public static Boolean strictWordSimilarityOp(
           Configuration configuration
@@ -1650,7 +1649,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.strict_word_similarity_op</code> as a field.
+     * Get <code>strict_word_similarity_op</code> as a field.
      */
     public static Field<Boolean> strictWordSimilarityOp(
           String __1
@@ -1664,7 +1663,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.strict_word_similarity_op</code> as a field.
+     * Get <code>strict_word_similarity_op</code> as a field.
      */
     public static Field<Boolean> strictWordSimilarityOp(
           Field<String> __1
@@ -1678,7 +1677,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.UPDATE_COMPONENT_METRICS</code>
+     * Call <code>UPDATE_COMPONENT_METRICS</code>
      */
     public static void updateComponentMetrics(
           Configuration configuration
@@ -1691,7 +1690,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.UPDATE_PORTFOLIO_METRICS</code>
+     * Call <code>UPDATE_PORTFOLIO_METRICS</code>
      */
     public static void updatePortfolioMetrics(
           Configuration configuration
@@ -1702,7 +1701,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.UPDATE_PROJECT_METRICS</code>
+     * Call <code>UPDATE_PROJECT_METRICS</code>
      */
     public static void updateProjectMetrics(
           Configuration configuration
@@ -1715,7 +1714,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.word_similarity</code>
+     * Call <code>word_similarity</code>
      */
     public static Float wordSimilarity(
           Configuration configuration
@@ -1731,7 +1730,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.word_similarity</code> as a field.
+     * Get <code>word_similarity</code> as a field.
      */
     public static Field<Float> wordSimilarity(
           String __1
@@ -1745,7 +1744,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.word_similarity</code> as a field.
+     * Get <code>word_similarity</code> as a field.
      */
     public static Field<Float> wordSimilarity(
           Field<String> __1
@@ -1759,7 +1758,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.word_similarity_commutator_op</code>
+     * Call <code>word_similarity_commutator_op</code>
      */
     public static Boolean wordSimilarityCommutatorOp(
           Configuration configuration
@@ -1775,7 +1774,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.word_similarity_commutator_op</code> as a field.
+     * Get <code>word_similarity_commutator_op</code> as a field.
      */
     public static Field<Boolean> wordSimilarityCommutatorOp(
           String __1
@@ -1789,7 +1788,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.word_similarity_commutator_op</code> as a field.
+     * Get <code>word_similarity_commutator_op</code> as a field.
      */
     public static Field<Boolean> wordSimilarityCommutatorOp(
           Field<String> __1
@@ -1803,7 +1802,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.word_similarity_dist_commutator_op</code>
+     * Call <code>word_similarity_dist_commutator_op</code>
      */
     public static Float wordSimilarityDistCommutatorOp(
           Configuration configuration
@@ -1819,7 +1818,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.word_similarity_dist_commutator_op</code> as a field.
+     * Get <code>word_similarity_dist_commutator_op</code> as a field.
      */
     public static Field<Float> wordSimilarityDistCommutatorOp(
           String __1
@@ -1833,7 +1832,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.word_similarity_dist_commutator_op</code> as a field.
+     * Get <code>word_similarity_dist_commutator_op</code> as a field.
      */
     public static Field<Float> wordSimilarityDistCommutatorOp(
           Field<String> __1
@@ -1847,7 +1846,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.word_similarity_dist_op</code>
+     * Call <code>word_similarity_dist_op</code>
      */
     public static Float wordSimilarityDistOp(
           Configuration configuration
@@ -1863,7 +1862,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.word_similarity_dist_op</code> as a field.
+     * Get <code>word_similarity_dist_op</code> as a field.
      */
     public static Field<Float> wordSimilarityDistOp(
           String __1
@@ -1877,7 +1876,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.word_similarity_dist_op</code> as a field.
+     * Get <code>word_similarity_dist_op</code> as a field.
      */
     public static Field<Float> wordSimilarityDistOp(
           Field<String> __1
@@ -1891,7 +1890,7 @@ public class Routines {
     }
 
     /**
-     * Call <code>public.word_similarity_op</code>
+     * Call <code>word_similarity_op</code>
      */
     public static Boolean wordSimilarityOp(
           Configuration configuration
@@ -1907,7 +1906,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.word_similarity_op</code> as a field.
+     * Get <code>word_similarity_op</code> as a field.
      */
     public static Field<Boolean> wordSimilarityOp(
           String __1
@@ -1921,7 +1920,7 @@ public class Routines {
     }
 
     /**
-     * Get <code>public.word_similarity_op</code> as a field.
+     * Get <code>word_similarity_op</code> as a field.
      */
     public static Field<Boolean> wordSimilarityOp(
           Field<String> __1

@@ -8,8 +8,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ConfigPropertyRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -39,7 +39,7 @@ public class ConfigProperty extends TableImpl<ConfigPropertyRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.CONFIGPROPERTY</code>
+     * The reference instance of <code>CONFIGPROPERTY</code>
      */
     public static final ConfigProperty CONFIGPROPERTY = new ConfigProperty();
 
@@ -52,32 +52,32 @@ public class ConfigProperty extends TableImpl<ConfigPropertyRecord> {
     }
 
     /**
-     * The column <code>public.CONFIGPROPERTY.ID</code>.
+     * The column <code>CONFIGPROPERTY.ID</code>.
      */
     public final TableField<ConfigPropertyRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.CONFIGPROPERTY.DESCRIPTION</code>.
+     * The column <code>CONFIGPROPERTY.DESCRIPTION</code>.
      */
     public final TableField<ConfigPropertyRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.CONFIGPROPERTY.GROUPNAME</code>.
+     * The column <code>CONFIGPROPERTY.GROUPNAME</code>.
      */
     public final TableField<ConfigPropertyRecord, String> GROUPNAME = createField(DSL.name("GROUPNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.CONFIGPROPERTY.PROPERTYNAME</code>.
+     * The column <code>CONFIGPROPERTY.PROPERTYNAME</code>.
      */
     public final TableField<ConfigPropertyRecord, String> PROPERTYNAME = createField(DSL.name("PROPERTYNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.CONFIGPROPERTY.PROPERTYTYPE</code>.
+     * The column <code>CONFIGPROPERTY.PROPERTYTYPE</code>.
      */
     public final TableField<ConfigPropertyRecord, String> PROPERTYTYPE = createField(DSL.name("PROPERTYTYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.CONFIGPROPERTY.PROPERTYVALUE</code>.
+     * The column <code>CONFIGPROPERTY.PROPERTYVALUE</code>.
      */
     public final TableField<ConfigPropertyRecord, String> PROPERTYVALUE = createField(DSL.name("PROPERTYVALUE"), SQLDataType.VARCHAR(1024), this, "");
 
@@ -90,21 +90,21 @@ public class ConfigProperty extends TableImpl<ConfigPropertyRecord> {
     }
 
     /**
-     * Create an aliased <code>public.CONFIGPROPERTY</code> table reference
+     * Create an aliased <code>CONFIGPROPERTY</code> table reference
      */
     public ConfigProperty(String alias) {
         this(DSL.name(alias), CONFIGPROPERTY);
     }
 
     /**
-     * Create an aliased <code>public.CONFIGPROPERTY</code> table reference
+     * Create an aliased <code>CONFIGPROPERTY</code> table reference
      */
     public ConfigProperty(Name alias) {
         this(alias, CONFIGPROPERTY);
     }
 
     /**
-     * Create a <code>public.CONFIGPROPERTY</code> table reference
+     * Create a <code>CONFIGPROPERTY</code> table reference
      */
     public ConfigProperty() {
         this(DSL.name("CONFIGPROPERTY"), null);
@@ -112,7 +112,7 @@ public class ConfigProperty extends TableImpl<ConfigPropertyRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override

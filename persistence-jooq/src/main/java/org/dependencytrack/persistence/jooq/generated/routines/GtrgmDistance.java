@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Field;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
@@ -23,7 +23,7 @@ public class GtrgmDistance extends AbstractRoutine<Double> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The parameter <code>public.gtrgm_distance.RETURN_VALUE</code>.
+     * The parameter <code>gtrgm_distance.RETURN_VALUE</code>.
      */
     public static final Parameter<Double> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", SQLDataType.DOUBLE, false, false);
 
@@ -39,17 +39,17 @@ public class GtrgmDistance extends AbstractRoutine<Double> {
     public static final Parameter<Object> _1 = Internal.createParameter("_1", DefaultDataType.getDefaultDataType("\"pg_catalog\".\"internal\""), false, true);
 
     /**
-     * The parameter <code>public.gtrgm_distance._2</code>.
+     * The parameter <code>gtrgm_distance._2</code>.
      */
     public static final Parameter<String> _2 = Internal.createParameter("_2", SQLDataType.CLOB, false, true);
 
     /**
-     * The parameter <code>public.gtrgm_distance._3</code>.
+     * The parameter <code>gtrgm_distance._3</code>.
      */
     public static final Parameter<Short> _3 = Internal.createParameter("_3", SQLDataType.SMALLINT, false, true);
 
     /**
-     * The parameter <code>public.gtrgm_distance._4</code>.
+     * The parameter <code>gtrgm_distance._4</code>.
      */
     public static final Parameter<Long> _4 = Internal.createParameter("_4", SQLDataType.BIGINT, false, true);
 
@@ -68,7 +68,7 @@ public class GtrgmDistance extends AbstractRoutine<Double> {
      * Create a new routine call instance
      */
     public GtrgmDistance() {
-        super("gtrgm_distance", Public.PUBLIC, DSL.comment(""), SQLDataType.DOUBLE);
+        super("gtrgm_distance", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""), SQLDataType.DOUBLE);
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(_1);
@@ -89,8 +89,9 @@ public class GtrgmDistance extends AbstractRoutine<Double> {
      * Set the <code>_1</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__1(Field<Object> field) {
+    public GtrgmDistance set__1(Field<Object> field) {
         setField(_1, field);
+        return this;
     }
 
     /**
@@ -104,8 +105,9 @@ public class GtrgmDistance extends AbstractRoutine<Double> {
      * Set the <code>_2</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__2(Field<String> field) {
+    public GtrgmDistance set__2(Field<String> field) {
         setField(_2, field);
+        return this;
     }
 
     /**
@@ -119,8 +121,9 @@ public class GtrgmDistance extends AbstractRoutine<Double> {
      * Set the <code>_3</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__3(Field<Short> field) {
+    public GtrgmDistance set__3(Field<Short> field) {
         setField(_3, field);
+        return this;
     }
 
     /**
@@ -134,8 +137,9 @@ public class GtrgmDistance extends AbstractRoutine<Double> {
      * Set the <code>_4</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__4(Field<Long> field) {
+    public GtrgmDistance set__4(Field<Long> field) {
         setField(_4, field);
+        return this;
     }
 
     /**
@@ -149,7 +153,8 @@ public class GtrgmDistance extends AbstractRoutine<Double> {
      * Set the <code>_5</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__5(Field<Object> field) {
+    public GtrgmDistance set__5(Field<Object> field) {
         setField(_5, field);
+        return this;
     }
 }

@@ -8,12 +8,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponent.ServicecomponentPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponentsVulnerabilities.ServicecomponentsVulnerabilitiesPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponent.ServiceComponentPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponentsVulnerabilities.ServiceComponentsVulnerabilitiesPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ServiceComponentRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -48,7 +48,7 @@ public class ServiceComponent extends TableImpl<ServiceComponentRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.SERVICECOMPONENT</code>
+     * The reference instance of <code>SERVICECOMPONENT</code>
      */
     public static final ServiceComponent SERVICECOMPONENT = new ServiceComponent();
 
@@ -61,83 +61,82 @@ public class ServiceComponent extends TableImpl<ServiceComponentRecord> {
     }
 
     /**
-     * The column <code>public.SERVICECOMPONENT.ID</code>.
+     * The column <code>SERVICECOMPONENT.ID</code>.
      */
     public final TableField<ServiceComponentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.AUTHENTICATED</code>.
+     * The column <code>SERVICECOMPONENT.AUTHENTICATED</code>.
      */
     public final TableField<ServiceComponentRecord, Boolean> AUTHENTICATED = createField(DSL.name("AUTHENTICATED"), SQLDataType.BOOLEAN, this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.X_TRUST_BOUNDARY</code>.
+     * The column <code>SERVICECOMPONENT.X_TRUST_BOUNDARY</code>.
      */
     public final TableField<ServiceComponentRecord, Boolean> X_TRUST_BOUNDARY = createField(DSL.name("X_TRUST_BOUNDARY"), SQLDataType.BOOLEAN, this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.DATA</code>.
+     * The column <code>SERVICECOMPONENT.DATA</code>.
      */
     public final TableField<ServiceComponentRecord, byte[]> DATA = createField(DSL.name("DATA"), SQLDataType.BLOB, this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.DESCRIPTION</code>.
+     * The column <code>SERVICECOMPONENT.DESCRIPTION</code>.
      */
     public final TableField<ServiceComponentRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.ENDPOINTS</code>.
+     * The column <code>SERVICECOMPONENT.ENDPOINTS</code>.
      */
     public final TableField<ServiceComponentRecord, byte[]> ENDPOINTS = createField(DSL.name("ENDPOINTS"), SQLDataType.BLOB, this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.EXTERNAL_REFERENCES</code>.
+     * The column <code>SERVICECOMPONENT.EXTERNAL_REFERENCES</code>.
      */
     public final TableField<ServiceComponentRecord, byte[]> EXTERNAL_REFERENCES = createField(DSL.name("EXTERNAL_REFERENCES"), SQLDataType.BLOB, this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.GROUP</code>.
+     * The column <code>SERVICECOMPONENT.GROUP</code>.
      */
     public final TableField<ServiceComponentRecord, String> GROUP = createField(DSL.name("GROUP"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.LAST_RISKSCORE</code>.
+     * The column <code>SERVICECOMPONENT.LAST_RISKSCORE</code>.
      */
     public final TableField<ServiceComponentRecord, Double> LAST_RISKSCORE = createField(DSL.name("LAST_RISKSCORE"), SQLDataType.DOUBLE.nullable(false).defaultValue(DSL.field(DSL.raw("'0'::double precision"), SQLDataType.DOUBLE)), this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.NAME</code>.
+     * The column <code>SERVICECOMPONENT.NAME</code>.
      */
     public final TableField<ServiceComponentRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.TEXT</code>.
+     * The column <code>SERVICECOMPONENT.TEXT</code>.
      */
     public final TableField<ServiceComponentRecord, String> TEXT = createField(DSL.name("TEXT"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column
-     * <code>public.SERVICECOMPONENT.PARENT_SERVICECOMPONENT_ID</code>.
+     * The column <code>SERVICECOMPONENT.PARENT_SERVICECOMPONENT_ID</code>.
      */
     public final TableField<ServiceComponentRecord, Long> PARENT_SERVICECOMPONENT_ID = createField(DSL.name("PARENT_SERVICECOMPONENT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.PROJECT_ID</code>.
+     * The column <code>SERVICECOMPONENT.PROJECT_ID</code>.
      */
     public final TableField<ServiceComponentRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.PROVIDER_ID</code>.
+     * The column <code>SERVICECOMPONENT.PROVIDER_ID</code>.
      */
     public final TableField<ServiceComponentRecord, byte[]> PROVIDER_ID = createField(DSL.name("PROVIDER_ID"), SQLDataType.BLOB, this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.UUID</code>.
+     * The column <code>SERVICECOMPONENT.UUID</code>.
      */
     public final TableField<ServiceComponentRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.SERVICECOMPONENT.VERSION</code>.
+     * The column <code>SERVICECOMPONENT.VERSION</code>.
      */
     public final TableField<ServiceComponentRecord, String> VERSION = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
 
@@ -150,21 +149,21 @@ public class ServiceComponent extends TableImpl<ServiceComponentRecord> {
     }
 
     /**
-     * Create an aliased <code>public.SERVICECOMPONENT</code> table reference
+     * Create an aliased <code>SERVICECOMPONENT</code> table reference
      */
     public ServiceComponent(String alias) {
         this(DSL.name(alias), SERVICECOMPONENT);
     }
 
     /**
-     * Create an aliased <code>public.SERVICECOMPONENT</code> table reference
+     * Create an aliased <code>SERVICECOMPONENT</code> table reference
      */
     public ServiceComponent(Name alias) {
         this(alias, SERVICECOMPONENT);
     }
 
     /**
-     * Create a <code>public.SERVICECOMPONENT</code> table reference
+     * Create a <code>SERVICECOMPONENT</code> table reference
      */
     public ServiceComponent() {
         this(DSL.name("SERVICECOMPONENT"), null);
@@ -177,35 +176,35 @@ public class ServiceComponent extends TableImpl<ServiceComponentRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class ServicecomponentPath extends ServiceComponent implements Path<ServiceComponentRecord> {
+    public static class ServiceComponentPath extends ServiceComponent implements Path<ServiceComponentRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> ServicecomponentPath(Table<O> path, ForeignKey<O, ServiceComponentRecord> childPath, InverseForeignKey<O, ServiceComponentRecord> parentPath) {
+        public <O extends Record> ServiceComponentPath(Table<O> path, ForeignKey<O, ServiceComponentRecord> childPath, InverseForeignKey<O, ServiceComponentRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private ServicecomponentPath(Name alias, Table<ServiceComponentRecord> aliased) {
+        private ServiceComponentPath(Name alias, Table<ServiceComponentRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public ServicecomponentPath as(String alias) {
-            return new ServicecomponentPath(DSL.name(alias), this);
+        public ServiceComponentPath as(String alias) {
+            return new ServiceComponentPath(DSL.name(alias), this);
         }
 
         @Override
-        public ServicecomponentPath as(Name alias) {
-            return new ServicecomponentPath(alias, this);
+        public ServiceComponentPath as(Name alias) {
+            return new ServiceComponentPath(alias, this);
         }
 
         @Override
-        public ServicecomponentPath as(Table<?> alias) {
-            return new ServicecomponentPath(alias.getQualifiedName(), this);
+        public ServiceComponentPath as(Table<?> alias) {
+            return new ServiceComponentPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -230,45 +229,44 @@ public class ServiceComponent extends TableImpl<ServiceComponentRecord> {
 
     @Override
     public List<ForeignKey<ServiceComponentRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.SERVICECOMPONENT__SERVICECOMPONENT_PROJECT_FK, Keys.SERVICECOMPONENT__SERVICECOMPONENT_SERVICECOMPONENT_FK);
+        return Arrays.asList(Keys.SERVICECOMPONENT_PROJECT_FK, Keys.SERVICECOMPONENT_SERVICECOMPONENT_FK);
     }
 
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.SERVICECOMPONENT__SERVICECOMPONENT_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.SERVICECOMPONENT_PROJECT_FK, null);
 
         return _project;
     }
 
-    private transient ServicecomponentPath _servicecomponent;
+    private transient ServiceComponentPath _serviceComponent;
 
     /**
-     * Get the implicit join path to the <code>public.SERVICECOMPONENT</code>
-     * table.
+     * Get the implicit join path to the <code>SERVICECOMPONENT</code> table.
      */
-    public ServicecomponentPath servicecomponent() {
-        if (_servicecomponent == null)
-            _servicecomponent = new ServicecomponentPath(this, Keys.SERVICECOMPONENT__SERVICECOMPONENT_SERVICECOMPONENT_FK, null);
+    public ServiceComponentPath serviceComponent() {
+        if (_serviceComponent == null)
+            _serviceComponent = new ServiceComponentPath(this, Keys.SERVICECOMPONENT_SERVICECOMPONENT_FK, null);
 
-        return _servicecomponent;
+        return _serviceComponent;
     }
 
-    private transient ServicecomponentsVulnerabilitiesPath _servicecomponentsVulnerabilities;
+    private transient ServiceComponentsVulnerabilitiesPath _serviceComponentsVulnerabilities;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.SERVICECOMPONENTS_VULNERABILITIES</code> table
+     * <code>SERVICECOMPONENTS_VULNERABILITIES</code> table
      */
-    public ServicecomponentsVulnerabilitiesPath servicecomponentsVulnerabilities() {
-        if (_servicecomponentsVulnerabilities == null)
-            _servicecomponentsVulnerabilities = new ServicecomponentsVulnerabilitiesPath(this, null, Keys.SERVICECOMPONENTS_VULNERABILITIES__SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK.getInverseKey());
+    public ServiceComponentsVulnerabilitiesPath serviceComponentsVulnerabilities() {
+        if (_serviceComponentsVulnerabilities == null)
+            _serviceComponentsVulnerabilities = new ServiceComponentsVulnerabilitiesPath(this, null, Keys.SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK.getInverseKey());
 
-        return _servicecomponentsVulnerabilities;
+        return _serviceComponentsVulnerabilities;
     }
 
     @Override

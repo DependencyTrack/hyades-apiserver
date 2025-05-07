@@ -18,98 +18,105 @@ public class ProjectPropertyRecord extends UpdatableRecordImpl<ProjectPropertyRe
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.PROJECT_PROPERTY.ID</code>.
+     * Setter for <code>PROJECT_PROPERTY.ID</code>.
      */
-    public void setId(Long value) {
+    public ProjectPropertyRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_PROPERTY.ID</code>.
+     * Getter for <code>PROJECT_PROPERTY.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.PROJECT_PROPERTY.DESCRIPTION</code>.
+     * Setter for <code>PROJECT_PROPERTY.DESCRIPTION</code>.
      */
-    public void setDescription(String value) {
+    public ProjectPropertyRecord setDescription(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_PROPERTY.DESCRIPTION</code>.
+     * Getter for <code>PROJECT_PROPERTY.DESCRIPTION</code>.
      */
     public String getDescription() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.PROJECT_PROPERTY.GROUPNAME</code>.
+     * Setter for <code>PROJECT_PROPERTY.GROUPNAME</code>.
      */
-    public void setGroupname(String value) {
+    public ProjectPropertyRecord setGroupname(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_PROPERTY.GROUPNAME</code>.
+     * Getter for <code>PROJECT_PROPERTY.GROUPNAME</code>.
      */
     public String getGroupname() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.PROJECT_PROPERTY.PROJECT_ID</code>.
+     * Setter for <code>PROJECT_PROPERTY.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public ProjectPropertyRecord setProjectId(Long value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_PROPERTY.PROJECT_ID</code>.
+     * Getter for <code>PROJECT_PROPERTY.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(3);
     }
 
     /**
-     * Setter for <code>public.PROJECT_PROPERTY.PROPERTYNAME</code>.
+     * Setter for <code>PROJECT_PROPERTY.PROPERTYNAME</code>.
      */
-    public void setPropertyname(String value) {
+    public ProjectPropertyRecord setPropertyname(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_PROPERTY.PROPERTYNAME</code>.
+     * Getter for <code>PROJECT_PROPERTY.PROPERTYNAME</code>.
      */
     public String getPropertyname() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.PROJECT_PROPERTY.PROPERTYTYPE</code>.
+     * Setter for <code>PROJECT_PROPERTY.PROPERTYTYPE</code>.
      */
-    public void setPropertytype(String value) {
+    public ProjectPropertyRecord setPropertytype(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_PROPERTY.PROPERTYTYPE</code>.
+     * Getter for <code>PROJECT_PROPERTY.PROPERTYTYPE</code>.
      */
     public String getPropertytype() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.PROJECT_PROPERTY.PROPERTYVALUE</code>.
+     * Setter for <code>PROJECT_PROPERTY.PROPERTYVALUE</code>.
      */
-    public void setPropertyvalue(String value) {
+    public ProjectPropertyRecord setPropertyvalue(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_PROPERTY.PROPERTYVALUE</code>.
+     * Getter for <code>PROJECT_PROPERTY.PROPERTYVALUE</code>.
      */
     public String getPropertyvalue() {
         return (String) get(6);

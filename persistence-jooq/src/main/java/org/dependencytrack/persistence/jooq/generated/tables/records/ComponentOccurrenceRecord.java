@@ -21,98 +21,105 @@ public class ComponentOccurrenceRecord extends UpdatableRecordImpl<ComponentOccu
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.COMPONENT_OCCURRENCE.ID</code>.
+     * Setter for <code>COMPONENT_OCCURRENCE.ID</code>.
      */
-    public void setId(UUID value) {
+    public ComponentOccurrenceRecord setId(UUID value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_OCCURRENCE.ID</code>.
+     * Getter for <code>COMPONENT_OCCURRENCE.ID</code>.
      */
     public UUID getId() {
         return (UUID) get(0);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_OCCURRENCE.COMPONENT_ID</code>.
+     * Setter for <code>COMPONENT_OCCURRENCE.COMPONENT_ID</code>.
      */
-    public void setComponentId(Long value) {
+    public ComponentOccurrenceRecord setComponentId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_OCCURRENCE.COMPONENT_ID</code>.
+     * Getter for <code>COMPONENT_OCCURRENCE.COMPONENT_ID</code>.
      */
     public Long getComponentId() {
         return (Long) get(1);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_OCCURRENCE.LOCATION</code>.
+     * Setter for <code>COMPONENT_OCCURRENCE.LOCATION</code>.
      */
-    public void setLocation(String value) {
+    public ComponentOccurrenceRecord setLocation(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_OCCURRENCE.LOCATION</code>.
+     * Getter for <code>COMPONENT_OCCURRENCE.LOCATION</code>.
      */
     public String getLocation() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_OCCURRENCE.LINE</code>.
+     * Setter for <code>COMPONENT_OCCURRENCE.LINE</code>.
      */
-    public void setLine(Integer value) {
+    public ComponentOccurrenceRecord setLine(Integer value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_OCCURRENCE.LINE</code>.
+     * Getter for <code>COMPONENT_OCCURRENCE.LINE</code>.
      */
     public Integer getLine() {
         return (Integer) get(3);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_OCCURRENCE.OFFSET</code>.
+     * Setter for <code>COMPONENT_OCCURRENCE.OFFSET</code>.
      */
-    public void setOffset(Integer value) {
+    public ComponentOccurrenceRecord setOffset(Integer value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_OCCURRENCE.OFFSET</code>.
+     * Getter for <code>COMPONENT_OCCURRENCE.OFFSET</code>.
      */
     public Integer getOffset() {
         return (Integer) get(4);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_OCCURRENCE.SYMBOL</code>.
+     * Setter for <code>COMPONENT_OCCURRENCE.SYMBOL</code>.
      */
-    public void setSymbol(String value) {
+    public ComponentOccurrenceRecord setSymbol(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_OCCURRENCE.SYMBOL</code>.
+     * Getter for <code>COMPONENT_OCCURRENCE.SYMBOL</code>.
      */
     public String getSymbol() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_OCCURRENCE.CREATED_AT</code>.
+     * Setter for <code>COMPONENT_OCCURRENCE.CREATED_AT</code>.
      */
-    public void setCreatedAt(OffsetDateTime value) {
+    public ComponentOccurrenceRecord setCreatedAt(OffsetDateTime value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_OCCURRENCE.CREATED_AT</code>.
+     * Getter for <code>COMPONENT_OCCURRENCE.CREATED_AT</code>.
      */
     public OffsetDateTime getCreatedAt() {
         return (OffsetDateTime) get(6);

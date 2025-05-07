@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationrulePath;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationRulePath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.NotificationPublisherRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -44,7 +44,7 @@ public class NotificationPublisher extends TableImpl<NotificationPublisherRecord
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.NOTIFICATIONPUBLISHER</code>
+     * The reference instance of <code>NOTIFICATIONPUBLISHER</code>
      */
     public static final NotificationPublisher NOTIFICATIONPUBLISHER = new NotificationPublisher();
 
@@ -57,42 +57,42 @@ public class NotificationPublisher extends TableImpl<NotificationPublisherRecord
     }
 
     /**
-     * The column <code>public.NOTIFICATIONPUBLISHER.ID</code>.
+     * The column <code>NOTIFICATIONPUBLISHER.ID</code>.
      */
     public final TableField<NotificationPublisherRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.NOTIFICATIONPUBLISHER.DEFAULT_PUBLISHER</code>.
+     * The column <code>NOTIFICATIONPUBLISHER.DEFAULT_PUBLISHER</code>.
      */
     public final TableField<NotificationPublisherRecord, Boolean> DEFAULT_PUBLISHER = createField(DSL.name("DEFAULT_PUBLISHER"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
-     * The column <code>public.NOTIFICATIONPUBLISHER.DESCRIPTION</code>.
+     * The column <code>NOTIFICATIONPUBLISHER.DESCRIPTION</code>.
      */
     public final TableField<NotificationPublisherRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.NOTIFICATIONPUBLISHER.NAME</code>.
+     * The column <code>NOTIFICATIONPUBLISHER.NAME</code>.
      */
     public final TableField<NotificationPublisherRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.NOTIFICATIONPUBLISHER.PUBLISHER_CLASS</code>.
+     * The column <code>NOTIFICATIONPUBLISHER.PUBLISHER_CLASS</code>.
      */
     public final TableField<NotificationPublisherRecord, String> PUBLISHER_CLASS = createField(DSL.name("PUBLISHER_CLASS"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
 
     /**
-     * The column <code>public.NOTIFICATIONPUBLISHER.TEMPLATE</code>.
+     * The column <code>NOTIFICATIONPUBLISHER.TEMPLATE</code>.
      */
     public final TableField<NotificationPublisherRecord, String> TEMPLATE = createField(DSL.name("TEMPLATE"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.NOTIFICATIONPUBLISHER.TEMPLATE_MIME_TYPE</code>.
+     * The column <code>NOTIFICATIONPUBLISHER.TEMPLATE_MIME_TYPE</code>.
      */
     public final TableField<NotificationPublisherRecord, String> TEMPLATE_MIME_TYPE = createField(DSL.name("TEMPLATE_MIME_TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.NOTIFICATIONPUBLISHER.UUID</code>.
+     * The column <code>NOTIFICATIONPUBLISHER.UUID</code>.
      */
     public final TableField<NotificationPublisherRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
@@ -105,23 +105,21 @@ public class NotificationPublisher extends TableImpl<NotificationPublisherRecord
     }
 
     /**
-     * Create an aliased <code>public.NOTIFICATIONPUBLISHER</code> table
-     * reference
+     * Create an aliased <code>NOTIFICATIONPUBLISHER</code> table reference
      */
     public NotificationPublisher(String alias) {
         this(DSL.name(alias), NOTIFICATIONPUBLISHER);
     }
 
     /**
-     * Create an aliased <code>public.NOTIFICATIONPUBLISHER</code> table
-     * reference
+     * Create an aliased <code>NOTIFICATIONPUBLISHER</code> table reference
      */
     public NotificationPublisher(Name alias) {
         this(alias, NOTIFICATIONPUBLISHER);
     }
 
     /**
-     * Create a <code>public.NOTIFICATIONPUBLISHER</code> table reference
+     * Create a <code>NOTIFICATIONPUBLISHER</code> table reference
      */
     public NotificationPublisher() {
         this(DSL.name("NOTIFICATIONPUBLISHER"), null);
@@ -134,35 +132,35 @@ public class NotificationPublisher extends TableImpl<NotificationPublisherRecord
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class NotificationpublisherPath extends NotificationPublisher implements Path<NotificationPublisherRecord> {
+    public static class NotificationPublisherPath extends NotificationPublisher implements Path<NotificationPublisherRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> NotificationpublisherPath(Table<O> path, ForeignKey<O, NotificationPublisherRecord> childPath, InverseForeignKey<O, NotificationPublisherRecord> parentPath) {
+        public <O extends Record> NotificationPublisherPath(Table<O> path, ForeignKey<O, NotificationPublisherRecord> childPath, InverseForeignKey<O, NotificationPublisherRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private NotificationpublisherPath(Name alias, Table<NotificationPublisherRecord> aliased) {
+        private NotificationPublisherPath(Name alias, Table<NotificationPublisherRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public NotificationpublisherPath as(String alias) {
-            return new NotificationpublisherPath(DSL.name(alias), this);
+        public NotificationPublisherPath as(String alias) {
+            return new NotificationPublisherPath(DSL.name(alias), this);
         }
 
         @Override
-        public NotificationpublisherPath as(Name alias) {
-            return new NotificationpublisherPath(alias, this);
+        public NotificationPublisherPath as(Name alias) {
+            return new NotificationPublisherPath(alias, this);
         }
 
         @Override
-        public NotificationpublisherPath as(Table<?> alias) {
-            return new NotificationpublisherPath(alias.getQualifiedName(), this);
+        public NotificationPublisherPath as(Table<?> alias) {
+            return new NotificationPublisherPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -180,17 +178,17 @@ public class NotificationPublisher extends TableImpl<NotificationPublisherRecord
         return Arrays.asList(Keys.NOTIFICATIONPUBLISHER_UUID_IDX);
     }
 
-    private transient NotificationrulePath _notificationrule;
+    private transient NotificationRulePath _notificationRule;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.NOTIFICATIONRULE</code> table
+     * Get the implicit to-many join path to the <code>NOTIFICATIONRULE</code>
+     * table
      */
-    public NotificationrulePath notificationrule() {
-        if (_notificationrule == null)
-            _notificationrule = new NotificationrulePath(this, null, Keys.NOTIFICATIONRULE__NOTIFICATIONRULE_NOTIFICATIONPUBLISHER_FK.getInverseKey());
+    public NotificationRulePath notificationRule() {
+        if (_notificationRule == null)
+            _notificationRule = new NotificationRulePath(this, null, Keys.NOTIFICATIONRULE_NOTIFICATIONPUBLISHER_FK.getInverseKey());
 
-        return _notificationrule;
+        return _notificationRule;
     }
 
     @Override

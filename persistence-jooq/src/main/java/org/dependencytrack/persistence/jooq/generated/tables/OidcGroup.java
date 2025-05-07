@@ -8,11 +8,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.MappedOidcGroup.MappedoidcgroupPath;
-import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
+import org.dependencytrack.persistence.jooq.generated.tables.MappedOidcGroup.MappedOidcGroupPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.OidcGroupRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -47,7 +46,7 @@ public class OidcGroup extends TableImpl<OidcGroupRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.OIDCGROUP</code>
+     * The reference instance of <code>OIDCGROUP</code>
      */
     public static final OidcGroup OIDCGROUP = new OidcGroup();
 
@@ -60,17 +59,17 @@ public class OidcGroup extends TableImpl<OidcGroupRecord> {
     }
 
     /**
-     * The column <code>public.OIDCGROUP.ID</code>.
+     * The column <code>OIDCGROUP.ID</code>.
      */
     public final TableField<OidcGroupRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.OIDCGROUP.NAME</code>.
+     * The column <code>OIDCGROUP.NAME</code>.
      */
     public final TableField<OidcGroupRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
 
     /**
-     * The column <code>public.OIDCGROUP.UUID</code>.
+     * The column <code>OIDCGROUP.UUID</code>.
      */
     public final TableField<OidcGroupRecord, String> UUID = createField(DSL.name("UUID"), SQLDataType.VARCHAR(36).nullable(false), this, "");
 
@@ -83,21 +82,21 @@ public class OidcGroup extends TableImpl<OidcGroupRecord> {
     }
 
     /**
-     * Create an aliased <code>public.OIDCGROUP</code> table reference
+     * Create an aliased <code>OIDCGROUP</code> table reference
      */
     public OidcGroup(String alias) {
         this(DSL.name(alias), OIDCGROUP);
     }
 
     /**
-     * Create an aliased <code>public.OIDCGROUP</code> table reference
+     * Create an aliased <code>OIDCGROUP</code> table reference
      */
     public OidcGroup(Name alias) {
         this(alias, OIDCGROUP);
     }
 
     /**
-     * Create a <code>public.OIDCGROUP</code> table reference
+     * Create a <code>OIDCGROUP</code> table reference
      */
     public OidcGroup() {
         this(DSL.name("OIDCGROUP"), null);
@@ -110,35 +109,35 @@ public class OidcGroup extends TableImpl<OidcGroupRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class OidcgroupPath extends OidcGroup implements Path<OidcGroupRecord> {
+    public static class OidcGroupPath extends OidcGroup implements Path<OidcGroupRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> OidcgroupPath(Table<O> path, ForeignKey<O, OidcGroupRecord> childPath, InverseForeignKey<O, OidcGroupRecord> parentPath) {
+        public <O extends Record> OidcGroupPath(Table<O> path, ForeignKey<O, OidcGroupRecord> childPath, InverseForeignKey<O, OidcGroupRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private OidcgroupPath(Name alias, Table<OidcGroupRecord> aliased) {
+        private OidcGroupPath(Name alias, Table<OidcGroupRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public OidcgroupPath as(String alias) {
-            return new OidcgroupPath(DSL.name(alias), this);
+        public OidcGroupPath as(String alias) {
+            return new OidcGroupPath(DSL.name(alias), this);
         }
 
         @Override
-        public OidcgroupPath as(Name alias) {
-            return new OidcgroupPath(alias, this);
+        public OidcGroupPath as(Name alias) {
+            return new OidcGroupPath(alias, this);
         }
 
         @Override
-        public OidcgroupPath as(Table<?> alias) {
-            return new OidcgroupPath(alias.getQualifiedName(), this);
+        public OidcGroupPath as(Table<?> alias) {
+            return new OidcGroupPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -161,25 +160,17 @@ public class OidcGroup extends TableImpl<OidcGroupRecord> {
         return Arrays.asList(Keys.OIDCGROUP_UUID_IDX);
     }
 
-    private transient MappedoidcgroupPath _mappedoidcgroup;
+    private transient MappedOidcGroupPath _mappedOidcGroup;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.MAPPEDOIDCGROUP</code> table
-     */
-    public MappedoidcgroupPath mappedoidcgroup() {
-        if (_mappedoidcgroup == null)
-            _mappedoidcgroup = new MappedoidcgroupPath(this, null, Keys.MAPPEDOIDCGROUP__MAPPEDOIDCGROUP_OIDCGROUP_FK.getInverseKey());
-
-        return _mappedoidcgroup;
-    }
-
-    /**
-     * Get the implicit many-to-many join path to the <code>public.TEAM</code>
+     * Get the implicit to-many join path to the <code>MAPPEDOIDCGROUP</code>
      * table
      */
-    public TeamPath team() {
-        return mappedoidcgroup().team();
+    public MappedOidcGroupPath mappedOidcGroup() {
+        if (_mappedOidcGroup == null)
+            _mappedOidcGroup = new MappedOidcGroupPath(this, null, Keys.MAPPEDOIDCGROUP_OIDCGROUP_FK.getInverseKey());
+
+        return _mappedOidcGroup;
     }
 
     @Override

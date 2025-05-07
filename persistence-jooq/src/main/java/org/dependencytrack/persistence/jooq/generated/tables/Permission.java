@@ -8,14 +8,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapuserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersPermissions.LdapusersPermissionsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManageduserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersPermissions.ManagedusersPermissionsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUser.OidcuserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersPermissions.OidcusersPermissionsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapUserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersPermissions.LdapUsersPermissionsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManagedUserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersPermissions.ManagedUsersPermissionsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUser.OidcUserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersPermissions.OidcUsersPermissionsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.TeamsPermissions.TeamsPermissionsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions.UserProjectEffectivePermissionsPath;
@@ -52,7 +52,7 @@ public class Permission extends TableImpl<PermissionRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.PERMISSION</code>
+     * The reference instance of <code>PERMISSION</code>
      */
     public static final Permission PERMISSION = new Permission();
 
@@ -65,17 +65,17 @@ public class Permission extends TableImpl<PermissionRecord> {
     }
 
     /**
-     * The column <code>public.PERMISSION.ID</code>.
+     * The column <code>PERMISSION.ID</code>.
      */
     public final TableField<PermissionRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.PERMISSION.DESCRIPTION</code>.
+     * The column <code>PERMISSION.DESCRIPTION</code>.
      */
     public final TableField<PermissionRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.PERMISSION.NAME</code>.
+     * The column <code>PERMISSION.NAME</code>.
      */
     public final TableField<PermissionRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
@@ -88,21 +88,21 @@ public class Permission extends TableImpl<PermissionRecord> {
     }
 
     /**
-     * Create an aliased <code>public.PERMISSION</code> table reference
+     * Create an aliased <code>PERMISSION</code> table reference
      */
     public Permission(String alias) {
         this(DSL.name(alias), PERMISSION);
     }
 
     /**
-     * Create an aliased <code>public.PERMISSION</code> table reference
+     * Create an aliased <code>PERMISSION</code> table reference
      */
     public Permission(Name alias) {
         this(alias, PERMISSION);
     }
 
     /**
-     * Create a <code>public.PERMISSION</code> table reference
+     * Create a <code>PERMISSION</code> table reference
      */
     public Permission() {
         this(DSL.name("PERMISSION"), null);
@@ -143,7 +143,7 @@ public class Permission extends TableImpl<PermissionRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -161,41 +161,41 @@ public class Permission extends TableImpl<PermissionRecord> {
         return Arrays.asList(Keys.PERMISSION_IDX);
     }
 
-    private transient LdapusersPermissionsPath _ldapusersPermissions;
+    private transient LdapUsersPermissionsPath _ldapusersPermissions;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.LDAPUSERS_PERMISSIONS</code> table
+     * <code>LDAPUSERS_PERMISSIONS</code> table
      */
-    public LdapusersPermissionsPath ldapusersPermissions() {
+    public LdapUsersPermissionsPath ldapusersPermissions() {
         if (_ldapusersPermissions == null)
-            _ldapusersPermissions = new LdapusersPermissionsPath(this, null, Keys.LDAPUSERS_PERMISSIONS__LDAPUSERS_PERMISSIONS_PERMISSION_FK.getInverseKey());
+            _ldapusersPermissions = new LdapUsersPermissionsPath(this, null, Keys.LDAPUSERS_PERMISSIONS_PERMISSION_FK.getInverseKey());
 
         return _ldapusersPermissions;
     }
 
-    private transient ManagedusersPermissionsPath _managedusersPermissions;
+    private transient ManagedUsersPermissionsPath _managedusersPermissions;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.MANAGEDUSERS_PERMISSIONS</code> table
+     * <code>MANAGEDUSERS_PERMISSIONS</code> table
      */
-    public ManagedusersPermissionsPath managedusersPermissions() {
+    public ManagedUsersPermissionsPath managedusersPermissions() {
         if (_managedusersPermissions == null)
-            _managedusersPermissions = new ManagedusersPermissionsPath(this, null, Keys.MANAGEDUSERS_PERMISSIONS__MANAGEDUSERS_PERMISSIONS_PERMISSION_FK.getInverseKey());
+            _managedusersPermissions = new ManagedUsersPermissionsPath(this, null, Keys.MANAGEDUSERS_PERMISSIONS_PERMISSION_FK.getInverseKey());
 
         return _managedusersPermissions;
     }
 
-    private transient OidcusersPermissionsPath _oidcusersPermissions;
+    private transient OidcUsersPermissionsPath _oidcusersPermissions;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.OIDCUSERS_PERMISSIONS</code> table
+     * <code>OIDCUSERS_PERMISSIONS</code> table
      */
-    public OidcusersPermissionsPath oidcusersPermissions() {
+    public OidcUsersPermissionsPath oidcusersPermissions() {
         if (_oidcusersPermissions == null)
-            _oidcusersPermissions = new OidcusersPermissionsPath(this, null, Keys.OIDCUSERS_PERMISSIONS__OIDCUSERS_PERMISSIONS_PERMISSION_FK.getInverseKey());
+            _oidcusersPermissions = new OidcUsersPermissionsPath(this, null, Keys.OIDCUSERS_PERMISSIONS_PERMISSION_FK.getInverseKey());
 
         return _oidcusersPermissions;
     }
@@ -203,8 +203,8 @@ public class Permission extends TableImpl<PermissionRecord> {
     private transient TeamsPermissionsPath _teamsPermissions;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.TEAMS_PERMISSIONS</code> table
+     * Get the implicit to-many join path to the <code>TEAMS_PERMISSIONS</code>
+     * table
      */
     public TeamsPermissionsPath teamsPermissions() {
         if (_teamsPermissions == null)
@@ -217,7 +217,7 @@ public class Permission extends TableImpl<PermissionRecord> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table, via the
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table, via the
      * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK</code> key
      */
     public UserProjectEffectivePermissionsPath userProjectEffectivePermissionsPermissionIdFk() {
@@ -231,7 +231,7 @@ public class Permission extends TableImpl<PermissionRecord> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table, via the
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table, via the
      * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK</code> key
      */
     public UserProjectEffectivePermissionsPath userProjectEffectivePermissionsPermissionNameFk() {
@@ -242,32 +242,31 @@ public class Permission extends TableImpl<PermissionRecord> {
     }
 
     /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.LDAPUSER</code> table
-     */
-    public LdapuserPath ldapuser() {
-        return ldapusersPermissions().ldapuser();
-    }
-
-    /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.MANAGEDUSER</code> table
-     */
-    public ManageduserPath manageduser() {
-        return managedusersPermissions().manageduser();
-    }
-
-    /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.OIDCUSER</code> table
-     */
-    public OidcuserPath oidcuser() {
-        return oidcusersPermissions().oidcuser();
-    }
-
-    /**
-     * Get the implicit many-to-many join path to the <code>public.TEAM</code>
+     * Get the implicit many-to-many join path to the <code>LDAPUSER</code>
      * table
+     */
+    public LdapUserPath ldapUsersPermissions() {
+        return ldapusersPermissions().ldapUser();
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>MANAGEDUSER</code>
+     * table
+     */
+    public ManagedUserPath managedUsersPermissions() {
+        return managedusersPermissions().managedUser();
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>OIDCUSER</code>
+     * table
+     */
+    public OidcUserPath oidcUsersPermissions() {
+        return oidcusersPermissions().oidcUser();
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>TEAM</code> table
      */
     public TeamPath team() {
         return teamsPermissions().team();

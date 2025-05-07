@@ -21,112 +21,120 @@ public class WorkflowStateRecord extends UpdatableRecordImpl<WorkflowStateRecord
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.WORKFLOW_STATE.ID</code>.
+     * Setter for <code>WORKFLOW_STATE.ID</code>.
      */
-    public void setId(Long value) {
+    public WorkflowStateRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.WORKFLOW_STATE.ID</code>.
+     * Getter for <code>WORKFLOW_STATE.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.WORKFLOW_STATE.FAILURE_REASON</code>.
+     * Setter for <code>WORKFLOW_STATE.FAILURE_REASON</code>.
      */
-    public void setFailureReason(String value) {
+    public WorkflowStateRecord setFailureReason(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.WORKFLOW_STATE.FAILURE_REASON</code>.
+     * Getter for <code>WORKFLOW_STATE.FAILURE_REASON</code>.
      */
     public String getFailureReason() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.WORKFLOW_STATE.PARENT_STEP_ID</code>.
+     * Setter for <code>WORKFLOW_STATE.PARENT_STEP_ID</code>.
      */
-    public void setParentStepId(Long value) {
+    public WorkflowStateRecord setParentStepId(Long value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.WORKFLOW_STATE.PARENT_STEP_ID</code>.
+     * Getter for <code>WORKFLOW_STATE.PARENT_STEP_ID</code>.
      */
     public Long getParentStepId() {
         return (Long) get(2);
     }
 
     /**
-     * Setter for <code>public.WORKFLOW_STATE.STARTED_AT</code>.
+     * Setter for <code>WORKFLOW_STATE.STARTED_AT</code>.
      */
-    public void setStartedAt(OffsetDateTime value) {
+    public WorkflowStateRecord setStartedAt(OffsetDateTime value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.WORKFLOW_STATE.STARTED_AT</code>.
+     * Getter for <code>WORKFLOW_STATE.STARTED_AT</code>.
      */
     public OffsetDateTime getStartedAt() {
         return (OffsetDateTime) get(3);
     }
 
     /**
-     * Setter for <code>public.WORKFLOW_STATE.STATUS</code>.
+     * Setter for <code>WORKFLOW_STATE.STATUS</code>.
      */
-    public void setStatus(String value) {
+    public WorkflowStateRecord setStatus(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.WORKFLOW_STATE.STATUS</code>.
+     * Getter for <code>WORKFLOW_STATE.STATUS</code>.
      */
     public String getStatus() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.WORKFLOW_STATE.STEP</code>.
+     * Setter for <code>WORKFLOW_STATE.STEP</code>.
      */
-    public void setStep(String value) {
+    public WorkflowStateRecord setStep(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.WORKFLOW_STATE.STEP</code>.
+     * Getter for <code>WORKFLOW_STATE.STEP</code>.
      */
     public String getStep() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.WORKFLOW_STATE.TOKEN</code>.
+     * Setter for <code>WORKFLOW_STATE.TOKEN</code>.
      */
-    public void setToken(UUID value) {
+    public WorkflowStateRecord setToken(UUID value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.WORKFLOW_STATE.TOKEN</code>.
+     * Getter for <code>WORKFLOW_STATE.TOKEN</code>.
      */
     public UUID getToken() {
         return (UUID) get(6);
     }
 
     /**
-     * Setter for <code>public.WORKFLOW_STATE.UPDATED_AT</code>.
+     * Setter for <code>WORKFLOW_STATE.UPDATED_AT</code>.
      */
-    public void setUpdatedAt(OffsetDateTime value) {
+    public WorkflowStateRecord setUpdatedAt(OffsetDateTime value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.WORKFLOW_STATE.UPDATED_AT</code>.
+     * Getter for <code>WORKFLOW_STATE.UPDATED_AT</code>.
      */
     public OffsetDateTime getUpdatedAt() {
         return (OffsetDateTime) get(7);

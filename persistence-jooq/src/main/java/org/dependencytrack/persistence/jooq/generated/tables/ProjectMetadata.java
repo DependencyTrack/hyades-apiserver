@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectMetadataRecord;
 import org.jooq.Condition;
@@ -46,7 +46,7 @@ public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.PROJECT_METADATA</code>
+     * The reference instance of <code>PROJECT_METADATA</code>
      */
     public static final ProjectMetadata PROJECT_METADATA = new ProjectMetadata();
 
@@ -59,27 +59,27 @@ public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
     }
 
     /**
-     * The column <code>public.PROJECT_METADATA.ID</code>.
+     * The column <code>PROJECT_METADATA.ID</code>.
      */
     public final TableField<ProjectMetadataRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.PROJECT_METADATA.PROJECT_ID</code>.
+     * The column <code>PROJECT_METADATA.PROJECT_ID</code>.
      */
     public final TableField<ProjectMetadataRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECT_METADATA.SUPPLIER</code>.
+     * The column <code>PROJECT_METADATA.SUPPLIER</code>.
      */
     public final TableField<ProjectMetadataRecord, String> SUPPLIER = createField(DSL.name("SUPPLIER"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.PROJECT_METADATA.AUTHORS</code>.
+     * The column <code>PROJECT_METADATA.AUTHORS</code>.
      */
     public final TableField<ProjectMetadataRecord, String> AUTHORS = createField(DSL.name("AUTHORS"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.PROJECT_METADATA.TOOLS</code>.
+     * The column <code>PROJECT_METADATA.TOOLS</code>.
      */
     public final TableField<ProjectMetadataRecord, String> TOOLS = createField(DSL.name("TOOLS"), SQLDataType.CLOB, this, "");
 
@@ -92,21 +92,21 @@ public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
     }
 
     /**
-     * Create an aliased <code>public.PROJECT_METADATA</code> table reference
+     * Create an aliased <code>PROJECT_METADATA</code> table reference
      */
     public ProjectMetadata(String alias) {
         this(DSL.name(alias), PROJECT_METADATA);
     }
 
     /**
-     * Create an aliased <code>public.PROJECT_METADATA</code> table reference
+     * Create an aliased <code>PROJECT_METADATA</code> table reference
      */
     public ProjectMetadata(Name alias) {
         this(alias, PROJECT_METADATA);
     }
 
     /**
-     * Create a <code>public.PROJECT_METADATA</code> table reference
+     * Create a <code>PROJECT_METADATA</code> table reference
      */
     public ProjectMetadata() {
         this(DSL.name("PROJECT_METADATA"), null);
@@ -147,7 +147,7 @@ public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -173,7 +173,7 @@ public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)

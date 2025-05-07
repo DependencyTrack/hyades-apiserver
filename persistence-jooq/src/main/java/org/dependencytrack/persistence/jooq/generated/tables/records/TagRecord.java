@@ -18,28 +18,30 @@ public class TagRecord extends UpdatableRecordImpl<TagRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.TAG.ID</code>.
+     * Setter for <code>TAG.ID</code>.
      */
-    public void setId(Long value) {
+    public TagRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.TAG.ID</code>.
+     * Getter for <code>TAG.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.TAG.NAME</code>.
+     * Setter for <code>TAG.NAME</code>.
      */
-    public void setName(String value) {
+    public TagRecord setName(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.TAG.NAME</code>.
+     * Getter for <code>TAG.NAME</code>.
      */
     public String getName() {
         return (String) get(1);

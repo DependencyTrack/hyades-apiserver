@@ -18,70 +18,75 @@ public class ProjectMetadataRecord extends UpdatableRecordImpl<ProjectMetadataRe
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.PROJECT_METADATA.ID</code>.
+     * Setter for <code>PROJECT_METADATA.ID</code>.
      */
-    public void setId(Long value) {
+    public ProjectMetadataRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_METADATA.ID</code>.
+     * Getter for <code>PROJECT_METADATA.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.PROJECT_METADATA.PROJECT_ID</code>.
+     * Setter for <code>PROJECT_METADATA.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public ProjectMetadataRecord setProjectId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_METADATA.PROJECT_ID</code>.
+     * Getter for <code>PROJECT_METADATA.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(1);
     }
 
     /**
-     * Setter for <code>public.PROJECT_METADATA.SUPPLIER</code>.
+     * Setter for <code>PROJECT_METADATA.SUPPLIER</code>.
      */
-    public void setSupplier(String value) {
+    public ProjectMetadataRecord setSupplier(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_METADATA.SUPPLIER</code>.
+     * Getter for <code>PROJECT_METADATA.SUPPLIER</code>.
      */
     public String getSupplier() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.PROJECT_METADATA.AUTHORS</code>.
+     * Setter for <code>PROJECT_METADATA.AUTHORS</code>.
      */
-    public void setAuthors(String value) {
+    public ProjectMetadataRecord setAuthors(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_METADATA.AUTHORS</code>.
+     * Getter for <code>PROJECT_METADATA.AUTHORS</code>.
      */
     public String getAuthors() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.PROJECT_METADATA.TOOLS</code>.
+     * Setter for <code>PROJECT_METADATA.TOOLS</code>.
      */
-    public void setTools(String value) {
+    public ProjectMetadataRecord setTools(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_METADATA.TOOLS</code>.
+     * Getter for <code>PROJECT_METADATA.TOOLS</code>.
      */
     public String getTools() {
         return (String) get(4);
