@@ -169,7 +169,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
         final String projectIds = executeAndCloseList(projectsQuery).stream()
                 .map(Project::getId)
                 .map(String::valueOf)
-                .collect(Collectors.joining(", ", "'{", "}'"));
+                .collect(Collectors.joining(", ", "(", ")"));
 
         // language=SQL
         final var queryString = """
@@ -182,7 +182,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
                     upep."PERMISSION_NAME"
                   FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" upep
                  WHERE upep."%s" = :userId
-                   AND upep."PROJECT_ID" = ANY(%s)
+                   AND upep."PROJECT_ID" IN %s
                 """.formatted(columnName, projectIds);
 
         final Query<?> query = pm.newQuery(Query.SQL, queryString);

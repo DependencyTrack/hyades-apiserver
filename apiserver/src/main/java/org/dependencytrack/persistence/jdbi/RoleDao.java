@@ -47,6 +47,18 @@ public interface RoleDao {
     int deleteRole(@Bind final long roleId);
 
     @SqlUpdate(/* language=sql */ """
+            INSERT INTO "ROLES_PERMISSIONS"
+              ("ROLE_ID", "PERMISSION_ID")
+            VALUES
+              (:roleId, :permissionId)
+            ON CONFLICT DO NOTHING
+            """)
+    @DefineNamedBindings
+    <T extends UserPrincipal> int addPermissionToRole(
+            @Bind long roleId,
+            @Bind long permissionId);
+
+    @SqlUpdate(/* language=sql */ """
             <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
             <#assign prefix = userClass.getSimpleName()?upper_case>
             INSERT INTO "${prefix}S_PROJECTS_ROLES"
