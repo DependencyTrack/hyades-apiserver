@@ -16,6 +16,13 @@
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
 
         <lib.jooq.version>3.20.3</lib.jooq.version>
+        <matcher.pattern>
+            AFFECTED | ALIAS | ANALYSIS | API | ATTRIBUTION | COMMENT | COMPONENTS? | CONDITION
+            | CONFIG | DEPENDENCY | FINDING | GROUP | INSTALLED | KEYS? | LDAP | LICENSE | MANAGED
+            | MAPPED | METRICS | NOTIFICATION | OIDC | PERMISSIONS? | POLICY | PORTFOLIO | PROJECTS?
+            | PROPERTY | PUBLISHER | RULE | SCAN | SCHEMA | SERVICE | SOFTWARE | TAGS? | TEAMS?
+            | UPGRADES | USERS? | VERSION | VIOLATION | VULNERABILITIES | VULNERABILITY | VULNERABLE
+        </matcher.pattern>
     </properties>
 
     <dependencies>
@@ -116,10 +123,7 @@
                                             <tables>
                                                 <!-- Matcher to fix casing of generated classes for 2-word entity tables -->
                                                 <table>
-                                                    <expression>
-                                                        ^(ANALYSIS|API|CONFIG|DEPENDENCY|FINDING|INSTALLED|LDAP|LICENSE|MANAGED|NOTIFICATION|OIDC|POLICY|PORTFOLIO|PROJECT|SCHEMA|SERVICE|VIOLATION|VULNERABILITY|VULNERABLE)
-                                                        (ALIAS|ANALYSIS|ATTRIBUTION|COMMENT|COMPONENT|CONDITION|GROUP|KEY|METRICS|PROPERTY|PUBLISHER|RULE|SCAN|SOFTWARE|UPGRADES|USER|VERSION|VIOLATION)$
-                                                    </expression>
+                                                    <expression>^(${matcher.pattern})(${matcher.pattern})$</expression>
                                                     <pathClass>
                                                         <transform>PASCAL</transform>
                                                         <expression>$1_$2_PATH</expression>
@@ -135,11 +139,7 @@
                                                 </table>
                                                 <!-- Matcher to fix casing of generated classes for 3-word entity tables -->
                                                 <table>
-                                                    <expression>
-                                                        ^(AFFECTED|API|LDAP|LICENSE|MANAGED|MAPPED|NOTIFICATION|OIDC|SERVICE|VIOLATION|VULNERABLE)
-                                                        (ANALYSIS|COMPONENTS|GROUP|KEYS|LDAP|OIDC|RULE|SOFTWARE|USERS|VERSION)
-                                                        _?(ATTRIBUTION|COMMENT|GROUP|LICENSE|PERMISSIONS|PROJECTS|TAGS|TEAMS|VULNERABILITIES)$
-                                                    </expression>
+                                                    <expression>^(${matcher.pattern})(${matcher.pattern})_?(${matcher.pattern})$</expression>
                                                     <pathClass>
                                                         <transform>PASCAL</transform>
                                                         <expression>$1_$2_$3_PATH</expression>
@@ -156,12 +156,7 @@
                                             </tables>
                                             <foreignKeys>
                                                 <foreignKey>
-                                                    <expression>
-                                                        ^(AFFECTED|MAPPED)
-                                                        (LDAP|OIDC|VERSION)
-                                                        (ATTRIBUTION|GROUP)
-                                                        _(TEAM|VULNERABILITY)_FK$
-                                                    </expression>
+                                                    <expression>^(${matcher.pattern})(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_FK$</expression>
                                                     <keyIdentifier>
                                                         <expression>$0</expression>
                                                     </keyIdentifier>
@@ -175,13 +170,7 @@
                                                     </pathMethodNameManyToMany>
                                                 </foreignKey>
                                                 <foreignKey>
-                                                    <expression>
-                                                        ^(AFFECTED|MAPPED|VIOLATION)
-                                                        (ANALYSIS|OIDC|VERSION)
-                                                        (ATTRIBUTION|COMMENT|GROUP)
-                                                        _(OIDC|VIOLATION|VULNERABLE)
-                                                        (ANALYSIS|GROUP|SOFTWARE)_FK$
-                                                    </expression>
+                                                    <expression>^(${matcher.pattern})(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})(${matcher.pattern})_FK$</expression>
                                                     <keyIdentifier>
                                                         <expression>$0</expression>
                                                     </keyIdentifier>
@@ -199,11 +188,7 @@
                                                     </pathMethodNameManyToMany>
                                                 </foreignKey>
                                                 <foreignKey>
-                                                    <expression>
-                                                        ^(ANALYSIS|DEPENDENCY|FINDING|POLICY|PROJECT|SERVICE|VIOLATION)
-                                                        (ANALYSIS|ATTRIBUTION|COMMENT|COMPONENT|CONDITION|METRICS|VIOLATION)
-                                                        _(ANALYSIS|COMPONENT|POLICY|PROJECT|VULNERABILITY)_FK$
-                                                    </expression>
+                                                    <expression>^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_FK$</expression>
                                                     <keyIdentifier>
                                                         <expression>$0</expression>
                                                     </keyIdentifier>
@@ -217,12 +202,7 @@
                                                     </pathMethodNameManyToMany>
                                                 </foreignKey>
                                                 <foreignKey>
-                                                    <expression>
-                                                        ^(NOTIFICATION|POLICY|SERVICE|VIOLATION)
-                                                        (ANALYSIS|COMPONENT|RULE|VIOLATION)
-                                                        _(NOTIFICATION|POLICY|SERVICE)
-                                                        (COMPONENT|CONDITION|PUBLISHER|VIOLATION)_FK$
-                                                    </expression>
+                                                    <expression>^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})(${matcher.pattern})_FK$</expression>
                                                     <keyIdentifier>
                                                         <expression>$0</expression>
                                                     </keyIdentifier>
@@ -240,13 +220,7 @@
                                                     </pathMethodNameManyToMany>
                                                 </foreignKey>
                                                 <foreignKey>
-                                                    <expression>
-                                                        ^(API|LDAP|LICENSE|MANAGED|NOTIFICATION|OIDC|SERVICE|VULNERABLE)
-                                                        (COMPONENTS|GROUP|KEYS|RULE|SOFTWARE|USERS)
-                                                        _(LICENSE|PERMISSIONS|PROJECTS|TAGS|TEAMS|VULNERABILITIES)
-                                                        _(API|LDAP|LICENSE|MANAGED|NOTIFICATION|OIDC|SERVICE|VULNERABLE)
-                                                        (COMPONENT|GROUP|KEY|RULE|SOFTWARE|USER)_FK$
-                                                    </expression>
+                                                    <expression>^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_(${matcher.pattern})(${matcher.pattern})_FK$</expression>
                                                     <keyIdentifier>
                                                         <expression>$0</expression>
                                                     </keyIdentifier>
@@ -264,20 +238,13 @@
                                                     </pathMethodNameManyToMany>
                                                 </foreignKey>
                                                 <foreignKey>
-                                                    <expression>
-                                                        ^(API|LDAP|LICENSE|MANAGED|NOTIFICATION|OIDC|SERVICE|VULNERABLE)
-                                                        (COMPONENTS|GROUP|KEYS|RULE|SOFTWARE|USERS)
-                                                        _(LICENSE|PERMISSIONS|PROJECTS|TAGS|TEAMS|VULNERABILITIES)
-                                                        _(LICENSE|PERMISSION|PROJECT|TAG|TEAM|VULNERABILITY)_FK$
-                                                    </expression>
+                                                    <expression>^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_(${matcher.pattern})_FK$</expression>
                                                     <keyIdentifier>
                                                         <expression>$0</expression>
                                                     </keyIdentifier>
                                                 </foreignKey>
                                                 <foreignKey>
-                                                    <expression>
-                                                        ^USER_PROJECT_EFFECTIVE_PERMISSIONS_(LDAP|MANAGED|OIDC)USER_FK$
-                                                    </expression>
+                                                    <expression>^USER_PROJECT_EFFECTIVE_PERMISSIONS_(LDAP|MANAGED|OIDC)USER_FK$</expression>
                                                     <keyIdentifier>
                                                         <expression>$0</expression>
                                                     </keyIdentifier>
