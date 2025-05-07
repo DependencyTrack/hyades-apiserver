@@ -8,10 +8,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponent.ServicecomponentPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponent.ServiceComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Vulnerability.VulnerabilityPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ServiceComponentsVulnerabilitiesRecord;
 import org.jooq.Condition;
@@ -45,8 +45,7 @@ public class ServiceComponentsVulnerabilities extends TableImpl<ServiceComponent
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of
-     * <code>public.SERVICECOMPONENTS_VULNERABILITIES</code>
+     * The reference instance of <code>SERVICECOMPONENTS_VULNERABILITIES</code>
      */
     public static final ServiceComponentsVulnerabilities SERVICECOMPONENTS_VULNERABILITIES = new ServiceComponentsVulnerabilities();
 
@@ -60,13 +59,13 @@ public class ServiceComponentsVulnerabilities extends TableImpl<ServiceComponent
 
     /**
      * The column
-     * <code>public.SERVICECOMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
+     * <code>SERVICECOMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
     public final TableField<ServiceComponentsVulnerabilitiesRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column
-     * <code>public.SERVICECOMPONENTS_VULNERABILITIES.SERVICECOMPONENT_ID</code>.
+     * <code>SERVICECOMPONENTS_VULNERABILITIES.SERVICECOMPONENT_ID</code>.
      */
     public final TableField<ServiceComponentsVulnerabilitiesRecord, Long> SERVICECOMPONENT_ID = createField(DSL.name("SERVICECOMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -79,24 +78,23 @@ public class ServiceComponentsVulnerabilities extends TableImpl<ServiceComponent
     }
 
     /**
-     * Create an aliased <code>public.SERVICECOMPONENTS_VULNERABILITIES</code>
-     * table reference
+     * Create an aliased <code>SERVICECOMPONENTS_VULNERABILITIES</code> table
+     * reference
      */
     public ServiceComponentsVulnerabilities(String alias) {
         this(DSL.name(alias), SERVICECOMPONENTS_VULNERABILITIES);
     }
 
     /**
-     * Create an aliased <code>public.SERVICECOMPONENTS_VULNERABILITIES</code>
-     * table reference
+     * Create an aliased <code>SERVICECOMPONENTS_VULNERABILITIES</code> table
+     * reference
      */
     public ServiceComponentsVulnerabilities(Name alias) {
         this(alias, SERVICECOMPONENTS_VULNERABILITIES);
     }
 
     /**
-     * Create a <code>public.SERVICECOMPONENTS_VULNERABILITIES</code> table
-     * reference
+     * Create a <code>SERVICECOMPONENTS_VULNERABILITIES</code> table reference
      */
     public ServiceComponentsVulnerabilities() {
         this(DSL.name("SERVICECOMPONENTS_VULNERABILITIES"), null);
@@ -109,35 +107,35 @@ public class ServiceComponentsVulnerabilities extends TableImpl<ServiceComponent
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class ServicecomponentsVulnerabilitiesPath extends ServiceComponentsVulnerabilities implements Path<ServiceComponentsVulnerabilitiesRecord> {
+    public static class ServiceComponentsVulnerabilitiesPath extends ServiceComponentsVulnerabilities implements Path<ServiceComponentsVulnerabilitiesRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> ServicecomponentsVulnerabilitiesPath(Table<O> path, ForeignKey<O, ServiceComponentsVulnerabilitiesRecord> childPath, InverseForeignKey<O, ServiceComponentsVulnerabilitiesRecord> parentPath) {
+        public <O extends Record> ServiceComponentsVulnerabilitiesPath(Table<O> path, ForeignKey<O, ServiceComponentsVulnerabilitiesRecord> childPath, InverseForeignKey<O, ServiceComponentsVulnerabilitiesRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private ServicecomponentsVulnerabilitiesPath(Name alias, Table<ServiceComponentsVulnerabilitiesRecord> aliased) {
+        private ServiceComponentsVulnerabilitiesPath(Name alias, Table<ServiceComponentsVulnerabilitiesRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public ServicecomponentsVulnerabilitiesPath as(String alias) {
-            return new ServicecomponentsVulnerabilitiesPath(DSL.name(alias), this);
+        public ServiceComponentsVulnerabilitiesPath as(String alias) {
+            return new ServiceComponentsVulnerabilitiesPath(DSL.name(alias), this);
         }
 
         @Override
-        public ServicecomponentsVulnerabilitiesPath as(Name alias) {
-            return new ServicecomponentsVulnerabilitiesPath(alias, this);
+        public ServiceComponentsVulnerabilitiesPath as(Name alias) {
+            return new ServiceComponentsVulnerabilitiesPath(alias, this);
         }
 
         @Override
-        public ServicecomponentsVulnerabilitiesPath as(Table<?> alias) {
-            return new ServicecomponentsVulnerabilitiesPath(alias.getQualifiedName(), this);
+        public ServiceComponentsVulnerabilitiesPath as(Table<?> alias) {
+            return new ServiceComponentsVulnerabilitiesPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -147,31 +145,29 @@ public class ServiceComponentsVulnerabilities extends TableImpl<ServiceComponent
 
     @Override
     public List<ForeignKey<ServiceComponentsVulnerabilitiesRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.SERVICECOMPONENTS_VULNERABILITIES__SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK, Keys.SERVICECOMPONENTS_VULNERABILITIES__SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK);
+        return Arrays.asList(Keys.SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK, Keys.SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK);
     }
 
-    private transient ServicecomponentPath _servicecomponent;
+    private transient ServiceComponentPath _serviceComponent;
 
     /**
-     * Get the implicit join path to the <code>public.SERVICECOMPONENT</code>
-     * table.
+     * Get the implicit join path to the <code>SERVICECOMPONENT</code> table.
      */
-    public ServicecomponentPath servicecomponent() {
-        if (_servicecomponent == null)
-            _servicecomponent = new ServicecomponentPath(this, Keys.SERVICECOMPONENTS_VULNERABILITIES__SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK, null);
+    public ServiceComponentPath serviceComponent() {
+        if (_serviceComponent == null)
+            _serviceComponent = new ServiceComponentPath(this, Keys.SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_FK, null);
 
-        return _servicecomponent;
+        return _serviceComponent;
     }
 
     private transient VulnerabilityPath _vulnerability;
 
     /**
-     * Get the implicit join path to the <code>public.VULNERABILITY</code>
-     * table.
+     * Get the implicit join path to the <code>VULNERABILITY</code> table.
      */
     public VulnerabilityPath vulnerability() {
         if (_vulnerability == null)
-            _vulnerability = new VulnerabilityPath(this, Keys.SERVICECOMPONENTS_VULNERABILITIES__SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK, null);
+            _vulnerability = new VulnerabilityPath(this, Keys.SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_FK, null);
 
         return _vulnerability;
     }

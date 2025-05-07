@@ -17,28 +17,30 @@ public class NotificationRuleTagsRecord extends TableRecordImpl<NotificationRule
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE_TAGS.NOTIFICATIONRULE_ID</code>.
+     * Setter for <code>NOTIFICATIONRULE_TAGS.NOTIFICATIONRULE_ID</code>.
      */
-    public void setNotificationruleId(Long value) {
+    public NotificationRuleTagsRecord setNotificationruleId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE_TAGS.NOTIFICATIONRULE_ID</code>.
+     * Getter for <code>NOTIFICATIONRULE_TAGS.NOTIFICATIONRULE_ID</code>.
      */
     public Long getNotificationruleId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE_TAGS.TAG_ID</code>.
+     * Setter for <code>NOTIFICATIONRULE_TAGS.TAG_ID</code>.
      */
-    public void setTagId(Long value) {
+    public NotificationRuleTagsRecord setTagId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE_TAGS.TAG_ID</code>.
+     * Getter for <code>NOTIFICATIONRULE_TAGS.TAG_ID</code>.
      */
     public Long getTagId() {
         return (Long) get(1);

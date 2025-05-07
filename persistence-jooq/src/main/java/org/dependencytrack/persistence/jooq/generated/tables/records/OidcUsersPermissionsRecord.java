@@ -18,28 +18,30 @@ public class OidcUsersPermissionsRecord extends UpdatableRecordImpl<OidcUsersPer
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.OIDCUSERS_PERMISSIONS.PERMISSION_ID</code>.
+     * Setter for <code>OIDCUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
-    public void setPermissionId(Long value) {
+    public OidcUsersPermissionsRecord setPermissionId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCUSERS_PERMISSIONS.PERMISSION_ID</code>.
+     * Getter for <code>OIDCUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
     public Long getPermissionId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.OIDCUSERS_PERMISSIONS.OIDCUSER_ID</code>.
+     * Setter for <code>OIDCUSERS_PERMISSIONS.OIDCUSER_ID</code>.
      */
-    public void setOidcuserId(Long value) {
+    public OidcUsersPermissionsRecord setOidcuserId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCUSERS_PERMISSIONS.OIDCUSER_ID</code>.
+     * Getter for <code>OIDCUSERS_PERMISSIONS.OIDCUSER_ID</code>.
      */
     public Long getOidcuserId() {
         return (Long) get(1);

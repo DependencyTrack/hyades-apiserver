@@ -9,11 +9,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.enums.Severity;
-import org.dependencytrack.persistence.jooq.generated.tables.AnalysisComment.AnalysiscommentPath;
+import org.dependencytrack.persistence.jooq.generated.tables.AnalysisComment.AnalysisCommentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Vulnerability.VulnerabilityPath;
@@ -52,7 +52,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.ANALYSIS</code>
+     * The reference instance of <code>ANALYSIS</code>
      */
     public static final Analysis ANALYSIS = new Analysis();
 
@@ -65,87 +65,87 @@ public class Analysis extends TableImpl<AnalysisRecord> {
     }
 
     /**
-     * The column <code>public.ANALYSIS.ID</code>.
+     * The column <code>ANALYSIS.ID</code>.
      */
     public final TableField<AnalysisRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.ANALYSIS.DETAILS</code>.
+     * The column <code>ANALYSIS.DETAILS</code>.
      */
     public final TableField<AnalysisRecord, String> DETAILS = createField(DSL.name("DETAILS"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.ANALYSIS.JUSTIFICATION</code>.
+     * The column <code>ANALYSIS.JUSTIFICATION</code>.
      */
     public final TableField<AnalysisRecord, String> JUSTIFICATION = createField(DSL.name("JUSTIFICATION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.ANALYSIS.RESPONSE</code>.
+     * The column <code>ANALYSIS.RESPONSE</code>.
      */
     public final TableField<AnalysisRecord, String> RESPONSE = createField(DSL.name("RESPONSE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.ANALYSIS.STATE</code>.
+     * The column <code>ANALYSIS.STATE</code>.
      */
     public final TableField<AnalysisRecord, String> STATE = createField(DSL.name("STATE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.ANALYSIS.COMPONENT_ID</code>.
+     * The column <code>ANALYSIS.COMPONENT_ID</code>.
      */
     public final TableField<AnalysisRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column <code>public.ANALYSIS.PROJECT_ID</code>.
+     * The column <code>ANALYSIS.PROJECT_ID</code>.
      */
     public final TableField<AnalysisRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column <code>public.ANALYSIS.SUPPRESSED</code>.
+     * The column <code>ANALYSIS.SUPPRESSED</code>.
      */
     public final TableField<AnalysisRecord, Boolean> SUPPRESSED = createField(DSL.name("SUPPRESSED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
-     * The column <code>public.ANALYSIS.VULNERABILITY_ID</code>.
+     * The column <code>ANALYSIS.VULNERABILITY_ID</code>.
      */
     public final TableField<AnalysisRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.ANALYSIS.CVSSV2VECTOR</code>.
+     * The column <code>ANALYSIS.CVSSV2VECTOR</code>.
      */
     public final TableField<AnalysisRecord, String> CVSSV2VECTOR = createField(DSL.name("CVSSV2VECTOR"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.ANALYSIS.CVSSV3SCORE</code>.
+     * The column <code>ANALYSIS.CVSSV3SCORE</code>.
      */
     public final TableField<AnalysisRecord, BigDecimal> CVSSV3SCORE = createField(DSL.name("CVSSV3SCORE"), SQLDataType.NUMERIC, this, "");
 
     /**
-     * The column <code>public.ANALYSIS.OWASPSCORE</code>.
+     * The column <code>ANALYSIS.OWASPSCORE</code>.
      */
     public final TableField<AnalysisRecord, BigDecimal> OWASPSCORE = createField(DSL.name("OWASPSCORE"), SQLDataType.NUMERIC, this, "");
 
     /**
-     * The column <code>public.ANALYSIS.CVSSV2SCORE</code>.
+     * The column <code>ANALYSIS.CVSSV2SCORE</code>.
      */
     public final TableField<AnalysisRecord, BigDecimal> CVSSV2SCORE = createField(DSL.name("CVSSV2SCORE"), SQLDataType.NUMERIC, this, "");
 
     /**
-     * The column <code>public.ANALYSIS.OWASPVECTOR</code>.
+     * The column <code>ANALYSIS.OWASPVECTOR</code>.
      */
     public final TableField<AnalysisRecord, String> OWASPVECTOR = createField(DSL.name("OWASPVECTOR"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.ANALYSIS.CVSSV3VECTOR</code>.
+     * The column <code>ANALYSIS.CVSSV3VECTOR</code>.
      */
     public final TableField<AnalysisRecord, String> CVSSV3VECTOR = createField(DSL.name("CVSSV3VECTOR"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.ANALYSIS.SEVERITY</code>.
+     * The column <code>ANALYSIS.SEVERITY</code>.
      */
     public final TableField<AnalysisRecord, Severity> SEVERITY = createField(DSL.name("SEVERITY"), SQLDataType.VARCHAR.asEnumDataType(Severity.class), this, "");
 
     /**
-     * The column <code>public.ANALYSIS.VULNERABILITY_POLICY_ID</code>.
+     * The column <code>ANALYSIS.VULNERABILITY_POLICY_ID</code>.
      */
     public final TableField<AnalysisRecord, Long> VULNERABILITY_POLICY_ID = createField(DSL.name("VULNERABILITY_POLICY_ID"), SQLDataType.BIGINT, this, "");
 
@@ -158,21 +158,21 @@ public class Analysis extends TableImpl<AnalysisRecord> {
     }
 
     /**
-     * Create an aliased <code>public.ANALYSIS</code> table reference
+     * Create an aliased <code>ANALYSIS</code> table reference
      */
     public Analysis(String alias) {
         this(DSL.name(alias), ANALYSIS);
     }
 
     /**
-     * Create an aliased <code>public.ANALYSIS</code> table reference
+     * Create an aliased <code>ANALYSIS</code> table reference
      */
     public Analysis(Name alias) {
         this(alias, ANALYSIS);
     }
 
     /**
-     * Create a <code>public.ANALYSIS</code> table reference
+     * Create a <code>ANALYSIS</code> table reference
      */
     public Analysis() {
         this(DSL.name("ANALYSIS"), null);
@@ -213,7 +213,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -244,7 +244,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit join path to the <code>public.COMPONENT</code> table.
+     * Get the implicit join path to the <code>COMPONENT</code> table.
      */
     public ComponentPath component() {
         if (_component == null)
@@ -256,7 +256,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
@@ -268,8 +268,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
     private transient VulnerabilityPath _vulnerability;
 
     /**
-     * Get the implicit join path to the <code>public.VULNERABILITY</code>
-     * table.
+     * Get the implicit join path to the <code>VULNERABILITY</code> table.
      */
     public VulnerabilityPath vulnerability() {
         if (_vulnerability == null)
@@ -281,8 +280,8 @@ public class Analysis extends TableImpl<AnalysisRecord> {
     private transient VulnerabilityPolicyPath _vulnerabilityPolicy;
 
     /**
-     * Get the implicit join path to the
-     * <code>public.VULNERABILITY_POLICY</code> table.
+     * Get the implicit join path to the <code>VULNERABILITY_POLICY</code>
+     * table.
      */
     public VulnerabilityPolicyPath vulnerabilityPolicy() {
         if (_vulnerabilityPolicy == null)
@@ -291,17 +290,17 @@ public class Analysis extends TableImpl<AnalysisRecord> {
         return _vulnerabilityPolicy;
     }
 
-    private transient AnalysiscommentPath _analysiscomment;
+    private transient AnalysisCommentPath _analysisComment;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.ANALYSISCOMMENT</code> table
+     * Get the implicit to-many join path to the <code>ANALYSISCOMMENT</code>
+     * table
      */
-    public AnalysiscommentPath analysiscomment() {
-        if (_analysiscomment == null)
-            _analysiscomment = new AnalysiscommentPath(this, null, Keys.ANALYSISCOMMENT__ANALYSISCOMMENT_ANALYSIS_FK.getInverseKey());
+    public AnalysisCommentPath analysisComment() {
+        if (_analysisComment == null)
+            _analysisComment = new AnalysisCommentPath(this, null, Keys.ANALYSISCOMMENT_ANALYSIS_FK.getInverseKey());
 
-        return _analysiscomment;
+        return _analysisComment;
     }
 
     @Override

@@ -20,98 +20,105 @@ public class PolicyConditionRecord extends UpdatableRecordImpl<PolicyConditionRe
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.POLICYCONDITION.ID</code>.
+     * Setter for <code>POLICYCONDITION.ID</code>.
      */
-    public void setId(Long value) {
+    public PolicyConditionRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYCONDITION.ID</code>.
+     * Getter for <code>POLICYCONDITION.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.POLICYCONDITION.OPERATOR</code>.
+     * Setter for <code>POLICYCONDITION.OPERATOR</code>.
      */
-    public void setOperator(String value) {
+    public PolicyConditionRecord setOperator(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYCONDITION.OPERATOR</code>.
+     * Getter for <code>POLICYCONDITION.OPERATOR</code>.
      */
     public String getOperator() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.POLICYCONDITION.POLICY_ID</code>.
+     * Setter for <code>POLICYCONDITION.POLICY_ID</code>.
      */
-    public void setPolicyId(Long value) {
+    public PolicyConditionRecord setPolicyId(Long value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYCONDITION.POLICY_ID</code>.
+     * Getter for <code>POLICYCONDITION.POLICY_ID</code>.
      */
     public Long getPolicyId() {
         return (Long) get(2);
     }
 
     /**
-     * Setter for <code>public.POLICYCONDITION.SUBJECT</code>.
+     * Setter for <code>POLICYCONDITION.SUBJECT</code>.
      */
-    public void setSubject(String value) {
+    public PolicyConditionRecord setSubject(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYCONDITION.SUBJECT</code>.
+     * Getter for <code>POLICYCONDITION.SUBJECT</code>.
      */
     public String getSubject() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.POLICYCONDITION.UUID</code>.
+     * Setter for <code>POLICYCONDITION.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public PolicyConditionRecord setUuid(UUID value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYCONDITION.UUID</code>.
+     * Getter for <code>POLICYCONDITION.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(4);
     }
 
     /**
-     * Setter for <code>public.POLICYCONDITION.VALUE</code>.
+     * Setter for <code>POLICYCONDITION.VALUE</code>.
      */
-    public void setValue(String value) {
+    public PolicyConditionRecord setValue(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYCONDITION.VALUE</code>.
+     * Getter for <code>POLICYCONDITION.VALUE</code>.
      */
     public String getValue() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.POLICYCONDITION.VIOLATIONTYPE</code>.
+     * Setter for <code>POLICYCONDITION.VIOLATIONTYPE</code>.
      */
-    public void setViolationtype(String value) {
+    public PolicyConditionRecord setViolationtype(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYCONDITION.VIOLATIONTYPE</code>.
+     * Getter for <code>POLICYCONDITION.VIOLATIONTYPE</code>.
      */
     public String getViolationtype() {
         return (String) get(6);

@@ -18,28 +18,30 @@ public class TeamsPermissionsRecord extends UpdatableRecordImpl<TeamsPermissions
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.TEAMS_PERMISSIONS.TEAM_ID</code>.
+     * Setter for <code>TEAMS_PERMISSIONS.TEAM_ID</code>.
      */
-    public void setTeamId(Long value) {
+    public TeamsPermissionsRecord setTeamId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.TEAMS_PERMISSIONS.TEAM_ID</code>.
+     * Getter for <code>TEAMS_PERMISSIONS.TEAM_ID</code>.
      */
     public Long getTeamId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.TEAMS_PERMISSIONS.PERMISSION_ID</code>.
+     * Setter for <code>TEAMS_PERMISSIONS.PERMISSION_ID</code>.
      */
-    public void setPermissionId(Long value) {
+    public TeamsPermissionsRecord setPermissionId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.TEAMS_PERMISSIONS.PERMISSION_ID</code>.
+     * Getter for <code>TEAMS_PERMISSIONS.PERMISSION_ID</code>.
      */
     public Long getPermissionId() {
         return (Long) get(1);

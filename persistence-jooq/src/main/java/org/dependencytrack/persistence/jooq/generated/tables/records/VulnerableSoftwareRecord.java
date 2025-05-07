@@ -20,378 +20,405 @@ public class VulnerableSoftwareRecord extends UpdatableRecordImpl<VulnerableSoft
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.ID</code>.
+     * Setter for <code>VULNERABLESOFTWARE.ID</code>.
      */
-    public void setId(Long value) {
+    public VulnerableSoftwareRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.ID</code>.
+     * Getter for <code>VULNERABLESOFTWARE.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.CPE22</code>.
+     * Setter for <code>VULNERABLESOFTWARE.CPE22</code>.
      */
-    public void setCpe22(String value) {
+    public VulnerableSoftwareRecord setCpe22(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.CPE22</code>.
+     * Getter for <code>VULNERABLESOFTWARE.CPE22</code>.
      */
     public String getCpe22() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.CPE23</code>.
+     * Setter for <code>VULNERABLESOFTWARE.CPE23</code>.
      */
-    public void setCpe23(String value) {
+    public VulnerableSoftwareRecord setCpe23(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.CPE23</code>.
+     * Getter for <code>VULNERABLESOFTWARE.CPE23</code>.
      */
     public String getCpe23() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.EDITION</code>.
+     * Setter for <code>VULNERABLESOFTWARE.EDITION</code>.
      */
-    public void setEdition(String value) {
+    public VulnerableSoftwareRecord setEdition(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.EDITION</code>.
+     * Getter for <code>VULNERABLESOFTWARE.EDITION</code>.
      */
     public String getEdition() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.LANGUAGE</code>.
+     * Setter for <code>VULNERABLESOFTWARE.LANGUAGE</code>.
      */
-    public void setLanguage(String value) {
+    public VulnerableSoftwareRecord setLanguage(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.LANGUAGE</code>.
+     * Getter for <code>VULNERABLESOFTWARE.LANGUAGE</code>.
      */
     public String getLanguage() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.OTHER</code>.
+     * Setter for <code>VULNERABLESOFTWARE.OTHER</code>.
      */
-    public void setOther(String value) {
+    public VulnerableSoftwareRecord setOther(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.OTHER</code>.
+     * Getter for <code>VULNERABLESOFTWARE.OTHER</code>.
      */
     public String getOther() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.PART</code>.
+     * Setter for <code>VULNERABLESOFTWARE.PART</code>.
      */
-    public void setPart(String value) {
+    public VulnerableSoftwareRecord setPart(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.PART</code>.
+     * Getter for <code>VULNERABLESOFTWARE.PART</code>.
      */
     public String getPart() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.PRODUCT</code>.
+     * Setter for <code>VULNERABLESOFTWARE.PRODUCT</code>.
      */
-    public void setProduct(String value) {
+    public VulnerableSoftwareRecord setProduct(String value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.PRODUCT</code>.
+     * Getter for <code>VULNERABLESOFTWARE.PRODUCT</code>.
      */
     public String getProduct() {
         return (String) get(7);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.PURL</code>.
+     * Setter for <code>VULNERABLESOFTWARE.PURL</code>.
      */
-    public void setPurl(String value) {
+    public VulnerableSoftwareRecord setPurl(String value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.PURL</code>.
+     * Getter for <code>VULNERABLESOFTWARE.PURL</code>.
      */
     public String getPurl() {
         return (String) get(8);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.PURL_NAME</code>.
+     * Setter for <code>VULNERABLESOFTWARE.PURL_NAME</code>.
      */
-    public void setPurlName(String value) {
+    public VulnerableSoftwareRecord setPurlName(String value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.PURL_NAME</code>.
+     * Getter for <code>VULNERABLESOFTWARE.PURL_NAME</code>.
      */
     public String getPurlName() {
         return (String) get(9);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.PURL_NAMESPACE</code>.
+     * Setter for <code>VULNERABLESOFTWARE.PURL_NAMESPACE</code>.
      */
-    public void setPurlNamespace(String value) {
+    public VulnerableSoftwareRecord setPurlNamespace(String value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.PURL_NAMESPACE</code>.
+     * Getter for <code>VULNERABLESOFTWARE.PURL_NAMESPACE</code>.
      */
     public String getPurlNamespace() {
         return (String) get(10);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.PURL_QUALIFIERS</code>.
+     * Setter for <code>VULNERABLESOFTWARE.PURL_QUALIFIERS</code>.
      */
-    public void setPurlQualifiers(String value) {
+    public VulnerableSoftwareRecord setPurlQualifiers(String value) {
         set(11, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.PURL_QUALIFIERS</code>.
+     * Getter for <code>VULNERABLESOFTWARE.PURL_QUALIFIERS</code>.
      */
     public String getPurlQualifiers() {
         return (String) get(11);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.PURL_SUBPATH</code>.
+     * Setter for <code>VULNERABLESOFTWARE.PURL_SUBPATH</code>.
      */
-    public void setPurlSubpath(String value) {
+    public VulnerableSoftwareRecord setPurlSubpath(String value) {
         set(12, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.PURL_SUBPATH</code>.
+     * Getter for <code>VULNERABLESOFTWARE.PURL_SUBPATH</code>.
      */
     public String getPurlSubpath() {
         return (String) get(12);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.PURL_TYPE</code>.
+     * Setter for <code>VULNERABLESOFTWARE.PURL_TYPE</code>.
      */
-    public void setPurlType(String value) {
+    public VulnerableSoftwareRecord setPurlType(String value) {
         set(13, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.PURL_TYPE</code>.
+     * Getter for <code>VULNERABLESOFTWARE.PURL_TYPE</code>.
      */
     public String getPurlType() {
         return (String) get(13);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.PURL_VERSION</code>.
+     * Setter for <code>VULNERABLESOFTWARE.PURL_VERSION</code>.
      */
-    public void setPurlVersion(String value) {
+    public VulnerableSoftwareRecord setPurlVersion(String value) {
         set(14, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.PURL_VERSION</code>.
+     * Getter for <code>VULNERABLESOFTWARE.PURL_VERSION</code>.
      */
     public String getPurlVersion() {
         return (String) get(14);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.SWEDITION</code>.
+     * Setter for <code>VULNERABLESOFTWARE.SWEDITION</code>.
      */
-    public void setSwedition(String value) {
+    public VulnerableSoftwareRecord setSwedition(String value) {
         set(15, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.SWEDITION</code>.
+     * Getter for <code>VULNERABLESOFTWARE.SWEDITION</code>.
      */
     public String getSwedition() {
         return (String) get(15);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.TARGETHW</code>.
+     * Setter for <code>VULNERABLESOFTWARE.TARGETHW</code>.
      */
-    public void setTargethw(String value) {
+    public VulnerableSoftwareRecord setTargethw(String value) {
         set(16, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.TARGETHW</code>.
+     * Getter for <code>VULNERABLESOFTWARE.TARGETHW</code>.
      */
     public String getTargethw() {
         return (String) get(16);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.TARGETSW</code>.
+     * Setter for <code>VULNERABLESOFTWARE.TARGETSW</code>.
      */
-    public void setTargetsw(String value) {
+    public VulnerableSoftwareRecord setTargetsw(String value) {
         set(17, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.TARGETSW</code>.
+     * Getter for <code>VULNERABLESOFTWARE.TARGETSW</code>.
      */
     public String getTargetsw() {
         return (String) get(17);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.UPDATE</code>.
+     * Setter for <code>VULNERABLESOFTWARE.UPDATE</code>.
      */
-    public void setUpdate(String value) {
+    public VulnerableSoftwareRecord setUpdate(String value) {
         set(18, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.UPDATE</code>.
+     * Getter for <code>VULNERABLESOFTWARE.UPDATE</code>.
      */
     public String getUpdate() {
         return (String) get(18);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.UUID</code>.
+     * Setter for <code>VULNERABLESOFTWARE.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public VulnerableSoftwareRecord setUuid(UUID value) {
         set(19, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.UUID</code>.
+     * Getter for <code>VULNERABLESOFTWARE.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(19);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.VENDOR</code>.
+     * Setter for <code>VULNERABLESOFTWARE.VENDOR</code>.
      */
-    public void setVendor(String value) {
+    public VulnerableSoftwareRecord setVendor(String value) {
         set(20, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.VENDOR</code>.
+     * Getter for <code>VULNERABLESOFTWARE.VENDOR</code>.
      */
     public String getVendor() {
         return (String) get(20);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.VERSION</code>.
+     * Setter for <code>VULNERABLESOFTWARE.VERSION</code>.
      */
-    public void setVersion(String value) {
+    public VulnerableSoftwareRecord setVersion(String value) {
         set(21, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.VERSION</code>.
+     * Getter for <code>VULNERABLESOFTWARE.VERSION</code>.
      */
     public String getVersion() {
         return (String) get(21);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.VERSIONENDEXCLUDING</code>.
+     * Setter for <code>VULNERABLESOFTWARE.VERSIONENDEXCLUDING</code>.
      */
-    public void setVersionendexcluding(String value) {
+    public VulnerableSoftwareRecord setVersionendexcluding(String value) {
         set(22, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.VERSIONENDEXCLUDING</code>.
+     * Getter for <code>VULNERABLESOFTWARE.VERSIONENDEXCLUDING</code>.
      */
     public String getVersionendexcluding() {
         return (String) get(22);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.VERSIONENDINCLUDING</code>.
+     * Setter for <code>VULNERABLESOFTWARE.VERSIONENDINCLUDING</code>.
      */
-    public void setVersionendincluding(String value) {
+    public VulnerableSoftwareRecord setVersionendincluding(String value) {
         set(23, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.VERSIONENDINCLUDING</code>.
+     * Getter for <code>VULNERABLESOFTWARE.VERSIONENDINCLUDING</code>.
      */
     public String getVersionendincluding() {
         return (String) get(23);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.VERSIONSTARTEXCLUDING</code>.
+     * Setter for <code>VULNERABLESOFTWARE.VERSIONSTARTEXCLUDING</code>.
      */
-    public void setVersionstartexcluding(String value) {
+    public VulnerableSoftwareRecord setVersionstartexcluding(String value) {
         set(24, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.VERSIONSTARTEXCLUDING</code>.
+     * Getter for <code>VULNERABLESOFTWARE.VERSIONSTARTEXCLUDING</code>.
      */
     public String getVersionstartexcluding() {
         return (String) get(24);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.VERSIONSTARTINCLUDING</code>.
+     * Setter for <code>VULNERABLESOFTWARE.VERSIONSTARTINCLUDING</code>.
      */
-    public void setVersionstartincluding(String value) {
+    public VulnerableSoftwareRecord setVersionstartincluding(String value) {
         set(25, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.VERSIONSTARTINCLUDING</code>.
+     * Getter for <code>VULNERABLESOFTWARE.VERSIONSTARTINCLUDING</code>.
      */
     public String getVersionstartincluding() {
         return (String) get(25);
     }
 
     /**
-     * Setter for <code>public.VULNERABLESOFTWARE.VULNERABLE</code>.
+     * Setter for <code>VULNERABLESOFTWARE.VULNERABLE</code>.
      */
-    public void setVulnerable(Boolean value) {
+    public VulnerableSoftwareRecord setVulnerable(Boolean value) {
         set(26, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABLESOFTWARE.VULNERABLE</code>.
+     * Getter for <code>VULNERABLESOFTWARE.VULNERABLE</code>.
      */
     public Boolean getVulnerable() {
         return (Boolean) get(26);

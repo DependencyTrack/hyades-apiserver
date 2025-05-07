@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Field;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
@@ -40,7 +40,7 @@ public class GinExtractValueTrgm extends AbstractRoutine<Object> {
     public static final Parameter<Object> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", DefaultDataType.getDefaultDataType("\"pg_catalog\".\"internal\""), false, false);
 
     /**
-     * The parameter <code>public.gin_extract_value_trgm._1</code>.
+     * The parameter <code>gin_extract_value_trgm._1</code>.
      */
     public static final Parameter<String> _1 = Internal.createParameter("_1", SQLDataType.CLOB, false, true);
 
@@ -59,7 +59,7 @@ public class GinExtractValueTrgm extends AbstractRoutine<Object> {
      * Create a new routine call instance
      */
     public GinExtractValueTrgm() {
-        super("gin_extract_value_trgm", Public.PUBLIC, DSL.comment(""), DefaultDataType.getDefaultDataType("\"pg_catalog\".\"internal\""));
+        super("gin_extract_value_trgm", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""), DefaultDataType.getDefaultDataType("\"pg_catalog\".\"internal\""));
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(_1);
@@ -77,8 +77,9 @@ public class GinExtractValueTrgm extends AbstractRoutine<Object> {
      * Set the <code>_1</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__1(Field<String> field) {
+    public GinExtractValueTrgm set__1(Field<String> field) {
         setField(_1, field);
+        return this;
     }
 
     /**
@@ -92,7 +93,8 @@ public class GinExtractValueTrgm extends AbstractRoutine<Object> {
      * Set the <code>_2</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__2(Field<Object> field) {
+    public GinExtractValueTrgm set__2(Field<Object> field) {
         setField(_2, field);
+        return this;
     }
 }

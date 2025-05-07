@@ -20,98 +20,105 @@ public class ApiKeyRecord extends UpdatableRecordImpl<ApiKeyRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.APIKEY.ID</code>.
+     * Setter for <code>APIKEY.ID</code>.
      */
-    public void setId(Long value) {
+    public ApiKeyRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.APIKEY.ID</code>.
+     * Getter for <code>APIKEY.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.APIKEY.COMMENT</code>.
+     * Setter for <code>APIKEY.COMMENT</code>.
      */
-    public void setComment(String value) {
+    public ApiKeyRecord setComment(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.APIKEY.COMMENT</code>.
+     * Getter for <code>APIKEY.COMMENT</code>.
      */
     public String getComment() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.APIKEY.CREATED</code>.
+     * Setter for <code>APIKEY.CREATED</code>.
      */
-    public void setCreated(OffsetDateTime value) {
+    public ApiKeyRecord setCreated(OffsetDateTime value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.APIKEY.CREATED</code>.
+     * Getter for <code>APIKEY.CREATED</code>.
      */
     public OffsetDateTime getCreated() {
         return (OffsetDateTime) get(2);
     }
 
     /**
-     * Setter for <code>public.APIKEY.LAST_USED</code>.
+     * Setter for <code>APIKEY.LAST_USED</code>.
      */
-    public void setLastUsed(OffsetDateTime value) {
+    public ApiKeyRecord setLastUsed(OffsetDateTime value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.APIKEY.LAST_USED</code>.
+     * Getter for <code>APIKEY.LAST_USED</code>.
      */
     public OffsetDateTime getLastUsed() {
         return (OffsetDateTime) get(3);
     }
 
     /**
-     * Setter for <code>public.APIKEY.SECRET_HASH</code>.
+     * Setter for <code>APIKEY.SECRET_HASH</code>.
      */
-    public void setSecretHash(String value) {
+    public ApiKeyRecord setSecretHash(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.APIKEY.SECRET_HASH</code>.
+     * Getter for <code>APIKEY.SECRET_HASH</code>.
      */
     public String getSecretHash() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.APIKEY.PUBLIC_ID</code>.
+     * Setter for <code>APIKEY.PUBLIC_ID</code>.
      */
-    public void setPublicId(String value) {
+    public ApiKeyRecord setPublicId(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.APIKEY.PUBLIC_ID</code>.
+     * Getter for <code>APIKEY.PUBLIC_ID</code>.
      */
     public String getPublicId() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.APIKEY.IS_LEGACY</code>.
+     * Setter for <code>APIKEY.IS_LEGACY</code>.
      */
-    public void setIsLegacy(Boolean value) {
+    public ApiKeyRecord setIsLegacy(Boolean value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.APIKEY.IS_LEGACY</code>.
+     * Getter for <code>APIKEY.IS_LEGACY</code>.
      */
     public Boolean getIsLegacy() {
         return (Boolean) get(6);

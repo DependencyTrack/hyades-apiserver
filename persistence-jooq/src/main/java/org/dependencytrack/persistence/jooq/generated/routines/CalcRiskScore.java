@@ -6,7 +6,7 @@ package org.dependencytrack.persistence.jooq.generated.routines;
 
 import java.math.BigDecimal;
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Field;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
@@ -24,32 +24,32 @@ public class CalcRiskScore extends AbstractRoutine<BigDecimal> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The parameter <code>public.CALC_RISK_SCORE.RETURN_VALUE</code>.
+     * The parameter <code>CALC_RISK_SCORE.RETURN_VALUE</code>.
      */
     public static final Parameter<BigDecimal> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", SQLDataType.NUMERIC, false, false);
 
     /**
-     * The parameter <code>public.CALC_RISK_SCORE.critical</code>.
+     * The parameter <code>CALC_RISK_SCORE.critical</code>.
      */
     public static final Parameter<Integer> CRITICAL = Internal.createParameter("critical", SQLDataType.INTEGER, false, false);
 
     /**
-     * The parameter <code>public.CALC_RISK_SCORE.high</code>.
+     * The parameter <code>CALC_RISK_SCORE.high</code>.
      */
     public static final Parameter<Integer> HIGH = Internal.createParameter("high", SQLDataType.INTEGER, false, false);
 
     /**
-     * The parameter <code>public.CALC_RISK_SCORE.medium</code>.
+     * The parameter <code>CALC_RISK_SCORE.medium</code>.
      */
     public static final Parameter<Integer> MEDIUM = Internal.createParameter("medium", SQLDataType.INTEGER, false, false);
 
     /**
-     * The parameter <code>public.CALC_RISK_SCORE.low</code>.
+     * The parameter <code>CALC_RISK_SCORE.low</code>.
      */
     public static final Parameter<Integer> LOW = Internal.createParameter("low", SQLDataType.INTEGER, false, false);
 
     /**
-     * The parameter <code>public.CALC_RISK_SCORE.unassigned</code>.
+     * The parameter <code>CALC_RISK_SCORE.unassigned</code>.
      */
     public static final Parameter<Integer> UNASSIGNED = Internal.createParameter("unassigned", SQLDataType.INTEGER, false, false);
 
@@ -57,7 +57,7 @@ public class CalcRiskScore extends AbstractRoutine<BigDecimal> {
      * Create a new routine call instance
      */
     public CalcRiskScore() {
-        super("CALC_RISK_SCORE", Public.PUBLIC, DSL.comment(""), SQLDataType.NUMERIC);
+        super("CALC_RISK_SCORE", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""), SQLDataType.NUMERIC);
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(CRITICAL);
@@ -78,8 +78,9 @@ public class CalcRiskScore extends AbstractRoutine<BigDecimal> {
      * Set the <code>critical</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void setCritical(Field<Integer> field) {
+    public CalcRiskScore setCritical(Field<Integer> field) {
         setField(CRITICAL, field);
+        return this;
     }
 
     /**
@@ -93,8 +94,9 @@ public class CalcRiskScore extends AbstractRoutine<BigDecimal> {
      * Set the <code>high</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void setHigh(Field<Integer> field) {
+    public CalcRiskScore setHigh(Field<Integer> field) {
         setField(HIGH, field);
+        return this;
     }
 
     /**
@@ -108,8 +110,9 @@ public class CalcRiskScore extends AbstractRoutine<BigDecimal> {
      * Set the <code>medium</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void setMedium(Field<Integer> field) {
+    public CalcRiskScore setMedium(Field<Integer> field) {
         setField(MEDIUM, field);
+        return this;
     }
 
     /**
@@ -123,8 +126,9 @@ public class CalcRiskScore extends AbstractRoutine<BigDecimal> {
      * Set the <code>low</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void setLow(Field<Integer> field) {
+    public CalcRiskScore setLow(Field<Integer> field) {
         setField(LOW, field);
+        return this;
     }
 
     /**
@@ -138,7 +142,8 @@ public class CalcRiskScore extends AbstractRoutine<BigDecimal> {
      * Set the <code>unassigned</code> parameter to the function to be used with
      * a {@link org.jooq.Select} statement
      */
-    public void setUnassigned(Field<Integer> field) {
+    public CalcRiskScore setUnassigned(Field<Integer> field) {
         setField(UNASSIGNED, field);
+        return this;
     }
 }

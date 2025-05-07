@@ -21,112 +21,120 @@ public class PolicyViolationRecord extends UpdatableRecordImpl<PolicyViolationRe
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.POLICYVIOLATION.ID</code>.
+     * Setter for <code>POLICYVIOLATION.ID</code>.
      */
-    public void setId(Long value) {
+    public PolicyViolationRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYVIOLATION.ID</code>.
+     * Getter for <code>POLICYVIOLATION.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.POLICYVIOLATION.COMPONENT_ID</code>.
+     * Setter for <code>POLICYVIOLATION.COMPONENT_ID</code>.
      */
-    public void setComponentId(Long value) {
+    public PolicyViolationRecord setComponentId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYVIOLATION.COMPONENT_ID</code>.
+     * Getter for <code>POLICYVIOLATION.COMPONENT_ID</code>.
      */
     public Long getComponentId() {
         return (Long) get(1);
     }
 
     /**
-     * Setter for <code>public.POLICYVIOLATION.POLICYCONDITION_ID</code>.
+     * Setter for <code>POLICYVIOLATION.POLICYCONDITION_ID</code>.
      */
-    public void setPolicyconditionId(Long value) {
+    public PolicyViolationRecord setPolicyconditionId(Long value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYVIOLATION.POLICYCONDITION_ID</code>.
+     * Getter for <code>POLICYVIOLATION.POLICYCONDITION_ID</code>.
      */
     public Long getPolicyconditionId() {
         return (Long) get(2);
     }
 
     /**
-     * Setter for <code>public.POLICYVIOLATION.PROJECT_ID</code>.
+     * Setter for <code>POLICYVIOLATION.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public PolicyViolationRecord setProjectId(Long value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYVIOLATION.PROJECT_ID</code>.
+     * Getter for <code>POLICYVIOLATION.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(3);
     }
 
     /**
-     * Setter for <code>public.POLICYVIOLATION.TEXT</code>.
+     * Setter for <code>POLICYVIOLATION.TEXT</code>.
      */
-    public void setText(String value) {
+    public PolicyViolationRecord setText(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYVIOLATION.TEXT</code>.
+     * Getter for <code>POLICYVIOLATION.TEXT</code>.
      */
     public String getText() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.POLICYVIOLATION.TIMESTAMP</code>.
+     * Setter for <code>POLICYVIOLATION.TIMESTAMP</code>.
      */
-    public void setTimestamp(OffsetDateTime value) {
+    public PolicyViolationRecord setTimestamp(OffsetDateTime value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYVIOLATION.TIMESTAMP</code>.
+     * Getter for <code>POLICYVIOLATION.TIMESTAMP</code>.
      */
     public OffsetDateTime getTimestamp() {
         return (OffsetDateTime) get(5);
     }
 
     /**
-     * Setter for <code>public.POLICYVIOLATION.TYPE</code>.
+     * Setter for <code>POLICYVIOLATION.TYPE</code>.
      */
-    public void setType(String value) {
+    public PolicyViolationRecord setType(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYVIOLATION.TYPE</code>.
+     * Getter for <code>POLICYVIOLATION.TYPE</code>.
      */
     public String getType() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.POLICYVIOLATION.UUID</code>.
+     * Setter for <code>POLICYVIOLATION.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public PolicyViolationRecord setUuid(UUID value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICYVIOLATION.UUID</code>.
+     * Getter for <code>POLICYVIOLATION.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(7);

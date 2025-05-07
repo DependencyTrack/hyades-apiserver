@@ -20,56 +20,60 @@ public class LicenseGroupRecord extends UpdatableRecordImpl<LicenseGroupRecord> 
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.LICENSEGROUP.ID</code>.
+     * Setter for <code>LICENSEGROUP.ID</code>.
      */
-    public void setId(Long value) {
+    public LicenseGroupRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSEGROUP.ID</code>.
+     * Getter for <code>LICENSEGROUP.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.LICENSEGROUP.NAME</code>.
+     * Setter for <code>LICENSEGROUP.NAME</code>.
      */
-    public void setName(String value) {
+    public LicenseGroupRecord setName(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSEGROUP.NAME</code>.
+     * Getter for <code>LICENSEGROUP.NAME</code>.
      */
     public String getName() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.LICENSEGROUP.RISKWEIGHT</code>.
+     * Setter for <code>LICENSEGROUP.RISKWEIGHT</code>.
      */
-    public void setRiskweight(Integer value) {
+    public LicenseGroupRecord setRiskweight(Integer value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSEGROUP.RISKWEIGHT</code>.
+     * Getter for <code>LICENSEGROUP.RISKWEIGHT</code>.
      */
     public Integer getRiskweight() {
         return (Integer) get(2);
     }
 
     /**
-     * Setter for <code>public.LICENSEGROUP.UUID</code>.
+     * Setter for <code>LICENSEGROUP.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public LicenseGroupRecord setUuid(UUID value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSEGROUP.UUID</code>.
+     * Getter for <code>LICENSEGROUP.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(3);

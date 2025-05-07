@@ -22,308 +22,330 @@ public class ProjectRecord extends UpdatableRecordImpl<ProjectRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.PROJECT.ID</code>.
+     * Setter for <code>PROJECT.ID</code>.
      */
-    public void setId(Long value) {
+    public ProjectRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.ID</code>.
+     * Getter for <code>PROJECT.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.PROJECT.CLASSIFIER</code>.
+     * Setter for <code>PROJECT.CLASSIFIER</code>.
      */
-    public void setClassifier(String value) {
+    public ProjectRecord setClassifier(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.CLASSIFIER</code>.
+     * Getter for <code>PROJECT.CLASSIFIER</code>.
      */
     public String getClassifier() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.PROJECT.CPE</code>.
+     * Setter for <code>PROJECT.CPE</code>.
      */
-    public void setCpe(String value) {
+    public ProjectRecord setCpe(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.CPE</code>.
+     * Getter for <code>PROJECT.CPE</code>.
      */
     public String getCpe() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.PROJECT.DESCRIPTION</code>.
+     * Setter for <code>PROJECT.DESCRIPTION</code>.
      */
-    public void setDescription(String value) {
+    public ProjectRecord setDescription(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.DESCRIPTION</code>.
+     * Getter for <code>PROJECT.DESCRIPTION</code>.
      */
     public String getDescription() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.PROJECT.DIRECT_DEPENDENCIES</code>.
+     * Setter for <code>PROJECT.DIRECT_DEPENDENCIES</code>.
      */
-    public void setDirectDependencies(JSONB value) {
+    public ProjectRecord setDirectDependencies(JSONB value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.DIRECT_DEPENDENCIES</code>.
+     * Getter for <code>PROJECT.DIRECT_DEPENDENCIES</code>.
      */
     public JSONB getDirectDependencies() {
         return (JSONB) get(4);
     }
 
     /**
-     * Setter for <code>public.PROJECT.EXTERNAL_REFERENCES</code>.
+     * Setter for <code>PROJECT.EXTERNAL_REFERENCES</code>.
      */
-    public void setExternalReferences(byte[] value) {
+    public ProjectRecord setExternalReferences(byte[] value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.EXTERNAL_REFERENCES</code>.
+     * Getter for <code>PROJECT.EXTERNAL_REFERENCES</code>.
      */
     public byte[] getExternalReferences() {
         return (byte[]) get(5);
     }
 
     /**
-     * Setter for <code>public.PROJECT.GROUP</code>.
+     * Setter for <code>PROJECT.GROUP</code>.
      */
-    public void setGroup(String value) {
+    public ProjectRecord setGroup(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.GROUP</code>.
+     * Getter for <code>PROJECT.GROUP</code>.
      */
     public String getGroup() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.PROJECT.LAST_BOM_IMPORTED</code>.
+     * Setter for <code>PROJECT.LAST_BOM_IMPORTED</code>.
      */
-    public void setLastBomImported(OffsetDateTime value) {
+    public ProjectRecord setLastBomImported(OffsetDateTime value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.LAST_BOM_IMPORTED</code>.
+     * Getter for <code>PROJECT.LAST_BOM_IMPORTED</code>.
      */
     public OffsetDateTime getLastBomImported() {
         return (OffsetDateTime) get(7);
     }
 
     /**
-     * Setter for <code>public.PROJECT.LAST_BOM_IMPORTED_FORMAT</code>.
+     * Setter for <code>PROJECT.LAST_BOM_IMPORTED_FORMAT</code>.
      */
-    public void setLastBomImportedFormat(String value) {
+    public ProjectRecord setLastBomImportedFormat(String value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.LAST_BOM_IMPORTED_FORMAT</code>.
+     * Getter for <code>PROJECT.LAST_BOM_IMPORTED_FORMAT</code>.
      */
     public String getLastBomImportedFormat() {
         return (String) get(8);
     }
 
     /**
-     * Setter for <code>public.PROJECT.LAST_RISKSCORE</code>.
+     * Setter for <code>PROJECT.LAST_RISKSCORE</code>.
      */
-    public void setLastRiskscore(Double value) {
+    public ProjectRecord setLastRiskscore(Double value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.LAST_RISKSCORE</code>.
+     * Getter for <code>PROJECT.LAST_RISKSCORE</code>.
      */
     public Double getLastRiskscore() {
         return (Double) get(9);
     }
 
     /**
-     * Setter for <code>public.PROJECT.NAME</code>.
+     * Setter for <code>PROJECT.NAME</code>.
      */
-    public void setName(String value) {
+    public ProjectRecord setName(String value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.NAME</code>.
+     * Getter for <code>PROJECT.NAME</code>.
      */
     public String getName() {
         return (String) get(10);
     }
 
     /**
-     * Setter for <code>public.PROJECT.PARENT_PROJECT_ID</code>.
+     * Setter for <code>PROJECT.PARENT_PROJECT_ID</code>.
      */
-    public void setParentProjectId(Long value) {
+    public ProjectRecord setParentProjectId(Long value) {
         set(11, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.PARENT_PROJECT_ID</code>.
+     * Getter for <code>PROJECT.PARENT_PROJECT_ID</code>.
      */
     public Long getParentProjectId() {
         return (Long) get(11);
     }
 
     /**
-     * Setter for <code>public.PROJECT.PUBLISHER</code>.
+     * Setter for <code>PROJECT.PUBLISHER</code>.
      */
-    public void setPublisher(String value) {
+    public ProjectRecord setPublisher(String value) {
         set(12, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.PUBLISHER</code>.
+     * Getter for <code>PROJECT.PUBLISHER</code>.
      */
     public String getPublisher() {
         return (String) get(12);
     }
 
     /**
-     * Setter for <code>public.PROJECT.PURL</code>.
+     * Setter for <code>PROJECT.PURL</code>.
      */
-    public void setPurl(String value) {
+    public ProjectRecord setPurl(String value) {
         set(13, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.PURL</code>.
+     * Getter for <code>PROJECT.PURL</code>.
      */
     public String getPurl() {
         return (String) get(13);
     }
 
     /**
-     * Setter for <code>public.PROJECT.SWIDTAGID</code>.
+     * Setter for <code>PROJECT.SWIDTAGID</code>.
      */
-    public void setSwidtagid(String value) {
+    public ProjectRecord setSwidtagid(String value) {
         set(14, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.SWIDTAGID</code>.
+     * Getter for <code>PROJECT.SWIDTAGID</code>.
      */
     public String getSwidtagid() {
         return (String) get(14);
     }
 
     /**
-     * Setter for <code>public.PROJECT.UUID</code>.
+     * Setter for <code>PROJECT.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public ProjectRecord setUuid(UUID value) {
         set(15, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.UUID</code>.
+     * Getter for <code>PROJECT.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(15);
     }
 
     /**
-     * Setter for <code>public.PROJECT.VERSION</code>.
+     * Setter for <code>PROJECT.VERSION</code>.
      */
-    public void setVersion(String value) {
+    public ProjectRecord setVersion(String value) {
         set(16, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.VERSION</code>.
+     * Getter for <code>PROJECT.VERSION</code>.
      */
     public String getVersion() {
         return (String) get(16);
     }
 
     /**
-     * Setter for <code>public.PROJECT.SUPPLIER</code>.
+     * Setter for <code>PROJECT.SUPPLIER</code>.
      */
-    public void setSupplier(String value) {
+    public ProjectRecord setSupplier(String value) {
         set(17, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.SUPPLIER</code>.
+     * Getter for <code>PROJECT.SUPPLIER</code>.
      */
     public String getSupplier() {
         return (String) get(17);
     }
 
     /**
-     * Setter for <code>public.PROJECT.MANUFACTURER</code>.
+     * Setter for <code>PROJECT.MANUFACTURER</code>.
      */
-    public void setManufacturer(String value) {
+    public ProjectRecord setManufacturer(String value) {
         set(18, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.MANUFACTURER</code>.
+     * Getter for <code>PROJECT.MANUFACTURER</code>.
      */
     public String getManufacturer() {
         return (String) get(18);
     }
 
     /**
-     * Setter for <code>public.PROJECT.AUTHORS</code>.
+     * Setter for <code>PROJECT.AUTHORS</code>.
      */
-    public void setAuthors(String value) {
+    public ProjectRecord setAuthors(String value) {
         set(19, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.AUTHORS</code>.
+     * Getter for <code>PROJECT.AUTHORS</code>.
      */
     public String getAuthors() {
         return (String) get(19);
     }
 
     /**
-     * Setter for <code>public.PROJECT.IS_LATEST</code>.
+     * Setter for <code>PROJECT.IS_LATEST</code>.
      */
-    public void setIsLatest(Boolean value) {
+    public ProjectRecord setIsLatest(Boolean value) {
         set(20, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.IS_LATEST</code>.
+     * Getter for <code>PROJECT.IS_LATEST</code>.
      */
     public Boolean getIsLatest() {
         return (Boolean) get(20);
     }
 
     /**
-     * Setter for <code>public.PROJECT.INACTIVE_SINCE</code>.
+     * Setter for <code>PROJECT.INACTIVE_SINCE</code>.
      */
-    public void setInactiveSince(OffsetDateTime value) {
+    public ProjectRecord setInactiveSince(OffsetDateTime value) {
         set(21, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT.INACTIVE_SINCE</code>.
+     * Getter for <code>PROJECT.INACTIVE_SINCE</code>.
      */
     public OffsetDateTime getInactiveSince() {
         return (OffsetDateTime) get(21);

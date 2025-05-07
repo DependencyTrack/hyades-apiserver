@@ -8,13 +8,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
-import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation.PolicyviolationPath;
+import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation.PolicyViolationPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysisComment.ViolationanalysiscommentPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysisComment.ViolationAnalysisCommentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ViolationAnalysisRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -49,7 +49,7 @@ public class ViolationAnalysis extends TableImpl<ViolationAnalysisRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.VIOLATIONANALYSIS</code>
+     * The reference instance of <code>VIOLATIONANALYSIS</code>
      */
     public static final ViolationAnalysis VIOLATIONANALYSIS = new ViolationAnalysis();
 
@@ -62,32 +62,32 @@ public class ViolationAnalysis extends TableImpl<ViolationAnalysisRecord> {
     }
 
     /**
-     * The column <code>public.VIOLATIONANALYSIS.ID</code>.
+     * The column <code>VIOLATIONANALYSIS.ID</code>.
      */
     public final TableField<ViolationAnalysisRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.VIOLATIONANALYSIS.STATE</code>.
+     * The column <code>VIOLATIONANALYSIS.STATE</code>.
      */
     public final TableField<ViolationAnalysisRecord, String> STATE = createField(DSL.name("STATE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.VIOLATIONANALYSIS.COMPONENT_ID</code>.
+     * The column <code>VIOLATIONANALYSIS.COMPONENT_ID</code>.
      */
     public final TableField<ViolationAnalysisRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column <code>public.VIOLATIONANALYSIS.POLICYVIOLATION_ID</code>.
+     * The column <code>VIOLATIONANALYSIS.POLICYVIOLATION_ID</code>.
      */
     public final TableField<ViolationAnalysisRecord, Long> POLICYVIOLATION_ID = createField(DSL.name("POLICYVIOLATION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.VIOLATIONANALYSIS.PROJECT_ID</code>.
+     * The column <code>VIOLATIONANALYSIS.PROJECT_ID</code>.
      */
     public final TableField<ViolationAnalysisRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column <code>public.VIOLATIONANALYSIS.SUPPRESSED</code>.
+     * The column <code>VIOLATIONANALYSIS.SUPPRESSED</code>.
      */
     public final TableField<ViolationAnalysisRecord, Boolean> SUPPRESSED = createField(DSL.name("SUPPRESSED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
@@ -100,21 +100,21 @@ public class ViolationAnalysis extends TableImpl<ViolationAnalysisRecord> {
     }
 
     /**
-     * Create an aliased <code>public.VIOLATIONANALYSIS</code> table reference
+     * Create an aliased <code>VIOLATIONANALYSIS</code> table reference
      */
     public ViolationAnalysis(String alias) {
         this(DSL.name(alias), VIOLATIONANALYSIS);
     }
 
     /**
-     * Create an aliased <code>public.VIOLATIONANALYSIS</code> table reference
+     * Create an aliased <code>VIOLATIONANALYSIS</code> table reference
      */
     public ViolationAnalysis(Name alias) {
         this(alias, VIOLATIONANALYSIS);
     }
 
     /**
-     * Create a <code>public.VIOLATIONANALYSIS</code> table reference
+     * Create a <code>VIOLATIONANALYSIS</code> table reference
      */
     public ViolationAnalysis() {
         this(DSL.name("VIOLATIONANALYSIS"), null);
@@ -127,35 +127,35 @@ public class ViolationAnalysis extends TableImpl<ViolationAnalysisRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class ViolationanalysisPath extends ViolationAnalysis implements Path<ViolationAnalysisRecord> {
+    public static class ViolationAnalysisPath extends ViolationAnalysis implements Path<ViolationAnalysisRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> ViolationanalysisPath(Table<O> path, ForeignKey<O, ViolationAnalysisRecord> childPath, InverseForeignKey<O, ViolationAnalysisRecord> parentPath) {
+        public <O extends Record> ViolationAnalysisPath(Table<O> path, ForeignKey<O, ViolationAnalysisRecord> childPath, InverseForeignKey<O, ViolationAnalysisRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private ViolationanalysisPath(Name alias, Table<ViolationAnalysisRecord> aliased) {
+        private ViolationAnalysisPath(Name alias, Table<ViolationAnalysisRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public ViolationanalysisPath as(String alias) {
-            return new ViolationanalysisPath(DSL.name(alias), this);
+        public ViolationAnalysisPath as(String alias) {
+            return new ViolationAnalysisPath(DSL.name(alias), this);
         }
 
         @Override
-        public ViolationanalysisPath as(Name alias) {
-            return new ViolationanalysisPath(alias, this);
+        public ViolationAnalysisPath as(Name alias) {
+            return new ViolationAnalysisPath(alias, this);
         }
 
         @Override
-        public ViolationanalysisPath as(Table<?> alias) {
-            return new ViolationanalysisPath(alias.getQualifiedName(), this);
+        public ViolationAnalysisPath as(Table<?> alias) {
+            return new ViolationAnalysisPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -180,57 +180,56 @@ public class ViolationAnalysis extends TableImpl<ViolationAnalysisRecord> {
 
     @Override
     public List<ForeignKey<ViolationAnalysisRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.VIOLATIONANALYSIS__VIOLATIONANALYSIS_COMPONENT_FK, Keys.VIOLATIONANALYSIS__VIOLATIONANALYSIS_POLICYVIOLATION_FK, Keys.VIOLATIONANALYSIS__VIOLATIONANALYSIS_PROJECT_FK);
+        return Arrays.asList(Keys.VIOLATIONANALYSIS_COMPONENT_FK, Keys.VIOLATIONANALYSIS_POLICYVIOLATION_FK, Keys.VIOLATIONANALYSIS_PROJECT_FK);
     }
 
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit join path to the <code>public.COMPONENT</code> table.
+     * Get the implicit join path to the <code>COMPONENT</code> table.
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, Keys.VIOLATIONANALYSIS__VIOLATIONANALYSIS_COMPONENT_FK, null);
+            _component = new ComponentPath(this, Keys.VIOLATIONANALYSIS_COMPONENT_FK, null);
 
         return _component;
     }
 
-    private transient PolicyviolationPath _policyviolation;
+    private transient PolicyViolationPath _policyViolation;
 
     /**
-     * Get the implicit join path to the <code>public.POLICYVIOLATION</code>
-     * table.
+     * Get the implicit join path to the <code>POLICYVIOLATION</code> table.
      */
-    public PolicyviolationPath policyviolation() {
-        if (_policyviolation == null)
-            _policyviolation = new PolicyviolationPath(this, Keys.VIOLATIONANALYSIS__VIOLATIONANALYSIS_POLICYVIOLATION_FK, null);
+    public PolicyViolationPath policyViolation() {
+        if (_policyViolation == null)
+            _policyViolation = new PolicyViolationPath(this, Keys.VIOLATIONANALYSIS_POLICYVIOLATION_FK, null);
 
-        return _policyviolation;
+        return _policyViolation;
     }
 
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.VIOLATIONANALYSIS__VIOLATIONANALYSIS_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.VIOLATIONANALYSIS_PROJECT_FK, null);
 
         return _project;
     }
 
-    private transient ViolationanalysiscommentPath _violationanalysiscomment;
+    private transient ViolationAnalysisCommentPath _violationAnalysisComment;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.VIOLATIONANALYSISCOMMENT</code> table
+     * <code>VIOLATIONANALYSISCOMMENT</code> table
      */
-    public ViolationanalysiscommentPath violationanalysiscomment() {
-        if (_violationanalysiscomment == null)
-            _violationanalysiscomment = new ViolationanalysiscommentPath(this, null, Keys.VIOLATIONANALYSISCOMMENT__VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK.getInverseKey());
+    public ViolationAnalysisCommentPath violationAnalysisComment() {
+        if (_violationAnalysisComment == null)
+            _violationAnalysisComment = new ViolationAnalysisCommentPath(this, null, Keys.VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK.getInverseKey());
 
-        return _violationanalysiscomment;
+        return _violationAnalysisComment;
     }
 
     @Override

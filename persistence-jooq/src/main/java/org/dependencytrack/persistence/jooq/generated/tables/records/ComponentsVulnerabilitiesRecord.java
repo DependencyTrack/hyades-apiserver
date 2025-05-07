@@ -17,30 +17,30 @@ public class ComponentsVulnerabilitiesRecord extends TableRecordImpl<ComponentsV
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.COMPONENTS_VULNERABILITIES.COMPONENT_ID</code>.
+     * Setter for <code>COMPONENTS_VULNERABILITIES.COMPONENT_ID</code>.
      */
-    public void setComponentId(Long value) {
+    public ComponentsVulnerabilitiesRecord setComponentId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENTS_VULNERABILITIES.COMPONENT_ID</code>.
+     * Getter for <code>COMPONENTS_VULNERABILITIES.COMPONENT_ID</code>.
      */
     public Long getComponentId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for
-     * <code>public.COMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
+     * Setter for <code>COMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
-    public void setVulnerabilityId(Long value) {
+    public ComponentsVulnerabilitiesRecord setVulnerabilityId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.COMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
+     * Getter for <code>COMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
     public Long getVulnerabilityId() {
         return (Long) get(1);

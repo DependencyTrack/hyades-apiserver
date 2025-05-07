@@ -6,7 +6,7 @@ package org.dependencytrack.persistence.jooq.generated.routines;
 
 import java.util.UUID;
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
 import org.jooq.impl.DSL;
@@ -23,8 +23,7 @@ public class UpdateComponentMetrics extends AbstractRoutine<java.lang.Void> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The parameter
-     * <code>public.UPDATE_COMPONENT_METRICS.component_uuid</code>.
+     * The parameter <code>UPDATE_COMPONENT_METRICS.component_uuid</code>.
      */
     public static final Parameter<UUID> COMPONENT_UUID = Internal.createParameter("component_uuid", SQLDataType.UUID, false, false);
 
@@ -32,7 +31,7 @@ public class UpdateComponentMetrics extends AbstractRoutine<java.lang.Void> {
      * Create a new routine call instance
      */
     public UpdateComponentMetrics() {
-        super("UPDATE_COMPONENT_METRICS", Public.PUBLIC, DSL.comment(""));
+        super("UPDATE_COMPONENT_METRICS", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""));
 
         addInParameter(COMPONENT_UUID);
         setSQLUsable(false);

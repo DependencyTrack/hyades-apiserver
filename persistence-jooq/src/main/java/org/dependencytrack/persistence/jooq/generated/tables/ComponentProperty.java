@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ComponentPropertyRecord;
 import org.jooq.Check;
@@ -48,7 +48,7 @@ public class ComponentProperty extends TableImpl<ComponentPropertyRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.COMPONENT_PROPERTY</code>
+     * The reference instance of <code>COMPONENT_PROPERTY</code>
      */
     public static final ComponentProperty COMPONENT_PROPERTY = new ComponentProperty();
 
@@ -61,42 +61,42 @@ public class ComponentProperty extends TableImpl<ComponentPropertyRecord> {
     }
 
     /**
-     * The column <code>public.COMPONENT_PROPERTY.ID</code>.
+     * The column <code>COMPONENT_PROPERTY.ID</code>.
      */
     public final TableField<ComponentPropertyRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.COMPONENT_PROPERTY.COMPONENT_ID</code>.
+     * The column <code>COMPONENT_PROPERTY.COMPONENT_ID</code>.
      */
     public final TableField<ComponentPropertyRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.COMPONENT_PROPERTY.GROUPNAME</code>.
+     * The column <code>COMPONENT_PROPERTY.GROUPNAME</code>.
      */
     public final TableField<ComponentPropertyRecord, String> GROUPNAME = createField(DSL.name("GROUPNAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT_PROPERTY.PROPERTYNAME</code>.
+     * The column <code>COMPONENT_PROPERTY.PROPERTYNAME</code>.
      */
     public final TableField<ComponentPropertyRecord, String> PROPERTYNAME = createField(DSL.name("PROPERTYNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.COMPONENT_PROPERTY.PROPERTYVALUE</code>.
+     * The column <code>COMPONENT_PROPERTY.PROPERTYVALUE</code>.
      */
     public final TableField<ComponentPropertyRecord, String> PROPERTYVALUE = createField(DSL.name("PROPERTYVALUE"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
-     * The column <code>public.COMPONENT_PROPERTY.PROPERTYTYPE</code>.
+     * The column <code>COMPONENT_PROPERTY.PROPERTYTYPE</code>.
      */
     public final TableField<ComponentPropertyRecord, String> PROPERTYTYPE = createField(DSL.name("PROPERTYTYPE"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
-     * The column <code>public.COMPONENT_PROPERTY.DESCRIPTION</code>.
+     * The column <code>COMPONENT_PROPERTY.DESCRIPTION</code>.
      */
     public final TableField<ComponentPropertyRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.COMPONENT_PROPERTY.UUID</code>.
+     * The column <code>COMPONENT_PROPERTY.UUID</code>.
      */
     public final TableField<ComponentPropertyRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
@@ -109,21 +109,21 @@ public class ComponentProperty extends TableImpl<ComponentPropertyRecord> {
     }
 
     /**
-     * Create an aliased <code>public.COMPONENT_PROPERTY</code> table reference
+     * Create an aliased <code>COMPONENT_PROPERTY</code> table reference
      */
     public ComponentProperty(String alias) {
         this(DSL.name(alias), COMPONENT_PROPERTY);
     }
 
     /**
-     * Create an aliased <code>public.COMPONENT_PROPERTY</code> table reference
+     * Create an aliased <code>COMPONENT_PROPERTY</code> table reference
      */
     public ComponentProperty(Name alias) {
         this(alias, COMPONENT_PROPERTY);
     }
 
     /**
-     * Create a <code>public.COMPONENT_PROPERTY</code> table reference
+     * Create a <code>COMPONENT_PROPERTY</code> table reference
      */
     public ComponentProperty() {
         this(DSL.name("COMPONENT_PROPERTY"), null);
@@ -164,7 +164,7 @@ public class ComponentProperty extends TableImpl<ComponentPropertyRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -190,7 +190,7 @@ public class ComponentProperty extends TableImpl<ComponentPropertyRecord> {
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit join path to the <code>public.COMPONENT</code> table.
+     * Get the implicit join path to the <code>COMPONENT</code> table.
      */
     public ComponentPath component() {
         if (_component == null)

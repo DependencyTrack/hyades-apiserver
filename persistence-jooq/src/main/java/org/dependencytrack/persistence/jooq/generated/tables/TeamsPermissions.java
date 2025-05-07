@@ -8,8 +8,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission.PermissionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.TeamsPermissionsRecord;
@@ -44,7 +44,7 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.TEAMS_PERMISSIONS</code>
+     * The reference instance of <code>TEAMS_PERMISSIONS</code>
      */
     public static final TeamsPermissions TEAMS_PERMISSIONS = new TeamsPermissions();
 
@@ -57,12 +57,12 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
     }
 
     /**
-     * The column <code>public.TEAMS_PERMISSIONS.TEAM_ID</code>.
+     * The column <code>TEAMS_PERMISSIONS.TEAM_ID</code>.
      */
     public final TableField<TeamsPermissionsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.TEAMS_PERMISSIONS.PERMISSION_ID</code>.
+     * The column <code>TEAMS_PERMISSIONS.PERMISSION_ID</code>.
      */
     public final TableField<TeamsPermissionsRecord, Long> PERMISSION_ID = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -75,21 +75,21 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.TEAMS_PERMISSIONS</code> table reference
+     * Create an aliased <code>TEAMS_PERMISSIONS</code> table reference
      */
     public TeamsPermissions(String alias) {
         this(DSL.name(alias), TEAMS_PERMISSIONS);
     }
 
     /**
-     * Create an aliased <code>public.TEAMS_PERMISSIONS</code> table reference
+     * Create an aliased <code>TEAMS_PERMISSIONS</code> table reference
      */
     public TeamsPermissions(Name alias) {
         this(alias, TEAMS_PERMISSIONS);
     }
 
     /**
-     * Create a <code>public.TEAMS_PERMISSIONS</code> table reference
+     * Create a <code>TEAMS_PERMISSIONS</code> table reference
      */
     public TeamsPermissions() {
         this(DSL.name("TEAMS_PERMISSIONS"), null);
@@ -130,7 +130,7 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -146,7 +146,7 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
     private transient PermissionPath _permission;
 
     /**
-     * Get the implicit join path to the <code>public.PERMISSION</code> table.
+     * Get the implicit join path to the <code>PERMISSION</code> table.
      */
     public PermissionPath permission() {
         if (_permission == null)
@@ -158,7 +158,7 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
     private transient TeamPath _team;
 
     /**
-     * Get the implicit join path to the <code>public.TEAM</code> table.
+     * Get the implicit join path to the <code>TEAM</code> table.
      */
     public TeamPath team() {
         if (_team == null)

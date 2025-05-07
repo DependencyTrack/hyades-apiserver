@@ -20,212 +20,225 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.ID</code>.
+     * Setter for <code>DEPENDENCYMETRICS.ID</code>.
      */
-    public void setId(Long value) {
+    public DependencyMetricsRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.ID</code>.
+     * Getter for <code>DEPENDENCYMETRICS.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.COMPONENT_ID</code>.
+     * Setter for <code>DEPENDENCYMETRICS.COMPONENT_ID</code>.
      */
-    public void setComponentId(Long value) {
+    public DependencyMetricsRecord setComponentId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.COMPONENT_ID</code>.
+     * Getter for <code>DEPENDENCYMETRICS.COMPONENT_ID</code>.
      */
     public Long getComponentId() {
         return (Long) get(1);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.CRITICAL</code>.
+     * Setter for <code>DEPENDENCYMETRICS.CRITICAL</code>.
      */
-    public void setCritical(Integer value) {
+    public DependencyMetricsRecord setCritical(Integer value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.CRITICAL</code>.
+     * Getter for <code>DEPENDENCYMETRICS.CRITICAL</code>.
      */
     public Integer getCritical() {
         return (Integer) get(2);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.FINDINGS_AUDITED</code>.
+     * Setter for <code>DEPENDENCYMETRICS.FINDINGS_AUDITED</code>.
      */
-    public void setFindingsAudited(Integer value) {
+    public DependencyMetricsRecord setFindingsAudited(Integer value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.FINDINGS_AUDITED</code>.
+     * Getter for <code>DEPENDENCYMETRICS.FINDINGS_AUDITED</code>.
      */
     public Integer getFindingsAudited() {
         return (Integer) get(3);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.FINDINGS_TOTAL</code>.
+     * Setter for <code>DEPENDENCYMETRICS.FINDINGS_TOTAL</code>.
      */
-    public void setFindingsTotal(Integer value) {
+    public DependencyMetricsRecord setFindingsTotal(Integer value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.FINDINGS_TOTAL</code>.
+     * Getter for <code>DEPENDENCYMETRICS.FINDINGS_TOTAL</code>.
      */
     public Integer getFindingsTotal() {
         return (Integer) get(4);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.FINDINGS_UNAUDITED</code>.
+     * Setter for <code>DEPENDENCYMETRICS.FINDINGS_UNAUDITED</code>.
      */
-    public void setFindingsUnaudited(Integer value) {
+    public DependencyMetricsRecord setFindingsUnaudited(Integer value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.FINDINGS_UNAUDITED</code>.
+     * Getter for <code>DEPENDENCYMETRICS.FINDINGS_UNAUDITED</code>.
      */
     public Integer getFindingsUnaudited() {
         return (Integer) get(5);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.FIRST_OCCURRENCE</code>.
+     * Setter for <code>DEPENDENCYMETRICS.FIRST_OCCURRENCE</code>.
      */
-    public void setFirstOccurrence(OffsetDateTime value) {
+    public DependencyMetricsRecord setFirstOccurrence(OffsetDateTime value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.FIRST_OCCURRENCE</code>.
+     * Getter for <code>DEPENDENCYMETRICS.FIRST_OCCURRENCE</code>.
      */
     public OffsetDateTime getFirstOccurrence() {
         return (OffsetDateTime) get(6);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.HIGH</code>.
+     * Setter for <code>DEPENDENCYMETRICS.HIGH</code>.
      */
-    public void setHigh(Integer value) {
+    public DependencyMetricsRecord setHigh(Integer value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.HIGH</code>.
+     * Getter for <code>DEPENDENCYMETRICS.HIGH</code>.
      */
     public Integer getHigh() {
         return (Integer) get(7);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.RISKSCORE</code>.
+     * Setter for <code>DEPENDENCYMETRICS.RISKSCORE</code>.
      */
-    public void setRiskscore(Double value) {
+    public DependencyMetricsRecord setRiskscore(Double value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.RISKSCORE</code>.
+     * Getter for <code>DEPENDENCYMETRICS.RISKSCORE</code>.
      */
     public Double getRiskscore() {
         return (Double) get(8);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.LAST_OCCURRENCE</code>.
+     * Setter for <code>DEPENDENCYMETRICS.LAST_OCCURRENCE</code>.
      */
-    public void setLastOccurrence(OffsetDateTime value) {
+    public DependencyMetricsRecord setLastOccurrence(OffsetDateTime value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.LAST_OCCURRENCE</code>.
+     * Getter for <code>DEPENDENCYMETRICS.LAST_OCCURRENCE</code>.
      */
     public OffsetDateTime getLastOccurrence() {
         return (OffsetDateTime) get(9);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.LOW</code>.
+     * Setter for <code>DEPENDENCYMETRICS.LOW</code>.
      */
-    public void setLow(Integer value) {
+    public DependencyMetricsRecord setLow(Integer value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.LOW</code>.
+     * Getter for <code>DEPENDENCYMETRICS.LOW</code>.
      */
     public Integer getLow() {
         return (Integer) get(10);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.MEDIUM</code>.
+     * Setter for <code>DEPENDENCYMETRICS.MEDIUM</code>.
      */
-    public void setMedium(Integer value) {
+    public DependencyMetricsRecord setMedium(Integer value) {
         set(11, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.MEDIUM</code>.
+     * Getter for <code>DEPENDENCYMETRICS.MEDIUM</code>.
      */
     public Integer getMedium() {
         return (Integer) get(11);
     }
 
     /**
-     * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_AUDITED</code>.
+     * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
-    public void setPolicyviolationsAudited(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsAudited(Integer value) {
         set(12, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_AUDITED</code>.
+     * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
     public Integer getPolicyviolationsAudited() {
         return (Integer) get(12);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_FAIL</code>.
+     * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
-    public void setPolicyviolationsFail(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsFail(Integer value) {
         set(13, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_FAIL</code>.
+     * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
     public Integer getPolicyviolationsFail() {
         return (Integer) get(13);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_INFO</code>.
+     * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
-    public void setPolicyviolationsInfo(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsInfo(Integer value) {
         set(14, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_INFO</code>.
+     * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
     public Integer getPolicyviolationsInfo() {
         return (Integer) get(14);
@@ -233,31 +246,31 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
 
     /**
      * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
-    public void setPolicyviolationsLicenseAudited(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsLicenseAudited(Integer value) {
         set(15, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
     public Integer getPolicyviolationsLicenseAudited() {
         return (Integer) get(15);
     }
 
     /**
-     * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
+     * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
-    public void setPolicyviolationsLicenseTotal(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsLicenseTotal(Integer value) {
         set(16, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
+     * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
     public Integer getPolicyviolationsLicenseTotal() {
         return (Integer) get(16);
@@ -265,15 +278,16 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
 
     /**
      * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
-    public void setPolicyviolationsLicenseUnaudited(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsLicenseUnaudited(Integer value) {
         set(17, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsLicenseUnaudited() {
         return (Integer) get(17);
@@ -281,15 +295,16 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
 
     /**
      * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
-    public void setPolicyviolationsOperationalAudited(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsOperationalAudited(Integer value) {
         set(18, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
     public Integer getPolicyviolationsOperationalAudited() {
         return (Integer) get(18);
@@ -297,15 +312,16 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
 
     /**
      * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
-    public void setPolicyviolationsOperationalTotal(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsOperationalTotal(Integer value) {
         set(19, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
     public Integer getPolicyviolationsOperationalTotal() {
         return (Integer) get(19);
@@ -313,15 +329,16 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
 
     /**
      * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
-    public void setPolicyviolationsOperationalUnaudited(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsOperationalUnaudited(Integer value) {
         set(20, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsOperationalUnaudited() {
         return (Integer) get(20);
@@ -329,15 +346,16 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
 
     /**
      * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
-    public void setPolicyviolationsSecurityAudited(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsSecurityAudited(Integer value) {
         set(21, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
     public Integer getPolicyviolationsSecurityAudited() {
         return (Integer) get(21);
@@ -345,15 +363,16 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
 
     /**
      * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
-    public void setPolicyviolationsSecurityTotal(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsSecurityTotal(Integer value) {
         set(22, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
     public Integer getPolicyviolationsSecurityTotal() {
         return (Integer) get(22);
@@ -361,115 +380,121 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
 
     /**
      * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
-    public void setPolicyviolationsSecurityUnaudited(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsSecurityUnaudited(Integer value) {
         set(23, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsSecurityUnaudited() {
         return (Integer) get(23);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_TOTAL</code>.
+     * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
-    public void setPolicyviolationsTotal(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsTotal(Integer value) {
         set(24, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_TOTAL</code>.
+     * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
     public Integer getPolicyviolationsTotal() {
         return (Integer) get(24);
     }
 
     /**
-     * Setter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
+     * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
-    public void setPolicyviolationsUnaudited(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsUnaudited(Integer value) {
         set(25, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
+     * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsUnaudited() {
         return (Integer) get(25);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_WARN</code>.
+     * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
-    public void setPolicyviolationsWarn(Integer value) {
+    public DependencyMetricsRecord setPolicyviolationsWarn(Integer value) {
         set(26, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_WARN</code>.
+     * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
     public Integer getPolicyviolationsWarn() {
         return (Integer) get(26);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.PROJECT_ID</code>.
+     * Setter for <code>DEPENDENCYMETRICS.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public DependencyMetricsRecord setProjectId(Long value) {
         set(27, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.PROJECT_ID</code>.
+     * Getter for <code>DEPENDENCYMETRICS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(27);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.SUPPRESSED</code>.
+     * Setter for <code>DEPENDENCYMETRICS.SUPPRESSED</code>.
      */
-    public void setSuppressed(Integer value) {
+    public DependencyMetricsRecord setSuppressed(Integer value) {
         set(28, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.SUPPRESSED</code>.
+     * Getter for <code>DEPENDENCYMETRICS.SUPPRESSED</code>.
      */
     public Integer getSuppressed() {
         return (Integer) get(28);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.UNASSIGNED_SEVERITY</code>.
+     * Setter for <code>DEPENDENCYMETRICS.UNASSIGNED_SEVERITY</code>.
      */
-    public void setUnassignedSeverity(Integer value) {
+    public DependencyMetricsRecord setUnassignedSeverity(Integer value) {
         set(29, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.UNASSIGNED_SEVERITY</code>.
+     * Getter for <code>DEPENDENCYMETRICS.UNASSIGNED_SEVERITY</code>.
      */
     public Integer getUnassignedSeverity() {
         return (Integer) get(29);
     }
 
     /**
-     * Setter for <code>public.DEPENDENCYMETRICS.VULNERABILITIES</code>.
+     * Setter for <code>DEPENDENCYMETRICS.VULNERABILITIES</code>.
      */
-    public void setVulnerabilities(Integer value) {
+    public DependencyMetricsRecord setVulnerabilities(Integer value) {
         set(30, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.DEPENDENCYMETRICS.VULNERABILITIES</code>.
+     * Getter for <code>DEPENDENCYMETRICS.VULNERABILITIES</code>.
      */
     public Integer getVulnerabilities() {
         return (Integer) get(30);

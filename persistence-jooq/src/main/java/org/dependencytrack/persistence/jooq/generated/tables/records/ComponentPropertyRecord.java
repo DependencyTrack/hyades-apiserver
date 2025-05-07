@@ -20,112 +20,120 @@ public class ComponentPropertyRecord extends UpdatableRecordImpl<ComponentProper
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.COMPONENT_PROPERTY.ID</code>.
+     * Setter for <code>COMPONENT_PROPERTY.ID</code>.
      */
-    public void setId(Long value) {
+    public ComponentPropertyRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_PROPERTY.ID</code>.
+     * Getter for <code>COMPONENT_PROPERTY.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_PROPERTY.COMPONENT_ID</code>.
+     * Setter for <code>COMPONENT_PROPERTY.COMPONENT_ID</code>.
      */
-    public void setComponentId(Long value) {
+    public ComponentPropertyRecord setComponentId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_PROPERTY.COMPONENT_ID</code>.
+     * Getter for <code>COMPONENT_PROPERTY.COMPONENT_ID</code>.
      */
     public Long getComponentId() {
         return (Long) get(1);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_PROPERTY.GROUPNAME</code>.
+     * Setter for <code>COMPONENT_PROPERTY.GROUPNAME</code>.
      */
-    public void setGroupname(String value) {
+    public ComponentPropertyRecord setGroupname(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_PROPERTY.GROUPNAME</code>.
+     * Getter for <code>COMPONENT_PROPERTY.GROUPNAME</code>.
      */
     public String getGroupname() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_PROPERTY.PROPERTYNAME</code>.
+     * Setter for <code>COMPONENT_PROPERTY.PROPERTYNAME</code>.
      */
-    public void setPropertyname(String value) {
+    public ComponentPropertyRecord setPropertyname(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_PROPERTY.PROPERTYNAME</code>.
+     * Getter for <code>COMPONENT_PROPERTY.PROPERTYNAME</code>.
      */
     public String getPropertyname() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_PROPERTY.PROPERTYVALUE</code>.
+     * Setter for <code>COMPONENT_PROPERTY.PROPERTYVALUE</code>.
      */
-    public void setPropertyvalue(String value) {
+    public ComponentPropertyRecord setPropertyvalue(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_PROPERTY.PROPERTYVALUE</code>.
+     * Getter for <code>COMPONENT_PROPERTY.PROPERTYVALUE</code>.
      */
     public String getPropertyvalue() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_PROPERTY.PROPERTYTYPE</code>.
+     * Setter for <code>COMPONENT_PROPERTY.PROPERTYTYPE</code>.
      */
-    public void setPropertytype(String value) {
+    public ComponentPropertyRecord setPropertytype(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_PROPERTY.PROPERTYTYPE</code>.
+     * Getter for <code>COMPONENT_PROPERTY.PROPERTYTYPE</code>.
      */
     public String getPropertytype() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_PROPERTY.DESCRIPTION</code>.
+     * Setter for <code>COMPONENT_PROPERTY.DESCRIPTION</code>.
      */
-    public void setDescription(String value) {
+    public ComponentPropertyRecord setDescription(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_PROPERTY.DESCRIPTION</code>.
+     * Getter for <code>COMPONENT_PROPERTY.DESCRIPTION</code>.
      */
     public String getDescription() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.COMPONENT_PROPERTY.UUID</code>.
+     * Setter for <code>COMPONENT_PROPERTY.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public ComponentPropertyRecord setUuid(UUID value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT_PROPERTY.UUID</code>.
+     * Getter for <code>COMPONENT_PROPERTY.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(7);

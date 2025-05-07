@@ -9,29 +9,29 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Analysis.AnalysisPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Bom.BomPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
-import org.dependencytrack.persistence.jooq.generated.tables.DependencyMetrics.DependencymetricsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.FindingAttribution.FindingattributionPath;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleProjects.NotificationruleProjectsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.DependencyMetrics.DependencyMetricsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.FindingAttribution.FindingAttributionPath;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleProjects.NotificationRuleProjectsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyProjects.PolicyProjectsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation.PolicyviolationPath;
+import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation.PolicyViolationPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectAccessTeams.ProjectAccessTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectHierarchy.ProjectHierarchyPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectMetadata.ProjectMetadataPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ProjectMetrics.ProjectmetricsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ProjectMetrics.ProjectMetricsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectProperty.ProjectPropertyPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectsTags.ProjectsTagsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponent.ServicecomponentPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponent.ServiceComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions.UserProjectEffectivePermissionsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Vex.VexPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis.ViolationanalysisPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis.ViolationAnalysisPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectRecord;
 import org.jooq.Check;
 import org.jooq.Condition;
@@ -69,7 +69,7 @@ public class Project extends TableImpl<ProjectRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.PROJECT</code>
+     * The reference instance of <code>PROJECT</code>
      */
     public static final Project PROJECT = new Project();
 
@@ -82,112 +82,112 @@ public class Project extends TableImpl<ProjectRecord> {
     }
 
     /**
-     * The column <code>public.PROJECT.ID</code>.
+     * The column <code>PROJECT.ID</code>.
      */
     public final TableField<ProjectRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.PROJECT.CLASSIFIER</code>.
+     * The column <code>PROJECT.CLASSIFIER</code>.
      */
     public final TableField<ProjectRecord, String> CLASSIFIER = createField(DSL.name("CLASSIFIER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.PROJECT.CPE</code>.
+     * The column <code>PROJECT.CPE</code>.
      */
     public final TableField<ProjectRecord, String> CPE = createField(DSL.name("CPE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.PROJECT.DESCRIPTION</code>.
+     * The column <code>PROJECT.DESCRIPTION</code>.
      */
     public final TableField<ProjectRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.PROJECT.DIRECT_DEPENDENCIES</code>.
+     * The column <code>PROJECT.DIRECT_DEPENDENCIES</code>.
      */
     public final TableField<ProjectRecord, JSONB> DIRECT_DEPENDENCIES = createField(DSL.name("DIRECT_DEPENDENCIES"), SQLDataType.JSONB, this, "");
 
     /**
-     * The column <code>public.PROJECT.EXTERNAL_REFERENCES</code>.
+     * The column <code>PROJECT.EXTERNAL_REFERENCES</code>.
      */
     public final TableField<ProjectRecord, byte[]> EXTERNAL_REFERENCES = createField(DSL.name("EXTERNAL_REFERENCES"), SQLDataType.BLOB, this, "");
 
     /**
-     * The column <code>public.PROJECT.GROUP</code>.
+     * The column <code>PROJECT.GROUP</code>.
      */
     public final TableField<ProjectRecord, String> GROUP = createField(DSL.name("GROUP"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.PROJECT.LAST_BOM_IMPORTED</code>.
+     * The column <code>PROJECT.LAST_BOM_IMPORTED</code>.
      */
     public final TableField<ProjectRecord, OffsetDateTime> LAST_BOM_IMPORTED = createField(DSL.name("LAST_BOM_IMPORTED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
-     * The column <code>public.PROJECT.LAST_BOM_IMPORTED_FORMAT</code>.
+     * The column <code>PROJECT.LAST_BOM_IMPORTED_FORMAT</code>.
      */
     public final TableField<ProjectRecord, String> LAST_BOM_IMPORTED_FORMAT = createField(DSL.name("LAST_BOM_IMPORTED_FORMAT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.PROJECT.LAST_RISKSCORE</code>.
+     * The column <code>PROJECT.LAST_RISKSCORE</code>.
      */
     public final TableField<ProjectRecord, Double> LAST_RISKSCORE = createField(DSL.name("LAST_RISKSCORE"), SQLDataType.DOUBLE, this, "");
 
     /**
-     * The column <code>public.PROJECT.NAME</code>.
+     * The column <code>PROJECT.NAME</code>.
      */
     public final TableField<ProjectRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECT.PARENT_PROJECT_ID</code>.
+     * The column <code>PROJECT.PARENT_PROJECT_ID</code>.
      */
     public final TableField<ProjectRecord, Long> PARENT_PROJECT_ID = createField(DSL.name("PARENT_PROJECT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
-     * The column <code>public.PROJECT.PUBLISHER</code>.
+     * The column <code>PROJECT.PUBLISHER</code>.
      */
     public final TableField<ProjectRecord, String> PUBLISHER = createField(DSL.name("PUBLISHER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.PROJECT.PURL</code>.
+     * The column <code>PROJECT.PURL</code>.
      */
     public final TableField<ProjectRecord, String> PURL = createField(DSL.name("PURL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.PROJECT.SWIDTAGID</code>.
+     * The column <code>PROJECT.SWIDTAGID</code>.
      */
     public final TableField<ProjectRecord, String> SWIDTAGID = createField(DSL.name("SWIDTAGID"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.PROJECT.UUID</code>.
+     * The column <code>PROJECT.UUID</code>.
      */
     public final TableField<ProjectRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECT.VERSION</code>.
+     * The column <code>PROJECT.VERSION</code>.
      */
     public final TableField<ProjectRecord, String> VERSION = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.PROJECT.SUPPLIER</code>.
+     * The column <code>PROJECT.SUPPLIER</code>.
      */
     public final TableField<ProjectRecord, String> SUPPLIER = createField(DSL.name("SUPPLIER"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.PROJECT.MANUFACTURER</code>.
+     * The column <code>PROJECT.MANUFACTURER</code>.
      */
     public final TableField<ProjectRecord, String> MANUFACTURER = createField(DSL.name("MANUFACTURER"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.PROJECT.AUTHORS</code>.
+     * The column <code>PROJECT.AUTHORS</code>.
      */
     public final TableField<ProjectRecord, String> AUTHORS = createField(DSL.name("AUTHORS"), SQLDataType.CLOB, this, "");
 
     /**
-     * The column <code>public.PROJECT.IS_LATEST</code>.
+     * The column <code>PROJECT.IS_LATEST</code>.
      */
     public final TableField<ProjectRecord, Boolean> IS_LATEST = createField(DSL.name("IS_LATEST"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
     /**
-     * The column <code>public.PROJECT.INACTIVE_SINCE</code>.
+     * The column <code>PROJECT.INACTIVE_SINCE</code>.
      */
     public final TableField<ProjectRecord, OffsetDateTime> INACTIVE_SINCE = createField(DSL.name("INACTIVE_SINCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
@@ -200,21 +200,21 @@ public class Project extends TableImpl<ProjectRecord> {
     }
 
     /**
-     * Create an aliased <code>public.PROJECT</code> table reference
+     * Create an aliased <code>PROJECT</code> table reference
      */
     public Project(String alias) {
         this(DSL.name(alias), PROJECT);
     }
 
     /**
-     * Create an aliased <code>public.PROJECT</code> table reference
+     * Create an aliased <code>PROJECT</code> table reference
      */
     public Project(Name alias) {
         this(alias, PROJECT);
     }
 
     /**
-     * Create a <code>public.PROJECT</code> table reference
+     * Create a <code>PROJECT</code> table reference
      */
     public Project() {
         this(DSL.name("PROJECT"), null);
@@ -255,7 +255,7 @@ public class Project extends TableImpl<ProjectRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -286,7 +286,7 @@ public class Project extends TableImpl<ProjectRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
@@ -298,8 +298,7 @@ public class Project extends TableImpl<ProjectRecord> {
     private transient AnalysisPath _analysis;
 
     /**
-     * Get the implicit to-many join path to the <code>public.ANALYSIS</code>
-     * table
+     * Get the implicit to-many join path to the <code>ANALYSIS</code> table
      */
     public AnalysisPath analysis() {
         if (_analysis == null)
@@ -311,7 +310,7 @@ public class Project extends TableImpl<ProjectRecord> {
     private transient BomPath _bom;
 
     /**
-     * Get the implicit to-many join path to the <code>public.BOM</code> table
+     * Get the implicit to-many join path to the <code>BOM</code> table
      */
     public BomPath bom() {
         if (_bom == null)
@@ -323,8 +322,7 @@ public class Project extends TableImpl<ProjectRecord> {
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit to-many join path to the <code>public.COMPONENT</code>
-     * table
+     * Get the implicit to-many join path to the <code>COMPONENT</code> table
      */
     public ComponentPath component() {
         if (_component == null)
@@ -333,41 +331,41 @@ public class Project extends TableImpl<ProjectRecord> {
         return _component;
     }
 
-    private transient DependencymetricsPath _dependencymetrics;
+    private transient DependencyMetricsPath _dependencyMetrics;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.DEPENDENCYMETRICS</code> table
+     * Get the implicit to-many join path to the <code>DEPENDENCYMETRICS</code>
+     * table
      */
-    public DependencymetricsPath dependencymetrics() {
-        if (_dependencymetrics == null)
-            _dependencymetrics = new DependencymetricsPath(this, null, Keys.DEPENDENCYMETRICS__DEPENDENCYMETRICS_PROJECT_FK.getInverseKey());
+    public DependencyMetricsPath dependencyMetrics() {
+        if (_dependencyMetrics == null)
+            _dependencyMetrics = new DependencyMetricsPath(this, null, Keys.DEPENDENCYMETRICS_PROJECT_FK.getInverseKey());
 
-        return _dependencymetrics;
+        return _dependencyMetrics;
     }
 
-    private transient FindingattributionPath _findingattribution;
+    private transient FindingAttributionPath _findingAttribution;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.FINDINGATTRIBUTION</code> table
+     * Get the implicit to-many join path to the <code>FINDINGATTRIBUTION</code>
+     * table
      */
-    public FindingattributionPath findingattribution() {
-        if (_findingattribution == null)
-            _findingattribution = new FindingattributionPath(this, null, Keys.FINDINGATTRIBUTION__FINDINGATTRIBUTION_PROJECT_FK.getInverseKey());
+    public FindingAttributionPath findingAttribution() {
+        if (_findingAttribution == null)
+            _findingAttribution = new FindingAttributionPath(this, null, Keys.FINDINGATTRIBUTION_PROJECT_FK.getInverseKey());
 
-        return _findingattribution;
+        return _findingAttribution;
     }
 
-    private transient NotificationruleProjectsPath _notificationruleProjects;
+    private transient NotificationRuleProjectsPath _notificationruleProjects;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.NOTIFICATIONRULE_PROJECTS</code> table
+     * <code>NOTIFICATIONRULE_PROJECTS</code> table
      */
-    public NotificationruleProjectsPath notificationruleProjects() {
+    public NotificationRuleProjectsPath notificationruleProjects() {
         if (_notificationruleProjects == null)
-            _notificationruleProjects = new NotificationruleProjectsPath(this, null, Keys.NOTIFICATIONRULE_PROJECTS__NOTIFICATIONRULE_PROJECTS_PROJECT_FK.getInverseKey());
+            _notificationruleProjects = new NotificationRuleProjectsPath(this, null, Keys.NOTIFICATIONRULE_PROJECTS_PROJECT_FK.getInverseKey());
 
         return _notificationruleProjects;
     }
@@ -375,8 +373,8 @@ public class Project extends TableImpl<ProjectRecord> {
     private transient PolicyProjectsPath _policyProjects;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.POLICY_PROJECTS</code> table
+     * Get the implicit to-many join path to the <code>POLICY_PROJECTS</code>
+     * table
      */
     public PolicyProjectsPath policyProjects() {
         if (_policyProjects == null)
@@ -385,24 +383,24 @@ public class Project extends TableImpl<ProjectRecord> {
         return _policyProjects;
     }
 
-    private transient PolicyviolationPath _policyviolation;
+    private transient PolicyViolationPath _policyViolation;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.POLICYVIOLATION</code> table
+     * Get the implicit to-many join path to the <code>POLICYVIOLATION</code>
+     * table
      */
-    public PolicyviolationPath policyviolation() {
-        if (_policyviolation == null)
-            _policyviolation = new PolicyviolationPath(this, null, Keys.POLICYVIOLATION__POLICYVIOLATION_PROJECT_FK.getInverseKey());
+    public PolicyViolationPath policyViolation() {
+        if (_policyViolation == null)
+            _policyViolation = new PolicyViolationPath(this, null, Keys.POLICYVIOLATION_PROJECT_FK.getInverseKey());
 
-        return _policyviolation;
+        return _policyViolation;
     }
 
     private transient ProjectAccessTeamsPath _projectAccessTeams;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.PROJECT_ACCESS_TEAMS</code> table
+     * <code>PROJECT_ACCESS_TEAMS</code> table
      */
     public ProjectAccessTeamsPath projectAccessTeams() {
         if (_projectAccessTeams == null)
@@ -414,9 +412,8 @@ public class Project extends TableImpl<ProjectRecord> {
     private transient ProjectHierarchyPath _projectHierarchyChildProjectFk;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.PROJECT_HIERARCHY</code> table, via the
-     * <code>PROJECT_HIERARCHY_CHILD_PROJECT_FK</code> key
+     * Get the implicit to-many join path to the <code>PROJECT_HIERARCHY</code>
+     * table, via the <code>PROJECT_HIERARCHY_CHILD_PROJECT_FK</code> key
      */
     public ProjectHierarchyPath projectHierarchyChildProjectFk() {
         if (_projectHierarchyChildProjectFk == null)
@@ -428,9 +425,8 @@ public class Project extends TableImpl<ProjectRecord> {
     private transient ProjectHierarchyPath _projectHierarchyParentProjectFk;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.PROJECT_HIERARCHY</code> table, via the
-     * <code>PROJECT_HIERARCHY_PARENT_PROJECT_FK</code> key
+     * Get the implicit to-many join path to the <code>PROJECT_HIERARCHY</code>
+     * table, via the <code>PROJECT_HIERARCHY_PARENT_PROJECT_FK</code> key
      */
     public ProjectHierarchyPath projectHierarchyParentProjectFk() {
         if (_projectHierarchyParentProjectFk == null)
@@ -442,8 +438,8 @@ public class Project extends TableImpl<ProjectRecord> {
     private transient ProjectMetadataPath _projectMetadata;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.PROJECT_METADATA</code> table
+     * Get the implicit to-many join path to the <code>PROJECT_METADATA</code>
+     * table
      */
     public ProjectMetadataPath projectMetadata() {
         if (_projectMetadata == null)
@@ -455,8 +451,8 @@ public class Project extends TableImpl<ProjectRecord> {
     private transient ProjectPropertyPath _projectProperty;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.PROJECT_PROPERTY</code> table
+     * Get the implicit to-many join path to the <code>PROJECT_PROPERTY</code>
+     * table
      */
     public ProjectPropertyPath projectProperty() {
         if (_projectProperty == null)
@@ -465,24 +461,24 @@ public class Project extends TableImpl<ProjectRecord> {
         return _projectProperty;
     }
 
-    private transient ProjectmetricsPath _projectmetrics;
+    private transient ProjectMetricsPath _projectMetrics;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.PROJECTMETRICS</code> table
+     * Get the implicit to-many join path to the <code>PROJECTMETRICS</code>
+     * table
      */
-    public ProjectmetricsPath projectmetrics() {
-        if (_projectmetrics == null)
-            _projectmetrics = new ProjectmetricsPath(this, null, Keys.PROJECTMETRICS__PROJECTMETRICS_PROJECT_FK.getInverseKey());
+    public ProjectMetricsPath projectMetrics() {
+        if (_projectMetrics == null)
+            _projectMetrics = new ProjectMetricsPath(this, null, Keys.PROJECTMETRICS_PROJECT_FK.getInverseKey());
 
-        return _projectmetrics;
+        return _projectMetrics;
     }
 
     private transient ProjectsTagsPath _projectsTags;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.PROJECTS_TAGS</code> table
+     * Get the implicit to-many join path to the <code>PROJECTS_TAGS</code>
+     * table
      */
     public ProjectsTagsPath projectsTags() {
         if (_projectsTags == null)
@@ -491,24 +487,24 @@ public class Project extends TableImpl<ProjectRecord> {
         return _projectsTags;
     }
 
-    private transient ServicecomponentPath _servicecomponent;
+    private transient ServiceComponentPath _serviceComponent;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.SERVICECOMPONENT</code> table
+     * Get the implicit to-many join path to the <code>SERVICECOMPONENT</code>
+     * table
      */
-    public ServicecomponentPath servicecomponent() {
-        if (_servicecomponent == null)
-            _servicecomponent = new ServicecomponentPath(this, null, Keys.SERVICECOMPONENT__SERVICECOMPONENT_PROJECT_FK.getInverseKey());
+    public ServiceComponentPath serviceComponent() {
+        if (_serviceComponent == null)
+            _serviceComponent = new ServiceComponentPath(this, null, Keys.SERVICECOMPONENT_PROJECT_FK.getInverseKey());
 
-        return _servicecomponent;
+        return _serviceComponent;
     }
 
     private transient UserProjectEffectivePermissionsPath _userProjectEffectivePermissions;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
      */
     public UserProjectEffectivePermissionsPath userProjectEffectivePermissions() {
         if (_userProjectEffectivePermissions == null)
@@ -520,7 +516,7 @@ public class Project extends TableImpl<ProjectRecord> {
     private transient VexPath _vex;
 
     /**
-     * Get the implicit to-many join path to the <code>public.VEX</code> table
+     * Get the implicit to-many join path to the <code>VEX</code> table
      */
     public VexPath vex() {
         if (_vex == null)
@@ -529,22 +525,21 @@ public class Project extends TableImpl<ProjectRecord> {
         return _vex;
     }
 
-    private transient ViolationanalysisPath _violationanalysis;
+    private transient ViolationAnalysisPath _violationAnalysis;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.VIOLATIONANALYSIS</code> table
+     * Get the implicit to-many join path to the <code>VIOLATIONANALYSIS</code>
+     * table
      */
-    public ViolationanalysisPath violationanalysis() {
-        if (_violationanalysis == null)
-            _violationanalysis = new ViolationanalysisPath(this, null, Keys.VIOLATIONANALYSIS__VIOLATIONANALYSIS_PROJECT_FK.getInverseKey());
+    public ViolationAnalysisPath violationAnalysis() {
+        if (_violationAnalysis == null)
+            _violationAnalysis = new ViolationAnalysisPath(this, null, Keys.VIOLATIONANALYSIS_PROJECT_FK.getInverseKey());
 
-        return _violationanalysis;
+        return _violationAnalysis;
     }
 
     /**
-     * Get the implicit many-to-many join path to the <code>public.TEAM</code>
-     * table
+     * Get the implicit many-to-many join path to the <code>TEAM</code> table
      */
     public TeamPath team() {
         return projectAccessTeams().team();

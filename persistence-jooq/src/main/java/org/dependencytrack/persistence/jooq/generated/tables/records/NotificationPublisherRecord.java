@@ -20,112 +20,120 @@ public class NotificationPublisherRecord extends UpdatableRecordImpl<Notificatio
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.NOTIFICATIONPUBLISHER.ID</code>.
+     * Setter for <code>NOTIFICATIONPUBLISHER.ID</code>.
      */
-    public void setId(Long value) {
+    public NotificationPublisherRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONPUBLISHER.ID</code>.
+     * Getter for <code>NOTIFICATIONPUBLISHER.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONPUBLISHER.DEFAULT_PUBLISHER</code>.
+     * Setter for <code>NOTIFICATIONPUBLISHER.DEFAULT_PUBLISHER</code>.
      */
-    public void setDefaultPublisher(Boolean value) {
+    public NotificationPublisherRecord setDefaultPublisher(Boolean value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONPUBLISHER.DEFAULT_PUBLISHER</code>.
+     * Getter for <code>NOTIFICATIONPUBLISHER.DEFAULT_PUBLISHER</code>.
      */
     public Boolean getDefaultPublisher() {
         return (Boolean) get(1);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONPUBLISHER.DESCRIPTION</code>.
+     * Setter for <code>NOTIFICATIONPUBLISHER.DESCRIPTION</code>.
      */
-    public void setDescription(String value) {
+    public NotificationPublisherRecord setDescription(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONPUBLISHER.DESCRIPTION</code>.
+     * Getter for <code>NOTIFICATIONPUBLISHER.DESCRIPTION</code>.
      */
     public String getDescription() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONPUBLISHER.NAME</code>.
+     * Setter for <code>NOTIFICATIONPUBLISHER.NAME</code>.
      */
-    public void setName(String value) {
+    public NotificationPublisherRecord setName(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONPUBLISHER.NAME</code>.
+     * Getter for <code>NOTIFICATIONPUBLISHER.NAME</code>.
      */
     public String getName() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONPUBLISHER.PUBLISHER_CLASS</code>.
+     * Setter for <code>NOTIFICATIONPUBLISHER.PUBLISHER_CLASS</code>.
      */
-    public void setPublisherClass(String value) {
+    public NotificationPublisherRecord setPublisherClass(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONPUBLISHER.PUBLISHER_CLASS</code>.
+     * Getter for <code>NOTIFICATIONPUBLISHER.PUBLISHER_CLASS</code>.
      */
     public String getPublisherClass() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONPUBLISHER.TEMPLATE</code>.
+     * Setter for <code>NOTIFICATIONPUBLISHER.TEMPLATE</code>.
      */
-    public void setTemplate(String value) {
+    public NotificationPublisherRecord setTemplate(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONPUBLISHER.TEMPLATE</code>.
+     * Getter for <code>NOTIFICATIONPUBLISHER.TEMPLATE</code>.
      */
     public String getTemplate() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONPUBLISHER.TEMPLATE_MIME_TYPE</code>.
+     * Setter for <code>NOTIFICATIONPUBLISHER.TEMPLATE_MIME_TYPE</code>.
      */
-    public void setTemplateMimeType(String value) {
+    public NotificationPublisherRecord setTemplateMimeType(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONPUBLISHER.TEMPLATE_MIME_TYPE</code>.
+     * Getter for <code>NOTIFICATIONPUBLISHER.TEMPLATE_MIME_TYPE</code>.
      */
     public String getTemplateMimeType() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONPUBLISHER.UUID</code>.
+     * Setter for <code>NOTIFICATIONPUBLISHER.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public NotificationPublisherRecord setUuid(UUID value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONPUBLISHER.UUID</code>.
+     * Getter for <code>NOTIFICATIONPUBLISHER.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(7);

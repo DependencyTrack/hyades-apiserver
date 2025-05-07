@@ -8,10 +8,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroupLicense.LicensegroupLicensePath;
+import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroupLicense.LicenseGroupLicensePath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.LicenseGroupRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -46,7 +46,7 @@ public class LicenseGroup extends TableImpl<LicenseGroupRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.LICENSEGROUP</code>
+     * The reference instance of <code>LICENSEGROUP</code>
      */
     public static final LicenseGroup LICENSEGROUP = new LicenseGroup();
 
@@ -59,22 +59,22 @@ public class LicenseGroup extends TableImpl<LicenseGroupRecord> {
     }
 
     /**
-     * The column <code>public.LICENSEGROUP.ID</code>.
+     * The column <code>LICENSEGROUP.ID</code>.
      */
     public final TableField<LicenseGroupRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.LICENSEGROUP.NAME</code>.
+     * The column <code>LICENSEGROUP.NAME</code>.
      */
     public final TableField<LicenseGroupRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.LICENSEGROUP.RISKWEIGHT</code>.
+     * The column <code>LICENSEGROUP.RISKWEIGHT</code>.
      */
     public final TableField<LicenseGroupRecord, Integer> RISKWEIGHT = createField(DSL.name("RISKWEIGHT"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.LICENSEGROUP.UUID</code>.
+     * The column <code>LICENSEGROUP.UUID</code>.
      */
     public final TableField<LicenseGroupRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
@@ -87,21 +87,21 @@ public class LicenseGroup extends TableImpl<LicenseGroupRecord> {
     }
 
     /**
-     * Create an aliased <code>public.LICENSEGROUP</code> table reference
+     * Create an aliased <code>LICENSEGROUP</code> table reference
      */
     public LicenseGroup(String alias) {
         this(DSL.name(alias), LICENSEGROUP);
     }
 
     /**
-     * Create an aliased <code>public.LICENSEGROUP</code> table reference
+     * Create an aliased <code>LICENSEGROUP</code> table reference
      */
     public LicenseGroup(Name alias) {
         this(alias, LICENSEGROUP);
     }
 
     /**
-     * Create a <code>public.LICENSEGROUP</code> table reference
+     * Create a <code>LICENSEGROUP</code> table reference
      */
     public LicenseGroup() {
         this(DSL.name("LICENSEGROUP"), null);
@@ -114,35 +114,35 @@ public class LicenseGroup extends TableImpl<LicenseGroupRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class LicensegroupPath extends LicenseGroup implements Path<LicenseGroupRecord> {
+    public static class LicenseGroupPath extends LicenseGroup implements Path<LicenseGroupRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> LicensegroupPath(Table<O> path, ForeignKey<O, LicenseGroupRecord> childPath, InverseForeignKey<O, LicenseGroupRecord> parentPath) {
+        public <O extends Record> LicenseGroupPath(Table<O> path, ForeignKey<O, LicenseGroupRecord> childPath, InverseForeignKey<O, LicenseGroupRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private LicensegroupPath(Name alias, Table<LicenseGroupRecord> aliased) {
+        private LicenseGroupPath(Name alias, Table<LicenseGroupRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public LicensegroupPath as(String alias) {
-            return new LicensegroupPath(DSL.name(alias), this);
+        public LicenseGroupPath as(String alias) {
+            return new LicenseGroupPath(DSL.name(alias), this);
         }
 
         @Override
-        public LicensegroupPath as(Name alias) {
-            return new LicensegroupPath(alias, this);
+        public LicenseGroupPath as(Name alias) {
+            return new LicenseGroupPath(alias, this);
         }
 
         @Override
-        public LicensegroupPath as(Table<?> alias) {
-            return new LicensegroupPath(alias.getQualifiedName(), this);
+        public LicenseGroupPath as(Table<?> alias) {
+            return new LicenseGroupPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -165,17 +165,17 @@ public class LicenseGroup extends TableImpl<LicenseGroupRecord> {
         return Arrays.asList(Keys.LICENSEGROUP_UUID_IDX);
     }
 
-    private transient LicensegroupLicensePath _licensegroupLicense;
+    private transient LicenseGroupLicensePath _licenseGroupLicense;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.LICENSEGROUP_LICENSE</code> table
+     * <code>LICENSEGROUP_LICENSE</code> table
      */
-    public LicensegroupLicensePath licensegroupLicense() {
-        if (_licensegroupLicense == null)
-            _licensegroupLicense = new LicensegroupLicensePath(this, null, Keys.LICENSEGROUP_LICENSE__LICENSEGROUP_LICENSE_LICENSEGROUP_FK.getInverseKey());
+    public LicenseGroupLicensePath licenseGroupLicense() {
+        if (_licenseGroupLicense == null)
+            _licenseGroupLicense = new LicenseGroupLicensePath(this, null, Keys.LICENSEGROUP_LICENSE_LICENSEGROUP_FK.getInverseKey());
 
-        return _licensegroupLicense;
+        return _licenseGroupLicense;
     }
 
     @Override

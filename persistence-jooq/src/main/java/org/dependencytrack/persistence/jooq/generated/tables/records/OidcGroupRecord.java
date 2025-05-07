@@ -18,42 +18,45 @@ public class OidcGroupRecord extends UpdatableRecordImpl<OidcGroupRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.OIDCGROUP.ID</code>.
+     * Setter for <code>OIDCGROUP.ID</code>.
      */
-    public void setId(Long value) {
+    public OidcGroupRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCGROUP.ID</code>.
+     * Getter for <code>OIDCGROUP.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.OIDCGROUP.NAME</code>.
+     * Setter for <code>OIDCGROUP.NAME</code>.
      */
-    public void setName(String value) {
+    public OidcGroupRecord setName(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCGROUP.NAME</code>.
+     * Getter for <code>OIDCGROUP.NAME</code>.
      */
     public String getName() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.OIDCGROUP.UUID</code>.
+     * Setter for <code>OIDCGROUP.UUID</code>.
      */
-    public void setUuid(String value) {
+    public OidcGroupRecord setUuid(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCGROUP.UUID</code>.
+     * Getter for <code>OIDCGROUP.UUID</code>.
      */
     public String getUuid() {
         return (String) get(2);

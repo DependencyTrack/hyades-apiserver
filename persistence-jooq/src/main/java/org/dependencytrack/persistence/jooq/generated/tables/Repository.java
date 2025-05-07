@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.records.RepositoryRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -41,7 +41,7 @@ public class Repository extends TableImpl<RepositoryRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.REPOSITORY</code>
+     * The reference instance of <code>REPOSITORY</code>
      */
     public static final Repository REPOSITORY = new Repository();
 
@@ -54,57 +54,57 @@ public class Repository extends TableImpl<RepositoryRecord> {
     }
 
     /**
-     * The column <code>public.REPOSITORY.ID</code>.
+     * The column <code>REPOSITORY.ID</code>.
      */
     public final TableField<RepositoryRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.REPOSITORY.AUTHENTICATIONREQUIRED</code>.
+     * The column <code>REPOSITORY.AUTHENTICATIONREQUIRED</code>.
      */
     public final TableField<RepositoryRecord, Boolean> AUTHENTICATIONREQUIRED = createField(DSL.name("AUTHENTICATIONREQUIRED"), SQLDataType.BOOLEAN, this, "");
 
     /**
-     * The column <code>public.REPOSITORY.ENABLED</code>.
+     * The column <code>REPOSITORY.ENABLED</code>.
      */
     public final TableField<RepositoryRecord, Boolean> ENABLED = createField(DSL.name("ENABLED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
-     * The column <code>public.REPOSITORY.IDENTIFIER</code>.
+     * The column <code>REPOSITORY.IDENTIFIER</code>.
      */
     public final TableField<RepositoryRecord, String> IDENTIFIER = createField(DSL.name("IDENTIFIER"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.REPOSITORY.INTERNAL</code>.
+     * The column <code>REPOSITORY.INTERNAL</code>.
      */
     public final TableField<RepositoryRecord, Boolean> INTERNAL = createField(DSL.name("INTERNAL"), SQLDataType.BOOLEAN, this, "");
 
     /**
-     * The column <code>public.REPOSITORY.PASSWORD</code>.
+     * The column <code>REPOSITORY.PASSWORD</code>.
      */
     public final TableField<RepositoryRecord, String> PASSWORD = createField(DSL.name("PASSWORD"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.REPOSITORY.RESOLUTION_ORDER</code>.
+     * The column <code>REPOSITORY.RESOLUTION_ORDER</code>.
      */
     public final TableField<RepositoryRecord, Integer> RESOLUTION_ORDER = createField(DSL.name("RESOLUTION_ORDER"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.REPOSITORY.TYPE</code>.
+     * The column <code>REPOSITORY.TYPE</code>.
      */
     public final TableField<RepositoryRecord, String> TYPE = createField(DSL.name("TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.REPOSITORY.URL</code>.
+     * The column <code>REPOSITORY.URL</code>.
      */
     public final TableField<RepositoryRecord, String> URL = createField(DSL.name("URL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.REPOSITORY.USERNAME</code>.
+     * The column <code>REPOSITORY.USERNAME</code>.
      */
     public final TableField<RepositoryRecord, String> USERNAME = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.REPOSITORY.UUID</code>.
+     * The column <code>REPOSITORY.UUID</code>.
      */
     public final TableField<RepositoryRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID, this, "");
 
@@ -117,21 +117,21 @@ public class Repository extends TableImpl<RepositoryRecord> {
     }
 
     /**
-     * Create an aliased <code>public.REPOSITORY</code> table reference
+     * Create an aliased <code>REPOSITORY</code> table reference
      */
     public Repository(String alias) {
         this(DSL.name(alias), REPOSITORY);
     }
 
     /**
-     * Create an aliased <code>public.REPOSITORY</code> table reference
+     * Create an aliased <code>REPOSITORY</code> table reference
      */
     public Repository(Name alias) {
         this(alias, REPOSITORY);
     }
 
     /**
-     * Create a <code>public.REPOSITORY</code> table reference
+     * Create a <code>REPOSITORY</code> table reference
      */
     public Repository() {
         this(DSL.name("REPOSITORY"), null);
@@ -139,7 +139,7 @@ public class Repository extends TableImpl<RepositoryRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override

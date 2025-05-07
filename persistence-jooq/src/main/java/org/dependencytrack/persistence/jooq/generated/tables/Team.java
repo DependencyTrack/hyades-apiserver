@@ -8,21 +8,20 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.ApiKey.ApikeyPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ApiKeysTeams.ApikeysTeamsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapuserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersTeams.LdapusersTeamsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManageduserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersTeams.ManagedusersTeamsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.MappedLdapGroup.MappedldapgroupPath;
-import org.dependencytrack.persistence.jooq.generated.tables.MappedOidcGroup.MappedoidcgroupPath;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationrulePath;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTeams.NotificationruleTeamsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcGroup.OidcgroupPath;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUser.OidcuserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersTeams.OidcusersTeamsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ApiKey.ApiKeyPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ApiKeysTeams.ApiKeysTeamsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapUserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersTeams.LdapUsersTeamsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManagedUserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersTeams.ManagedUsersTeamsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.MappedLdapGroup.MappedLdapGroupPath;
+import org.dependencytrack.persistence.jooq.generated.tables.MappedOidcGroup.MappedOidcGroupPath;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationRulePath;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTeams.NotificationRuleTeamsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUser.OidcUserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersTeams.OidcUsersTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission.PermissionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectAccessTeams.ProjectAccessTeamsPath;
@@ -60,7 +59,7 @@ public class Team extends TableImpl<TeamRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.TEAM</code>
+     * The reference instance of <code>TEAM</code>
      */
     public static final Team TEAM = new Team();
 
@@ -73,17 +72,17 @@ public class Team extends TableImpl<TeamRecord> {
     }
 
     /**
-     * The column <code>public.TEAM.ID</code>.
+     * The column <code>TEAM.ID</code>.
      */
     public final TableField<TeamRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.TEAM.NAME</code>.
+     * The column <code>TEAM.NAME</code>.
      */
     public final TableField<TeamRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.TEAM.UUID</code>.
+     * The column <code>TEAM.UUID</code>.
      */
     public final TableField<TeamRecord, String> UUID = createField(DSL.name("UUID"), SQLDataType.VARCHAR(36).nullable(false), this, "");
 
@@ -96,21 +95,21 @@ public class Team extends TableImpl<TeamRecord> {
     }
 
     /**
-     * Create an aliased <code>public.TEAM</code> table reference
+     * Create an aliased <code>TEAM</code> table reference
      */
     public Team(String alias) {
         this(DSL.name(alias), TEAM);
     }
 
     /**
-     * Create an aliased <code>public.TEAM</code> table reference
+     * Create an aliased <code>TEAM</code> table reference
      */
     public Team(Name alias) {
         this(alias, TEAM);
     }
 
     /**
-     * Create a <code>public.TEAM</code> table reference
+     * Create a <code>TEAM</code> table reference
      */
     public Team() {
         this(DSL.name("TEAM"), null);
@@ -151,7 +150,7 @@ public class Team extends TableImpl<TeamRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -169,93 +168,93 @@ public class Team extends TableImpl<TeamRecord> {
         return Arrays.asList(Keys.TEAM_NAME_IDX, Keys.TEAM_UUID_IDX);
     }
 
-    private transient ApikeysTeamsPath _apikeysTeams;
+    private transient ApiKeysTeamsPath _apikeysTeams;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.APIKEYS_TEAMS</code> table
+     * Get the implicit to-many join path to the <code>APIKEYS_TEAMS</code>
+     * table
      */
-    public ApikeysTeamsPath apikeysTeams() {
+    public ApiKeysTeamsPath apikeysTeams() {
         if (_apikeysTeams == null)
-            _apikeysTeams = new ApikeysTeamsPath(this, null, Keys.APIKEYS_TEAMS__APIKEYS_TEAMS_TEAM_FK.getInverseKey());
+            _apikeysTeams = new ApiKeysTeamsPath(this, null, Keys.APIKEYS_TEAMS_TEAM_FK.getInverseKey());
 
         return _apikeysTeams;
     }
 
-    private transient LdapusersTeamsPath _ldapusersTeams;
+    private transient LdapUsersTeamsPath _ldapusersTeams;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.LDAPUSERS_TEAMS</code> table
+     * Get the implicit to-many join path to the <code>LDAPUSERS_TEAMS</code>
+     * table
      */
-    public LdapusersTeamsPath ldapusersTeams() {
+    public LdapUsersTeamsPath ldapusersTeams() {
         if (_ldapusersTeams == null)
-            _ldapusersTeams = new LdapusersTeamsPath(this, null, Keys.LDAPUSERS_TEAMS__LDAPUSERS_TEAMS_TEAM_FK.getInverseKey());
+            _ldapusersTeams = new LdapUsersTeamsPath(this, null, Keys.LDAPUSERS_TEAMS_TEAM_FK.getInverseKey());
 
         return _ldapusersTeams;
     }
 
-    private transient ManagedusersTeamsPath _managedusersTeams;
+    private transient ManagedUsersTeamsPath _managedusersTeams;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.MANAGEDUSERS_TEAMS</code> table
+     * Get the implicit to-many join path to the <code>MANAGEDUSERS_TEAMS</code>
+     * table
      */
-    public ManagedusersTeamsPath managedusersTeams() {
+    public ManagedUsersTeamsPath managedusersTeams() {
         if (_managedusersTeams == null)
-            _managedusersTeams = new ManagedusersTeamsPath(this, null, Keys.MANAGEDUSERS_TEAMS__MANAGEDUSERS_TEAMS_TEAM_FK.getInverseKey());
+            _managedusersTeams = new ManagedUsersTeamsPath(this, null, Keys.MANAGEDUSERS_TEAMS_TEAM_FK.getInverseKey());
 
         return _managedusersTeams;
     }
 
-    private transient MappedldapgroupPath _mappedldapgroup;
+    private transient MappedLdapGroupPath _mappedLdapGroup;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.MAPPEDLDAPGROUP</code> table
+     * Get the implicit to-many join path to the <code>MAPPEDLDAPGROUP</code>
+     * table
      */
-    public MappedldapgroupPath mappedldapgroup() {
-        if (_mappedldapgroup == null)
-            _mappedldapgroup = new MappedldapgroupPath(this, null, Keys.MAPPEDLDAPGROUP__MAPPEDLDAPGROUP_TEAM_FK.getInverseKey());
+    public MappedLdapGroupPath mappedLdapGroup() {
+        if (_mappedLdapGroup == null)
+            _mappedLdapGroup = new MappedLdapGroupPath(this, null, Keys.MAPPEDLDAPGROUP_TEAM_FK.getInverseKey());
 
-        return _mappedldapgroup;
+        return _mappedLdapGroup;
     }
 
-    private transient MappedoidcgroupPath _mappedoidcgroup;
+    private transient MappedOidcGroupPath _mappedOidcGroup;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.MAPPEDOIDCGROUP</code> table
+     * Get the implicit to-many join path to the <code>MAPPEDOIDCGROUP</code>
+     * table
      */
-    public MappedoidcgroupPath mappedoidcgroup() {
-        if (_mappedoidcgroup == null)
-            _mappedoidcgroup = new MappedoidcgroupPath(this, null, Keys.MAPPEDOIDCGROUP__MAPPEDOIDCGROUP_TEAM_FK.getInverseKey());
+    public MappedOidcGroupPath mappedOidcGroup() {
+        if (_mappedOidcGroup == null)
+            _mappedOidcGroup = new MappedOidcGroupPath(this, null, Keys.MAPPEDOIDCGROUP_TEAM_FK.getInverseKey());
 
-        return _mappedoidcgroup;
+        return _mappedOidcGroup;
     }
 
-    private transient NotificationruleTeamsPath _notificationruleTeams;
+    private transient NotificationRuleTeamsPath _notificationruleTeams;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.NOTIFICATIONRULE_TEAMS</code> table
+     * <code>NOTIFICATIONRULE_TEAMS</code> table
      */
-    public NotificationruleTeamsPath notificationruleTeams() {
+    public NotificationRuleTeamsPath notificationruleTeams() {
         if (_notificationruleTeams == null)
-            _notificationruleTeams = new NotificationruleTeamsPath(this, null, Keys.NOTIFICATIONRULE_TEAMS__NOTIFICATIONRULE_TEAMS_TEAM_FK.getInverseKey());
+            _notificationruleTeams = new NotificationRuleTeamsPath(this, null, Keys.NOTIFICATIONRULE_TEAMS_TEAM_FK.getInverseKey());
 
         return _notificationruleTeams;
     }
 
-    private transient OidcusersTeamsPath _oidcusersTeams;
+    private transient OidcUsersTeamsPath _oidcusersTeams;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.OIDCUSERS_TEAMS</code> table
+     * Get the implicit to-many join path to the <code>OIDCUSERS_TEAMS</code>
+     * table
      */
-    public OidcusersTeamsPath oidcusersTeams() {
+    public OidcUsersTeamsPath oidcusersTeams() {
         if (_oidcusersTeams == null)
-            _oidcusersTeams = new OidcusersTeamsPath(this, null, Keys.OIDCUSERS_TEAMS__OIDCUSERS_TEAMS_TEAM_FK.getInverseKey());
+            _oidcusersTeams = new OidcUsersTeamsPath(this, null, Keys.OIDCUSERS_TEAMS_TEAM_FK.getInverseKey());
 
         return _oidcusersTeams;
     }
@@ -264,7 +263,7 @@ public class Team extends TableImpl<TeamRecord> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.PROJECT_ACCESS_TEAMS</code> table
+     * <code>PROJECT_ACCESS_TEAMS</code> table
      */
     public ProjectAccessTeamsPath projectAccessTeams() {
         if (_projectAccessTeams == null)
@@ -276,8 +275,8 @@ public class Team extends TableImpl<TeamRecord> {
     private transient TeamsPermissionsPath _teamsPermissions;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.TEAMS_PERMISSIONS</code> table
+     * Get the implicit to-many join path to the <code>TEAMS_PERMISSIONS</code>
+     * table
      */
     public TeamsPermissionsPath teamsPermissions() {
         if (_teamsPermissions == null)
@@ -287,64 +286,54 @@ public class Team extends TableImpl<TeamRecord> {
     }
 
     /**
-     * Get the implicit many-to-many join path to the <code>public.APIKEY</code>
+     * Get the implicit many-to-many join path to the <code>APIKEY</code> table
+     */
+    public ApiKeyPath apiKeysTeams() {
+        return apikeysTeams().apiKey();
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>LDAPUSER</code>
      * table
      */
-    public ApikeyPath apikey() {
-        return apikeysTeams().apikey();
+    public LdapUserPath ldapUsersTeams() {
+        return ldapusersTeams().ldapUser();
     }
 
     /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.LDAPUSER</code> table
+     * Get the implicit many-to-many join path to the <code>MANAGEDUSER</code>
+     * table
      */
-    public LdapuserPath ldapuser() {
-        return ldapusersTeams().ldapuser();
+    public ManagedUserPath managedUsersTeams() {
+        return managedusersTeams().managedUser();
     }
 
     /**
      * Get the implicit many-to-many join path to the
-     * <code>public.MANAGEDUSER</code> table
+     * <code>NOTIFICATIONRULE</code> table
      */
-    public ManageduserPath manageduser() {
-        return managedusersTeams().manageduser();
+    public NotificationRulePath notificationRuleTeams() {
+        return notificationruleTeams().notificationRule();
     }
 
     /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.OIDCGROUP</code> table
+     * Get the implicit many-to-many join path to the <code>OIDCUSER</code>
+     * table
      */
-    public OidcgroupPath oidcgroup() {
-        return mappedoidcgroup().oidcgroup();
+    public OidcUserPath oidcUsersTeams() {
+        return oidcusersTeams().oidcUser();
     }
 
     /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.NOTIFICATIONRULE</code> table
-     */
-    public NotificationrulePath notificationrule() {
-        return notificationruleTeams().notificationrule();
-    }
-
-    /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.OIDCUSER</code> table
-     */
-    public OidcuserPath oidcuser() {
-        return oidcusersTeams().oidcuser();
-    }
-
-    /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.PROJECT</code> table
+     * Get the implicit many-to-many join path to the <code>PROJECT</code> table
      */
     public ProjectPath project() {
         return projectAccessTeams().project();
     }
 
     /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.PERMISSION</code> table
+     * Get the implicit many-to-many join path to the <code>PERMISSION</code>
+     * table
      */
     public PermissionPath permission() {
         return teamsPermissions().permission();

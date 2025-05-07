@@ -8,11 +8,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.License.LicensePath;
-import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroup.LicensegroupPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroup.LicenseGroupPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.LicenseGroupLicenseRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -45,7 +45,7 @@ public class LicenseGroupLicense extends TableImpl<LicenseGroupLicenseRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.LICENSEGROUP_LICENSE</code>
+     * The reference instance of <code>LICENSEGROUP_LICENSE</code>
      */
     public static final LicenseGroupLicense LICENSEGROUP_LICENSE = new LicenseGroupLicense();
 
@@ -58,12 +58,12 @@ public class LicenseGroupLicense extends TableImpl<LicenseGroupLicenseRecord> {
     }
 
     /**
-     * The column <code>public.LICENSEGROUP_LICENSE.LICENSEGROUP_ID</code>.
+     * The column <code>LICENSEGROUP_LICENSE.LICENSEGROUP_ID</code>.
      */
     public final TableField<LicenseGroupLicenseRecord, Long> LICENSEGROUP_ID = createField(DSL.name("LICENSEGROUP_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.LICENSEGROUP_LICENSE.LICENSE_ID</code>.
+     * The column <code>LICENSEGROUP_LICENSE.LICENSE_ID</code>.
      */
     public final TableField<LicenseGroupLicenseRecord, Long> LICENSE_ID = createField(DSL.name("LICENSE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -76,23 +76,21 @@ public class LicenseGroupLicense extends TableImpl<LicenseGroupLicenseRecord> {
     }
 
     /**
-     * Create an aliased <code>public.LICENSEGROUP_LICENSE</code> table
-     * reference
+     * Create an aliased <code>LICENSEGROUP_LICENSE</code> table reference
      */
     public LicenseGroupLicense(String alias) {
         this(DSL.name(alias), LICENSEGROUP_LICENSE);
     }
 
     /**
-     * Create an aliased <code>public.LICENSEGROUP_LICENSE</code> table
-     * reference
+     * Create an aliased <code>LICENSEGROUP_LICENSE</code> table reference
      */
     public LicenseGroupLicense(Name alias) {
         this(alias, LICENSEGROUP_LICENSE);
     }
 
     /**
-     * Create a <code>public.LICENSEGROUP_LICENSE</code> table reference
+     * Create a <code>LICENSEGROUP_LICENSE</code> table reference
      */
     public LicenseGroupLicense() {
         this(DSL.name("LICENSEGROUP_LICENSE"), null);
@@ -105,35 +103,35 @@ public class LicenseGroupLicense extends TableImpl<LicenseGroupLicenseRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class LicensegroupLicensePath extends LicenseGroupLicense implements Path<LicenseGroupLicenseRecord> {
+    public static class LicenseGroupLicensePath extends LicenseGroupLicense implements Path<LicenseGroupLicenseRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> LicensegroupLicensePath(Table<O> path, ForeignKey<O, LicenseGroupLicenseRecord> childPath, InverseForeignKey<O, LicenseGroupLicenseRecord> parentPath) {
+        public <O extends Record> LicenseGroupLicensePath(Table<O> path, ForeignKey<O, LicenseGroupLicenseRecord> childPath, InverseForeignKey<O, LicenseGroupLicenseRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private LicensegroupLicensePath(Name alias, Table<LicenseGroupLicenseRecord> aliased) {
+        private LicenseGroupLicensePath(Name alias, Table<LicenseGroupLicenseRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public LicensegroupLicensePath as(String alias) {
-            return new LicensegroupLicensePath(DSL.name(alias), this);
+        public LicenseGroupLicensePath as(String alias) {
+            return new LicenseGroupLicensePath(DSL.name(alias), this);
         }
 
         @Override
-        public LicensegroupLicensePath as(Name alias) {
-            return new LicensegroupLicensePath(alias, this);
+        public LicenseGroupLicensePath as(Name alias) {
+            return new LicenseGroupLicensePath(alias, this);
         }
 
         @Override
-        public LicensegroupLicensePath as(Table<?> alias) {
-            return new LicensegroupLicensePath(alias.getQualifiedName(), this);
+        public LicenseGroupLicensePath as(Table<?> alias) {
+            return new LicenseGroupLicensePath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -143,31 +141,31 @@ public class LicenseGroupLicense extends TableImpl<LicenseGroupLicenseRecord> {
 
     @Override
     public List<ForeignKey<LicenseGroupLicenseRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.LICENSEGROUP_LICENSE__LICENSEGROUP_LICENSE_LICENSE_FK, Keys.LICENSEGROUP_LICENSE__LICENSEGROUP_LICENSE_LICENSEGROUP_FK);
+        return Arrays.asList(Keys.LICENSEGROUP_LICENSE_LICENSE_FK, Keys.LICENSEGROUP_LICENSE_LICENSEGROUP_FK);
     }
 
     private transient LicensePath _license;
 
     /**
-     * Get the implicit join path to the <code>public.LICENSE</code> table.
+     * Get the implicit join path to the <code>LICENSE</code> table.
      */
     public LicensePath license() {
         if (_license == null)
-            _license = new LicensePath(this, Keys.LICENSEGROUP_LICENSE__LICENSEGROUP_LICENSE_LICENSE_FK, null);
+            _license = new LicensePath(this, Keys.LICENSEGROUP_LICENSE_LICENSE_FK, null);
 
         return _license;
     }
 
-    private transient LicensegroupPath _licensegroup;
+    private transient LicenseGroupPath _licenseGroup;
 
     /**
-     * Get the implicit join path to the <code>public.LICENSEGROUP</code> table.
+     * Get the implicit join path to the <code>LICENSEGROUP</code> table.
      */
-    public LicensegroupPath licensegroup() {
-        if (_licensegroup == null)
-            _licensegroup = new LicensegroupPath(this, Keys.LICENSEGROUP_LICENSE__LICENSEGROUP_LICENSE_LICENSEGROUP_FK, null);
+    public LicenseGroupPath licenseGroup() {
+        if (_licenseGroup == null)
+            _licenseGroup = new LicenseGroupPath(this, Keys.LICENSEGROUP_LICENSE_LICENSEGROUP_FK, null);
 
-        return _licensegroup;
+        return _licenseGroup;
     }
 
     @Override

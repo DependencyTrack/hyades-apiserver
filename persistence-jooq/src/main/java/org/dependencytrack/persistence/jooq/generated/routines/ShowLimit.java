@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
 import org.jooq.impl.DSL;
@@ -21,7 +21,7 @@ public class ShowLimit extends AbstractRoutine<Float> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The parameter <code>public.show_limit.RETURN_VALUE</code>.
+     * The parameter <code>show_limit.RETURN_VALUE</code>.
      */
     public static final Parameter<Float> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", SQLDataType.REAL, false, false);
 
@@ -29,7 +29,7 @@ public class ShowLimit extends AbstractRoutine<Float> {
      * Create a new routine call instance
      */
     public ShowLimit() {
-        super("show_limit", Public.PUBLIC, DSL.comment(""), SQLDataType.REAL);
+        super("show_limit", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""), SQLDataType.REAL);
 
         setReturnParameter(RETURN_VALUE);
     }

@@ -20,182 +20,195 @@ public class LicenseRecord extends UpdatableRecordImpl<LicenseRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.LICENSE.ID</code>.
+     * Setter for <code>LICENSE.ID</code>.
      */
-    public void setId(Long value) {
+    public LicenseRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.ID</code>.
+     * Getter for <code>LICENSE.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.LICENSE.COMMENT</code>.
+     * Setter for <code>LICENSE.COMMENT</code>.
      */
-    public void setComment(String value) {
+    public LicenseRecord setComment(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.COMMENT</code>.
+     * Getter for <code>LICENSE.COMMENT</code>.
      */
     public String getComment() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.LICENSE.ISCUSTOMLICENSE</code>.
+     * Setter for <code>LICENSE.ISCUSTOMLICENSE</code>.
      */
-    public void setIscustomlicense(Boolean value) {
+    public LicenseRecord setIscustomlicense(Boolean value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.ISCUSTOMLICENSE</code>.
+     * Getter for <code>LICENSE.ISCUSTOMLICENSE</code>.
      */
     public Boolean getIscustomlicense() {
         return (Boolean) get(2);
     }
 
     /**
-     * Setter for <code>public.LICENSE.ISDEPRECATED</code>.
+     * Setter for <code>LICENSE.ISDEPRECATED</code>.
      */
-    public void setIsdeprecated(Boolean value) {
+    public LicenseRecord setIsdeprecated(Boolean value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.ISDEPRECATED</code>.
+     * Getter for <code>LICENSE.ISDEPRECATED</code>.
      */
     public Boolean getIsdeprecated() {
         return (Boolean) get(3);
     }
 
     /**
-     * Setter for <code>public.LICENSE.FSFLIBRE</code>.
+     * Setter for <code>LICENSE.FSFLIBRE</code>.
      */
-    public void setFsflibre(Boolean value) {
+    public LicenseRecord setFsflibre(Boolean value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.FSFLIBRE</code>.
+     * Getter for <code>LICENSE.FSFLIBRE</code>.
      */
     public Boolean getFsflibre() {
         return (Boolean) get(4);
     }
 
     /**
-     * Setter for <code>public.LICENSE.HEADER</code>.
+     * Setter for <code>LICENSE.HEADER</code>.
      */
-    public void setHeader(String value) {
+    public LicenseRecord setHeader(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.HEADER</code>.
+     * Getter for <code>LICENSE.HEADER</code>.
      */
     public String getHeader() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.LICENSE.LICENSEID</code>.
+     * Setter for <code>LICENSE.LICENSEID</code>.
      */
-    public void setLicenseid(String value) {
+    public LicenseRecord setLicenseid(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.LICENSEID</code>.
+     * Getter for <code>LICENSE.LICENSEID</code>.
      */
     public String getLicenseid() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.LICENSE.NAME</code>.
+     * Setter for <code>LICENSE.NAME</code>.
      */
-    public void setName(String value) {
+    public LicenseRecord setName(String value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.NAME</code>.
+     * Getter for <code>LICENSE.NAME</code>.
      */
     public String getName() {
         return (String) get(7);
     }
 
     /**
-     * Setter for <code>public.LICENSE.ISOSIAPPROVED</code>.
+     * Setter for <code>LICENSE.ISOSIAPPROVED</code>.
      */
-    public void setIsosiapproved(Boolean value) {
+    public LicenseRecord setIsosiapproved(Boolean value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.ISOSIAPPROVED</code>.
+     * Getter for <code>LICENSE.ISOSIAPPROVED</code>.
      */
     public Boolean getIsosiapproved() {
         return (Boolean) get(8);
     }
 
     /**
-     * Setter for <code>public.LICENSE.SEEALSO</code>.
+     * Setter for <code>LICENSE.SEEALSO</code>.
      */
-    public void setSeealso(byte[] value) {
+    public LicenseRecord setSeealso(byte[] value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.SEEALSO</code>.
+     * Getter for <code>LICENSE.SEEALSO</code>.
      */
     public byte[] getSeealso() {
         return (byte[]) get(9);
     }
 
     /**
-     * Setter for <code>public.LICENSE.TEMPLATE</code>.
+     * Setter for <code>LICENSE.TEMPLATE</code>.
      */
-    public void setTemplate(String value) {
+    public LicenseRecord setTemplate(String value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.TEMPLATE</code>.
+     * Getter for <code>LICENSE.TEMPLATE</code>.
      */
     public String getTemplate() {
         return (String) get(10);
     }
 
     /**
-     * Setter for <code>public.LICENSE.TEXT</code>.
+     * Setter for <code>LICENSE.TEXT</code>.
      */
-    public void setText(String value) {
+    public LicenseRecord setText(String value) {
         set(11, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.TEXT</code>.
+     * Getter for <code>LICENSE.TEXT</code>.
      */
     public String getText() {
         return (String) get(11);
     }
 
     /**
-     * Setter for <code>public.LICENSE.UUID</code>.
+     * Setter for <code>LICENSE.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public LicenseRecord setUuid(UUID value) {
         set(12, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSE.UUID</code>.
+     * Getter for <code>LICENSE.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(12);

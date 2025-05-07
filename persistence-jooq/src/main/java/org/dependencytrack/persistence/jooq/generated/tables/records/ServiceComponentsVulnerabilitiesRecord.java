@@ -18,15 +18,16 @@ public class ServiceComponentsVulnerabilitiesRecord extends TableRecordImpl<Serv
 
     /**
      * Setter for
-     * <code>public.SERVICECOMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
+     * <code>SERVICECOMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
-    public void setVulnerabilityId(Long value) {
+    public ServiceComponentsVulnerabilitiesRecord setVulnerabilityId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.SERVICECOMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
+     * <code>SERVICECOMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
     public Long getVulnerabilityId() {
         return (Long) get(0);
@@ -34,15 +35,16 @@ public class ServiceComponentsVulnerabilitiesRecord extends TableRecordImpl<Serv
 
     /**
      * Setter for
-     * <code>public.SERVICECOMPONENTS_VULNERABILITIES.SERVICECOMPONENT_ID</code>.
+     * <code>SERVICECOMPONENTS_VULNERABILITIES.SERVICECOMPONENT_ID</code>.
      */
-    public void setServicecomponentId(Long value) {
+    public ServiceComponentsVulnerabilitiesRecord setServicecomponentId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.SERVICECOMPONENTS_VULNERABILITIES.SERVICECOMPONENT_ID</code>.
+     * <code>SERVICECOMPONENTS_VULNERABILITIES.SERVICECOMPONENT_ID</code>.
      */
     public Long getServicecomponentId() {
         return (Long) get(1);

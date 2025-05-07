@@ -6,9 +6,9 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 
 import java.util.Collection;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTags.NotificationruleTagsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTags.NotificationRuleTagsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyTags.PolicyTagsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectsTags.ProjectsTagsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.VulnerabilitiesTags.VulnerabilitiesTagsPath;
@@ -45,7 +45,7 @@ public class Tag extends TableImpl<TagRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.TAG</code>
+     * The reference instance of <code>TAG</code>
      */
     public static final Tag TAG = new Tag();
 
@@ -58,12 +58,12 @@ public class Tag extends TableImpl<TagRecord> {
     }
 
     /**
-     * The column <code>public.TAG.ID</code>.
+     * The column <code>TAG.ID</code>.
      */
     public final TableField<TagRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.TAG.NAME</code>.
+     * The column <code>TAG.NAME</code>.
      */
     public final TableField<TagRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
@@ -76,21 +76,21 @@ public class Tag extends TableImpl<TagRecord> {
     }
 
     /**
-     * Create an aliased <code>public.TAG</code> table reference
+     * Create an aliased <code>TAG</code> table reference
      */
     public Tag(String alias) {
         this(DSL.name(alias), TAG);
     }
 
     /**
-     * Create an aliased <code>public.TAG</code> table reference
+     * Create an aliased <code>TAG</code> table reference
      */
     public Tag(Name alias) {
         this(alias, TAG);
     }
 
     /**
-     * Create a <code>public.TAG</code> table reference
+     * Create a <code>TAG</code> table reference
      */
     public Tag() {
         this(DSL.name("TAG"), null);
@@ -131,7 +131,7 @@ public class Tag extends TableImpl<TagRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -144,15 +144,15 @@ public class Tag extends TableImpl<TagRecord> {
         return Keys.TAG_PK;
     }
 
-    private transient NotificationruleTagsPath _notificationruleTags;
+    private transient NotificationRuleTagsPath _notificationruleTags;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.NOTIFICATIONRULE_TAGS</code> table
+     * <code>NOTIFICATIONRULE_TAGS</code> table
      */
-    public NotificationruleTagsPath notificationruleTags() {
+    public NotificationRuleTagsPath notificationruleTags() {
         if (_notificationruleTags == null)
-            _notificationruleTags = new NotificationruleTagsPath(this, null, Keys.NOTIFICATIONRULE_TAGS__NOTIFICATIONRULE_TAGS_TAG_FK.getInverseKey());
+            _notificationruleTags = new NotificationRuleTagsPath(this, null, Keys.NOTIFICATIONRULE_TAGS_TAG_FK.getInverseKey());
 
         return _notificationruleTags;
     }
@@ -160,8 +160,7 @@ public class Tag extends TableImpl<TagRecord> {
     private transient PolicyTagsPath _policyTags;
 
     /**
-     * Get the implicit to-many join path to the <code>public.POLICY_TAGS</code>
-     * table
+     * Get the implicit to-many join path to the <code>POLICY_TAGS</code> table
      */
     public PolicyTagsPath policyTags() {
         if (_policyTags == null)
@@ -173,8 +172,8 @@ public class Tag extends TableImpl<TagRecord> {
     private transient ProjectsTagsPath _projectsTags;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.PROJECTS_TAGS</code> table
+     * Get the implicit to-many join path to the <code>PROJECTS_TAGS</code>
+     * table
      */
     public ProjectsTagsPath projectsTags() {
         if (_projectsTags == null)
@@ -187,7 +186,7 @@ public class Tag extends TableImpl<TagRecord> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.VULNERABILITIES_TAGS</code> table
+     * <code>VULNERABILITIES_TAGS</code> table
      */
     public VulnerabilitiesTagsPath vulnerabilitiesTags() {
         if (_vulnerabilitiesTags == null)

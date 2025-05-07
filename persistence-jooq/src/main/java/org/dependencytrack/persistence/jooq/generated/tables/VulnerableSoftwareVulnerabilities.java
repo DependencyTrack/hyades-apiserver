@@ -8,11 +8,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Vulnerability.VulnerabilityPath;
-import org.dependencytrack.persistence.jooq.generated.tables.VulnerableSoftware.VulnerablesoftwarePath;
+import org.dependencytrack.persistence.jooq.generated.tables.VulnerableSoftware.VulnerableSoftwarePath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.VulnerableSoftwareVulnerabilitiesRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -45,8 +45,7 @@ public class VulnerableSoftwareVulnerabilities extends TableImpl<VulnerableSoftw
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of
-     * <code>public.VULNERABLESOFTWARE_VULNERABILITIES</code>
+     * The reference instance of <code>VULNERABLESOFTWARE_VULNERABILITIES</code>
      */
     public static final VulnerableSoftwareVulnerabilities VULNERABLESOFTWARE_VULNERABILITIES = new VulnerableSoftwareVulnerabilities();
 
@@ -60,13 +59,13 @@ public class VulnerableSoftwareVulnerabilities extends TableImpl<VulnerableSoftw
 
     /**
      * The column
-     * <code>public.VULNERABLESOFTWARE_VULNERABILITIES.VULNERABILITY_ID</code>.
+     * <code>VULNERABLESOFTWARE_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
     public final TableField<VulnerableSoftwareVulnerabilitiesRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column
-     * <code>public.VULNERABLESOFTWARE_VULNERABILITIES.VULNERABLESOFTWARE_ID</code>.
+     * <code>VULNERABLESOFTWARE_VULNERABILITIES.VULNERABLESOFTWARE_ID</code>.
      */
     public final TableField<VulnerableSoftwareVulnerabilitiesRecord, Long> VULNERABLESOFTWARE_ID = createField(DSL.name("VULNERABLESOFTWARE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -79,24 +78,23 @@ public class VulnerableSoftwareVulnerabilities extends TableImpl<VulnerableSoftw
     }
 
     /**
-     * Create an aliased <code>public.VULNERABLESOFTWARE_VULNERABILITIES</code>
-     * table reference
+     * Create an aliased <code>VULNERABLESOFTWARE_VULNERABILITIES</code> table
+     * reference
      */
     public VulnerableSoftwareVulnerabilities(String alias) {
         this(DSL.name(alias), VULNERABLESOFTWARE_VULNERABILITIES);
     }
 
     /**
-     * Create an aliased <code>public.VULNERABLESOFTWARE_VULNERABILITIES</code>
-     * table reference
+     * Create an aliased <code>VULNERABLESOFTWARE_VULNERABILITIES</code> table
+     * reference
      */
     public VulnerableSoftwareVulnerabilities(Name alias) {
         this(alias, VULNERABLESOFTWARE_VULNERABILITIES);
     }
 
     /**
-     * Create a <code>public.VULNERABLESOFTWARE_VULNERABILITIES</code> table
-     * reference
+     * Create a <code>VULNERABLESOFTWARE_VULNERABILITIES</code> table reference
      */
     public VulnerableSoftwareVulnerabilities() {
         this(DSL.name("VULNERABLESOFTWARE_VULNERABILITIES"), null);
@@ -109,35 +107,35 @@ public class VulnerableSoftwareVulnerabilities extends TableImpl<VulnerableSoftw
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class VulnerablesoftwareVulnerabilitiesPath extends VulnerableSoftwareVulnerabilities implements Path<VulnerableSoftwareVulnerabilitiesRecord> {
+    public static class VulnerableSoftwareVulnerabilitiesPath extends VulnerableSoftwareVulnerabilities implements Path<VulnerableSoftwareVulnerabilitiesRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> VulnerablesoftwareVulnerabilitiesPath(Table<O> path, ForeignKey<O, VulnerableSoftwareVulnerabilitiesRecord> childPath, InverseForeignKey<O, VulnerableSoftwareVulnerabilitiesRecord> parentPath) {
+        public <O extends Record> VulnerableSoftwareVulnerabilitiesPath(Table<O> path, ForeignKey<O, VulnerableSoftwareVulnerabilitiesRecord> childPath, InverseForeignKey<O, VulnerableSoftwareVulnerabilitiesRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private VulnerablesoftwareVulnerabilitiesPath(Name alias, Table<VulnerableSoftwareVulnerabilitiesRecord> aliased) {
+        private VulnerableSoftwareVulnerabilitiesPath(Name alias, Table<VulnerableSoftwareVulnerabilitiesRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public VulnerablesoftwareVulnerabilitiesPath as(String alias) {
-            return new VulnerablesoftwareVulnerabilitiesPath(DSL.name(alias), this);
+        public VulnerableSoftwareVulnerabilitiesPath as(String alias) {
+            return new VulnerableSoftwareVulnerabilitiesPath(DSL.name(alias), this);
         }
 
         @Override
-        public VulnerablesoftwareVulnerabilitiesPath as(Name alias) {
-            return new VulnerablesoftwareVulnerabilitiesPath(alias, this);
+        public VulnerableSoftwareVulnerabilitiesPath as(Name alias) {
+            return new VulnerableSoftwareVulnerabilitiesPath(alias, this);
         }
 
         @Override
-        public VulnerablesoftwareVulnerabilitiesPath as(Table<?> alias) {
-            return new VulnerablesoftwareVulnerabilitiesPath(alias.getQualifiedName(), this);
+        public VulnerableSoftwareVulnerabilitiesPath as(Table<?> alias) {
+            return new VulnerableSoftwareVulnerabilitiesPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -147,33 +145,31 @@ public class VulnerableSoftwareVulnerabilities extends TableImpl<VulnerableSoftw
 
     @Override
     public List<ForeignKey<VulnerableSoftwareVulnerabilitiesRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.VULNERABLESOFTWARE_VULNERABILITIES__VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK, Keys.VULNERABLESOFTWARE_VULNERABILITIES__VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK);
+        return Arrays.asList(Keys.VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK, Keys.VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK);
     }
 
     private transient VulnerabilityPath _vulnerability;
 
     /**
-     * Get the implicit join path to the <code>public.VULNERABILITY</code>
-     * table.
+     * Get the implicit join path to the <code>VULNERABILITY</code> table.
      */
     public VulnerabilityPath vulnerability() {
         if (_vulnerability == null)
-            _vulnerability = new VulnerabilityPath(this, Keys.VULNERABLESOFTWARE_VULNERABILITIES__VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK, null);
+            _vulnerability = new VulnerabilityPath(this, Keys.VULNERABLESOFTWARE_VULNERABILITIES_VULNERABILITY_FK, null);
 
         return _vulnerability;
     }
 
-    private transient VulnerablesoftwarePath _vulnerablesoftware;
+    private transient VulnerableSoftwarePath _vulnerableSoftware;
 
     /**
-     * Get the implicit join path to the <code>public.VULNERABLESOFTWARE</code>
-     * table.
+     * Get the implicit join path to the <code>VULNERABLESOFTWARE</code> table.
      */
-    public VulnerablesoftwarePath vulnerablesoftware() {
-        if (_vulnerablesoftware == null)
-            _vulnerablesoftware = new VulnerablesoftwarePath(this, Keys.VULNERABLESOFTWARE_VULNERABILITIES__VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK, null);
+    public VulnerableSoftwarePath vulnerableSoftware() {
+        if (_vulnerableSoftware == null)
+            _vulnerableSoftware = new VulnerableSoftwarePath(this, Keys.VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK, null);
 
-        return _vulnerablesoftware;
+        return _vulnerableSoftware;
     }
 
     @Override

@@ -8,8 +8,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectAccessTeamsRecord;
@@ -44,7 +44,7 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.PROJECT_ACCESS_TEAMS</code>
+     * The reference instance of <code>PROJECT_ACCESS_TEAMS</code>
      */
     public static final ProjectAccessTeams PROJECT_ACCESS_TEAMS = new ProjectAccessTeams();
 
@@ -57,12 +57,12 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
     }
 
     /**
-     * The column <code>public.PROJECT_ACCESS_TEAMS.PROJECT_ID</code>.
+     * The column <code>PROJECT_ACCESS_TEAMS.PROJECT_ID</code>.
      */
     public final TableField<ProjectAccessTeamsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECT_ACCESS_TEAMS.TEAM_ID</code>.
+     * The column <code>PROJECT_ACCESS_TEAMS.TEAM_ID</code>.
      */
     public final TableField<ProjectAccessTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -75,23 +75,21 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.PROJECT_ACCESS_TEAMS</code> table
-     * reference
+     * Create an aliased <code>PROJECT_ACCESS_TEAMS</code> table reference
      */
     public ProjectAccessTeams(String alias) {
         this(DSL.name(alias), PROJECT_ACCESS_TEAMS);
     }
 
     /**
-     * Create an aliased <code>public.PROJECT_ACCESS_TEAMS</code> table
-     * reference
+     * Create an aliased <code>PROJECT_ACCESS_TEAMS</code> table reference
      */
     public ProjectAccessTeams(Name alias) {
         this(alias, PROJECT_ACCESS_TEAMS);
     }
 
     /**
-     * Create a <code>public.PROJECT_ACCESS_TEAMS</code> table reference
+     * Create a <code>PROJECT_ACCESS_TEAMS</code> table reference
      */
     public ProjectAccessTeams() {
         this(DSL.name("PROJECT_ACCESS_TEAMS"), null);
@@ -132,7 +130,7 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -148,7 +146,7 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
@@ -160,7 +158,7 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
     private transient TeamPath _team;
 
     /**
-     * Get the implicit join path to the <code>public.TEAM</code> table.
+     * Get the implicit join path to the <code>TEAM</code> table.
      */
     public TeamPath team() {
         if (_team == null)

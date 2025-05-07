@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManageduserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManagedUserPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission.PermissionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ManagedUsersPermissionsRecord;
 import org.jooq.Condition;
@@ -44,7 +44,7 @@ public class ManagedUsersPermissions extends TableImpl<ManagedUsersPermissionsRe
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.MANAGEDUSERS_PERMISSIONS</code>
+     * The reference instance of <code>MANAGEDUSERS_PERMISSIONS</code>
      */
     public static final ManagedUsersPermissions MANAGEDUSERS_PERMISSIONS = new ManagedUsersPermissions();
 
@@ -57,12 +57,12 @@ public class ManagedUsersPermissions extends TableImpl<ManagedUsersPermissionsRe
     }
 
     /**
-     * The column <code>public.MANAGEDUSERS_PERMISSIONS.MANAGEDUSER_ID</code>.
+     * The column <code>MANAGEDUSERS_PERMISSIONS.MANAGEDUSER_ID</code>.
      */
     public final TableField<ManagedUsersPermissionsRecord, Long> MANAGEDUSER_ID = createField(DSL.name("MANAGEDUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.MANAGEDUSERS_PERMISSIONS.PERMISSION_ID</code>.
+     * The column <code>MANAGEDUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
     public final TableField<ManagedUsersPermissionsRecord, Long> PERMISSION_ID = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -75,23 +75,21 @@ public class ManagedUsersPermissions extends TableImpl<ManagedUsersPermissionsRe
     }
 
     /**
-     * Create an aliased <code>public.MANAGEDUSERS_PERMISSIONS</code> table
-     * reference
+     * Create an aliased <code>MANAGEDUSERS_PERMISSIONS</code> table reference
      */
     public ManagedUsersPermissions(String alias) {
         this(DSL.name(alias), MANAGEDUSERS_PERMISSIONS);
     }
 
     /**
-     * Create an aliased <code>public.MANAGEDUSERS_PERMISSIONS</code> table
-     * reference
+     * Create an aliased <code>MANAGEDUSERS_PERMISSIONS</code> table reference
      */
     public ManagedUsersPermissions(Name alias) {
         this(alias, MANAGEDUSERS_PERMISSIONS);
     }
 
     /**
-     * Create a <code>public.MANAGEDUSERS_PERMISSIONS</code> table reference
+     * Create a <code>MANAGEDUSERS_PERMISSIONS</code> table reference
      */
     public ManagedUsersPermissions() {
         this(DSL.name("MANAGEDUSERS_PERMISSIONS"), null);
@@ -104,35 +102,35 @@ public class ManagedUsersPermissions extends TableImpl<ManagedUsersPermissionsRe
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class ManagedusersPermissionsPath extends ManagedUsersPermissions implements Path<ManagedUsersPermissionsRecord> {
+    public static class ManagedUsersPermissionsPath extends ManagedUsersPermissions implements Path<ManagedUsersPermissionsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> ManagedusersPermissionsPath(Table<O> path, ForeignKey<O, ManagedUsersPermissionsRecord> childPath, InverseForeignKey<O, ManagedUsersPermissionsRecord> parentPath) {
+        public <O extends Record> ManagedUsersPermissionsPath(Table<O> path, ForeignKey<O, ManagedUsersPermissionsRecord> childPath, InverseForeignKey<O, ManagedUsersPermissionsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private ManagedusersPermissionsPath(Name alias, Table<ManagedUsersPermissionsRecord> aliased) {
+        private ManagedUsersPermissionsPath(Name alias, Table<ManagedUsersPermissionsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public ManagedusersPermissionsPath as(String alias) {
-            return new ManagedusersPermissionsPath(DSL.name(alias), this);
+        public ManagedUsersPermissionsPath as(String alias) {
+            return new ManagedUsersPermissionsPath(DSL.name(alias), this);
         }
 
         @Override
-        public ManagedusersPermissionsPath as(Name alias) {
-            return new ManagedusersPermissionsPath(alias, this);
+        public ManagedUsersPermissionsPath as(Name alias) {
+            return new ManagedUsersPermissionsPath(alias, this);
         }
 
         @Override
-        public ManagedusersPermissionsPath as(Table<?> alias) {
-            return new ManagedusersPermissionsPath(alias.getQualifiedName(), this);
+        public ManagedUsersPermissionsPath as(Table<?> alias) {
+            return new ManagedUsersPermissionsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -142,29 +140,29 @@ public class ManagedUsersPermissions extends TableImpl<ManagedUsersPermissionsRe
 
     @Override
     public List<ForeignKey<ManagedUsersPermissionsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.MANAGEDUSERS_PERMISSIONS__MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK, Keys.MANAGEDUSERS_PERMISSIONS__MANAGEDUSERS_PERMISSIONS_PERMISSION_FK);
+        return Arrays.asList(Keys.MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK, Keys.MANAGEDUSERS_PERMISSIONS_PERMISSION_FK);
     }
 
-    private transient ManageduserPath _manageduser;
+    private transient ManagedUserPath _managedUser;
 
     /**
-     * Get the implicit join path to the <code>public.MANAGEDUSER</code> table.
+     * Get the implicit join path to the <code>MANAGEDUSER</code> table.
      */
-    public ManageduserPath manageduser() {
-        if (_manageduser == null)
-            _manageduser = new ManageduserPath(this, Keys.MANAGEDUSERS_PERMISSIONS__MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK, null);
+    public ManagedUserPath managedUser() {
+        if (_managedUser == null)
+            _managedUser = new ManagedUserPath(this, Keys.MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK, null);
 
-        return _manageduser;
+        return _managedUser;
     }
 
     private transient PermissionPath _permission;
 
     /**
-     * Get the implicit join path to the <code>public.PERMISSION</code> table.
+     * Get the implicit join path to the <code>PERMISSION</code> table.
      */
     public PermissionPath permission() {
         if (_permission == null)
-            _permission = new PermissionPath(this, Keys.MANAGEDUSERS_PERMISSIONS__MANAGEDUSERS_PERMISSIONS_PERMISSION_FK, null);
+            _permission = new PermissionPath(this, Keys.MANAGEDUSERS_PERMISSIONS_PERMISSION_FK, null);
 
         return _permission;
     }

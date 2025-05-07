@@ -8,8 +8,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectHierarchyRecord;
 import org.jooq.Condition;
@@ -43,7 +43,7 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.PROJECT_HIERARCHY</code>
+     * The reference instance of <code>PROJECT_HIERARCHY</code>
      */
     public static final ProjectHierarchy PROJECT_HIERARCHY = new ProjectHierarchy();
 
@@ -56,17 +56,17 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
     }
 
     /**
-     * The column <code>public.PROJECT_HIERARCHY.PARENT_PROJECT_ID</code>.
+     * The column <code>PROJECT_HIERARCHY.PARENT_PROJECT_ID</code>.
      */
     public final TableField<ProjectHierarchyRecord, Long> PARENT_PROJECT_ID = createField(DSL.name("PARENT_PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECT_HIERARCHY.CHILD_PROJECT_ID</code>.
+     * The column <code>PROJECT_HIERARCHY.CHILD_PROJECT_ID</code>.
      */
     public final TableField<ProjectHierarchyRecord, Long> CHILD_PROJECT_ID = createField(DSL.name("CHILD_PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECT_HIERARCHY.DEPTH</code>.
+     * The column <code>PROJECT_HIERARCHY.DEPTH</code>.
      */
     public final TableField<ProjectHierarchyRecord, Short> DEPTH = createField(DSL.name("DEPTH"), SQLDataType.SMALLINT.nullable(false), this, "");
 
@@ -79,21 +79,21 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
     }
 
     /**
-     * Create an aliased <code>public.PROJECT_HIERARCHY</code> table reference
+     * Create an aliased <code>PROJECT_HIERARCHY</code> table reference
      */
     public ProjectHierarchy(String alias) {
         this(DSL.name(alias), PROJECT_HIERARCHY);
     }
 
     /**
-     * Create an aliased <code>public.PROJECT_HIERARCHY</code> table reference
+     * Create an aliased <code>PROJECT_HIERARCHY</code> table reference
      */
     public ProjectHierarchy(Name alias) {
         this(alias, PROJECT_HIERARCHY);
     }
 
     /**
-     * Create a <code>public.PROJECT_HIERARCHY</code> table reference
+     * Create a <code>PROJECT_HIERARCHY</code> table reference
      */
     public ProjectHierarchy() {
         this(DSL.name("PROJECT_HIERARCHY"), null);
@@ -134,7 +134,7 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -150,8 +150,8 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
     private transient ProjectPath _projectHierarchyChildProjectFk;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table, via
-     * the <code>PROJECT_HIERARCHY_CHILD_PROJECT_FK</code> key.
+     * Get the implicit join path to the <code>PROJECT</code> table, via the
+     * <code>PROJECT_HIERARCHY_CHILD_PROJECT_FK</code> key.
      */
     public ProjectPath projectHierarchyChildProjectFk() {
         if (_projectHierarchyChildProjectFk == null)
@@ -163,8 +163,8 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
     private transient ProjectPath _projectHierarchyParentProjectFk;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table, via
-     * the <code>PROJECT_HIERARCHY_PARENT_PROJECT_FK</code> key.
+     * Get the implicit join path to the <code>PROJECT</code> table, via the
+     * <code>PROJECT_HIERARCHY_PARENT_PROJECT_FK</code> key.
      */
     public ProjectPath projectHierarchyParentProjectFk() {
         if (_projectHierarchyParentProjectFk == null)

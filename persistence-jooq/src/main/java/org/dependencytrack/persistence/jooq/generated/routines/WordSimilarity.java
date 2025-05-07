@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Field;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
@@ -22,17 +22,17 @@ public class WordSimilarity extends AbstractRoutine<Float> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The parameter <code>public.word_similarity.RETURN_VALUE</code>.
+     * The parameter <code>word_similarity.RETURN_VALUE</code>.
      */
     public static final Parameter<Float> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", SQLDataType.REAL, false, false);
 
     /**
-     * The parameter <code>public.word_similarity._1</code>.
+     * The parameter <code>word_similarity._1</code>.
      */
     public static final Parameter<String> _1 = Internal.createParameter("_1", SQLDataType.CLOB, false, true);
 
     /**
-     * The parameter <code>public.word_similarity._2</code>.
+     * The parameter <code>word_similarity._2</code>.
      */
     public static final Parameter<String> _2 = Internal.createParameter("_2", SQLDataType.CLOB, false, true);
 
@@ -40,7 +40,7 @@ public class WordSimilarity extends AbstractRoutine<Float> {
      * Create a new routine call instance
      */
     public WordSimilarity() {
-        super("word_similarity", Public.PUBLIC, DSL.comment(""), SQLDataType.REAL);
+        super("word_similarity", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""), SQLDataType.REAL);
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(_1);
@@ -58,8 +58,9 @@ public class WordSimilarity extends AbstractRoutine<Float> {
      * Set the <code>_1</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__1(Field<String> field) {
+    public WordSimilarity set__1(Field<String> field) {
         setField(_1, field);
+        return this;
     }
 
     /**
@@ -73,7 +74,8 @@ public class WordSimilarity extends AbstractRoutine<Float> {
      * Set the <code>_2</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__2(Field<String> field) {
+    public WordSimilarity set__2(Field<String> field) {
         setField(_2, field);
+        return this;
     }
 }

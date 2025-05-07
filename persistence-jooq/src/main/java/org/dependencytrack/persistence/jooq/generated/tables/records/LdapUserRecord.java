@@ -18,56 +18,60 @@ public class LdapUserRecord extends UpdatableRecordImpl<LdapUserRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.LDAPUSER.ID</code>.
+     * Setter for <code>LDAPUSER.ID</code>.
      */
-    public void setId(Long value) {
+    public LdapUserRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LDAPUSER.ID</code>.
+     * Getter for <code>LDAPUSER.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.LDAPUSER.DN</code>.
+     * Setter for <code>LDAPUSER.DN</code>.
      */
-    public void setDn(String value) {
+    public LdapUserRecord setDn(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LDAPUSER.DN</code>.
+     * Getter for <code>LDAPUSER.DN</code>.
      */
     public String getDn() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.LDAPUSER.EMAIL</code>.
+     * Setter for <code>LDAPUSER.EMAIL</code>.
      */
-    public void setEmail(String value) {
+    public LdapUserRecord setEmail(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LDAPUSER.EMAIL</code>.
+     * Getter for <code>LDAPUSER.EMAIL</code>.
      */
     public String getEmail() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.LDAPUSER.USERNAME</code>.
+     * Setter for <code>LDAPUSER.USERNAME</code>.
      */
-    public void setUsername(String value) {
+    public LdapUserRecord setUsername(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LDAPUSER.USERNAME</code>.
+     * Getter for <code>LDAPUSER.USERNAME</code>.
      */
     public String getUsername() {
         return (String) get(3);

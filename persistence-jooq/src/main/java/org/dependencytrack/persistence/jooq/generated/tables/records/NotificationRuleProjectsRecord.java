@@ -17,30 +17,30 @@ public class NotificationRuleProjectsRecord extends TableRecordImpl<Notification
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for
-     * <code>public.NOTIFICATIONRULE_PROJECTS.NOTIFICATIONRULE_ID</code>.
+     * Setter for <code>NOTIFICATIONRULE_PROJECTS.NOTIFICATIONRULE_ID</code>.
      */
-    public void setNotificationruleId(Long value) {
+    public NotificationRuleProjectsRecord setNotificationruleId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.NOTIFICATIONRULE_PROJECTS.NOTIFICATIONRULE_ID</code>.
+     * Getter for <code>NOTIFICATIONRULE_PROJECTS.NOTIFICATIONRULE_ID</code>.
      */
     public Long getNotificationruleId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE_PROJECTS.PROJECT_ID</code>.
+     * Setter for <code>NOTIFICATIONRULE_PROJECTS.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public NotificationRuleProjectsRecord setProjectId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE_PROJECTS.PROJECT_ID</code>.
+     * Getter for <code>NOTIFICATIONRULE_PROJECTS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(1);

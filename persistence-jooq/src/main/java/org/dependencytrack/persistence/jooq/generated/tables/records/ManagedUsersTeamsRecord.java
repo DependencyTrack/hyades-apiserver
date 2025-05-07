@@ -18,28 +18,30 @@ public class ManagedUsersTeamsRecord extends UpdatableRecordImpl<ManagedUsersTea
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.MANAGEDUSERS_TEAMS.TEAM_ID</code>.
+     * Setter for <code>MANAGEDUSERS_TEAMS.TEAM_ID</code>.
      */
-    public void setTeamId(Long value) {
+    public ManagedUsersTeamsRecord setTeamId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSERS_TEAMS.TEAM_ID</code>.
+     * Getter for <code>MANAGEDUSERS_TEAMS.TEAM_ID</code>.
      */
     public Long getTeamId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.MANAGEDUSERS_TEAMS.MANAGEDUSER_ID</code>.
+     * Setter for <code>MANAGEDUSERS_TEAMS.MANAGEDUSER_ID</code>.
      */
-    public void setManageduserId(Long value) {
+    public ManagedUsersTeamsRecord setManageduserId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSERS_TEAMS.MANAGEDUSER_ID</code>.
+     * Getter for <code>MANAGEDUSERS_TEAMS.MANAGEDUSER_ID</code>.
      */
     public Long getManageduserId() {
         return (Long) get(1);

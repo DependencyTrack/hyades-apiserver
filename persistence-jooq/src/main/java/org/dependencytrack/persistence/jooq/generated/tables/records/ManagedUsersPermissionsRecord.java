@@ -18,28 +18,30 @@ public class ManagedUsersPermissionsRecord extends UpdatableRecordImpl<ManagedUs
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.MANAGEDUSERS_PERMISSIONS.MANAGEDUSER_ID</code>.
+     * Setter for <code>MANAGEDUSERS_PERMISSIONS.MANAGEDUSER_ID</code>.
      */
-    public void setManageduserId(Long value) {
+    public ManagedUsersPermissionsRecord setManageduserId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSERS_PERMISSIONS.MANAGEDUSER_ID</code>.
+     * Getter for <code>MANAGEDUSERS_PERMISSIONS.MANAGEDUSER_ID</code>.
      */
     public Long getManageduserId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.MANAGEDUSERS_PERMISSIONS.PERMISSION_ID</code>.
+     * Setter for <code>MANAGEDUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
-    public void setPermissionId(Long value) {
+    public ManagedUsersPermissionsRecord setPermissionId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSERS_PERMISSIONS.PERMISSION_ID</code>.
+     * Getter for <code>MANAGEDUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
     public Long getPermissionId() {
         return (Long) get(1);

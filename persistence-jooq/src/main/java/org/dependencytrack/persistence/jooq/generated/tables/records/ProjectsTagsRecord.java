@@ -17,28 +17,30 @@ public class ProjectsTagsRecord extends TableRecordImpl<ProjectsTagsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.PROJECTS_TAGS.TAG_ID</code>.
+     * Setter for <code>PROJECTS_TAGS.TAG_ID</code>.
      */
-    public void setTagId(Long value) {
+    public ProjectsTagsRecord setTagId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTS_TAGS.TAG_ID</code>.
+     * Getter for <code>PROJECTS_TAGS.TAG_ID</code>.
      */
     public Long getTagId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.PROJECTS_TAGS.PROJECT_ID</code>.
+     * Setter for <code>PROJECTS_TAGS.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public ProjectsTagsRecord setProjectId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECTS_TAGS.PROJECT_ID</code>.
+     * Getter for <code>PROJECTS_TAGS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(1);

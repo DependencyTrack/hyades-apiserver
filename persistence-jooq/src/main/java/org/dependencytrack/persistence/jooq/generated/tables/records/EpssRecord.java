@@ -20,56 +20,60 @@ public class EpssRecord extends UpdatableRecordImpl<EpssRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.EPSS.ID</code>.
+     * Setter for <code>EPSS.ID</code>.
      */
-    public void setId(Long value) {
+    public EpssRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.EPSS.ID</code>.
+     * Getter for <code>EPSS.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.EPSS.CVE</code>.
+     * Setter for <code>EPSS.CVE</code>.
      */
-    public void setCve(String value) {
+    public EpssRecord setCve(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.EPSS.CVE</code>.
+     * Getter for <code>EPSS.CVE</code>.
      */
     public String getCve() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.EPSS.PERCENTILE</code>.
+     * Setter for <code>EPSS.PERCENTILE</code>.
      */
-    public void setPercentile(BigDecimal value) {
+    public EpssRecord setPercentile(BigDecimal value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.EPSS.PERCENTILE</code>.
+     * Getter for <code>EPSS.PERCENTILE</code>.
      */
     public BigDecimal getPercentile() {
         return (BigDecimal) get(2);
     }
 
     /**
-     * Setter for <code>public.EPSS.SCORE</code>.
+     * Setter for <code>EPSS.SCORE</code>.
      */
-    public void setScore(BigDecimal value) {
+    public EpssRecord setScore(BigDecimal value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.EPSS.SCORE</code>.
+     * Getter for <code>EPSS.SCORE</code>.
      */
     public BigDecimal getScore() {
         return (BigDecimal) get(3);

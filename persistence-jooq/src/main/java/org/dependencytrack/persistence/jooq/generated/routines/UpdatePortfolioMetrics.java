@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.impl.AbstractRoutine;
 import org.jooq.impl.DSL;
 
@@ -21,7 +21,7 @@ public class UpdatePortfolioMetrics extends AbstractRoutine<java.lang.Void> {
      * Create a new routine call instance
      */
     public UpdatePortfolioMetrics() {
-        super("UPDATE_PORTFOLIO_METRICS", Public.PUBLIC, DSL.comment(""));
+        super("UPDATE_PORTFOLIO_METRICS", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""));
         setSQLUsable(false);
     }
 }

@@ -20,140 +20,150 @@ public class IntegrityMetaComponentRecord extends UpdatableRecordImpl<IntegrityM
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.INTEGRITY_META_COMPONENT.ID</code>.
+     * Setter for <code>INTEGRITY_META_COMPONENT.ID</code>.
      */
-    public void setId(Long value) {
+    public IntegrityMetaComponentRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_META_COMPONENT.ID</code>.
+     * Getter for <code>INTEGRITY_META_COMPONENT.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_META_COMPONENT.LAST_FETCH</code>.
+     * Setter for <code>INTEGRITY_META_COMPONENT.LAST_FETCH</code>.
      */
-    public void setLastFetch(OffsetDateTime value) {
+    public IntegrityMetaComponentRecord setLastFetch(OffsetDateTime value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_META_COMPONENT.LAST_FETCH</code>.
+     * Getter for <code>INTEGRITY_META_COMPONENT.LAST_FETCH</code>.
      */
     public OffsetDateTime getLastFetch() {
         return (OffsetDateTime) get(1);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_META_COMPONENT.MD5</code>.
+     * Setter for <code>INTEGRITY_META_COMPONENT.MD5</code>.
      */
-    public void setMd5(String value) {
+    public IntegrityMetaComponentRecord setMd5(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_META_COMPONENT.MD5</code>.
+     * Getter for <code>INTEGRITY_META_COMPONENT.MD5</code>.
      */
     public String getMd5() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_META_COMPONENT.PUBLISHED_AT</code>.
+     * Setter for <code>INTEGRITY_META_COMPONENT.PUBLISHED_AT</code>.
      */
-    public void setPublishedAt(OffsetDateTime value) {
+    public IntegrityMetaComponentRecord setPublishedAt(OffsetDateTime value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_META_COMPONENT.PUBLISHED_AT</code>.
+     * Getter for <code>INTEGRITY_META_COMPONENT.PUBLISHED_AT</code>.
      */
     public OffsetDateTime getPublishedAt() {
         return (OffsetDateTime) get(3);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_META_COMPONENT.PURL</code>.
+     * Setter for <code>INTEGRITY_META_COMPONENT.PURL</code>.
      */
-    public void setPurl(String value) {
+    public IntegrityMetaComponentRecord setPurl(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_META_COMPONENT.PURL</code>.
+     * Getter for <code>INTEGRITY_META_COMPONENT.PURL</code>.
      */
     public String getPurl() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_META_COMPONENT.REPOSITORY_URL</code>.
+     * Setter for <code>INTEGRITY_META_COMPONENT.REPOSITORY_URL</code>.
      */
-    public void setRepositoryUrl(String value) {
+    public IntegrityMetaComponentRecord setRepositoryUrl(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_META_COMPONENT.REPOSITORY_URL</code>.
+     * Getter for <code>INTEGRITY_META_COMPONENT.REPOSITORY_URL</code>.
      */
     public String getRepositoryUrl() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_META_COMPONENT.SHA1</code>.
+     * Setter for <code>INTEGRITY_META_COMPONENT.SHA1</code>.
      */
-    public void setSha1(String value) {
+    public IntegrityMetaComponentRecord setSha1(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_META_COMPONENT.SHA1</code>.
+     * Getter for <code>INTEGRITY_META_COMPONENT.SHA1</code>.
      */
     public String getSha1() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_META_COMPONENT.SHA256</code>.
+     * Setter for <code>INTEGRITY_META_COMPONENT.SHA256</code>.
      */
-    public void setSha256(String value) {
+    public IntegrityMetaComponentRecord setSha256(String value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_META_COMPONENT.SHA256</code>.
+     * Getter for <code>INTEGRITY_META_COMPONENT.SHA256</code>.
      */
     public String getSha256() {
         return (String) get(7);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_META_COMPONENT.SHA512</code>.
+     * Setter for <code>INTEGRITY_META_COMPONENT.SHA512</code>.
      */
-    public void setSha512(String value) {
+    public IntegrityMetaComponentRecord setSha512(String value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_META_COMPONENT.SHA512</code>.
+     * Getter for <code>INTEGRITY_META_COMPONENT.SHA512</code>.
      */
     public String getSha512() {
         return (String) get(8);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_META_COMPONENT.STATUS</code>.
+     * Setter for <code>INTEGRITY_META_COMPONENT.STATUS</code>.
      */
-    public void setStatus(String value) {
+    public IntegrityMetaComponentRecord setStatus(String value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_META_COMPONENT.STATUS</code>.
+     * Getter for <code>INTEGRITY_META_COMPONENT.STATUS</code>.
      */
     public String getStatus() {
         return (String) get(9);

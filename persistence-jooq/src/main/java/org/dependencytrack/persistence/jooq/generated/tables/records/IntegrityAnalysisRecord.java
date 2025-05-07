@@ -20,116 +20,120 @@ public class IntegrityAnalysisRecord extends UpdatableRecordImpl<IntegrityAnalys
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.INTEGRITY_ANALYSIS.ID</code>.
+     * Setter for <code>INTEGRITY_ANALYSIS.ID</code>.
      */
-    public void setId(Long value) {
+    public IntegrityAnalysisRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_ANALYSIS.ID</code>.
+     * Getter for <code>INTEGRITY_ANALYSIS.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_ANALYSIS.COMPONENT_ID</code>.
+     * Setter for <code>INTEGRITY_ANALYSIS.COMPONENT_ID</code>.
      */
-    public void setComponentId(Long value) {
+    public IntegrityAnalysisRecord setComponentId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_ANALYSIS.COMPONENT_ID</code>.
+     * Getter for <code>INTEGRITY_ANALYSIS.COMPONENT_ID</code>.
      */
     public Long getComponentId() {
         return (Long) get(1);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_ANALYSIS.INTEGRITY_CHECK_STATUS</code>.
+     * Setter for <code>INTEGRITY_ANALYSIS.INTEGRITY_CHECK_STATUS</code>.
      */
-    public void setIntegrityCheckStatus(String value) {
+    public IntegrityAnalysisRecord setIntegrityCheckStatus(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_ANALYSIS.INTEGRITY_CHECK_STATUS</code>.
+     * Getter for <code>INTEGRITY_ANALYSIS.INTEGRITY_CHECK_STATUS</code>.
      */
     public String getIntegrityCheckStatus() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_ANALYSIS.MD5_HASH_MATCH_STATUS</code>.
+     * Setter for <code>INTEGRITY_ANALYSIS.MD5_HASH_MATCH_STATUS</code>.
      */
-    public void setMd5HashMatchStatus(String value) {
+    public IntegrityAnalysisRecord setMd5HashMatchStatus(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_ANALYSIS.MD5_HASH_MATCH_STATUS</code>.
+     * Getter for <code>INTEGRITY_ANALYSIS.MD5_HASH_MATCH_STATUS</code>.
      */
     public String getMd5HashMatchStatus() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_ANALYSIS.SHA1_HASH_MATCH_STATUS</code>.
+     * Setter for <code>INTEGRITY_ANALYSIS.SHA1_HASH_MATCH_STATUS</code>.
      */
-    public void setSha1HashMatchStatus(String value) {
+    public IntegrityAnalysisRecord setSha1HashMatchStatus(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_ANALYSIS.SHA1_HASH_MATCH_STATUS</code>.
+     * Getter for <code>INTEGRITY_ANALYSIS.SHA1_HASH_MATCH_STATUS</code>.
      */
     public String getSha1HashMatchStatus() {
         return (String) get(4);
     }
 
     /**
-     * Setter for
-     * <code>public.INTEGRITY_ANALYSIS.SHA256_HASH_MATCH_STATUS</code>.
+     * Setter for <code>INTEGRITY_ANALYSIS.SHA256_HASH_MATCH_STATUS</code>.
      */
-    public void setSha256HashMatchStatus(String value) {
+    public IntegrityAnalysisRecord setSha256HashMatchStatus(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.INTEGRITY_ANALYSIS.SHA256_HASH_MATCH_STATUS</code>.
+     * Getter for <code>INTEGRITY_ANALYSIS.SHA256_HASH_MATCH_STATUS</code>.
      */
     public String getSha256HashMatchStatus() {
         return (String) get(5);
     }
 
     /**
-     * Setter for
-     * <code>public.INTEGRITY_ANALYSIS.SHA512_HASH_MATCH_STATUS</code>.
+     * Setter for <code>INTEGRITY_ANALYSIS.SHA512_HASH_MATCH_STATUS</code>.
      */
-    public void setSha512HashMatchStatus(String value) {
+    public IntegrityAnalysisRecord setSha512HashMatchStatus(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.INTEGRITY_ANALYSIS.SHA512_HASH_MATCH_STATUS</code>.
+     * Getter for <code>INTEGRITY_ANALYSIS.SHA512_HASH_MATCH_STATUS</code>.
      */
     public String getSha512HashMatchStatus() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.INTEGRITY_ANALYSIS.UPDATED_AT</code>.
+     * Setter for <code>INTEGRITY_ANALYSIS.UPDATED_AT</code>.
      */
-    public void setUpdatedAt(OffsetDateTime value) {
+    public IntegrityAnalysisRecord setUpdatedAt(OffsetDateTime value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.INTEGRITY_ANALYSIS.UPDATED_AT</code>.
+     * Getter for <code>INTEGRITY_ANALYSIS.UPDATED_AT</code>.
      */
     public OffsetDateTime getUpdatedAt() {
         return (OffsetDateTime) get(7);

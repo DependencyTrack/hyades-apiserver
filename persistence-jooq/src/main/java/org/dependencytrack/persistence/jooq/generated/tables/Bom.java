@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.BomRecord;
 import org.jooq.Condition;
@@ -47,7 +47,7 @@ public class Bom extends TableImpl<BomRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.BOM</code>
+     * The reference instance of <code>BOM</code>
      */
     public static final Bom BOM = new Bom();
 
@@ -60,47 +60,47 @@ public class Bom extends TableImpl<BomRecord> {
     }
 
     /**
-     * The column <code>public.BOM.ID</code>.
+     * The column <code>BOM.ID</code>.
      */
     public final TableField<BomRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.BOM.BOM_FORMAT</code>.
+     * The column <code>BOM.BOM_FORMAT</code>.
      */
     public final TableField<BomRecord, String> BOM_FORMAT = createField(DSL.name("BOM_FORMAT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.BOM.BOM_VERSION</code>.
+     * The column <code>BOM.BOM_VERSION</code>.
      */
     public final TableField<BomRecord, Integer> BOM_VERSION = createField(DSL.name("BOM_VERSION"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.BOM.IMPORTED</code>.
+     * The column <code>BOM.IMPORTED</code>.
      */
     public final TableField<BomRecord, OffsetDateTime> IMPORTED = createField(DSL.name("IMPORTED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.BOM.PROJECT_ID</code>.
+     * The column <code>BOM.PROJECT_ID</code>.
      */
     public final TableField<BomRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.BOM.SERIAL_NUMBER</code>.
+     * The column <code>BOM.SERIAL_NUMBER</code>.
      */
     public final TableField<BomRecord, String> SERIAL_NUMBER = createField(DSL.name("SERIAL_NUMBER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.BOM.SPEC_VERSION</code>.
+     * The column <code>BOM.SPEC_VERSION</code>.
      */
     public final TableField<BomRecord, String> SPEC_VERSION = createField(DSL.name("SPEC_VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.BOM.UUID</code>.
+     * The column <code>BOM.UUID</code>.
      */
     public final TableField<BomRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.BOM.GENERATED</code>.
+     * The column <code>BOM.GENERATED</code>.
      */
     public final TableField<BomRecord, OffsetDateTime> GENERATED = createField(DSL.name("GENERATED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
@@ -113,21 +113,21 @@ public class Bom extends TableImpl<BomRecord> {
     }
 
     /**
-     * Create an aliased <code>public.BOM</code> table reference
+     * Create an aliased <code>BOM</code> table reference
      */
     public Bom(String alias) {
         this(DSL.name(alias), BOM);
     }
 
     /**
-     * Create an aliased <code>public.BOM</code> table reference
+     * Create an aliased <code>BOM</code> table reference
      */
     public Bom(Name alias) {
         this(alias, BOM);
     }
 
     /**
-     * Create a <code>public.BOM</code> table reference
+     * Create a <code>BOM</code> table reference
      */
     public Bom() {
         this(DSL.name("BOM"), null);
@@ -168,7 +168,7 @@ public class Bom extends TableImpl<BomRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -199,7 +199,7 @@ public class Bom extends TableImpl<BomRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)

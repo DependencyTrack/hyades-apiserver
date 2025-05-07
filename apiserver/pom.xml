@@ -87,6 +87,11 @@
             <artifactId>proto</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>persistence-jooq</artifactId>
+        </dependency>
+
         <!-- Alpine -->
         <dependency>
             <groupId>org.dependencytrack</groupId>

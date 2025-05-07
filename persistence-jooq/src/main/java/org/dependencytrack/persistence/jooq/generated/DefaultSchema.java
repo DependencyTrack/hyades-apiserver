@@ -21,7 +21,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.ConfigProperty;
 import org.dependencytrack.persistence.jooq.generated.tables.DependencyMetrics;
 import org.dependencytrack.persistence.jooq.generated.tables.Epss;
 import org.dependencytrack.persistence.jooq.generated.tables.FindingAttribution;
-import org.dependencytrack.persistence.jooq.generated.tables.InstalledUpgrades;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityAnalysis;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityMetaComponent;
 import org.dependencytrack.persistence.jooq.generated.tables.LdapUser;
@@ -60,7 +59,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.ProjectProperty;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectsTags;
 import org.dependencytrack.persistence.jooq.generated.tables.Repository;
 import org.dependencytrack.persistence.jooq.generated.tables.RepositoryMetaComponent;
-import org.dependencytrack.persistence.jooq.generated.tables.SchemaVersion;
 import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponent;
 import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponentsVulnerabilities;
 import org.dependencytrack.persistence.jooq.generated.tables.Tag;
@@ -90,385 +88,375 @@ import org.jooq.impl.SchemaImpl;
  * standard public schema
  */
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
-public class Public extends SchemaImpl {
+public class DefaultSchema extends SchemaImpl {
 
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public</code>
+     * The reference instance of <code>DEFAULT_SCHEMA</code>
      */
-    public static final Public PUBLIC = new Public();
+    public static final DefaultSchema DEFAULT_SCHEMA = new DefaultSchema();
 
     /**
-     * The table <code>public.AFFECTEDVERSIONATTRIBUTION</code>.
+     * The table <code>AFFECTEDVERSIONATTRIBUTION</code>.
      */
     public final AffectedVersionAttribution AFFECTEDVERSIONATTRIBUTION = AffectedVersionAttribution.AFFECTEDVERSIONATTRIBUTION;
 
     /**
-     * The table <code>public.ANALYSIS</code>.
+     * The table <code>ANALYSIS</code>.
      */
     public final Analysis ANALYSIS = Analysis.ANALYSIS;
 
     /**
-     * The table <code>public.ANALYSISCOMMENT</code>.
+     * The table <code>ANALYSISCOMMENT</code>.
      */
     public final AnalysisComment ANALYSISCOMMENT = AnalysisComment.ANALYSISCOMMENT;
 
     /**
-     * The table <code>public.APIKEY</code>.
+     * The table <code>APIKEY</code>.
      */
     public final ApiKey APIKEY = ApiKey.APIKEY;
 
     /**
-     * The table <code>public.APIKEYS_TEAMS</code>.
+     * The table <code>APIKEYS_TEAMS</code>.
      */
     public final ApiKeysTeams APIKEYS_TEAMS = ApiKeysTeams.APIKEYS_TEAMS;
 
     /**
-     * The table <code>public.BOM</code>.
+     * The table <code>BOM</code>.
      */
     public final Bom BOM = Bom.BOM;
 
     /**
-     * The table <code>public.COMPONENT</code>.
+     * The table <code>COMPONENT</code>.
      */
     public final Component COMPONENT = Component.COMPONENT;
 
     /**
-     * The table <code>public.COMPONENT_OCCURRENCE</code>.
+     * The table <code>COMPONENT_OCCURRENCE</code>.
      */
     public final ComponentOccurrence COMPONENT_OCCURRENCE = ComponentOccurrence.COMPONENT_OCCURRENCE;
 
     /**
-     * The table <code>public.COMPONENT_PROPERTY</code>.
+     * The table <code>COMPONENT_PROPERTY</code>.
      */
     public final ComponentProperty COMPONENT_PROPERTY = ComponentProperty.COMPONENT_PROPERTY;
 
     /**
-     * The table <code>public.COMPONENTS_VULNERABILITIES</code>.
+     * The table <code>COMPONENTS_VULNERABILITIES</code>.
      */
     public final ComponentsVulnerabilities COMPONENTS_VULNERABILITIES = ComponentsVulnerabilities.COMPONENTS_VULNERABILITIES;
 
     /**
-     * The table <code>public.CONFIGPROPERTY</code>.
+     * The table <code>CONFIGPROPERTY</code>.
      */
     public final ConfigProperty CONFIGPROPERTY = ConfigProperty.CONFIGPROPERTY;
 
     /**
-     * The table <code>public.DEPENDENCYMETRICS</code>.
+     * The table <code>DEPENDENCYMETRICS</code>.
      */
     public final DependencyMetrics DEPENDENCYMETRICS = DependencyMetrics.DEPENDENCYMETRICS;
 
     /**
-     * The table <code>public.EPSS</code>.
+     * The table <code>EPSS</code>.
      */
     public final Epss EPSS = Epss.EPSS;
 
     /**
-     * The table <code>public.FINDINGATTRIBUTION</code>.
+     * The table <code>FINDINGATTRIBUTION</code>.
      */
     public final FindingAttribution FINDINGATTRIBUTION = FindingAttribution.FINDINGATTRIBUTION;
 
     /**
-     * The table <code>public.INSTALLEDUPGRADES</code>.
-     */
-    public final InstalledUpgrades INSTALLEDUPGRADES = InstalledUpgrades.INSTALLEDUPGRADES;
-
-    /**
-     * The table <code>public.INTEGRITY_ANALYSIS</code>.
+     * The table <code>INTEGRITY_ANALYSIS</code>.
      */
     public final IntegrityAnalysis INTEGRITY_ANALYSIS = IntegrityAnalysis.INTEGRITY_ANALYSIS;
 
     /**
-     * The table <code>public.INTEGRITY_META_COMPONENT</code>.
+     * The table <code>INTEGRITY_META_COMPONENT</code>.
      */
     public final IntegrityMetaComponent INTEGRITY_META_COMPONENT = IntegrityMetaComponent.INTEGRITY_META_COMPONENT;
 
     /**
-     * The table <code>public.LDAPUSER</code>.
+     * The table <code>LDAPUSER</code>.
      */
     public final LdapUser LDAPUSER = LdapUser.LDAPUSER;
 
     /**
-     * The table <code>public.LDAPUSERS_PERMISSIONS</code>.
+     * The table <code>LDAPUSERS_PERMISSIONS</code>.
      */
     public final LdapUsersPermissions LDAPUSERS_PERMISSIONS = LdapUsersPermissions.LDAPUSERS_PERMISSIONS;
 
     /**
-     * The table <code>public.LDAPUSERS_TEAMS</code>.
+     * The table <code>LDAPUSERS_TEAMS</code>.
      */
     public final LdapUsersTeams LDAPUSERS_TEAMS = LdapUsersTeams.LDAPUSERS_TEAMS;
 
     /**
-     * The table <code>public.LICENSE</code>.
+     * The table <code>LICENSE</code>.
      */
     public final License LICENSE = License.LICENSE;
 
     /**
-     * The table <code>public.LICENSEGROUP</code>.
+     * The table <code>LICENSEGROUP</code>.
      */
     public final LicenseGroup LICENSEGROUP = LicenseGroup.LICENSEGROUP;
 
     /**
-     * The table <code>public.LICENSEGROUP_LICENSE</code>.
+     * The table <code>LICENSEGROUP_LICENSE</code>.
      */
     public final LicenseGroupLicense LICENSEGROUP_LICENSE = LicenseGroupLicense.LICENSEGROUP_LICENSE;
 
     /**
-     * The table <code>public.MANAGEDUSER</code>.
+     * The table <code>MANAGEDUSER</code>.
      */
     public final ManagedUser MANAGEDUSER = ManagedUser.MANAGEDUSER;
 
     /**
-     * The table <code>public.MANAGEDUSERS_PERMISSIONS</code>.
+     * The table <code>MANAGEDUSERS_PERMISSIONS</code>.
      */
     public final ManagedUsersPermissions MANAGEDUSERS_PERMISSIONS = ManagedUsersPermissions.MANAGEDUSERS_PERMISSIONS;
 
     /**
-     * The table <code>public.MANAGEDUSERS_TEAMS</code>.
+     * The table <code>MANAGEDUSERS_TEAMS</code>.
      */
     public final ManagedUsersTeams MANAGEDUSERS_TEAMS = ManagedUsersTeams.MANAGEDUSERS_TEAMS;
 
     /**
-     * The table <code>public.MAPPEDLDAPGROUP</code>.
+     * The table <code>MAPPEDLDAPGROUP</code>.
      */
     public final MappedLdapGroup MAPPEDLDAPGROUP = MappedLdapGroup.MAPPEDLDAPGROUP;
 
     /**
-     * The table <code>public.MAPPEDOIDCGROUP</code>.
+     * The table <code>MAPPEDOIDCGROUP</code>.
      */
     public final MappedOidcGroup MAPPEDOIDCGROUP = MappedOidcGroup.MAPPEDOIDCGROUP;
 
     /**
-     * The table <code>public.NOTIFICATIONPUBLISHER</code>.
+     * The table <code>NOTIFICATIONPUBLISHER</code>.
      */
     public final NotificationPublisher NOTIFICATIONPUBLISHER = NotificationPublisher.NOTIFICATIONPUBLISHER;
 
     /**
-     * The table <code>public.NOTIFICATIONRULE</code>.
+     * The table <code>NOTIFICATIONRULE</code>.
      */
     public final NotificationRule NOTIFICATIONRULE = NotificationRule.NOTIFICATIONRULE;
 
     /**
-     * The table <code>public.NOTIFICATIONRULE_PROJECTS</code>.
+     * The table <code>NOTIFICATIONRULE_PROJECTS</code>.
      */
     public final NotificationRuleProjects NOTIFICATIONRULE_PROJECTS = NotificationRuleProjects.NOTIFICATIONRULE_PROJECTS;
 
     /**
-     * The table <code>public.NOTIFICATIONRULE_TAGS</code>.
+     * The table <code>NOTIFICATIONRULE_TAGS</code>.
      */
     public final NotificationRuleTags NOTIFICATIONRULE_TAGS = NotificationRuleTags.NOTIFICATIONRULE_TAGS;
 
     /**
-     * The table <code>public.NOTIFICATIONRULE_TEAMS</code>.
+     * The table <code>NOTIFICATIONRULE_TEAMS</code>.
      */
     public final NotificationRuleTeams NOTIFICATIONRULE_TEAMS = NotificationRuleTeams.NOTIFICATIONRULE_TEAMS;
 
     /**
-     * The table <code>public.OIDCGROUP</code>.
+     * The table <code>OIDCGROUP</code>.
      */
     public final OidcGroup OIDCGROUP = OidcGroup.OIDCGROUP;
 
     /**
-     * The table <code>public.OIDCUSER</code>.
+     * The table <code>OIDCUSER</code>.
      */
     public final OidcUser OIDCUSER = OidcUser.OIDCUSER;
 
     /**
-     * The table <code>public.OIDCUSERS_PERMISSIONS</code>.
+     * The table <code>OIDCUSERS_PERMISSIONS</code>.
      */
     public final OidcUsersPermissions OIDCUSERS_PERMISSIONS = OidcUsersPermissions.OIDCUSERS_PERMISSIONS;
 
     /**
-     * The table <code>public.OIDCUSERS_TEAMS</code>.
+     * The table <code>OIDCUSERS_TEAMS</code>.
      */
     public final OidcUsersTeams OIDCUSERS_TEAMS = OidcUsersTeams.OIDCUSERS_TEAMS;
 
     /**
-     * The table <code>public.PERMISSION</code>.
+     * The table <code>PERMISSION</code>.
      */
     public final Permission PERMISSION = Permission.PERMISSION;
 
     /**
-     * The table <code>public.POLICY</code>.
+     * The table <code>POLICY</code>.
      */
     public final Policy POLICY = Policy.POLICY;
 
     /**
-     * The table <code>public.POLICY_PROJECTS</code>.
+     * The table <code>POLICY_PROJECTS</code>.
      */
     public final PolicyProjects POLICY_PROJECTS = PolicyProjects.POLICY_PROJECTS;
 
     /**
-     * The table <code>public.POLICY_TAGS</code>.
+     * The table <code>POLICY_TAGS</code>.
      */
     public final PolicyTags POLICY_TAGS = PolicyTags.POLICY_TAGS;
 
     /**
-     * The table <code>public.POLICYCONDITION</code>.
+     * The table <code>POLICYCONDITION</code>.
      */
     public final PolicyCondition POLICYCONDITION = PolicyCondition.POLICYCONDITION;
 
     /**
-     * The table <code>public.POLICYVIOLATION</code>.
+     * The table <code>POLICYVIOLATION</code>.
      */
     public final PolicyViolation POLICYVIOLATION = PolicyViolation.POLICYVIOLATION;
 
     /**
-     * The table <code>public.PORTFOLIOMETRICS</code>.
+     * The table <code>PORTFOLIOMETRICS</code>.
      */
     public final PortfolioMetrics PORTFOLIOMETRICS = PortfolioMetrics.PORTFOLIOMETRICS;
 
     /**
-     * The table <code>public.PROJECT</code>.
+     * The table <code>PROJECT</code>.
      */
     public final Project PROJECT = Project.PROJECT;
 
     /**
-     * The table <code>public.PROJECT_ACCESS_TEAMS</code>.
+     * The table <code>PROJECT_ACCESS_TEAMS</code>.
      */
     public final ProjectAccessTeams PROJECT_ACCESS_TEAMS = ProjectAccessTeams.PROJECT_ACCESS_TEAMS;
 
     /**
-     * The table <code>public.PROJECT_HIERARCHY</code>.
+     * The table <code>PROJECT_HIERARCHY</code>.
      */
     public final ProjectHierarchy PROJECT_HIERARCHY = ProjectHierarchy.PROJECT_HIERARCHY;
 
     /**
-     * The table <code>public.PROJECT_METADATA</code>.
+     * The table <code>PROJECT_METADATA</code>.
      */
     public final ProjectMetadata PROJECT_METADATA = ProjectMetadata.PROJECT_METADATA;
 
     /**
-     * The table <code>public.PROJECT_PROPERTY</code>.
+     * The table <code>PROJECT_PROPERTY</code>.
      */
     public final ProjectProperty PROJECT_PROPERTY = ProjectProperty.PROJECT_PROPERTY;
 
     /**
-     * The table <code>public.PROJECTMETRICS</code>.
+     * The table <code>PROJECTMETRICS</code>.
      */
     public final ProjectMetrics PROJECTMETRICS = ProjectMetrics.PROJECTMETRICS;
 
     /**
-     * The table <code>public.PROJECTS_TAGS</code>.
+     * The table <code>PROJECTS_TAGS</code>.
      */
     public final ProjectsTags PROJECTS_TAGS = ProjectsTags.PROJECTS_TAGS;
 
     /**
-     * The table <code>public.REPOSITORY</code>.
+     * The table <code>REPOSITORY</code>.
      */
     public final Repository REPOSITORY = Repository.REPOSITORY;
 
     /**
-     * The table <code>public.REPOSITORY_META_COMPONENT</code>.
+     * The table <code>REPOSITORY_META_COMPONENT</code>.
      */
     public final RepositoryMetaComponent REPOSITORY_META_COMPONENT = RepositoryMetaComponent.REPOSITORY_META_COMPONENT;
 
     /**
-     * The table <code>public.SCHEMAVERSION</code>.
-     */
-    public final SchemaVersion SCHEMAVERSION = SchemaVersion.SCHEMAVERSION;
-
-    /**
-     * The table <code>public.SERVICECOMPONENT</code>.
+     * The table <code>SERVICECOMPONENT</code>.
      */
     public final ServiceComponent SERVICECOMPONENT = ServiceComponent.SERVICECOMPONENT;
 
     /**
-     * The table <code>public.SERVICECOMPONENTS_VULNERABILITIES</code>.
+     * The table <code>SERVICECOMPONENTS_VULNERABILITIES</code>.
      */
     public final ServiceComponentsVulnerabilities SERVICECOMPONENTS_VULNERABILITIES = ServiceComponentsVulnerabilities.SERVICECOMPONENTS_VULNERABILITIES;
 
     /**
-     * The table <code>public.TAG</code>.
+     * The table <code>TAG</code>.
      */
     public final Tag TAG = Tag.TAG;
 
     /**
-     * The table <code>public.TEAM</code>.
+     * The table <code>TEAM</code>.
      */
     public final Team TEAM = Team.TEAM;
 
     /**
-     * The table <code>public.TEAMS_PERMISSIONS</code>.
+     * The table <code>TEAMS_PERMISSIONS</code>.
      */
     public final TeamsPermissions TEAMS_PERMISSIONS = TeamsPermissions.TEAMS_PERMISSIONS;
 
     /**
-     * The table <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code>.
+     * The table <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code>.
      */
     public final UserProjectEffectivePermissions USER_PROJECT_EFFECTIVE_PERMISSIONS = UserProjectEffectivePermissions.USER_PROJECT_EFFECTIVE_PERMISSIONS;
 
     /**
-     * The table <code>public.VEX</code>.
+     * The table <code>VEX</code>.
      */
     public final Vex VEX = Vex.VEX;
 
     /**
-     * The table <code>public.VIOLATIONANALYSIS</code>.
+     * The table <code>VIOLATIONANALYSIS</code>.
      */
     public final ViolationAnalysis VIOLATIONANALYSIS = ViolationAnalysis.VIOLATIONANALYSIS;
 
     /**
-     * The table <code>public.VIOLATIONANALYSISCOMMENT</code>.
+     * The table <code>VIOLATIONANALYSISCOMMENT</code>.
      */
     public final ViolationAnalysisComment VIOLATIONANALYSISCOMMENT = ViolationAnalysisComment.VIOLATIONANALYSISCOMMENT;
 
     /**
-     * The table <code>public.VULNERABILITIES_TAGS</code>.
+     * The table <code>VULNERABILITIES_TAGS</code>.
      */
     public final VulnerabilitiesTags VULNERABILITIES_TAGS = VulnerabilitiesTags.VULNERABILITIES_TAGS;
 
     /**
-     * The table <code>public.VULNERABILITY</code>.
+     * The table <code>VULNERABILITY</code>.
      */
     public final Vulnerability VULNERABILITY = Vulnerability.VULNERABILITY;
 
     /**
-     * The table <code>public.VULNERABILITY_POLICY</code>.
+     * The table <code>VULNERABILITY_POLICY</code>.
      */
     public final VulnerabilityPolicy VULNERABILITY_POLICY = VulnerabilityPolicy.VULNERABILITY_POLICY;
 
     /**
-     * The table <code>public.VULNERABILITY_POLICY_BUNDLE</code>.
+     * The table <code>VULNERABILITY_POLICY_BUNDLE</code>.
      */
     public final VulnerabilityPolicyBundle VULNERABILITY_POLICY_BUNDLE = VulnerabilityPolicyBundle.VULNERABILITY_POLICY_BUNDLE;
 
     /**
-     * The table <code>public.VULNERABILITYALIAS</code>.
+     * The table <code>VULNERABILITYALIAS</code>.
      */
     public final VulnerabilityAlias VULNERABILITYALIAS = VulnerabilityAlias.VULNERABILITYALIAS;
 
     /**
-     * The table <code>public.VULNERABILITYMETRICS</code>.
+     * The table <code>VULNERABILITYMETRICS</code>.
      */
     public final VulnerabilityMetrics VULNERABILITYMETRICS = VulnerabilityMetrics.VULNERABILITYMETRICS;
 
     /**
-     * The table <code>public.VULNERABILITYSCAN</code>.
+     * The table <code>VULNERABILITYSCAN</code>.
      */
     public final VulnerabilityScan VULNERABILITYSCAN = VulnerabilityScan.VULNERABILITYSCAN;
 
     /**
-     * The table <code>public.VULNERABLESOFTWARE</code>.
+     * The table <code>VULNERABLESOFTWARE</code>.
      */
     public final VulnerableSoftware VULNERABLESOFTWARE = VulnerableSoftware.VULNERABLESOFTWARE;
 
     /**
-     * The table <code>public.VULNERABLESOFTWARE_VULNERABILITIES</code>.
+     * The table <code>VULNERABLESOFTWARE_VULNERABILITIES</code>.
      */
     public final VulnerableSoftwareVulnerabilities VULNERABLESOFTWARE_VULNERABILITIES = VulnerableSoftwareVulnerabilities.VULNERABLESOFTWARE_VULNERABILITIES;
 
     /**
-     * The table <code>public.WORKFLOW_STATE</code>.
+     * The table <code>WORKFLOW_STATE</code>.
      */
     public final WorkflowState WORKFLOW_STATE = WorkflowState.WORKFLOW_STATE;
 
     /**
      * No further instances allowed
      */
-    private Public() {
-        super(DSL.name("public"), null, DSL.comment("standard public schema"));
+    private DefaultSchema() {
+        super(DSL.name(""), null, DSL.comment("standard public schema"));
     }
 
 
@@ -494,7 +482,6 @@ public class Public extends SchemaImpl {
             DependencyMetrics.DEPENDENCYMETRICS,
             Epss.EPSS,
             FindingAttribution.FINDINGATTRIBUTION,
-            InstalledUpgrades.INSTALLEDUPGRADES,
             IntegrityAnalysis.INTEGRITY_ANALYSIS,
             IntegrityMetaComponent.INTEGRITY_META_COMPONENT,
             LdapUser.LDAPUSER,
@@ -533,7 +520,6 @@ public class Public extends SchemaImpl {
             ProjectsTags.PROJECTS_TAGS,
             Repository.REPOSITORY,
             RepositoryMetaComponent.REPOSITORY_META_COMPONENT,
-            SchemaVersion.SCHEMAVERSION,
             ServiceComponent.SERVICECOMPONENT,
             ServiceComponentsVulnerabilities.SERVICECOMPONENTS_VULNERABILITIES,
             Tag.TAG,

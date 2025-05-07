@@ -8,10 +8,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition.PolicyconditionPath;
+import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition.PolicyConditionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyProjects.PolicyProjectsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyTags.PolicyTagsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.PolicyRecord;
@@ -48,7 +48,7 @@ public class Policy extends TableImpl<PolicyRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.POLICY</code>
+     * The reference instance of <code>POLICY</code>
      */
     public static final Policy POLICY = new Policy();
 
@@ -61,37 +61,37 @@ public class Policy extends TableImpl<PolicyRecord> {
     }
 
     /**
-     * The column <code>public.POLICY.ID</code>.
+     * The column <code>POLICY.ID</code>.
      */
     public final TableField<PolicyRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.POLICY.INCLUDE_CHILDREN</code>.
+     * The column <code>POLICY.INCLUDE_CHILDREN</code>.
      */
     public final TableField<PolicyRecord, Boolean> INCLUDE_CHILDREN = createField(DSL.name("INCLUDE_CHILDREN"), SQLDataType.BOOLEAN, this, "");
 
     /**
-     * The column <code>public.POLICY.NAME</code>.
+     * The column <code>POLICY.NAME</code>.
      */
     public final TableField<PolicyRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICY.OPERATOR</code>.
+     * The column <code>POLICY.OPERATOR</code>.
      */
     public final TableField<PolicyRecord, String> OPERATOR = createField(DSL.name("OPERATOR"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICY.UUID</code>.
+     * The column <code>POLICY.UUID</code>.
      */
     public final TableField<PolicyRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICY.VIOLATIONSTATE</code>.
+     * The column <code>POLICY.VIOLATIONSTATE</code>.
      */
     public final TableField<PolicyRecord, String> VIOLATIONSTATE = createField(DSL.name("VIOLATIONSTATE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICY.ONLY_LATEST_PROJECT_VERSION</code>.
+     * The column <code>POLICY.ONLY_LATEST_PROJECT_VERSION</code>.
      */
     public final TableField<PolicyRecord, Boolean> ONLY_LATEST_PROJECT_VERSION = createField(DSL.name("ONLY_LATEST_PROJECT_VERSION"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
@@ -104,21 +104,21 @@ public class Policy extends TableImpl<PolicyRecord> {
     }
 
     /**
-     * Create an aliased <code>public.POLICY</code> table reference
+     * Create an aliased <code>POLICY</code> table reference
      */
     public Policy(String alias) {
         this(DSL.name(alias), POLICY);
     }
 
     /**
-     * Create an aliased <code>public.POLICY</code> table reference
+     * Create an aliased <code>POLICY</code> table reference
      */
     public Policy(Name alias) {
         this(alias, POLICY);
     }
 
     /**
-     * Create a <code>public.POLICY</code> table reference
+     * Create a <code>POLICY</code> table reference
      */
     public Policy() {
         this(DSL.name("POLICY"), null);
@@ -159,7 +159,7 @@ public class Policy extends TableImpl<PolicyRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -185,8 +185,8 @@ public class Policy extends TableImpl<PolicyRecord> {
     private transient PolicyProjectsPath _policyProjects;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.POLICY_PROJECTS</code> table
+     * Get the implicit to-many join path to the <code>POLICY_PROJECTS</code>
+     * table
      */
     public PolicyProjectsPath policyProjects() {
         if (_policyProjects == null)
@@ -198,8 +198,7 @@ public class Policy extends TableImpl<PolicyRecord> {
     private transient PolicyTagsPath _policyTags;
 
     /**
-     * Get the implicit to-many join path to the <code>public.POLICY_TAGS</code>
-     * table
+     * Get the implicit to-many join path to the <code>POLICY_TAGS</code> table
      */
     public PolicyTagsPath policyTags() {
         if (_policyTags == null)
@@ -208,17 +207,17 @@ public class Policy extends TableImpl<PolicyRecord> {
         return _policyTags;
     }
 
-    private transient PolicyconditionPath _policycondition;
+    private transient PolicyConditionPath _policyCondition;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.POLICYCONDITION</code> table
+     * Get the implicit to-many join path to the <code>POLICYCONDITION</code>
+     * table
      */
-    public PolicyconditionPath policycondition() {
-        if (_policycondition == null)
-            _policycondition = new PolicyconditionPath(this, null, Keys.POLICYCONDITION__POLICYCONDITION_POLICY_FK.getInverseKey());
+    public PolicyConditionPath policyCondition() {
+        if (_policyCondition == null)
+            _policyCondition = new PolicyConditionPath(this, null, Keys.POLICYCONDITION_POLICY_FK.getInverseKey());
 
-        return _policycondition;
+        return _policyCondition;
     }
 
     @Override

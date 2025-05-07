@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.records.EpssRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -42,7 +42,7 @@ public class Epss extends TableImpl<EpssRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.EPSS</code>
+     * The reference instance of <code>EPSS</code>
      */
     public static final Epss EPSS = new Epss();
 
@@ -55,22 +55,22 @@ public class Epss extends TableImpl<EpssRecord> {
     }
 
     /**
-     * The column <code>public.EPSS.ID</code>.
+     * The column <code>EPSS.ID</code>.
      */
     public final TableField<EpssRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.EPSS.CVE</code>.
+     * The column <code>EPSS.CVE</code>.
      */
     public final TableField<EpssRecord, String> CVE = createField(DSL.name("CVE"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
-     * The column <code>public.EPSS.PERCENTILE</code>.
+     * The column <code>EPSS.PERCENTILE</code>.
      */
     public final TableField<EpssRecord, BigDecimal> PERCENTILE = createField(DSL.name("PERCENTILE"), SQLDataType.NUMERIC, this, "");
 
     /**
-     * The column <code>public.EPSS.SCORE</code>.
+     * The column <code>EPSS.SCORE</code>.
      */
     public final TableField<EpssRecord, BigDecimal> SCORE = createField(DSL.name("SCORE"), SQLDataType.NUMERIC, this, "");
 
@@ -83,21 +83,21 @@ public class Epss extends TableImpl<EpssRecord> {
     }
 
     /**
-     * Create an aliased <code>public.EPSS</code> table reference
+     * Create an aliased <code>EPSS</code> table reference
      */
     public Epss(String alias) {
         this(DSL.name(alias), EPSS);
     }
 
     /**
-     * Create an aliased <code>public.EPSS</code> table reference
+     * Create an aliased <code>EPSS</code> table reference
      */
     public Epss(Name alias) {
         this(alias, EPSS);
     }
 
     /**
-     * Create a <code>public.EPSS</code> table reference
+     * Create a <code>EPSS</code> table reference
      */
     public Epss() {
         this(DSL.name("EPSS"), null);
@@ -105,7 +105,7 @@ public class Epss extends TableImpl<EpssRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override

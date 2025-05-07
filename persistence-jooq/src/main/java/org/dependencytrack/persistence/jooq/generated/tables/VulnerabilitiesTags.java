@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Tag.TagPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Vulnerability.VulnerabilityPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.VulnerabilitiesTagsRecord;
@@ -45,7 +45,7 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.VULNERABILITIES_TAGS</code>
+     * The reference instance of <code>VULNERABILITIES_TAGS</code>
      */
     public static final VulnerabilitiesTags VULNERABILITIES_TAGS = new VulnerabilitiesTags();
 
@@ -58,12 +58,12 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
     }
 
     /**
-     * The column <code>public.VULNERABILITIES_TAGS.TAG_ID</code>.
+     * The column <code>VULNERABILITIES_TAGS.TAG_ID</code>.
      */
     public final TableField<VulnerabilitiesTagsRecord, Long> TAG_ID = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.VULNERABILITIES_TAGS.VULNERABILITY_ID</code>.
+     * The column <code>VULNERABILITIES_TAGS.VULNERABILITY_ID</code>.
      */
     public final TableField<VulnerabilitiesTagsRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -76,23 +76,21 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.VULNERABILITIES_TAGS</code> table
-     * reference
+     * Create an aliased <code>VULNERABILITIES_TAGS</code> table reference
      */
     public VulnerabilitiesTags(String alias) {
         this(DSL.name(alias), VULNERABILITIES_TAGS);
     }
 
     /**
-     * Create an aliased <code>public.VULNERABILITIES_TAGS</code> table
-     * reference
+     * Create an aliased <code>VULNERABILITIES_TAGS</code> table reference
      */
     public VulnerabilitiesTags(Name alias) {
         this(alias, VULNERABILITIES_TAGS);
     }
 
     /**
-     * Create a <code>public.VULNERABILITIES_TAGS</code> table reference
+     * Create a <code>VULNERABILITIES_TAGS</code> table reference
      */
     public VulnerabilitiesTags() {
         this(DSL.name("VULNERABILITIES_TAGS"), null);
@@ -133,7 +131,7 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -149,7 +147,7 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
     private transient TagPath _tag;
 
     /**
-     * Get the implicit join path to the <code>public.TAG</code> table.
+     * Get the implicit join path to the <code>TAG</code> table.
      */
     public TagPath tag() {
         if (_tag == null)
@@ -161,8 +159,7 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
     private transient VulnerabilityPath _vulnerability;
 
     /**
-     * Get the implicit join path to the <code>public.VULNERABILITY</code>
-     * table.
+     * Get the implicit join path to the <code>VULNERABILITY</code> table.
      */
     public VulnerabilityPath vulnerability() {
         if (_vulnerability == null)

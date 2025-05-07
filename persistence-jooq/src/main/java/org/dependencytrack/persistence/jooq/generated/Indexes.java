@@ -58,7 +58,7 @@ import org.jooq.impl.Internal;
 
 
 /**
- * A class modelling indexes of tables in public.
+ * A class modelling indexes of tables in the default schema.
  */
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Indexes {

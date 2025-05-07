@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.records.IntegrityMetaComponentRecord;
 import org.jooq.Check;
 import org.jooq.Condition;
@@ -44,7 +44,7 @@ public class IntegrityMetaComponent extends TableImpl<IntegrityMetaComponentReco
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.INTEGRITY_META_COMPONENT</code>
+     * The reference instance of <code>INTEGRITY_META_COMPONENT</code>
      */
     public static final IntegrityMetaComponent INTEGRITY_META_COMPONENT = new IntegrityMetaComponent();
 
@@ -57,52 +57,52 @@ public class IntegrityMetaComponent extends TableImpl<IntegrityMetaComponentReco
     }
 
     /**
-     * The column <code>public.INTEGRITY_META_COMPONENT.ID</code>.
+     * The column <code>INTEGRITY_META_COMPONENT.ID</code>.
      */
     public final TableField<IntegrityMetaComponentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_META_COMPONENT.LAST_FETCH</code>.
+     * The column <code>INTEGRITY_META_COMPONENT.LAST_FETCH</code>.
      */
     public final TableField<IntegrityMetaComponentRecord, OffsetDateTime> LAST_FETCH = createField(DSL.name("LAST_FETCH"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_META_COMPONENT.MD5</code>.
+     * The column <code>INTEGRITY_META_COMPONENT.MD5</code>.
      */
     public final TableField<IntegrityMetaComponentRecord, String> MD5 = createField(DSL.name("MD5"), SQLDataType.VARCHAR(32), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_META_COMPONENT.PUBLISHED_AT</code>.
+     * The column <code>INTEGRITY_META_COMPONENT.PUBLISHED_AT</code>.
      */
     public final TableField<IntegrityMetaComponentRecord, OffsetDateTime> PUBLISHED_AT = createField(DSL.name("PUBLISHED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_META_COMPONENT.PURL</code>.
+     * The column <code>INTEGRITY_META_COMPONENT.PURL</code>.
      */
     public final TableField<IntegrityMetaComponentRecord, String> PURL = createField(DSL.name("PURL"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_META_COMPONENT.REPOSITORY_URL</code>.
+     * The column <code>INTEGRITY_META_COMPONENT.REPOSITORY_URL</code>.
      */
     public final TableField<IntegrityMetaComponentRecord, String> REPOSITORY_URL = createField(DSL.name("REPOSITORY_URL"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_META_COMPONENT.SHA1</code>.
+     * The column <code>INTEGRITY_META_COMPONENT.SHA1</code>.
      */
     public final TableField<IntegrityMetaComponentRecord, String> SHA1 = createField(DSL.name("SHA1"), SQLDataType.VARCHAR(40), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_META_COMPONENT.SHA256</code>.
+     * The column <code>INTEGRITY_META_COMPONENT.SHA256</code>.
      */
     public final TableField<IntegrityMetaComponentRecord, String> SHA256 = createField(DSL.name("SHA256"), SQLDataType.VARCHAR(64), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_META_COMPONENT.SHA512</code>.
+     * The column <code>INTEGRITY_META_COMPONENT.SHA512</code>.
      */
     public final TableField<IntegrityMetaComponentRecord, String> SHA512 = createField(DSL.name("SHA512"), SQLDataType.VARCHAR(128), this, "");
 
     /**
-     * The column <code>public.INTEGRITY_META_COMPONENT.STATUS</code>.
+     * The column <code>INTEGRITY_META_COMPONENT.STATUS</code>.
      */
     public final TableField<IntegrityMetaComponentRecord, String> STATUS = createField(DSL.name("STATUS"), SQLDataType.VARCHAR(64), this, "");
 
@@ -115,23 +115,21 @@ public class IntegrityMetaComponent extends TableImpl<IntegrityMetaComponentReco
     }
 
     /**
-     * Create an aliased <code>public.INTEGRITY_META_COMPONENT</code> table
-     * reference
+     * Create an aliased <code>INTEGRITY_META_COMPONENT</code> table reference
      */
     public IntegrityMetaComponent(String alias) {
         this(DSL.name(alias), INTEGRITY_META_COMPONENT);
     }
 
     /**
-     * Create an aliased <code>public.INTEGRITY_META_COMPONENT</code> table
-     * reference
+     * Create an aliased <code>INTEGRITY_META_COMPONENT</code> table reference
      */
     public IntegrityMetaComponent(Name alias) {
         this(alias, INTEGRITY_META_COMPONENT);
     }
 
     /**
-     * Create a <code>public.INTEGRITY_META_COMPONENT</code> table reference
+     * Create a <code>INTEGRITY_META_COMPONENT</code> table reference
      */
     public IntegrityMetaComponent() {
         this(DSL.name("INTEGRITY_META_COMPONENT"), null);
@@ -139,7 +137,7 @@ public class IntegrityMetaComponent extends TableImpl<IntegrityMetaComponentReco
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override

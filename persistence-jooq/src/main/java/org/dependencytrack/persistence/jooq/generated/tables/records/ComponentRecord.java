@@ -21,560 +21,600 @@ public class ComponentRecord extends UpdatableRecordImpl<ComponentRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.COMPONENT.ID</code>.
+     * Setter for <code>COMPONENT.ID</code>.
      */
-    public void setId(Long value) {
+    public ComponentRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.ID</code>.
+     * Getter for <code>COMPONENT.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.BLAKE2B_256</code>.
+     * Setter for <code>COMPONENT.BLAKE2B_256</code>.
      */
-    public void setBlake2b_256(String value) {
+    public ComponentRecord setBlake2b_256(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.BLAKE2B_256</code>.
+     * Getter for <code>COMPONENT.BLAKE2B_256</code>.
      */
     public String getBlake2b_256() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.BLAKE2B_384</code>.
+     * Setter for <code>COMPONENT.BLAKE2B_384</code>.
      */
-    public void setBlake2b_384(String value) {
+    public ComponentRecord setBlake2b_384(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.BLAKE2B_384</code>.
+     * Getter for <code>COMPONENT.BLAKE2B_384</code>.
      */
     public String getBlake2b_384() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.BLAKE2B_512</code>.
+     * Setter for <code>COMPONENT.BLAKE2B_512</code>.
      */
-    public void setBlake2b_512(String value) {
+    public ComponentRecord setBlake2b_512(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.BLAKE2B_512</code>.
+     * Getter for <code>COMPONENT.BLAKE2B_512</code>.
      */
     public String getBlake2b_512() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.BLAKE3</code>.
+     * Setter for <code>COMPONENT.BLAKE3</code>.
      */
-    public void setBlake3(String value) {
+    public ComponentRecord setBlake3(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.BLAKE3</code>.
+     * Getter for <code>COMPONENT.BLAKE3</code>.
      */
     public String getBlake3() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.CLASSIFIER</code>.
+     * Setter for <code>COMPONENT.CLASSIFIER</code>.
      */
-    public void setClassifier(String value) {
+    public ComponentRecord setClassifier(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.CLASSIFIER</code>.
+     * Getter for <code>COMPONENT.CLASSIFIER</code>.
      */
     public String getClassifier() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.COPYRIGHT</code>.
+     * Setter for <code>COMPONENT.COPYRIGHT</code>.
      */
-    public void setCopyright(String value) {
+    public ComponentRecord setCopyright(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.COPYRIGHT</code>.
+     * Getter for <code>COMPONENT.COPYRIGHT</code>.
      */
     public String getCopyright() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.CPE</code>.
+     * Setter for <code>COMPONENT.CPE</code>.
      */
-    public void setCpe(String value) {
+    public ComponentRecord setCpe(String value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.CPE</code>.
+     * Getter for <code>COMPONENT.CPE</code>.
      */
     public String getCpe() {
         return (String) get(7);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.DESCRIPTION</code>.
+     * Setter for <code>COMPONENT.DESCRIPTION</code>.
      */
-    public void setDescription(String value) {
+    public ComponentRecord setDescription(String value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.DESCRIPTION</code>.
+     * Getter for <code>COMPONENT.DESCRIPTION</code>.
      */
     public String getDescription() {
         return (String) get(8);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.DIRECT_DEPENDENCIES</code>.
+     * Setter for <code>COMPONENT.DIRECT_DEPENDENCIES</code>.
      */
-    public void setDirectDependencies(JSONB value) {
+    public ComponentRecord setDirectDependencies(JSONB value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.DIRECT_DEPENDENCIES</code>.
+     * Getter for <code>COMPONENT.DIRECT_DEPENDENCIES</code>.
      */
     public JSONB getDirectDependencies() {
         return (JSONB) get(9);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.EXTENSION</code>.
+     * Setter for <code>COMPONENT.EXTENSION</code>.
      */
-    public void setExtension(String value) {
+    public ComponentRecord setExtension(String value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.EXTENSION</code>.
+     * Getter for <code>COMPONENT.EXTENSION</code>.
      */
     public String getExtension() {
         return (String) get(10);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.EXTERNAL_REFERENCES</code>.
+     * Setter for <code>COMPONENT.EXTERNAL_REFERENCES</code>.
      */
-    public void setExternalReferences(byte[] value) {
+    public ComponentRecord setExternalReferences(byte[] value) {
         set(11, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.EXTERNAL_REFERENCES</code>.
+     * Getter for <code>COMPONENT.EXTERNAL_REFERENCES</code>.
      */
     public byte[] getExternalReferences() {
         return (byte[]) get(11);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.FILENAME</code>.
+     * Setter for <code>COMPONENT.FILENAME</code>.
      */
-    public void setFilename(String value) {
+    public ComponentRecord setFilename(String value) {
         set(12, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.FILENAME</code>.
+     * Getter for <code>COMPONENT.FILENAME</code>.
      */
     public String getFilename() {
         return (String) get(12);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.GROUP</code>.
+     * Setter for <code>COMPONENT.GROUP</code>.
      */
-    public void setGroup(String value) {
+    public ComponentRecord setGroup(String value) {
         set(13, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.GROUP</code>.
+     * Getter for <code>COMPONENT.GROUP</code>.
      */
     public String getGroup() {
         return (String) get(13);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.INTERNAL</code>.
+     * Setter for <code>COMPONENT.INTERNAL</code>.
      */
-    public void setInternal(Boolean value) {
+    public ComponentRecord setInternal(Boolean value) {
         set(14, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.INTERNAL</code>.
+     * Getter for <code>COMPONENT.INTERNAL</code>.
      */
     public Boolean getInternal() {
         return (Boolean) get(14);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.LAST_RISKSCORE</code>.
+     * Setter for <code>COMPONENT.LAST_RISKSCORE</code>.
      */
-    public void setLastRiskscore(Double value) {
+    public ComponentRecord setLastRiskscore(Double value) {
         set(15, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.LAST_RISKSCORE</code>.
+     * Getter for <code>COMPONENT.LAST_RISKSCORE</code>.
      */
     public Double getLastRiskscore() {
         return (Double) get(15);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.LICENSE</code>.
+     * Setter for <code>COMPONENT.LICENSE</code>.
      */
-    public void setLicense(String value) {
+    public ComponentRecord setLicense(String value) {
         set(16, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.LICENSE</code>.
+     * Getter for <code>COMPONENT.LICENSE</code>.
      */
     public String getLicense() {
         return (String) get(16);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.LICENSE_EXPRESSION</code>.
+     * Setter for <code>COMPONENT.LICENSE_EXPRESSION</code>.
      */
-    public void setLicenseExpression(String value) {
+    public ComponentRecord setLicenseExpression(String value) {
         set(17, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.LICENSE_EXPRESSION</code>.
+     * Getter for <code>COMPONENT.LICENSE_EXPRESSION</code>.
      */
     public String getLicenseExpression() {
         return (String) get(17);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.LICENSE_URL</code>.
+     * Setter for <code>COMPONENT.LICENSE_URL</code>.
      */
-    public void setLicenseUrl(String value) {
+    public ComponentRecord setLicenseUrl(String value) {
         set(18, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.LICENSE_URL</code>.
+     * Getter for <code>COMPONENT.LICENSE_URL</code>.
      */
     public String getLicenseUrl() {
         return (String) get(18);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.MD5</code>.
+     * Setter for <code>COMPONENT.MD5</code>.
      */
-    public void setMd5(String value) {
+    public ComponentRecord setMd5(String value) {
         set(19, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.MD5</code>.
+     * Getter for <code>COMPONENT.MD5</code>.
      */
     public String getMd5() {
         return (String) get(19);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.NAME</code>.
+     * Setter for <code>COMPONENT.NAME</code>.
      */
-    public void setName(String value) {
+    public ComponentRecord setName(String value) {
         set(20, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.NAME</code>.
+     * Getter for <code>COMPONENT.NAME</code>.
      */
     public String getName() {
         return (String) get(20);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.TEXT</code>.
+     * Setter for <code>COMPONENT.TEXT</code>.
      */
-    public void setText(String value) {
+    public ComponentRecord setText(String value) {
         set(21, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.TEXT</code>.
+     * Getter for <code>COMPONENT.TEXT</code>.
      */
     public String getText() {
         return (String) get(21);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.PARENT_COMPONENT_ID</code>.
+     * Setter for <code>COMPONENT.PARENT_COMPONENT_ID</code>.
      */
-    public void setParentComponentId(Long value) {
+    public ComponentRecord setParentComponentId(Long value) {
         set(22, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.PARENT_COMPONENT_ID</code>.
+     * Getter for <code>COMPONENT.PARENT_COMPONENT_ID</code>.
      */
     public Long getParentComponentId() {
         return (Long) get(22);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.PROJECT_ID</code>.
+     * Setter for <code>COMPONENT.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public ComponentRecord setProjectId(Long value) {
         set(23, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.PROJECT_ID</code>.
+     * Getter for <code>COMPONENT.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(23);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.PUBLISHER</code>.
+     * Setter for <code>COMPONENT.PUBLISHER</code>.
      */
-    public void setPublisher(String value) {
+    public ComponentRecord setPublisher(String value) {
         set(24, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.PUBLISHER</code>.
+     * Getter for <code>COMPONENT.PUBLISHER</code>.
      */
     public String getPublisher() {
         return (String) get(24);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.PURL</code>.
+     * Setter for <code>COMPONENT.PURL</code>.
      */
-    public void setPurl(String value) {
+    public ComponentRecord setPurl(String value) {
         set(25, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.PURL</code>.
+     * Getter for <code>COMPONENT.PURL</code>.
      */
     public String getPurl() {
         return (String) get(25);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.PURLCOORDINATES</code>.
+     * Setter for <code>COMPONENT.PURLCOORDINATES</code>.
      */
-    public void setPurlcoordinates(String value) {
+    public ComponentRecord setPurlcoordinates(String value) {
         set(26, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.PURLCOORDINATES</code>.
+     * Getter for <code>COMPONENT.PURLCOORDINATES</code>.
      */
     public String getPurlcoordinates() {
         return (String) get(26);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.LICENSE_ID</code>.
+     * Setter for <code>COMPONENT.LICENSE_ID</code>.
      */
-    public void setLicenseId(Long value) {
+    public ComponentRecord setLicenseId(Long value) {
         set(27, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.LICENSE_ID</code>.
+     * Getter for <code>COMPONENT.LICENSE_ID</code>.
      */
     public Long getLicenseId() {
         return (Long) get(27);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.SHA1</code>.
+     * Setter for <code>COMPONENT.SHA1</code>.
      */
-    public void setSha1(String value) {
+    public ComponentRecord setSha1(String value) {
         set(28, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.SHA1</code>.
+     * Getter for <code>COMPONENT.SHA1</code>.
      */
     public String getSha1() {
         return (String) get(28);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.SHA_256</code>.
+     * Setter for <code>COMPONENT.SHA_256</code>.
      */
-    public void setSha_256(String value) {
+    public ComponentRecord setSha_256(String value) {
         set(29, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.SHA_256</code>.
+     * Getter for <code>COMPONENT.SHA_256</code>.
      */
     public String getSha_256() {
         return (String) get(29);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.SHA_384</code>.
+     * Setter for <code>COMPONENT.SHA_384</code>.
      */
-    public void setSha_384(String value) {
+    public ComponentRecord setSha_384(String value) {
         set(30, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.SHA_384</code>.
+     * Getter for <code>COMPONENT.SHA_384</code>.
      */
     public String getSha_384() {
         return (String) get(30);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.SHA3_256</code>.
+     * Setter for <code>COMPONENT.SHA3_256</code>.
      */
-    public void setSha3_256(String value) {
+    public ComponentRecord setSha3_256(String value) {
         set(31, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.SHA3_256</code>.
+     * Getter for <code>COMPONENT.SHA3_256</code>.
      */
     public String getSha3_256() {
         return (String) get(31);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.SHA3_384</code>.
+     * Setter for <code>COMPONENT.SHA3_384</code>.
      */
-    public void setSha3_384(String value) {
+    public ComponentRecord setSha3_384(String value) {
         set(32, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.SHA3_384</code>.
+     * Getter for <code>COMPONENT.SHA3_384</code>.
      */
     public String getSha3_384() {
         return (String) get(32);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.SHA3_512</code>.
+     * Setter for <code>COMPONENT.SHA3_512</code>.
      */
-    public void setSha3_512(String value) {
+    public ComponentRecord setSha3_512(String value) {
         set(33, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.SHA3_512</code>.
+     * Getter for <code>COMPONENT.SHA3_512</code>.
      */
     public String getSha3_512() {
         return (String) get(33);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.SHA_512</code>.
+     * Setter for <code>COMPONENT.SHA_512</code>.
      */
-    public void setSha_512(String value) {
+    public ComponentRecord setSha_512(String value) {
         set(34, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.SHA_512</code>.
+     * Getter for <code>COMPONENT.SHA_512</code>.
      */
     public String getSha_512() {
         return (String) get(34);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.SWIDTAGID</code>.
+     * Setter for <code>COMPONENT.SWIDTAGID</code>.
      */
-    public void setSwidtagid(String value) {
+    public ComponentRecord setSwidtagid(String value) {
         set(35, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.SWIDTAGID</code>.
+     * Getter for <code>COMPONENT.SWIDTAGID</code>.
      */
     public String getSwidtagid() {
         return (String) get(35);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.UUID</code>.
+     * Setter for <code>COMPONENT.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public ComponentRecord setUuid(UUID value) {
         set(36, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.UUID</code>.
+     * Getter for <code>COMPONENT.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(36);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.VERSION</code>.
+     * Setter for <code>COMPONENT.VERSION</code>.
      */
-    public void setVersion(String value) {
+    public ComponentRecord setVersion(String value) {
         set(37, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.VERSION</code>.
+     * Getter for <code>COMPONENT.VERSION</code>.
      */
     public String getVersion() {
         return (String) get(37);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.SUPPLIER</code>.
+     * Setter for <code>COMPONENT.SUPPLIER</code>.
      */
-    public void setSupplier(String value) {
+    public ComponentRecord setSupplier(String value) {
         set(38, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.SUPPLIER</code>.
+     * Getter for <code>COMPONENT.SUPPLIER</code>.
      */
     public String getSupplier() {
         return (String) get(38);
     }
 
     /**
-     * Setter for <code>public.COMPONENT.AUTHORS</code>.
+     * Setter for <code>COMPONENT.AUTHORS</code>.
      */
-    public void setAuthors(String value) {
+    public ComponentRecord setAuthors(String value) {
         set(39, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.COMPONENT.AUTHORS</code>.
+     * Getter for <code>COMPONENT.AUTHORS</code>.
      */
     public String getAuthors() {
         return (String) get(39);

@@ -17,28 +17,30 @@ public class LicenseGroupLicenseRecord extends TableRecordImpl<LicenseGroupLicen
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.LICENSEGROUP_LICENSE.LICENSEGROUP_ID</code>.
+     * Setter for <code>LICENSEGROUP_LICENSE.LICENSEGROUP_ID</code>.
      */
-    public void setLicensegroupId(Long value) {
+    public LicenseGroupLicenseRecord setLicensegroupId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSEGROUP_LICENSE.LICENSEGROUP_ID</code>.
+     * Getter for <code>LICENSEGROUP_LICENSE.LICENSEGROUP_ID</code>.
      */
     public Long getLicensegroupId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.LICENSEGROUP_LICENSE.LICENSE_ID</code>.
+     * Setter for <code>LICENSEGROUP_LICENSE.LICENSE_ID</code>.
      */
-    public void setLicenseId(Long value) {
+    public LicenseGroupLicenseRecord setLicenseId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.LICENSEGROUP_LICENSE.LICENSE_ID</code>.
+     * Getter for <code>LICENSEGROUP_LICENSE.LICENSE_ID</code>.
      */
     public Long getLicenseId() {
         return (Long) get(1);

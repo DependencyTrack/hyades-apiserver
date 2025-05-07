@@ -20,226 +20,240 @@ public class ServiceComponentRecord extends UpdatableRecordImpl<ServiceComponent
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.ID</code>.
+     * Setter for <code>SERVICECOMPONENT.ID</code>.
      */
-    public void setId(Long value) {
+    public ServiceComponentRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.ID</code>.
+     * Getter for <code>SERVICECOMPONENT.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.AUTHENTICATED</code>.
+     * Setter for <code>SERVICECOMPONENT.AUTHENTICATED</code>.
      */
-    public void setAuthenticated(Boolean value) {
+    public ServiceComponentRecord setAuthenticated(Boolean value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.AUTHENTICATED</code>.
+     * Getter for <code>SERVICECOMPONENT.AUTHENTICATED</code>.
      */
     public Boolean getAuthenticated() {
         return (Boolean) get(1);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.X_TRUST_BOUNDARY</code>.
+     * Setter for <code>SERVICECOMPONENT.X_TRUST_BOUNDARY</code>.
      */
-    public void setXTrustBoundary(Boolean value) {
+    public ServiceComponentRecord setXTrustBoundary(Boolean value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.X_TRUST_BOUNDARY</code>.
+     * Getter for <code>SERVICECOMPONENT.X_TRUST_BOUNDARY</code>.
      */
     public Boolean getXTrustBoundary() {
         return (Boolean) get(2);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.DATA</code>.
+     * Setter for <code>SERVICECOMPONENT.DATA</code>.
      */
-    public void setData(byte[] value) {
+    public ServiceComponentRecord setData(byte[] value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.DATA</code>.
+     * Getter for <code>SERVICECOMPONENT.DATA</code>.
      */
     public byte[] getData() {
         return (byte[]) get(3);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.DESCRIPTION</code>.
+     * Setter for <code>SERVICECOMPONENT.DESCRIPTION</code>.
      */
-    public void setDescription(String value) {
+    public ServiceComponentRecord setDescription(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.DESCRIPTION</code>.
+     * Getter for <code>SERVICECOMPONENT.DESCRIPTION</code>.
      */
     public String getDescription() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.ENDPOINTS</code>.
+     * Setter for <code>SERVICECOMPONENT.ENDPOINTS</code>.
      */
-    public void setEndpoints(byte[] value) {
+    public ServiceComponentRecord setEndpoints(byte[] value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.ENDPOINTS</code>.
+     * Getter for <code>SERVICECOMPONENT.ENDPOINTS</code>.
      */
     public byte[] getEndpoints() {
         return (byte[]) get(5);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.EXTERNAL_REFERENCES</code>.
+     * Setter for <code>SERVICECOMPONENT.EXTERNAL_REFERENCES</code>.
      */
-    public void setExternalReferences(byte[] value) {
+    public ServiceComponentRecord setExternalReferences(byte[] value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.EXTERNAL_REFERENCES</code>.
+     * Getter for <code>SERVICECOMPONENT.EXTERNAL_REFERENCES</code>.
      */
     public byte[] getExternalReferences() {
         return (byte[]) get(6);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.GROUP</code>.
+     * Setter for <code>SERVICECOMPONENT.GROUP</code>.
      */
-    public void setGroup(String value) {
+    public ServiceComponentRecord setGroup(String value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.GROUP</code>.
+     * Getter for <code>SERVICECOMPONENT.GROUP</code>.
      */
     public String getGroup() {
         return (String) get(7);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.LAST_RISKSCORE</code>.
+     * Setter for <code>SERVICECOMPONENT.LAST_RISKSCORE</code>.
      */
-    public void setLastRiskscore(Double value) {
+    public ServiceComponentRecord setLastRiskscore(Double value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.LAST_RISKSCORE</code>.
+     * Getter for <code>SERVICECOMPONENT.LAST_RISKSCORE</code>.
      */
     public Double getLastRiskscore() {
         return (Double) get(8);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.NAME</code>.
+     * Setter for <code>SERVICECOMPONENT.NAME</code>.
      */
-    public void setName(String value) {
+    public ServiceComponentRecord setName(String value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.NAME</code>.
+     * Getter for <code>SERVICECOMPONENT.NAME</code>.
      */
     public String getName() {
         return (String) get(9);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.TEXT</code>.
+     * Setter for <code>SERVICECOMPONENT.TEXT</code>.
      */
-    public void setText(String value) {
+    public ServiceComponentRecord setText(String value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.TEXT</code>.
+     * Getter for <code>SERVICECOMPONENT.TEXT</code>.
      */
     public String getText() {
         return (String) get(10);
     }
 
     /**
-     * Setter for
-     * <code>public.SERVICECOMPONENT.PARENT_SERVICECOMPONENT_ID</code>.
+     * Setter for <code>SERVICECOMPONENT.PARENT_SERVICECOMPONENT_ID</code>.
      */
-    public void setParentServicecomponentId(Long value) {
+    public ServiceComponentRecord setParentServicecomponentId(Long value) {
         set(11, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.SERVICECOMPONENT.PARENT_SERVICECOMPONENT_ID</code>.
+     * Getter for <code>SERVICECOMPONENT.PARENT_SERVICECOMPONENT_ID</code>.
      */
     public Long getParentServicecomponentId() {
         return (Long) get(11);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.PROJECT_ID</code>.
+     * Setter for <code>SERVICECOMPONENT.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public ServiceComponentRecord setProjectId(Long value) {
         set(12, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.PROJECT_ID</code>.
+     * Getter for <code>SERVICECOMPONENT.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(12);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.PROVIDER_ID</code>.
+     * Setter for <code>SERVICECOMPONENT.PROVIDER_ID</code>.
      */
-    public void setProviderId(byte[] value) {
+    public ServiceComponentRecord setProviderId(byte[] value) {
         set(13, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.PROVIDER_ID</code>.
+     * Getter for <code>SERVICECOMPONENT.PROVIDER_ID</code>.
      */
     public byte[] getProviderId() {
         return (byte[]) get(13);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.UUID</code>.
+     * Setter for <code>SERVICECOMPONENT.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public ServiceComponentRecord setUuid(UUID value) {
         set(14, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.UUID</code>.
+     * Getter for <code>SERVICECOMPONENT.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(14);
     }
 
     /**
-     * Setter for <code>public.SERVICECOMPONENT.VERSION</code>.
+     * Setter for <code>SERVICECOMPONENT.VERSION</code>.
      */
-    public void setVersion(String value) {
+    public ServiceComponentRecord setVersion(String value) {
         set(15, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.SERVICECOMPONENT.VERSION</code>.
+     * Getter for <code>SERVICECOMPONENT.VERSION</code>.
      */
     public String getVersion() {
         return (String) get(15);
