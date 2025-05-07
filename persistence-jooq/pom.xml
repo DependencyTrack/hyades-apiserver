@@ -104,12 +104,8 @@
                                             | eventservicelog
                                             | shedlock
                                         </excludes>
-                                        <schemata>
-                                            <schema>
-                                                <inputSchema>public</inputSchema>
-                                                <outputSchemaToDefault>true</outputSchemaToDefault>
-                                            </schema>
-                                        </schemata>
+                                        <inputSchema>public</inputSchema>
+                                        <outputSchemaToDefault>true</outputSchemaToDefault>
                                     </database>
                                     <target>
                                         <packageName>org.dependencytrack.persistence.jooq.generated</packageName>
