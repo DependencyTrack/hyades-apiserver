@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUser.OidcuserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUser.OidcUserPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.OidcUsersTeamsRecord;
 import org.jooq.Condition;
@@ -44,7 +44,7 @@ public class OidcUsersTeams extends TableImpl<OidcUsersTeamsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.OIDCUSERS_TEAMS</code>
+     * The reference instance of <code>OIDCUSERS_TEAMS</code>
      */
     public static final OidcUsersTeams OIDCUSERS_TEAMS = new OidcUsersTeams();
 
@@ -57,12 +57,12 @@ public class OidcUsersTeams extends TableImpl<OidcUsersTeamsRecord> {
     }
 
     /**
-     * The column <code>public.OIDCUSERS_TEAMS.OIDCUSERS_ID</code>.
+     * The column <code>OIDCUSERS_TEAMS.OIDCUSERS_ID</code>.
      */
     public final TableField<OidcUsersTeamsRecord, Long> OIDCUSERS_ID = createField(DSL.name("OIDCUSERS_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.OIDCUSERS_TEAMS.TEAM_ID</code>.
+     * The column <code>OIDCUSERS_TEAMS.TEAM_ID</code>.
      */
     public final TableField<OidcUsersTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -75,21 +75,21 @@ public class OidcUsersTeams extends TableImpl<OidcUsersTeamsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.OIDCUSERS_TEAMS</code> table reference
+     * Create an aliased <code>OIDCUSERS_TEAMS</code> table reference
      */
     public OidcUsersTeams(String alias) {
         this(DSL.name(alias), OIDCUSERS_TEAMS);
     }
 
     /**
-     * Create an aliased <code>public.OIDCUSERS_TEAMS</code> table reference
+     * Create an aliased <code>OIDCUSERS_TEAMS</code> table reference
      */
     public OidcUsersTeams(Name alias) {
         this(alias, OIDCUSERS_TEAMS);
     }
 
     /**
-     * Create a <code>public.OIDCUSERS_TEAMS</code> table reference
+     * Create a <code>OIDCUSERS_TEAMS</code> table reference
      */
     public OidcUsersTeams() {
         this(DSL.name("OIDCUSERS_TEAMS"), null);
@@ -102,35 +102,35 @@ public class OidcUsersTeams extends TableImpl<OidcUsersTeamsRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class OidcusersTeamsPath extends OidcUsersTeams implements Path<OidcUsersTeamsRecord> {
+    public static class OidcUsersTeamsPath extends OidcUsersTeams implements Path<OidcUsersTeamsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> OidcusersTeamsPath(Table<O> path, ForeignKey<O, OidcUsersTeamsRecord> childPath, InverseForeignKey<O, OidcUsersTeamsRecord> parentPath) {
+        public <O extends Record> OidcUsersTeamsPath(Table<O> path, ForeignKey<O, OidcUsersTeamsRecord> childPath, InverseForeignKey<O, OidcUsersTeamsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private OidcusersTeamsPath(Name alias, Table<OidcUsersTeamsRecord> aliased) {
+        private OidcUsersTeamsPath(Name alias, Table<OidcUsersTeamsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public OidcusersTeamsPath as(String alias) {
-            return new OidcusersTeamsPath(DSL.name(alias), this);
+        public OidcUsersTeamsPath as(String alias) {
+            return new OidcUsersTeamsPath(DSL.name(alias), this);
         }
 
         @Override
-        public OidcusersTeamsPath as(Name alias) {
-            return new OidcusersTeamsPath(alias, this);
+        public OidcUsersTeamsPath as(Name alias) {
+            return new OidcUsersTeamsPath(alias, this);
         }
 
         @Override
-        public OidcusersTeamsPath as(Table<?> alias) {
-            return new OidcusersTeamsPath(alias.getQualifiedName(), this);
+        public OidcUsersTeamsPath as(Table<?> alias) {
+            return new OidcUsersTeamsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -140,29 +140,29 @@ public class OidcUsersTeams extends TableImpl<OidcUsersTeamsRecord> {
 
     @Override
     public List<ForeignKey<OidcUsersTeamsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.OIDCUSERS_TEAMS__OIDCUSERS_TEAMS_OIDCUSER_FK, Keys.OIDCUSERS_TEAMS__OIDCUSERS_TEAMS_TEAM_FK);
+        return Arrays.asList(Keys.OIDCUSERS_TEAMS_OIDCUSER_FK, Keys.OIDCUSERS_TEAMS_TEAM_FK);
     }
 
-    private transient OidcuserPath _oidcuser;
+    private transient OidcUserPath _oidcUser;
 
     /**
-     * Get the implicit join path to the <code>public.OIDCUSER</code> table.
+     * Get the implicit join path to the <code>OIDCUSER</code> table.
      */
-    public OidcuserPath oidcuser() {
-        if (_oidcuser == null)
-            _oidcuser = new OidcuserPath(this, Keys.OIDCUSERS_TEAMS__OIDCUSERS_TEAMS_OIDCUSER_FK, null);
+    public OidcUserPath oidcUser() {
+        if (_oidcUser == null)
+            _oidcUser = new OidcUserPath(this, Keys.OIDCUSERS_TEAMS_OIDCUSER_FK, null);
 
-        return _oidcuser;
+        return _oidcUser;
     }
 
     private transient TeamPath _team;
 
     /**
-     * Get the implicit join path to the <code>public.TEAM</code> table.
+     * Get the implicit join path to the <code>TEAM</code> table.
      */
     public TeamPath team() {
         if (_team == null)
-            _team = new TeamPath(this, Keys.OIDCUSERS_TEAMS__OIDCUSERS_TEAMS_TEAM_FK, null);
+            _team = new TeamPath(this, Keys.OIDCUSERS_TEAMS_TEAM_FK, null);
 
         return _team;
     }

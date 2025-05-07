@@ -17,28 +17,30 @@ public class VulnerabilitiesTagsRecord extends TableRecordImpl<VulnerabilitiesTa
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.VULNERABILITIES_TAGS.TAG_ID</code>.
+     * Setter for <code>VULNERABILITIES_TAGS.TAG_ID</code>.
      */
-    public void setTagId(Long value) {
+    public VulnerabilitiesTagsRecord setTagId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABILITIES_TAGS.TAG_ID</code>.
+     * Getter for <code>VULNERABILITIES_TAGS.TAG_ID</code>.
      */
     public Long getTagId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.VULNERABILITIES_TAGS.VULNERABILITY_ID</code>.
+     * Setter for <code>VULNERABILITIES_TAGS.VULNERABILITY_ID</code>.
      */
-    public void setVulnerabilityId(Long value) {
+    public VulnerabilitiesTagsRecord setVulnerabilityId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VULNERABILITIES_TAGS.VULNERABILITY_ID</code>.
+     * Getter for <code>VULNERABILITIES_TAGS.VULNERABILITY_ID</code>.
      */
     public Long getVulnerabilityId() {
         return (Long) get(1);

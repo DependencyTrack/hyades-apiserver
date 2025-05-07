@@ -20,168 +20,180 @@ public class NotificationRuleRecord extends UpdatableRecordImpl<NotificationRule
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.ID</code>.
+     * Setter for <code>NOTIFICATIONRULE.ID</code>.
      */
-    public void setId(Long value) {
+    public NotificationRuleRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.ID</code>.
+     * Getter for <code>NOTIFICATIONRULE.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.ENABLED</code>.
+     * Setter for <code>NOTIFICATIONRULE.ENABLED</code>.
      */
-    public void setEnabled(Boolean value) {
+    public NotificationRuleRecord setEnabled(Boolean value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.ENABLED</code>.
+     * Getter for <code>NOTIFICATIONRULE.ENABLED</code>.
      */
     public Boolean getEnabled() {
         return (Boolean) get(1);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.MESSAGE</code>.
+     * Setter for <code>NOTIFICATIONRULE.MESSAGE</code>.
      */
-    public void setMessage(String value) {
+    public NotificationRuleRecord setMessage(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.MESSAGE</code>.
+     * Getter for <code>NOTIFICATIONRULE.MESSAGE</code>.
      */
     public String getMessage() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.NAME</code>.
+     * Setter for <code>NOTIFICATIONRULE.NAME</code>.
      */
-    public void setName(String value) {
+    public NotificationRuleRecord setName(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.NAME</code>.
+     * Getter for <code>NOTIFICATIONRULE.NAME</code>.
      */
     public String getName() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.NOTIFICATION_LEVEL</code>.
+     * Setter for <code>NOTIFICATIONRULE.NOTIFICATION_LEVEL</code>.
      */
-    public void setNotificationLevel(String value) {
+    public NotificationRuleRecord setNotificationLevel(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.NOTIFICATION_LEVEL</code>.
+     * Getter for <code>NOTIFICATIONRULE.NOTIFICATION_LEVEL</code>.
      */
     public String getNotificationLevel() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.NOTIFY_CHILDREN</code>.
+     * Setter for <code>NOTIFICATIONRULE.NOTIFY_CHILDREN</code>.
      */
-    public void setNotifyChildren(Boolean value) {
+    public NotificationRuleRecord setNotifyChildren(Boolean value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.NOTIFY_CHILDREN</code>.
+     * Getter for <code>NOTIFICATIONRULE.NOTIFY_CHILDREN</code>.
      */
     public Boolean getNotifyChildren() {
         return (Boolean) get(5);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.NOTIFY_ON</code>.
+     * Setter for <code>NOTIFICATIONRULE.NOTIFY_ON</code>.
      */
-    public void setNotifyOn(String value) {
+    public NotificationRuleRecord setNotifyOn(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.NOTIFY_ON</code>.
+     * Getter for <code>NOTIFICATIONRULE.NOTIFY_ON</code>.
      */
     public String getNotifyOn() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.PUBLISHER</code>.
+     * Setter for <code>NOTIFICATIONRULE.PUBLISHER</code>.
      */
-    public void setPublisher(Long value) {
+    public NotificationRuleRecord setPublisher(Long value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.PUBLISHER</code>.
+     * Getter for <code>NOTIFICATIONRULE.PUBLISHER</code>.
      */
     public Long getPublisher() {
         return (Long) get(7);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.PUBLISHER_CONFIG</code>.
+     * Setter for <code>NOTIFICATIONRULE.PUBLISHER_CONFIG</code>.
      */
-    public void setPublisherConfig(String value) {
+    public NotificationRuleRecord setPublisherConfig(String value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.PUBLISHER_CONFIG</code>.
+     * Getter for <code>NOTIFICATIONRULE.PUBLISHER_CONFIG</code>.
      */
     public String getPublisherConfig() {
         return (String) get(8);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.SCOPE</code>.
+     * Setter for <code>NOTIFICATIONRULE.SCOPE</code>.
      */
-    public void setScope(String value) {
+    public NotificationRuleRecord setScope(String value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.SCOPE</code>.
+     * Getter for <code>NOTIFICATIONRULE.SCOPE</code>.
      */
     public String getScope() {
         return (String) get(9);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.UUID</code>.
+     * Setter for <code>NOTIFICATIONRULE.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public NotificationRuleRecord setUuid(UUID value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.UUID</code>.
+     * Getter for <code>NOTIFICATIONRULE.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(10);
     }
 
     /**
-     * Setter for <code>public.NOTIFICATIONRULE.LOG_SUCCESSFUL_PUBLISH</code>.
+     * Setter for <code>NOTIFICATIONRULE.LOG_SUCCESSFUL_PUBLISH</code>.
      */
-    public void setLogSuccessfulPublish(Boolean value) {
+    public NotificationRuleRecord setLogSuccessfulPublish(Boolean value) {
         set(11, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.NOTIFICATIONRULE.LOG_SUCCESSFUL_PUBLISH</code>.
+     * Getter for <code>NOTIFICATIONRULE.LOG_SUCCESSFUL_PUBLISH</code>.
      */
     public Boolean getLogSuccessfulPublish() {
         return (Boolean) get(11);

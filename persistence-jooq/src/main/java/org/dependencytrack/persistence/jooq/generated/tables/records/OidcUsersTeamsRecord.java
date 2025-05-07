@@ -18,28 +18,30 @@ public class OidcUsersTeamsRecord extends UpdatableRecordImpl<OidcUsersTeamsReco
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.OIDCUSERS_TEAMS.OIDCUSERS_ID</code>.
+     * Setter for <code>OIDCUSERS_TEAMS.OIDCUSERS_ID</code>.
      */
-    public void setOidcusersId(Long value) {
+    public OidcUsersTeamsRecord setOidcusersId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCUSERS_TEAMS.OIDCUSERS_ID</code>.
+     * Getter for <code>OIDCUSERS_TEAMS.OIDCUSERS_ID</code>.
      */
     public Long getOidcusersId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.OIDCUSERS_TEAMS.TEAM_ID</code>.
+     * Setter for <code>OIDCUSERS_TEAMS.TEAM_ID</code>.
      */
-    public void setTeamId(Long value) {
+    public OidcUsersTeamsRecord setTeamId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCUSERS_TEAMS.TEAM_ID</code>.
+     * Getter for <code>OIDCUSERS_TEAMS.TEAM_ID</code>.
      */
     public Long getTeamId() {
         return (Long) get(1);

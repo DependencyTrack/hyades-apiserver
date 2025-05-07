@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapuserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapUserPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.LdapUsersTeamsRecord;
 import org.jooq.Condition;
@@ -44,7 +44,7 @@ public class LdapUsersTeams extends TableImpl<LdapUsersTeamsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.LDAPUSERS_TEAMS</code>
+     * The reference instance of <code>LDAPUSERS_TEAMS</code>
      */
     public static final LdapUsersTeams LDAPUSERS_TEAMS = new LdapUsersTeams();
 
@@ -57,12 +57,12 @@ public class LdapUsersTeams extends TableImpl<LdapUsersTeamsRecord> {
     }
 
     /**
-     * The column <code>public.LDAPUSERS_TEAMS.TEAM_ID</code>.
+     * The column <code>LDAPUSERS_TEAMS.TEAM_ID</code>.
      */
     public final TableField<LdapUsersTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.LDAPUSERS_TEAMS.LDAPUSER_ID</code>.
+     * The column <code>LDAPUSERS_TEAMS.LDAPUSER_ID</code>.
      */
     public final TableField<LdapUsersTeamsRecord, Long> LDAPUSER_ID = createField(DSL.name("LDAPUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -75,21 +75,21 @@ public class LdapUsersTeams extends TableImpl<LdapUsersTeamsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.LDAPUSERS_TEAMS</code> table reference
+     * Create an aliased <code>LDAPUSERS_TEAMS</code> table reference
      */
     public LdapUsersTeams(String alias) {
         this(DSL.name(alias), LDAPUSERS_TEAMS);
     }
 
     /**
-     * Create an aliased <code>public.LDAPUSERS_TEAMS</code> table reference
+     * Create an aliased <code>LDAPUSERS_TEAMS</code> table reference
      */
     public LdapUsersTeams(Name alias) {
         this(alias, LDAPUSERS_TEAMS);
     }
 
     /**
-     * Create a <code>public.LDAPUSERS_TEAMS</code> table reference
+     * Create a <code>LDAPUSERS_TEAMS</code> table reference
      */
     public LdapUsersTeams() {
         this(DSL.name("LDAPUSERS_TEAMS"), null);
@@ -102,35 +102,35 @@ public class LdapUsersTeams extends TableImpl<LdapUsersTeamsRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class LdapusersTeamsPath extends LdapUsersTeams implements Path<LdapUsersTeamsRecord> {
+    public static class LdapUsersTeamsPath extends LdapUsersTeams implements Path<LdapUsersTeamsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> LdapusersTeamsPath(Table<O> path, ForeignKey<O, LdapUsersTeamsRecord> childPath, InverseForeignKey<O, LdapUsersTeamsRecord> parentPath) {
+        public <O extends Record> LdapUsersTeamsPath(Table<O> path, ForeignKey<O, LdapUsersTeamsRecord> childPath, InverseForeignKey<O, LdapUsersTeamsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private LdapusersTeamsPath(Name alias, Table<LdapUsersTeamsRecord> aliased) {
+        private LdapUsersTeamsPath(Name alias, Table<LdapUsersTeamsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public LdapusersTeamsPath as(String alias) {
-            return new LdapusersTeamsPath(DSL.name(alias), this);
+        public LdapUsersTeamsPath as(String alias) {
+            return new LdapUsersTeamsPath(DSL.name(alias), this);
         }
 
         @Override
-        public LdapusersTeamsPath as(Name alias) {
-            return new LdapusersTeamsPath(alias, this);
+        public LdapUsersTeamsPath as(Name alias) {
+            return new LdapUsersTeamsPath(alias, this);
         }
 
         @Override
-        public LdapusersTeamsPath as(Table<?> alias) {
-            return new LdapusersTeamsPath(alias.getQualifiedName(), this);
+        public LdapUsersTeamsPath as(Table<?> alias) {
+            return new LdapUsersTeamsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -140,29 +140,29 @@ public class LdapUsersTeams extends TableImpl<LdapUsersTeamsRecord> {
 
     @Override
     public List<ForeignKey<LdapUsersTeamsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.LDAPUSERS_TEAMS__LDAPUSERS_TEAMS_LDAPUSER_FK, Keys.LDAPUSERS_TEAMS__LDAPUSERS_TEAMS_TEAM_FK);
+        return Arrays.asList(Keys.LDAPUSERS_TEAMS_LDAPUSER_FK, Keys.LDAPUSERS_TEAMS_TEAM_FK);
     }
 
-    private transient LdapuserPath _ldapuser;
+    private transient LdapUserPath _ldapUser;
 
     /**
-     * Get the implicit join path to the <code>public.LDAPUSER</code> table.
+     * Get the implicit join path to the <code>LDAPUSER</code> table.
      */
-    public LdapuserPath ldapuser() {
-        if (_ldapuser == null)
-            _ldapuser = new LdapuserPath(this, Keys.LDAPUSERS_TEAMS__LDAPUSERS_TEAMS_LDAPUSER_FK, null);
+    public LdapUserPath ldapUser() {
+        if (_ldapUser == null)
+            _ldapUser = new LdapUserPath(this, Keys.LDAPUSERS_TEAMS_LDAPUSER_FK, null);
 
-        return _ldapuser;
+        return _ldapUser;
     }
 
     private transient TeamPath _team;
 
     /**
-     * Get the implicit join path to the <code>public.TEAM</code> table.
+     * Get the implicit join path to the <code>TEAM</code> table.
      */
     public TeamPath team() {
         if (_team == null)
-            _team = new TeamPath(this, Keys.LDAPUSERS_TEAMS__LDAPUSERS_TEAMS_TEAM_FK, null);
+            _team = new TeamPath(this, Keys.LDAPUSERS_TEAMS_TEAM_FK, null);
 
         return _team;
     }

@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManageduserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManagedUserPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ManagedUsersTeamsRecord;
 import org.jooq.Condition;
@@ -44,7 +44,7 @@ public class ManagedUsersTeams extends TableImpl<ManagedUsersTeamsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.MANAGEDUSERS_TEAMS</code>
+     * The reference instance of <code>MANAGEDUSERS_TEAMS</code>
      */
     public static final ManagedUsersTeams MANAGEDUSERS_TEAMS = new ManagedUsersTeams();
 
@@ -57,12 +57,12 @@ public class ManagedUsersTeams extends TableImpl<ManagedUsersTeamsRecord> {
     }
 
     /**
-     * The column <code>public.MANAGEDUSERS_TEAMS.TEAM_ID</code>.
+     * The column <code>MANAGEDUSERS_TEAMS.TEAM_ID</code>.
      */
     public final TableField<ManagedUsersTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.MANAGEDUSERS_TEAMS.MANAGEDUSER_ID</code>.
+     * The column <code>MANAGEDUSERS_TEAMS.MANAGEDUSER_ID</code>.
      */
     public final TableField<ManagedUsersTeamsRecord, Long> MANAGEDUSER_ID = createField(DSL.name("MANAGEDUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -75,21 +75,21 @@ public class ManagedUsersTeams extends TableImpl<ManagedUsersTeamsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.MANAGEDUSERS_TEAMS</code> table reference
+     * Create an aliased <code>MANAGEDUSERS_TEAMS</code> table reference
      */
     public ManagedUsersTeams(String alias) {
         this(DSL.name(alias), MANAGEDUSERS_TEAMS);
     }
 
     /**
-     * Create an aliased <code>public.MANAGEDUSERS_TEAMS</code> table reference
+     * Create an aliased <code>MANAGEDUSERS_TEAMS</code> table reference
      */
     public ManagedUsersTeams(Name alias) {
         this(alias, MANAGEDUSERS_TEAMS);
     }
 
     /**
-     * Create a <code>public.MANAGEDUSERS_TEAMS</code> table reference
+     * Create a <code>MANAGEDUSERS_TEAMS</code> table reference
      */
     public ManagedUsersTeams() {
         this(DSL.name("MANAGEDUSERS_TEAMS"), null);
@@ -102,35 +102,35 @@ public class ManagedUsersTeams extends TableImpl<ManagedUsersTeamsRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class ManagedusersTeamsPath extends ManagedUsersTeams implements Path<ManagedUsersTeamsRecord> {
+    public static class ManagedUsersTeamsPath extends ManagedUsersTeams implements Path<ManagedUsersTeamsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> ManagedusersTeamsPath(Table<O> path, ForeignKey<O, ManagedUsersTeamsRecord> childPath, InverseForeignKey<O, ManagedUsersTeamsRecord> parentPath) {
+        public <O extends Record> ManagedUsersTeamsPath(Table<O> path, ForeignKey<O, ManagedUsersTeamsRecord> childPath, InverseForeignKey<O, ManagedUsersTeamsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private ManagedusersTeamsPath(Name alias, Table<ManagedUsersTeamsRecord> aliased) {
+        private ManagedUsersTeamsPath(Name alias, Table<ManagedUsersTeamsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public ManagedusersTeamsPath as(String alias) {
-            return new ManagedusersTeamsPath(DSL.name(alias), this);
+        public ManagedUsersTeamsPath as(String alias) {
+            return new ManagedUsersTeamsPath(DSL.name(alias), this);
         }
 
         @Override
-        public ManagedusersTeamsPath as(Name alias) {
-            return new ManagedusersTeamsPath(alias, this);
+        public ManagedUsersTeamsPath as(Name alias) {
+            return new ManagedUsersTeamsPath(alias, this);
         }
 
         @Override
-        public ManagedusersTeamsPath as(Table<?> alias) {
-            return new ManagedusersTeamsPath(alias.getQualifiedName(), this);
+        public ManagedUsersTeamsPath as(Table<?> alias) {
+            return new ManagedUsersTeamsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -140,29 +140,29 @@ public class ManagedUsersTeams extends TableImpl<ManagedUsersTeamsRecord> {
 
     @Override
     public List<ForeignKey<ManagedUsersTeamsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.MANAGEDUSERS_TEAMS__MANAGEDUSERS_TEAMS_MANAGEDUSER_FK, Keys.MANAGEDUSERS_TEAMS__MANAGEDUSERS_TEAMS_TEAM_FK);
+        return Arrays.asList(Keys.MANAGEDUSERS_TEAMS_MANAGEDUSER_FK, Keys.MANAGEDUSERS_TEAMS_TEAM_FK);
     }
 
-    private transient ManageduserPath _manageduser;
+    private transient ManagedUserPath _managedUser;
 
     /**
-     * Get the implicit join path to the <code>public.MANAGEDUSER</code> table.
+     * Get the implicit join path to the <code>MANAGEDUSER</code> table.
      */
-    public ManageduserPath manageduser() {
-        if (_manageduser == null)
-            _manageduser = new ManageduserPath(this, Keys.MANAGEDUSERS_TEAMS__MANAGEDUSERS_TEAMS_MANAGEDUSER_FK, null);
+    public ManagedUserPath managedUser() {
+        if (_managedUser == null)
+            _managedUser = new ManagedUserPath(this, Keys.MANAGEDUSERS_TEAMS_MANAGEDUSER_FK, null);
 
-        return _manageduser;
+        return _managedUser;
     }
 
     private transient TeamPath _team;
 
     /**
-     * Get the implicit join path to the <code>public.TEAM</code> table.
+     * Get the implicit join path to the <code>TEAM</code> table.
      */
     public TeamPath team() {
         if (_team == null)
-            _team = new TeamPath(this, Keys.MANAGEDUSERS_TEAMS__MANAGEDUSERS_TEAMS_TEAM_FK, null);
+            _team = new TeamPath(this, Keys.MANAGEDUSERS_TEAMS_TEAM_FK, null);
 
         return _team;
     }

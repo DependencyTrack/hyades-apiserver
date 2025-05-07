@@ -18,56 +18,60 @@ public class MappedOidcGroupRecord extends UpdatableRecordImpl<MappedOidcGroupRe
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.MAPPEDOIDCGROUP.ID</code>.
+     * Setter for <code>MAPPEDOIDCGROUP.ID</code>.
      */
-    public void setId(Long value) {
+    public MappedOidcGroupRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MAPPEDOIDCGROUP.ID</code>.
+     * Getter for <code>MAPPEDOIDCGROUP.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.MAPPEDOIDCGROUP.GROUP_ID</code>.
+     * Setter for <code>MAPPEDOIDCGROUP.GROUP_ID</code>.
      */
-    public void setGroupId(Long value) {
+    public MappedOidcGroupRecord setGroupId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MAPPEDOIDCGROUP.GROUP_ID</code>.
+     * Getter for <code>MAPPEDOIDCGROUP.GROUP_ID</code>.
      */
     public Long getGroupId() {
         return (Long) get(1);
     }
 
     /**
-     * Setter for <code>public.MAPPEDOIDCGROUP.TEAM_ID</code>.
+     * Setter for <code>MAPPEDOIDCGROUP.TEAM_ID</code>.
      */
-    public void setTeamId(Long value) {
+    public MappedOidcGroupRecord setTeamId(Long value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MAPPEDOIDCGROUP.TEAM_ID</code>.
+     * Getter for <code>MAPPEDOIDCGROUP.TEAM_ID</code>.
      */
     public Long getTeamId() {
         return (Long) get(2);
     }
 
     /**
-     * Setter for <code>public.MAPPEDOIDCGROUP.UUID</code>.
+     * Setter for <code>MAPPEDOIDCGROUP.UUID</code>.
      */
-    public void setUuid(String value) {
+    public MappedOidcGroupRecord setUuid(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MAPPEDOIDCGROUP.UUID</code>.
+     * Getter for <code>MAPPEDOIDCGROUP.UUID</code>.
      */
     public String getUuid() {
         return (String) get(3);

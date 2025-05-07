@@ -20,98 +20,105 @@ public class PolicyRecord extends UpdatableRecordImpl<PolicyRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.POLICY.ID</code>.
+     * Setter for <code>POLICY.ID</code>.
      */
-    public void setId(Long value) {
+    public PolicyRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY.ID</code>.
+     * Getter for <code>POLICY.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.POLICY.INCLUDE_CHILDREN</code>.
+     * Setter for <code>POLICY.INCLUDE_CHILDREN</code>.
      */
-    public void setIncludeChildren(Boolean value) {
+    public PolicyRecord setIncludeChildren(Boolean value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY.INCLUDE_CHILDREN</code>.
+     * Getter for <code>POLICY.INCLUDE_CHILDREN</code>.
      */
     public Boolean getIncludeChildren() {
         return (Boolean) get(1);
     }
 
     /**
-     * Setter for <code>public.POLICY.NAME</code>.
+     * Setter for <code>POLICY.NAME</code>.
      */
-    public void setName(String value) {
+    public PolicyRecord setName(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY.NAME</code>.
+     * Getter for <code>POLICY.NAME</code>.
      */
     public String getName() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.POLICY.OPERATOR</code>.
+     * Setter for <code>POLICY.OPERATOR</code>.
      */
-    public void setOperator(String value) {
+    public PolicyRecord setOperator(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY.OPERATOR</code>.
+     * Getter for <code>POLICY.OPERATOR</code>.
      */
     public String getOperator() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.POLICY.UUID</code>.
+     * Setter for <code>POLICY.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public PolicyRecord setUuid(UUID value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY.UUID</code>.
+     * Getter for <code>POLICY.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(4);
     }
 
     /**
-     * Setter for <code>public.POLICY.VIOLATIONSTATE</code>.
+     * Setter for <code>POLICY.VIOLATIONSTATE</code>.
      */
-    public void setViolationstate(String value) {
+    public PolicyRecord setViolationstate(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY.VIOLATIONSTATE</code>.
+     * Getter for <code>POLICY.VIOLATIONSTATE</code>.
      */
     public String getViolationstate() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.POLICY.ONLY_LATEST_PROJECT_VERSION</code>.
+     * Setter for <code>POLICY.ONLY_LATEST_PROJECT_VERSION</code>.
      */
-    public void setOnlyLatestProjectVersion(Boolean value) {
+    public PolicyRecord setOnlyLatestProjectVersion(Boolean value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY.ONLY_LATEST_PROJECT_VERSION</code>.
+     * Getter for <code>POLICY.ONLY_LATEST_PROJECT_VERSION</code>.
      */
     public Boolean getOnlyLatestProjectVersion() {
         return (Boolean) get(6);

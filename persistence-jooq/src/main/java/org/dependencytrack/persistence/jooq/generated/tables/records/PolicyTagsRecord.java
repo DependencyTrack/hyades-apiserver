@@ -17,28 +17,30 @@ public class PolicyTagsRecord extends TableRecordImpl<PolicyTagsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.POLICY_TAGS.POLICY_ID</code>.
+     * Setter for <code>POLICY_TAGS.POLICY_ID</code>.
      */
-    public void setPolicyId(Long value) {
+    public PolicyTagsRecord setPolicyId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY_TAGS.POLICY_ID</code>.
+     * Getter for <code>POLICY_TAGS.POLICY_ID</code>.
      */
     public Long getPolicyId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.POLICY_TAGS.TAG_ID</code>.
+     * Setter for <code>POLICY_TAGS.TAG_ID</code>.
      */
-    public void setTagId(Long value) {
+    public PolicyTagsRecord setTagId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.POLICY_TAGS.TAG_ID</code>.
+     * Getter for <code>POLICY_TAGS.TAG_ID</code>.
      */
     public Long getTagId() {
         return (Long) get(1);

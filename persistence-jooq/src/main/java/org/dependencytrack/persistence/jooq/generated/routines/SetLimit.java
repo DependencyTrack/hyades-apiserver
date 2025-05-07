@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Field;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
@@ -22,12 +22,12 @@ public class SetLimit extends AbstractRoutine<Float> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The parameter <code>public.set_limit.RETURN_VALUE</code>.
+     * The parameter <code>set_limit.RETURN_VALUE</code>.
      */
     public static final Parameter<Float> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", SQLDataType.REAL, false, false);
 
     /**
-     * The parameter <code>public.set_limit._1</code>.
+     * The parameter <code>set_limit._1</code>.
      */
     public static final Parameter<Float> _1 = Internal.createParameter("_1", SQLDataType.REAL, false, true);
 
@@ -35,7 +35,7 @@ public class SetLimit extends AbstractRoutine<Float> {
      * Create a new routine call instance
      */
     public SetLimit() {
-        super("set_limit", Public.PUBLIC, DSL.comment(""), SQLDataType.REAL);
+        super("set_limit", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""), SQLDataType.REAL);
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(_1);
@@ -52,7 +52,8 @@ public class SetLimit extends AbstractRoutine<Float> {
      * Set the <code>_1</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__1(Field<Float> field) {
+    public SetLimit set__1(Field<Float> field) {
         setField(_1, field);
+        return this;
     }
 }

@@ -8,10 +8,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersPermissions.OidcusersPermissionsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersTeams.OidcusersTeamsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersPermissions.OidcUsersPermissionsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersTeams.OidcUsersTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission.PermissionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions.UserProjectEffectivePermissionsPath;
@@ -48,7 +48,7 @@ public class OidcUser extends TableImpl<OidcUserRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.OIDCUSER</code>
+     * The reference instance of <code>OIDCUSER</code>
      */
     public static final OidcUser OIDCUSER = new OidcUser();
 
@@ -61,22 +61,22 @@ public class OidcUser extends TableImpl<OidcUserRecord> {
     }
 
     /**
-     * The column <code>public.OIDCUSER.ID</code>.
+     * The column <code>OIDCUSER.ID</code>.
      */
     public final TableField<OidcUserRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.OIDCUSER.EMAIL</code>.
+     * The column <code>OIDCUSER.EMAIL</code>.
      */
     public final TableField<OidcUserRecord, String> EMAIL = createField(DSL.name("EMAIL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.OIDCUSER.SUBJECT_IDENTIFIER</code>.
+     * The column <code>OIDCUSER.SUBJECT_IDENTIFIER</code>.
      */
     public final TableField<OidcUserRecord, String> SUBJECT_IDENTIFIER = createField(DSL.name("SUBJECT_IDENTIFIER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.OIDCUSER.USERNAME</code>.
+     * The column <code>OIDCUSER.USERNAME</code>.
      */
     public final TableField<OidcUserRecord, String> USERNAME = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
@@ -89,21 +89,21 @@ public class OidcUser extends TableImpl<OidcUserRecord> {
     }
 
     /**
-     * Create an aliased <code>public.OIDCUSER</code> table reference
+     * Create an aliased <code>OIDCUSER</code> table reference
      */
     public OidcUser(String alias) {
         this(DSL.name(alias), OIDCUSER);
     }
 
     /**
-     * Create an aliased <code>public.OIDCUSER</code> table reference
+     * Create an aliased <code>OIDCUSER</code> table reference
      */
     public OidcUser(Name alias) {
         this(alias, OIDCUSER);
     }
 
     /**
-     * Create a <code>public.OIDCUSER</code> table reference
+     * Create a <code>OIDCUSER</code> table reference
      */
     public OidcUser() {
         this(DSL.name("OIDCUSER"), null);
@@ -116,35 +116,35 @@ public class OidcUser extends TableImpl<OidcUserRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class OidcuserPath extends OidcUser implements Path<OidcUserRecord> {
+    public static class OidcUserPath extends OidcUser implements Path<OidcUserRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> OidcuserPath(Table<O> path, ForeignKey<O, OidcUserRecord> childPath, InverseForeignKey<O, OidcUserRecord> parentPath) {
+        public <O extends Record> OidcUserPath(Table<O> path, ForeignKey<O, OidcUserRecord> childPath, InverseForeignKey<O, OidcUserRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private OidcuserPath(Name alias, Table<OidcUserRecord> aliased) {
+        private OidcUserPath(Name alias, Table<OidcUserRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public OidcuserPath as(String alias) {
-            return new OidcuserPath(DSL.name(alias), this);
+        public OidcUserPath as(String alias) {
+            return new OidcUserPath(DSL.name(alias), this);
         }
 
         @Override
-        public OidcuserPath as(Name alias) {
-            return new OidcuserPath(alias, this);
+        public OidcUserPath as(Name alias) {
+            return new OidcUserPath(alias, this);
         }
 
         @Override
-        public OidcuserPath as(Table<?> alias) {
-            return new OidcuserPath(alias.getQualifiedName(), this);
+        public OidcUserPath as(Table<?> alias) {
+            return new OidcUserPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -162,59 +162,58 @@ public class OidcUser extends TableImpl<OidcUserRecord> {
         return Arrays.asList(Keys.OIDCUSER_USERNAME_IDX);
     }
 
-    private transient OidcusersPermissionsPath _oidcusersPermissions;
+    private transient OidcUsersPermissionsPath _oidcUsersPermissions;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.OIDCUSERS_PERMISSIONS</code> table
+     * <code>OIDCUSERS_PERMISSIONS</code> table
      */
-    public OidcusersPermissionsPath oidcusersPermissions() {
-        if (_oidcusersPermissions == null)
-            _oidcusersPermissions = new OidcusersPermissionsPath(this, null, Keys.OIDCUSERS_PERMISSIONS__OIDCUSERS_PERMISSIONS_OIDCUSER_FK.getInverseKey());
+    public OidcUsersPermissionsPath oidcUsersPermissions() {
+        if (_oidcUsersPermissions == null)
+            _oidcUsersPermissions = new OidcUsersPermissionsPath(this, null, Keys.OIDCUSERS_PERMISSIONS_OIDCUSER_FK.getInverseKey());
 
-        return _oidcusersPermissions;
+        return _oidcUsersPermissions;
     }
 
-    private transient OidcusersTeamsPath _oidcusersTeams;
+    private transient OidcUsersTeamsPath _oidcUsersTeams;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.OIDCUSERS_TEAMS</code> table
+     * Get the implicit to-many join path to the <code>OIDCUSERS_TEAMS</code>
+     * table
      */
-    public OidcusersTeamsPath oidcusersTeams() {
-        if (_oidcusersTeams == null)
-            _oidcusersTeams = new OidcusersTeamsPath(this, null, Keys.OIDCUSERS_TEAMS__OIDCUSERS_TEAMS_OIDCUSER_FK.getInverseKey());
+    public OidcUsersTeamsPath oidcUsersTeams() {
+        if (_oidcUsersTeams == null)
+            _oidcUsersTeams = new OidcUsersTeamsPath(this, null, Keys.OIDCUSERS_TEAMS_OIDCUSER_FK.getInverseKey());
 
-        return _oidcusersTeams;
+        return _oidcUsersTeams;
     }
 
     private transient UserProjectEffectivePermissionsPath _userProjectEffectivePermissions;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
      */
     public UserProjectEffectivePermissionsPath userProjectEffectivePermissions() {
         if (_userProjectEffectivePermissions == null)
-            _userProjectEffectivePermissions = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK.getInverseKey());
+            _userProjectEffectivePermissions = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK.getInverseKey());
 
         return _userProjectEffectivePermissions;
     }
 
     /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.PERMISSION</code> table
+     * Get the implicit many-to-many join path to the <code>PERMISSION</code>
+     * table
      */
     public PermissionPath permission() {
-        return oidcusersPermissions().permission();
+        return oidcUsersPermissions().permission();
     }
 
     /**
-     * Get the implicit many-to-many join path to the <code>public.TEAM</code>
-     * table
+     * Get the implicit many-to-many join path to the <code>TEAM</code> table
      */
     public TeamPath team() {
-        return oidcusersTeams().team();
+        return oidcUsersTeams().team();
     }
 
     @Override

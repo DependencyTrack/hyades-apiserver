@@ -20,126 +20,135 @@ public class ManagedUserRecord extends UpdatableRecordImpl<ManagedUserRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.MANAGEDUSER.ID</code>.
+     * Setter for <code>MANAGEDUSER.ID</code>.
      */
-    public void setId(Long value) {
+    public ManagedUserRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSER.ID</code>.
+     * Getter for <code>MANAGEDUSER.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.MANAGEDUSER.EMAIL</code>.
+     * Setter for <code>MANAGEDUSER.EMAIL</code>.
      */
-    public void setEmail(String value) {
+    public ManagedUserRecord setEmail(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSER.EMAIL</code>.
+     * Getter for <code>MANAGEDUSER.EMAIL</code>.
      */
     public String getEmail() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.MANAGEDUSER.FORCE_PASSWORD_CHANGE</code>.
+     * Setter for <code>MANAGEDUSER.FORCE_PASSWORD_CHANGE</code>.
      */
-    public void setForcePasswordChange(Boolean value) {
+    public ManagedUserRecord setForcePasswordChange(Boolean value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSER.FORCE_PASSWORD_CHANGE</code>.
+     * Getter for <code>MANAGEDUSER.FORCE_PASSWORD_CHANGE</code>.
      */
     public Boolean getForcePasswordChange() {
         return (Boolean) get(2);
     }
 
     /**
-     * Setter for <code>public.MANAGEDUSER.FULLNAME</code>.
+     * Setter for <code>MANAGEDUSER.FULLNAME</code>.
      */
-    public void setFullname(String value) {
+    public ManagedUserRecord setFullname(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSER.FULLNAME</code>.
+     * Getter for <code>MANAGEDUSER.FULLNAME</code>.
      */
     public String getFullname() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.MANAGEDUSER.LAST_PASSWORD_CHANGE</code>.
+     * Setter for <code>MANAGEDUSER.LAST_PASSWORD_CHANGE</code>.
      */
-    public void setLastPasswordChange(OffsetDateTime value) {
+    public ManagedUserRecord setLastPasswordChange(OffsetDateTime value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSER.LAST_PASSWORD_CHANGE</code>.
+     * Getter for <code>MANAGEDUSER.LAST_PASSWORD_CHANGE</code>.
      */
     public OffsetDateTime getLastPasswordChange() {
         return (OffsetDateTime) get(4);
     }
 
     /**
-     * Setter for <code>public.MANAGEDUSER.NON_EXPIRY_PASSWORD</code>.
+     * Setter for <code>MANAGEDUSER.NON_EXPIRY_PASSWORD</code>.
      */
-    public void setNonExpiryPassword(Boolean value) {
+    public ManagedUserRecord setNonExpiryPassword(Boolean value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSER.NON_EXPIRY_PASSWORD</code>.
+     * Getter for <code>MANAGEDUSER.NON_EXPIRY_PASSWORD</code>.
      */
     public Boolean getNonExpiryPassword() {
         return (Boolean) get(5);
     }
 
     /**
-     * Setter for <code>public.MANAGEDUSER.PASSWORD</code>.
+     * Setter for <code>MANAGEDUSER.PASSWORD</code>.
      */
-    public void setPassword(String value) {
+    public ManagedUserRecord setPassword(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSER.PASSWORD</code>.
+     * Getter for <code>MANAGEDUSER.PASSWORD</code>.
      */
     public String getPassword() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.MANAGEDUSER.SUSPENDED</code>.
+     * Setter for <code>MANAGEDUSER.SUSPENDED</code>.
      */
-    public void setSuspended(Boolean value) {
+    public ManagedUserRecord setSuspended(Boolean value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSER.SUSPENDED</code>.
+     * Getter for <code>MANAGEDUSER.SUSPENDED</code>.
      */
     public Boolean getSuspended() {
         return (Boolean) get(7);
     }
 
     /**
-     * Setter for <code>public.MANAGEDUSER.USERNAME</code>.
+     * Setter for <code>MANAGEDUSER.USERNAME</code>.
      */
-    public void setUsername(String value) {
+    public ManagedUserRecord setUsername(String value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MANAGEDUSER.USERNAME</code>.
+     * Getter for <code>MANAGEDUSER.USERNAME</code>.
      */
     public String getUsername() {
         return (String) get(8);

@@ -8,10 +8,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationrulePath;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationRulePath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.NotificationRuleProjectsRecord;
 import org.jooq.Condition;
@@ -45,7 +45,7 @@ public class NotificationRuleProjects extends TableImpl<NotificationRuleProjects
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.NOTIFICATIONRULE_PROJECTS</code>
+     * The reference instance of <code>NOTIFICATIONRULE_PROJECTS</code>
      */
     public static final NotificationRuleProjects NOTIFICATIONRULE_PROJECTS = new NotificationRuleProjects();
 
@@ -58,13 +58,12 @@ public class NotificationRuleProjects extends TableImpl<NotificationRuleProjects
     }
 
     /**
-     * The column
-     * <code>public.NOTIFICATIONRULE_PROJECTS.NOTIFICATIONRULE_ID</code>.
+     * The column <code>NOTIFICATIONRULE_PROJECTS.NOTIFICATIONRULE_ID</code>.
      */
     public final TableField<NotificationRuleProjectsRecord, Long> NOTIFICATIONRULE_ID = createField(DSL.name("NOTIFICATIONRULE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.NOTIFICATIONRULE_PROJECTS.PROJECT_ID</code>.
+     * The column <code>NOTIFICATIONRULE_PROJECTS.PROJECT_ID</code>.
      */
     public final TableField<NotificationRuleProjectsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT, this, "");
 
@@ -77,23 +76,21 @@ public class NotificationRuleProjects extends TableImpl<NotificationRuleProjects
     }
 
     /**
-     * Create an aliased <code>public.NOTIFICATIONRULE_PROJECTS</code> table
-     * reference
+     * Create an aliased <code>NOTIFICATIONRULE_PROJECTS</code> table reference
      */
     public NotificationRuleProjects(String alias) {
         this(DSL.name(alias), NOTIFICATIONRULE_PROJECTS);
     }
 
     /**
-     * Create an aliased <code>public.NOTIFICATIONRULE_PROJECTS</code> table
-     * reference
+     * Create an aliased <code>NOTIFICATIONRULE_PROJECTS</code> table reference
      */
     public NotificationRuleProjects(Name alias) {
         this(alias, NOTIFICATIONRULE_PROJECTS);
     }
 
     /**
-     * Create a <code>public.NOTIFICATIONRULE_PROJECTS</code> table reference
+     * Create a <code>NOTIFICATIONRULE_PROJECTS</code> table reference
      */
     public NotificationRuleProjects() {
         this(DSL.name("NOTIFICATIONRULE_PROJECTS"), null);
@@ -106,35 +103,35 @@ public class NotificationRuleProjects extends TableImpl<NotificationRuleProjects
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class NotificationruleProjectsPath extends NotificationRuleProjects implements Path<NotificationRuleProjectsRecord> {
+    public static class NotificationRuleProjectsPath extends NotificationRuleProjects implements Path<NotificationRuleProjectsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> NotificationruleProjectsPath(Table<O> path, ForeignKey<O, NotificationRuleProjectsRecord> childPath, InverseForeignKey<O, NotificationRuleProjectsRecord> parentPath) {
+        public <O extends Record> NotificationRuleProjectsPath(Table<O> path, ForeignKey<O, NotificationRuleProjectsRecord> childPath, InverseForeignKey<O, NotificationRuleProjectsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private NotificationruleProjectsPath(Name alias, Table<NotificationRuleProjectsRecord> aliased) {
+        private NotificationRuleProjectsPath(Name alias, Table<NotificationRuleProjectsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public NotificationruleProjectsPath as(String alias) {
-            return new NotificationruleProjectsPath(DSL.name(alias), this);
+        public NotificationRuleProjectsPath as(String alias) {
+            return new NotificationRuleProjectsPath(DSL.name(alias), this);
         }
 
         @Override
-        public NotificationruleProjectsPath as(Name alias) {
-            return new NotificationruleProjectsPath(alias, this);
+        public NotificationRuleProjectsPath as(Name alias) {
+            return new NotificationRuleProjectsPath(alias, this);
         }
 
         @Override
-        public NotificationruleProjectsPath as(Table<?> alias) {
-            return new NotificationruleProjectsPath(alias.getQualifiedName(), this);
+        public NotificationRuleProjectsPath as(Table<?> alias) {
+            return new NotificationRuleProjectsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -144,30 +141,29 @@ public class NotificationRuleProjects extends TableImpl<NotificationRuleProjects
 
     @Override
     public List<ForeignKey<NotificationRuleProjectsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.NOTIFICATIONRULE_PROJECTS__NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK, Keys.NOTIFICATIONRULE_PROJECTS__NOTIFICATIONRULE_PROJECTS_PROJECT_FK);
+        return Arrays.asList(Keys.NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK, Keys.NOTIFICATIONRULE_PROJECTS_PROJECT_FK);
     }
 
-    private transient NotificationrulePath _notificationrule;
+    private transient NotificationRulePath _notificationRule;
 
     /**
-     * Get the implicit join path to the <code>public.NOTIFICATIONRULE</code>
-     * table.
+     * Get the implicit join path to the <code>NOTIFICATIONRULE</code> table.
      */
-    public NotificationrulePath notificationrule() {
-        if (_notificationrule == null)
-            _notificationrule = new NotificationrulePath(this, Keys.NOTIFICATIONRULE_PROJECTS__NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK, null);
+    public NotificationRulePath notificationRule() {
+        if (_notificationRule == null)
+            _notificationRule = new NotificationRulePath(this, Keys.NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_FK, null);
 
-        return _notificationrule;
+        return _notificationRule;
     }
 
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.NOTIFICATIONRULE_PROJECTS__NOTIFICATIONRULE_PROJECTS_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.NOTIFICATIONRULE_PROJECTS_PROJECT_FK, null);
 
         return _project;
     }

@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Vulnerability.VulnerabilityPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ComponentsVulnerabilitiesRecord;
@@ -45,7 +45,7 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.COMPONENTS_VULNERABILITIES</code>
+     * The reference instance of <code>COMPONENTS_VULNERABILITIES</code>
      */
     public static final ComponentsVulnerabilities COMPONENTS_VULNERABILITIES = new ComponentsVulnerabilities();
 
@@ -58,13 +58,12 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
     }
 
     /**
-     * The column <code>public.COMPONENTS_VULNERABILITIES.COMPONENT_ID</code>.
+     * The column <code>COMPONENTS_VULNERABILITIES.COMPONENT_ID</code>.
      */
     public final TableField<ComponentsVulnerabilitiesRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column
-     * <code>public.COMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
+     * The column <code>COMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
     public final TableField<ComponentsVulnerabilitiesRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -77,23 +76,21 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
     }
 
     /**
-     * Create an aliased <code>public.COMPONENTS_VULNERABILITIES</code> table
-     * reference
+     * Create an aliased <code>COMPONENTS_VULNERABILITIES</code> table reference
      */
     public ComponentsVulnerabilities(String alias) {
         this(DSL.name(alias), COMPONENTS_VULNERABILITIES);
     }
 
     /**
-     * Create an aliased <code>public.COMPONENTS_VULNERABILITIES</code> table
-     * reference
+     * Create an aliased <code>COMPONENTS_VULNERABILITIES</code> table reference
      */
     public ComponentsVulnerabilities(Name alias) {
         this(alias, COMPONENTS_VULNERABILITIES);
     }
 
     /**
-     * Create a <code>public.COMPONENTS_VULNERABILITIES</code> table reference
+     * Create a <code>COMPONENTS_VULNERABILITIES</code> table reference
      */
     public ComponentsVulnerabilities() {
         this(DSL.name("COMPONENTS_VULNERABILITIES"), null);
@@ -134,7 +131,7 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -150,7 +147,7 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit join path to the <code>public.COMPONENT</code> table.
+     * Get the implicit join path to the <code>COMPONENT</code> table.
      */
     public ComponentPath component() {
         if (_component == null)
@@ -162,8 +159,7 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
     private transient VulnerabilityPath _vulnerability;
 
     /**
-     * Get the implicit join path to the <code>public.VULNERABILITY</code>
-     * table.
+     * Get the implicit join path to the <code>VULNERABILITY</code> table.
      */
     public VulnerabilityPath vulnerability() {
         if (_vulnerability == null)

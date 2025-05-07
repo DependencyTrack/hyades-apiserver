@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationrulePath;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationRulePath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.NotificationRuleTeamsRecord;
 import org.jooq.Condition;
@@ -44,7 +44,7 @@ public class NotificationRuleTeams extends TableImpl<NotificationRuleTeamsRecord
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.NOTIFICATIONRULE_TEAMS</code>
+     * The reference instance of <code>NOTIFICATIONRULE_TEAMS</code>
      */
     public static final NotificationRuleTeams NOTIFICATIONRULE_TEAMS = new NotificationRuleTeams();
 
@@ -57,13 +57,12 @@ public class NotificationRuleTeams extends TableImpl<NotificationRuleTeamsRecord
     }
 
     /**
-     * The column
-     * <code>public.NOTIFICATIONRULE_TEAMS.NOTIFICATIONRULE_ID</code>.
+     * The column <code>NOTIFICATIONRULE_TEAMS.NOTIFICATIONRULE_ID</code>.
      */
     public final TableField<NotificationRuleTeamsRecord, Long> NOTIFICATIONRULE_ID = createField(DSL.name("NOTIFICATIONRULE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.NOTIFICATIONRULE_TEAMS.TEAM_ID</code>.
+     * The column <code>NOTIFICATIONRULE_TEAMS.TEAM_ID</code>.
      */
     public final TableField<NotificationRuleTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -76,23 +75,21 @@ public class NotificationRuleTeams extends TableImpl<NotificationRuleTeamsRecord
     }
 
     /**
-     * Create an aliased <code>public.NOTIFICATIONRULE_TEAMS</code> table
-     * reference
+     * Create an aliased <code>NOTIFICATIONRULE_TEAMS</code> table reference
      */
     public NotificationRuleTeams(String alias) {
         this(DSL.name(alias), NOTIFICATIONRULE_TEAMS);
     }
 
     /**
-     * Create an aliased <code>public.NOTIFICATIONRULE_TEAMS</code> table
-     * reference
+     * Create an aliased <code>NOTIFICATIONRULE_TEAMS</code> table reference
      */
     public NotificationRuleTeams(Name alias) {
         this(alias, NOTIFICATIONRULE_TEAMS);
     }
 
     /**
-     * Create a <code>public.NOTIFICATIONRULE_TEAMS</code> table reference
+     * Create a <code>NOTIFICATIONRULE_TEAMS</code> table reference
      */
     public NotificationRuleTeams() {
         this(DSL.name("NOTIFICATIONRULE_TEAMS"), null);
@@ -105,35 +102,35 @@ public class NotificationRuleTeams extends TableImpl<NotificationRuleTeamsRecord
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class NotificationruleTeamsPath extends NotificationRuleTeams implements Path<NotificationRuleTeamsRecord> {
+    public static class NotificationRuleTeamsPath extends NotificationRuleTeams implements Path<NotificationRuleTeamsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> NotificationruleTeamsPath(Table<O> path, ForeignKey<O, NotificationRuleTeamsRecord> childPath, InverseForeignKey<O, NotificationRuleTeamsRecord> parentPath) {
+        public <O extends Record> NotificationRuleTeamsPath(Table<O> path, ForeignKey<O, NotificationRuleTeamsRecord> childPath, InverseForeignKey<O, NotificationRuleTeamsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private NotificationruleTeamsPath(Name alias, Table<NotificationRuleTeamsRecord> aliased) {
+        private NotificationRuleTeamsPath(Name alias, Table<NotificationRuleTeamsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public NotificationruleTeamsPath as(String alias) {
-            return new NotificationruleTeamsPath(DSL.name(alias), this);
+        public NotificationRuleTeamsPath as(String alias) {
+            return new NotificationRuleTeamsPath(DSL.name(alias), this);
         }
 
         @Override
-        public NotificationruleTeamsPath as(Name alias) {
-            return new NotificationruleTeamsPath(alias, this);
+        public NotificationRuleTeamsPath as(Name alias) {
+            return new NotificationRuleTeamsPath(alias, this);
         }
 
         @Override
-        public NotificationruleTeamsPath as(Table<?> alias) {
-            return new NotificationruleTeamsPath(alias.getQualifiedName(), this);
+        public NotificationRuleTeamsPath as(Table<?> alias) {
+            return new NotificationRuleTeamsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -143,30 +140,29 @@ public class NotificationRuleTeams extends TableImpl<NotificationRuleTeamsRecord
 
     @Override
     public List<ForeignKey<NotificationRuleTeamsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.NOTIFICATIONRULE_TEAMS__NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK, Keys.NOTIFICATIONRULE_TEAMS__NOTIFICATIONRULE_TEAMS_TEAM_FK);
+        return Arrays.asList(Keys.NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK, Keys.NOTIFICATIONRULE_TEAMS_TEAM_FK);
     }
 
-    private transient NotificationrulePath _notificationrule;
+    private transient NotificationRulePath _notificationRule;
 
     /**
-     * Get the implicit join path to the <code>public.NOTIFICATIONRULE</code>
-     * table.
+     * Get the implicit join path to the <code>NOTIFICATIONRULE</code> table.
      */
-    public NotificationrulePath notificationrule() {
-        if (_notificationrule == null)
-            _notificationrule = new NotificationrulePath(this, Keys.NOTIFICATIONRULE_TEAMS__NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK, null);
+    public NotificationRulePath notificationRule() {
+        if (_notificationRule == null)
+            _notificationRule = new NotificationRulePath(this, Keys.NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK, null);
 
-        return _notificationrule;
+        return _notificationRule;
     }
 
     private transient TeamPath _team;
 
     /**
-     * Get the implicit join path to the <code>public.TEAM</code> table.
+     * Get the implicit join path to the <code>TEAM</code> table.
      */
     public TeamPath team() {
         if (_team == null)
-            _team = new TeamPath(this, Keys.NOTIFICATIONRULE_TEAMS__NOTIFICATIONRULE_TEAMS_TEAM_FK, null);
+            _team = new TeamPath(this, Keys.NOTIFICATIONRULE_TEAMS_TEAM_FK, null);
 
         return _team;
     }

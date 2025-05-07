@@ -8,10 +8,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationrulePath;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationRulePath;
 import org.dependencytrack.persistence.jooq.generated.tables.Tag.TagPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.NotificationRuleTagsRecord;
 import org.jooq.Condition;
@@ -45,7 +45,7 @@ public class NotificationRuleTags extends TableImpl<NotificationRuleTagsRecord> 
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.NOTIFICATIONRULE_TAGS</code>
+     * The reference instance of <code>NOTIFICATIONRULE_TAGS</code>
      */
     public static final NotificationRuleTags NOTIFICATIONRULE_TAGS = new NotificationRuleTags();
 
@@ -58,12 +58,12 @@ public class NotificationRuleTags extends TableImpl<NotificationRuleTagsRecord> 
     }
 
     /**
-     * The column <code>public.NOTIFICATIONRULE_TAGS.NOTIFICATIONRULE_ID</code>.
+     * The column <code>NOTIFICATIONRULE_TAGS.NOTIFICATIONRULE_ID</code>.
      */
     public final TableField<NotificationRuleTagsRecord, Long> NOTIFICATIONRULE_ID = createField(DSL.name("NOTIFICATIONRULE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.NOTIFICATIONRULE_TAGS.TAG_ID</code>.
+     * The column <code>NOTIFICATIONRULE_TAGS.TAG_ID</code>.
      */
     public final TableField<NotificationRuleTagsRecord, Long> TAG_ID = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT, this, "");
 
@@ -76,23 +76,21 @@ public class NotificationRuleTags extends TableImpl<NotificationRuleTagsRecord> 
     }
 
     /**
-     * Create an aliased <code>public.NOTIFICATIONRULE_TAGS</code> table
-     * reference
+     * Create an aliased <code>NOTIFICATIONRULE_TAGS</code> table reference
      */
     public NotificationRuleTags(String alias) {
         this(DSL.name(alias), NOTIFICATIONRULE_TAGS);
     }
 
     /**
-     * Create an aliased <code>public.NOTIFICATIONRULE_TAGS</code> table
-     * reference
+     * Create an aliased <code>NOTIFICATIONRULE_TAGS</code> table reference
      */
     public NotificationRuleTags(Name alias) {
         this(alias, NOTIFICATIONRULE_TAGS);
     }
 
     /**
-     * Create a <code>public.NOTIFICATIONRULE_TAGS</code> table reference
+     * Create a <code>NOTIFICATIONRULE_TAGS</code> table reference
      */
     public NotificationRuleTags() {
         this(DSL.name("NOTIFICATIONRULE_TAGS"), null);
@@ -105,35 +103,35 @@ public class NotificationRuleTags extends TableImpl<NotificationRuleTagsRecord> 
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class NotificationruleTagsPath extends NotificationRuleTags implements Path<NotificationRuleTagsRecord> {
+    public static class NotificationRuleTagsPath extends NotificationRuleTags implements Path<NotificationRuleTagsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> NotificationruleTagsPath(Table<O> path, ForeignKey<O, NotificationRuleTagsRecord> childPath, InverseForeignKey<O, NotificationRuleTagsRecord> parentPath) {
+        public <O extends Record> NotificationRuleTagsPath(Table<O> path, ForeignKey<O, NotificationRuleTagsRecord> childPath, InverseForeignKey<O, NotificationRuleTagsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private NotificationruleTagsPath(Name alias, Table<NotificationRuleTagsRecord> aliased) {
+        private NotificationRuleTagsPath(Name alias, Table<NotificationRuleTagsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public NotificationruleTagsPath as(String alias) {
-            return new NotificationruleTagsPath(DSL.name(alias), this);
+        public NotificationRuleTagsPath as(String alias) {
+            return new NotificationRuleTagsPath(DSL.name(alias), this);
         }
 
         @Override
-        public NotificationruleTagsPath as(Name alias) {
-            return new NotificationruleTagsPath(alias, this);
+        public NotificationRuleTagsPath as(Name alias) {
+            return new NotificationRuleTagsPath(alias, this);
         }
 
         @Override
-        public NotificationruleTagsPath as(Table<?> alias) {
-            return new NotificationruleTagsPath(alias.getQualifiedName(), this);
+        public NotificationRuleTagsPath as(Table<?> alias) {
+            return new NotificationRuleTagsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -143,30 +141,29 @@ public class NotificationRuleTags extends TableImpl<NotificationRuleTagsRecord> 
 
     @Override
     public List<ForeignKey<NotificationRuleTagsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.NOTIFICATIONRULE_TAGS__NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK, Keys.NOTIFICATIONRULE_TAGS__NOTIFICATIONRULE_TAGS_TAG_FK);
+        return Arrays.asList(Keys.NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK, Keys.NOTIFICATIONRULE_TAGS_TAG_FK);
     }
 
-    private transient NotificationrulePath _notificationrule;
+    private transient NotificationRulePath _notificationRule;
 
     /**
-     * Get the implicit join path to the <code>public.NOTIFICATIONRULE</code>
-     * table.
+     * Get the implicit join path to the <code>NOTIFICATIONRULE</code> table.
      */
-    public NotificationrulePath notificationrule() {
-        if (_notificationrule == null)
-            _notificationrule = new NotificationrulePath(this, Keys.NOTIFICATIONRULE_TAGS__NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK, null);
+    public NotificationRulePath notificationRule() {
+        if (_notificationRule == null)
+            _notificationRule = new NotificationRulePath(this, Keys.NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK, null);
 
-        return _notificationrule;
+        return _notificationRule;
     }
 
     private transient TagPath _tag;
 
     /**
-     * Get the implicit join path to the <code>public.TAG</code> table.
+     * Get the implicit join path to the <code>TAG</code> table.
      */
     public TagPath tag() {
         if (_tag == null)
-            _tag = new TagPath(this, Keys.NOTIFICATIONRULE_TAGS__NOTIFICATIONRULE_TAGS_TAG_FK, null);
+            _tag = new TagPath(this, Keys.NOTIFICATIONRULE_TAGS_TAG_FK, null);
 
         return _tag;
     }

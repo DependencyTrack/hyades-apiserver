@@ -8,10 +8,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersPermissions.LdapusersPermissionsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersTeams.LdapusersTeamsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersPermissions.LdapUsersPermissionsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersTeams.LdapUsersTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission.PermissionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions.UserProjectEffectivePermissionsPath;
@@ -48,7 +48,7 @@ public class LdapUser extends TableImpl<LdapUserRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.LDAPUSER</code>
+     * The reference instance of <code>LDAPUSER</code>
      */
     public static final LdapUser LDAPUSER = new LdapUser();
 
@@ -61,22 +61,22 @@ public class LdapUser extends TableImpl<LdapUserRecord> {
     }
 
     /**
-     * The column <code>public.LDAPUSER.ID</code>.
+     * The column <code>LDAPUSER.ID</code>.
      */
     public final TableField<LdapUserRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.LDAPUSER.DN</code>.
+     * The column <code>LDAPUSER.DN</code>.
      */
     public final TableField<LdapUserRecord, String> DN = createField(DSL.name("DN"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.LDAPUSER.EMAIL</code>.
+     * The column <code>LDAPUSER.EMAIL</code>.
      */
     public final TableField<LdapUserRecord, String> EMAIL = createField(DSL.name("EMAIL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.LDAPUSER.USERNAME</code>.
+     * The column <code>LDAPUSER.USERNAME</code>.
      */
     public final TableField<LdapUserRecord, String> USERNAME = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
 
@@ -89,21 +89,21 @@ public class LdapUser extends TableImpl<LdapUserRecord> {
     }
 
     /**
-     * Create an aliased <code>public.LDAPUSER</code> table reference
+     * Create an aliased <code>LDAPUSER</code> table reference
      */
     public LdapUser(String alias) {
         this(DSL.name(alias), LDAPUSER);
     }
 
     /**
-     * Create an aliased <code>public.LDAPUSER</code> table reference
+     * Create an aliased <code>LDAPUSER</code> table reference
      */
     public LdapUser(Name alias) {
         this(alias, LDAPUSER);
     }
 
     /**
-     * Create a <code>public.LDAPUSER</code> table reference
+     * Create a <code>LDAPUSER</code> table reference
      */
     public LdapUser() {
         this(DSL.name("LDAPUSER"), null);
@@ -116,35 +116,35 @@ public class LdapUser extends TableImpl<LdapUserRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class LdapuserPath extends LdapUser implements Path<LdapUserRecord> {
+    public static class LdapUserPath extends LdapUser implements Path<LdapUserRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> LdapuserPath(Table<O> path, ForeignKey<O, LdapUserRecord> childPath, InverseForeignKey<O, LdapUserRecord> parentPath) {
+        public <O extends Record> LdapUserPath(Table<O> path, ForeignKey<O, LdapUserRecord> childPath, InverseForeignKey<O, LdapUserRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private LdapuserPath(Name alias, Table<LdapUserRecord> aliased) {
+        private LdapUserPath(Name alias, Table<LdapUserRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public LdapuserPath as(String alias) {
-            return new LdapuserPath(DSL.name(alias), this);
+        public LdapUserPath as(String alias) {
+            return new LdapUserPath(DSL.name(alias), this);
         }
 
         @Override
-        public LdapuserPath as(Name alias) {
-            return new LdapuserPath(alias, this);
+        public LdapUserPath as(Name alias) {
+            return new LdapUserPath(alias, this);
         }
 
         @Override
-        public LdapuserPath as(Table<?> alias) {
-            return new LdapuserPath(alias.getQualifiedName(), this);
+        public LdapUserPath as(Table<?> alias) {
+            return new LdapUserPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -162,59 +162,58 @@ public class LdapUser extends TableImpl<LdapUserRecord> {
         return Arrays.asList(Keys.LDAPUSER_USERNAME_IDX);
     }
 
-    private transient LdapusersPermissionsPath _ldapusersPermissions;
+    private transient LdapUsersPermissionsPath _ldapUsersPermissions;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.LDAPUSERS_PERMISSIONS</code> table
+     * <code>LDAPUSERS_PERMISSIONS</code> table
      */
-    public LdapusersPermissionsPath ldapusersPermissions() {
-        if (_ldapusersPermissions == null)
-            _ldapusersPermissions = new LdapusersPermissionsPath(this, null, Keys.LDAPUSERS_PERMISSIONS__LDAPUSERS_PERMISSIONS_LDAPUSER_FK.getInverseKey());
+    public LdapUsersPermissionsPath ldapUsersPermissions() {
+        if (_ldapUsersPermissions == null)
+            _ldapUsersPermissions = new LdapUsersPermissionsPath(this, null, Keys.LDAPUSERS_PERMISSIONS_LDAPUSER_FK.getInverseKey());
 
-        return _ldapusersPermissions;
+        return _ldapUsersPermissions;
     }
 
-    private transient LdapusersTeamsPath _ldapusersTeams;
+    private transient LdapUsersTeamsPath _ldapUsersTeams;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.LDAPUSERS_TEAMS</code> table
+     * Get the implicit to-many join path to the <code>LDAPUSERS_TEAMS</code>
+     * table
      */
-    public LdapusersTeamsPath ldapusersTeams() {
-        if (_ldapusersTeams == null)
-            _ldapusersTeams = new LdapusersTeamsPath(this, null, Keys.LDAPUSERS_TEAMS__LDAPUSERS_TEAMS_LDAPUSER_FK.getInverseKey());
+    public LdapUsersTeamsPath ldapUsersTeams() {
+        if (_ldapUsersTeams == null)
+            _ldapUsersTeams = new LdapUsersTeamsPath(this, null, Keys.LDAPUSERS_TEAMS_LDAPUSER_FK.getInverseKey());
 
-        return _ldapusersTeams;
+        return _ldapUsersTeams;
     }
 
     private transient UserProjectEffectivePermissionsPath _userProjectEffectivePermissions;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
      */
     public UserProjectEffectivePermissionsPath userProjectEffectivePermissions() {
         if (_userProjectEffectivePermissions == null)
-            _userProjectEffectivePermissions = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK.getInverseKey());
+            _userProjectEffectivePermissions = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK.getInverseKey());
 
         return _userProjectEffectivePermissions;
     }
 
     /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.PERMISSION</code> table
+     * Get the implicit many-to-many join path to the <code>PERMISSION</code>
+     * table
      */
     public PermissionPath permission() {
-        return ldapusersPermissions().permission();
+        return ldapUsersPermissions().permission();
     }
 
     /**
-     * Get the implicit many-to-many join path to the <code>public.TEAM</code>
-     * table
+     * Get the implicit many-to-many join path to the <code>TEAM</code> table
      */
     public TeamPath team() {
-        return ldapusersTeams().team();
+        return ldapUsersTeams().team();
     }
 
     @Override

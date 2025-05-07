@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
 import org.jooq.impl.DSL;
@@ -22,7 +22,7 @@ public class RecalcUserProjectEffectivePermissions extends AbstractRoutine<java.
 
     /**
      * The parameter
-     * <code>public.recalc_user_project_effective_permissions.project_ids</code>.
+     * <code>recalc_user_project_effective_permissions.project_ids</code>.
      */
     public static final Parameter<Long[]> PROJECT_IDS = Internal.createParameter("project_ids", SQLDataType.BIGINT.array(), false, false);
 
@@ -30,7 +30,7 @@ public class RecalcUserProjectEffectivePermissions extends AbstractRoutine<java.
      * Create a new routine call instance
      */
     public RecalcUserProjectEffectivePermissions() {
-        super("recalc_user_project_effective_permissions", Public.PUBLIC, DSL.comment(""));
+        super("recalc_user_project_effective_permissions", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""));
 
         addInParameter(PROJECT_IDS);
     }

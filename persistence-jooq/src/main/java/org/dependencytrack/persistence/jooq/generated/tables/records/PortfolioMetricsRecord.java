@@ -20,210 +20,225 @@ public class PortfolioMetricsRecord extends UpdatableRecordImpl<PortfolioMetrics
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.ID</code>.
+     * Setter for <code>PORTFOLIOMETRICS.ID</code>.
      */
-    public void setId(Long value) {
+    public PortfolioMetricsRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.ID</code>.
+     * Getter for <code>PORTFOLIOMETRICS.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.COMPONENTS</code>.
+     * Setter for <code>PORTFOLIOMETRICS.COMPONENTS</code>.
      */
-    public void setComponents(Integer value) {
+    public PortfolioMetricsRecord setComponents(Integer value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.COMPONENTS</code>.
+     * Getter for <code>PORTFOLIOMETRICS.COMPONENTS</code>.
      */
     public Integer getComponents() {
         return (Integer) get(1);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.CRITICAL</code>.
+     * Setter for <code>PORTFOLIOMETRICS.CRITICAL</code>.
      */
-    public void setCritical(Integer value) {
+    public PortfolioMetricsRecord setCritical(Integer value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.CRITICAL</code>.
+     * Getter for <code>PORTFOLIOMETRICS.CRITICAL</code>.
      */
     public Integer getCritical() {
         return (Integer) get(2);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.FINDINGS_AUDITED</code>.
+     * Setter for <code>PORTFOLIOMETRICS.FINDINGS_AUDITED</code>.
      */
-    public void setFindingsAudited(Integer value) {
+    public PortfolioMetricsRecord setFindingsAudited(Integer value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.FINDINGS_AUDITED</code>.
+     * Getter for <code>PORTFOLIOMETRICS.FINDINGS_AUDITED</code>.
      */
     public Integer getFindingsAudited() {
         return (Integer) get(3);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.FINDINGS_TOTAL</code>.
+     * Setter for <code>PORTFOLIOMETRICS.FINDINGS_TOTAL</code>.
      */
-    public void setFindingsTotal(Integer value) {
+    public PortfolioMetricsRecord setFindingsTotal(Integer value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.FINDINGS_TOTAL</code>.
+     * Getter for <code>PORTFOLIOMETRICS.FINDINGS_TOTAL</code>.
      */
     public Integer getFindingsTotal() {
         return (Integer) get(4);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.FINDINGS_UNAUDITED</code>.
+     * Setter for <code>PORTFOLIOMETRICS.FINDINGS_UNAUDITED</code>.
      */
-    public void setFindingsUnaudited(Integer value) {
+    public PortfolioMetricsRecord setFindingsUnaudited(Integer value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.FINDINGS_UNAUDITED</code>.
+     * Getter for <code>PORTFOLIOMETRICS.FINDINGS_UNAUDITED</code>.
      */
     public Integer getFindingsUnaudited() {
         return (Integer) get(5);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.FIRST_OCCURRENCE</code>.
+     * Setter for <code>PORTFOLIOMETRICS.FIRST_OCCURRENCE</code>.
      */
-    public void setFirstOccurrence(OffsetDateTime value) {
+    public PortfolioMetricsRecord setFirstOccurrence(OffsetDateTime value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.FIRST_OCCURRENCE</code>.
+     * Getter for <code>PORTFOLIOMETRICS.FIRST_OCCURRENCE</code>.
      */
     public OffsetDateTime getFirstOccurrence() {
         return (OffsetDateTime) get(6);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.HIGH</code>.
+     * Setter for <code>PORTFOLIOMETRICS.HIGH</code>.
      */
-    public void setHigh(Integer value) {
+    public PortfolioMetricsRecord setHigh(Integer value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.HIGH</code>.
+     * Getter for <code>PORTFOLIOMETRICS.HIGH</code>.
      */
     public Integer getHigh() {
         return (Integer) get(7);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.RISKSCORE</code>.
+     * Setter for <code>PORTFOLIOMETRICS.RISKSCORE</code>.
      */
-    public void setRiskscore(Double value) {
+    public PortfolioMetricsRecord setRiskscore(Double value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.RISKSCORE</code>.
+     * Getter for <code>PORTFOLIOMETRICS.RISKSCORE</code>.
      */
     public Double getRiskscore() {
         return (Double) get(8);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.LAST_OCCURRENCE</code>.
+     * Setter for <code>PORTFOLIOMETRICS.LAST_OCCURRENCE</code>.
      */
-    public void setLastOccurrence(OffsetDateTime value) {
+    public PortfolioMetricsRecord setLastOccurrence(OffsetDateTime value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.LAST_OCCURRENCE</code>.
+     * Getter for <code>PORTFOLIOMETRICS.LAST_OCCURRENCE</code>.
      */
     public OffsetDateTime getLastOccurrence() {
         return (OffsetDateTime) get(9);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.LOW</code>.
+     * Setter for <code>PORTFOLIOMETRICS.LOW</code>.
      */
-    public void setLow(Integer value) {
+    public PortfolioMetricsRecord setLow(Integer value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.LOW</code>.
+     * Getter for <code>PORTFOLIOMETRICS.LOW</code>.
      */
     public Integer getLow() {
         return (Integer) get(10);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.MEDIUM</code>.
+     * Setter for <code>PORTFOLIOMETRICS.MEDIUM</code>.
      */
-    public void setMedium(Integer value) {
+    public PortfolioMetricsRecord setMedium(Integer value) {
         set(11, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.MEDIUM</code>.
+     * Getter for <code>PORTFOLIOMETRICS.MEDIUM</code>.
      */
     public Integer getMedium() {
         return (Integer) get(11);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_AUDITED</code>.
+     * Setter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
-    public void setPolicyviolationsAudited(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsAudited(Integer value) {
         set(12, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_AUDITED</code>.
+     * Getter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
     public Integer getPolicyviolationsAudited() {
         return (Integer) get(12);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_FAIL</code>.
+     * Setter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
-    public void setPolicyviolationsFail(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsFail(Integer value) {
         set(13, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_FAIL</code>.
+     * Getter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
     public Integer getPolicyviolationsFail() {
         return (Integer) get(13);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_INFO</code>.
+     * Setter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
-    public void setPolicyviolationsInfo(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsInfo(Integer value) {
         set(14, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_INFO</code>.
+     * Getter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
     public Integer getPolicyviolationsInfo() {
         return (Integer) get(14);
@@ -231,31 +246,31 @@ public class PortfolioMetricsRecord extends UpdatableRecordImpl<PortfolioMetrics
 
     /**
      * Setter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
-    public void setPolicyviolationsLicenseAudited(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsLicenseAudited(Integer value) {
         set(15, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
     public Integer getPolicyviolationsLicenseAudited() {
         return (Integer) get(15);
     }
 
     /**
-     * Setter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
+     * Setter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
-    public void setPolicyviolationsLicenseTotal(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsLicenseTotal(Integer value) {
         set(16, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
+     * Getter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
     public Integer getPolicyviolationsLicenseTotal() {
         return (Integer) get(16);
@@ -263,15 +278,16 @@ public class PortfolioMetricsRecord extends UpdatableRecordImpl<PortfolioMetrics
 
     /**
      * Setter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
-    public void setPolicyviolationsLicenseUnaudited(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsLicenseUnaudited(Integer value) {
         set(17, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsLicenseUnaudited() {
         return (Integer) get(17);
@@ -279,15 +295,16 @@ public class PortfolioMetricsRecord extends UpdatableRecordImpl<PortfolioMetrics
 
     /**
      * Setter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
-    public void setPolicyviolationsOperationalAudited(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsOperationalAudited(Integer value) {
         set(18, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
     public Integer getPolicyviolationsOperationalAudited() {
         return (Integer) get(18);
@@ -295,15 +312,16 @@ public class PortfolioMetricsRecord extends UpdatableRecordImpl<PortfolioMetrics
 
     /**
      * Setter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
-    public void setPolicyviolationsOperationalTotal(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsOperationalTotal(Integer value) {
         set(19, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
     public Integer getPolicyviolationsOperationalTotal() {
         return (Integer) get(19);
@@ -311,15 +329,16 @@ public class PortfolioMetricsRecord extends UpdatableRecordImpl<PortfolioMetrics
 
     /**
      * Setter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
-    public void setPolicyviolationsOperationalUnaudited(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsOperationalUnaudited(Integer value) {
         set(20, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsOperationalUnaudited() {
         return (Integer) get(20);
@@ -327,31 +346,31 @@ public class PortfolioMetricsRecord extends UpdatableRecordImpl<PortfolioMetrics
 
     /**
      * Setter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
-    public void setPolicyviolationsSecurityAudited(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsSecurityAudited(Integer value) {
         set(21, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
     public Integer getPolicyviolationsSecurityAudited() {
         return (Integer) get(21);
     }
 
     /**
-     * Setter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
+     * Setter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
-    public void setPolicyviolationsSecurityTotal(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsSecurityTotal(Integer value) {
         set(22, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
+     * Getter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
     public Integer getPolicyviolationsSecurityTotal() {
         return (Integer) get(22);
@@ -359,143 +378,151 @@ public class PortfolioMetricsRecord extends UpdatableRecordImpl<PortfolioMetrics
 
     /**
      * Setter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
-    public void setPolicyviolationsSecurityUnaudited(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsSecurityUnaudited(Integer value) {
         set(23, value);
+        return this;
     }
 
     /**
      * Getter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
+     * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsSecurityUnaudited() {
         return (Integer) get(23);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_TOTAL</code>.
+     * Setter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
-    public void setPolicyviolationsTotal(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsTotal(Integer value) {
         set(24, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_TOTAL</code>.
+     * Getter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
     public Integer getPolicyviolationsTotal() {
         return (Integer) get(24);
     }
 
     /**
-     * Setter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
+     * Setter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
-    public void setPolicyviolationsUnaudited(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsUnaudited(Integer value) {
         set(25, value);
+        return this;
     }
 
     /**
-     * Getter for
-     * <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
+     * Getter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsUnaudited() {
         return (Integer) get(25);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_WARN</code>.
+     * Setter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
-    public void setPolicyviolationsWarn(Integer value) {
+    public PortfolioMetricsRecord setPolicyviolationsWarn(Integer value) {
         set(26, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.POLICYVIOLATIONS_WARN</code>.
+     * Getter for <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
     public Integer getPolicyviolationsWarn() {
         return (Integer) get(26);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.PROJECTS</code>.
+     * Setter for <code>PORTFOLIOMETRICS.PROJECTS</code>.
      */
-    public void setProjects(Integer value) {
+    public PortfolioMetricsRecord setProjects(Integer value) {
         set(27, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.PROJECTS</code>.
+     * Getter for <code>PORTFOLIOMETRICS.PROJECTS</code>.
      */
     public Integer getProjects() {
         return (Integer) get(27);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.SUPPRESSED</code>.
+     * Setter for <code>PORTFOLIOMETRICS.SUPPRESSED</code>.
      */
-    public void setSuppressed(Integer value) {
+    public PortfolioMetricsRecord setSuppressed(Integer value) {
         set(28, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.SUPPRESSED</code>.
+     * Getter for <code>PORTFOLIOMETRICS.SUPPRESSED</code>.
      */
     public Integer getSuppressed() {
         return (Integer) get(28);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.UNASSIGNED_SEVERITY</code>.
+     * Setter for <code>PORTFOLIOMETRICS.UNASSIGNED_SEVERITY</code>.
      */
-    public void setUnassignedSeverity(Integer value) {
+    public PortfolioMetricsRecord setUnassignedSeverity(Integer value) {
         set(29, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.UNASSIGNED_SEVERITY</code>.
+     * Getter for <code>PORTFOLIOMETRICS.UNASSIGNED_SEVERITY</code>.
      */
     public Integer getUnassignedSeverity() {
         return (Integer) get(29);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.VULNERABILITIES</code>.
+     * Setter for <code>PORTFOLIOMETRICS.VULNERABILITIES</code>.
      */
-    public void setVulnerabilities(Integer value) {
+    public PortfolioMetricsRecord setVulnerabilities(Integer value) {
         set(30, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.VULNERABILITIES</code>.
+     * Getter for <code>PORTFOLIOMETRICS.VULNERABILITIES</code>.
      */
     public Integer getVulnerabilities() {
         return (Integer) get(30);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.VULNERABLECOMPONENTS</code>.
+     * Setter for <code>PORTFOLIOMETRICS.VULNERABLECOMPONENTS</code>.
      */
-    public void setVulnerablecomponents(Integer value) {
+    public PortfolioMetricsRecord setVulnerablecomponents(Integer value) {
         set(31, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.VULNERABLECOMPONENTS</code>.
+     * Getter for <code>PORTFOLIOMETRICS.VULNERABLECOMPONENTS</code>.
      */
     public Integer getVulnerablecomponents() {
         return (Integer) get(31);
     }
 
     /**
-     * Setter for <code>public.PORTFOLIOMETRICS.VULNERABLEPROJECTS</code>.
+     * Setter for <code>PORTFOLIOMETRICS.VULNERABLEPROJECTS</code>.
      */
-    public void setVulnerableprojects(Integer value) {
+    public PortfolioMetricsRecord setVulnerableprojects(Integer value) {
         set(32, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PORTFOLIOMETRICS.VULNERABLEPROJECTS</code>.
+     * Getter for <code>PORTFOLIOMETRICS.VULNERABLEPROJECTS</code>.
      */
     public Integer getVulnerableprojects() {
         return (Integer) get(32);

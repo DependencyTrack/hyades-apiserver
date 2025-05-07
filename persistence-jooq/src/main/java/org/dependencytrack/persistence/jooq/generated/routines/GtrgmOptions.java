@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
 import org.jooq.impl.DSL;
@@ -35,7 +35,7 @@ public class GtrgmOptions extends AbstractRoutine<java.lang.Void> {
      * Create a new routine call instance
      */
     public GtrgmOptions() {
-        super("gtrgm_options", Public.PUBLIC, DSL.comment(""));
+        super("gtrgm_options", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""));
 
         addInParameter(_1);
     }

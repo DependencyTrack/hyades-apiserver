@@ -21,126 +21,135 @@ public class BomRecord extends UpdatableRecordImpl<BomRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.BOM.ID</code>.
+     * Setter for <code>BOM.ID</code>.
      */
-    public void setId(Long value) {
+    public BomRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.BOM.ID</code>.
+     * Getter for <code>BOM.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.BOM.BOM_FORMAT</code>.
+     * Setter for <code>BOM.BOM_FORMAT</code>.
      */
-    public void setBomFormat(String value) {
+    public BomRecord setBomFormat(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.BOM.BOM_FORMAT</code>.
+     * Getter for <code>BOM.BOM_FORMAT</code>.
      */
     public String getBomFormat() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.BOM.BOM_VERSION</code>.
+     * Setter for <code>BOM.BOM_VERSION</code>.
      */
-    public void setBomVersion(Integer value) {
+    public BomRecord setBomVersion(Integer value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.BOM.BOM_VERSION</code>.
+     * Getter for <code>BOM.BOM_VERSION</code>.
      */
     public Integer getBomVersion() {
         return (Integer) get(2);
     }
 
     /**
-     * Setter for <code>public.BOM.IMPORTED</code>.
+     * Setter for <code>BOM.IMPORTED</code>.
      */
-    public void setImported(OffsetDateTime value) {
+    public BomRecord setImported(OffsetDateTime value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.BOM.IMPORTED</code>.
+     * Getter for <code>BOM.IMPORTED</code>.
      */
     public OffsetDateTime getImported() {
         return (OffsetDateTime) get(3);
     }
 
     /**
-     * Setter for <code>public.BOM.PROJECT_ID</code>.
+     * Setter for <code>BOM.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public BomRecord setProjectId(Long value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.BOM.PROJECT_ID</code>.
+     * Getter for <code>BOM.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(4);
     }
 
     /**
-     * Setter for <code>public.BOM.SERIAL_NUMBER</code>.
+     * Setter for <code>BOM.SERIAL_NUMBER</code>.
      */
-    public void setSerialNumber(String value) {
+    public BomRecord setSerialNumber(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.BOM.SERIAL_NUMBER</code>.
+     * Getter for <code>BOM.SERIAL_NUMBER</code>.
      */
     public String getSerialNumber() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.BOM.SPEC_VERSION</code>.
+     * Setter for <code>BOM.SPEC_VERSION</code>.
      */
-    public void setSpecVersion(String value) {
+    public BomRecord setSpecVersion(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.BOM.SPEC_VERSION</code>.
+     * Getter for <code>BOM.SPEC_VERSION</code>.
      */
     public String getSpecVersion() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.BOM.UUID</code>.
+     * Setter for <code>BOM.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public BomRecord setUuid(UUID value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.BOM.UUID</code>.
+     * Getter for <code>BOM.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(7);
     }
 
     /**
-     * Setter for <code>public.BOM.GENERATED</code>.
+     * Setter for <code>BOM.GENERATED</code>.
      */
-    public void setGenerated(OffsetDateTime value) {
+    public BomRecord setGenerated(OffsetDateTime value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.BOM.GENERATED</code>.
+     * Getter for <code>BOM.GENERATED</code>.
      */
     public OffsetDateTime getGenerated() {
         return (OffsetDateTime) get(8);

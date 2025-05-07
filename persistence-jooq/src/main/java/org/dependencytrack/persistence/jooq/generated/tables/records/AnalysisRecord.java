@@ -21,238 +21,255 @@ public class AnalysisRecord extends UpdatableRecordImpl<AnalysisRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.ANALYSIS.ID</code>.
+     * Setter for <code>ANALYSIS.ID</code>.
      */
-    public void setId(Long value) {
+    public AnalysisRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.ID</code>.
+     * Getter for <code>ANALYSIS.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.DETAILS</code>.
+     * Setter for <code>ANALYSIS.DETAILS</code>.
      */
-    public void setDetails(String value) {
+    public AnalysisRecord setDetails(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.DETAILS</code>.
+     * Getter for <code>ANALYSIS.DETAILS</code>.
      */
     public String getDetails() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.JUSTIFICATION</code>.
+     * Setter for <code>ANALYSIS.JUSTIFICATION</code>.
      */
-    public void setJustification(String value) {
+    public AnalysisRecord setJustification(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.JUSTIFICATION</code>.
+     * Getter for <code>ANALYSIS.JUSTIFICATION</code>.
      */
     public String getJustification() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.RESPONSE</code>.
+     * Setter for <code>ANALYSIS.RESPONSE</code>.
      */
-    public void setResponse(String value) {
+    public AnalysisRecord setResponse(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.RESPONSE</code>.
+     * Getter for <code>ANALYSIS.RESPONSE</code>.
      */
     public String getResponse() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.STATE</code>.
+     * Setter for <code>ANALYSIS.STATE</code>.
      */
-    public void setState(String value) {
+    public AnalysisRecord setState(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.STATE</code>.
+     * Getter for <code>ANALYSIS.STATE</code>.
      */
     public String getState() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.COMPONENT_ID</code>.
+     * Setter for <code>ANALYSIS.COMPONENT_ID</code>.
      */
-    public void setComponentId(Long value) {
+    public AnalysisRecord setComponentId(Long value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.COMPONENT_ID</code>.
+     * Getter for <code>ANALYSIS.COMPONENT_ID</code>.
      */
     public Long getComponentId() {
         return (Long) get(5);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.PROJECT_ID</code>.
+     * Setter for <code>ANALYSIS.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public AnalysisRecord setProjectId(Long value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.PROJECT_ID</code>.
+     * Getter for <code>ANALYSIS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(6);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.SUPPRESSED</code>.
+     * Setter for <code>ANALYSIS.SUPPRESSED</code>.
      */
-    public void setSuppressed(Boolean value) {
+    public AnalysisRecord setSuppressed(Boolean value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.SUPPRESSED</code>.
+     * Getter for <code>ANALYSIS.SUPPRESSED</code>.
      */
     public Boolean getSuppressed() {
         return (Boolean) get(7);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.VULNERABILITY_ID</code>.
+     * Setter for <code>ANALYSIS.VULNERABILITY_ID</code>.
      */
-    public void setVulnerabilityId(Long value) {
+    public AnalysisRecord setVulnerabilityId(Long value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.VULNERABILITY_ID</code>.
+     * Getter for <code>ANALYSIS.VULNERABILITY_ID</code>.
      */
     public Long getVulnerabilityId() {
         return (Long) get(8);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.CVSSV2VECTOR</code>.
+     * Setter for <code>ANALYSIS.CVSSV2VECTOR</code>.
      */
-    public void setCvssv2vector(String value) {
+    public AnalysisRecord setCvssv2vector(String value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.CVSSV2VECTOR</code>.
+     * Getter for <code>ANALYSIS.CVSSV2VECTOR</code>.
      */
     public String getCvssv2vector() {
         return (String) get(9);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.CVSSV3SCORE</code>.
+     * Setter for <code>ANALYSIS.CVSSV3SCORE</code>.
      */
-    public void setCvssv3score(BigDecimal value) {
+    public AnalysisRecord setCvssv3score(BigDecimal value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.CVSSV3SCORE</code>.
+     * Getter for <code>ANALYSIS.CVSSV3SCORE</code>.
      */
     public BigDecimal getCvssv3score() {
         return (BigDecimal) get(10);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.OWASPSCORE</code>.
+     * Setter for <code>ANALYSIS.OWASPSCORE</code>.
      */
-    public void setOwaspscore(BigDecimal value) {
+    public AnalysisRecord setOwaspscore(BigDecimal value) {
         set(11, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.OWASPSCORE</code>.
+     * Getter for <code>ANALYSIS.OWASPSCORE</code>.
      */
     public BigDecimal getOwaspscore() {
         return (BigDecimal) get(11);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.CVSSV2SCORE</code>.
+     * Setter for <code>ANALYSIS.CVSSV2SCORE</code>.
      */
-    public void setCvssv2score(BigDecimal value) {
+    public AnalysisRecord setCvssv2score(BigDecimal value) {
         set(12, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.CVSSV2SCORE</code>.
+     * Getter for <code>ANALYSIS.CVSSV2SCORE</code>.
      */
     public BigDecimal getCvssv2score() {
         return (BigDecimal) get(12);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.OWASPVECTOR</code>.
+     * Setter for <code>ANALYSIS.OWASPVECTOR</code>.
      */
-    public void setOwaspvector(String value) {
+    public AnalysisRecord setOwaspvector(String value) {
         set(13, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.OWASPVECTOR</code>.
+     * Getter for <code>ANALYSIS.OWASPVECTOR</code>.
      */
     public String getOwaspvector() {
         return (String) get(13);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.CVSSV3VECTOR</code>.
+     * Setter for <code>ANALYSIS.CVSSV3VECTOR</code>.
      */
-    public void setCvssv3vector(String value) {
+    public AnalysisRecord setCvssv3vector(String value) {
         set(14, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.CVSSV3VECTOR</code>.
+     * Getter for <code>ANALYSIS.CVSSV3VECTOR</code>.
      */
     public String getCvssv3vector() {
         return (String) get(14);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.SEVERITY</code>.
+     * Setter for <code>ANALYSIS.SEVERITY</code>.
      */
-    public void setSeverity(Severity value) {
+    public AnalysisRecord setSeverity(Severity value) {
         set(15, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.SEVERITY</code>.
+     * Getter for <code>ANALYSIS.SEVERITY</code>.
      */
     public Severity getSeverity() {
         return (Severity) get(15);
     }
 
     /**
-     * Setter for <code>public.ANALYSIS.VULNERABILITY_POLICY_ID</code>.
+     * Setter for <code>ANALYSIS.VULNERABILITY_POLICY_ID</code>.
      */
-    public void setVulnerabilityPolicyId(Long value) {
+    public AnalysisRecord setVulnerabilityPolicyId(Long value) {
         set(16, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSIS.VULNERABILITY_POLICY_ID</code>.
+     * Getter for <code>ANALYSIS.VULNERABILITY_POLICY_ID</code>.
      */
     public Long getVulnerabilityPolicyId() {
         return (Long) get(16);

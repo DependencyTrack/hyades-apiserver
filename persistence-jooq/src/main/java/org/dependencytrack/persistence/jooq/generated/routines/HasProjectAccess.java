@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Field;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
@@ -22,17 +22,17 @@ public class HasProjectAccess extends AbstractRoutine<Boolean> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The parameter <code>public.has_project_access.RETURN_VALUE</code>.
+     * The parameter <code>has_project_access.RETURN_VALUE</code>.
      */
     public static final Parameter<Boolean> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", SQLDataType.BOOLEAN, false, false);
 
     /**
-     * The parameter <code>public.has_project_access.project_id</code>.
+     * The parameter <code>has_project_access.project_id</code>.
      */
     public static final Parameter<Long> PROJECT_ID = Internal.createParameter("project_id", SQLDataType.BIGINT, false, false);
 
     /**
-     * The parameter <code>public.has_project_access.team_ids</code>.
+     * The parameter <code>has_project_access.team_ids</code>.
      */
     public static final Parameter<Long[]> TEAM_IDS = Internal.createParameter("team_ids", SQLDataType.BIGINT.array(), false, false);
 
@@ -40,7 +40,7 @@ public class HasProjectAccess extends AbstractRoutine<Boolean> {
      * Create a new routine call instance
      */
     public HasProjectAccess() {
-        super("has_project_access", Public.PUBLIC, DSL.comment(""), SQLDataType.BOOLEAN);
+        super("has_project_access", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""), SQLDataType.BOOLEAN);
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(PROJECT_ID);
@@ -58,8 +58,9 @@ public class HasProjectAccess extends AbstractRoutine<Boolean> {
      * Set the <code>project_id</code> parameter to the function to be used with
      * a {@link org.jooq.Select} statement
      */
-    public void setProjectId(Field<Long> field) {
+    public HasProjectAccess setProjectId(Field<Long> field) {
         setField(PROJECT_ID, field);
+        return this;
     }
 
     /**
@@ -73,7 +74,8 @@ public class HasProjectAccess extends AbstractRoutine<Boolean> {
      * Set the <code>team_ids</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void setTeamIds(Field<Long[]> field) {
+    public HasProjectAccess setTeamIds(Field<Long[]> field) {
         setField(TEAM_IDS, field);
+        return this;
     }
 }

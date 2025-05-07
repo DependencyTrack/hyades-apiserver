@@ -8,8 +8,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectPropertyRecord;
 import org.jooq.Condition;
@@ -44,7 +44,7 @@ public class ProjectProperty extends TableImpl<ProjectPropertyRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.PROJECT_PROPERTY</code>
+     * The reference instance of <code>PROJECT_PROPERTY</code>
      */
     public static final ProjectProperty PROJECT_PROPERTY = new ProjectProperty();
 
@@ -57,37 +57,37 @@ public class ProjectProperty extends TableImpl<ProjectPropertyRecord> {
     }
 
     /**
-     * The column <code>public.PROJECT_PROPERTY.ID</code>.
+     * The column <code>PROJECT_PROPERTY.ID</code>.
      */
     public final TableField<ProjectPropertyRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.PROJECT_PROPERTY.DESCRIPTION</code>.
+     * The column <code>PROJECT_PROPERTY.DESCRIPTION</code>.
      */
     public final TableField<ProjectPropertyRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.PROJECT_PROPERTY.GROUPNAME</code>.
+     * The column <code>PROJECT_PROPERTY.GROUPNAME</code>.
      */
     public final TableField<ProjectPropertyRecord, String> GROUPNAME = createField(DSL.name("GROUPNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECT_PROPERTY.PROJECT_ID</code>.
+     * The column <code>PROJECT_PROPERTY.PROJECT_ID</code>.
      */
     public final TableField<ProjectPropertyRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECT_PROPERTY.PROPERTYNAME</code>.
+     * The column <code>PROJECT_PROPERTY.PROPERTYNAME</code>.
      */
     public final TableField<ProjectPropertyRecord, String> PROPERTYNAME = createField(DSL.name("PROPERTYNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECT_PROPERTY.PROPERTYTYPE</code>.
+     * The column <code>PROJECT_PROPERTY.PROPERTYTYPE</code>.
      */
     public final TableField<ProjectPropertyRecord, String> PROPERTYTYPE = createField(DSL.name("PROPERTYTYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECT_PROPERTY.PROPERTYVALUE</code>.
+     * The column <code>PROJECT_PROPERTY.PROPERTYVALUE</code>.
      */
     public final TableField<ProjectPropertyRecord, String> PROPERTYVALUE = createField(DSL.name("PROPERTYVALUE"), SQLDataType.VARCHAR(1024), this, "");
 
@@ -100,21 +100,21 @@ public class ProjectProperty extends TableImpl<ProjectPropertyRecord> {
     }
 
     /**
-     * Create an aliased <code>public.PROJECT_PROPERTY</code> table reference
+     * Create an aliased <code>PROJECT_PROPERTY</code> table reference
      */
     public ProjectProperty(String alias) {
         this(DSL.name(alias), PROJECT_PROPERTY);
     }
 
     /**
-     * Create an aliased <code>public.PROJECT_PROPERTY</code> table reference
+     * Create an aliased <code>PROJECT_PROPERTY</code> table reference
      */
     public ProjectProperty(Name alias) {
         this(alias, PROJECT_PROPERTY);
     }
 
     /**
-     * Create a <code>public.PROJECT_PROPERTY</code> table reference
+     * Create a <code>PROJECT_PROPERTY</code> table reference
      */
     public ProjectProperty() {
         this(DSL.name("PROJECT_PROPERTY"), null);
@@ -155,7 +155,7 @@ public class ProjectProperty extends TableImpl<ProjectPropertyRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -181,7 +181,7 @@ public class ProjectProperty extends TableImpl<ProjectPropertyRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)

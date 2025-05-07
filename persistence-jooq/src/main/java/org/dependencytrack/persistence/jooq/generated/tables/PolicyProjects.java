@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Policy.PolicyPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.PolicyProjectsRecord;
@@ -45,7 +45,7 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.POLICY_PROJECTS</code>
+     * The reference instance of <code>POLICY_PROJECTS</code>
      */
     public static final PolicyProjects POLICY_PROJECTS = new PolicyProjects();
 
@@ -58,12 +58,12 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
     }
 
     /**
-     * The column <code>public.POLICY_PROJECTS.POLICY_ID</code>.
+     * The column <code>POLICY_PROJECTS.POLICY_ID</code>.
      */
     public final TableField<PolicyProjectsRecord, Long> POLICY_ID = createField(DSL.name("POLICY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICY_PROJECTS.PROJECT_ID</code>.
+     * The column <code>POLICY_PROJECTS.PROJECT_ID</code>.
      */
     public final TableField<PolicyProjectsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT, this, "");
 
@@ -76,21 +76,21 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.POLICY_PROJECTS</code> table reference
+     * Create an aliased <code>POLICY_PROJECTS</code> table reference
      */
     public PolicyProjects(String alias) {
         this(DSL.name(alias), POLICY_PROJECTS);
     }
 
     /**
-     * Create an aliased <code>public.POLICY_PROJECTS</code> table reference
+     * Create an aliased <code>POLICY_PROJECTS</code> table reference
      */
     public PolicyProjects(Name alias) {
         this(alias, POLICY_PROJECTS);
     }
 
     /**
-     * Create a <code>public.POLICY_PROJECTS</code> table reference
+     * Create a <code>POLICY_PROJECTS</code> table reference
      */
     public PolicyProjects() {
         this(DSL.name("POLICY_PROJECTS"), null);
@@ -131,7 +131,7 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -147,7 +147,7 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
     private transient PolicyPath _policy;
 
     /**
-     * Get the implicit join path to the <code>public.POLICY</code> table.
+     * Get the implicit join path to the <code>POLICY</code> table.
      */
     public PolicyPath policy() {
         if (_policy == null)
@@ -159,7 +159,7 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)

@@ -9,13 +9,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
-import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition.PolicyconditionPath;
+import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition.PolicyConditionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis.ViolationanalysisPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis.ViolationAnalysisPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.PolicyViolationRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -50,7 +50,7 @@ public class PolicyViolation extends TableImpl<PolicyViolationRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.POLICYVIOLATION</code>
+     * The reference instance of <code>POLICYVIOLATION</code>
      */
     public static final PolicyViolation POLICYVIOLATION = new PolicyViolation();
 
@@ -63,42 +63,42 @@ public class PolicyViolation extends TableImpl<PolicyViolationRecord> {
     }
 
     /**
-     * The column <code>public.POLICYVIOLATION.ID</code>.
+     * The column <code>POLICYVIOLATION.ID</code>.
      */
     public final TableField<PolicyViolationRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.POLICYVIOLATION.COMPONENT_ID</code>.
+     * The column <code>POLICYVIOLATION.COMPONENT_ID</code>.
      */
     public final TableField<PolicyViolationRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICYVIOLATION.POLICYCONDITION_ID</code>.
+     * The column <code>POLICYVIOLATION.POLICYCONDITION_ID</code>.
      */
     public final TableField<PolicyViolationRecord, Long> POLICYCONDITION_ID = createField(DSL.name("POLICYCONDITION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICYVIOLATION.PROJECT_ID</code>.
+     * The column <code>POLICYVIOLATION.PROJECT_ID</code>.
      */
     public final TableField<PolicyViolationRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICYVIOLATION.TEXT</code>.
+     * The column <code>POLICYVIOLATION.TEXT</code>.
      */
     public final TableField<PolicyViolationRecord, String> TEXT = createField(DSL.name("TEXT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.POLICYVIOLATION.TIMESTAMP</code>.
+     * The column <code>POLICYVIOLATION.TIMESTAMP</code>.
      */
     public final TableField<PolicyViolationRecord, OffsetDateTime> TIMESTAMP = createField(DSL.name("TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICYVIOLATION.TYPE</code>.
+     * The column <code>POLICYVIOLATION.TYPE</code>.
      */
     public final TableField<PolicyViolationRecord, String> TYPE = createField(DSL.name("TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICYVIOLATION.UUID</code>.
+     * The column <code>POLICYVIOLATION.UUID</code>.
      */
     public final TableField<PolicyViolationRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
@@ -111,21 +111,21 @@ public class PolicyViolation extends TableImpl<PolicyViolationRecord> {
     }
 
     /**
-     * Create an aliased <code>public.POLICYVIOLATION</code> table reference
+     * Create an aliased <code>POLICYVIOLATION</code> table reference
      */
     public PolicyViolation(String alias) {
         this(DSL.name(alias), POLICYVIOLATION);
     }
 
     /**
-     * Create an aliased <code>public.POLICYVIOLATION</code> table reference
+     * Create an aliased <code>POLICYVIOLATION</code> table reference
      */
     public PolicyViolation(Name alias) {
         this(alias, POLICYVIOLATION);
     }
 
     /**
-     * Create a <code>public.POLICYVIOLATION</code> table reference
+     * Create a <code>POLICYVIOLATION</code> table reference
      */
     public PolicyViolation() {
         this(DSL.name("POLICYVIOLATION"), null);
@@ -138,35 +138,35 @@ public class PolicyViolation extends TableImpl<PolicyViolationRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class PolicyviolationPath extends PolicyViolation implements Path<PolicyViolationRecord> {
+    public static class PolicyViolationPath extends PolicyViolation implements Path<PolicyViolationRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> PolicyviolationPath(Table<O> path, ForeignKey<O, PolicyViolationRecord> childPath, InverseForeignKey<O, PolicyViolationRecord> parentPath) {
+        public <O extends Record> PolicyViolationPath(Table<O> path, ForeignKey<O, PolicyViolationRecord> childPath, InverseForeignKey<O, PolicyViolationRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private PolicyviolationPath(Name alias, Table<PolicyViolationRecord> aliased) {
+        private PolicyViolationPath(Name alias, Table<PolicyViolationRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public PolicyviolationPath as(String alias) {
-            return new PolicyviolationPath(DSL.name(alias), this);
+        public PolicyViolationPath as(String alias) {
+            return new PolicyViolationPath(DSL.name(alias), this);
         }
 
         @Override
-        public PolicyviolationPath as(Name alias) {
-            return new PolicyviolationPath(alias, this);
+        public PolicyViolationPath as(Name alias) {
+            return new PolicyViolationPath(alias, this);
         }
 
         @Override
-        public PolicyviolationPath as(Table<?> alias) {
-            return new PolicyviolationPath(alias.getQualifiedName(), this);
+        public PolicyViolationPath as(Table<?> alias) {
+            return new PolicyViolationPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -191,57 +191,56 @@ public class PolicyViolation extends TableImpl<PolicyViolationRecord> {
 
     @Override
     public List<ForeignKey<PolicyViolationRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.POLICYVIOLATION__POLICYVIOLATION_COMPONENT_FK, Keys.POLICYVIOLATION__POLICYVIOLATION_POLICYCONDITION_FK, Keys.POLICYVIOLATION__POLICYVIOLATION_PROJECT_FK);
+        return Arrays.asList(Keys.POLICYVIOLATION_COMPONENT_FK, Keys.POLICYVIOLATION_POLICYCONDITION_FK, Keys.POLICYVIOLATION_PROJECT_FK);
     }
 
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit join path to the <code>public.COMPONENT</code> table.
+     * Get the implicit join path to the <code>COMPONENT</code> table.
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, Keys.POLICYVIOLATION__POLICYVIOLATION_COMPONENT_FK, null);
+            _component = new ComponentPath(this, Keys.POLICYVIOLATION_COMPONENT_FK, null);
 
         return _component;
     }
 
-    private transient PolicyconditionPath _policycondition;
+    private transient PolicyConditionPath _policyCondition;
 
     /**
-     * Get the implicit join path to the <code>public.POLICYCONDITION</code>
-     * table.
+     * Get the implicit join path to the <code>POLICYCONDITION</code> table.
      */
-    public PolicyconditionPath policycondition() {
-        if (_policycondition == null)
-            _policycondition = new PolicyconditionPath(this, Keys.POLICYVIOLATION__POLICYVIOLATION_POLICYCONDITION_FK, null);
+    public PolicyConditionPath policyCondition() {
+        if (_policyCondition == null)
+            _policyCondition = new PolicyConditionPath(this, Keys.POLICYVIOLATION_POLICYCONDITION_FK, null);
 
-        return _policycondition;
+        return _policyCondition;
     }
 
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.POLICYVIOLATION__POLICYVIOLATION_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.POLICYVIOLATION_PROJECT_FK, null);
 
         return _project;
     }
 
-    private transient ViolationanalysisPath _violationanalysis;
+    private transient ViolationAnalysisPath _violationAnalysis;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.VIOLATIONANALYSIS</code> table
+     * Get the implicit to-many join path to the <code>VIOLATIONANALYSIS</code>
+     * table
      */
-    public ViolationanalysisPath violationanalysis() {
-        if (_violationanalysis == null)
-            _violationanalysis = new ViolationanalysisPath(this, null, Keys.VIOLATIONANALYSIS__VIOLATIONANALYSIS_POLICYVIOLATION_FK.getInverseKey());
+    public ViolationAnalysisPath violationAnalysis() {
+        if (_violationAnalysis == null)
+            _violationAnalysis = new ViolationAnalysisPath(this, null, Keys.VIOLATIONANALYSIS_POLICYVIOLATION_FK.getInverseKey());
 
-        return _violationanalysis;
+        return _violationAnalysis;
     }
 
     @Override

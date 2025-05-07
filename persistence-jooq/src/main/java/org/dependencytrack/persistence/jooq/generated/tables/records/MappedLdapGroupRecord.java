@@ -18,56 +18,60 @@ public class MappedLdapGroupRecord extends UpdatableRecordImpl<MappedLdapGroupRe
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.MAPPEDLDAPGROUP.ID</code>.
+     * Setter for <code>MAPPEDLDAPGROUP.ID</code>.
      */
-    public void setId(Long value) {
+    public MappedLdapGroupRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MAPPEDLDAPGROUP.ID</code>.
+     * Getter for <code>MAPPEDLDAPGROUP.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.MAPPEDLDAPGROUP.DN</code>.
+     * Setter for <code>MAPPEDLDAPGROUP.DN</code>.
      */
-    public void setDn(String value) {
+    public MappedLdapGroupRecord setDn(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MAPPEDLDAPGROUP.DN</code>.
+     * Getter for <code>MAPPEDLDAPGROUP.DN</code>.
      */
     public String getDn() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.MAPPEDLDAPGROUP.TEAM_ID</code>.
+     * Setter for <code>MAPPEDLDAPGROUP.TEAM_ID</code>.
      */
-    public void setTeamId(Long value) {
+    public MappedLdapGroupRecord setTeamId(Long value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MAPPEDLDAPGROUP.TEAM_ID</code>.
+     * Getter for <code>MAPPEDLDAPGROUP.TEAM_ID</code>.
      */
     public Long getTeamId() {
         return (Long) get(2);
     }
 
     /**
-     * Setter for <code>public.MAPPEDLDAPGROUP.UUID</code>.
+     * Setter for <code>MAPPEDLDAPGROUP.UUID</code>.
      */
-    public void setUuid(String value) {
+    public MappedLdapGroupRecord setUuid(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.MAPPEDLDAPGROUP.UUID</code>.
+     * Getter for <code>MAPPEDLDAPGROUP.UUID</code>.
      */
     public String getUuid() {
         return (String) get(3);

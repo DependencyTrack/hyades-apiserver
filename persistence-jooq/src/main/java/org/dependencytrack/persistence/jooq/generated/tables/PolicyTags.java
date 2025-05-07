@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Policy.PolicyPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Tag.TagPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.PolicyTagsRecord;
@@ -45,7 +45,7 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.POLICY_TAGS</code>
+     * The reference instance of <code>POLICY_TAGS</code>
      */
     public static final PolicyTags POLICY_TAGS = new PolicyTags();
 
@@ -58,12 +58,12 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
     }
 
     /**
-     * The column <code>public.POLICY_TAGS.POLICY_ID</code>.
+     * The column <code>POLICY_TAGS.POLICY_ID</code>.
      */
     public final TableField<PolicyTagsRecord, Long> POLICY_ID = createField(DSL.name("POLICY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.POLICY_TAGS.TAG_ID</code>.
+     * The column <code>POLICY_TAGS.TAG_ID</code>.
      */
     public final TableField<PolicyTagsRecord, Long> TAG_ID = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT, this, "");
 
@@ -76,21 +76,21 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.POLICY_TAGS</code> table reference
+     * Create an aliased <code>POLICY_TAGS</code> table reference
      */
     public PolicyTags(String alias) {
         this(DSL.name(alias), POLICY_TAGS);
     }
 
     /**
-     * Create an aliased <code>public.POLICY_TAGS</code> table reference
+     * Create an aliased <code>POLICY_TAGS</code> table reference
      */
     public PolicyTags(Name alias) {
         this(alias, POLICY_TAGS);
     }
 
     /**
-     * Create a <code>public.POLICY_TAGS</code> table reference
+     * Create a <code>POLICY_TAGS</code> table reference
      */
     public PolicyTags() {
         this(DSL.name("POLICY_TAGS"), null);
@@ -131,7 +131,7 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -147,7 +147,7 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
     private transient PolicyPath _policy;
 
     /**
-     * Get the implicit join path to the <code>public.POLICY</code> table.
+     * Get the implicit join path to the <code>POLICY</code> table.
      */
     public PolicyPath policy() {
         if (_policy == null)
@@ -159,7 +159,7 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
     private transient TagPath _tag;
 
     /**
-     * Get the implicit join path to the <code>public.TAG</code> table.
+     * Get the implicit join path to the <code>TAG</code> table.
      */
     public TagPath tag() {
         if (_tag == null)

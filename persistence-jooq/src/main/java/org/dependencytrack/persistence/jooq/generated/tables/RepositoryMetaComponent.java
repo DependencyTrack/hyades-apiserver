@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.records.RepositoryMetaComponentRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -42,7 +42,7 @@ public class RepositoryMetaComponent extends TableImpl<RepositoryMetaComponentRe
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.REPOSITORY_META_COMPONENT</code>
+     * The reference instance of <code>REPOSITORY_META_COMPONENT</code>
      */
     public static final RepositoryMetaComponent REPOSITORY_META_COMPONENT = new RepositoryMetaComponent();
 
@@ -55,37 +55,37 @@ public class RepositoryMetaComponent extends TableImpl<RepositoryMetaComponentRe
     }
 
     /**
-     * The column <code>public.REPOSITORY_META_COMPONENT.ID</code>.
+     * The column <code>REPOSITORY_META_COMPONENT.ID</code>.
      */
     public final TableField<RepositoryMetaComponentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.REPOSITORY_META_COMPONENT.LAST_CHECK</code>.
+     * The column <code>REPOSITORY_META_COMPONENT.LAST_CHECK</code>.
      */
     public final TableField<RepositoryMetaComponentRecord, OffsetDateTime> LAST_CHECK = createField(DSL.name("LAST_CHECK"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.REPOSITORY_META_COMPONENT.LATEST_VERSION</code>.
+     * The column <code>REPOSITORY_META_COMPONENT.LATEST_VERSION</code>.
      */
     public final TableField<RepositoryMetaComponentRecord, String> LATEST_VERSION = createField(DSL.name("LATEST_VERSION"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.REPOSITORY_META_COMPONENT.NAME</code>.
+     * The column <code>REPOSITORY_META_COMPONENT.NAME</code>.
      */
     public final TableField<RepositoryMetaComponentRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.REPOSITORY_META_COMPONENT.NAMESPACE</code>.
+     * The column <code>REPOSITORY_META_COMPONENT.NAMESPACE</code>.
      */
     public final TableField<RepositoryMetaComponentRecord, String> NAMESPACE = createField(DSL.name("NAMESPACE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.REPOSITORY_META_COMPONENT.PUBLISHED</code>.
+     * The column <code>REPOSITORY_META_COMPONENT.PUBLISHED</code>.
      */
     public final TableField<RepositoryMetaComponentRecord, OffsetDateTime> PUBLISHED = createField(DSL.name("PUBLISHED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
-     * The column <code>public.REPOSITORY_META_COMPONENT.REPOSITORY_TYPE</code>.
+     * The column <code>REPOSITORY_META_COMPONENT.REPOSITORY_TYPE</code>.
      */
     public final TableField<RepositoryMetaComponentRecord, String> REPOSITORY_TYPE = createField(DSL.name("REPOSITORY_TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
@@ -98,23 +98,21 @@ public class RepositoryMetaComponent extends TableImpl<RepositoryMetaComponentRe
     }
 
     /**
-     * Create an aliased <code>public.REPOSITORY_META_COMPONENT</code> table
-     * reference
+     * Create an aliased <code>REPOSITORY_META_COMPONENT</code> table reference
      */
     public RepositoryMetaComponent(String alias) {
         this(DSL.name(alias), REPOSITORY_META_COMPONENT);
     }
 
     /**
-     * Create an aliased <code>public.REPOSITORY_META_COMPONENT</code> table
-     * reference
+     * Create an aliased <code>REPOSITORY_META_COMPONENT</code> table reference
      */
     public RepositoryMetaComponent(Name alias) {
         this(alias, REPOSITORY_META_COMPONENT);
     }
 
     /**
-     * Create a <code>public.REPOSITORY_META_COMPONENT</code> table reference
+     * Create a <code>REPOSITORY_META_COMPONENT</code> table reference
      */
     public RepositoryMetaComponent() {
         this(DSL.name("REPOSITORY_META_COMPONENT"), null);
@@ -122,7 +120,7 @@ public class RepositoryMetaComponent extends TableImpl<RepositoryMetaComponentRe
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override

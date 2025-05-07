@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.ApiKey.ApikeyPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ApiKey.ApiKeyPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ApiKeysTeamsRecord;
 import org.jooq.Condition;
@@ -44,7 +44,7 @@ public class ApiKeysTeams extends TableImpl<ApiKeysTeamsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.APIKEYS_TEAMS</code>
+     * The reference instance of <code>APIKEYS_TEAMS</code>
      */
     public static final ApiKeysTeams APIKEYS_TEAMS = new ApiKeysTeams();
 
@@ -57,12 +57,12 @@ public class ApiKeysTeams extends TableImpl<ApiKeysTeamsRecord> {
     }
 
     /**
-     * The column <code>public.APIKEYS_TEAMS.TEAM_ID</code>.
+     * The column <code>APIKEYS_TEAMS.TEAM_ID</code>.
      */
     public final TableField<ApiKeysTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.APIKEYS_TEAMS.APIKEY_ID</code>.
+     * The column <code>APIKEYS_TEAMS.APIKEY_ID</code>.
      */
     public final TableField<ApiKeysTeamsRecord, Long> APIKEY_ID = createField(DSL.name("APIKEY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -75,21 +75,21 @@ public class ApiKeysTeams extends TableImpl<ApiKeysTeamsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.APIKEYS_TEAMS</code> table reference
+     * Create an aliased <code>APIKEYS_TEAMS</code> table reference
      */
     public ApiKeysTeams(String alias) {
         this(DSL.name(alias), APIKEYS_TEAMS);
     }
 
     /**
-     * Create an aliased <code>public.APIKEYS_TEAMS</code> table reference
+     * Create an aliased <code>APIKEYS_TEAMS</code> table reference
      */
     public ApiKeysTeams(Name alias) {
         this(alias, APIKEYS_TEAMS);
     }
 
     /**
-     * Create a <code>public.APIKEYS_TEAMS</code> table reference
+     * Create a <code>APIKEYS_TEAMS</code> table reference
      */
     public ApiKeysTeams() {
         this(DSL.name("APIKEYS_TEAMS"), null);
@@ -102,35 +102,35 @@ public class ApiKeysTeams extends TableImpl<ApiKeysTeamsRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class ApikeysTeamsPath extends ApiKeysTeams implements Path<ApiKeysTeamsRecord> {
+    public static class ApiKeysTeamsPath extends ApiKeysTeams implements Path<ApiKeysTeamsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> ApikeysTeamsPath(Table<O> path, ForeignKey<O, ApiKeysTeamsRecord> childPath, InverseForeignKey<O, ApiKeysTeamsRecord> parentPath) {
+        public <O extends Record> ApiKeysTeamsPath(Table<O> path, ForeignKey<O, ApiKeysTeamsRecord> childPath, InverseForeignKey<O, ApiKeysTeamsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private ApikeysTeamsPath(Name alias, Table<ApiKeysTeamsRecord> aliased) {
+        private ApiKeysTeamsPath(Name alias, Table<ApiKeysTeamsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public ApikeysTeamsPath as(String alias) {
-            return new ApikeysTeamsPath(DSL.name(alias), this);
+        public ApiKeysTeamsPath as(String alias) {
+            return new ApiKeysTeamsPath(DSL.name(alias), this);
         }
 
         @Override
-        public ApikeysTeamsPath as(Name alias) {
-            return new ApikeysTeamsPath(alias, this);
+        public ApiKeysTeamsPath as(Name alias) {
+            return new ApiKeysTeamsPath(alias, this);
         }
 
         @Override
-        public ApikeysTeamsPath as(Table<?> alias) {
-            return new ApikeysTeamsPath(alias.getQualifiedName(), this);
+        public ApiKeysTeamsPath as(Table<?> alias) {
+            return new ApiKeysTeamsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -140,29 +140,29 @@ public class ApiKeysTeams extends TableImpl<ApiKeysTeamsRecord> {
 
     @Override
     public List<ForeignKey<ApiKeysTeamsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.APIKEYS_TEAMS__APIKEYS_TEAMS_APIKEY_FK, Keys.APIKEYS_TEAMS__APIKEYS_TEAMS_TEAM_FK);
+        return Arrays.asList(Keys.APIKEYS_TEAMS_APIKEY_FK, Keys.APIKEYS_TEAMS_TEAM_FK);
     }
 
-    private transient ApikeyPath _apikey;
+    private transient ApiKeyPath _apiKey;
 
     /**
-     * Get the implicit join path to the <code>public.APIKEY</code> table.
+     * Get the implicit join path to the <code>APIKEY</code> table.
      */
-    public ApikeyPath apikey() {
-        if (_apikey == null)
-            _apikey = new ApikeyPath(this, Keys.APIKEYS_TEAMS__APIKEYS_TEAMS_APIKEY_FK, null);
+    public ApiKeyPath apiKey() {
+        if (_apiKey == null)
+            _apiKey = new ApiKeyPath(this, Keys.APIKEYS_TEAMS_APIKEY_FK, null);
 
-        return _apikey;
+        return _apiKey;
     }
 
     private transient TeamPath _team;
 
     /**
-     * Get the implicit join path to the <code>public.TEAM</code> table.
+     * Get the implicit join path to the <code>TEAM</code> table.
      */
     public TeamPath team() {
         if (_team == null)
-            _team = new TeamPath(this, Keys.APIKEYS_TEAMS__APIKEYS_TEAMS_TEAM_FK, null);
+            _team = new TeamPath(this, Keys.APIKEYS_TEAMS_TEAM_FK, null);
 
         return _team;
     }

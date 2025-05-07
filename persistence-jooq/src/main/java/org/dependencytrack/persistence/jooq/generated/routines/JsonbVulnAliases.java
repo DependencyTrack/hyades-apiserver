@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Field;
 import org.jooq.JSONB;
 import org.jooq.Parameter;
@@ -23,17 +23,17 @@ public class JsonbVulnAliases extends AbstractRoutine<JSONB> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The parameter <code>public.jsonb_vuln_aliases.RETURN_VALUE</code>.
+     * The parameter <code>jsonb_vuln_aliases.RETURN_VALUE</code>.
      */
     public static final Parameter<JSONB> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", SQLDataType.JSONB, false, false);
 
     /**
-     * The parameter <code>public.jsonb_vuln_aliases.vuln_source</code>.
+     * The parameter <code>jsonb_vuln_aliases.vuln_source</code>.
      */
     public static final Parameter<String> VULN_SOURCE = Internal.createParameter("vuln_source", SQLDataType.CLOB, false, false);
 
     /**
-     * The parameter <code>public.jsonb_vuln_aliases.vuln_id</code>.
+     * The parameter <code>jsonb_vuln_aliases.vuln_id</code>.
      */
     public static final Parameter<String> VULN_ID = Internal.createParameter("vuln_id", SQLDataType.CLOB, false, false);
 
@@ -41,7 +41,7 @@ public class JsonbVulnAliases extends AbstractRoutine<JSONB> {
      * Create a new routine call instance
      */
     public JsonbVulnAliases() {
-        super("jsonb_vuln_aliases", Public.PUBLIC, DSL.comment(""), SQLDataType.JSONB);
+        super("jsonb_vuln_aliases", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""), SQLDataType.JSONB);
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(VULN_SOURCE);
@@ -59,8 +59,9 @@ public class JsonbVulnAliases extends AbstractRoutine<JSONB> {
      * Set the <code>vuln_source</code> parameter to the function to be used
      * with a {@link org.jooq.Select} statement
      */
-    public void setVulnSource(Field<String> field) {
+    public JsonbVulnAliases setVulnSource(Field<String> field) {
         setField(VULN_SOURCE, field);
+        return this;
     }
 
     /**
@@ -74,7 +75,8 @@ public class JsonbVulnAliases extends AbstractRoutine<JSONB> {
      * Set the <code>vuln_id</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void setVulnId(Field<String> field) {
+    public JsonbVulnAliases setVulnId(Field<String> field) {
         setField(VULN_ID, field);
+        return this;
     }
 }

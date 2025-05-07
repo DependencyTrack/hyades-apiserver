@@ -21,112 +21,120 @@ public class VexRecord extends UpdatableRecordImpl<VexRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.VEX.ID</code>.
+     * Setter for <code>VEX.ID</code>.
      */
-    public void setId(Long value) {
+    public VexRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VEX.ID</code>.
+     * Getter for <code>VEX.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.VEX.IMPORTED</code>.
+     * Setter for <code>VEX.IMPORTED</code>.
      */
-    public void setImported(OffsetDateTime value) {
+    public VexRecord setImported(OffsetDateTime value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VEX.IMPORTED</code>.
+     * Getter for <code>VEX.IMPORTED</code>.
      */
     public OffsetDateTime getImported() {
         return (OffsetDateTime) get(1);
     }
 
     /**
-     * Setter for <code>public.VEX.PROJECT_ID</code>.
+     * Setter for <code>VEX.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public VexRecord setProjectId(Long value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VEX.PROJECT_ID</code>.
+     * Getter for <code>VEX.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(2);
     }
 
     /**
-     * Setter for <code>public.VEX.SERIAL_NUMBER</code>.
+     * Setter for <code>VEX.SERIAL_NUMBER</code>.
      */
-    public void setSerialNumber(String value) {
+    public VexRecord setSerialNumber(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VEX.SERIAL_NUMBER</code>.
+     * Getter for <code>VEX.SERIAL_NUMBER</code>.
      */
     public String getSerialNumber() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.VEX.SPEC_VERSION</code>.
+     * Setter for <code>VEX.SPEC_VERSION</code>.
      */
-    public void setSpecVersion(String value) {
+    public VexRecord setSpecVersion(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VEX.SPEC_VERSION</code>.
+     * Getter for <code>VEX.SPEC_VERSION</code>.
      */
     public String getSpecVersion() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.VEX.UUID</code>.
+     * Setter for <code>VEX.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public VexRecord setUuid(UUID value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VEX.UUID</code>.
+     * Getter for <code>VEX.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(5);
     }
 
     /**
-     * Setter for <code>public.VEX.VEX_FORMAT</code>.
+     * Setter for <code>VEX.VEX_FORMAT</code>.
      */
-    public void setVexFormat(String value) {
+    public VexRecord setVexFormat(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VEX.VEX_FORMAT</code>.
+     * Getter for <code>VEX.VEX_FORMAT</code>.
      */
     public String getVexFormat() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.VEX.VEX_VERSION</code>.
+     * Setter for <code>VEX.VEX_VERSION</code>.
      */
-    public void setVexVersion(Integer value) {
+    public VexRecord setVexVersion(Integer value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VEX.VEX_VERSION</code>.
+     * Getter for <code>VEX.VEX_VERSION</code>.
      */
     public Integer getVexVersion() {
         return (Integer) get(7);

@@ -21,126 +21,135 @@ public class FindingAttributionRecord extends UpdatableRecordImpl<FindingAttribu
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.FINDINGATTRIBUTION.ID</code>.
+     * Setter for <code>FINDINGATTRIBUTION.ID</code>.
      */
-    public void setId(Long value) {
+    public FindingAttributionRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.FINDINGATTRIBUTION.ID</code>.
+     * Getter for <code>FINDINGATTRIBUTION.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.FINDINGATTRIBUTION.ALT_ID</code>.
+     * Setter for <code>FINDINGATTRIBUTION.ALT_ID</code>.
      */
-    public void setAltId(String value) {
+    public FindingAttributionRecord setAltId(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.FINDINGATTRIBUTION.ALT_ID</code>.
+     * Getter for <code>FINDINGATTRIBUTION.ALT_ID</code>.
      */
     public String getAltId() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.FINDINGATTRIBUTION.ANALYZERIDENTITY</code>.
+     * Setter for <code>FINDINGATTRIBUTION.ANALYZERIDENTITY</code>.
      */
-    public void setAnalyzeridentity(String value) {
+    public FindingAttributionRecord setAnalyzeridentity(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.FINDINGATTRIBUTION.ANALYZERIDENTITY</code>.
+     * Getter for <code>FINDINGATTRIBUTION.ANALYZERIDENTITY</code>.
      */
     public String getAnalyzeridentity() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.FINDINGATTRIBUTION.ATTRIBUTED_ON</code>.
+     * Setter for <code>FINDINGATTRIBUTION.ATTRIBUTED_ON</code>.
      */
-    public void setAttributedOn(OffsetDateTime value) {
+    public FindingAttributionRecord setAttributedOn(OffsetDateTime value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.FINDINGATTRIBUTION.ATTRIBUTED_ON</code>.
+     * Getter for <code>FINDINGATTRIBUTION.ATTRIBUTED_ON</code>.
      */
     public OffsetDateTime getAttributedOn() {
         return (OffsetDateTime) get(3);
     }
 
     /**
-     * Setter for <code>public.FINDINGATTRIBUTION.COMPONENT_ID</code>.
+     * Setter for <code>FINDINGATTRIBUTION.COMPONENT_ID</code>.
      */
-    public void setComponentId(Long value) {
+    public FindingAttributionRecord setComponentId(Long value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.FINDINGATTRIBUTION.COMPONENT_ID</code>.
+     * Getter for <code>FINDINGATTRIBUTION.COMPONENT_ID</code>.
      */
     public Long getComponentId() {
         return (Long) get(4);
     }
 
     /**
-     * Setter for <code>public.FINDINGATTRIBUTION.PROJECT_ID</code>.
+     * Setter for <code>FINDINGATTRIBUTION.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public FindingAttributionRecord setProjectId(Long value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.FINDINGATTRIBUTION.PROJECT_ID</code>.
+     * Getter for <code>FINDINGATTRIBUTION.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(5);
     }
 
     /**
-     * Setter for <code>public.FINDINGATTRIBUTION.REFERENCE_URL</code>.
+     * Setter for <code>FINDINGATTRIBUTION.REFERENCE_URL</code>.
      */
-    public void setReferenceUrl(String value) {
+    public FindingAttributionRecord setReferenceUrl(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.FINDINGATTRIBUTION.REFERENCE_URL</code>.
+     * Getter for <code>FINDINGATTRIBUTION.REFERENCE_URL</code>.
      */
     public String getReferenceUrl() {
         return (String) get(6);
     }
 
     /**
-     * Setter for <code>public.FINDINGATTRIBUTION.UUID</code>.
+     * Setter for <code>FINDINGATTRIBUTION.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public FindingAttributionRecord setUuid(UUID value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.FINDINGATTRIBUTION.UUID</code>.
+     * Getter for <code>FINDINGATTRIBUTION.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(7);
     }
 
     /**
-     * Setter for <code>public.FINDINGATTRIBUTION.VULNERABILITY_ID</code>.
+     * Setter for <code>FINDINGATTRIBUTION.VULNERABILITY_ID</code>.
      */
-    public void setVulnerabilityId(Long value) {
+    public FindingAttributionRecord setVulnerabilityId(Long value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.FINDINGATTRIBUTION.VULNERABILITY_ID</code>.
+     * Getter for <code>FINDINGATTRIBUTION.VULNERABILITY_ID</code>.
      */
     public Long getVulnerabilityId() {
         return (Long) get(8);

@@ -18,56 +18,60 @@ public class OidcUserRecord extends UpdatableRecordImpl<OidcUserRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.OIDCUSER.ID</code>.
+     * Setter for <code>OIDCUSER.ID</code>.
      */
-    public void setId(Long value) {
+    public OidcUserRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCUSER.ID</code>.
+     * Getter for <code>OIDCUSER.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.OIDCUSER.EMAIL</code>.
+     * Setter for <code>OIDCUSER.EMAIL</code>.
      */
-    public void setEmail(String value) {
+    public OidcUserRecord setEmail(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCUSER.EMAIL</code>.
+     * Getter for <code>OIDCUSER.EMAIL</code>.
      */
     public String getEmail() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.OIDCUSER.SUBJECT_IDENTIFIER</code>.
+     * Setter for <code>OIDCUSER.SUBJECT_IDENTIFIER</code>.
      */
-    public void setSubjectIdentifier(String value) {
+    public OidcUserRecord setSubjectIdentifier(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCUSER.SUBJECT_IDENTIFIER</code>.
+     * Getter for <code>OIDCUSER.SUBJECT_IDENTIFIER</code>.
      */
     public String getSubjectIdentifier() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.OIDCUSER.USERNAME</code>.
+     * Setter for <code>OIDCUSER.USERNAME</code>.
      */
-    public void setUsername(String value) {
+    public OidcUserRecord setUsername(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.OIDCUSER.USERNAME</code>.
+     * Getter for <code>OIDCUSER.USERNAME</code>.
      */
     public String getUsername() {
         return (String) get(3);

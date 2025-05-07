@@ -9,10 +9,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis.ViolationanalysisPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis.ViolationAnalysisPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ViolationAnalysisCommentRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -47,7 +47,7 @@ public class ViolationAnalysisComment extends TableImpl<ViolationAnalysisComment
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.VIOLATIONANALYSISCOMMENT</code>
+     * The reference instance of <code>VIOLATIONANALYSISCOMMENT</code>
      */
     public static final ViolationAnalysisComment VIOLATIONANALYSISCOMMENT = new ViolationAnalysisComment();
 
@@ -60,28 +60,27 @@ public class ViolationAnalysisComment extends TableImpl<ViolationAnalysisComment
     }
 
     /**
-     * The column <code>public.VIOLATIONANALYSISCOMMENT.ID</code>.
+     * The column <code>VIOLATIONANALYSISCOMMENT.ID</code>.
      */
     public final TableField<ViolationAnalysisCommentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.VIOLATIONANALYSISCOMMENT.COMMENT</code>.
+     * The column <code>VIOLATIONANALYSISCOMMENT.COMMENT</code>.
      */
     public final TableField<ViolationAnalysisCommentRecord, String> COMMENT = createField(DSL.name("COMMENT"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
-     * The column <code>public.VIOLATIONANALYSISCOMMENT.COMMENTER</code>.
+     * The column <code>VIOLATIONANALYSISCOMMENT.COMMENTER</code>.
      */
     public final TableField<ViolationAnalysisCommentRecord, String> COMMENTER = createField(DSL.name("COMMENTER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VIOLATIONANALYSISCOMMENT.TIMESTAMP</code>.
+     * The column <code>VIOLATIONANALYSISCOMMENT.TIMESTAMP</code>.
      */
     public final TableField<ViolationAnalysisCommentRecord, OffsetDateTime> TIMESTAMP = createField(DSL.name("TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column
-     * <code>public.VIOLATIONANALYSISCOMMENT.VIOLATIONANALYSIS_ID</code>.
+     * The column <code>VIOLATIONANALYSISCOMMENT.VIOLATIONANALYSIS_ID</code>.
      */
     public final TableField<ViolationAnalysisCommentRecord, Long> VIOLATIONANALYSIS_ID = createField(DSL.name("VIOLATIONANALYSIS_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -94,23 +93,21 @@ public class ViolationAnalysisComment extends TableImpl<ViolationAnalysisComment
     }
 
     /**
-     * Create an aliased <code>public.VIOLATIONANALYSISCOMMENT</code> table
-     * reference
+     * Create an aliased <code>VIOLATIONANALYSISCOMMENT</code> table reference
      */
     public ViolationAnalysisComment(String alias) {
         this(DSL.name(alias), VIOLATIONANALYSISCOMMENT);
     }
 
     /**
-     * Create an aliased <code>public.VIOLATIONANALYSISCOMMENT</code> table
-     * reference
+     * Create an aliased <code>VIOLATIONANALYSISCOMMENT</code> table reference
      */
     public ViolationAnalysisComment(Name alias) {
         this(alias, VIOLATIONANALYSISCOMMENT);
     }
 
     /**
-     * Create a <code>public.VIOLATIONANALYSISCOMMENT</code> table reference
+     * Create a <code>VIOLATIONANALYSISCOMMENT</code> table reference
      */
     public ViolationAnalysisComment() {
         this(DSL.name("VIOLATIONANALYSISCOMMENT"), null);
@@ -123,35 +120,35 @@ public class ViolationAnalysisComment extends TableImpl<ViolationAnalysisComment
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class ViolationanalysiscommentPath extends ViolationAnalysisComment implements Path<ViolationAnalysisCommentRecord> {
+    public static class ViolationAnalysisCommentPath extends ViolationAnalysisComment implements Path<ViolationAnalysisCommentRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> ViolationanalysiscommentPath(Table<O> path, ForeignKey<O, ViolationAnalysisCommentRecord> childPath, InverseForeignKey<O, ViolationAnalysisCommentRecord> parentPath) {
+        public <O extends Record> ViolationAnalysisCommentPath(Table<O> path, ForeignKey<O, ViolationAnalysisCommentRecord> childPath, InverseForeignKey<O, ViolationAnalysisCommentRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private ViolationanalysiscommentPath(Name alias, Table<ViolationAnalysisCommentRecord> aliased) {
+        private ViolationAnalysisCommentPath(Name alias, Table<ViolationAnalysisCommentRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public ViolationanalysiscommentPath as(String alias) {
-            return new ViolationanalysiscommentPath(DSL.name(alias), this);
+        public ViolationAnalysisCommentPath as(String alias) {
+            return new ViolationAnalysisCommentPath(DSL.name(alias), this);
         }
 
         @Override
-        public ViolationanalysiscommentPath as(Name alias) {
-            return new ViolationanalysiscommentPath(alias, this);
+        public ViolationAnalysisCommentPath as(Name alias) {
+            return new ViolationAnalysisCommentPath(alias, this);
         }
 
         @Override
-        public ViolationanalysiscommentPath as(Table<?> alias) {
-            return new ViolationanalysiscommentPath(alias.getQualifiedName(), this);
+        public ViolationAnalysisCommentPath as(Table<?> alias) {
+            return new ViolationAnalysisCommentPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -171,20 +168,19 @@ public class ViolationAnalysisComment extends TableImpl<ViolationAnalysisComment
 
     @Override
     public List<ForeignKey<ViolationAnalysisCommentRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.VIOLATIONANALYSISCOMMENT__VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK);
+        return Arrays.asList(Keys.VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK);
     }
 
-    private transient ViolationanalysisPath _violationanalysis;
+    private transient ViolationAnalysisPath _violationAnalysis;
 
     /**
-     * Get the implicit join path to the <code>public.VIOLATIONANALYSIS</code>
-     * table.
+     * Get the implicit join path to the <code>VIOLATIONANALYSIS</code> table.
      */
-    public ViolationanalysisPath violationanalysis() {
-        if (_violationanalysis == null)
-            _violationanalysis = new ViolationanalysisPath(this, Keys.VIOLATIONANALYSISCOMMENT__VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK, null);
+    public ViolationAnalysisPath violationAnalysis() {
+        if (_violationAnalysis == null)
+            _violationAnalysis = new ViolationAnalysisPath(this, Keys.VIOLATIONANALYSISCOMMENT_VIOLATIONANALYSIS_FK, null);
 
-        return _violationanalysis;
+        return _violationAnalysis;
     }
 
     @Override

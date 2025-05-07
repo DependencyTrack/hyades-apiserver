@@ -9,10 +9,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.ApiKeysTeams.ApikeysTeamsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ApiKeysTeams.ApiKeysTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ApiKeyRecord;
 import org.jooq.Condition;
@@ -48,7 +48,7 @@ public class ApiKey extends TableImpl<ApiKeyRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.APIKEY</code>
+     * The reference instance of <code>APIKEY</code>
      */
     public static final ApiKey APIKEY = new ApiKey();
 
@@ -61,37 +61,37 @@ public class ApiKey extends TableImpl<ApiKeyRecord> {
     }
 
     /**
-     * The column <code>public.APIKEY.ID</code>.
+     * The column <code>APIKEY.ID</code>.
      */
     public final TableField<ApiKeyRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.APIKEY.COMMENT</code>.
+     * The column <code>APIKEY.COMMENT</code>.
      */
     public final TableField<ApiKeyRecord, String> COMMENT = createField(DSL.name("COMMENT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.APIKEY.CREATED</code>.
+     * The column <code>APIKEY.CREATED</code>.
      */
     public final TableField<ApiKeyRecord, OffsetDateTime> CREATED = createField(DSL.name("CREATED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
-     * The column <code>public.APIKEY.LAST_USED</code>.
+     * The column <code>APIKEY.LAST_USED</code>.
      */
     public final TableField<ApiKeyRecord, OffsetDateTime> LAST_USED = createField(DSL.name("LAST_USED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
-     * The column <code>public.APIKEY.SECRET_HASH</code>.
+     * The column <code>APIKEY.SECRET_HASH</code>.
      */
     public final TableField<ApiKeyRecord, String> SECRET_HASH = createField(DSL.name("SECRET_HASH"), SQLDataType.VARCHAR(64).nullable(false), this, "");
 
     /**
-     * The column <code>public.APIKEY.PUBLIC_ID</code>.
+     * The column <code>APIKEY.PUBLIC_ID</code>.
      */
     public final TableField<ApiKeyRecord, String> PUBLIC_ID = createField(DSL.name("PUBLIC_ID"), SQLDataType.VARCHAR(8).nullable(false), this, "");
 
     /**
-     * The column <code>public.APIKEY.IS_LEGACY</code>.
+     * The column <code>APIKEY.IS_LEGACY</code>.
      */
     public final TableField<ApiKeyRecord, Boolean> IS_LEGACY = createField(DSL.name("IS_LEGACY"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
@@ -104,21 +104,21 @@ public class ApiKey extends TableImpl<ApiKeyRecord> {
     }
 
     /**
-     * Create an aliased <code>public.APIKEY</code> table reference
+     * Create an aliased <code>APIKEY</code> table reference
      */
     public ApiKey(String alias) {
         this(DSL.name(alias), APIKEY);
     }
 
     /**
-     * Create an aliased <code>public.APIKEY</code> table reference
+     * Create an aliased <code>APIKEY</code> table reference
      */
     public ApiKey(Name alias) {
         this(alias, APIKEY);
     }
 
     /**
-     * Create a <code>public.APIKEY</code> table reference
+     * Create a <code>APIKEY</code> table reference
      */
     public ApiKey() {
         this(DSL.name("APIKEY"), null);
@@ -131,35 +131,35 @@ public class ApiKey extends TableImpl<ApiKeyRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class ApikeyPath extends ApiKey implements Path<ApiKeyRecord> {
+    public static class ApiKeyPath extends ApiKey implements Path<ApiKeyRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> ApikeyPath(Table<O> path, ForeignKey<O, ApiKeyRecord> childPath, InverseForeignKey<O, ApiKeyRecord> parentPath) {
+        public <O extends Record> ApiKeyPath(Table<O> path, ForeignKey<O, ApiKeyRecord> childPath, InverseForeignKey<O, ApiKeyRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private ApikeyPath(Name alias, Table<ApiKeyRecord> aliased) {
+        private ApiKeyPath(Name alias, Table<ApiKeyRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public ApikeyPath as(String alias) {
-            return new ApikeyPath(DSL.name(alias), this);
+        public ApiKeyPath as(String alias) {
+            return new ApiKeyPath(DSL.name(alias), this);
         }
 
         @Override
-        public ApikeyPath as(Name alias) {
-            return new ApikeyPath(alias, this);
+        public ApiKeyPath as(Name alias) {
+            return new ApiKeyPath(alias, this);
         }
 
         @Override
-        public ApikeyPath as(Table<?> alias) {
-            return new ApikeyPath(alias.getQualifiedName(), this);
+        public ApiKeyPath as(Table<?> alias) {
+            return new ApiKeyPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -177,25 +177,24 @@ public class ApiKey extends TableImpl<ApiKeyRecord> {
         return Keys.APIKEY_PK;
     }
 
-    private transient ApikeysTeamsPath _apikeysTeams;
+    private transient ApiKeysTeamsPath _apiKeysTeams;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.APIKEYS_TEAMS</code> table
+     * Get the implicit to-many join path to the <code>APIKEYS_TEAMS</code>
+     * table
      */
-    public ApikeysTeamsPath apikeysTeams() {
-        if (_apikeysTeams == null)
-            _apikeysTeams = new ApikeysTeamsPath(this, null, Keys.APIKEYS_TEAMS__APIKEYS_TEAMS_APIKEY_FK.getInverseKey());
+    public ApiKeysTeamsPath apiKeysTeams() {
+        if (_apiKeysTeams == null)
+            _apiKeysTeams = new ApiKeysTeamsPath(this, null, Keys.APIKEYS_TEAMS_APIKEY_FK.getInverseKey());
 
-        return _apikeysTeams;
+        return _apiKeysTeams;
     }
 
     /**
-     * Get the implicit many-to-many join path to the <code>public.TEAM</code>
-     * table
+     * Get the implicit many-to-many join path to the <code>TEAM</code> table
      */
     public TeamPath team() {
-        return apikeysTeams().team();
+        return apiKeysTeams().team();
     }
 
     @Override

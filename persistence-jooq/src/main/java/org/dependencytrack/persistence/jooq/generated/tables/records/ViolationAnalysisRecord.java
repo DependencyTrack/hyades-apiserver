@@ -18,84 +18,90 @@ public class ViolationAnalysisRecord extends UpdatableRecordImpl<ViolationAnalys
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.VIOLATIONANALYSIS.ID</code>.
+     * Setter for <code>VIOLATIONANALYSIS.ID</code>.
      */
-    public void setId(Long value) {
+    public ViolationAnalysisRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VIOLATIONANALYSIS.ID</code>.
+     * Getter for <code>VIOLATIONANALYSIS.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.VIOLATIONANALYSIS.STATE</code>.
+     * Setter for <code>VIOLATIONANALYSIS.STATE</code>.
      */
-    public void setState(String value) {
+    public ViolationAnalysisRecord setState(String value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VIOLATIONANALYSIS.STATE</code>.
+     * Getter for <code>VIOLATIONANALYSIS.STATE</code>.
      */
     public String getState() {
         return (String) get(1);
     }
 
     /**
-     * Setter for <code>public.VIOLATIONANALYSIS.COMPONENT_ID</code>.
+     * Setter for <code>VIOLATIONANALYSIS.COMPONENT_ID</code>.
      */
-    public void setComponentId(Long value) {
+    public ViolationAnalysisRecord setComponentId(Long value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VIOLATIONANALYSIS.COMPONENT_ID</code>.
+     * Getter for <code>VIOLATIONANALYSIS.COMPONENT_ID</code>.
      */
     public Long getComponentId() {
         return (Long) get(2);
     }
 
     /**
-     * Setter for <code>public.VIOLATIONANALYSIS.POLICYVIOLATION_ID</code>.
+     * Setter for <code>VIOLATIONANALYSIS.POLICYVIOLATION_ID</code>.
      */
-    public void setPolicyviolationId(Long value) {
+    public ViolationAnalysisRecord setPolicyviolationId(Long value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VIOLATIONANALYSIS.POLICYVIOLATION_ID</code>.
+     * Getter for <code>VIOLATIONANALYSIS.POLICYVIOLATION_ID</code>.
      */
     public Long getPolicyviolationId() {
         return (Long) get(3);
     }
 
     /**
-     * Setter for <code>public.VIOLATIONANALYSIS.PROJECT_ID</code>.
+     * Setter for <code>VIOLATIONANALYSIS.PROJECT_ID</code>.
      */
-    public void setProjectId(Long value) {
+    public ViolationAnalysisRecord setProjectId(Long value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VIOLATIONANALYSIS.PROJECT_ID</code>.
+     * Getter for <code>VIOLATIONANALYSIS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
         return (Long) get(4);
     }
 
     /**
-     * Setter for <code>public.VIOLATIONANALYSIS.SUPPRESSED</code>.
+     * Setter for <code>VIOLATIONANALYSIS.SUPPRESSED</code>.
      */
-    public void setSuppressed(Boolean value) {
+    public ViolationAnalysisRecord setSuppressed(Boolean value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.VIOLATIONANALYSIS.SUPPRESSED</code>.
+     * Getter for <code>VIOLATIONANALYSIS.SUPPRESSED</code>.
      */
     public Boolean getSuppressed() {
         return (Boolean) get(5);

@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Analysis.AnalysisPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.AnalysisCommentRecord;
 import org.jooq.Condition;
@@ -47,7 +47,7 @@ public class AnalysisComment extends TableImpl<AnalysisCommentRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.ANALYSISCOMMENT</code>
+     * The reference instance of <code>ANALYSISCOMMENT</code>
      */
     public static final AnalysisComment ANALYSISCOMMENT = new AnalysisComment();
 
@@ -60,27 +60,27 @@ public class AnalysisComment extends TableImpl<AnalysisCommentRecord> {
     }
 
     /**
-     * The column <code>public.ANALYSISCOMMENT.ID</code>.
+     * The column <code>ANALYSISCOMMENT.ID</code>.
      */
     public final TableField<AnalysisCommentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.ANALYSISCOMMENT.ANALYSIS_ID</code>.
+     * The column <code>ANALYSISCOMMENT.ANALYSIS_ID</code>.
      */
     public final TableField<AnalysisCommentRecord, Long> ANALYSIS_ID = createField(DSL.name("ANALYSIS_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.ANALYSISCOMMENT.COMMENT</code>.
+     * The column <code>ANALYSISCOMMENT.COMMENT</code>.
      */
     public final TableField<AnalysisCommentRecord, String> COMMENT = createField(DSL.name("COMMENT"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
-     * The column <code>public.ANALYSISCOMMENT.COMMENTER</code>.
+     * The column <code>ANALYSISCOMMENT.COMMENTER</code>.
      */
     public final TableField<AnalysisCommentRecord, String> COMMENTER = createField(DSL.name("COMMENTER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.ANALYSISCOMMENT.TIMESTAMP</code>.
+     * The column <code>ANALYSISCOMMENT.TIMESTAMP</code>.
      */
     public final TableField<AnalysisCommentRecord, OffsetDateTime> TIMESTAMP = createField(DSL.name("TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
@@ -93,21 +93,21 @@ public class AnalysisComment extends TableImpl<AnalysisCommentRecord> {
     }
 
     /**
-     * Create an aliased <code>public.ANALYSISCOMMENT</code> table reference
+     * Create an aliased <code>ANALYSISCOMMENT</code> table reference
      */
     public AnalysisComment(String alias) {
         this(DSL.name(alias), ANALYSISCOMMENT);
     }
 
     /**
-     * Create an aliased <code>public.ANALYSISCOMMENT</code> table reference
+     * Create an aliased <code>ANALYSISCOMMENT</code> table reference
      */
     public AnalysisComment(Name alias) {
         this(alias, ANALYSISCOMMENT);
     }
 
     /**
-     * Create a <code>public.ANALYSISCOMMENT</code> table reference
+     * Create a <code>ANALYSISCOMMENT</code> table reference
      */
     public AnalysisComment() {
         this(DSL.name("ANALYSISCOMMENT"), null);
@@ -120,35 +120,35 @@ public class AnalysisComment extends TableImpl<AnalysisCommentRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class AnalysiscommentPath extends AnalysisComment implements Path<AnalysisCommentRecord> {
+    public static class AnalysisCommentPath extends AnalysisComment implements Path<AnalysisCommentRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> AnalysiscommentPath(Table<O> path, ForeignKey<O, AnalysisCommentRecord> childPath, InverseForeignKey<O, AnalysisCommentRecord> parentPath) {
+        public <O extends Record> AnalysisCommentPath(Table<O> path, ForeignKey<O, AnalysisCommentRecord> childPath, InverseForeignKey<O, AnalysisCommentRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private AnalysiscommentPath(Name alias, Table<AnalysisCommentRecord> aliased) {
+        private AnalysisCommentPath(Name alias, Table<AnalysisCommentRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public AnalysiscommentPath as(String alias) {
-            return new AnalysiscommentPath(DSL.name(alias), this);
+        public AnalysisCommentPath as(String alias) {
+            return new AnalysisCommentPath(DSL.name(alias), this);
         }
 
         @Override
-        public AnalysiscommentPath as(Name alias) {
-            return new AnalysiscommentPath(alias, this);
+        public AnalysisCommentPath as(Name alias) {
+            return new AnalysisCommentPath(alias, this);
         }
 
         @Override
-        public AnalysiscommentPath as(Table<?> alias) {
-            return new AnalysiscommentPath(alias.getQualifiedName(), this);
+        public AnalysisCommentPath as(Table<?> alias) {
+            return new AnalysisCommentPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -168,17 +168,17 @@ public class AnalysisComment extends TableImpl<AnalysisCommentRecord> {
 
     @Override
     public List<ForeignKey<AnalysisCommentRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.ANALYSISCOMMENT__ANALYSISCOMMENT_ANALYSIS_FK);
+        return Arrays.asList(Keys.ANALYSISCOMMENT_ANALYSIS_FK);
     }
 
     private transient AnalysisPath _analysis;
 
     /**
-     * Get the implicit join path to the <code>public.ANALYSIS</code> table.
+     * Get the implicit join path to the <code>ANALYSIS</code> table.
      */
     public AnalysisPath analysis() {
         if (_analysis == null)
-            _analysis = new AnalysisPath(this, Keys.ANALYSISCOMMENT__ANALYSISCOMMENT_ANALYSIS_FK, null);
+            _analysis = new AnalysisPath(this, Keys.ANALYSISCOMMENT_ANALYSIS_FK, null);
 
         return _analysis;
     }

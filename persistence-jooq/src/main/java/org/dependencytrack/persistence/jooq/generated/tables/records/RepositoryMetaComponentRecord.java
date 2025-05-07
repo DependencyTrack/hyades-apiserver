@@ -20,98 +20,105 @@ public class RepositoryMetaComponentRecord extends UpdatableRecordImpl<Repositor
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.REPOSITORY_META_COMPONENT.ID</code>.
+     * Setter for <code>REPOSITORY_META_COMPONENT.ID</code>.
      */
-    public void setId(Long value) {
+    public RepositoryMetaComponentRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY_META_COMPONENT.ID</code>.
+     * Getter for <code>REPOSITORY_META_COMPONENT.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY_META_COMPONENT.LAST_CHECK</code>.
+     * Setter for <code>REPOSITORY_META_COMPONENT.LAST_CHECK</code>.
      */
-    public void setLastCheck(OffsetDateTime value) {
+    public RepositoryMetaComponentRecord setLastCheck(OffsetDateTime value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY_META_COMPONENT.LAST_CHECK</code>.
+     * Getter for <code>REPOSITORY_META_COMPONENT.LAST_CHECK</code>.
      */
     public OffsetDateTime getLastCheck() {
         return (OffsetDateTime) get(1);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY_META_COMPONENT.LATEST_VERSION</code>.
+     * Setter for <code>REPOSITORY_META_COMPONENT.LATEST_VERSION</code>.
      */
-    public void setLatestVersion(String value) {
+    public RepositoryMetaComponentRecord setLatestVersion(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY_META_COMPONENT.LATEST_VERSION</code>.
+     * Getter for <code>REPOSITORY_META_COMPONENT.LATEST_VERSION</code>.
      */
     public String getLatestVersion() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY_META_COMPONENT.NAME</code>.
+     * Setter for <code>REPOSITORY_META_COMPONENT.NAME</code>.
      */
-    public void setName(String value) {
+    public RepositoryMetaComponentRecord setName(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY_META_COMPONENT.NAME</code>.
+     * Getter for <code>REPOSITORY_META_COMPONENT.NAME</code>.
      */
     public String getName() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY_META_COMPONENT.NAMESPACE</code>.
+     * Setter for <code>REPOSITORY_META_COMPONENT.NAMESPACE</code>.
      */
-    public void setNamespace(String value) {
+    public RepositoryMetaComponentRecord setNamespace(String value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY_META_COMPONENT.NAMESPACE</code>.
+     * Getter for <code>REPOSITORY_META_COMPONENT.NAMESPACE</code>.
      */
     public String getNamespace() {
         return (String) get(4);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY_META_COMPONENT.PUBLISHED</code>.
+     * Setter for <code>REPOSITORY_META_COMPONENT.PUBLISHED</code>.
      */
-    public void setPublished(OffsetDateTime value) {
+    public RepositoryMetaComponentRecord setPublished(OffsetDateTime value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY_META_COMPONENT.PUBLISHED</code>.
+     * Getter for <code>REPOSITORY_META_COMPONENT.PUBLISHED</code>.
      */
     public OffsetDateTime getPublished() {
         return (OffsetDateTime) get(5);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY_META_COMPONENT.REPOSITORY_TYPE</code>.
+     * Setter for <code>REPOSITORY_META_COMPONENT.REPOSITORY_TYPE</code>.
      */
-    public void setRepositoryType(String value) {
+    public RepositoryMetaComponentRecord setRepositoryType(String value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY_META_COMPONENT.REPOSITORY_TYPE</code>.
+     * Getter for <code>REPOSITORY_META_COMPONENT.REPOSITORY_TYPE</code>.
      */
     public String getRepositoryType() {
         return (String) get(6);

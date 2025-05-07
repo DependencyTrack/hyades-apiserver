@@ -18,28 +18,30 @@ public class ApiKeysTeamsRecord extends UpdatableRecordImpl<ApiKeysTeamsRecord> 
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.APIKEYS_TEAMS.TEAM_ID</code>.
+     * Setter for <code>APIKEYS_TEAMS.TEAM_ID</code>.
      */
-    public void setTeamId(Long value) {
+    public ApiKeysTeamsRecord setTeamId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.APIKEYS_TEAMS.TEAM_ID</code>.
+     * Getter for <code>APIKEYS_TEAMS.TEAM_ID</code>.
      */
     public Long getTeamId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.APIKEYS_TEAMS.APIKEY_ID</code>.
+     * Setter for <code>APIKEYS_TEAMS.APIKEY_ID</code>.
      */
-    public void setApikeyId(Long value) {
+    public ApiKeysTeamsRecord setApikeyId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.APIKEYS_TEAMS.APIKEY_ID</code>.
+     * Getter for <code>APIKEYS_TEAMS.APIKEY_ID</code>.
      */
     public Long getApikeyId() {
         return (Long) get(1);

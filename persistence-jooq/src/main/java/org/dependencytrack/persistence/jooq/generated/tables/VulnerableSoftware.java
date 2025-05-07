@@ -8,11 +8,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.AffectedVersionAttribution.AffectedversionattributionPath;
-import org.dependencytrack.persistence.jooq.generated.tables.VulnerableSoftwareVulnerabilities.VulnerablesoftwareVulnerabilitiesPath;
+import org.dependencytrack.persistence.jooq.generated.tables.AffectedVersionAttribution.AffectedVersionAttributionPath;
+import org.dependencytrack.persistence.jooq.generated.tables.VulnerableSoftwareVulnerabilities.VulnerableSoftwareVulnerabilitiesPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.VulnerableSoftwareRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -47,7 +47,7 @@ public class VulnerableSoftware extends TableImpl<VulnerableSoftwareRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.VULNERABLESOFTWARE</code>
+     * The reference instance of <code>VULNERABLESOFTWARE</code>
      */
     public static final VulnerableSoftware VULNERABLESOFTWARE = new VulnerableSoftware();
 
@@ -60,137 +60,137 @@ public class VulnerableSoftware extends TableImpl<VulnerableSoftwareRecord> {
     }
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.ID</code>.
+     * The column <code>VULNERABLESOFTWARE.ID</code>.
      */
     public final TableField<VulnerableSoftwareRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.CPE22</code>.
+     * The column <code>VULNERABLESOFTWARE.CPE22</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> CPE22 = createField(DSL.name("CPE22"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.CPE23</code>.
+     * The column <code>VULNERABLESOFTWARE.CPE23</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> CPE23 = createField(DSL.name("CPE23"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.EDITION</code>.
+     * The column <code>VULNERABLESOFTWARE.EDITION</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> EDITION = createField(DSL.name("EDITION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.LANGUAGE</code>.
+     * The column <code>VULNERABLESOFTWARE.LANGUAGE</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> LANGUAGE = createField(DSL.name("LANGUAGE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.OTHER</code>.
+     * The column <code>VULNERABLESOFTWARE.OTHER</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> OTHER = createField(DSL.name("OTHER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.PART</code>.
+     * The column <code>VULNERABLESOFTWARE.PART</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> PART = createField(DSL.name("PART"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.PRODUCT</code>.
+     * The column <code>VULNERABLESOFTWARE.PRODUCT</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> PRODUCT = createField(DSL.name("PRODUCT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.PURL</code>.
+     * The column <code>VULNERABLESOFTWARE.PURL</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> PURL = createField(DSL.name("PURL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.PURL_NAME</code>.
+     * The column <code>VULNERABLESOFTWARE.PURL_NAME</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> PURL_NAME = createField(DSL.name("PURL_NAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.PURL_NAMESPACE</code>.
+     * The column <code>VULNERABLESOFTWARE.PURL_NAMESPACE</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> PURL_NAMESPACE = createField(DSL.name("PURL_NAMESPACE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.PURL_QUALIFIERS</code>.
+     * The column <code>VULNERABLESOFTWARE.PURL_QUALIFIERS</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> PURL_QUALIFIERS = createField(DSL.name("PURL_QUALIFIERS"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.PURL_SUBPATH</code>.
+     * The column <code>VULNERABLESOFTWARE.PURL_SUBPATH</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> PURL_SUBPATH = createField(DSL.name("PURL_SUBPATH"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.PURL_TYPE</code>.
+     * The column <code>VULNERABLESOFTWARE.PURL_TYPE</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> PURL_TYPE = createField(DSL.name("PURL_TYPE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.PURL_VERSION</code>.
+     * The column <code>VULNERABLESOFTWARE.PURL_VERSION</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> PURL_VERSION = createField(DSL.name("PURL_VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.SWEDITION</code>.
+     * The column <code>VULNERABLESOFTWARE.SWEDITION</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> SWEDITION = createField(DSL.name("SWEDITION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.TARGETHW</code>.
+     * The column <code>VULNERABLESOFTWARE.TARGETHW</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> TARGETHW = createField(DSL.name("TARGETHW"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.TARGETSW</code>.
+     * The column <code>VULNERABLESOFTWARE.TARGETSW</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> TARGETSW = createField(DSL.name("TARGETSW"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.UPDATE</code>.
+     * The column <code>VULNERABLESOFTWARE.UPDATE</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> UPDATE = createField(DSL.name("UPDATE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.UUID</code>.
+     * The column <code>VULNERABLESOFTWARE.UUID</code>.
      */
     public final TableField<VulnerableSoftwareRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.VENDOR</code>.
+     * The column <code>VULNERABLESOFTWARE.VENDOR</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> VENDOR = createField(DSL.name("VENDOR"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.VERSION</code>.
+     * The column <code>VULNERABLESOFTWARE.VERSION</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> VERSION = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.VERSIONENDEXCLUDING</code>.
+     * The column <code>VULNERABLESOFTWARE.VERSIONENDEXCLUDING</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> VERSIONENDEXCLUDING = createField(DSL.name("VERSIONENDEXCLUDING"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.VERSIONENDINCLUDING</code>.
+     * The column <code>VULNERABLESOFTWARE.VERSIONENDINCLUDING</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> VERSIONENDINCLUDING = createField(DSL.name("VERSIONENDINCLUDING"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.VERSIONSTARTEXCLUDING</code>.
+     * The column <code>VULNERABLESOFTWARE.VERSIONSTARTEXCLUDING</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> VERSIONSTARTEXCLUDING = createField(DSL.name("VERSIONSTARTEXCLUDING"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.VERSIONSTARTINCLUDING</code>.
+     * The column <code>VULNERABLESOFTWARE.VERSIONSTARTINCLUDING</code>.
      */
     public final TableField<VulnerableSoftwareRecord, String> VERSIONSTARTINCLUDING = createField(DSL.name("VERSIONSTARTINCLUDING"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.VULNERABLESOFTWARE.VULNERABLE</code>.
+     * The column <code>VULNERABLESOFTWARE.VULNERABLE</code>.
      */
     public final TableField<VulnerableSoftwareRecord, Boolean> VULNERABLE = createField(DSL.name("VULNERABLE"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
@@ -203,21 +203,21 @@ public class VulnerableSoftware extends TableImpl<VulnerableSoftwareRecord> {
     }
 
     /**
-     * Create an aliased <code>public.VULNERABLESOFTWARE</code> table reference
+     * Create an aliased <code>VULNERABLESOFTWARE</code> table reference
      */
     public VulnerableSoftware(String alias) {
         this(DSL.name(alias), VULNERABLESOFTWARE);
     }
 
     /**
-     * Create an aliased <code>public.VULNERABLESOFTWARE</code> table reference
+     * Create an aliased <code>VULNERABLESOFTWARE</code> table reference
      */
     public VulnerableSoftware(Name alias) {
         this(alias, VULNERABLESOFTWARE);
     }
 
     /**
-     * Create a <code>public.VULNERABLESOFTWARE</code> table reference
+     * Create a <code>VULNERABLESOFTWARE</code> table reference
      */
     public VulnerableSoftware() {
         this(DSL.name("VULNERABLESOFTWARE"), null);
@@ -230,35 +230,35 @@ public class VulnerableSoftware extends TableImpl<VulnerableSoftwareRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class VulnerablesoftwarePath extends VulnerableSoftware implements Path<VulnerableSoftwareRecord> {
+    public static class VulnerableSoftwarePath extends VulnerableSoftware implements Path<VulnerableSoftwareRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> VulnerablesoftwarePath(Table<O> path, ForeignKey<O, VulnerableSoftwareRecord> childPath, InverseForeignKey<O, VulnerableSoftwareRecord> parentPath) {
+        public <O extends Record> VulnerableSoftwarePath(Table<O> path, ForeignKey<O, VulnerableSoftwareRecord> childPath, InverseForeignKey<O, VulnerableSoftwareRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private VulnerablesoftwarePath(Name alias, Table<VulnerableSoftwareRecord> aliased) {
+        private VulnerableSoftwarePath(Name alias, Table<VulnerableSoftwareRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public VulnerablesoftwarePath as(String alias) {
-            return new VulnerablesoftwarePath(DSL.name(alias), this);
+        public VulnerableSoftwarePath as(String alias) {
+            return new VulnerableSoftwarePath(DSL.name(alias), this);
         }
 
         @Override
-        public VulnerablesoftwarePath as(Name alias) {
-            return new VulnerablesoftwarePath(alias, this);
+        public VulnerableSoftwarePath as(Name alias) {
+            return new VulnerableSoftwarePath(alias, this);
         }
 
         @Override
-        public VulnerablesoftwarePath as(Table<?> alias) {
-            return new VulnerablesoftwarePath(alias.getQualifiedName(), this);
+        public VulnerableSoftwarePath as(Table<?> alias) {
+            return new VulnerableSoftwarePath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -281,30 +281,30 @@ public class VulnerableSoftware extends TableImpl<VulnerableSoftwareRecord> {
         return Arrays.asList(Keys.VULNERABLESOFTWARE_UUID_IDX);
     }
 
-    private transient AffectedversionattributionPath _affectedversionattribution;
+    private transient AffectedVersionAttributionPath _affectedVersionAttribution;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.AFFECTEDVERSIONATTRIBUTION</code> table
+     * <code>AFFECTEDVERSIONATTRIBUTION</code> table
      */
-    public AffectedversionattributionPath affectedversionattribution() {
-        if (_affectedversionattribution == null)
-            _affectedversionattribution = new AffectedversionattributionPath(this, null, Keys.AFFECTEDVERSIONATTRIBUTION__AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK.getInverseKey());
+    public AffectedVersionAttributionPath affectedVersionAttribution() {
+        if (_affectedVersionAttribution == null)
+            _affectedVersionAttribution = new AffectedVersionAttributionPath(this, null, Keys.AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK.getInverseKey());
 
-        return _affectedversionattribution;
+        return _affectedVersionAttribution;
     }
 
-    private transient VulnerablesoftwareVulnerabilitiesPath _vulnerablesoftwareVulnerabilities;
+    private transient VulnerableSoftwareVulnerabilitiesPath _vulnerableSoftwareVulnerabilities;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.VULNERABLESOFTWARE_VULNERABILITIES</code> table
+     * <code>VULNERABLESOFTWARE_VULNERABILITIES</code> table
      */
-    public VulnerablesoftwareVulnerabilitiesPath vulnerablesoftwareVulnerabilities() {
-        if (_vulnerablesoftwareVulnerabilities == null)
-            _vulnerablesoftwareVulnerabilities = new VulnerablesoftwareVulnerabilitiesPath(this, null, Keys.VULNERABLESOFTWARE_VULNERABILITIES__VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK.getInverseKey());
+    public VulnerableSoftwareVulnerabilitiesPath vulnerableSoftwareVulnerabilities() {
+        if (_vulnerableSoftwareVulnerabilities == null)
+            _vulnerableSoftwareVulnerabilities = new VulnerableSoftwareVulnerabilitiesPath(this, null, Keys.VULNERABLESOFTWARE_VULNERABILITIES_VULNERABLESOFTWARE_FK.getInverseKey());
 
-        return _vulnerablesoftwareVulnerabilities;
+        return _vulnerableSoftwareVulnerabilities;
     }
 
     @Override

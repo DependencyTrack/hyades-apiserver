@@ -20,154 +20,165 @@ public class RepositoryRecord extends UpdatableRecordImpl<RepositoryRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.REPOSITORY.ID</code>.
+     * Setter for <code>REPOSITORY.ID</code>.
      */
-    public void setId(Long value) {
+    public RepositoryRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.ID</code>.
+     * Getter for <code>REPOSITORY.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY.AUTHENTICATIONREQUIRED</code>.
+     * Setter for <code>REPOSITORY.AUTHENTICATIONREQUIRED</code>.
      */
-    public void setAuthenticationrequired(Boolean value) {
+    public RepositoryRecord setAuthenticationrequired(Boolean value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.AUTHENTICATIONREQUIRED</code>.
+     * Getter for <code>REPOSITORY.AUTHENTICATIONREQUIRED</code>.
      */
     public Boolean getAuthenticationrequired() {
         return (Boolean) get(1);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY.ENABLED</code>.
+     * Setter for <code>REPOSITORY.ENABLED</code>.
      */
-    public void setEnabled(Boolean value) {
+    public RepositoryRecord setEnabled(Boolean value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.ENABLED</code>.
+     * Getter for <code>REPOSITORY.ENABLED</code>.
      */
     public Boolean getEnabled() {
         return (Boolean) get(2);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY.IDENTIFIER</code>.
+     * Setter for <code>REPOSITORY.IDENTIFIER</code>.
      */
-    public void setIdentifier(String value) {
+    public RepositoryRecord setIdentifier(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.IDENTIFIER</code>.
+     * Getter for <code>REPOSITORY.IDENTIFIER</code>.
      */
     public String getIdentifier() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY.INTERNAL</code>.
+     * Setter for <code>REPOSITORY.INTERNAL</code>.
      */
-    public void setInternal(Boolean value) {
+    public RepositoryRecord setInternal(Boolean value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.INTERNAL</code>.
+     * Getter for <code>REPOSITORY.INTERNAL</code>.
      */
     public Boolean getInternal() {
         return (Boolean) get(4);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY.PASSWORD</code>.
+     * Setter for <code>REPOSITORY.PASSWORD</code>.
      */
-    public void setPassword(String value) {
+    public RepositoryRecord setPassword(String value) {
         set(5, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.PASSWORD</code>.
+     * Getter for <code>REPOSITORY.PASSWORD</code>.
      */
     public String getPassword() {
         return (String) get(5);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY.RESOLUTION_ORDER</code>.
+     * Setter for <code>REPOSITORY.RESOLUTION_ORDER</code>.
      */
-    public void setResolutionOrder(Integer value) {
+    public RepositoryRecord setResolutionOrder(Integer value) {
         set(6, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.RESOLUTION_ORDER</code>.
+     * Getter for <code>REPOSITORY.RESOLUTION_ORDER</code>.
      */
     public Integer getResolutionOrder() {
         return (Integer) get(6);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY.TYPE</code>.
+     * Setter for <code>REPOSITORY.TYPE</code>.
      */
-    public void setType(String value) {
+    public RepositoryRecord setType(String value) {
         set(7, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.TYPE</code>.
+     * Getter for <code>REPOSITORY.TYPE</code>.
      */
     public String getType() {
         return (String) get(7);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY.URL</code>.
+     * Setter for <code>REPOSITORY.URL</code>.
      */
-    public void setUrl(String value) {
+    public RepositoryRecord setUrl(String value) {
         set(8, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.URL</code>.
+     * Getter for <code>REPOSITORY.URL</code>.
      */
     public String getUrl() {
         return (String) get(8);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY.USERNAME</code>.
+     * Setter for <code>REPOSITORY.USERNAME</code>.
      */
-    public void setUsername(String value) {
+    public RepositoryRecord setUsername(String value) {
         set(9, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.USERNAME</code>.
+     * Getter for <code>REPOSITORY.USERNAME</code>.
      */
     public String getUsername() {
         return (String) get(9);
     }
 
     /**
-     * Setter for <code>public.REPOSITORY.UUID</code>.
+     * Setter for <code>REPOSITORY.UUID</code>.
      */
-    public void setUuid(UUID value) {
+    public RepositoryRecord setUuid(UUID value) {
         set(10, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.REPOSITORY.UUID</code>.
+     * Getter for <code>REPOSITORY.UUID</code>.
      */
     public UUID getUuid() {
         return (UUID) get(10);

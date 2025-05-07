@@ -20,70 +20,75 @@ public class AnalysisCommentRecord extends UpdatableRecordImpl<AnalysisCommentRe
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.ANALYSISCOMMENT.ID</code>.
+     * Setter for <code>ANALYSISCOMMENT.ID</code>.
      */
-    public void setId(Long value) {
+    public AnalysisCommentRecord setId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSISCOMMENT.ID</code>.
+     * Getter for <code>ANALYSISCOMMENT.ID</code>.
      */
     public Long getId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.ANALYSISCOMMENT.ANALYSIS_ID</code>.
+     * Setter for <code>ANALYSISCOMMENT.ANALYSIS_ID</code>.
      */
-    public void setAnalysisId(Long value) {
+    public AnalysisCommentRecord setAnalysisId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSISCOMMENT.ANALYSIS_ID</code>.
+     * Getter for <code>ANALYSISCOMMENT.ANALYSIS_ID</code>.
      */
     public Long getAnalysisId() {
         return (Long) get(1);
     }
 
     /**
-     * Setter for <code>public.ANALYSISCOMMENT.COMMENT</code>.
+     * Setter for <code>ANALYSISCOMMENT.COMMENT</code>.
      */
-    public void setComment(String value) {
+    public AnalysisCommentRecord setComment(String value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSISCOMMENT.COMMENT</code>.
+     * Getter for <code>ANALYSISCOMMENT.COMMENT</code>.
      */
     public String getComment() {
         return (String) get(2);
     }
 
     /**
-     * Setter for <code>public.ANALYSISCOMMENT.COMMENTER</code>.
+     * Setter for <code>ANALYSISCOMMENT.COMMENTER</code>.
      */
-    public void setCommenter(String value) {
+    public AnalysisCommentRecord setCommenter(String value) {
         set(3, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSISCOMMENT.COMMENTER</code>.
+     * Getter for <code>ANALYSISCOMMENT.COMMENTER</code>.
      */
     public String getCommenter() {
         return (String) get(3);
     }
 
     /**
-     * Setter for <code>public.ANALYSISCOMMENT.TIMESTAMP</code>.
+     * Setter for <code>ANALYSISCOMMENT.TIMESTAMP</code>.
      */
-    public void setTimestamp(OffsetDateTime value) {
+    public AnalysisCommentRecord setTimestamp(OffsetDateTime value) {
         set(4, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.ANALYSISCOMMENT.TIMESTAMP</code>.
+     * Getter for <code>ANALYSISCOMMENT.TIMESTAMP</code>.
      */
     public OffsetDateTime getTimestamp() {
         return (OffsetDateTime) get(4);

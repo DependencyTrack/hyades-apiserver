@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.DependencyMetricsRecord;
@@ -48,7 +48,7 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.DEPENDENCYMETRICS</code>
+     * The reference instance of <code>DEPENDENCYMETRICS</code>
      */
     public static final DependencyMetrics DEPENDENCYMETRICS = new DependencyMetrics();
 
@@ -61,168 +61,165 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
     }
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.ID</code>.
+     * The column <code>DEPENDENCYMETRICS.ID</code>.
      */
     public final TableField<DependencyMetricsRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.COMPONENT_ID</code>.
+     * The column <code>DEPENDENCYMETRICS.COMPONENT_ID</code>.
      */
     public final TableField<DependencyMetricsRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.CRITICAL</code>.
+     * The column <code>DEPENDENCYMETRICS.CRITICAL</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> CRITICAL = createField(DSL.name("CRITICAL"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.FINDINGS_AUDITED</code>.
+     * The column <code>DEPENDENCYMETRICS.FINDINGS_AUDITED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> FINDINGS_AUDITED = createField(DSL.name("FINDINGS_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.FINDINGS_TOTAL</code>.
+     * The column <code>DEPENDENCYMETRICS.FINDINGS_TOTAL</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> FINDINGS_TOTAL = createField(DSL.name("FINDINGS_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.FINDINGS_UNAUDITED</code>.
+     * The column <code>DEPENDENCYMETRICS.FINDINGS_UNAUDITED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> FINDINGS_UNAUDITED = createField(DSL.name("FINDINGS_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.FIRST_OCCURRENCE</code>.
+     * The column <code>DEPENDENCYMETRICS.FIRST_OCCURRENCE</code>.
      */
     public final TableField<DependencyMetricsRecord, OffsetDateTime> FIRST_OCCURRENCE = createField(DSL.name("FIRST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.HIGH</code>.
+     * The column <code>DEPENDENCYMETRICS.HIGH</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> HIGH = createField(DSL.name("HIGH"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.RISKSCORE</code>.
+     * The column <code>DEPENDENCYMETRICS.RISKSCORE</code>.
      */
     public final TableField<DependencyMetricsRecord, Double> RISKSCORE = createField(DSL.name("RISKSCORE"), SQLDataType.DOUBLE.nullable(false), this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.LAST_OCCURRENCE</code>.
+     * The column <code>DEPENDENCYMETRICS.LAST_OCCURRENCE</code>.
      */
     public final TableField<DependencyMetricsRecord, OffsetDateTime> LAST_OCCURRENCE = createField(DSL.name("LAST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.LOW</code>.
+     * The column <code>DEPENDENCYMETRICS.LOW</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> LOW = createField(DSL.name("LOW"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.MEDIUM</code>.
+     * The column <code>DEPENDENCYMETRICS.MEDIUM</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> MEDIUM = createField(DSL.name("MEDIUM"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_AUDITED</code>.
+     * The column <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_AUDITED = createField(DSL.name("POLICYVIOLATIONS_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_FAIL</code>.
+     * The column <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_FAIL = createField(DSL.name("POLICYVIOLATIONS_FAIL"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_INFO</code>.
+     * The column <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_INFO = createField(DSL.name("POLICYVIOLATIONS_INFO"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_AUDITED = createField(DSL.name("POLICYVIOLATIONS_LICENSE_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
+     * The column <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_TOTAL = createField(DSL.name("POLICYVIOLATIONS_LICENSE_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_LICENSE_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_AUDITED = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_TOTAL = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_AUDITED = createField(DSL.name("POLICYVIOLATIONS_SECURITY_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_TOTAL = createField(DSL.name("POLICYVIOLATIONS_SECURITY_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
+     * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_SECURITY_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_TOTAL</code>.
+     * The column <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_TOTAL = createField(DSL.name("POLICYVIOLATIONS_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column
-     * <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
+     * The column <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.POLICYVIOLATIONS_WARN</code>.
+     * The column <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> POLICYVIOLATIONS_WARN = createField(DSL.name("POLICYVIOLATIONS_WARN"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.PROJECT_ID</code>.
+     * The column <code>DEPENDENCYMETRICS.PROJECT_ID</code>.
      */
     public final TableField<DependencyMetricsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.SUPPRESSED</code>.
+     * The column <code>DEPENDENCYMETRICS.SUPPRESSED</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> SUPPRESSED = createField(DSL.name("SUPPRESSED"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.UNASSIGNED_SEVERITY</code>.
+     * The column <code>DEPENDENCYMETRICS.UNASSIGNED_SEVERITY</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> UNASSIGNED_SEVERITY = createField(DSL.name("UNASSIGNED_SEVERITY"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.DEPENDENCYMETRICS.VULNERABILITIES</code>.
+     * The column <code>DEPENDENCYMETRICS.VULNERABILITIES</code>.
      */
     public final TableField<DependencyMetricsRecord, Integer> VULNERABILITIES = createField(DSL.name("VULNERABILITIES"), SQLDataType.INTEGER.nullable(false), this, "");
 
@@ -235,21 +232,21 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.DEPENDENCYMETRICS</code> table reference
+     * Create an aliased <code>DEPENDENCYMETRICS</code> table reference
      */
     public DependencyMetrics(String alias) {
         this(DSL.name(alias), DEPENDENCYMETRICS);
     }
 
     /**
-     * Create an aliased <code>public.DEPENDENCYMETRICS</code> table reference
+     * Create an aliased <code>DEPENDENCYMETRICS</code> table reference
      */
     public DependencyMetrics(Name alias) {
         this(alias, DEPENDENCYMETRICS);
     }
 
     /**
-     * Create a <code>public.DEPENDENCYMETRICS</code> table reference
+     * Create a <code>DEPENDENCYMETRICS</code> table reference
      */
     public DependencyMetrics() {
         this(DSL.name("DEPENDENCYMETRICS"), null);
@@ -262,35 +259,35 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class DependencymetricsPath extends DependencyMetrics implements Path<DependencyMetricsRecord> {
+    public static class DependencyMetricsPath extends DependencyMetrics implements Path<DependencyMetricsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> DependencymetricsPath(Table<O> path, ForeignKey<O, DependencyMetricsRecord> childPath, InverseForeignKey<O, DependencyMetricsRecord> parentPath) {
+        public <O extends Record> DependencyMetricsPath(Table<O> path, ForeignKey<O, DependencyMetricsRecord> childPath, InverseForeignKey<O, DependencyMetricsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private DependencymetricsPath(Name alias, Table<DependencyMetricsRecord> aliased) {
+        private DependencyMetricsPath(Name alias, Table<DependencyMetricsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public DependencymetricsPath as(String alias) {
-            return new DependencymetricsPath(DSL.name(alias), this);
+        public DependencyMetricsPath as(String alias) {
+            return new DependencyMetricsPath(DSL.name(alias), this);
         }
 
         @Override
-        public DependencymetricsPath as(Name alias) {
-            return new DependencymetricsPath(alias, this);
+        public DependencyMetricsPath as(Name alias) {
+            return new DependencyMetricsPath(alias, this);
         }
 
         @Override
-        public DependencymetricsPath as(Table<?> alias) {
-            return new DependencymetricsPath(alias.getQualifiedName(), this);
+        public DependencyMetricsPath as(Table<?> alias) {
+            return new DependencyMetricsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -310,17 +307,17 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
 
     @Override
     public List<ForeignKey<DependencyMetricsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.DEPENDENCYMETRICS__DEPENDENCYMETRICS_COMPONENT_FK, Keys.DEPENDENCYMETRICS__DEPENDENCYMETRICS_PROJECT_FK);
+        return Arrays.asList(Keys.DEPENDENCYMETRICS_COMPONENT_FK, Keys.DEPENDENCYMETRICS_PROJECT_FK);
     }
 
     private transient ComponentPath _component;
 
     /**
-     * Get the implicit join path to the <code>public.COMPONENT</code> table.
+     * Get the implicit join path to the <code>COMPONENT</code> table.
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, Keys.DEPENDENCYMETRICS__DEPENDENCYMETRICS_COMPONENT_FK, null);
+            _component = new ComponentPath(this, Keys.DEPENDENCYMETRICS_COMPONENT_FK, null);
 
         return _component;
     }
@@ -328,11 +325,11 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.DEPENDENCYMETRICS__DEPENDENCYMETRICS_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.DEPENDENCYMETRICS_PROJECT_FK, null);
 
         return _project;
     }

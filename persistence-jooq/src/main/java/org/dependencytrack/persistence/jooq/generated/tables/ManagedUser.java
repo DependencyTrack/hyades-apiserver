@@ -9,10 +9,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersPermissions.ManagedusersPermissionsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersTeams.ManagedusersTeamsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersPermissions.ManagedUsersPermissionsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersTeams.ManagedUsersTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission.PermissionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions.UserProjectEffectivePermissionsPath;
@@ -49,7 +49,7 @@ public class ManagedUser extends TableImpl<ManagedUserRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.MANAGEDUSER</code>
+     * The reference instance of <code>MANAGEDUSER</code>
      */
     public static final ManagedUser MANAGEDUSER = new ManagedUser();
 
@@ -62,47 +62,47 @@ public class ManagedUser extends TableImpl<ManagedUserRecord> {
     }
 
     /**
-     * The column <code>public.MANAGEDUSER.ID</code>.
+     * The column <code>MANAGEDUSER.ID</code>.
      */
     public final TableField<ManagedUserRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.MANAGEDUSER.EMAIL</code>.
+     * The column <code>MANAGEDUSER.EMAIL</code>.
      */
     public final TableField<ManagedUserRecord, String> EMAIL = createField(DSL.name("EMAIL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.MANAGEDUSER.FORCE_PASSWORD_CHANGE</code>.
+     * The column <code>MANAGEDUSER.FORCE_PASSWORD_CHANGE</code>.
      */
     public final TableField<ManagedUserRecord, Boolean> FORCE_PASSWORD_CHANGE = createField(DSL.name("FORCE_PASSWORD_CHANGE"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
-     * The column <code>public.MANAGEDUSER.FULLNAME</code>.
+     * The column <code>MANAGEDUSER.FULLNAME</code>.
      */
     public final TableField<ManagedUserRecord, String> FULLNAME = createField(DSL.name("FULLNAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
-     * The column <code>public.MANAGEDUSER.LAST_PASSWORD_CHANGE</code>.
+     * The column <code>MANAGEDUSER.LAST_PASSWORD_CHANGE</code>.
      */
     public final TableField<ManagedUserRecord, OffsetDateTime> LAST_PASSWORD_CHANGE = createField(DSL.name("LAST_PASSWORD_CHANGE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.MANAGEDUSER.NON_EXPIRY_PASSWORD</code>.
+     * The column <code>MANAGEDUSER.NON_EXPIRY_PASSWORD</code>.
      */
     public final TableField<ManagedUserRecord, Boolean> NON_EXPIRY_PASSWORD = createField(DSL.name("NON_EXPIRY_PASSWORD"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
-     * The column <code>public.MANAGEDUSER.PASSWORD</code>.
+     * The column <code>MANAGEDUSER.PASSWORD</code>.
      */
     public final TableField<ManagedUserRecord, String> PASSWORD = createField(DSL.name("PASSWORD"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.MANAGEDUSER.SUSPENDED</code>.
+     * The column <code>MANAGEDUSER.SUSPENDED</code>.
      */
     public final TableField<ManagedUserRecord, Boolean> SUSPENDED = createField(DSL.name("SUSPENDED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
-     * The column <code>public.MANAGEDUSER.USERNAME</code>.
+     * The column <code>MANAGEDUSER.USERNAME</code>.
      */
     public final TableField<ManagedUserRecord, String> USERNAME = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
 
@@ -115,21 +115,21 @@ public class ManagedUser extends TableImpl<ManagedUserRecord> {
     }
 
     /**
-     * Create an aliased <code>public.MANAGEDUSER</code> table reference
+     * Create an aliased <code>MANAGEDUSER</code> table reference
      */
     public ManagedUser(String alias) {
         this(DSL.name(alias), MANAGEDUSER);
     }
 
     /**
-     * Create an aliased <code>public.MANAGEDUSER</code> table reference
+     * Create an aliased <code>MANAGEDUSER</code> table reference
      */
     public ManagedUser(Name alias) {
         this(alias, MANAGEDUSER);
     }
 
     /**
-     * Create a <code>public.MANAGEDUSER</code> table reference
+     * Create a <code>MANAGEDUSER</code> table reference
      */
     public ManagedUser() {
         this(DSL.name("MANAGEDUSER"), null);
@@ -142,35 +142,35 @@ public class ManagedUser extends TableImpl<ManagedUserRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class ManageduserPath extends ManagedUser implements Path<ManagedUserRecord> {
+    public static class ManagedUserPath extends ManagedUser implements Path<ManagedUserRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> ManageduserPath(Table<O> path, ForeignKey<O, ManagedUserRecord> childPath, InverseForeignKey<O, ManagedUserRecord> parentPath) {
+        public <O extends Record> ManagedUserPath(Table<O> path, ForeignKey<O, ManagedUserRecord> childPath, InverseForeignKey<O, ManagedUserRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private ManageduserPath(Name alias, Table<ManagedUserRecord> aliased) {
+        private ManagedUserPath(Name alias, Table<ManagedUserRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public ManageduserPath as(String alias) {
-            return new ManageduserPath(DSL.name(alias), this);
+        public ManagedUserPath as(String alias) {
+            return new ManagedUserPath(DSL.name(alias), this);
         }
 
         @Override
-        public ManageduserPath as(Name alias) {
-            return new ManageduserPath(alias, this);
+        public ManagedUserPath as(Name alias) {
+            return new ManagedUserPath(alias, this);
         }
 
         @Override
-        public ManageduserPath as(Table<?> alias) {
-            return new ManageduserPath(alias.getQualifiedName(), this);
+        public ManagedUserPath as(Table<?> alias) {
+            return new ManagedUserPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -188,59 +188,58 @@ public class ManagedUser extends TableImpl<ManagedUserRecord> {
         return Arrays.asList(Keys.MANAGEDUSER_USERNAME_IDX);
     }
 
-    private transient ManagedusersPermissionsPath _managedusersPermissions;
+    private transient ManagedUsersPermissionsPath _managedUsersPermissions;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.MANAGEDUSERS_PERMISSIONS</code> table
+     * <code>MANAGEDUSERS_PERMISSIONS</code> table
      */
-    public ManagedusersPermissionsPath managedusersPermissions() {
-        if (_managedusersPermissions == null)
-            _managedusersPermissions = new ManagedusersPermissionsPath(this, null, Keys.MANAGEDUSERS_PERMISSIONS__MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK.getInverseKey());
+    public ManagedUsersPermissionsPath managedUsersPermissions() {
+        if (_managedUsersPermissions == null)
+            _managedUsersPermissions = new ManagedUsersPermissionsPath(this, null, Keys.MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK.getInverseKey());
 
-        return _managedusersPermissions;
+        return _managedUsersPermissions;
     }
 
-    private transient ManagedusersTeamsPath _managedusersTeams;
+    private transient ManagedUsersTeamsPath _managedUsersTeams;
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.MANAGEDUSERS_TEAMS</code> table
+     * Get the implicit to-many join path to the <code>MANAGEDUSERS_TEAMS</code>
+     * table
      */
-    public ManagedusersTeamsPath managedusersTeams() {
-        if (_managedusersTeams == null)
-            _managedusersTeams = new ManagedusersTeamsPath(this, null, Keys.MANAGEDUSERS_TEAMS__MANAGEDUSERS_TEAMS_MANAGEDUSER_FK.getInverseKey());
+    public ManagedUsersTeamsPath managedUsersTeams() {
+        if (_managedUsersTeams == null)
+            _managedUsersTeams = new ManagedUsersTeamsPath(this, null, Keys.MANAGEDUSERS_TEAMS_MANAGEDUSER_FK.getInverseKey());
 
-        return _managedusersTeams;
+        return _managedUsersTeams;
     }
 
     private transient UserProjectEffectivePermissionsPath _userProjectEffectivePermissions;
 
     /**
      * Get the implicit to-many join path to the
-     * <code>public.USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
+     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code> table
      */
     public UserProjectEffectivePermissionsPath userProjectEffectivePermissions() {
         if (_userProjectEffectivePermissions == null)
-            _userProjectEffectivePermissions = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK.getInverseKey());
+            _userProjectEffectivePermissions = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK.getInverseKey());
 
         return _userProjectEffectivePermissions;
     }
 
     /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.PERMISSION</code> table
+     * Get the implicit many-to-many join path to the <code>PERMISSION</code>
+     * table
      */
     public PermissionPath permission() {
-        return managedusersPermissions().permission();
+        return managedUsersPermissions().permission();
     }
 
     /**
-     * Get the implicit many-to-many join path to the <code>public.TEAM</code>
-     * table
+     * Get the implicit many-to-many join path to the <code>TEAM</code> table
      */
     public TeamPath team() {
-        return managedusersTeams().team();
+        return managedUsersTeams().team();
     }
 
     @Override

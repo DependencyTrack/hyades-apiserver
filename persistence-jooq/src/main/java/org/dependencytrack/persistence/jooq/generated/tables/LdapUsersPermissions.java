@@ -8,9 +8,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapuserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapUserPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission.PermissionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.LdapUsersPermissionsRecord;
 import org.jooq.Condition;
@@ -44,7 +44,7 @@ public class LdapUsersPermissions extends TableImpl<LdapUsersPermissionsRecord> 
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.LDAPUSERS_PERMISSIONS</code>
+     * The reference instance of <code>LDAPUSERS_PERMISSIONS</code>
      */
     public static final LdapUsersPermissions LDAPUSERS_PERMISSIONS = new LdapUsersPermissions();
 
@@ -57,12 +57,12 @@ public class LdapUsersPermissions extends TableImpl<LdapUsersPermissionsRecord> 
     }
 
     /**
-     * The column <code>public.LDAPUSERS_PERMISSIONS.LDAPUSER_ID</code>.
+     * The column <code>LDAPUSERS_PERMISSIONS.LDAPUSER_ID</code>.
      */
     public final TableField<LdapUsersPermissionsRecord, Long> LDAPUSER_ID = createField(DSL.name("LDAPUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.LDAPUSERS_PERMISSIONS.PERMISSION_ID</code>.
+     * The column <code>LDAPUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
     public final TableField<LdapUsersPermissionsRecord, Long> PERMISSION_ID = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -75,23 +75,21 @@ public class LdapUsersPermissions extends TableImpl<LdapUsersPermissionsRecord> 
     }
 
     /**
-     * Create an aliased <code>public.LDAPUSERS_PERMISSIONS</code> table
-     * reference
+     * Create an aliased <code>LDAPUSERS_PERMISSIONS</code> table reference
      */
     public LdapUsersPermissions(String alias) {
         this(DSL.name(alias), LDAPUSERS_PERMISSIONS);
     }
 
     /**
-     * Create an aliased <code>public.LDAPUSERS_PERMISSIONS</code> table
-     * reference
+     * Create an aliased <code>LDAPUSERS_PERMISSIONS</code> table reference
      */
     public LdapUsersPermissions(Name alias) {
         this(alias, LDAPUSERS_PERMISSIONS);
     }
 
     /**
-     * Create a <code>public.LDAPUSERS_PERMISSIONS</code> table reference
+     * Create a <code>LDAPUSERS_PERMISSIONS</code> table reference
      */
     public LdapUsersPermissions() {
         this(DSL.name("LDAPUSERS_PERMISSIONS"), null);
@@ -104,35 +102,35 @@ public class LdapUsersPermissions extends TableImpl<LdapUsersPermissionsRecord> 
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class LdapusersPermissionsPath extends LdapUsersPermissions implements Path<LdapUsersPermissionsRecord> {
+    public static class LdapUsersPermissionsPath extends LdapUsersPermissions implements Path<LdapUsersPermissionsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> LdapusersPermissionsPath(Table<O> path, ForeignKey<O, LdapUsersPermissionsRecord> childPath, InverseForeignKey<O, LdapUsersPermissionsRecord> parentPath) {
+        public <O extends Record> LdapUsersPermissionsPath(Table<O> path, ForeignKey<O, LdapUsersPermissionsRecord> childPath, InverseForeignKey<O, LdapUsersPermissionsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private LdapusersPermissionsPath(Name alias, Table<LdapUsersPermissionsRecord> aliased) {
+        private LdapUsersPermissionsPath(Name alias, Table<LdapUsersPermissionsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public LdapusersPermissionsPath as(String alias) {
-            return new LdapusersPermissionsPath(DSL.name(alias), this);
+        public LdapUsersPermissionsPath as(String alias) {
+            return new LdapUsersPermissionsPath(DSL.name(alias), this);
         }
 
         @Override
-        public LdapusersPermissionsPath as(Name alias) {
-            return new LdapusersPermissionsPath(alias, this);
+        public LdapUsersPermissionsPath as(Name alias) {
+            return new LdapUsersPermissionsPath(alias, this);
         }
 
         @Override
-        public LdapusersPermissionsPath as(Table<?> alias) {
-            return new LdapusersPermissionsPath(alias.getQualifiedName(), this);
+        public LdapUsersPermissionsPath as(Table<?> alias) {
+            return new LdapUsersPermissionsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -142,29 +140,29 @@ public class LdapUsersPermissions extends TableImpl<LdapUsersPermissionsRecord> 
 
     @Override
     public List<ForeignKey<LdapUsersPermissionsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.LDAPUSERS_PERMISSIONS__LDAPUSERS_PERMISSIONS_LDAPUSER_FK, Keys.LDAPUSERS_PERMISSIONS__LDAPUSERS_PERMISSIONS_PERMISSION_FK);
+        return Arrays.asList(Keys.LDAPUSERS_PERMISSIONS_LDAPUSER_FK, Keys.LDAPUSERS_PERMISSIONS_PERMISSION_FK);
     }
 
-    private transient LdapuserPath _ldapuser;
+    private transient LdapUserPath _ldapUser;
 
     /**
-     * Get the implicit join path to the <code>public.LDAPUSER</code> table.
+     * Get the implicit join path to the <code>LDAPUSER</code> table.
      */
-    public LdapuserPath ldapuser() {
-        if (_ldapuser == null)
-            _ldapuser = new LdapuserPath(this, Keys.LDAPUSERS_PERMISSIONS__LDAPUSERS_PERMISSIONS_LDAPUSER_FK, null);
+    public LdapUserPath ldapUser() {
+        if (_ldapUser == null)
+            _ldapUser = new LdapUserPath(this, Keys.LDAPUSERS_PERMISSIONS_LDAPUSER_FK, null);
 
-        return _ldapuser;
+        return _ldapUser;
     }
 
     private transient PermissionPath _permission;
 
     /**
-     * Get the implicit join path to the <code>public.PERMISSION</code> table.
+     * Get the implicit join path to the <code>PERMISSION</code> table.
      */
     public PermissionPath permission() {
         if (_permission == null)
-            _permission = new PermissionPath(this, Keys.LDAPUSERS_PERMISSIONS__LDAPUSERS_PERMISSIONS_PERMISSION_FK, null);
+            _permission = new PermissionPath(this, Keys.LDAPUSERS_PERMISSIONS_PERMISSION_FK, null);
 
         return _permission;
     }

@@ -9,11 +9,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Vulnerability.VulnerabilityPath;
-import org.dependencytrack.persistence.jooq.generated.tables.VulnerableSoftware.VulnerablesoftwarePath;
+import org.dependencytrack.persistence.jooq.generated.tables.VulnerableSoftware.VulnerableSoftwarePath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.AffectedVersionAttributionRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -48,7 +48,7 @@ public class AffectedVersionAttribution extends TableImpl<AffectedVersionAttribu
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.AFFECTEDVERSIONATTRIBUTION</code>
+     * The reference instance of <code>AFFECTEDVERSIONATTRIBUTION</code>
      */
     public static final AffectedVersionAttribution AFFECTEDVERSIONATTRIBUTION = new AffectedVersionAttribution();
 
@@ -61,38 +61,37 @@ public class AffectedVersionAttribution extends TableImpl<AffectedVersionAttribu
     }
 
     /**
-     * The column <code>public.AFFECTEDVERSIONATTRIBUTION.ID</code>.
+     * The column <code>AFFECTEDVERSIONATTRIBUTION.ID</code>.
      */
     public final TableField<AffectedVersionAttributionRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.AFFECTEDVERSIONATTRIBUTION.FIRST_SEEN</code>.
+     * The column <code>AFFECTEDVERSIONATTRIBUTION.FIRST_SEEN</code>.
      */
     public final TableField<AffectedVersionAttributionRecord, OffsetDateTime> FIRST_SEEN = createField(DSL.name("FIRST_SEEN"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.AFFECTEDVERSIONATTRIBUTION.LAST_SEEN</code>.
+     * The column <code>AFFECTEDVERSIONATTRIBUTION.LAST_SEEN</code>.
      */
     public final TableField<AffectedVersionAttributionRecord, OffsetDateTime> LAST_SEEN = createField(DSL.name("LAST_SEEN"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.AFFECTEDVERSIONATTRIBUTION.SOURCE</code>.
+     * The column <code>AFFECTEDVERSIONATTRIBUTION.SOURCE</code>.
      */
     public final TableField<AffectedVersionAttributionRecord, String> SOURCE = createField(DSL.name("SOURCE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
-     * The column <code>public.AFFECTEDVERSIONATTRIBUTION.UUID</code>.
+     * The column <code>AFFECTEDVERSIONATTRIBUTION.UUID</code>.
      */
     public final TableField<AffectedVersionAttributionRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
-     * The column <code>public.AFFECTEDVERSIONATTRIBUTION.VULNERABILITY</code>.
+     * The column <code>AFFECTEDVERSIONATTRIBUTION.VULNERABILITY</code>.
      */
     public final TableField<AffectedVersionAttributionRecord, Long> VULNERABILITY = createField(DSL.name("VULNERABILITY"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column
-     * <code>public.AFFECTEDVERSIONATTRIBUTION.VULNERABLE_SOFTWARE</code>.
+     * The column <code>AFFECTEDVERSIONATTRIBUTION.VULNERABLE_SOFTWARE</code>.
      */
     public final TableField<AffectedVersionAttributionRecord, Long> VULNERABLE_SOFTWARE = createField(DSL.name("VULNERABLE_SOFTWARE"), SQLDataType.BIGINT.nullable(false), this, "");
 
@@ -105,23 +104,21 @@ public class AffectedVersionAttribution extends TableImpl<AffectedVersionAttribu
     }
 
     /**
-     * Create an aliased <code>public.AFFECTEDVERSIONATTRIBUTION</code> table
-     * reference
+     * Create an aliased <code>AFFECTEDVERSIONATTRIBUTION</code> table reference
      */
     public AffectedVersionAttribution(String alias) {
         this(DSL.name(alias), AFFECTEDVERSIONATTRIBUTION);
     }
 
     /**
-     * Create an aliased <code>public.AFFECTEDVERSIONATTRIBUTION</code> table
-     * reference
+     * Create an aliased <code>AFFECTEDVERSIONATTRIBUTION</code> table reference
      */
     public AffectedVersionAttribution(Name alias) {
         this(alias, AFFECTEDVERSIONATTRIBUTION);
     }
 
     /**
-     * Create a <code>public.AFFECTEDVERSIONATTRIBUTION</code> table reference
+     * Create a <code>AFFECTEDVERSIONATTRIBUTION</code> table reference
      */
     public AffectedVersionAttribution() {
         this(DSL.name("AFFECTEDVERSIONATTRIBUTION"), null);
@@ -134,35 +131,35 @@ public class AffectedVersionAttribution extends TableImpl<AffectedVersionAttribu
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class AffectedversionattributionPath extends AffectedVersionAttribution implements Path<AffectedVersionAttributionRecord> {
+    public static class AffectedVersionAttributionPath extends AffectedVersionAttribution implements Path<AffectedVersionAttributionRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> AffectedversionattributionPath(Table<O> path, ForeignKey<O, AffectedVersionAttributionRecord> childPath, InverseForeignKey<O, AffectedVersionAttributionRecord> parentPath) {
+        public <O extends Record> AffectedVersionAttributionPath(Table<O> path, ForeignKey<O, AffectedVersionAttributionRecord> childPath, InverseForeignKey<O, AffectedVersionAttributionRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private AffectedversionattributionPath(Name alias, Table<AffectedVersionAttributionRecord> aliased) {
+        private AffectedVersionAttributionPath(Name alias, Table<AffectedVersionAttributionRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public AffectedversionattributionPath as(String alias) {
-            return new AffectedversionattributionPath(DSL.name(alias), this);
+        public AffectedVersionAttributionPath as(String alias) {
+            return new AffectedVersionAttributionPath(DSL.name(alias), this);
         }
 
         @Override
-        public AffectedversionattributionPath as(Name alias) {
-            return new AffectedversionattributionPath(alias, this);
+        public AffectedVersionAttributionPath as(Name alias) {
+            return new AffectedVersionAttributionPath(alias, this);
         }
 
         @Override
-        public AffectedversionattributionPath as(Table<?> alias) {
-            return new AffectedversionattributionPath(alias.getQualifiedName(), this);
+        public AffectedVersionAttributionPath as(Table<?> alias) {
+            return new AffectedVersionAttributionPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -187,33 +184,31 @@ public class AffectedVersionAttribution extends TableImpl<AffectedVersionAttribu
 
     @Override
     public List<ForeignKey<AffectedVersionAttributionRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.AFFECTEDVERSIONATTRIBUTION__AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK, Keys.AFFECTEDVERSIONATTRIBUTION__AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK);
+        return Arrays.asList(Keys.AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK, Keys.AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK);
     }
 
     private transient VulnerabilityPath _vulnerability;
 
     /**
-     * Get the implicit join path to the <code>public.VULNERABILITY</code>
-     * table.
+     * Get the implicit join path to the <code>VULNERABILITY</code> table.
      */
     public VulnerabilityPath vulnerability() {
         if (_vulnerability == null)
-            _vulnerability = new VulnerabilityPath(this, Keys.AFFECTEDVERSIONATTRIBUTION__AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK, null);
+            _vulnerability = new VulnerabilityPath(this, Keys.AFFECTEDVERSIONATTRIBUTION_VULNERABILITY_FK, null);
 
         return _vulnerability;
     }
 
-    private transient VulnerablesoftwarePath _vulnerablesoftware;
+    private transient VulnerableSoftwarePath _vulnerableSoftware;
 
     /**
-     * Get the implicit join path to the <code>public.VULNERABLESOFTWARE</code>
-     * table.
+     * Get the implicit join path to the <code>VULNERABLESOFTWARE</code> table.
      */
-    public VulnerablesoftwarePath vulnerablesoftware() {
-        if (_vulnerablesoftware == null)
-            _vulnerablesoftware = new VulnerablesoftwarePath(this, Keys.AFFECTEDVERSIONATTRIBUTION__AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK, null);
+    public VulnerableSoftwarePath vulnerableSoftware() {
+        if (_vulnerableSoftware == null)
+            _vulnerableSoftware = new VulnerableSoftwarePath(this, Keys.AFFECTEDVERSIONATTRIBUTION_VULNERABLESOFTWARE_FK, null);
 
-        return _vulnerablesoftware;
+        return _vulnerableSoftware;
     }
 
     @Override

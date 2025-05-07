@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.Public;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectMetricsRecord;
 import org.jooq.Condition;
@@ -47,7 +47,7 @@ public class ProjectMetrics extends TableImpl<ProjectMetricsRecord> {
     private static final long serialVersionUID = 1L;
 
     /**
-     * The reference instance of <code>public.PROJECTMETRICS</code>
+     * The reference instance of <code>PROJECTMETRICS</code>
      */
     public static final ProjectMetrics PROJECTMETRICS = new ProjectMetrics();
 
@@ -60,171 +60,167 @@ public class ProjectMetrics extends TableImpl<ProjectMetricsRecord> {
     }
 
     /**
-     * The column <code>public.PROJECTMETRICS.ID</code>.
+     * The column <code>PROJECTMETRICS.ID</code>.
      */
     public final TableField<ProjectMetricsRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.COMPONENTS</code>.
+     * The column <code>PROJECTMETRICS.COMPONENTS</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> COMPONENTS = createField(DSL.name("COMPONENTS"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.CRITICAL</code>.
+     * The column <code>PROJECTMETRICS.CRITICAL</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> CRITICAL = createField(DSL.name("CRITICAL"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.FINDINGS_AUDITED</code>.
+     * The column <code>PROJECTMETRICS.FINDINGS_AUDITED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> FINDINGS_AUDITED = createField(DSL.name("FINDINGS_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.FINDINGS_TOTAL</code>.
+     * The column <code>PROJECTMETRICS.FINDINGS_TOTAL</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> FINDINGS_TOTAL = createField(DSL.name("FINDINGS_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.FINDINGS_UNAUDITED</code>.
+     * The column <code>PROJECTMETRICS.FINDINGS_UNAUDITED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> FINDINGS_UNAUDITED = createField(DSL.name("FINDINGS_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.FIRST_OCCURRENCE</code>.
+     * The column <code>PROJECTMETRICS.FIRST_OCCURRENCE</code>.
      */
     public final TableField<ProjectMetricsRecord, OffsetDateTime> FIRST_OCCURRENCE = createField(DSL.name("FIRST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.HIGH</code>.
+     * The column <code>PROJECTMETRICS.HIGH</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> HIGH = createField(DSL.name("HIGH"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.RISKSCORE</code>.
+     * The column <code>PROJECTMETRICS.RISKSCORE</code>.
      */
     public final TableField<ProjectMetricsRecord, Double> RISKSCORE = createField(DSL.name("RISKSCORE"), SQLDataType.DOUBLE.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.LAST_OCCURRENCE</code>.
+     * The column <code>PROJECTMETRICS.LAST_OCCURRENCE</code>.
      */
     public final TableField<ProjectMetricsRecord, OffsetDateTime> LAST_OCCURRENCE = createField(DSL.name("LAST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.LOW</code>.
+     * The column <code>PROJECTMETRICS.LOW</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> LOW = createField(DSL.name("LOW"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.MEDIUM</code>.
+     * The column <code>PROJECTMETRICS.MEDIUM</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> MEDIUM = createField(DSL.name("MEDIUM"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.POLICYVIOLATIONS_AUDITED</code>.
+     * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_AUDITED = createField(DSL.name("POLICYVIOLATIONS_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.POLICYVIOLATIONS_FAIL</code>.
+     * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_FAIL = createField(DSL.name("POLICYVIOLATIONS_FAIL"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.POLICYVIOLATIONS_INFO</code>.
+     * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_INFO = createField(DSL.name("POLICYVIOLATIONS_INFO"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
+     * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_AUDITED = createField(DSL.name("POLICYVIOLATIONS_LICENSE_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
+     * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_TOTAL = createField(DSL.name("POLICYVIOLATIONS_LICENSE_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_LICENSE_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_AUDITED = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_TOTAL = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
+     * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_AUDITED = createField(DSL.name("POLICYVIOLATIONS_SECURITY_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
+     * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_TOTAL = createField(DSL.name("POLICYVIOLATIONS_SECURITY_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
-     * <code>public.PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
+     * <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_SECURITY_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.POLICYVIOLATIONS_TOTAL</code>.
+     * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_TOTAL = createField(DSL.name("POLICYVIOLATIONS_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
+     * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.POLICYVIOLATIONS_WARN</code>.
+     * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_WARN = createField(DSL.name("POLICYVIOLATIONS_WARN"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.PROJECT_ID</code>.
+     * The column <code>PROJECTMETRICS.PROJECT_ID</code>.
      */
     public final TableField<ProjectMetricsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.SUPPRESSED</code>.
+     * The column <code>PROJECTMETRICS.SUPPRESSED</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> SUPPRESSED = createField(DSL.name("SUPPRESSED"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.UNASSIGNED_SEVERITY</code>.
+     * The column <code>PROJECTMETRICS.UNASSIGNED_SEVERITY</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> UNASSIGNED_SEVERITY = createField(DSL.name("UNASSIGNED_SEVERITY"), SQLDataType.INTEGER, this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.VULNERABILITIES</code>.
+     * The column <code>PROJECTMETRICS.VULNERABILITIES</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> VULNERABILITIES = createField(DSL.name("VULNERABILITIES"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
-     * The column <code>public.PROJECTMETRICS.VULNERABLECOMPONENTS</code>.
+     * The column <code>PROJECTMETRICS.VULNERABLECOMPONENTS</code>.
      */
     public final TableField<ProjectMetricsRecord, Integer> VULNERABLECOMPONENTS = createField(DSL.name("VULNERABLECOMPONENTS"), SQLDataType.INTEGER.nullable(false), this, "");
 
@@ -237,21 +233,21 @@ public class ProjectMetrics extends TableImpl<ProjectMetricsRecord> {
     }
 
     /**
-     * Create an aliased <code>public.PROJECTMETRICS</code> table reference
+     * Create an aliased <code>PROJECTMETRICS</code> table reference
      */
     public ProjectMetrics(String alias) {
         this(DSL.name(alias), PROJECTMETRICS);
     }
 
     /**
-     * Create an aliased <code>public.PROJECTMETRICS</code> table reference
+     * Create an aliased <code>PROJECTMETRICS</code> table reference
      */
     public ProjectMetrics(Name alias) {
         this(alias, PROJECTMETRICS);
     }
 
     /**
-     * Create a <code>public.PROJECTMETRICS</code> table reference
+     * Create a <code>PROJECTMETRICS</code> table reference
      */
     public ProjectMetrics() {
         this(DSL.name("PROJECTMETRICS"), null);
@@ -264,35 +260,35 @@ public class ProjectMetrics extends TableImpl<ProjectMetricsRecord> {
     /**
      * A subtype implementing {@link Path} for simplified path-based joins.
      */
-    public static class ProjectmetricsPath extends ProjectMetrics implements Path<ProjectMetricsRecord> {
+    public static class ProjectMetricsPath extends ProjectMetrics implements Path<ProjectMetricsRecord> {
 
         private static final long serialVersionUID = 1L;
-        public <O extends Record> ProjectmetricsPath(Table<O> path, ForeignKey<O, ProjectMetricsRecord> childPath, InverseForeignKey<O, ProjectMetricsRecord> parentPath) {
+        public <O extends Record> ProjectMetricsPath(Table<O> path, ForeignKey<O, ProjectMetricsRecord> childPath, InverseForeignKey<O, ProjectMetricsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
-        private ProjectmetricsPath(Name alias, Table<ProjectMetricsRecord> aliased) {
+        private ProjectMetricsPath(Name alias, Table<ProjectMetricsRecord> aliased) {
             super(alias, aliased);
         }
 
         @Override
-        public ProjectmetricsPath as(String alias) {
-            return new ProjectmetricsPath(DSL.name(alias), this);
+        public ProjectMetricsPath as(String alias) {
+            return new ProjectMetricsPath(DSL.name(alias), this);
         }
 
         @Override
-        public ProjectmetricsPath as(Name alias) {
-            return new ProjectmetricsPath(alias, this);
+        public ProjectMetricsPath as(Name alias) {
+            return new ProjectMetricsPath(alias, this);
         }
 
         @Override
-        public ProjectmetricsPath as(Table<?> alias) {
-            return new ProjectmetricsPath(alias.getQualifiedName(), this);
+        public ProjectMetricsPath as(Table<?> alias) {
+            return new ProjectMetricsPath(alias.getQualifiedName(), this);
         }
     }
 
     @Override
     public Schema getSchema() {
-        return aliased() ? null : Public.PUBLIC;
+        return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
     }
 
     @Override
@@ -312,17 +308,17 @@ public class ProjectMetrics extends TableImpl<ProjectMetricsRecord> {
 
     @Override
     public List<ForeignKey<ProjectMetricsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.PROJECTMETRICS__PROJECTMETRICS_PROJECT_FK);
+        return Arrays.asList(Keys.PROJECTMETRICS_PROJECT_FK);
     }
 
     private transient ProjectPath _project;
 
     /**
-     * Get the implicit join path to the <code>public.PROJECT</code> table.
+     * Get the implicit join path to the <code>PROJECT</code> table.
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.PROJECTMETRICS__PROJECTMETRICS_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.PROJECTMETRICS_PROJECT_FK, null);
 
         return _project;
     }

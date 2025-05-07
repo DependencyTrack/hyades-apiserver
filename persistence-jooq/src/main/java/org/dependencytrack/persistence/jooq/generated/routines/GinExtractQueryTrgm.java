@@ -4,7 +4,7 @@
 package org.dependencytrack.persistence.jooq.generated.routines;
 
 
-import org.dependencytrack.persistence.jooq.generated.Public;
+import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.jooq.Field;
 import org.jooq.Parameter;
 import org.jooq.impl.AbstractRoutine;
@@ -40,7 +40,7 @@ public class GinExtractQueryTrgm extends AbstractRoutine<Object> {
     public static final Parameter<Object> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", DefaultDataType.getDefaultDataType("\"pg_catalog\".\"internal\""), false, false);
 
     /**
-     * The parameter <code>public.gin_extract_query_trgm._1</code>.
+     * The parameter <code>gin_extract_query_trgm._1</code>.
      */
     public static final Parameter<String> _1 = Internal.createParameter("_1", SQLDataType.CLOB, false, true);
 
@@ -56,7 +56,7 @@ public class GinExtractQueryTrgm extends AbstractRoutine<Object> {
     public static final Parameter<Object> _2 = Internal.createParameter("_2", DefaultDataType.getDefaultDataType("\"pg_catalog\".\"internal\""), false, true);
 
     /**
-     * The parameter <code>public.gin_extract_query_trgm._3</code>.
+     * The parameter <code>gin_extract_query_trgm._3</code>.
      */
     public static final Parameter<Short> _3 = Internal.createParameter("_3", SQLDataType.SMALLINT, false, true);
 
@@ -108,7 +108,7 @@ public class GinExtractQueryTrgm extends AbstractRoutine<Object> {
      * Create a new routine call instance
      */
     public GinExtractQueryTrgm() {
-        super("gin_extract_query_trgm", Public.PUBLIC, DSL.comment(""), DefaultDataType.getDefaultDataType("\"pg_catalog\".\"internal\""));
+        super("gin_extract_query_trgm", DefaultSchema.DEFAULT_SCHEMA, DSL.comment(""), DefaultDataType.getDefaultDataType("\"pg_catalog\".\"internal\""));
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(_1);
@@ -131,8 +131,9 @@ public class GinExtractQueryTrgm extends AbstractRoutine<Object> {
      * Set the <code>_1</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__1(Field<String> field) {
+    public GinExtractQueryTrgm set__1(Field<String> field) {
         setField(_1, field);
+        return this;
     }
 
     /**
@@ -146,8 +147,9 @@ public class GinExtractQueryTrgm extends AbstractRoutine<Object> {
      * Set the <code>_2</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__2(Field<Object> field) {
+    public GinExtractQueryTrgm set__2(Field<Object> field) {
         setField(_2, field);
+        return this;
     }
 
     /**
@@ -161,8 +163,9 @@ public class GinExtractQueryTrgm extends AbstractRoutine<Object> {
      * Set the <code>_3</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__3(Field<Short> field) {
+    public GinExtractQueryTrgm set__3(Field<Short> field) {
         setField(_3, field);
+        return this;
     }
 
     /**
@@ -176,8 +179,9 @@ public class GinExtractQueryTrgm extends AbstractRoutine<Object> {
      * Set the <code>_4</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__4(Field<Object> field) {
+    public GinExtractQueryTrgm set__4(Field<Object> field) {
         setField(_4, field);
+        return this;
     }
 
     /**
@@ -191,8 +195,9 @@ public class GinExtractQueryTrgm extends AbstractRoutine<Object> {
      * Set the <code>_5</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__5(Field<Object> field) {
+    public GinExtractQueryTrgm set__5(Field<Object> field) {
         setField(_5, field);
+        return this;
     }
 
     /**
@@ -206,8 +211,9 @@ public class GinExtractQueryTrgm extends AbstractRoutine<Object> {
      * Set the <code>_6</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__6(Field<Object> field) {
+    public GinExtractQueryTrgm set__6(Field<Object> field) {
         setField(_6, field);
+        return this;
     }
 
     /**
@@ -221,7 +227,8 @@ public class GinExtractQueryTrgm extends AbstractRoutine<Object> {
      * Set the <code>_7</code> parameter to the function to be used with a
      * {@link org.jooq.Select} statement
      */
-    public void set__7(Field<Object> field) {
+    public GinExtractQueryTrgm set__7(Field<Object> field) {
         setField(_7, field);
+        return this;
     }
 }

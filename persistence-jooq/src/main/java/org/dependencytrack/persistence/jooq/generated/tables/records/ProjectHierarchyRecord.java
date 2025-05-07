@@ -18,42 +18,45 @@ public class ProjectHierarchyRecord extends UpdatableRecordImpl<ProjectHierarchy
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>public.PROJECT_HIERARCHY.PARENT_PROJECT_ID</code>.
+     * Setter for <code>PROJECT_HIERARCHY.PARENT_PROJECT_ID</code>.
      */
-    public void setParentProjectId(Long value) {
+    public ProjectHierarchyRecord setParentProjectId(Long value) {
         set(0, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_HIERARCHY.PARENT_PROJECT_ID</code>.
+     * Getter for <code>PROJECT_HIERARCHY.PARENT_PROJECT_ID</code>.
      */
     public Long getParentProjectId() {
         return (Long) get(0);
     }
 
     /**
-     * Setter for <code>public.PROJECT_HIERARCHY.CHILD_PROJECT_ID</code>.
+     * Setter for <code>PROJECT_HIERARCHY.CHILD_PROJECT_ID</code>.
      */
-    public void setChildProjectId(Long value) {
+    public ProjectHierarchyRecord setChildProjectId(Long value) {
         set(1, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_HIERARCHY.CHILD_PROJECT_ID</code>.
+     * Getter for <code>PROJECT_HIERARCHY.CHILD_PROJECT_ID</code>.
      */
     public Long getChildProjectId() {
         return (Long) get(1);
     }
 
     /**
-     * Setter for <code>public.PROJECT_HIERARCHY.DEPTH</code>.
+     * Setter for <code>PROJECT_HIERARCHY.DEPTH</code>.
      */
-    public void setDepth(Short value) {
+    public ProjectHierarchyRecord setDepth(Short value) {
         set(2, value);
+        return this;
     }
 
     /**
-     * Getter for <code>public.PROJECT_HIERARCHY.DEPTH</code>.
+     * Getter for <code>PROJECT_HIERARCHY.DEPTH</code>.
      */
     public Short getDepth() {
         return (Short) get(2);
