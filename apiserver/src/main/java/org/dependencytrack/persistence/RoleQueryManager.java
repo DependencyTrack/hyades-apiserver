@@ -59,4 +59,101 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
         //TODO: Implement removeRoleFromUser
         return true;
     }
+
+    public List<Permission> getUnassignedRolePermissions(final Role role) {
+        final List<Permission> permissions = new ArrayList<>();
+
+        final var permissionNames = role.getPermissions().stream()
+                .map(Permission::getName)
+                .toList();
+
+        final Query<Permission> query = pm.newQuery(Permission.class)
+                .filter("!:permissionNames.contains(name)")
+                .setNamedParameters(Map.of("permissionNames", permissionNames));
+
+        permissions.addAll(executeAndCloseList(query));
+
+        return permissions;
+    }
+
+    @Override
+    public Role updateRole(final Role transientRole) {
+        final Role role = getObjectByUuid(Role.class, transientRole.getUuid());
+        if (role == null)
+            return null;
+
+        role.setName(transientRole.getName());
+
+        return persist(role);
+    }
+
+    @Override
+    public List<Permission> getUserProjectPermissions(final String username, final String projectName) {
+        final UserPrincipal user = getUserPrincipal(username);
+        final String columnName;
+
+        switch (user) {
+            case LdapUser ldapUser -> columnName = "LDAPUSER_ID";
+            case ManagedUser managedUser -> columnName = "MANAGEDUSER_ID";
+            case OidcUser oidcUser -> columnName = "OIDCUSER_ID";
+            default -> {
+                return null;
+            }
+        }
+
+        final Query<Project> projectsQuery = pm.newQuery(Project.class)
+                .filter("name == :projectName")
+                .setNamedParameters(Map.of("projectName", projectName));
+
+        final String projectIds = executeAndCloseList(projectsQuery).stream()
+                .map(Project::getId)
+                .map(String::valueOf)
+                .collect(Collectors.joining(", ", "(", ")"));
+
+        // language=SQL
+        final var queryString = """
+                SELECT
+                    upep."LDAPUSER_ID",
+                    upep."MANAGEDUSER_ID",
+                    upep."OIDCUSER_ID",
+                    upep."PROJECT_ID",
+                    upep."PERMISSION_ID",
+                    upep."PERMISSION_NAME"
+                  FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" upep
+                 WHERE upep."%s" = :userId
+                   AND upep."PROJECT_ID" IN %s
+                """.formatted(columnName, projectIds);
+
+        final Query<?> query = pm.newQuery(Query.SQL, queryString);
+        query.setNamedParameters(Map.of(
+                "userId", user.getId(),
+                "projectIds", projectIds));
+
+        return executeAndCloseResultList(query, UserProjectEffectivePermissionsRow.class)
+                .stream()
+                .map(UserProjectEffectivePermissionsRow::permissionName)
+                .map(this::getPermission)
+                .distinct()
+                .toList();
+    }
+
+    @Override
+    public boolean addRoleToUser(final UserPrincipal user, final Role role, final Project project) {
+        return JdbiFactory.withJdbiHandle(
+                handle -> handle.attach(RoleDao.class).addRoleToUser(
+                        user.getClass(),
+                        user.getId(),
+                        project.getId(),
+                        role.getId())) == 1;
+    }
+
+    @Override
+    public boolean removeRoleFromUser(final UserPrincipal user, final Role role, final Project project) {
+        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).removeRoleFromUser(
+                user.getClass(),
+                user.getId(),
+                project.getName(),
+                role.getId())) > 0;
+    }
+
 }

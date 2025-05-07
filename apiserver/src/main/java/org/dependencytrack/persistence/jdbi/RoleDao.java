@@ -34,28 +34,32 @@ public interface RoleDao {
     int deleteRole(@Bind final long roleId);
 
     @SqlUpdate(/* language=sql */ """
-        DELETE
-          FROM "LDAPUSERS_PROJECTS_ROLES"
-         WHERE "LDAPUSER_ID" = :userId
-           AND "PROJECT_ACCESS_ROLE_ID" IN (
-               SELECT "ID"
-                 FROM "PROJECT_ACCESS_ROLES"
-                WHERE "ROLE_ID" = :roleId
-                  AND "PROJECT_ID" = :projectId)
-        """)
-    int removeRoleFromLdapUser(@Bind final long userId, @Bind final long projectId, @Bind final long roleId);
+            INSERT INTO "ROLES_PERMISSIONS"
+              ("ROLE_ID", "PERMISSION_ID")
+            VALUES
+              (:roleId, :permissionId)
+            ON CONFLICT DO NOTHING
+            """)
+    @DefineNamedBindings
+    <T extends UserPrincipal> int addPermissionToRole(
+            @Bind long roleId,
+            @Bind long permissionId);
 
     @SqlUpdate(/* language=sql */ """
-        DELETE
-          FROM "MANAGEDUSERS_PROJECTS_ROLES"
-         WHERE "MANAGEDUSER_ID" = :userId
-           AND "PROJECT_ACCESS_ROLE_ID" IN (
-               SELECT "ID"
-                 FROM "PROJECT_ACCESS_ROLES"
-                WHERE "ROLE_ID" = :roleId
-                  AND "PROJECT_ID" = :projectId)
-        """)
-    int removeRoleFromManagedUser(@Bind final long userId, @Bind final long projectId, @Bind final long roleId);
+            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
+            <#assign prefix = userClass.getSimpleName()?upper_case>
+            INSERT INTO "${prefix}S_PROJECTS_ROLES"
+              ("${prefix}_ID", "PROJECT_ID", "ROLE_ID")
+            VALUES
+              (:userId, :projectId, :roleId)
+            ON CONFLICT DO NOTHING
+            """)
+    @DefineNamedBindings
+    <T extends UserPrincipal> int addRoleToUser(
+            @Define Class<T> userClass,
+            @Bind long userId,
+            @Bind long projectId,
+            @Bind long roleId);
 
     @SqlUpdate(/* language=sql */ """
             DELETE
