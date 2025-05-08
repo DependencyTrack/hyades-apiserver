@@ -212,6 +212,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                                         "name": "acme-lib",
                                         "version": "1.2.3",
                                         "project": "${json-unit.any-string}",
+                                        "hasOccurrences": false,
                                         "projectName" : "acme-app",
                                         "projectVersion" : "1.0.0"
                                       },
@@ -468,6 +469,7 @@ public class DefectDojoUploaderTest extends PersistenceCapableTest {
                                         "name": "acme-lib",
                                         "version": "1.2.3",
                                         "project": "${json-unit.any-string}",
+                                        "hasOccurrences": false,
                                         "projectName" : "acme-app",
                                         "projectVersion" : "1.0.0"
                                       },

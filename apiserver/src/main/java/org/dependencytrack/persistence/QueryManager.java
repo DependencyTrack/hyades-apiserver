@@ -26,7 +26,7 @@ import alpine.model.ConfigProperty;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Permission;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.notification.NotificationLevel;
 import alpine.persistence.AbstractAlpineQueryManager;
 import alpine.persistence.AlpineQueryManager;
@@ -488,9 +488,9 @@ public class QueryManager extends AlpineQueryManager {
      */
     protected Set<Long> getTeamIds(final Principal principal) {
         final var principalTeamIds = new HashSet<Long>();
-        if (principal instanceof final UserPrincipal userPrincipal
-                && userPrincipal.getTeams() != null) {
-            for (final Team userInTeam : userPrincipal.getTeams()) {
+        if (principal instanceof final User user
+            && user.getTeams() != null) {
+            for (final Team userInTeam : user.getTeams()) {
                 principalTeamIds.add(userInTeam.getId());
             }
         } else if (principal instanceof final ApiKey apiKey
@@ -1217,14 +1217,14 @@ public class QueryManager extends AlpineQueryManager {
         return getNotificationQueryManager().bind(notificationRule, tags);
     }
 
-    public List<Permission> getEffectivePermissions(UserPrincipal userPrincipal, Project project) {
+    public List<Permission> getEffectivePermissions(User user, Project project) {
         return JdbiFactory.withJdbiHandle(request, handle -> handle.attach(EffectivePermissionDao.class)
-                .getEffectivePermissions(userPrincipal.getClass(), userPrincipal.getId(), project.getId()));
+                .getEffectivePermissions(user.getId(), project.getId()));
     }
 
     public boolean hasAccessManagementPermission(final Object principal) {
-        if (principal instanceof final UserPrincipal userPrincipal) {
-            return hasAccessManagementPermission(userPrincipal);
+        if (principal instanceof final User user) {
+            return hasAccessManagementPermission(user);
         } else if (principal instanceof final ApiKey apiKey) {
             return hasAccessManagementPermission(apiKey);
         }
@@ -1232,8 +1232,8 @@ public class QueryManager extends AlpineQueryManager {
         throw new IllegalArgumentException("Provided principal is of invalid type " + ClassUtils.getName(principal));
     }
 
-    public boolean hasAccessManagementPermission(final UserPrincipal userPrincipal) {
-        return getProjectQueryManager().hasAccessManagementPermission(userPrincipal);
+    public boolean hasAccessManagementPermission(final User user) {
+        return getProjectQueryManager().hasAccessManagementPermission(user);
     }
 
     public boolean hasAccessManagementPermission(final ApiKey apiKey) {

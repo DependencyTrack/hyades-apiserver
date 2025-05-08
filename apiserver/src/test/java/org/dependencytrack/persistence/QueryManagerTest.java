@@ -18,6 +18,10 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.model.Permission;
+import alpine.model.Team;
+import alpine.model.User;
+import alpine.server.auth.PasswordService;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
@@ -27,13 +31,7 @@ import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.Project;
-
 import org.junit.Test;
-
-import alpine.model.Permission;
-import alpine.model.Team;
-import alpine.model.UserPrincipal;
-import alpine.server.auth.PasswordService;
 
 import java.util.Date;
 import java.util.List;
@@ -275,7 +273,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
                 .map(Permission::getName)
                 .toArray(String[]::new);
 
-        record TestMatrixEntry(UserPrincipal user, Project project, Team team, List<Project> noAccessProjects) {
+        record TestMatrixEntry(User user, Project project, Team team, List<Project> noAccessProjects) {
             String[] getPermissionNames(List<Permission> permissions) {
                 return permissions
                         .stream()
