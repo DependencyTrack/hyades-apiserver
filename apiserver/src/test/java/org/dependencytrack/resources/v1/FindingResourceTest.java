@@ -36,6 +36,7 @@ import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -474,6 +475,40 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getFindingsByProjectWithComponentOccurrence() {
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Component c1 = createComponent(p1, "Component A", "1.0");
+        Component c2 = createComponent(p1, "Component B", "1.0");
+
+        var componentOccurrence = new ComponentOccurrence();
+        componentOccurrence.setComponent(c2);
+        componentOccurrence.setLocation("/foo/bar");
+        componentOccurrence.setLine(666);
+        componentOccurrence.setOffset(123);
+        componentOccurrence.setSymbol("someSymbol");
+        qm.persist(componentOccurrence);
+
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
+        qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
+        qm.addVulnerability(v1, c2, AnalyzerIdentity.NONE);
+
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertEquals(200, response.getStatus(), 0);
+        assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray jsonArray = parseJsonArray(response);
+        assertNotNull(jsonArray);
+        assertEquals(2, jsonArray.size());
+        JsonObject json  = jsonArray.getJsonObject(0);
+        assertEquals("Component A", json.getJsonObject("component").getString("name"));
+        assertEquals(false, json.getJsonObject("component").getBoolean("hasOccurrences"));
+        json  = jsonArray.getJsonObject(1);
+        assertEquals("Component B", json.getJsonObject("component").getString("name"));
+        assertEquals(true, json.getJsonObject("component").getBoolean("hasOccurrences"));
+    }
+
+    @Test
     public void getFindingsByProjectWithRatingOverride() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c1 = createComponent(p1, "Component A", "1.0");
@@ -687,6 +722,41 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals(p1_child.getName(), json.getJsonObject(2).getJsonObject("component").getString("projectName"));
         assertEquals(p1_child.getVersion(), json.getJsonObject(2).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1_child.getUuid().toString(), json.getJsonObject(2).getJsonObject("component").getString("project"));
+    }
+
+    @Test
+    public void getAllFindingsWithComponentOccurrence() {
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Component c1 = createComponent(p1, "Component A", "1.0");
+        Component c2 = createComponent(p1, "Component B", "1.0");
+
+        var componentOccurrence = new ComponentOccurrence();
+        componentOccurrence.setComponent(c2);
+        componentOccurrence.setLocation("/foo/bar");
+        componentOccurrence.setLine(666);
+        componentOccurrence.setOffset(123);
+        componentOccurrence.setSymbol("someSymbol");
+        qm.persist(componentOccurrence);
+
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
+        qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
+        qm.addVulnerability(v1, c2, AnalyzerIdentity.NONE);
+
+        Response response = jersey.target(V1_FINDING)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertEquals(200, response.getStatus(), 0);
+        assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray jsonArray = parseJsonArray(response);
+        assertNotNull(jsonArray);
+        assertEquals(2, jsonArray.size());
+        JsonObject json  = jsonArray.getJsonObject(0);
+        assertEquals("Component A", json.getJsonObject("component").getString("name"));
+        assertEquals(false, json.getJsonObject("component").getBoolean("hasOccurrences"));
+        json  = jsonArray.getJsonObject(1);
+        assertEquals("Component B", json.getJsonObject("component").getString("name"));
+        assertEquals(true, json.getJsonObject("component").getBoolean("hasOccurrences"));
     }
 
     @Test
