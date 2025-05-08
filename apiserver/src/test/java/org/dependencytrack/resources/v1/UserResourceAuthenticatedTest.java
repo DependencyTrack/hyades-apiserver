@@ -22,7 +22,7 @@ import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
@@ -698,7 +698,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
         Assert.assertEquals(200, response.getStatus());
 
-        UserPrincipal user = qm.getManagedUser("blackbeard");
+        User user = qm.getManagedUser("blackbeard");
         List<Team> userTeams = user.getTeams();
 
         Assert.assertEquals(userTeams.size(), teamSet1.size());
@@ -709,7 +709,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(teamRequest2.toString(), MediaType.APPLICATION_JSON));
 
-        user = qm.getUserPrincipal("blackbeard");
+        user = qm.getUser("blackbeard");
         userTeams = user.getTeams();
 
         Assert.assertEquals(200, response.getStatus());

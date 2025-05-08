@@ -20,10 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.validation.RegexSequence;
 import alpine.common.validation.ValidationTask;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -154,8 +151,8 @@ public class ViolationAnalysisResource extends AbstractApiResource {
             }
 
             String commenter = null;
-            if (getPrincipal() instanceof LdapUser || getPrincipal() instanceof ManagedUser || getPrincipal() instanceof OidcUser) {
-                commenter = ((UserPrincipal) getPrincipal()).getUsername();
+            if (getPrincipal() instanceof final User user) {
+                commenter = user.getUsername();
             }
 
             boolean analysisStateChange = false;

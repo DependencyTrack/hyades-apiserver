@@ -18,26 +18,18 @@
  */
 package alpine.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
-import javax.jdo.annotations.Element;
-import javax.jdo.annotations.Extension;
-import javax.jdo.annotations.ForeignKeyAction;
-import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Join;
-import javax.jdo.annotations.Order;
+import javax.jdo.annotations.Discriminator;
+import javax.jdo.annotations.Inheritance;
+import javax.jdo.annotations.InheritanceStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
-import javax.jdo.annotations.PrimaryKey;
-import javax.jdo.annotations.Unique;
-import java.io.Serializable;
-import java.security.Principal;
-import java.util.List;
 
 /**
  * Persistable object representing an LdapUser.
@@ -46,23 +38,13 @@ import java.util.List;
  * @since 1.0.0
  */
 @PersistenceCapable
+@Inheritance(strategy = InheritanceStrategy.SUPERCLASS_TABLE)
+@Discriminator(value = "LDAP")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class LdapUser implements Serializable, Principal, UserPrincipal {
+@JsonPropertyOrder(value = { "username", "dn", "email", "teams", "permissions" })
+public class LdapUser extends User {
 
     private static final long serialVersionUID = 261924579887470488L;
-
-    @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
-    @JsonIgnore
-    private long id;
-
-    @Persistent
-    @Unique(name = "LDAPUSER_USERNAME_IDX")
-    @Column(name = "USERNAME")
-    @NotBlank
-    @Size(min = 1, max = 255)
-    @Pattern(regexp = "[\\P{Cc}]+", message = "The username must not contain control characters")
-    private String username;
 
     @Persistent
     @Column(name = "DN", allowsNull = "false")
@@ -71,81 +53,12 @@ public class LdapUser implements Serializable, Principal, UserPrincipal {
     @Pattern(regexp = "[\\P{Cc}]+", message = "The distinguished name must not contain control characters")
     private String dn;
 
-    @Persistent(table = "LDAPUSERS_TEAMS", defaultFetchGroup = "true")
-    @Join(column = "LDAPUSER_ID", primaryKey = "LDAPUSERS_TEAMS_PK", foreignKey = "LDAPUSERS_TEAMS_LDAPUSER_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Element(column = "TEAM_ID", foreignKey = "LDAPUSERS_TEAMS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    private List<Team> teams;
-
-    @Persistent
-    @Column(name = "EMAIL", allowsNull = "true")
-    @Size(max = 255)
-    @Pattern(regexp = "[\\P{Cc}]+", message = "The email address must not contain control characters")
-    private String email;
-
-    @Persistent(table = "LDAPUSERS_PERMISSIONS", defaultFetchGroup = "true")
-    @Join(column = "LDAPUSER_ID", primaryKey = "LDAPUSERS_PERMISSIONS_PK", foreignKey = "LDAPUSERS_PERMISSIONS_LDAPUSER_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Element(column = "PERMISSION_ID", foreignKey = "LDAPUSERS_PERMISSIONS_PERMISSION_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    private List<Permission> permissions;
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
     public String getDN() {
         return dn;
     }
 
     public void setDN(String dn) {
         this.dn = dn;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public List<Team> getTeams() {
-        return teams;
-    }
-
-    public void setTeams(List<Team> teams) {
-        this.teams = teams;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public List<Permission> getPermissions() {
-        return permissions;
-    }
-
-    public void setPermissions(List<Permission> permissions) {
-        this.permissions = permissions;
-    }
-
-    /**
-     * Do not use - only here to satisfy Principal implementation requirement.
-     * @deprecated use {@link LdapUser#getUsername()}
-     * @return the value of {@link #getUsername()}
-     */
-    @Deprecated
-    @JsonIgnore
-    public String getName() {
-        return getUsername();
     }
 
 }

@@ -25,7 +25,7 @@ import alpine.model.ApiKey;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.persistence.AlpineQueryManager;
 import alpine.resources.AlpineRequest;
 import alpine.server.filters.AuthorizationFilter;
@@ -332,8 +332,8 @@ public abstract class AlpineResource {
             boolean hasPermission = false;
             if (getPrincipal() instanceof ApiKey) {
                 hasPermission = qm.hasPermission((ApiKey)getPrincipal(), permission);
-            } else if (getPrincipal() instanceof UserPrincipal) {
-                hasPermission = qm.hasPermission((UserPrincipal)getPrincipal(), permission, true);
+            } else if (getPrincipal() instanceof User) {
+                hasPermission = qm.hasPermission((User)getPrincipal(), permission, true);
             }
             return hasPermission;
         }
