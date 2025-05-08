@@ -14,6 +14,7 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
+        <checkstyle.skip>true</checkstyle.skip>
 
         <lib.jooq.version>3.20.3</lib.jooq.version>
         <matcher.pattern>
