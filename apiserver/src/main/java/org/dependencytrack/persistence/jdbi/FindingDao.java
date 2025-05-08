@@ -113,10 +113,7 @@ public interface FindingDao {
                  , "COMPONENT"."VERSION" AS "componentVersion"
                  , "COMPONENT"."PURL" AS "componentPurl"
                  , "COMPONENT"."CPE" AS "componentCpe"
-                 , CASE
-                    WHEN co."COMPONENT_ID" IS NOT NULL THEN true
-                    ELSE false
-                    END AS "componentHasOccurrences"
+                 , EXISTS(SELECT 1 FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = "COMPONENT"."ID") AS "componentHasOccurrences"
                  , "V"."UUID" AS "vulnUuid"
                  , "V"."SOURCE" AS "vulnSource"
                  , "V"."VULNID"
@@ -187,8 +184,6 @@ public interface FindingDao {
                AND "COMPONENT"."PROJECT_ID" = "A"."PROJECT_ID"
               INNER JOIN "PROJECT"
                 ON "COMPONENT"."PROJECT_ID" = "PROJECT"."ID"
-              LEFT JOIN "COMPONENT_OCCURRENCE" co
-                ON "COMPONENT"."ID" = "co"."COMPONENT_ID"
              WHERE "COMPONENT"."PROJECT_ID" = :projectId
                AND (:includeSuppressed OR "A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
              ORDER BY "FINDINGATTRIBUTION"."ID"
@@ -220,10 +215,7 @@ public interface FindingDao {
                  , "COMPONENT"."VERSION" AS "componentVersion"
                  , "COMPONENT"."PURL" AS "componentPurl"
                  , "COMPONENT"."CPE" AS "componentCpe"
-                 , CASE
-                    WHEN co."COMPONENT_ID" IS NOT NULL THEN true
-                    ELSE false
-                    END AS "componentHasOccurrences"
+                 , EXISTS(SELECT 1 FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = "COMPONENT"."ID") AS "componentHasOccurrences"
                  , "V"."UUID" AS "vulnUuid"
                  , "V"."SOURCE" AS "vulnSource"
                  , "V"."VULNID"
@@ -294,8 +286,6 @@ public interface FindingDao {
                AND "COMPONENT"."PROJECT_ID" = "A"."PROJECT_ID"
              INNER JOIN "PROJECT"
                 ON "COMPONENT"."PROJECT_ID" = "PROJECT"."ID"
-             LEFT JOIN "COMPONENT_OCCURRENCE" co
-                ON "COMPONENT"."ID" = "co"."COMPONENT_ID"
              WHERE ${apiProjectAclCondition}
              <#if !activeFilter>
                 AND "PROJECT"."INACTIVE_SINCE" IS NULL
