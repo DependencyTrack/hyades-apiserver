@@ -34,7 +34,7 @@ import alpine.model.OidcGroup;
 import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.resources.AlpineRequest;
 import alpine.security.ApiKeyGenerator;
 
@@ -43,9 +43,9 @@ import javax.jdo.Query;
 import java.security.Principal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -531,23 +531,15 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Resolves a UserPrincipal. Default order resolution is to first match
-     * on ManagedUser then on LdapUser and finally on OidcUser. This may be
-     * configurable in a future release.
+     * Resolves a User.
      * @param username the username of the principal to retrieve
-     * @return a UserPrincipal if found, null if not found
+     * @return a User if found, null if not found
      * @since 1.0.0
      */
-    public UserPrincipal getUserPrincipal(String username) {
-        UserPrincipal principal = getManagedUser(username);
-        if (principal != null) {
-            return principal;
-        }
-        principal = getLdapUser(username);
-        if (principal != null) {
-            return principal;
-        }
-        return getOidcUser(username);
+    public User getUser(String username) {
+        final Query<User> query = pm.newQuery(User.class, "username == :username");
+        query.setParameters(username);
+        return executeAndCloseUnique(query);
     }
 
     /**
@@ -621,7 +613,7 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Associates a UserPrincipal to a Team.
+     * Associates a User to a Team.
      * @param user The user to bind
      * @param team The team to bind
      * @return true if operation was successful, false if not. This is not an indication of team association,
@@ -629,7 +621,7 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * exists between the two.
      * @since 1.0.0
      */
-    public boolean addUserToTeam(final UserPrincipal user, final Team team) {
+    public boolean addUserToTeam(final User user, final Team team) {
         return callInTransaction(() -> {
             List<Team> teams = user.getTeams();
             boolean found = false;
@@ -651,14 +643,14 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Removes the association of a UserPrincipal to a Team.
+     * Removes the association of a User to a Team.
      * @param user The user to unbind
      * @param team The team to unbind
      * @return true if operation was successful, false if not. This is not an indication of team disassociation,
      * an unsuccessful return value may be due to the team or user not existing, or a binding that may not exist.
      * @since 1.0.0
      */
-    public boolean removeUserFromTeam(final UserPrincipal user, final Team team) {
+    public boolean removeUserFromTeam(final User user, final Team team) {
         return callInTransaction(() -> {
             final List<Team> teams = user.getTeams();
             if (teams == null) {
@@ -708,6 +700,21 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
+     * Retrieves a list of {@link Permission}s having the given {@code names}.
+     * @param names The permission names
+     * @return a list of {@link Permission}s
+     * @since 5.6.0
+     */
+    public List<Permission> getPermissionsByName(final Collection<String> names) {
+        final Query<Permission> query = pm.newQuery(Permission.class)
+                .filter(":permissions.contains(name)")
+                .setNamedParameters(Map.of("permissions", names))
+                .orderBy("name ASC");
+
+        return executeAndCloseList(query);
+    }
+
+    /**
      * Returns a list of all Permissions defined in the system.
      * @return a List of Permission objects
      * @since 1.1.0
@@ -716,32 +723,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         final Query<Permission> query = pm.newQuery(Permission.class);
         query.setOrdering("name asc");
         return executeAndCloseList(query);
-    }
-
-    /**
-     * Determines the effective permissions for the specified user by collecting
-     * a List of all permissions assigned to the user either directly, or through
-     * team membership.
-     * @param user the user to retrieve permissions for
-     * @return a List of Permission objects
-     * @deprecated Use {@link #getEffectivePermissions(Principal)} instead.
-     * @since 1.1.0
-     */
-    @Deprecated(forRemoval = true, since = "3.2.0")
-    public List<Permission> getEffectivePermissions(UserPrincipal user) {
-        final LinkedHashSet<Permission> permissions = new LinkedHashSet<>();
-        if (user.getPermissions() != null) {
-            permissions.addAll(user.getPermissions());
-        }
-        if (user.getTeams() != null) {
-            for (final Team team: user.getTeams()) {
-                final List<Permission> teamPermissions = getObjectById(Team.class, team.getId()).getPermissions();
-                if (teamPermissions != null) {
-                    permissions.addAll(teamPermissions);
-                }
-            }
-        }
-        return new ArrayList<>(permissions);
     }
 
     /**
@@ -754,9 +735,7 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     public Set<String> getEffectivePermissions(final Principal principal) {
         return switch (principal) {
             case ApiKey apiKey -> getEffectivePermissions(apiKey);
-            case LdapUser ldapUser -> getEffectivePermissions(ldapUser);
-            case ManagedUser managedUser -> getEffectivePermissions(managedUser);
-            case OidcUser oidcUser -> getEffectivePermissions(oidcUser);
+            case User user -> getEffectivePermissions(user);
             default -> Collections.emptySet();
         };
     }
@@ -779,134 +758,60 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         return Set.copyOf(executeAndCloseResultList(query, String.class));
     }
 
-    private Set<String> getEffectivePermissions(final LdapUser ldapUser) {
-        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
-                SELECT "PERMISSION"."NAME"
-                  FROM "LDAPUSER"
-                 INNER JOIN "LDAPUSERS_TEAMS"
-                    ON "LDAPUSERS_TEAMS"."LDAPUSER_ID" = "LDAPUSER"."ID"
-                 INNER JOIN "TEAM"
-                    ON "TEAM"."ID" = "LDAPUSERS_TEAMS"."TEAM_ID"
-                 INNER JOIN "TEAMS_PERMISSIONS"
-                    ON "TEAMS_PERMISSIONS"."TEAM_ID" = "TEAM"."ID"
-                 INNER JOIN "PERMISSION"
-                    ON "PERMISSION"."ID" = "TEAMS_PERMISSIONS"."PERMISSION_ID"
-                 WHERE "LDAPUSER"."ID" = :ldapUserId
-                 UNION ALL
-                SELECT "PERMISSION"."NAME"
-                  FROM "LDAPUSER"
-                 INNER JOIN "LDAPUSERS_PERMISSIONS"
-                    ON "LDAPUSERS_PERMISSIONS"."LDAPUSER_ID" = "LDAPUSER"."ID"
-                 INNER JOIN "PERMISSION"
-                    ON "PERMISSION"."ID" = "LDAPUSERS_PERMISSIONS"."PERMISSION_ID"
-                 WHERE "LDAPUSER"."ID" = :ldapUserId
-                """);
-        query.setNamedParameters(Map.of("ldapUserId", ldapUser.getId()));
-        return Set.copyOf(executeAndCloseResultList(query, String.class));
-    }
-
-    private Set<String> getEffectivePermissions(final ManagedUser managedUser) {
-        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
-                SELECT "PERMISSION"."NAME"
-                  FROM "MANAGEDUSER"
-                 INNER JOIN "MANAGEDUSERS_TEAMS"
-                    ON "MANAGEDUSERS_TEAMS"."MANAGEDUSER_ID" = "MANAGEDUSER"."ID"
-                 INNER JOIN "TEAM"
-                    ON "TEAM"."ID" = "MANAGEDUSERS_TEAMS"."TEAM_ID"
-                 INNER JOIN "TEAMS_PERMISSIONS"
-                    ON "TEAMS_PERMISSIONS"."TEAM_ID" = "TEAM"."ID"
-                 INNER JOIN "PERMISSION"
-                    ON "PERMISSION"."ID" = "TEAMS_PERMISSIONS"."PERMISSION_ID"
-                 WHERE "MANAGEDUSER"."ID" = :managedUserId
-                 UNION ALL
-                SELECT "PERMISSION"."NAME"
-                  FROM "MANAGEDUSER"
-                 INNER JOIN "MANAGEDUSERS_PERMISSIONS"
-                    ON "MANAGEDUSERS_PERMISSIONS"."MANAGEDUSER_ID" = "MANAGEDUSER"."ID"
-                 INNER JOIN "PERMISSION"
-                    ON "PERMISSION"."ID" = "MANAGEDUSERS_PERMISSIONS"."PERMISSION_ID"
-                 WHERE "MANAGEDUSER"."ID" = :managedUserId
-                """);
-        query.setNamedParameters(Map.of("managedUserId", managedUser.getId()));
-        return Set.copyOf(executeAndCloseResultList(query, String.class));
-    }
-
-    private Set<String> getEffectivePermissions(final OidcUser oidcUser) {
-        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
-                SELECT "PERMISSION"."NAME"
-                  FROM "OIDCUSER"
-                 INNER JOIN "OIDCUSERS_TEAMS"
-                    ON "OIDCUSERS_TEAMS"."OIDCUSERS_ID" = "OIDCUSER"."ID"
-                 INNER JOIN "TEAM"
-                    ON "TEAM"."ID" = "OIDCUSERS_TEAMS"."TEAM_ID"
-                 INNER JOIN "TEAMS_PERMISSIONS"
-                    ON "TEAMS_PERMISSIONS"."TEAM_ID" = "TEAM"."ID"
-                 INNER JOIN "PERMISSION"
-                    ON "PERMISSION"."ID" = "TEAMS_PERMISSIONS"."PERMISSION_ID"
-                 WHERE "OIDCUSER"."ID" = :oidcUserId
-                 UNION ALL
-                SELECT "PERMISSION"."NAME"
-                  FROM "OIDCUSER"
-                 INNER JOIN "OIDCUSERS_PERMISSIONS"
-                    ON "OIDCUSERS_PERMISSIONS"."OIDCUSER_ID" = "OIDCUSER"."ID"
-                 INNER JOIN "PERMISSION"
-                    ON "PERMISSION"."ID" = "OIDCUSERS_PERMISSIONS"."PERMISSION_ID"
-                 WHERE "OIDCUSER"."ID" = :oidcUserId
-                """);
-        query.setNamedParameters(Map.of("oidcUserId", oidcUser.getId()));
-        return Set.copyOf(executeAndCloseResultList(query, String.class));
-    }
-
     /**
-     * Determines if the specified UserPrincipal has been assigned the specified permission.
-     * @param user the UserPrincipal to query
-     * @param permissionName the name of the permission
-     * @return true if the user has the permission assigned, false if not
-     * @since 1.0.0
+     * Determines the effective permissions for the specified user by collecting
+     * a List of all permissions assigned to the user either directly, or through
+     * team membership.
+     * @param user the {@link User} to retrieve permissions for
+     * @return Set of permission names
      */
-    public boolean hasPermission(final UserPrincipal user, String permissionName) {
-        return hasPermission(user, permissionName, false);
+    private Set<String> getEffectivePermissions(final User user) {
+        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                SELECT p."NAME"
+                  FROM "USER" u
+                 INNER JOIN "USERS_TEAMS" ut
+                    ON ut."USER_ID" = u."ID"
+                 INNER JOIN "TEAM" t
+                    ON t."ID" = ut."TEAM_ID"
+                 INNER JOIN "TEAMS_PERMISSIONS" tp
+                    ON tp."TEAM_ID" = t."ID"
+                 INNER JOIN "PERMISSION" p
+                    ON p."ID" = tp."PERMISSION_ID"
+                 WHERE u."ID" = :userId
+                 UNION ALL
+                SELECT p."NAME"
+                  FROM "USER" u
+                 INNER JOIN "USERS_PERMISSIONS" up
+                    ON up."USER_ID" = u."ID"
+                 INNER JOIN "PERMISSION" p
+                    ON p."ID" = up."PERMISSION_ID"
+                 WHERE u."ID" = :userId
+                """);
+
+        query.setNamedParameters(Map.of("userId", user.getId()));
+
+        return Set.copyOf(executeAndCloseResultList(query, String.class));
     }
 
     /**
-     * Determines if the specified UserPrincipal has been assigned the specified permission.
-     * @param user the UserPrincipal to query
+     * Determines if the specified User has been assigned the specified permission.
+     * @param user the User to query
      * @param permissionName the name of the permission
      * @param includeTeams if true, will query all Team membership assigned to the user for the specified permission
      * @return true if the user has the permission assigned, false if not
      * @since 1.0.0
      */
-    public boolean hasPermission(final UserPrincipal user, String permissionName, boolean includeTeams) {
-        Query<?> query;
-        if (user instanceof final ManagedUser managedUser) {
-            query = pm.newQuery(Permission.class, "name == :permissionName && managedUsers.contains(user) && user.id == :userId");
-            query.declareVariables("alpine.model.ManagedUser user");
-            query.setParameters(permissionName, managedUser.getId());
-        } else if (user instanceof final LdapUser ldapUser) {
-            query = pm.newQuery(Permission.class, "name == :permissionName && ldapUsers.contains(user) && user.id == :userId");
-            query.declareVariables("alpine.model.LdapUser user");
-            query.setParameters(permissionName, ldapUser.getId());
-        } else if (user instanceof final OidcUser oidcUser) {
-            query = pm.newQuery(Permission.class, "name == :permissionName && oidcUsers.contains(user) && user.id == :userId");
-            query.declareVariables("alpine.model.OidcUser user");
-            query.setParameters(permissionName, oidcUser.getId());
-        } else {
-            LOGGER.warn("Unrecognized principal class %s; Unable to verify permissions".formatted(user.getClass()));
-            return false;
-        }
-        query.setResult("count(id)");
+    public boolean hasPermission(final User user, String permissionName, boolean includeTeams) {
+        Query<Permission> query = pm.newQuery(Permission.class)
+                .filter("name == :permissionName && users.contains(user) && user.id == :userId")
+                .variables("alpine.model.User user")
+                .setParameters(permissionName, user.getId())
+                .result("count(id)");
+
         final long count = query.executeResultUnique(Long.class);
-        if (count > 0) {
-            return true;
-        }
-        if (includeTeams) {
-            for (final Team team: user.getTeams()) {
-                if (hasPermission(team, permissionName)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+
+        return count > 0 || (includeTeams && user.getTeams().stream()
+                .anyMatch(team -> hasPermission(team, permissionName)));
     }
 
     /**

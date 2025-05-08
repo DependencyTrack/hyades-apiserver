@@ -29,7 +29,7 @@ import alpine.model.OidcUser;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Permission;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.notification.NotificationLevel;
 import alpine.persistence.AbstractAlpineQueryManager;
 import alpine.persistence.AlpineQueryManager;
@@ -539,8 +539,8 @@ public class QueryManager extends AlpineQueryManager {
      */
     protected Set<Long> getTeamIds(final Principal principal) {
         List<Team> teams = switch (principal) {
-            case UserPrincipal user -> user.getTeams();
-            case ApiKey apiKey -> apiKey.getTeams();
+            case User user when user != null -> user.getTeams();
+            case ApiKey apiKey when apiKey != null -> apiKey.getTeams();
             default -> Collections.emptyList();
         };
 
@@ -1310,14 +1310,14 @@ public class QueryManager extends AlpineQueryManager {
         return getNotificationQueryManager().bind(notificationRule, tags);
     }
 
-    public List<Permission> getEffectivePermissions(UserPrincipal userPrincipal, Project project) {
+    public List<Permission> getEffectivePermissions(User user, Project project) {
         return JdbiFactory.withJdbiHandle(request, handle -> handle.attach(EffectivePermissionDao.class)
-                .getEffectivePermissions(userPrincipal.getClass(), userPrincipal.getId(), project.getId()));
+                .getEffectivePermissions(user.getId(), project.getId()));
     }
 
     public boolean hasAccessManagementPermission(final Object principal) {
-        if (principal instanceof final UserPrincipal userPrincipal) {
-            return hasAccessManagementPermission(userPrincipal);
+        if (principal instanceof final User user) {
+            return hasAccessManagementPermission(user);
         } else if (principal instanceof final ApiKey apiKey) {
             return hasAccessManagementPermission(apiKey);
         }
@@ -1325,8 +1325,8 @@ public class QueryManager extends AlpineQueryManager {
         throw new IllegalArgumentException("Provided principal is of invalid type " + ClassUtils.getName(principal));
     }
 
-    public boolean hasAccessManagementPermission(final UserPrincipal userPrincipal) {
-        return getProjectQueryManager().hasAccessManagementPermission(userPrincipal);
+    public boolean hasAccessManagementPermission(final User user) {
+        return getProjectQueryManager().hasAccessManagementPermission(user);
     }
 
     public boolean hasAccessManagementPermission(final ApiKey apiKey) {
