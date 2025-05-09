@@ -105,7 +105,7 @@ public class MigrationInitializer implements ServletContextListener {
     }
 
     public static void runMigration(final DataSource dataSource) throws Exception {
-        runMigration(dataSource, "migration/changelog-main.xml");
+        runMigration(dataSource, "changelog-main.xml");
     }
 
     public static void runMigration(final DataSource dataSource, final String changelogResourcePath) throws Exception {
