@@ -1928,12 +1928,14 @@
                 INTO actual_data_start_date;
 
                 -- If no data exists, exit early
-                IF actual_data_start_date IS NULL OR actual_data_start_date <> current_date THEN
-                    RETURN;
+                IF actual_data_start_date IS NULL THEN
+                    -- Create partitions for today only
+                    start_date := current_date;
+                ELSE
+                    -- Use the later of the configured or actual data start date
+                    start_date := GREATEST(configured_start_date, actual_data_start_date);
                 END IF;
 
-                -- Use the later of the configured or actual data start date
-                start_date := GREATEST(configured_start_date, actual_data_start_date);
                 partition_date := start_date;
 
                 -- Create partitions for each day starting from retention period
