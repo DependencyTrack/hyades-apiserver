@@ -11,16 +11,15 @@ import java.util.List;
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.ApiKeysTeams.ApiKeysTeamsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersTeams.LdapUsersTeamsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersTeams.ManagedUsersTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.MappedLdapGroup.MappedLdapGroupPath;
 import org.dependencytrack.persistence.jooq.generated.tables.MappedOidcGroup.MappedOidcGroupPath;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTeams.NotificationRuleTeamsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersTeams.OidcUsersTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission.PermissionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectAccessTeams.ProjectAccessTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.TeamsPermissions.TeamsPermissionsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.User.UserPath;
+import org.dependencytrack.persistence.jooq.generated.tables.UsersTeams.UsersTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.TeamRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -176,32 +175,6 @@ public class Team extends TableImpl<TeamRecord> {
         return _apiKeysTeams;
     }
 
-    private transient LdapUsersTeamsPath _ldapUsersTeams;
-
-    /**
-     * Get the implicit to-many join path to the <code>LDAPUSERS_TEAMS</code>
-     * table
-     */
-    public LdapUsersTeamsPath ldapUsersTeams() {
-        if (_ldapUsersTeams == null)
-            _ldapUsersTeams = new LdapUsersTeamsPath(this, null, Keys.LDAPUSERS_TEAMS_TEAM_FK.getInverseKey());
-
-        return _ldapUsersTeams;
-    }
-
-    private transient ManagedUsersTeamsPath _managedUsersTeams;
-
-    /**
-     * Get the implicit to-many join path to the <code>MANAGEDUSERS_TEAMS</code>
-     * table
-     */
-    public ManagedUsersTeamsPath managedUsersTeams() {
-        if (_managedUsersTeams == null)
-            _managedUsersTeams = new ManagedUsersTeamsPath(this, null, Keys.MANAGEDUSERS_TEAMS_TEAM_FK.getInverseKey());
-
-        return _managedUsersTeams;
-    }
-
     private transient MappedLdapGroupPath _mappedLdapGroup;
 
     /**
@@ -241,19 +214,6 @@ public class Team extends TableImpl<TeamRecord> {
         return _notificationRuleTeams;
     }
 
-    private transient OidcUsersTeamsPath _oidcUsersTeams;
-
-    /**
-     * Get the implicit to-many join path to the <code>OIDCUSERS_TEAMS</code>
-     * table
-     */
-    public OidcUsersTeamsPath oidcUsersTeams() {
-        if (_oidcUsersTeams == null)
-            _oidcUsersTeams = new OidcUsersTeamsPath(this, null, Keys.OIDCUSERS_TEAMS_TEAM_FK.getInverseKey());
-
-        return _oidcUsersTeams;
-    }
-
     private transient ProjectAccessTeamsPath _projectAccessTeams;
 
     /**
@@ -280,6 +240,18 @@ public class Team extends TableImpl<TeamRecord> {
         return _teamsPermissions;
     }
 
+    private transient UsersTeamsPath _usersTeams;
+
+    /**
+     * Get the implicit to-many join path to the <code>USERS_TEAMS</code> table
+     */
+    public UsersTeamsPath usersTeams() {
+        if (_usersTeams == null)
+            _usersTeams = new UsersTeamsPath(this, null, Keys.USERS_TEAMS__USERS_TEAMS_TEAM_FK.getInverseKey());
+
+        return _usersTeams;
+    }
+
     /**
      * Get the implicit many-to-many join path to the <code>PROJECT</code> table
      */
@@ -293,6 +265,13 @@ public class Team extends TableImpl<TeamRecord> {
      */
     public PermissionPath permission() {
         return teamsPermissions().permission();
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>USER</code> table
+     */
+    public UserPath user() {
+        return usersTeams().user();
     }
 
     @Override

@@ -9,19 +9,14 @@ import java.util.Collection;
 import java.util.List;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
-import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUser.LdapUserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser.ManagedUserPath;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUser.OidcUserPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission.PermissionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
+import org.dependencytrack.persistence.jooq.generated.tables.User.UserPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.UserProjectEffectivePermissionsRecord;
-import org.jooq.Check;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
-import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -35,8 +30,8 @@ import org.jooq.Stringly;
 import org.jooq.Table;
 import org.jooq.TableField;
 import org.jooq.TableOptions;
+import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
-import org.jooq.impl.Internal;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
@@ -63,25 +58,14 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
     }
 
     /**
-     * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.LDAPUSER_ID</code>.
-     */
-    public final TableField<UserProjectEffectivePermissionsRecord, Long> ldapUserId = createField(DSL.name("LDAPUSER_ID"), SQLDataType.BIGINT, this, "");
-
-    /**
-     * The column
-     * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.MANAGEDUSER_ID</code>.
-     */
-    public final TableField<UserProjectEffectivePermissionsRecord, Long> managedUserId = createField(DSL.name("MANAGEDUSER_ID"), SQLDataType.BIGINT, this, "");
-
-    /**
-     * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.OIDCUSER_ID</code>.
-     */
-    public final TableField<UserProjectEffectivePermissionsRecord, Long> oidcUserId = createField(DSL.name("OIDCUSER_ID"), SQLDataType.BIGINT, this, "");
-
-    /**
      * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PROJECT_ID</code>.
      */
     public final TableField<UserProjectEffectivePermissionsRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+
+    /**
+     * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.USER_ID</code>.
+     */
+    public final TableField<UserProjectEffectivePermissionsRecord, Long> userId = createField(DSL.name("USER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_ID</code>.
@@ -164,49 +148,13 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
     }
 
     @Override
-    public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSERS_IDX, Indexes.USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSERS_IDX, Indexes.USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSERS_IDX);
+    public UniqueKey<UserProjectEffectivePermissionsRecord> getPrimaryKey() {
+        return Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_PK;
     }
 
     @Override
     public List<ForeignKey<UserProjectEffectivePermissionsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK);
-    }
-
-    private transient LdapUserPath _ldapUser;
-
-    /**
-     * Get the implicit join path to the <code>LDAPUSER</code> table.
-     */
-    public LdapUserPath ldapUser() {
-        if (_ldapUser == null)
-            _ldapUser = new LdapUserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_LDAPUSER_FK, null);
-
-        return _ldapUser;
-    }
-
-    private transient ManagedUserPath _managedUser;
-
-    /**
-     * Get the implicit join path to the <code>MANAGEDUSER</code> table.
-     */
-    public ManagedUserPath managedUser() {
-        if (_managedUser == null)
-            _managedUser = new ManagedUserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_MANAGEDUSER_FK, null);
-
-        return _managedUser;
-    }
-
-    private transient OidcUserPath _oidcUser;
-
-    /**
-     * Get the implicit join path to the <code>OIDCUSER</code> table.
-     */
-    public OidcUserPath oidcUser() {
-        if (_oidcUser == null)
-            _oidcUser = new OidcUserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_OIDCUSER_FK, null);
-
-        return _oidcUser;
+        return Arrays.asList(Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK);
     }
 
     private transient PermissionPath _userProjectEffectivePermissionsPermissionIdFk;
@@ -247,11 +195,16 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
         return _project;
     }
 
-    @Override
-    public List<Check<UserProjectEffectivePermissionsRecord>> getChecks() {
-        return Arrays.asList(
-            Internal.createCheck(this, DSL.name("USER_PROJECT_EFFECTIVE_PERMISSIONS_check"), "((((((\"LDAPUSER_ID\" IS NOT NULL))::integer + ((\"MANAGEDUSER_ID\" IS NOT NULL))::integer) + ((\"OIDCUSER_ID\" IS NOT NULL))::integer) = 1))", true)
-        );
+    private transient UserPath _user;
+
+    /**
+     * Get the implicit join path to the <code>USER</code> table.
+     */
+    public UserPath user() {
+        if (_user == null)
+            _user = new UserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK, null);
+
+        return _user;
     }
 
     @Override

@@ -102,7 +102,7 @@ public class Repository extends TableImpl<RepositoryRecord> {
     /**
      * The column <code>REPOSITORY.USERNAME</code>.
      */
-    public final TableField<RepositoryRecord, String> userName = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<RepositoryRecord, String> username = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>REPOSITORY.UUID</code>.
