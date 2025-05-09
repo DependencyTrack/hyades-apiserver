@@ -45,9 +45,7 @@
     <class>org.dependencytrack.model.ProjectMetadata</class>
     <class>org.dependencytrack.model.ProjectMetrics</class>
     <class>org.dependencytrack.model.ProjectProperty</class>
-    <class>org.dependencytrack.model.ProjectRole$LdapUserProjectRole</class>
-    <class>org.dependencytrack.model.ProjectRole$ManagedUserProjectRole</class>
-    <class>org.dependencytrack.model.ProjectRole$OidcUserProjectRole</class>
+    <class>org.dependencytrack.model.ProjectRole</class>
     <class>org.dependencytrack.model.Repository</class>
     <class>org.dependencytrack.model.RepositoryMetaComponent</class>
     <class>org.dependencytrack.model.Role</class>

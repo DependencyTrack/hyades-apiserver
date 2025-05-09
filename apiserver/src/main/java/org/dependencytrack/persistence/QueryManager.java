@@ -499,29 +499,8 @@ public class QueryManager extends AlpineQueryManager {
      * @return A {@link Set} of {@link ProjectRole} IDs
      */
     protected Set<Long> getRoleIds(final Principal principal, final Project project) {
-        String usersField;
-        Class<? extends ProjectRole> cls;
-
-        switch (principal) {
-            case LdapUser ldapUser -> {
-                usersField = "ldapUsers";
-                cls = ProjectRole.LdapUserProjectRole.class;
-            }
-            case ManagedUser managedUser -> {
-                usersField = "managedUsers";
-                cls = ProjectRole.ManagedUserProjectRole.class;
-            }
-            case OidcUser oidcUser -> {
-                usersField = "oidcUsers";
-                cls = ProjectRole.OidcUserProjectRole.class;
-            }
-            default -> {
-                return Collections.emptySet();
-            }
-        };
-
-        Query<? extends ProjectRole> query = pm.newQuery(cls)
-                .filter("project.id == :projectId && %s.contains(:principal)".formatted(usersField))
+        final Query<ProjectRole> query = pm.newQuery(ProjectRole.class)
+                .filter("project.id == :projectId && users.contains(:principal)")
                 .setNamedParameters(Map.ofEntries(
                     Map.entry("principal", principal),
                     Map.entry("projectId", project.getId())));
@@ -1192,15 +1171,15 @@ public class QueryManager extends AlpineQueryManager {
         return getRepositoryQueryManager().synchronizeRepositoryMetaComponent(transientRepositoryMetaComponent);
     }
 
-    public boolean addRoleToUser(UserPrincipal principal, Role role, Project project){
-        return getRoleQueryManager().addRoleToUser(principal, role, project);
+    public boolean addRoleToUser(User user, Role role, Project project){
+        return getRoleQueryManager().addRoleToUser(user, role, project);
     }
 
     public List<Project> getUnassignedProjects(final String username) {
         return getRoleQueryManager().getUnassignedProjects(username);
     }
 
-    public List<Project> getUnassignedProjects(final UserPrincipal user) {
+    public List<Project> getUnassignedProjects(final User user) {
         return getRoleQueryManager().getUnassignedProjects(user);
     }
 
@@ -1208,7 +1187,7 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getUnassignedRolePermissions(role);
     }
 
-    public List<? extends ProjectRole> getUserRoles(final UserPrincipal user) {
+    public List<ProjectRole> getUserRoles(final User user) {
         return getRoleQueryManager().getUserRoles(user);
     }
 
@@ -1216,7 +1195,7 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getUserProjectPermissions(username, projectName);
     }
 
-    public boolean removeRoleFromUser(final UserPrincipal user, final Role role, final Project project) {
+    public boolean removeRoleFromUser(final User user, final Role role, final Project project) {
         return getRoleQueryManager().removeRoleFromUser(user, role, project);
     }
 

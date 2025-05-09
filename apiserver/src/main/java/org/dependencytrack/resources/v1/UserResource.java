@@ -865,7 +865,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(
                     responseCode = "200",
                     description = "Updated user with a specific role",
-                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))
+                    content = @Content(schema = @Schema(implementation = User.class))
             ),
             @ApiResponse(responseCode = "304", description = "The user has already been assigned to this role."),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -882,23 +882,23 @@ public class UserResource extends AlpineResource {
             if (role == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
 
-            UserPrincipal principal = qm.getUserPrincipal(username);
-            if (principal == null)
+            User user = qm.getUser(username);
+            if (user == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
 
             Project project = qm.getProject(roleProjectRequest.projectUUID());
             if (project == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
 
-            final boolean modified = qm.addRoleToUser(principal, role, project);
+            final boolean modified = qm.addRoleToUser(user, role, project);
             if (!modified)
                 return Response.notModified().entity("The user is already a member of the specified role.").build();
 
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
                     "Added role membership for: %s / role: %s / project: %s"
-                            .formatted(principal.getName(), role.getName(), project.getName()));
+                            .formatted(user.getName(), role.getName(), project.getName()));
 
-            return Response.ok(principal).build();
+            return Response.ok(user).build();
         }
     }
 
@@ -914,7 +914,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(
                     responseCode = "200",
                     description = "Updated user with a specific role removed",
-                    content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+                    content = @Content(schema = @Schema(implementation = User.class))),
             @ApiResponse(responseCode = "204", description = "The role has been successfully removed from the user"),
             @ApiResponse(responseCode = "304", description = "The user is not a member of the specified role"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -929,22 +929,22 @@ public class UserResource extends AlpineResource {
             if (role == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
 
-            UserPrincipal principal = qm.getUserPrincipal(username);
-            if (principal == null)
+            User user = qm.getUser(username);
+            if (user == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
 
             Project project = qm.getProject(roleProjectRequest.projectUUID());
             if (project == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
 
-            final boolean modified = qm.removeRoleFromUser(principal, role, project);
+            final boolean modified = qm.removeRoleFromUser(user, role, project);
             if (!modified)
                 return Response.notModified().entity("The user is not a member of the specified role.").build();
 
-            principal = qm.getObjectById(principal.getClass(), principal.getId());
+            user = qm.getObjectById(user.getClass(), user.getId());
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
                     "Removed role membership for: %s / role: %s / project: %s"
-                            .formatted(principal.getName(), role.getName(), project.getName()));
+                            .formatted(user.getName(), role.getName(), project.getName()));
 
             return Response.noContent().build();
         }
@@ -956,7 +956,7 @@ public class UserResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Adds the username to the specified team.", description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = UserPrincipal.class))),
+            @ApiResponse(responseCode = "200", description = "The updated user", content = @Content(schema = @Schema(implementation = User.class))),
             @ApiResponse(responseCode = "304", description = "The user is already a member of the specified team(s)"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
@@ -966,14 +966,14 @@ public class UserResource extends AlpineResource {
             @Parameter(description = "A valid username", required = true) @PathParam("username") String username,
             @Parameter(description = "The UUID(s) of the team(s) to associate username with", required = true) @Valid TeamsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            UserPrincipal principal = qm.getUserPrincipal(username);
-            if (principal == null) {
+            User user = qm.getUser(username);
+            if (user == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
 
             // Compare given team uuids against current user teams
-            final Set<String> currentUserTeams = principal.getTeams() == null ? Collections.emptySet()
-                    : principal.getTeams().stream()
+            final Set<String> currentUserTeams = user.getTeams() == null ? Collections.emptySet()
+                    : user.getTeams().stream()
                             .map(Team::getUuid)
                             .map(UUID::toString)
                             .collect(Collectors.toSet());
@@ -1002,11 +1002,11 @@ public class UserResource extends AlpineResource {
                 return Response.status(Response.Status.BAD_REQUEST).entity(response).build();
             }
 
-            principal.setTeams(requestedTeams);
-            qm.persist(principal);
+            user.setTeams(requestedTeams);
+            qm.persist(user);
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                    "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
-            return Response.ok(principal).build();
+                    "Added team membership for: " + user.getName() + " / team: " + requestedTeams.toString());
+            return Response.ok(user).build();
         }
     }
 }
