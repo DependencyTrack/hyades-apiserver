@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -62,137 +63,137 @@ public class VulnerableSoftware extends TableImpl<VulnerableSoftwareRecord> {
     /**
      * The column <code>VULNERABLESOFTWARE.ID</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<VulnerableSoftwareRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.CPE22</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> CPE22 = createField(DSL.name("CPE22"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> cpe22 = createField(DSL.name("CPE22"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.CPE23</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> CPE23 = createField(DSL.name("CPE23"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> cpe23 = createField(DSL.name("CPE23"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.EDITION</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> EDITION = createField(DSL.name("EDITION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> edition = createField(DSL.name("EDITION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.LANGUAGE</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> LANGUAGE = createField(DSL.name("LANGUAGE"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> language = createField(DSL.name("LANGUAGE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.OTHER</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> OTHER = createField(DSL.name("OTHER"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> other = createField(DSL.name("OTHER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.PART</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> PART = createField(DSL.name("PART"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> part = createField(DSL.name("PART"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.PRODUCT</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> PRODUCT = createField(DSL.name("PRODUCT"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> product = createField(DSL.name("PRODUCT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.PURL</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> PURL = createField(DSL.name("PURL"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> purl = createField(DSL.name("PURL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.PURL_NAME</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> PURL_NAME = createField(DSL.name("PURL_NAME"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> purlName = createField(DSL.name("PURL_NAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.PURL_NAMESPACE</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> PURL_NAMESPACE = createField(DSL.name("PURL_NAMESPACE"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> purlNamespace = createField(DSL.name("PURL_NAMESPACE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.PURL_QUALIFIERS</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> PURL_QUALIFIERS = createField(DSL.name("PURL_QUALIFIERS"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> purlQualifiers = createField(DSL.name("PURL_QUALIFIERS"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.PURL_SUBPATH</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> PURL_SUBPATH = createField(DSL.name("PURL_SUBPATH"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> purlSubpath = createField(DSL.name("PURL_SUBPATH"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.PURL_TYPE</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> PURL_TYPE = createField(DSL.name("PURL_TYPE"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> purlType = createField(DSL.name("PURL_TYPE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.PURL_VERSION</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> PURL_VERSION = createField(DSL.name("PURL_VERSION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> purlVersion = createField(DSL.name("PURL_VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.SWEDITION</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> SWEDITION = createField(DSL.name("SWEDITION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> swEdition = createField(DSL.name("SWEDITION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.TARGETHW</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> TARGETHW = createField(DSL.name("TARGETHW"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> targetHw = createField(DSL.name("TARGETHW"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.TARGETSW</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> TARGETSW = createField(DSL.name("TARGETSW"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> targetSw = createField(DSL.name("TARGETSW"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.UPDATE</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> UPDATE = createField(DSL.name("UPDATE"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> update = createField(DSL.name("UPDATE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.UUID</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<VulnerableSoftwareRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.VENDOR</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> VENDOR = createField(DSL.name("VENDOR"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> vendor = createField(DSL.name("VENDOR"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.VERSION</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> VERSION = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> version = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.VERSIONENDEXCLUDING</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> VERSIONENDEXCLUDING = createField(DSL.name("VERSIONENDEXCLUDING"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> versionEndExcluding = createField(DSL.name("VERSIONENDEXCLUDING"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.VERSIONENDINCLUDING</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> VERSIONENDINCLUDING = createField(DSL.name("VERSIONENDINCLUDING"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> versionEndIncluding = createField(DSL.name("VERSIONENDINCLUDING"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.VERSIONSTARTEXCLUDING</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> VERSIONSTARTEXCLUDING = createField(DSL.name("VERSIONSTARTEXCLUDING"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> versionStartExcluding = createField(DSL.name("VERSIONSTARTEXCLUDING"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.VERSIONSTARTINCLUDING</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, String> VERSIONSTARTINCLUDING = createField(DSL.name("VERSIONSTARTINCLUDING"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VulnerableSoftwareRecord, String> versionStartIncluding = createField(DSL.name("VERSIONSTARTINCLUDING"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VULNERABLESOFTWARE.VULNERABLE</code>.
      */
-    public final TableField<VulnerableSoftwareRecord, Boolean> VULNERABLE = createField(DSL.name("VULNERABLE"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<VulnerableSoftwareRecord, Boolean> vulnerable = createField(DSL.name("VULNERABLE"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     private VulnerableSoftware(Name alias, Table<VulnerableSoftwareRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

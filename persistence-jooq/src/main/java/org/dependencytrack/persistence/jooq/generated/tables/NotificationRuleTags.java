@@ -60,12 +60,12 @@ public class NotificationRuleTags extends TableImpl<NotificationRuleTagsRecord> 
     /**
      * The column <code>NOTIFICATIONRULE_TAGS.NOTIFICATIONRULE_ID</code>.
      */
-    public final TableField<NotificationRuleTagsRecord, Long> NOTIFICATIONRULE_ID = createField(DSL.name("NOTIFICATIONRULE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<NotificationRuleTagsRecord, Long> notificationRuleId = createField(DSL.name("NOTIFICATIONRULE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE_TAGS.TAG_ID</code>.
      */
-    public final TableField<NotificationRuleTagsRecord, Long> TAG_ID = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<NotificationRuleTagsRecord, Long> tagId = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT, this, "");
 
     private NotificationRuleTags(Name alias, Table<NotificationRuleTagsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

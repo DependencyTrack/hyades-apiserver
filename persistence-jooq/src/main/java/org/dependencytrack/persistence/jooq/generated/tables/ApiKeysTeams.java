@@ -59,12 +59,12 @@ public class ApiKeysTeams extends TableImpl<ApiKeysTeamsRecord> {
     /**
      * The column <code>APIKEYS_TEAMS.TEAM_ID</code>.
      */
-    public final TableField<ApiKeysTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ApiKeysTeamsRecord, Long> teamId = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>APIKEYS_TEAMS.APIKEY_ID</code>.
      */
-    public final TableField<ApiKeysTeamsRecord, Long> APIKEY_ID = createField(DSL.name("APIKEY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ApiKeysTeamsRecord, Long> apiKeyId = createField(DSL.name("APIKEY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private ApiKeysTeams(Name alias, Table<ApiKeysTeamsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

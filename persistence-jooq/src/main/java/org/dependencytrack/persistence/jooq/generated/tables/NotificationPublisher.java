@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Keys;
@@ -59,42 +60,42 @@ public class NotificationPublisher extends TableImpl<NotificationPublisherRecord
     /**
      * The column <code>NOTIFICATIONPUBLISHER.ID</code>.
      */
-    public final TableField<NotificationPublisherRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<NotificationPublisherRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>NOTIFICATIONPUBLISHER.DEFAULT_PUBLISHER</code>.
      */
-    public final TableField<NotificationPublisherRecord, Boolean> DEFAULT_PUBLISHER = createField(DSL.name("DEFAULT_PUBLISHER"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<NotificationPublisherRecord, Boolean> defaultPublisher = createField(DSL.name("DEFAULT_PUBLISHER"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
      * The column <code>NOTIFICATIONPUBLISHER.DESCRIPTION</code>.
      */
-    public final TableField<NotificationPublisherRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<NotificationPublisherRecord, String> description = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>NOTIFICATIONPUBLISHER.NAME</code>.
      */
-    public final TableField<NotificationPublisherRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<NotificationPublisherRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>NOTIFICATIONPUBLISHER.PUBLISHER_CLASS</code>.
      */
-    public final TableField<NotificationPublisherRecord, String> PUBLISHER_CLASS = createField(DSL.name("PUBLISHER_CLASS"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
+    public final TableField<NotificationPublisherRecord, String> publisherClass = createField(DSL.name("PUBLISHER_CLASS"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
 
     /**
      * The column <code>NOTIFICATIONPUBLISHER.TEMPLATE</code>.
      */
-    public final TableField<NotificationPublisherRecord, String> TEMPLATE = createField(DSL.name("TEMPLATE"), SQLDataType.CLOB, this, "");
+    public final TableField<NotificationPublisherRecord, String> template = createField(DSL.name("TEMPLATE"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>NOTIFICATIONPUBLISHER.TEMPLATE_MIME_TYPE</code>.
      */
-    public final TableField<NotificationPublisherRecord, String> TEMPLATE_MIME_TYPE = createField(DSL.name("TEMPLATE_MIME_TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<NotificationPublisherRecord, String> templateMimeType = createField(DSL.name("TEMPLATE_MIME_TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>NOTIFICATIONPUBLISHER.UUID</code>.
      */
-    public final TableField<NotificationPublisherRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<NotificationPublisherRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     private NotificationPublisher(Name alias, Table<NotificationPublisherRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

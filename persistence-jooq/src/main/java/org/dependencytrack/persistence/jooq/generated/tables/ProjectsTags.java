@@ -60,12 +60,12 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
     /**
      * The column <code>PROJECTS_TAGS.TAG_ID</code>.
      */
-    public final TableField<ProjectsTagsRecord, Long> TAG_ID = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ProjectsTagsRecord, Long> tagId = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>PROJECTS_TAGS.PROJECT_ID</code>.
      */
-    public final TableField<ProjectsTagsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ProjectsTagsRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private ProjectsTags(Name alias, Table<ProjectsTagsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

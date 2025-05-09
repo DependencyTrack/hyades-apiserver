@@ -63,37 +63,37 @@ public class ApiKey extends TableImpl<ApiKeyRecord> {
     /**
      * The column <code>APIKEY.ID</code>.
      */
-    public final TableField<ApiKeyRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ApiKeyRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>APIKEY.COMMENT</code>.
      */
-    public final TableField<ApiKeyRecord, String> COMMENT = createField(DSL.name("COMMENT"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ApiKeyRecord, String> comment = createField(DSL.name("COMMENT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>APIKEY.CREATED</code>.
      */
-    public final TableField<ApiKeyRecord, OffsetDateTime> CREATED = createField(DSL.name("CREATED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<ApiKeyRecord, OffsetDateTime> created = createField(DSL.name("CREATED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
      * The column <code>APIKEY.LAST_USED</code>.
      */
-    public final TableField<ApiKeyRecord, OffsetDateTime> LAST_USED = createField(DSL.name("LAST_USED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<ApiKeyRecord, OffsetDateTime> lastUsed = createField(DSL.name("LAST_USED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
      * The column <code>APIKEY.SECRET_HASH</code>.
      */
-    public final TableField<ApiKeyRecord, String> SECRET_HASH = createField(DSL.name("SECRET_HASH"), SQLDataType.VARCHAR(64).nullable(false), this, "");
+    public final TableField<ApiKeyRecord, String> secretHash = createField(DSL.name("SECRET_HASH"), SQLDataType.VARCHAR(64).nullable(false), this, "");
 
     /**
      * The column <code>APIKEY.PUBLIC_ID</code>.
      */
-    public final TableField<ApiKeyRecord, String> PUBLIC_ID = createField(DSL.name("PUBLIC_ID"), SQLDataType.VARCHAR(8).nullable(false), this, "");
+    public final TableField<ApiKeyRecord, String> publicId = createField(DSL.name("PUBLIC_ID"), SQLDataType.VARCHAR(8).nullable(false), this, "");
 
     /**
      * The column <code>APIKEY.IS_LEGACY</code>.
      */
-    public final TableField<ApiKeyRecord, Boolean> IS_LEGACY = createField(DSL.name("IS_LEGACY"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+    public final TableField<ApiKeyRecord, Boolean> isLegacy = createField(DSL.name("IS_LEGACY"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
     private ApiKey(Name alias, Table<ApiKeyRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

@@ -59,12 +59,12 @@ public class NotificationRuleTeams extends TableImpl<NotificationRuleTeamsRecord
     /**
      * The column <code>NOTIFICATIONRULE_TEAMS.NOTIFICATIONRULE_ID</code>.
      */
-    public final TableField<NotificationRuleTeamsRecord, Long> NOTIFICATIONRULE_ID = createField(DSL.name("NOTIFICATIONRULE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<NotificationRuleTeamsRecord, Long> notificationRuleId = createField(DSL.name("NOTIFICATIONRULE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE_TEAMS.TEAM_ID</code>.
      */
-    public final TableField<NotificationRuleTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<NotificationRuleTeamsRecord, Long> teamId = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private NotificationRuleTeams(Name alias, Table<NotificationRuleTeamsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

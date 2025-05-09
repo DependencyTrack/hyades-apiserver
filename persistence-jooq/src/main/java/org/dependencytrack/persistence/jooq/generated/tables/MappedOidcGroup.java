@@ -62,22 +62,22 @@ public class MappedOidcGroup extends TableImpl<MappedOidcGroupRecord> {
     /**
      * The column <code>MAPPEDOIDCGROUP.ID</code>.
      */
-    public final TableField<MappedOidcGroupRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<MappedOidcGroupRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>MAPPEDOIDCGROUP.GROUP_ID</code>.
      */
-    public final TableField<MappedOidcGroupRecord, Long> GROUP_ID = createField(DSL.name("GROUP_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<MappedOidcGroupRecord, Long> groupId = createField(DSL.name("GROUP_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>MAPPEDOIDCGROUP.TEAM_ID</code>.
      */
-    public final TableField<MappedOidcGroupRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<MappedOidcGroupRecord, Long> teamId = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>MAPPEDOIDCGROUP.UUID</code>.
      */
-    public final TableField<MappedOidcGroupRecord, String> UUID = createField(DSL.name("UUID"), SQLDataType.VARCHAR(36).nullable(false), this, "");
+    public final TableField<MappedOidcGroupRecord, String> uuid = createField(DSL.name("UUID"), SQLDataType.VARCHAR(36).nullable(false), this, "");
 
     private MappedOidcGroup(Name alias, Table<MappedOidcGroupRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

@@ -60,12 +60,12 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
     /**
      * The column <code>COMPONENTS_VULNERABILITIES.COMPONENT_ID</code>.
      */
-    public final TableField<ComponentsVulnerabilitiesRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ComponentsVulnerabilitiesRecord, Long> componentId = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>COMPONENTS_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
-    public final TableField<ComponentsVulnerabilitiesRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ComponentsVulnerabilitiesRecord, Long> vulnerabilityId = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private ComponentsVulnerabilities(Name alias, Table<ComponentsVulnerabilitiesRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -62,42 +63,42 @@ public class Vex extends TableImpl<VexRecord> {
     /**
      * The column <code>VEX.ID</code>.
      */
-    public final TableField<VexRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<VexRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>VEX.IMPORTED</code>.
      */
-    public final TableField<VexRecord, OffsetDateTime> IMPORTED = createField(DSL.name("IMPORTED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<VexRecord, OffsetDateTime> imported = createField(DSL.name("IMPORTED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>VEX.PROJECT_ID</code>.
      */
-    public final TableField<VexRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<VexRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>VEX.SERIAL_NUMBER</code>.
      */
-    public final TableField<VexRecord, String> SERIAL_NUMBER = createField(DSL.name("SERIAL_NUMBER"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VexRecord, String> serialNumber = createField(DSL.name("SERIAL_NUMBER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VEX.SPEC_VERSION</code>.
      */
-    public final TableField<VexRecord, String> SPEC_VERSION = createField(DSL.name("SPEC_VERSION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VexRecord, String> specVersion = createField(DSL.name("SPEC_VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VEX.UUID</code>.
      */
-    public final TableField<VexRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<VexRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>VEX.VEX_FORMAT</code>.
      */
-    public final TableField<VexRecord, String> VEX_FORMAT = createField(DSL.name("VEX_FORMAT"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<VexRecord, String> vexFormat = createField(DSL.name("VEX_FORMAT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VEX.VEX_VERSION</code>.
      */
-    public final TableField<VexRecord, Integer> VEX_VERSION = createField(DSL.name("VEX_VERSION"), SQLDataType.INTEGER, this, "");
+    public final TableField<VexRecord, Integer> vexVersion = createField(DSL.name("VEX_VERSION"), SQLDataType.INTEGER, this, "");
 
     private Vex(Name alias, Table<VexRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

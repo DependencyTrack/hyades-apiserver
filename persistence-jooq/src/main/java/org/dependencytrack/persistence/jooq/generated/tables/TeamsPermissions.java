@@ -59,12 +59,12 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
     /**
      * The column <code>TEAMS_PERMISSIONS.TEAM_ID</code>.
      */
-    public final TableField<TeamsPermissionsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<TeamsPermissionsRecord, Long> teamId = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>TEAMS_PERMISSIONS.PERMISSION_ID</code>.
      */
-    public final TableField<TeamsPermissionsRecord, Long> PERMISSION_ID = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<TeamsPermissionsRecord, Long> permissionId = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private TeamsPermissions(Name alias, Table<TeamsPermissionsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

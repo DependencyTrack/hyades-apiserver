@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -65,62 +66,62 @@ public class NotificationRule extends TableImpl<NotificationRuleRecord> {
     /**
      * The column <code>NOTIFICATIONRULE.ID</code>.
      */
-    public final TableField<NotificationRuleRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<NotificationRuleRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.ENABLED</code>.
      */
-    public final TableField<NotificationRuleRecord, Boolean> ENABLED = createField(DSL.name("ENABLED"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<NotificationRuleRecord, Boolean> enabled = createField(DSL.name("ENABLED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.MESSAGE</code>.
      */
-    public final TableField<NotificationRuleRecord, String> MESSAGE = createField(DSL.name("MESSAGE"), SQLDataType.VARCHAR(1024), this, "");
+    public final TableField<NotificationRuleRecord, String> message = createField(DSL.name("MESSAGE"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.NAME</code>.
      */
-    public final TableField<NotificationRuleRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<NotificationRuleRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.NOTIFICATION_LEVEL</code>.
      */
-    public final TableField<NotificationRuleRecord, String> NOTIFICATION_LEVEL = createField(DSL.name("NOTIFICATION_LEVEL"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<NotificationRuleRecord, String> notificationLevel = createField(DSL.name("NOTIFICATION_LEVEL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.NOTIFY_CHILDREN</code>.
      */
-    public final TableField<NotificationRuleRecord, Boolean> NOTIFY_CHILDREN = createField(DSL.name("NOTIFY_CHILDREN"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<NotificationRuleRecord, Boolean> notifyChildren = createField(DSL.name("NOTIFY_CHILDREN"), SQLDataType.BOOLEAN, this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.NOTIFY_ON</code>.
      */
-    public final TableField<NotificationRuleRecord, String> NOTIFY_ON = createField(DSL.name("NOTIFY_ON"), SQLDataType.VARCHAR(1024), this, "");
+    public final TableField<NotificationRuleRecord, String> notifyOn = createField(DSL.name("NOTIFY_ON"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.PUBLISHER</code>.
      */
-    public final TableField<NotificationRuleRecord, Long> PUBLISHER = createField(DSL.name("PUBLISHER"), SQLDataType.BIGINT, this, "");
+    public final TableField<NotificationRuleRecord, Long> publisher = createField(DSL.name("PUBLISHER"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.PUBLISHER_CONFIG</code>.
      */
-    public final TableField<NotificationRuleRecord, String> PUBLISHER_CONFIG = createField(DSL.name("PUBLISHER_CONFIG"), SQLDataType.CLOB, this, "");
+    public final TableField<NotificationRuleRecord, String> publisherConfig = createField(DSL.name("PUBLISHER_CONFIG"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.SCOPE</code>.
      */
-    public final TableField<NotificationRuleRecord, String> SCOPE = createField(DSL.name("SCOPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<NotificationRuleRecord, String> scope = createField(DSL.name("SCOPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.UUID</code>.
      */
-    public final TableField<NotificationRuleRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<NotificationRuleRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>NOTIFICATIONRULE.LOG_SUCCESSFUL_PUBLISH</code>.
      */
-    public final TableField<NotificationRuleRecord, Boolean> LOG_SUCCESSFUL_PUBLISH = createField(DSL.name("LOG_SUCCESSFUL_PUBLISH"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<NotificationRuleRecord, Boolean> logSuccessfulPublish = createField(DSL.name("LOG_SUCCESSFUL_PUBLISH"), SQLDataType.BOOLEAN, this, "");
 
     private NotificationRule(Name alias, Table<NotificationRuleRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

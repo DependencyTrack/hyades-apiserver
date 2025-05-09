@@ -62,27 +62,27 @@ public class AnalysisComment extends TableImpl<AnalysisCommentRecord> {
     /**
      * The column <code>ANALYSISCOMMENT.ID</code>.
      */
-    public final TableField<AnalysisCommentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<AnalysisCommentRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>ANALYSISCOMMENT.ANALYSIS_ID</code>.
      */
-    public final TableField<AnalysisCommentRecord, Long> ANALYSIS_ID = createField(DSL.name("ANALYSIS_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<AnalysisCommentRecord, Long> analysisId = createField(DSL.name("ANALYSIS_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>ANALYSISCOMMENT.COMMENT</code>.
      */
-    public final TableField<AnalysisCommentRecord, String> COMMENT = createField(DSL.name("COMMENT"), SQLDataType.CLOB.nullable(false), this, "");
+    public final TableField<AnalysisCommentRecord, String> comment = createField(DSL.name("COMMENT"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
      * The column <code>ANALYSISCOMMENT.COMMENTER</code>.
      */
-    public final TableField<AnalysisCommentRecord, String> COMMENTER = createField(DSL.name("COMMENTER"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<AnalysisCommentRecord, String> commenter = createField(DSL.name("COMMENTER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>ANALYSISCOMMENT.TIMESTAMP</code>.
      */
-    public final TableField<AnalysisCommentRecord, OffsetDateTime> TIMESTAMP = createField(DSL.name("TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<AnalysisCommentRecord, OffsetDateTime> timestamp = createField(DSL.name("TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     private AnalysisComment(Name alias, Table<AnalysisCommentRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

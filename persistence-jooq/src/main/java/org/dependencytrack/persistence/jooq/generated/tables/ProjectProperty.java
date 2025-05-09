@@ -59,37 +59,37 @@ public class ProjectProperty extends TableImpl<ProjectPropertyRecord> {
     /**
      * The column <code>PROJECT_PROPERTY.ID</code>.
      */
-    public final TableField<ProjectPropertyRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ProjectPropertyRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>PROJECT_PROPERTY.DESCRIPTION</code>.
      */
-    public final TableField<ProjectPropertyRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectPropertyRecord, String> description = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>PROJECT_PROPERTY.GROUPNAME</code>.
      */
-    public final TableField<ProjectPropertyRecord, String> GROUPNAME = createField(DSL.name("GROUPNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ProjectPropertyRecord, String> groupName = createField(DSL.name("GROUPNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>PROJECT_PROPERTY.PROJECT_ID</code>.
      */
-    public final TableField<ProjectPropertyRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ProjectPropertyRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>PROJECT_PROPERTY.PROPERTYNAME</code>.
      */
-    public final TableField<ProjectPropertyRecord, String> PROPERTYNAME = createField(DSL.name("PROPERTYNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ProjectPropertyRecord, String> propertyName = createField(DSL.name("PROPERTYNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>PROJECT_PROPERTY.PROPERTYTYPE</code>.
      */
-    public final TableField<ProjectPropertyRecord, String> PROPERTYTYPE = createField(DSL.name("PROPERTYTYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ProjectPropertyRecord, String> propertyType = createField(DSL.name("PROPERTYTYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>PROJECT_PROPERTY.PROPERTYVALUE</code>.
      */
-    public final TableField<ProjectPropertyRecord, String> PROPERTYVALUE = createField(DSL.name("PROPERTYVALUE"), SQLDataType.VARCHAR(1024), this, "");
+    public final TableField<ProjectPropertyRecord, String> propertyValue = createField(DSL.name("PROPERTYVALUE"), SQLDataType.VARCHAR(1024), this, "");
 
     private ProjectProperty(Name alias, Table<ProjectPropertyRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

@@ -60,12 +60,12 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
     /**
      * The column <code>VULNERABILITIES_TAGS.TAG_ID</code>.
      */
-    public final TableField<VulnerabilitiesTagsRecord, Long> TAG_ID = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<VulnerabilitiesTagsRecord, Long> tagId = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>VULNERABILITIES_TAGS.VULNERABILITY_ID</code>.
      */
-    public final TableField<VulnerabilitiesTagsRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<VulnerabilitiesTagsRecord, Long> vulnerabilityId = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private VulnerabilitiesTags(Name alias, Table<VulnerabilitiesTagsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

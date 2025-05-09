@@ -61,13 +61,13 @@ public class VulnerableSoftwareVulnerabilities extends TableImpl<VulnerableSoftw
      * The column
      * <code>VULNERABLESOFTWARE_VULNERABILITIES.VULNERABILITY_ID</code>.
      */
-    public final TableField<VulnerableSoftwareVulnerabilitiesRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<VulnerableSoftwareVulnerabilitiesRecord, Long> vulnerabilityId = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column
      * <code>VULNERABLESOFTWARE_VULNERABILITIES.VULNERABLESOFTWARE_ID</code>.
      */
-    public final TableField<VulnerableSoftwareVulnerabilitiesRecord, Long> VULNERABLESOFTWARE_ID = createField(DSL.name("VULNERABLESOFTWARE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<VulnerableSoftwareVulnerabilitiesRecord, Long> vulnerableSoftwareId = createField(DSL.name("VULNERABLESOFTWARE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private VulnerableSoftwareVulnerabilities(Name alias, Table<VulnerableSoftwareVulnerabilitiesRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

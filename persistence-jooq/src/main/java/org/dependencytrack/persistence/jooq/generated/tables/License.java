@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -62,67 +63,67 @@ public class License extends TableImpl<LicenseRecord> {
     /**
      * The column <code>LICENSE.ID</code>.
      */
-    public final TableField<LicenseRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<LicenseRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>LICENSE.COMMENT</code>.
      */
-    public final TableField<LicenseRecord, String> COMMENT = createField(DSL.name("COMMENT"), SQLDataType.CLOB, this, "");
+    public final TableField<LicenseRecord, String> comment = createField(DSL.name("COMMENT"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>LICENSE.ISCUSTOMLICENSE</code>.
      */
-    public final TableField<LicenseRecord, Boolean> ISCUSTOMLICENSE = createField(DSL.name("ISCUSTOMLICENSE"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<LicenseRecord, Boolean> isCustomLicense = createField(DSL.name("ISCUSTOMLICENSE"), SQLDataType.BOOLEAN, this, "");
 
     /**
      * The column <code>LICENSE.ISDEPRECATED</code>.
      */
-    public final TableField<LicenseRecord, Boolean> ISDEPRECATED = createField(DSL.name("ISDEPRECATED"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<LicenseRecord, Boolean> isDeprecated = createField(DSL.name("ISDEPRECATED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
      * The column <code>LICENSE.FSFLIBRE</code>.
      */
-    public final TableField<LicenseRecord, Boolean> FSFLIBRE = createField(DSL.name("FSFLIBRE"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<LicenseRecord, Boolean> fsfLibre = createField(DSL.name("FSFLIBRE"), SQLDataType.BOOLEAN, this, "");
 
     /**
      * The column <code>LICENSE.HEADER</code>.
      */
-    public final TableField<LicenseRecord, String> HEADER = createField(DSL.name("HEADER"), SQLDataType.CLOB, this, "");
+    public final TableField<LicenseRecord, String> header = createField(DSL.name("HEADER"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>LICENSE.LICENSEID</code>.
      */
-    public final TableField<LicenseRecord, String> LICENSEID = createField(DSL.name("LICENSEID"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<LicenseRecord, String> licenseId = createField(DSL.name("LICENSEID"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>LICENSE.NAME</code>.
      */
-    public final TableField<LicenseRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<LicenseRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>LICENSE.ISOSIAPPROVED</code>.
      */
-    public final TableField<LicenseRecord, Boolean> ISOSIAPPROVED = createField(DSL.name("ISOSIAPPROVED"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<LicenseRecord, Boolean> isOsiApproved = createField(DSL.name("ISOSIAPPROVED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
      * The column <code>LICENSE.SEEALSO</code>.
      */
-    public final TableField<LicenseRecord, byte[]> SEEALSO = createField(DSL.name("SEEALSO"), SQLDataType.BLOB, this, "");
+    public final TableField<LicenseRecord, byte[]> seeAlso = createField(DSL.name("SEEALSO"), SQLDataType.BLOB, this, "");
 
     /**
      * The column <code>LICENSE.TEMPLATE</code>.
      */
-    public final TableField<LicenseRecord, String> TEMPLATE = createField(DSL.name("TEMPLATE"), SQLDataType.CLOB, this, "");
+    public final TableField<LicenseRecord, String> template = createField(DSL.name("TEMPLATE"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>LICENSE.TEXT</code>.
      */
-    public final TableField<LicenseRecord, String> TEXT = createField(DSL.name("TEXT"), SQLDataType.CLOB, this, "");
+    public final TableField<LicenseRecord, String> text = createField(DSL.name("TEXT"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>LICENSE.UUID</code>.
      */
-    public final TableField<LicenseRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<LicenseRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     private License(Name alias, Table<LicenseRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -223,17 +224,17 @@ public class License extends TableImpl<LicenseRecord> {
         return _component;
     }
 
-    private transient LicenseGroupLicensePath _licensegroupLicense;
+    private transient LicenseGroupLicensePath _licenseGroupLicense;
 
     /**
      * Get the implicit to-many join path to the
      * <code>LICENSEGROUP_LICENSE</code> table
      */
-    public LicenseGroupLicensePath licensegroupLicense() {
-        if (_licensegroupLicense == null)
-            _licensegroupLicense = new LicenseGroupLicensePath(this, null, Keys.LICENSEGROUP_LICENSE_LICENSE_FK.getInverseKey());
+    public LicenseGroupLicensePath licenseGroupLicense() {
+        if (_licenseGroupLicense == null)
+            _licenseGroupLicense = new LicenseGroupLicensePath(this, null, Keys.LICENSEGROUP_LICENSE_LICENSE_FK.getInverseKey());
 
-        return _licensegroupLicense;
+        return _licenseGroupLicense;
     }
 
     @Override

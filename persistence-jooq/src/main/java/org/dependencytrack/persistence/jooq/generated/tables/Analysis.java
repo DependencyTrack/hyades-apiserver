@@ -67,87 +67,87 @@ public class Analysis extends TableImpl<AnalysisRecord> {
     /**
      * The column <code>ANALYSIS.ID</code>.
      */
-    public final TableField<AnalysisRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<AnalysisRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>ANALYSIS.DETAILS</code>.
      */
-    public final TableField<AnalysisRecord, String> DETAILS = createField(DSL.name("DETAILS"), SQLDataType.CLOB, this, "");
+    public final TableField<AnalysisRecord, String> details = createField(DSL.name("DETAILS"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>ANALYSIS.JUSTIFICATION</code>.
      */
-    public final TableField<AnalysisRecord, String> JUSTIFICATION = createField(DSL.name("JUSTIFICATION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<AnalysisRecord, String> justification = createField(DSL.name("JUSTIFICATION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>ANALYSIS.RESPONSE</code>.
      */
-    public final TableField<AnalysisRecord, String> RESPONSE = createField(DSL.name("RESPONSE"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<AnalysisRecord, String> response = createField(DSL.name("RESPONSE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>ANALYSIS.STATE</code>.
      */
-    public final TableField<AnalysisRecord, String> STATE = createField(DSL.name("STATE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<AnalysisRecord, String> state = createField(DSL.name("STATE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>ANALYSIS.COMPONENT_ID</code>.
      */
-    public final TableField<AnalysisRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<AnalysisRecord, Long> componentId = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>ANALYSIS.PROJECT_ID</code>.
      */
-    public final TableField<AnalysisRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<AnalysisRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>ANALYSIS.SUPPRESSED</code>.
      */
-    public final TableField<AnalysisRecord, Boolean> SUPPRESSED = createField(DSL.name("SUPPRESSED"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<AnalysisRecord, Boolean> suppressed = createField(DSL.name("SUPPRESSED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
      * The column <code>ANALYSIS.VULNERABILITY_ID</code>.
      */
-    public final TableField<AnalysisRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<AnalysisRecord, Long> vulnerabilityId = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>ANALYSIS.CVSSV2VECTOR</code>.
      */
-    public final TableField<AnalysisRecord, String> CVSSV2VECTOR = createField(DSL.name("CVSSV2VECTOR"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<AnalysisRecord, String> cvssV2Vector = createField(DSL.name("CVSSV2VECTOR"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>ANALYSIS.CVSSV3SCORE</code>.
      */
-    public final TableField<AnalysisRecord, BigDecimal> CVSSV3SCORE = createField(DSL.name("CVSSV3SCORE"), SQLDataType.NUMERIC, this, "");
+    public final TableField<AnalysisRecord, BigDecimal> cvssV3Score = createField(DSL.name("CVSSV3SCORE"), SQLDataType.NUMERIC, this, "");
 
     /**
      * The column <code>ANALYSIS.OWASPSCORE</code>.
      */
-    public final TableField<AnalysisRecord, BigDecimal> OWASPSCORE = createField(DSL.name("OWASPSCORE"), SQLDataType.NUMERIC, this, "");
+    public final TableField<AnalysisRecord, BigDecimal> owaspScore = createField(DSL.name("OWASPSCORE"), SQLDataType.NUMERIC, this, "");
 
     /**
      * The column <code>ANALYSIS.CVSSV2SCORE</code>.
      */
-    public final TableField<AnalysisRecord, BigDecimal> CVSSV2SCORE = createField(DSL.name("CVSSV2SCORE"), SQLDataType.NUMERIC, this, "");
+    public final TableField<AnalysisRecord, BigDecimal> cvssV2Score = createField(DSL.name("CVSSV2SCORE"), SQLDataType.NUMERIC, this, "");
 
     /**
      * The column <code>ANALYSIS.OWASPVECTOR</code>.
      */
-    public final TableField<AnalysisRecord, String> OWASPVECTOR = createField(DSL.name("OWASPVECTOR"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<AnalysisRecord, String> owaspVector = createField(DSL.name("OWASPVECTOR"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>ANALYSIS.CVSSV3VECTOR</code>.
      */
-    public final TableField<AnalysisRecord, String> CVSSV3VECTOR = createField(DSL.name("CVSSV3VECTOR"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<AnalysisRecord, String> cvssV3Vector = createField(DSL.name("CVSSV3VECTOR"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>ANALYSIS.SEVERITY</code>.
      */
-    public final TableField<AnalysisRecord, Severity> SEVERITY = createField(DSL.name("SEVERITY"), SQLDataType.VARCHAR.asEnumDataType(Severity.class), this, "");
+    public final TableField<AnalysisRecord, Severity> severity = createField(DSL.name("SEVERITY"), SQLDataType.VARCHAR.asEnumDataType(Severity.class), this, "");
 
     /**
      * The column <code>ANALYSIS.VULNERABILITY_POLICY_ID</code>.
      */
-    public final TableField<AnalysisRecord, Long> VULNERABILITY_POLICY_ID = createField(DSL.name("VULNERABILITY_POLICY_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<AnalysisRecord, Long> vulnerabilityPolicyId = createField(DSL.name("VULNERABILITY_POLICY_ID"), SQLDataType.BIGINT, this, "");
 
     private Analysis(Name alias, Table<AnalysisRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

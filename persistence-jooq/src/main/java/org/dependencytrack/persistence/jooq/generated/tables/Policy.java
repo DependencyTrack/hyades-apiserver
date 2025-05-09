@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -63,37 +64,37 @@ public class Policy extends TableImpl<PolicyRecord> {
     /**
      * The column <code>POLICY.ID</code>.
      */
-    public final TableField<PolicyRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<PolicyRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>POLICY.INCLUDE_CHILDREN</code>.
      */
-    public final TableField<PolicyRecord, Boolean> INCLUDE_CHILDREN = createField(DSL.name("INCLUDE_CHILDREN"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<PolicyRecord, Boolean> includeChildren = createField(DSL.name("INCLUDE_CHILDREN"), SQLDataType.BOOLEAN, this, "");
 
     /**
      * The column <code>POLICY.NAME</code>.
      */
-    public final TableField<PolicyRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<PolicyRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>POLICY.OPERATOR</code>.
      */
-    public final TableField<PolicyRecord, String> OPERATOR = createField(DSL.name("OPERATOR"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<PolicyRecord, String> operator = createField(DSL.name("OPERATOR"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>POLICY.UUID</code>.
      */
-    public final TableField<PolicyRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<PolicyRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>POLICY.VIOLATIONSTATE</code>.
      */
-    public final TableField<PolicyRecord, String> VIOLATIONSTATE = createField(DSL.name("VIOLATIONSTATE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<PolicyRecord, String> violationState = createField(DSL.name("VIOLATIONSTATE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>POLICY.ONLY_LATEST_PROJECT_VERSION</code>.
      */
-    public final TableField<PolicyRecord, Boolean> ONLY_LATEST_PROJECT_VERSION = createField(DSL.name("ONLY_LATEST_PROJECT_VERSION"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+    public final TableField<PolicyRecord, Boolean> onlyLatestProjectVersion = createField(DSL.name("ONLY_LATEST_PROJECT_VERSION"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
     private Policy(Name alias, Table<PolicyRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

@@ -59,12 +59,12 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
     /**
      * The column <code>PROJECT_ACCESS_TEAMS.PROJECT_ID</code>.
      */
-    public final TableField<ProjectAccessTeamsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ProjectAccessTeamsRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>PROJECT_ACCESS_TEAMS.TEAM_ID</code>.
      */
-    public final TableField<ProjectAccessTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ProjectAccessTeamsRecord, Long> teamId = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private ProjectAccessTeams(Name alias, Table<ProjectAccessTeamsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

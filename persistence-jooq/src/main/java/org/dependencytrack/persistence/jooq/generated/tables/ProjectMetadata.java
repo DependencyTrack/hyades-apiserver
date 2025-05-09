@@ -61,27 +61,27 @@ public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
     /**
      * The column <code>PROJECT_METADATA.ID</code>.
      */
-    public final TableField<ProjectMetadataRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ProjectMetadataRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>PROJECT_METADATA.PROJECT_ID</code>.
      */
-    public final TableField<ProjectMetadataRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ProjectMetadataRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>PROJECT_METADATA.SUPPLIER</code>.
      */
-    public final TableField<ProjectMetadataRecord, String> SUPPLIER = createField(DSL.name("SUPPLIER"), SQLDataType.CLOB, this, "");
+    public final TableField<ProjectMetadataRecord, String> supplier = createField(DSL.name("SUPPLIER"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>PROJECT_METADATA.AUTHORS</code>.
      */
-    public final TableField<ProjectMetadataRecord, String> AUTHORS = createField(DSL.name("AUTHORS"), SQLDataType.CLOB, this, "");
+    public final TableField<ProjectMetadataRecord, String> authors = createField(DSL.name("AUTHORS"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>PROJECT_METADATA.TOOLS</code>.
      */
-    public final TableField<ProjectMetadataRecord, String> TOOLS = createField(DSL.name("TOOLS"), SQLDataType.CLOB, this, "");
+    public final TableField<ProjectMetadataRecord, String> tools = createField(DSL.name("TOOLS"), SQLDataType.CLOB, this, "");
 
     private ProjectMetadata(Name alias, Table<ProjectMetadataRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

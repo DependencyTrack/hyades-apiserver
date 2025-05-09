@@ -60,12 +60,12 @@ public class Tag extends TableImpl<TagRecord> {
     /**
      * The column <code>TAG.ID</code>.
      */
-    public final TableField<TagRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<TagRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>TAG.NAME</code>.
      */
-    public final TableField<TagRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<TagRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     private Tag(Name alias, Table<TagRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -144,17 +144,17 @@ public class Tag extends TableImpl<TagRecord> {
         return Keys.TAG_PK;
     }
 
-    private transient NotificationRuleTagsPath _notificationruleTags;
+    private transient NotificationRuleTagsPath _notificationRuleTags;
 
     /**
      * Get the implicit to-many join path to the
      * <code>NOTIFICATIONRULE_TAGS</code> table
      */
-    public NotificationRuleTagsPath notificationruleTags() {
-        if (_notificationruleTags == null)
-            _notificationruleTags = new NotificationRuleTagsPath(this, null, Keys.NOTIFICATIONRULE_TAGS_TAG_FK.getInverseKey());
+    public NotificationRuleTagsPath notificationRuleTags() {
+        if (_notificationRuleTags == null)
+            _notificationRuleTags = new NotificationRuleTagsPath(this, null, Keys.NOTIFICATIONRULE_TAGS_TAG_FK.getInverseKey());
 
-        return _notificationruleTags;
+        return _notificationRuleTags;
     }
 
     private transient PolicyTagsPath _policyTags;

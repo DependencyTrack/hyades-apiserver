@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -61,22 +62,22 @@ public class LicenseGroup extends TableImpl<LicenseGroupRecord> {
     /**
      * The column <code>LICENSEGROUP.ID</code>.
      */
-    public final TableField<LicenseGroupRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<LicenseGroupRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>LICENSEGROUP.NAME</code>.
      */
-    public final TableField<LicenseGroupRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<LicenseGroupRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>LICENSEGROUP.RISKWEIGHT</code>.
      */
-    public final TableField<LicenseGroupRecord, Integer> RISKWEIGHT = createField(DSL.name("RISKWEIGHT"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<LicenseGroupRecord, Integer> riskWeight = createField(DSL.name("RISKWEIGHT"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>LICENSEGROUP.UUID</code>.
      */
-    public final TableField<LicenseGroupRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<LicenseGroupRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     private LicenseGroup(Name alias, Table<LicenseGroupRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

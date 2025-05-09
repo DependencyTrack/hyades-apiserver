@@ -20,15 +20,9 @@ import org.dependencytrack.persistence.jooq.generated.tables.Epss;
 import org.dependencytrack.persistence.jooq.generated.tables.FindingAttribution;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityAnalysis;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityMetaComponent;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUser;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersPermissions;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.License;
 import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroup;
 import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroupLicense;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersPermissions;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.MappedLdapGroup;
 import org.dependencytrack.persistence.jooq.generated.tables.MappedOidcGroup;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationPublisher;
@@ -37,9 +31,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.NotificationRulePro
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTags;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.OidcGroup;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUser;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersPermissions;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission;
 import org.dependencytrack.persistence.jooq.generated.tables.Policy;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition;
@@ -61,7 +52,10 @@ import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponentsVu
 import org.dependencytrack.persistence.jooq.generated.tables.Tag;
 import org.dependencytrack.persistence.jooq.generated.tables.Team;
 import org.dependencytrack.persistence.jooq.generated.tables.TeamsPermissions;
+import org.dependencytrack.persistence.jooq.generated.tables.User;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions;
+import org.dependencytrack.persistence.jooq.generated.tables.UsersPermissions;
+import org.dependencytrack.persistence.jooq.generated.tables.UsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.Vex;
 import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis;
 import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysisComment;
@@ -164,21 +158,6 @@ public class Tables {
     public static final IntegrityMetaComponent INTEGRITY_META_COMPONENT = IntegrityMetaComponent.INTEGRITY_META_COMPONENT;
 
     /**
-     * The table <code>LDAPUSER</code>.
-     */
-    public static final LdapUser LDAPUSER = LdapUser.LDAPUSER;
-
-    /**
-     * The table <code>LDAPUSERS_PERMISSIONS</code>.
-     */
-    public static final LdapUsersPermissions LDAPUSERS_PERMISSIONS = LdapUsersPermissions.LDAPUSERS_PERMISSIONS;
-
-    /**
-     * The table <code>LDAPUSERS_TEAMS</code>.
-     */
-    public static final LdapUsersTeams LDAPUSERS_TEAMS = LdapUsersTeams.LDAPUSERS_TEAMS;
-
-    /**
      * The table <code>LICENSE</code>.
      */
     public static final License LICENSE = License.LICENSE;
@@ -192,21 +171,6 @@ public class Tables {
      * The table <code>LICENSEGROUP_LICENSE</code>.
      */
     public static final LicenseGroupLicense LICENSEGROUP_LICENSE = LicenseGroupLicense.LICENSEGROUP_LICENSE;
-
-    /**
-     * The table <code>MANAGEDUSER</code>.
-     */
-    public static final ManagedUser MANAGEDUSER = ManagedUser.MANAGEDUSER;
-
-    /**
-     * The table <code>MANAGEDUSERS_PERMISSIONS</code>.
-     */
-    public static final ManagedUsersPermissions MANAGEDUSERS_PERMISSIONS = ManagedUsersPermissions.MANAGEDUSERS_PERMISSIONS;
-
-    /**
-     * The table <code>MANAGEDUSERS_TEAMS</code>.
-     */
-    public static final ManagedUsersTeams MANAGEDUSERS_TEAMS = ManagedUsersTeams.MANAGEDUSERS_TEAMS;
 
     /**
      * The table <code>MAPPEDLDAPGROUP</code>.
@@ -247,21 +211,6 @@ public class Tables {
      * The table <code>OIDCGROUP</code>.
      */
     public static final OidcGroup OIDCGROUP = OidcGroup.OIDCGROUP;
-
-    /**
-     * The table <code>OIDCUSER</code>.
-     */
-    public static final OidcUser OIDCUSER = OidcUser.OIDCUSER;
-
-    /**
-     * The table <code>OIDCUSERS_PERMISSIONS</code>.
-     */
-    public static final OidcUsersPermissions OIDCUSERS_PERMISSIONS = OidcUsersPermissions.OIDCUSERS_PERMISSIONS;
-
-    /**
-     * The table <code>OIDCUSERS_TEAMS</code>.
-     */
-    public static final OidcUsersTeams OIDCUSERS_TEAMS = OidcUsersTeams.OIDCUSERS_TEAMS;
 
     /**
      * The table <code>PERMISSION</code>.
@@ -369,9 +318,24 @@ public class Tables {
     public static final TeamsPermissions TEAMS_PERMISSIONS = TeamsPermissions.TEAMS_PERMISSIONS;
 
     /**
+     * The table <code>USER</code>.
+     */
+    public static final User USER = User.USER;
+
+    /**
      * The table <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code>.
      */
     public static final UserProjectEffectivePermissions USER_PROJECT_EFFECTIVE_PERMISSIONS = UserProjectEffectivePermissions.USER_PROJECT_EFFECTIVE_PERMISSIONS;
+
+    /**
+     * The table <code>USERS_PERMISSIONS</code>.
+     */
+    public static final UsersPermissions USERS_PERMISSIONS = UsersPermissions.USERS_PERMISSIONS;
+
+    /**
+     * The table <code>USERS_TEAMS</code>.
+     */
+    public static final UsersTeams USERS_TEAMS = UsersTeams.USERS_TEAMS;
 
     /**
      * The table <code>VEX</code>.

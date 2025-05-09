@@ -59,52 +59,52 @@ public class IntegrityMetaComponent extends TableImpl<IntegrityMetaComponentReco
     /**
      * The column <code>INTEGRITY_META_COMPONENT.ID</code>.
      */
-    public final TableField<IntegrityMetaComponentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<IntegrityMetaComponentRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>INTEGRITY_META_COMPONENT.LAST_FETCH</code>.
      */
-    public final TableField<IntegrityMetaComponentRecord, OffsetDateTime> LAST_FETCH = createField(DSL.name("LAST_FETCH"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<IntegrityMetaComponentRecord, OffsetDateTime> lastFetch = createField(DSL.name("LAST_FETCH"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
      * The column <code>INTEGRITY_META_COMPONENT.MD5</code>.
      */
-    public final TableField<IntegrityMetaComponentRecord, String> MD5 = createField(DSL.name("MD5"), SQLDataType.VARCHAR(32), this, "");
+    public final TableField<IntegrityMetaComponentRecord, String> md5 = createField(DSL.name("MD5"), SQLDataType.VARCHAR(32), this, "");
 
     /**
      * The column <code>INTEGRITY_META_COMPONENT.PUBLISHED_AT</code>.
      */
-    public final TableField<IntegrityMetaComponentRecord, OffsetDateTime> PUBLISHED_AT = createField(DSL.name("PUBLISHED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<IntegrityMetaComponentRecord, OffsetDateTime> publishedAt = createField(DSL.name("PUBLISHED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
      * The column <code>INTEGRITY_META_COMPONENT.PURL</code>.
      */
-    public final TableField<IntegrityMetaComponentRecord, String> PURL = createField(DSL.name("PURL"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
+    public final TableField<IntegrityMetaComponentRecord, String> purl = createField(DSL.name("PURL"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
 
     /**
      * The column <code>INTEGRITY_META_COMPONENT.REPOSITORY_URL</code>.
      */
-    public final TableField<IntegrityMetaComponentRecord, String> REPOSITORY_URL = createField(DSL.name("REPOSITORY_URL"), SQLDataType.VARCHAR(1024), this, "");
+    public final TableField<IntegrityMetaComponentRecord, String> repositoryUrl = createField(DSL.name("REPOSITORY_URL"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
      * The column <code>INTEGRITY_META_COMPONENT.SHA1</code>.
      */
-    public final TableField<IntegrityMetaComponentRecord, String> SHA1 = createField(DSL.name("SHA1"), SQLDataType.VARCHAR(40), this, "");
+    public final TableField<IntegrityMetaComponentRecord, String> sha1 = createField(DSL.name("SHA1"), SQLDataType.VARCHAR(40), this, "");
 
     /**
      * The column <code>INTEGRITY_META_COMPONENT.SHA256</code>.
      */
-    public final TableField<IntegrityMetaComponentRecord, String> SHA256 = createField(DSL.name("SHA256"), SQLDataType.VARCHAR(64), this, "");
+    public final TableField<IntegrityMetaComponentRecord, String> sha256 = createField(DSL.name("SHA256"), SQLDataType.VARCHAR(64), this, "");
 
     /**
      * The column <code>INTEGRITY_META_COMPONENT.SHA512</code>.
      */
-    public final TableField<IntegrityMetaComponentRecord, String> SHA512 = createField(DSL.name("SHA512"), SQLDataType.VARCHAR(128), this, "");
+    public final TableField<IntegrityMetaComponentRecord, String> sha512 = createField(DSL.name("SHA512"), SQLDataType.VARCHAR(128), this, "");
 
     /**
      * The column <code>INTEGRITY_META_COMPONENT.STATUS</code>.
      */
-    public final TableField<IntegrityMetaComponentRecord, String> STATUS = createField(DSL.name("STATUS"), SQLDataType.VARCHAR(64), this, "");
+    public final TableField<IntegrityMetaComponentRecord, String> status = createField(DSL.name("STATUS"), SQLDataType.VARCHAR(64), this, "");
 
     private IntegrityMetaComponent(Name alias, Table<IntegrityMetaComponentRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

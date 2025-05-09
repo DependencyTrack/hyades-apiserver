@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -75,202 +76,202 @@ public class Component extends TableImpl<ComponentRecord> {
     /**
      * The column <code>COMPONENT.ID</code>.
      */
-    public final TableField<ComponentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ComponentRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>COMPONENT.BLAKE2B_256</code>.
      */
-    public final TableField<ComponentRecord, String> BLAKE2B_256 = createField(DSL.name("BLAKE2B_256"), SQLDataType.VARCHAR(64), this, "");
+    public final TableField<ComponentRecord, String> blake2b_256 = createField(DSL.name("BLAKE2B_256"), SQLDataType.VARCHAR(64), this, "");
 
     /**
      * The column <code>COMPONENT.BLAKE2B_384</code>.
      */
-    public final TableField<ComponentRecord, String> BLAKE2B_384 = createField(DSL.name("BLAKE2B_384"), SQLDataType.VARCHAR(96), this, "");
+    public final TableField<ComponentRecord, String> blake2b_384 = createField(DSL.name("BLAKE2B_384"), SQLDataType.VARCHAR(96), this, "");
 
     /**
      * The column <code>COMPONENT.BLAKE2B_512</code>.
      */
-    public final TableField<ComponentRecord, String> BLAKE2B_512 = createField(DSL.name("BLAKE2B_512"), SQLDataType.VARCHAR(128), this, "");
+    public final TableField<ComponentRecord, String> blake2b_512 = createField(DSL.name("BLAKE2B_512"), SQLDataType.VARCHAR(128), this, "");
 
     /**
      * The column <code>COMPONENT.BLAKE3</code>.
      */
-    public final TableField<ComponentRecord, String> BLAKE3 = createField(DSL.name("BLAKE3"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> blake3 = createField(DSL.name("BLAKE3"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.CLASSIFIER</code>.
      */
-    public final TableField<ComponentRecord, String> CLASSIFIER = createField(DSL.name("CLASSIFIER"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> classifier = createField(DSL.name("CLASSIFIER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.COPYRIGHT</code>.
      */
-    public final TableField<ComponentRecord, String> COPYRIGHT = createField(DSL.name("COPYRIGHT"), SQLDataType.VARCHAR(1024), this, "");
+    public final TableField<ComponentRecord, String> copyright = createField(DSL.name("COPYRIGHT"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
      * The column <code>COMPONENT.CPE</code>.
      */
-    public final TableField<ComponentRecord, String> CPE = createField(DSL.name("CPE"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> cpe = createField(DSL.name("CPE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.DESCRIPTION</code>.
      */
-    public final TableField<ComponentRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(1024), this, "");
+    public final TableField<ComponentRecord, String> description = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
      * The column <code>COMPONENT.DIRECT_DEPENDENCIES</code>.
      */
-    public final TableField<ComponentRecord, JSONB> DIRECT_DEPENDENCIES = createField(DSL.name("DIRECT_DEPENDENCIES"), SQLDataType.JSONB, this, "");
+    public final TableField<ComponentRecord, JSONB> directDependencies = createField(DSL.name("DIRECT_DEPENDENCIES"), SQLDataType.JSONB, this, "");
 
     /**
      * The column <code>COMPONENT.EXTENSION</code>.
      */
-    public final TableField<ComponentRecord, String> EXTENSION = createField(DSL.name("EXTENSION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> extension = createField(DSL.name("EXTENSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.EXTERNAL_REFERENCES</code>.
      */
-    public final TableField<ComponentRecord, byte[]> EXTERNAL_REFERENCES = createField(DSL.name("EXTERNAL_REFERENCES"), SQLDataType.BLOB, this, "");
+    public final TableField<ComponentRecord, byte[]> externalReferences = createField(DSL.name("EXTERNAL_REFERENCES"), SQLDataType.BLOB, this, "");
 
     /**
      * The column <code>COMPONENT.FILENAME</code>.
      */
-    public final TableField<ComponentRecord, String> FILENAME = createField(DSL.name("FILENAME"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> filename = createField(DSL.name("FILENAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.GROUP</code>.
      */
-    public final TableField<ComponentRecord, String> GROUP = createField(DSL.name("GROUP"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> group = createField(DSL.name("GROUP"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.INTERNAL</code>.
      */
-    public final TableField<ComponentRecord, Boolean> INTERNAL = createField(DSL.name("INTERNAL"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<ComponentRecord, Boolean> internal = createField(DSL.name("INTERNAL"), SQLDataType.BOOLEAN, this, "");
 
     /**
      * The column <code>COMPONENT.LAST_RISKSCORE</code>.
      */
-    public final TableField<ComponentRecord, Double> LAST_RISKSCORE = createField(DSL.name("LAST_RISKSCORE"), SQLDataType.DOUBLE, this, "");
+    public final TableField<ComponentRecord, Double> lastRiskScore = createField(DSL.name("LAST_RISKSCORE"), SQLDataType.DOUBLE, this, "");
 
     /**
      * The column <code>COMPONENT.LICENSE</code>.
      */
-    public final TableField<ComponentRecord, String> LICENSE = createField(DSL.name("LICENSE"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> license = createField(DSL.name("LICENSE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.LICENSE_EXPRESSION</code>.
      */
-    public final TableField<ComponentRecord, String> LICENSE_EXPRESSION = createField(DSL.name("LICENSE_EXPRESSION"), SQLDataType.CLOB, this, "");
+    public final TableField<ComponentRecord, String> licenseExpression = createField(DSL.name("LICENSE_EXPRESSION"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>COMPONENT.LICENSE_URL</code>.
      */
-    public final TableField<ComponentRecord, String> LICENSE_URL = createField(DSL.name("LICENSE_URL"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> licenseUrl = createField(DSL.name("LICENSE_URL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.MD5</code>.
      */
-    public final TableField<ComponentRecord, String> MD5 = createField(DSL.name("MD5"), SQLDataType.VARCHAR(32), this, "");
+    public final TableField<ComponentRecord, String> md5 = createField(DSL.name("MD5"), SQLDataType.VARCHAR(32), this, "");
 
     /**
      * The column <code>COMPONENT.NAME</code>.
      */
-    public final TableField<ComponentRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ComponentRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>COMPONENT.TEXT</code>.
      */
-    public final TableField<ComponentRecord, String> TEXT = createField(DSL.name("TEXT"), SQLDataType.CLOB, this, "");
+    public final TableField<ComponentRecord, String> text = createField(DSL.name("TEXT"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>COMPONENT.PARENT_COMPONENT_ID</code>.
      */
-    public final TableField<ComponentRecord, Long> PARENT_COMPONENT_ID = createField(DSL.name("PARENT_COMPONENT_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<ComponentRecord, Long> parentComponentId = createField(DSL.name("PARENT_COMPONENT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>COMPONENT.PROJECT_ID</code>.
      */
-    public final TableField<ComponentRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ComponentRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>COMPONENT.PUBLISHER</code>.
      */
-    public final TableField<ComponentRecord, String> PUBLISHER = createField(DSL.name("PUBLISHER"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> publisher = createField(DSL.name("PUBLISHER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.PURL</code>.
      */
-    public final TableField<ComponentRecord, String> PURL = createField(DSL.name("PURL"), SQLDataType.VARCHAR(1024), this, "");
+    public final TableField<ComponentRecord, String> purl = createField(DSL.name("PURL"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
      * The column <code>COMPONENT.PURLCOORDINATES</code>.
      */
-    public final TableField<ComponentRecord, String> PURLCOORDINATES = createField(DSL.name("PURLCOORDINATES"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> purlCoordinates = createField(DSL.name("PURLCOORDINATES"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.LICENSE_ID</code>.
      */
-    public final TableField<ComponentRecord, Long> LICENSE_ID = createField(DSL.name("LICENSE_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<ComponentRecord, Long> licenseId = createField(DSL.name("LICENSE_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>COMPONENT.SHA1</code>.
      */
-    public final TableField<ComponentRecord, String> SHA1 = createField(DSL.name("SHA1"), SQLDataType.VARCHAR(40), this, "");
+    public final TableField<ComponentRecord, String> sha1 = createField(DSL.name("SHA1"), SQLDataType.VARCHAR(40), this, "");
 
     /**
      * The column <code>COMPONENT.SHA_256</code>.
      */
-    public final TableField<ComponentRecord, String> SHA_256 = createField(DSL.name("SHA_256"), SQLDataType.VARCHAR(64), this, "");
+    public final TableField<ComponentRecord, String> sha_256 = createField(DSL.name("SHA_256"), SQLDataType.VARCHAR(64), this, "");
 
     /**
      * The column <code>COMPONENT.SHA_384</code>.
      */
-    public final TableField<ComponentRecord, String> SHA_384 = createField(DSL.name("SHA_384"), SQLDataType.VARCHAR(96), this, "");
+    public final TableField<ComponentRecord, String> sha_384 = createField(DSL.name("SHA_384"), SQLDataType.VARCHAR(96), this, "");
 
     /**
      * The column <code>COMPONENT.SHA3_256</code>.
      */
-    public final TableField<ComponentRecord, String> SHA3_256 = createField(DSL.name("SHA3_256"), SQLDataType.VARCHAR(64), this, "");
+    public final TableField<ComponentRecord, String> sha3_256 = createField(DSL.name("SHA3_256"), SQLDataType.VARCHAR(64), this, "");
 
     /**
      * The column <code>COMPONENT.SHA3_384</code>.
      */
-    public final TableField<ComponentRecord, String> SHA3_384 = createField(DSL.name("SHA3_384"), SQLDataType.VARCHAR(96), this, "");
+    public final TableField<ComponentRecord, String> sha3_384 = createField(DSL.name("SHA3_384"), SQLDataType.VARCHAR(96), this, "");
 
     /**
      * The column <code>COMPONENT.SHA3_512</code>.
      */
-    public final TableField<ComponentRecord, String> SHA3_512 = createField(DSL.name("SHA3_512"), SQLDataType.VARCHAR(128), this, "");
+    public final TableField<ComponentRecord, String> sha3_512 = createField(DSL.name("SHA3_512"), SQLDataType.VARCHAR(128), this, "");
 
     /**
      * The column <code>COMPONENT.SHA_512</code>.
      */
-    public final TableField<ComponentRecord, String> SHA_512 = createField(DSL.name("SHA_512"), SQLDataType.VARCHAR(128), this, "");
+    public final TableField<ComponentRecord, String> sha_512 = createField(DSL.name("SHA_512"), SQLDataType.VARCHAR(128), this, "");
 
     /**
      * The column <code>COMPONENT.SWIDTAGID</code>.
      */
-    public final TableField<ComponentRecord, String> SWIDTAGID = createField(DSL.name("SWIDTAGID"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> swidTagId = createField(DSL.name("SWIDTAGID"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.UUID</code>.
      */
-    public final TableField<ComponentRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<ComponentRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>COMPONENT.VERSION</code>.
      */
-    public final TableField<ComponentRecord, String> VERSION = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> version = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT.SUPPLIER</code>.
      */
-    public final TableField<ComponentRecord, String> SUPPLIER = createField(DSL.name("SUPPLIER"), SQLDataType.CLOB, this, "");
+    public final TableField<ComponentRecord, String> supplier = createField(DSL.name("SUPPLIER"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>COMPONENT.AUTHORS</code>.
      */
-    public final TableField<ComponentRecord, String> AUTHORS = createField(DSL.name("AUTHORS"), SQLDataType.CLOB, this, "");
+    public final TableField<ComponentRecord, String> authors = createField(DSL.name("AUTHORS"), SQLDataType.CLOB, this, "");
 
     private Component(Name alias, Table<ComponentRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

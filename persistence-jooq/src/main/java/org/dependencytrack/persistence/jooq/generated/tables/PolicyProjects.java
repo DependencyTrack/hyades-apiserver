@@ -60,12 +60,12 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
     /**
      * The column <code>POLICY_PROJECTS.POLICY_ID</code>.
      */
-    public final TableField<PolicyProjectsRecord, Long> POLICY_ID = createField(DSL.name("POLICY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<PolicyProjectsRecord, Long> policyId = createField(DSL.name("POLICY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>POLICY_PROJECTS.PROJECT_ID</code>.
      */
-    public final TableField<PolicyProjectsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<PolicyProjectsRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT, this, "");
 
     private PolicyProjects(Name alias, Table<PolicyProjectsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -65,42 +66,42 @@ public class PolicyViolation extends TableImpl<PolicyViolationRecord> {
     /**
      * The column <code>POLICYVIOLATION.ID</code>.
      */
-    public final TableField<PolicyViolationRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<PolicyViolationRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>POLICYVIOLATION.COMPONENT_ID</code>.
      */
-    public final TableField<PolicyViolationRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<PolicyViolationRecord, Long> componentId = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>POLICYVIOLATION.POLICYCONDITION_ID</code>.
      */
-    public final TableField<PolicyViolationRecord, Long> POLICYCONDITION_ID = createField(DSL.name("POLICYCONDITION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<PolicyViolationRecord, Long> policyConditionId = createField(DSL.name("POLICYCONDITION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>POLICYVIOLATION.PROJECT_ID</code>.
      */
-    public final TableField<PolicyViolationRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<PolicyViolationRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>POLICYVIOLATION.TEXT</code>.
      */
-    public final TableField<PolicyViolationRecord, String> TEXT = createField(DSL.name("TEXT"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<PolicyViolationRecord, String> text = createField(DSL.name("TEXT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>POLICYVIOLATION.TIMESTAMP</code>.
      */
-    public final TableField<PolicyViolationRecord, OffsetDateTime> TIMESTAMP = createField(DSL.name("TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<PolicyViolationRecord, OffsetDateTime> timestamp = createField(DSL.name("TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>POLICYVIOLATION.TYPE</code>.
      */
-    public final TableField<PolicyViolationRecord, String> TYPE = createField(DSL.name("TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<PolicyViolationRecord, String> type = createField(DSL.name("TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>POLICYVIOLATION.UUID</code>.
      */
-    public final TableField<PolicyViolationRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<PolicyViolationRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     private PolicyViolation(Name alias, Table<PolicyViolationRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

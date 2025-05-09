@@ -62,27 +62,27 @@ public class ViolationAnalysisComment extends TableImpl<ViolationAnalysisComment
     /**
      * The column <code>VIOLATIONANALYSISCOMMENT.ID</code>.
      */
-    public final TableField<ViolationAnalysisCommentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ViolationAnalysisCommentRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>VIOLATIONANALYSISCOMMENT.COMMENT</code>.
      */
-    public final TableField<ViolationAnalysisCommentRecord, String> COMMENT = createField(DSL.name("COMMENT"), SQLDataType.CLOB.nullable(false), this, "");
+    public final TableField<ViolationAnalysisCommentRecord, String> comment = createField(DSL.name("COMMENT"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
      * The column <code>VIOLATIONANALYSISCOMMENT.COMMENTER</code>.
      */
-    public final TableField<ViolationAnalysisCommentRecord, String> COMMENTER = createField(DSL.name("COMMENTER"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ViolationAnalysisCommentRecord, String> commenter = createField(DSL.name("COMMENTER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>VIOLATIONANALYSISCOMMENT.TIMESTAMP</code>.
      */
-    public final TableField<ViolationAnalysisCommentRecord, OffsetDateTime> TIMESTAMP = createField(DSL.name("TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<ViolationAnalysisCommentRecord, OffsetDateTime> timestamp = createField(DSL.name("TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>VIOLATIONANALYSISCOMMENT.VIOLATIONANALYSIS_ID</code>.
      */
-    public final TableField<ViolationAnalysisCommentRecord, Long> VIOLATIONANALYSIS_ID = createField(DSL.name("VIOLATIONANALYSIS_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ViolationAnalysisCommentRecord, Long> violationAnalysisId = createField(DSL.name("VIOLATIONANALYSIS_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private ViolationAnalysisComment(Name alias, Table<ViolationAnalysisCommentRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
