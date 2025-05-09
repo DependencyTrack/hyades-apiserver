@@ -20,7 +20,7 @@ package org.dependencytrack;
 
 import alpine.server.util.DbUtil;
 import com.github.dockerjava.api.command.InspectContainerResponse;
-import org.dependencytrack.persistence.migration.MigrationInitializer;
+import org.dependencytrack.persistence.migration.MigrationExecutor;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -72,7 +72,7 @@ public class PostgresTestContainer extends PostgreSQLContainer<PostgresTestConta
                 DbUtil.initPlatformName(connection);
             }
 
-            MigrationInitializer.runMigration(dataSource);
+            new MigrationExecutor(dataSource).executeMigration();
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);
         }

@@ -49,6 +49,11 @@
             <classifier>classes</classifier>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>persistence-migration</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>

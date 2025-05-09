@@ -18,10 +18,11 @@
  */
 package org.dependencytrack.persistence.migration;
 
-import alpine.common.logging.Logger;
 import liquibase.logging.core.AbstractLogService;
 import liquibase.logging.core.AbstractLogger;
 import liquibase.plugin.Plugin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.logging.Level;
 
@@ -33,7 +34,7 @@ class LiquibaseLogger extends AbstractLogger {
     private final Logger logger;
 
     LiquibaseLogger(final Class<?> clazz) {
-        this.logger = Logger.getLogger(clazz);
+        this.logger = LoggerFactory.getLogger(clazz);
     }
 
     @Override
