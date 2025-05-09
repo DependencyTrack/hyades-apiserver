@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -62,47 +63,47 @@ public class Bom extends TableImpl<BomRecord> {
     /**
      * The column <code>BOM.ID</code>.
      */
-    public final TableField<BomRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<BomRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>BOM.BOM_FORMAT</code>.
      */
-    public final TableField<BomRecord, String> BOM_FORMAT = createField(DSL.name("BOM_FORMAT"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<BomRecord, String> bomFormat = createField(DSL.name("BOM_FORMAT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>BOM.BOM_VERSION</code>.
      */
-    public final TableField<BomRecord, Integer> BOM_VERSION = createField(DSL.name("BOM_VERSION"), SQLDataType.INTEGER, this, "");
+    public final TableField<BomRecord, Integer> bomVersion = createField(DSL.name("BOM_VERSION"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>BOM.IMPORTED</code>.
      */
-    public final TableField<BomRecord, OffsetDateTime> IMPORTED = createField(DSL.name("IMPORTED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<BomRecord, OffsetDateTime> imported = createField(DSL.name("IMPORTED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>BOM.PROJECT_ID</code>.
      */
-    public final TableField<BomRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<BomRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>BOM.SERIAL_NUMBER</code>.
      */
-    public final TableField<BomRecord, String> SERIAL_NUMBER = createField(DSL.name("SERIAL_NUMBER"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<BomRecord, String> serialNumber = createField(DSL.name("SERIAL_NUMBER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>BOM.SPEC_VERSION</code>.
      */
-    public final TableField<BomRecord, String> SPEC_VERSION = createField(DSL.name("SPEC_VERSION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<BomRecord, String> specVersion = createField(DSL.name("SPEC_VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>BOM.UUID</code>.
      */
-    public final TableField<BomRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<BomRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>BOM.GENERATED</code>.
      */
-    public final TableField<BomRecord, OffsetDateTime> GENERATED = createField(DSL.name("GENERATED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<BomRecord, OffsetDateTime> generated = createField(DSL.name("GENERATED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     private Bom(Name alias, Table<BomRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

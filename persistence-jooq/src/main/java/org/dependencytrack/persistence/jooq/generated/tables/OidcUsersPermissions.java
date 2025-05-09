@@ -59,12 +59,12 @@ public class OidcUsersPermissions extends TableImpl<OidcUsersPermissionsRecord> 
     /**
      * The column <code>OIDCUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
-    public final TableField<OidcUsersPermissionsRecord, Long> PERMISSION_ID = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<OidcUsersPermissionsRecord, Long> permissionId = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>OIDCUSERS_PERMISSIONS.OIDCUSER_ID</code>.
      */
-    public final TableField<OidcUsersPermissionsRecord, Long> OIDCUSER_ID = createField(DSL.name("OIDCUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<OidcUsersPermissionsRecord, Long> oidcUserId = createField(DSL.name("OIDCUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private OidcUsersPermissions(Name alias, Table<OidcUsersPermissionsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -63,37 +64,37 @@ public class AffectedVersionAttribution extends TableImpl<AffectedVersionAttribu
     /**
      * The column <code>AFFECTEDVERSIONATTRIBUTION.ID</code>.
      */
-    public final TableField<AffectedVersionAttributionRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<AffectedVersionAttributionRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>AFFECTEDVERSIONATTRIBUTION.FIRST_SEEN</code>.
      */
-    public final TableField<AffectedVersionAttributionRecord, OffsetDateTime> FIRST_SEEN = createField(DSL.name("FIRST_SEEN"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<AffectedVersionAttributionRecord, OffsetDateTime> firstSeen = createField(DSL.name("FIRST_SEEN"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>AFFECTEDVERSIONATTRIBUTION.LAST_SEEN</code>.
      */
-    public final TableField<AffectedVersionAttributionRecord, OffsetDateTime> LAST_SEEN = createField(DSL.name("LAST_SEEN"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<AffectedVersionAttributionRecord, OffsetDateTime> lastSeen = createField(DSL.name("LAST_SEEN"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>AFFECTEDVERSIONATTRIBUTION.SOURCE</code>.
      */
-    public final TableField<AffectedVersionAttributionRecord, String> SOURCE = createField(DSL.name("SOURCE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<AffectedVersionAttributionRecord, String> source = createField(DSL.name("SOURCE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>AFFECTEDVERSIONATTRIBUTION.UUID</code>.
      */
-    public final TableField<AffectedVersionAttributionRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<AffectedVersionAttributionRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>AFFECTEDVERSIONATTRIBUTION.VULNERABILITY</code>.
      */
-    public final TableField<AffectedVersionAttributionRecord, Long> VULNERABILITY = createField(DSL.name("VULNERABILITY"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<AffectedVersionAttributionRecord, Long> vulnerability = createField(DSL.name("VULNERABILITY"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>AFFECTEDVERSIONATTRIBUTION.VULNERABLE_SOFTWARE</code>.
      */
-    public final TableField<AffectedVersionAttributionRecord, Long> VULNERABLE_SOFTWARE = createField(DSL.name("VULNERABLE_SOFTWARE"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<AffectedVersionAttributionRecord, Long> vulnerableSoftware = createField(DSL.name("VULNERABLE_SOFTWARE"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private AffectedVersionAttribution(Name alias, Table<AffectedVersionAttributionRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

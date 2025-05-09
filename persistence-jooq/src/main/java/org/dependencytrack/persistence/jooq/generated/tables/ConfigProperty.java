@@ -54,32 +54,32 @@ public class ConfigProperty extends TableImpl<ConfigPropertyRecord> {
     /**
      * The column <code>CONFIGPROPERTY.ID</code>.
      */
-    public final TableField<ConfigPropertyRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ConfigPropertyRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>CONFIGPROPERTY.DESCRIPTION</code>.
      */
-    public final TableField<ConfigPropertyRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ConfigPropertyRecord, String> description = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>CONFIGPROPERTY.GROUPNAME</code>.
      */
-    public final TableField<ConfigPropertyRecord, String> GROUPNAME = createField(DSL.name("GROUPNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ConfigPropertyRecord, String> groupName = createField(DSL.name("GROUPNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>CONFIGPROPERTY.PROPERTYNAME</code>.
      */
-    public final TableField<ConfigPropertyRecord, String> PROPERTYNAME = createField(DSL.name("PROPERTYNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ConfigPropertyRecord, String> propertyName = createField(DSL.name("PROPERTYNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>CONFIGPROPERTY.PROPERTYTYPE</code>.
      */
-    public final TableField<ConfigPropertyRecord, String> PROPERTYTYPE = createField(DSL.name("PROPERTYTYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ConfigPropertyRecord, String> propertyType = createField(DSL.name("PROPERTYTYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>CONFIGPROPERTY.PROPERTYVALUE</code>.
      */
-    public final TableField<ConfigPropertyRecord, String> PROPERTYVALUE = createField(DSL.name("PROPERTYVALUE"), SQLDataType.VARCHAR(1024), this, "");
+    public final TableField<ConfigPropertyRecord, String> propertyValue = createField(DSL.name("PROPERTYVALUE"), SQLDataType.VARCHAR(1024), this, "");
 
     private ConfigProperty(Name alias, Table<ConfigPropertyRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

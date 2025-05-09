@@ -57,37 +57,37 @@ public class RepositoryMetaComponent extends TableImpl<RepositoryMetaComponentRe
     /**
      * The column <code>REPOSITORY_META_COMPONENT.ID</code>.
      */
-    public final TableField<RepositoryMetaComponentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<RepositoryMetaComponentRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>REPOSITORY_META_COMPONENT.LAST_CHECK</code>.
      */
-    public final TableField<RepositoryMetaComponentRecord, OffsetDateTime> LAST_CHECK = createField(DSL.name("LAST_CHECK"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<RepositoryMetaComponentRecord, OffsetDateTime> lastCheck = createField(DSL.name("LAST_CHECK"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>REPOSITORY_META_COMPONENT.LATEST_VERSION</code>.
      */
-    public final TableField<RepositoryMetaComponentRecord, String> LATEST_VERSION = createField(DSL.name("LATEST_VERSION"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<RepositoryMetaComponentRecord, String> latestVersion = createField(DSL.name("LATEST_VERSION"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>REPOSITORY_META_COMPONENT.NAME</code>.
      */
-    public final TableField<RepositoryMetaComponentRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<RepositoryMetaComponentRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>REPOSITORY_META_COMPONENT.NAMESPACE</code>.
      */
-    public final TableField<RepositoryMetaComponentRecord, String> NAMESPACE = createField(DSL.name("NAMESPACE"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<RepositoryMetaComponentRecord, String> namespace = createField(DSL.name("NAMESPACE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>REPOSITORY_META_COMPONENT.PUBLISHED</code>.
      */
-    public final TableField<RepositoryMetaComponentRecord, OffsetDateTime> PUBLISHED = createField(DSL.name("PUBLISHED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<RepositoryMetaComponentRecord, OffsetDateTime> published = createField(DSL.name("PUBLISHED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
      * The column <code>REPOSITORY_META_COMPONENT.REPOSITORY_TYPE</code>.
      */
-    public final TableField<RepositoryMetaComponentRecord, String> REPOSITORY_TYPE = createField(DSL.name("REPOSITORY_TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<RepositoryMetaComponentRecord, String> repositoryType = createField(DSL.name("REPOSITORY_TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     private RepositoryMetaComponent(Name alias, Table<RepositoryMetaComponentRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

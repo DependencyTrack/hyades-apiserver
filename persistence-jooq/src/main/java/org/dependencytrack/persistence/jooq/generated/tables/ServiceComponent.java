@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -63,82 +64,82 @@ public class ServiceComponent extends TableImpl<ServiceComponentRecord> {
     /**
      * The column <code>SERVICECOMPONENT.ID</code>.
      */
-    public final TableField<ServiceComponentRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ServiceComponentRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.AUTHENTICATED</code>.
      */
-    public final TableField<ServiceComponentRecord, Boolean> AUTHENTICATED = createField(DSL.name("AUTHENTICATED"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<ServiceComponentRecord, Boolean> authenticated = createField(DSL.name("AUTHENTICATED"), SQLDataType.BOOLEAN, this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.X_TRUST_BOUNDARY</code>.
      */
-    public final TableField<ServiceComponentRecord, Boolean> X_TRUST_BOUNDARY = createField(DSL.name("X_TRUST_BOUNDARY"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<ServiceComponentRecord, Boolean> xTrustBoundary = createField(DSL.name("X_TRUST_BOUNDARY"), SQLDataType.BOOLEAN, this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.DATA</code>.
      */
-    public final TableField<ServiceComponentRecord, byte[]> DATA = createField(DSL.name("DATA"), SQLDataType.BLOB, this, "");
+    public final TableField<ServiceComponentRecord, byte[]> data = createField(DSL.name("DATA"), SQLDataType.BLOB, this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.DESCRIPTION</code>.
      */
-    public final TableField<ServiceComponentRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(1024), this, "");
+    public final TableField<ServiceComponentRecord, String> description = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.ENDPOINTS</code>.
      */
-    public final TableField<ServiceComponentRecord, byte[]> ENDPOINTS = createField(DSL.name("ENDPOINTS"), SQLDataType.BLOB, this, "");
+    public final TableField<ServiceComponentRecord, byte[]> endpoints = createField(DSL.name("ENDPOINTS"), SQLDataType.BLOB, this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.EXTERNAL_REFERENCES</code>.
      */
-    public final TableField<ServiceComponentRecord, byte[]> EXTERNAL_REFERENCES = createField(DSL.name("EXTERNAL_REFERENCES"), SQLDataType.BLOB, this, "");
+    public final TableField<ServiceComponentRecord, byte[]> externalReferences = createField(DSL.name("EXTERNAL_REFERENCES"), SQLDataType.BLOB, this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.GROUP</code>.
      */
-    public final TableField<ServiceComponentRecord, String> GROUP = createField(DSL.name("GROUP"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ServiceComponentRecord, String> group = createField(DSL.name("GROUP"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.LAST_RISKSCORE</code>.
      */
-    public final TableField<ServiceComponentRecord, Double> LAST_RISKSCORE = createField(DSL.name("LAST_RISKSCORE"), SQLDataType.DOUBLE.nullable(false).defaultValue(DSL.field(DSL.raw("'0'::double precision"), SQLDataType.DOUBLE)), this, "");
+    public final TableField<ServiceComponentRecord, Double> lastRiskScore = createField(DSL.name("LAST_RISKSCORE"), SQLDataType.DOUBLE.nullable(false).defaultValue(DSL.field(DSL.raw("'0'::double precision"), SQLDataType.DOUBLE)), this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.NAME</code>.
      */
-    public final TableField<ServiceComponentRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ServiceComponentRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.TEXT</code>.
      */
-    public final TableField<ServiceComponentRecord, String> TEXT = createField(DSL.name("TEXT"), SQLDataType.CLOB, this, "");
+    public final TableField<ServiceComponentRecord, String> text = createField(DSL.name("TEXT"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.PARENT_SERVICECOMPONENT_ID</code>.
      */
-    public final TableField<ServiceComponentRecord, Long> PARENT_SERVICECOMPONENT_ID = createField(DSL.name("PARENT_SERVICECOMPONENT_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<ServiceComponentRecord, Long> parentServiceComponentId = createField(DSL.name("PARENT_SERVICECOMPONENT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.PROJECT_ID</code>.
      */
-    public final TableField<ServiceComponentRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ServiceComponentRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.PROVIDER_ID</code>.
      */
-    public final TableField<ServiceComponentRecord, byte[]> PROVIDER_ID = createField(DSL.name("PROVIDER_ID"), SQLDataType.BLOB, this, "");
+    public final TableField<ServiceComponentRecord, byte[]> providerId = createField(DSL.name("PROVIDER_ID"), SQLDataType.BLOB, this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.UUID</code>.
      */
-    public final TableField<ServiceComponentRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<ServiceComponentRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>SERVICECOMPONENT.VERSION</code>.
      */
-    public final TableField<ServiceComponentRecord, String> VERSION = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ServiceComponentRecord, String> version = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     private ServiceComponent(Name alias, Table<ServiceComponentRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

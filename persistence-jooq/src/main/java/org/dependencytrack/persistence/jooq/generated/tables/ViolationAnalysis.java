@@ -64,32 +64,32 @@ public class ViolationAnalysis extends TableImpl<ViolationAnalysisRecord> {
     /**
      * The column <code>VIOLATIONANALYSIS.ID</code>.
      */
-    public final TableField<ViolationAnalysisRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ViolationAnalysisRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>VIOLATIONANALYSIS.STATE</code>.
      */
-    public final TableField<ViolationAnalysisRecord, String> STATE = createField(DSL.name("STATE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ViolationAnalysisRecord, String> state = createField(DSL.name("STATE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>VIOLATIONANALYSIS.COMPONENT_ID</code>.
      */
-    public final TableField<ViolationAnalysisRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<ViolationAnalysisRecord, Long> componentId = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>VIOLATIONANALYSIS.POLICYVIOLATION_ID</code>.
      */
-    public final TableField<ViolationAnalysisRecord, Long> POLICYVIOLATION_ID = createField(DSL.name("POLICYVIOLATION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ViolationAnalysisRecord, Long> policyViolationId = createField(DSL.name("POLICYVIOLATION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>VIOLATIONANALYSIS.PROJECT_ID</code>.
      */
-    public final TableField<ViolationAnalysisRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<ViolationAnalysisRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>VIOLATIONANALYSIS.SUPPRESSED</code>.
      */
-    public final TableField<ViolationAnalysisRecord, Boolean> SUPPRESSED = createField(DSL.name("SUPPRESSED"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<ViolationAnalysisRecord, Boolean> suppressed = createField(DSL.name("SUPPRESSED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     private ViolationAnalysis(Name alias, Table<ViolationAnalysisRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

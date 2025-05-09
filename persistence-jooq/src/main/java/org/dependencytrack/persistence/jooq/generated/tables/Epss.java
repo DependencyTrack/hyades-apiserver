@@ -57,22 +57,22 @@ public class Epss extends TableImpl<EpssRecord> {
     /**
      * The column <code>EPSS.ID</code>.
      */
-    public final TableField<EpssRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<EpssRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>EPSS.CVE</code>.
      */
-    public final TableField<EpssRecord, String> CVE = createField(DSL.name("CVE"), SQLDataType.CLOB.nullable(false), this, "");
+    public final TableField<EpssRecord, String> cve = createField(DSL.name("CVE"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
      * The column <code>EPSS.PERCENTILE</code>.
      */
-    public final TableField<EpssRecord, BigDecimal> PERCENTILE = createField(DSL.name("PERCENTILE"), SQLDataType.NUMERIC, this, "");
+    public final TableField<EpssRecord, BigDecimal> percentile = createField(DSL.name("PERCENTILE"), SQLDataType.NUMERIC, this, "");
 
     /**
      * The column <code>EPSS.SCORE</code>.
      */
-    public final TableField<EpssRecord, BigDecimal> SCORE = createField(DSL.name("SCORE"), SQLDataType.NUMERIC, this, "");
+    public final TableField<EpssRecord, BigDecimal> score = createField(DSL.name("SCORE"), SQLDataType.NUMERIC, this, "");
 
     private Epss(Name alias, Table<EpssRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

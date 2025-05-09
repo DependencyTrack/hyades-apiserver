@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -84,112 +85,112 @@ public class Project extends TableImpl<ProjectRecord> {
     /**
      * The column <code>PROJECT.ID</code>.
      */
-    public final TableField<ProjectRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ProjectRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>PROJECT.CLASSIFIER</code>.
      */
-    public final TableField<ProjectRecord, String> CLASSIFIER = createField(DSL.name("CLASSIFIER"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectRecord, String> classifier = createField(DSL.name("CLASSIFIER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>PROJECT.CPE</code>.
      */
-    public final TableField<ProjectRecord, String> CPE = createField(DSL.name("CPE"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectRecord, String> cpe = createField(DSL.name("CPE"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>PROJECT.DESCRIPTION</code>.
      */
-    public final TableField<ProjectRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectRecord, String> description = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>PROJECT.DIRECT_DEPENDENCIES</code>.
      */
-    public final TableField<ProjectRecord, JSONB> DIRECT_DEPENDENCIES = createField(DSL.name("DIRECT_DEPENDENCIES"), SQLDataType.JSONB, this, "");
+    public final TableField<ProjectRecord, JSONB> directDependencies = createField(DSL.name("DIRECT_DEPENDENCIES"), SQLDataType.JSONB, this, "");
 
     /**
      * The column <code>PROJECT.EXTERNAL_REFERENCES</code>.
      */
-    public final TableField<ProjectRecord, byte[]> EXTERNAL_REFERENCES = createField(DSL.name("EXTERNAL_REFERENCES"), SQLDataType.BLOB, this, "");
+    public final TableField<ProjectRecord, byte[]> externalReferences = createField(DSL.name("EXTERNAL_REFERENCES"), SQLDataType.BLOB, this, "");
 
     /**
      * The column <code>PROJECT.GROUP</code>.
      */
-    public final TableField<ProjectRecord, String> GROUP = createField(DSL.name("GROUP"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectRecord, String> group = createField(DSL.name("GROUP"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>PROJECT.LAST_BOM_IMPORTED</code>.
      */
-    public final TableField<ProjectRecord, OffsetDateTime> LAST_BOM_IMPORTED = createField(DSL.name("LAST_BOM_IMPORTED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<ProjectRecord, OffsetDateTime> lastBomImported = createField(DSL.name("LAST_BOM_IMPORTED"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
      * The column <code>PROJECT.LAST_BOM_IMPORTED_FORMAT</code>.
      */
-    public final TableField<ProjectRecord, String> LAST_BOM_IMPORTED_FORMAT = createField(DSL.name("LAST_BOM_IMPORTED_FORMAT"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectRecord, String> lastBomImportedFormat = createField(DSL.name("LAST_BOM_IMPORTED_FORMAT"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>PROJECT.LAST_RISKSCORE</code>.
      */
-    public final TableField<ProjectRecord, Double> LAST_RISKSCORE = createField(DSL.name("LAST_RISKSCORE"), SQLDataType.DOUBLE, this, "");
+    public final TableField<ProjectRecord, Double> lastRiskScore = createField(DSL.name("LAST_RISKSCORE"), SQLDataType.DOUBLE, this, "");
 
     /**
      * The column <code>PROJECT.NAME</code>.
      */
-    public final TableField<ProjectRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ProjectRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>PROJECT.PARENT_PROJECT_ID</code>.
      */
-    public final TableField<ProjectRecord, Long> PARENT_PROJECT_ID = createField(DSL.name("PARENT_PROJECT_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<ProjectRecord, Long> parentProjectId = createField(DSL.name("PARENT_PROJECT_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>PROJECT.PUBLISHER</code>.
      */
-    public final TableField<ProjectRecord, String> PUBLISHER = createField(DSL.name("PUBLISHER"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectRecord, String> publisher = createField(DSL.name("PUBLISHER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>PROJECT.PURL</code>.
      */
-    public final TableField<ProjectRecord, String> PURL = createField(DSL.name("PURL"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectRecord, String> purl = createField(DSL.name("PURL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>PROJECT.SWIDTAGID</code>.
      */
-    public final TableField<ProjectRecord, String> SWIDTAGID = createField(DSL.name("SWIDTAGID"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectRecord, String> swidTagId = createField(DSL.name("SWIDTAGID"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>PROJECT.UUID</code>.
      */
-    public final TableField<ProjectRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<ProjectRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>PROJECT.VERSION</code>.
      */
-    public final TableField<ProjectRecord, String> VERSION = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectRecord, String> version = createField(DSL.name("VERSION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>PROJECT.SUPPLIER</code>.
      */
-    public final TableField<ProjectRecord, String> SUPPLIER = createField(DSL.name("SUPPLIER"), SQLDataType.CLOB, this, "");
+    public final TableField<ProjectRecord, String> supplier = createField(DSL.name("SUPPLIER"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>PROJECT.MANUFACTURER</code>.
      */
-    public final TableField<ProjectRecord, String> MANUFACTURER = createField(DSL.name("MANUFACTURER"), SQLDataType.CLOB, this, "");
+    public final TableField<ProjectRecord, String> manufacturer = createField(DSL.name("MANUFACTURER"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>PROJECT.AUTHORS</code>.
      */
-    public final TableField<ProjectRecord, String> AUTHORS = createField(DSL.name("AUTHORS"), SQLDataType.CLOB, this, "");
+    public final TableField<ProjectRecord, String> authors = createField(DSL.name("AUTHORS"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>PROJECT.IS_LATEST</code>.
      */
-    public final TableField<ProjectRecord, Boolean> IS_LATEST = createField(DSL.name("IS_LATEST"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
+    public final TableField<ProjectRecord, Boolean> isLatest = createField(DSL.name("IS_LATEST"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "");
 
     /**
      * The column <code>PROJECT.INACTIVE_SINCE</code>.
      */
-    public final TableField<ProjectRecord, OffsetDateTime> INACTIVE_SINCE = createField(DSL.name("INACTIVE_SINCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<ProjectRecord, OffsetDateTime> inactiveSince = createField(DSL.name("INACTIVE_SINCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     private Project(Name alias, Table<ProjectRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -357,17 +358,17 @@ public class Project extends TableImpl<ProjectRecord> {
         return _findingAttribution;
     }
 
-    private transient NotificationRuleProjectsPath _notificationruleProjects;
+    private transient NotificationRuleProjectsPath _notificationRuleProjects;
 
     /**
      * Get the implicit to-many join path to the
      * <code>NOTIFICATIONRULE_PROJECTS</code> table
      */
-    public NotificationRuleProjectsPath notificationruleProjects() {
-        if (_notificationruleProjects == null)
-            _notificationruleProjects = new NotificationRuleProjectsPath(this, null, Keys.NOTIFICATIONRULE_PROJECTS_PROJECT_FK.getInverseKey());
+    public NotificationRuleProjectsPath notificationRuleProjects() {
+        if (_notificationRuleProjects == null)
+            _notificationRuleProjects = new NotificationRuleProjectsPath(this, null, Keys.NOTIFICATIONRULE_PROJECTS_PROJECT_FK.getInverseKey());
 
-        return _notificationruleProjects;
+        return _notificationRuleProjects;
     }
 
     private transient PolicyProjectsPath _policyProjects;

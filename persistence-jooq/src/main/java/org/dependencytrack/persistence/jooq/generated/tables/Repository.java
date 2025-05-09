@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -56,57 +57,57 @@ public class Repository extends TableImpl<RepositoryRecord> {
     /**
      * The column <code>REPOSITORY.ID</code>.
      */
-    public final TableField<RepositoryRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<RepositoryRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>REPOSITORY.AUTHENTICATIONREQUIRED</code>.
      */
-    public final TableField<RepositoryRecord, Boolean> AUTHENTICATIONREQUIRED = createField(DSL.name("AUTHENTICATIONREQUIRED"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<RepositoryRecord, Boolean> authenticationRequired = createField(DSL.name("AUTHENTICATIONREQUIRED"), SQLDataType.BOOLEAN, this, "");
 
     /**
      * The column <code>REPOSITORY.ENABLED</code>.
      */
-    public final TableField<RepositoryRecord, Boolean> ENABLED = createField(DSL.name("ENABLED"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<RepositoryRecord, Boolean> enabled = createField(DSL.name("ENABLED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
      * The column <code>REPOSITORY.IDENTIFIER</code>.
      */
-    public final TableField<RepositoryRecord, String> IDENTIFIER = createField(DSL.name("IDENTIFIER"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<RepositoryRecord, String> identifier = createField(DSL.name("IDENTIFIER"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>REPOSITORY.INTERNAL</code>.
      */
-    public final TableField<RepositoryRecord, Boolean> INTERNAL = createField(DSL.name("INTERNAL"), SQLDataType.BOOLEAN, this, "");
+    public final TableField<RepositoryRecord, Boolean> internal = createField(DSL.name("INTERNAL"), SQLDataType.BOOLEAN, this, "");
 
     /**
      * The column <code>REPOSITORY.PASSWORD</code>.
      */
-    public final TableField<RepositoryRecord, String> PASSWORD = createField(DSL.name("PASSWORD"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<RepositoryRecord, String> password = createField(DSL.name("PASSWORD"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>REPOSITORY.RESOLUTION_ORDER</code>.
      */
-    public final TableField<RepositoryRecord, Integer> RESOLUTION_ORDER = createField(DSL.name("RESOLUTION_ORDER"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<RepositoryRecord, Integer> resolutionOrder = createField(DSL.name("RESOLUTION_ORDER"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>REPOSITORY.TYPE</code>.
      */
-    public final TableField<RepositoryRecord, String> TYPE = createField(DSL.name("TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<RepositoryRecord, String> type = createField(DSL.name("TYPE"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>REPOSITORY.URL</code>.
      */
-    public final TableField<RepositoryRecord, String> URL = createField(DSL.name("URL"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<RepositoryRecord, String> url = createField(DSL.name("URL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>REPOSITORY.USERNAME</code>.
      */
-    public final TableField<RepositoryRecord, String> USERNAME = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<RepositoryRecord, String> userName = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>REPOSITORY.UUID</code>.
      */
-    public final TableField<RepositoryRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID, this, "");
+    public final TableField<RepositoryRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID, this, "");
 
     private Repository(Name alias, Table<RepositoryRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

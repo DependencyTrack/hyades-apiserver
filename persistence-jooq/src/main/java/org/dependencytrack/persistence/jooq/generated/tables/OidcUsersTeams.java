@@ -59,12 +59,12 @@ public class OidcUsersTeams extends TableImpl<OidcUsersTeamsRecord> {
     /**
      * The column <code>OIDCUSERS_TEAMS.OIDCUSERS_ID</code>.
      */
-    public final TableField<OidcUsersTeamsRecord, Long> OIDCUSERS_ID = createField(DSL.name("OIDCUSERS_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<OidcUsersTeamsRecord, Long> oidcUsersId = createField(DSL.name("OIDCUSERS_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>OIDCUSERS_TEAMS.TEAM_ID</code>.
      */
-    public final TableField<OidcUsersTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<OidcUsersTeamsRecord, Long> teamId = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private OidcUsersTeams(Name alias, Table<OidcUsersTeamsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

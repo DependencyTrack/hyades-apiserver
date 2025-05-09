@@ -59,12 +59,12 @@ public class LdapUsersPermissions extends TableImpl<LdapUsersPermissionsRecord> 
     /**
      * The column <code>LDAPUSERS_PERMISSIONS.LDAPUSER_ID</code>.
      */
-    public final TableField<LdapUsersPermissionsRecord, Long> LDAPUSER_ID = createField(DSL.name("LDAPUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<LdapUsersPermissionsRecord, Long> ldapUserId = createField(DSL.name("LDAPUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>LDAPUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
-    public final TableField<LdapUsersPermissionsRecord, Long> PERMISSION_ID = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<LdapUsersPermissionsRecord, Long> permissionId = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private LdapUsersPermissions(Name alias, Table<LdapUsersPermissionsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

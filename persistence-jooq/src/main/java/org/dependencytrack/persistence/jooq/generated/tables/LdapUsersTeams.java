@@ -59,12 +59,12 @@ public class LdapUsersTeams extends TableImpl<LdapUsersTeamsRecord> {
     /**
      * The column <code>LDAPUSERS_TEAMS.TEAM_ID</code>.
      */
-    public final TableField<LdapUsersTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<LdapUsersTeamsRecord, Long> teamId = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>LDAPUSERS_TEAMS.LDAPUSER_ID</code>.
      */
-    public final TableField<LdapUsersTeamsRecord, Long> LDAPUSER_ID = createField(DSL.name("LDAPUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<LdapUsersTeamsRecord, Long> ldapUserId = createField(DSL.name("LDAPUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private LdapUsersTeams(Name alias, Table<LdapUsersTeamsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

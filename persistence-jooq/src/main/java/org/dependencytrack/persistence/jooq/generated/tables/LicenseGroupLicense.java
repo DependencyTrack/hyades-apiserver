@@ -60,12 +60,12 @@ public class LicenseGroupLicense extends TableImpl<LicenseGroupLicenseRecord> {
     /**
      * The column <code>LICENSEGROUP_LICENSE.LICENSEGROUP_ID</code>.
      */
-    public final TableField<LicenseGroupLicenseRecord, Long> LICENSEGROUP_ID = createField(DSL.name("LICENSEGROUP_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<LicenseGroupLicenseRecord, Long> licenseGroupId = createField(DSL.name("LICENSEGROUP_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>LICENSEGROUP_LICENSE.LICENSE_ID</code>.
      */
-    public final TableField<LicenseGroupLicenseRecord, Long> LICENSE_ID = createField(DSL.name("LICENSE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<LicenseGroupLicenseRecord, Long> licenseId = createField(DSL.name("LICENSE_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private LicenseGroupLicense(Name alias, Table<LicenseGroupLicenseRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

@@ -65,42 +65,42 @@ public class WorkflowState extends TableImpl<WorkflowStateRecord> {
     /**
      * The column <code>WORKFLOW_STATE.ID</code>.
      */
-    public final TableField<WorkflowStateRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<WorkflowStateRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>WORKFLOW_STATE.FAILURE_REASON</code>.
      */
-    public final TableField<WorkflowStateRecord, String> FAILURE_REASON = createField(DSL.name("FAILURE_REASON"), SQLDataType.CLOB, this, "");
+    public final TableField<WorkflowStateRecord, String> failureReason = createField(DSL.name("FAILURE_REASON"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>WORKFLOW_STATE.PARENT_STEP_ID</code>.
      */
-    public final TableField<WorkflowStateRecord, Long> PARENT_STEP_ID = createField(DSL.name("PARENT_STEP_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<WorkflowStateRecord, Long> parentStepId = createField(DSL.name("PARENT_STEP_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>WORKFLOW_STATE.STARTED_AT</code>.
      */
-    public final TableField<WorkflowStateRecord, OffsetDateTime> STARTED_AT = createField(DSL.name("STARTED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
+    public final TableField<WorkflowStateRecord, OffsetDateTime> startedAt = createField(DSL.name("STARTED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "");
 
     /**
      * The column <code>WORKFLOW_STATE.STATUS</code>.
      */
-    public final TableField<WorkflowStateRecord, String> STATUS = createField(DSL.name("STATUS"), SQLDataType.VARCHAR(64).nullable(false), this, "");
+    public final TableField<WorkflowStateRecord, String> status = createField(DSL.name("STATUS"), SQLDataType.VARCHAR(64).nullable(false), this, "");
 
     /**
      * The column <code>WORKFLOW_STATE.STEP</code>.
      */
-    public final TableField<WorkflowStateRecord, String> STEP = createField(DSL.name("STEP"), SQLDataType.VARCHAR(64).nullable(false), this, "");
+    public final TableField<WorkflowStateRecord, String> step = createField(DSL.name("STEP"), SQLDataType.VARCHAR(64).nullable(false), this, "");
 
     /**
      * The column <code>WORKFLOW_STATE.TOKEN</code>.
      */
-    public final TableField<WorkflowStateRecord, UUID> TOKEN = createField(DSL.name("TOKEN"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<WorkflowStateRecord, UUID> token = createField(DSL.name("TOKEN"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>WORKFLOW_STATE.UPDATED_AT</code>.
      */
-    public final TableField<WorkflowStateRecord, OffsetDateTime> UPDATED_AT = createField(DSL.name("UPDATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<WorkflowStateRecord, OffsetDateTime> updatedAt = createField(DSL.name("UPDATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     private WorkflowState(Name alias, Table<WorkflowStateRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

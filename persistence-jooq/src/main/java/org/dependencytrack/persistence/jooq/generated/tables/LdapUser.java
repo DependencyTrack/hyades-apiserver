@@ -63,22 +63,22 @@ public class LdapUser extends TableImpl<LdapUserRecord> {
     /**
      * The column <code>LDAPUSER.ID</code>.
      */
-    public final TableField<LdapUserRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<LdapUserRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>LDAPUSER.DN</code>.
      */
-    public final TableField<LdapUserRecord, String> DN = createField(DSL.name("DN"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<LdapUserRecord, String> dn = createField(DSL.name("DN"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>LDAPUSER.EMAIL</code>.
      */
-    public final TableField<LdapUserRecord, String> EMAIL = createField(DSL.name("EMAIL"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<LdapUserRecord, String> email = createField(DSL.name("EMAIL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>LDAPUSER.USERNAME</code>.
      */
-    public final TableField<LdapUserRecord, String> USERNAME = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<LdapUserRecord, String> userName = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
 
     private LdapUser(Name alias, Table<LdapUserRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

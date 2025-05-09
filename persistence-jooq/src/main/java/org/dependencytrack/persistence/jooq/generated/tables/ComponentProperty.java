@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -63,42 +64,42 @@ public class ComponentProperty extends TableImpl<ComponentPropertyRecord> {
     /**
      * The column <code>COMPONENT_PROPERTY.ID</code>.
      */
-    public final TableField<ComponentPropertyRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ComponentPropertyRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>COMPONENT_PROPERTY.COMPONENT_ID</code>.
      */
-    public final TableField<ComponentPropertyRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ComponentPropertyRecord, Long> componentId = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>COMPONENT_PROPERTY.GROUPNAME</code>.
      */
-    public final TableField<ComponentPropertyRecord, String> GROUPNAME = createField(DSL.name("GROUPNAME"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentPropertyRecord, String> groupName = createField(DSL.name("GROUPNAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT_PROPERTY.PROPERTYNAME</code>.
      */
-    public final TableField<ComponentPropertyRecord, String> PROPERTYNAME = createField(DSL.name("PROPERTYNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ComponentPropertyRecord, String> propertyName = createField(DSL.name("PROPERTYNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>COMPONENT_PROPERTY.PROPERTYVALUE</code>.
      */
-    public final TableField<ComponentPropertyRecord, String> PROPERTYVALUE = createField(DSL.name("PROPERTYVALUE"), SQLDataType.VARCHAR(1024), this, "");
+    public final TableField<ComponentPropertyRecord, String> propertyValue = createField(DSL.name("PROPERTYVALUE"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
      * The column <code>COMPONENT_PROPERTY.PROPERTYTYPE</code>.
      */
-    public final TableField<ComponentPropertyRecord, String> PROPERTYTYPE = createField(DSL.name("PROPERTYTYPE"), SQLDataType.CLOB.nullable(false), this, "");
+    public final TableField<ComponentPropertyRecord, String> propertyType = createField(DSL.name("PROPERTYTYPE"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
      * The column <code>COMPONENT_PROPERTY.DESCRIPTION</code>.
      */
-    public final TableField<ComponentPropertyRecord, String> DESCRIPTION = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentPropertyRecord, String> description = createField(DSL.name("DESCRIPTION"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>COMPONENT_PROPERTY.UUID</code>.
      */
-    public final TableField<ComponentPropertyRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<ComponentPropertyRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     private ComponentProperty(Name alias, Table<ComponentPropertyRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

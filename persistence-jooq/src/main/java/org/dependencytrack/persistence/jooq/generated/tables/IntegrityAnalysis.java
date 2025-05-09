@@ -62,42 +62,42 @@ public class IntegrityAnalysis extends TableImpl<IntegrityAnalysisRecord> {
     /**
      * The column <code>INTEGRITY_ANALYSIS.ID</code>.
      */
-    public final TableField<IntegrityAnalysisRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<IntegrityAnalysisRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>INTEGRITY_ANALYSIS.COMPONENT_ID</code>.
      */
-    public final TableField<IntegrityAnalysisRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<IntegrityAnalysisRecord, Long> componentId = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>INTEGRITY_ANALYSIS.INTEGRITY_CHECK_STATUS</code>.
      */
-    public final TableField<IntegrityAnalysisRecord, String> INTEGRITY_CHECK_STATUS = createField(DSL.name("INTEGRITY_CHECK_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<IntegrityAnalysisRecord, String> integrityCheckStatus = createField(DSL.name("INTEGRITY_CHECK_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>INTEGRITY_ANALYSIS.MD5_HASH_MATCH_STATUS</code>.
      */
-    public final TableField<IntegrityAnalysisRecord, String> MD5_HASH_MATCH_STATUS = createField(DSL.name("MD5_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<IntegrityAnalysisRecord, String> md5HashMatchStatus = createField(DSL.name("MD5_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>INTEGRITY_ANALYSIS.SHA1_HASH_MATCH_STATUS</code>.
      */
-    public final TableField<IntegrityAnalysisRecord, String> SHA1_HASH_MATCH_STATUS = createField(DSL.name("SHA1_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<IntegrityAnalysisRecord, String> sha1HashMatchStatus = createField(DSL.name("SHA1_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>INTEGRITY_ANALYSIS.SHA256_HASH_MATCH_STATUS</code>.
      */
-    public final TableField<IntegrityAnalysisRecord, String> SHA256_HASH_MATCH_STATUS = createField(DSL.name("SHA256_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<IntegrityAnalysisRecord, String> sha256HashMatchStatus = createField(DSL.name("SHA256_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>INTEGRITY_ANALYSIS.SHA512_HASH_MATCH_STATUS</code>.
      */
-    public final TableField<IntegrityAnalysisRecord, String> SHA512_HASH_MATCH_STATUS = createField(DSL.name("SHA512_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<IntegrityAnalysisRecord, String> sha512HashMatchStatus = createField(DSL.name("SHA512_HASH_MATCH_STATUS"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>INTEGRITY_ANALYSIS.UPDATED_AT</code>.
      */
-    public final TableField<IntegrityAnalysisRecord, OffsetDateTime> UPDATED_AT = createField(DSL.name("UPDATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<IntegrityAnalysisRecord, OffsetDateTime> updatedAt = createField(DSL.name("UPDATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     private IntegrityAnalysis(Name alias, Table<IntegrityAnalysisRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

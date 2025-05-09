@@ -57,174 +57,174 @@ public class PortfolioMetrics extends TableImpl<PortfolioMetricsRecord> {
     /**
      * The column <code>PORTFOLIOMETRICS.ID</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<PortfolioMetricsRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.COMPONENTS</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> COMPONENTS = createField(DSL.name("COMPONENTS"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> components = createField(DSL.name("COMPONENTS"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.CRITICAL</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> CRITICAL = createField(DSL.name("CRITICAL"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> critical = createField(DSL.name("CRITICAL"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.FINDINGS_AUDITED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> FINDINGS_AUDITED = createField(DSL.name("FINDINGS_AUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> findingsAudited = createField(DSL.name("FINDINGS_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.FINDINGS_TOTAL</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> FINDINGS_TOTAL = createField(DSL.name("FINDINGS_TOTAL"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> findingsTotal = createField(DSL.name("FINDINGS_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.FINDINGS_UNAUDITED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> FINDINGS_UNAUDITED = createField(DSL.name("FINDINGS_UNAUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> findingsUnaudited = createField(DSL.name("FINDINGS_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.FIRST_OCCURRENCE</code>.
      */
-    public final TableField<PortfolioMetricsRecord, OffsetDateTime> FIRST_OCCURRENCE = createField(DSL.name("FIRST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, OffsetDateTime> firstOccurrence = createField(DSL.name("FIRST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.HIGH</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> HIGH = createField(DSL.name("HIGH"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> high = createField(DSL.name("HIGH"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.RISKSCORE</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Double> RISKSCORE = createField(DSL.name("RISKSCORE"), SQLDataType.DOUBLE.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Double> riskScore = createField(DSL.name("RISKSCORE"), SQLDataType.DOUBLE.nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.LAST_OCCURRENCE</code>.
      */
-    public final TableField<PortfolioMetricsRecord, OffsetDateTime> LAST_OCCURRENCE = createField(DSL.name("LAST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, OffsetDateTime> lastOccurrence = createField(DSL.name("LAST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.LOW</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> LOW = createField(DSL.name("LOW"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> low = createField(DSL.name("LOW"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.MEDIUM</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> MEDIUM = createField(DSL.name("MEDIUM"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> medium = createField(DSL.name("MEDIUM"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_AUDITED = createField(DSL.name("POLICYVIOLATIONS_AUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsAudited = createField(DSL.name("POLICYVIOLATIONS_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_FAIL = createField(DSL.name("POLICYVIOLATIONS_FAIL"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsFail = createField(DSL.name("POLICYVIOLATIONS_FAIL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_INFO = createField(DSL.name("POLICYVIOLATIONS_INFO"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsInfo = createField(DSL.name("POLICYVIOLATIONS_INFO"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_AUDITED = createField(DSL.name("POLICYVIOLATIONS_LICENSE_AUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsLicenseAudited = createField(DSL.name("POLICYVIOLATIONS_LICENSE_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_TOTAL = createField(DSL.name("POLICYVIOLATIONS_LICENSE_TOTAL"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsLicenseTotal = createField(DSL.name("POLICYVIOLATIONS_LICENSE_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_LICENSE_UNAUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsLicenseUnaudited = createField(DSL.name("POLICYVIOLATIONS_LICENSE_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_AUDITED = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_AUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsOperationalAudited = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_TOTAL = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_TOTAL"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsOperationalTotal = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsOperationalUnaudited = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_AUDITED = createField(DSL.name("POLICYVIOLATIONS_SECURITY_AUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsSecurityAudited = createField(DSL.name("POLICYVIOLATIONS_SECURITY_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_TOTAL = createField(DSL.name("POLICYVIOLATIONS_SECURITY_TOTAL"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsSecurityTotal = createField(DSL.name("POLICYVIOLATIONS_SECURITY_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_SECURITY_UNAUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsSecurityUnaudited = createField(DSL.name("POLICYVIOLATIONS_SECURITY_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_TOTAL = createField(DSL.name("POLICYVIOLATIONS_TOTAL"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsTotal = createField(DSL.name("POLICYVIOLATIONS_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_UNAUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsUnaudited = createField(DSL.name("POLICYVIOLATIONS_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> POLICYVIOLATIONS_WARN = createField(DSL.name("POLICYVIOLATIONS_WARN"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> policyViolationsWarn = createField(DSL.name("POLICYVIOLATIONS_WARN"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.PROJECTS</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> PROJECTS = createField(DSL.name("PROJECTS"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> projects = createField(DSL.name("PROJECTS"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.SUPPRESSED</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> SUPPRESSED = createField(DSL.name("SUPPRESSED"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> suppressed = createField(DSL.name("SUPPRESSED"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.UNASSIGNED_SEVERITY</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> UNASSIGNED_SEVERITY = createField(DSL.name("UNASSIGNED_SEVERITY"), SQLDataType.INTEGER, this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> unassignedSeverity = createField(DSL.name("UNASSIGNED_SEVERITY"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.VULNERABILITIES</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> VULNERABILITIES = createField(DSL.name("VULNERABILITIES"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> vulnerabilities = createField(DSL.name("VULNERABILITIES"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.VULNERABLECOMPONENTS</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> VULNERABLECOMPONENTS = createField(DSL.name("VULNERABLECOMPONENTS"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> vulnerableComponents = createField(DSL.name("VULNERABLECOMPONENTS"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.VULNERABLEPROJECTS</code>.
      */
-    public final TableField<PortfolioMetricsRecord, Integer> VULNERABLEPROJECTS = createField(DSL.name("VULNERABLEPROJECTS"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<PortfolioMetricsRecord, Integer> vulnerableProjects = createField(DSL.name("VULNERABLEPROJECTS"), SQLDataType.INTEGER.nullable(false), this, "");
 
     private PortfolioMetrics(Name alias, Table<PortfolioMetricsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
