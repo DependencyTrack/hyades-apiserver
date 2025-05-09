@@ -62,37 +62,37 @@ public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
     /**
      * The column <code>COMPONENT_OCCURRENCE.ID</code>.
      */
-    public final TableField<ComponentOccurrenceRecord, UUID> ID = createField(DSL.name("ID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<ComponentOccurrenceRecord, UUID> id = createField(DSL.name("ID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>COMPONENT_OCCURRENCE.COMPONENT_ID</code>.
      */
-    public final TableField<ComponentOccurrenceRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ComponentOccurrenceRecord, Long> componentId = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>COMPONENT_OCCURRENCE.LOCATION</code>.
      */
-    public final TableField<ComponentOccurrenceRecord, String> LOCATION = createField(DSL.name("LOCATION"), SQLDataType.CLOB.nullable(false), this, "");
+    public final TableField<ComponentOccurrenceRecord, String> location = createField(DSL.name("LOCATION"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
      * The column <code>COMPONENT_OCCURRENCE.LINE</code>.
      */
-    public final TableField<ComponentOccurrenceRecord, Integer> LINE = createField(DSL.name("LINE"), SQLDataType.INTEGER, this, "");
+    public final TableField<ComponentOccurrenceRecord, Integer> line = createField(DSL.name("LINE"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>COMPONENT_OCCURRENCE.OFFSET</code>.
      */
-    public final TableField<ComponentOccurrenceRecord, Integer> OFFSET = createField(DSL.name("OFFSET"), SQLDataType.INTEGER, this, "");
+    public final TableField<ComponentOccurrenceRecord, Integer> offset = createField(DSL.name("OFFSET"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>COMPONENT_OCCURRENCE.SYMBOL</code>.
      */
-    public final TableField<ComponentOccurrenceRecord, String> SYMBOL = createField(DSL.name("SYMBOL"), SQLDataType.CLOB, this, "");
+    public final TableField<ComponentOccurrenceRecord, String> symbol = createField(DSL.name("SYMBOL"), SQLDataType.CLOB, this, "");
 
     /**
      * The column <code>COMPONENT_OCCURRENCE.CREATED_AT</code>.
      */
-    public final TableField<ComponentOccurrenceRecord, OffsetDateTime> CREATED_AT = createField(DSL.name("CREATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(3).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
+    public final TableField<ComponentOccurrenceRecord, OffsetDateTime> createdAt = createField(DSL.name("CREATED_AT"), SQLDataType.TIMESTAMPWITHTIMEZONE(3).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "");
 
     private ComponentOccurrence(Name alias, Table<ComponentOccurrenceRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

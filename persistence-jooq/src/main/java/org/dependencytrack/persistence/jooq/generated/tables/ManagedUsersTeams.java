@@ -59,12 +59,12 @@ public class ManagedUsersTeams extends TableImpl<ManagedUsersTeamsRecord> {
     /**
      * The column <code>MANAGEDUSERS_TEAMS.TEAM_ID</code>.
      */
-    public final TableField<ManagedUsersTeamsRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ManagedUsersTeamsRecord, Long> teamId = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>MANAGEDUSERS_TEAMS.MANAGEDUSER_ID</code>.
      */
-    public final TableField<ManagedUsersTeamsRecord, Long> MANAGEDUSER_ID = createField(DSL.name("MANAGEDUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ManagedUsersTeamsRecord, Long> managedUserId = createField(DSL.name("MANAGEDUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private ManagedUsersTeams(Name alias, Table<ManagedUsersTeamsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

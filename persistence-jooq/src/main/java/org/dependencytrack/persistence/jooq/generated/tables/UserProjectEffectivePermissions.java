@@ -65,34 +65,34 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
     /**
      * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.LDAPUSER_ID</code>.
      */
-    public final TableField<UserProjectEffectivePermissionsRecord, Long> LDAPUSER_ID = createField(DSL.name("LDAPUSER_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<UserProjectEffectivePermissionsRecord, Long> ldapUserId = createField(DSL.name("LDAPUSER_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column
      * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.MANAGEDUSER_ID</code>.
      */
-    public final TableField<UserProjectEffectivePermissionsRecord, Long> MANAGEDUSER_ID = createField(DSL.name("MANAGEDUSER_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<UserProjectEffectivePermissionsRecord, Long> managedUserId = createField(DSL.name("MANAGEDUSER_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.OIDCUSER_ID</code>.
      */
-    public final TableField<UserProjectEffectivePermissionsRecord, Long> OIDCUSER_ID = createField(DSL.name("OIDCUSER_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<UserProjectEffectivePermissionsRecord, Long> oidcUserId = createField(DSL.name("OIDCUSER_ID"), SQLDataType.BIGINT, this, "");
 
     /**
      * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PROJECT_ID</code>.
      */
-    public final TableField<UserProjectEffectivePermissionsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<UserProjectEffectivePermissionsRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_ID</code>.
      */
-    public final TableField<UserProjectEffectivePermissionsRecord, Long> PERMISSION_ID = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<UserProjectEffectivePermissionsRecord, Long> permissionId = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column
      * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PERMISSION_NAME</code>.
      */
-    public final TableField<UserProjectEffectivePermissionsRecord, String> PERMISSION_NAME = createField(DSL.name("PERMISSION_NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<UserProjectEffectivePermissionsRecord, String> permissionName = createField(DSL.name("PERMISSION_NAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     private UserProjectEffectivePermissions(Name alias, Table<UserProjectEffectivePermissionsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

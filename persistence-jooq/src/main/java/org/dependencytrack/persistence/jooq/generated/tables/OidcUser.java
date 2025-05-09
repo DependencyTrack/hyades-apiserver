@@ -63,22 +63,22 @@ public class OidcUser extends TableImpl<OidcUserRecord> {
     /**
      * The column <code>OIDCUSER.ID</code>.
      */
-    public final TableField<OidcUserRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<OidcUserRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>OIDCUSER.EMAIL</code>.
      */
-    public final TableField<OidcUserRecord, String> EMAIL = createField(DSL.name("EMAIL"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<OidcUserRecord, String> email = createField(DSL.name("EMAIL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>OIDCUSER.SUBJECT_IDENTIFIER</code>.
      */
-    public final TableField<OidcUserRecord, String> SUBJECT_IDENTIFIER = createField(DSL.name("SUBJECT_IDENTIFIER"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<OidcUserRecord, String> subjectIdentifier = createField(DSL.name("SUBJECT_IDENTIFIER"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>OIDCUSER.USERNAME</code>.
      */
-    public final TableField<OidcUserRecord, String> USERNAME = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<OidcUserRecord, String> userName = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     private OidcUser(Name alias, Table<OidcUserRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

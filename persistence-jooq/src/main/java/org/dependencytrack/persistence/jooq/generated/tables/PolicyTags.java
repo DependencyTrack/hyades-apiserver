@@ -60,12 +60,12 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
     /**
      * The column <code>POLICY_TAGS.POLICY_ID</code>.
      */
-    public final TableField<PolicyTagsRecord, Long> POLICY_ID = createField(DSL.name("POLICY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<PolicyTagsRecord, Long> policyId = createField(DSL.name("POLICY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>POLICY_TAGS.TAG_ID</code>.
      */
-    public final TableField<PolicyTagsRecord, Long> TAG_ID = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<PolicyTagsRecord, Long> tagId = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT, this, "");
 
     private PolicyTags(Name alias, Table<PolicyTagsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

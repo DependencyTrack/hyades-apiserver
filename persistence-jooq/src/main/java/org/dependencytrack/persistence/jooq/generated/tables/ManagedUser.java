@@ -64,47 +64,47 @@ public class ManagedUser extends TableImpl<ManagedUserRecord> {
     /**
      * The column <code>MANAGEDUSER.ID</code>.
      */
-    public final TableField<ManagedUserRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ManagedUserRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>MANAGEDUSER.EMAIL</code>.
      */
-    public final TableField<ManagedUserRecord, String> EMAIL = createField(DSL.name("EMAIL"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ManagedUserRecord, String> email = createField(DSL.name("EMAIL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>MANAGEDUSER.FORCE_PASSWORD_CHANGE</code>.
      */
-    public final TableField<ManagedUserRecord, Boolean> FORCE_PASSWORD_CHANGE = createField(DSL.name("FORCE_PASSWORD_CHANGE"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<ManagedUserRecord, Boolean> forcePasswordChange = createField(DSL.name("FORCE_PASSWORD_CHANGE"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
      * The column <code>MANAGEDUSER.FULLNAME</code>.
      */
-    public final TableField<ManagedUserRecord, String> FULLNAME = createField(DSL.name("FULLNAME"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ManagedUserRecord, String> fullname = createField(DSL.name("FULLNAME"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>MANAGEDUSER.LAST_PASSWORD_CHANGE</code>.
      */
-    public final TableField<ManagedUserRecord, OffsetDateTime> LAST_PASSWORD_CHANGE = createField(DSL.name("LAST_PASSWORD_CHANGE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<ManagedUserRecord, OffsetDateTime> lastPasswordChange = createField(DSL.name("LAST_PASSWORD_CHANGE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>MANAGEDUSER.NON_EXPIRY_PASSWORD</code>.
      */
-    public final TableField<ManagedUserRecord, Boolean> NON_EXPIRY_PASSWORD = createField(DSL.name("NON_EXPIRY_PASSWORD"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<ManagedUserRecord, Boolean> nonExpiryPassword = createField(DSL.name("NON_EXPIRY_PASSWORD"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
      * The column <code>MANAGEDUSER.PASSWORD</code>.
      */
-    public final TableField<ManagedUserRecord, String> PASSWORD = createField(DSL.name("PASSWORD"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<ManagedUserRecord, String> password = createField(DSL.name("PASSWORD"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>MANAGEDUSER.SUSPENDED</code>.
      */
-    public final TableField<ManagedUserRecord, Boolean> SUSPENDED = createField(DSL.name("SUSPENDED"), SQLDataType.BOOLEAN.nullable(false), this, "");
+    public final TableField<ManagedUserRecord, Boolean> suspended = createField(DSL.name("SUSPENDED"), SQLDataType.BOOLEAN.nullable(false), this, "");
 
     /**
      * The column <code>MANAGEDUSER.USERNAME</code>.
      */
-    public final TableField<ManagedUserRecord, String> USERNAME = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ManagedUserRecord, String> userName = createField(DSL.name("USERNAME"), SQLDataType.VARCHAR(255), this, "");
 
     private ManagedUser(Name alias, Table<ManagedUserRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

@@ -59,22 +59,22 @@ public class MappedLdapGroup extends TableImpl<MappedLdapGroupRecord> {
     /**
      * The column <code>MAPPEDLDAPGROUP.ID</code>.
      */
-    public final TableField<MappedLdapGroupRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<MappedLdapGroupRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>MAPPEDLDAPGROUP.DN</code>.
      */
-    public final TableField<MappedLdapGroupRecord, String> DN = createField(DSL.name("DN"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
+    public final TableField<MappedLdapGroupRecord, String> dn = createField(DSL.name("DN"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
 
     /**
      * The column <code>MAPPEDLDAPGROUP.TEAM_ID</code>.
      */
-    public final TableField<MappedLdapGroupRecord, Long> TEAM_ID = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<MappedLdapGroupRecord, Long> teamId = createField(DSL.name("TEAM_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>MAPPEDLDAPGROUP.UUID</code>.
      */
-    public final TableField<MappedLdapGroupRecord, String> UUID = createField(DSL.name("UUID"), SQLDataType.VARCHAR(36).nullable(false), this, "");
+    public final TableField<MappedLdapGroupRecord, String> uuid = createField(DSL.name("UUID"), SQLDataType.VARCHAR(36).nullable(false), this, "");
 
     private MappedLdapGroup(Name alias, Table<MappedLdapGroupRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

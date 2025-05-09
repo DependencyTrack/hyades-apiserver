@@ -58,17 +58,17 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
     /**
      * The column <code>PROJECT_HIERARCHY.PARENT_PROJECT_ID</code>.
      */
-    public final TableField<ProjectHierarchyRecord, Long> PARENT_PROJECT_ID = createField(DSL.name("PARENT_PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ProjectHierarchyRecord, Long> parentProjectId = createField(DSL.name("PARENT_PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>PROJECT_HIERARCHY.CHILD_PROJECT_ID</code>.
      */
-    public final TableField<ProjectHierarchyRecord, Long> CHILD_PROJECT_ID = createField(DSL.name("CHILD_PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ProjectHierarchyRecord, Long> childProjectId = createField(DSL.name("CHILD_PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>PROJECT_HIERARCHY.DEPTH</code>.
      */
-    public final TableField<ProjectHierarchyRecord, Short> DEPTH = createField(DSL.name("DEPTH"), SQLDataType.SMALLINT.nullable(false), this, "");
+    public final TableField<ProjectHierarchyRecord, Short> depth = createField(DSL.name("DEPTH"), SQLDataType.SMALLINT.nullable(false), this, "");
 
     private ProjectHierarchy(Name alias, Table<ProjectHierarchyRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

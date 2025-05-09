@@ -7,6 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -62,37 +63,37 @@ public class PolicyCondition extends TableImpl<PolicyConditionRecord> {
     /**
      * The column <code>POLICYCONDITION.ID</code>.
      */
-    public final TableField<PolicyConditionRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<PolicyConditionRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>POLICYCONDITION.OPERATOR</code>.
      */
-    public final TableField<PolicyConditionRecord, String> OPERATOR = createField(DSL.name("OPERATOR"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<PolicyConditionRecord, String> operator = createField(DSL.name("OPERATOR"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>POLICYCONDITION.POLICY_ID</code>.
      */
-    public final TableField<PolicyConditionRecord, Long> POLICY_ID = createField(DSL.name("POLICY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<PolicyConditionRecord, Long> policyId = createField(DSL.name("POLICY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>POLICYCONDITION.SUBJECT</code>.
      */
-    public final TableField<PolicyConditionRecord, String> SUBJECT = createField(DSL.name("SUBJECT"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<PolicyConditionRecord, String> subject = createField(DSL.name("SUBJECT"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>POLICYCONDITION.UUID</code>.
      */
-    public final TableField<PolicyConditionRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<PolicyConditionRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>POLICYCONDITION.VALUE</code>.
      */
-    public final TableField<PolicyConditionRecord, String> VALUE = createField(DSL.name("VALUE"), SQLDataType.CLOB.nullable(false), this, "");
+    public final TableField<PolicyConditionRecord, String> value = createField(DSL.name("VALUE"), SQLDataType.CLOB.nullable(false), this, "");
 
     /**
      * The column <code>POLICYCONDITION.VIOLATIONTYPE</code>.
      */
-    public final TableField<PolicyConditionRecord, String> VIOLATIONTYPE = createField(DSL.name("VIOLATIONTYPE"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<PolicyConditionRecord, String> violationType = createField(DSL.name("VIOLATIONTYPE"), SQLDataType.VARCHAR(255), this, "");
 
     private PolicyCondition(Name alias, Table<PolicyConditionRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

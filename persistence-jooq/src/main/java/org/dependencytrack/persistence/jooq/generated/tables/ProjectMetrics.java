@@ -62,167 +62,167 @@ public class ProjectMetrics extends TableImpl<ProjectMetricsRecord> {
     /**
      * The column <code>PROJECTMETRICS.ID</code>.
      */
-    public final TableField<ProjectMetricsRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<ProjectMetricsRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.COMPONENTS</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> COMPONENTS = createField(DSL.name("COMPONENTS"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, Integer> components = createField(DSL.name("COMPONENTS"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.CRITICAL</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> CRITICAL = createField(DSL.name("CRITICAL"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, Integer> critical = createField(DSL.name("CRITICAL"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.FINDINGS_AUDITED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> FINDINGS_AUDITED = createField(DSL.name("FINDINGS_AUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> findingsAudited = createField(DSL.name("FINDINGS_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.FINDINGS_TOTAL</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> FINDINGS_TOTAL = createField(DSL.name("FINDINGS_TOTAL"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> findingsTotal = createField(DSL.name("FINDINGS_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.FINDINGS_UNAUDITED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> FINDINGS_UNAUDITED = createField(DSL.name("FINDINGS_UNAUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> findingsUnaudited = createField(DSL.name("FINDINGS_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.FIRST_OCCURRENCE</code>.
      */
-    public final TableField<ProjectMetricsRecord, OffsetDateTime> FIRST_OCCURRENCE = createField(DSL.name("FIRST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, OffsetDateTime> firstOccurrence = createField(DSL.name("FIRST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.HIGH</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> HIGH = createField(DSL.name("HIGH"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, Integer> high = createField(DSL.name("HIGH"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.RISKSCORE</code>.
      */
-    public final TableField<ProjectMetricsRecord, Double> RISKSCORE = createField(DSL.name("RISKSCORE"), SQLDataType.DOUBLE.nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, Double> riskScore = createField(DSL.name("RISKSCORE"), SQLDataType.DOUBLE.nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.LAST_OCCURRENCE</code>.
      */
-    public final TableField<ProjectMetricsRecord, OffsetDateTime> LAST_OCCURRENCE = createField(DSL.name("LAST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, OffsetDateTime> lastOccurrence = createField(DSL.name("LAST_OCCURRENCE"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.LOW</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> LOW = createField(DSL.name("LOW"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, Integer> low = createField(DSL.name("LOW"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.MEDIUM</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> MEDIUM = createField(DSL.name("MEDIUM"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, Integer> medium = createField(DSL.name("MEDIUM"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_AUDITED = createField(DSL.name("POLICYVIOLATIONS_AUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsAudited = createField(DSL.name("POLICYVIOLATIONS_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_FAIL = createField(DSL.name("POLICYVIOLATIONS_FAIL"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsFail = createField(DSL.name("POLICYVIOLATIONS_FAIL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_INFO = createField(DSL.name("POLICYVIOLATIONS_INFO"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsInfo = createField(DSL.name("POLICYVIOLATIONS_INFO"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_AUDITED = createField(DSL.name("POLICYVIOLATIONS_LICENSE_AUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsLicenseAudited = createField(DSL.name("POLICYVIOLATIONS_LICENSE_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_TOTAL = createField(DSL.name("POLICYVIOLATIONS_LICENSE_TOTAL"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsLicenseTotal = createField(DSL.name("POLICYVIOLATIONS_LICENSE_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_LICENSE_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_LICENSE_UNAUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsLicenseUnaudited = createField(DSL.name("POLICYVIOLATIONS_LICENSE_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_AUDITED = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_AUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsOperationalAudited = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_TOTAL = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_TOTAL"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsOperationalTotal = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_OPERATIONAL_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsOperationalUnaudited = createField(DSL.name("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_AUDITED = createField(DSL.name("POLICYVIOLATIONS_SECURITY_AUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsSecurityAudited = createField(DSL.name("POLICYVIOLATIONS_SECURITY_AUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_TOTAL = createField(DSL.name("POLICYVIOLATIONS_SECURITY_TOTAL"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsSecurityTotal = createField(DSL.name("POLICYVIOLATIONS_SECURITY_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_SECURITY_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_SECURITY_UNAUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsSecurityUnaudited = createField(DSL.name("POLICYVIOLATIONS_SECURITY_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_TOTAL = createField(DSL.name("POLICYVIOLATIONS_TOTAL"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsTotal = createField(DSL.name("POLICYVIOLATIONS_TOTAL"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_UNAUDITED = createField(DSL.name("POLICYVIOLATIONS_UNAUDITED"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsUnaudited = createField(DSL.name("POLICYVIOLATIONS_UNAUDITED"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> POLICYVIOLATIONS_WARN = createField(DSL.name("POLICYVIOLATIONS_WARN"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> policyViolationsWarn = createField(DSL.name("POLICYVIOLATIONS_WARN"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.PROJECT_ID</code>.
      */
-    public final TableField<ProjectMetricsRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.SUPPRESSED</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> SUPPRESSED = createField(DSL.name("SUPPRESSED"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, Integer> suppressed = createField(DSL.name("SUPPRESSED"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.UNASSIGNED_SEVERITY</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> UNASSIGNED_SEVERITY = createField(DSL.name("UNASSIGNED_SEVERITY"), SQLDataType.INTEGER, this, "");
+    public final TableField<ProjectMetricsRecord, Integer> unassignedSeverity = createField(DSL.name("UNASSIGNED_SEVERITY"), SQLDataType.INTEGER, this, "");
 
     /**
      * The column <code>PROJECTMETRICS.VULNERABILITIES</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> VULNERABILITIES = createField(DSL.name("VULNERABILITIES"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, Integer> vulnerabilities = createField(DSL.name("VULNERABILITIES"), SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.VULNERABLECOMPONENTS</code>.
      */
-    public final TableField<ProjectMetricsRecord, Integer> VULNERABLECOMPONENTS = createField(DSL.name("VULNERABLECOMPONENTS"), SQLDataType.INTEGER.nullable(false), this, "");
+    public final TableField<ProjectMetricsRecord, Integer> vulnerableComponents = createField(DSL.name("VULNERABLECOMPONENTS"), SQLDataType.INTEGER.nullable(false), this, "");
 
     private ProjectMetrics(Name alias, Table<ProjectMetricsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
 import org.dependencytrack.persistence.jooq.generated.Indexes;
@@ -64,47 +65,47 @@ public class FindingAttribution extends TableImpl<FindingAttributionRecord> {
     /**
      * The column <code>FINDINGATTRIBUTION.ID</code>.
      */
-    public final TableField<FindingAttributionRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<FindingAttributionRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>FINDINGATTRIBUTION.ALT_ID</code>.
      */
-    public final TableField<FindingAttributionRecord, String> ALT_ID = createField(DSL.name("ALT_ID"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<FindingAttributionRecord, String> altId = createField(DSL.name("ALT_ID"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>FINDINGATTRIBUTION.ANALYZERIDENTITY</code>.
      */
-    public final TableField<FindingAttributionRecord, String> ANALYZERIDENTITY = createField(DSL.name("ANALYZERIDENTITY"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<FindingAttributionRecord, String> analyzerIdentity = createField(DSL.name("ANALYZERIDENTITY"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>FINDINGATTRIBUTION.ATTRIBUTED_ON</code>.
      */
-    public final TableField<FindingAttributionRecord, OffsetDateTime> ATTRIBUTED_ON = createField(DSL.name("ATTRIBUTED_ON"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
+    public final TableField<FindingAttributionRecord, OffsetDateTime> attributedOn = createField(DSL.name("ATTRIBUTED_ON"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "");
 
     /**
      * The column <code>FINDINGATTRIBUTION.COMPONENT_ID</code>.
      */
-    public final TableField<FindingAttributionRecord, Long> COMPONENT_ID = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<FindingAttributionRecord, Long> componentId = createField(DSL.name("COMPONENT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>FINDINGATTRIBUTION.PROJECT_ID</code>.
      */
-    public final TableField<FindingAttributionRecord, Long> PROJECT_ID = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<FindingAttributionRecord, Long> projectId = createField(DSL.name("PROJECT_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>FINDINGATTRIBUTION.REFERENCE_URL</code>.
      */
-    public final TableField<FindingAttributionRecord, String> REFERENCE_URL = createField(DSL.name("REFERENCE_URL"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<FindingAttributionRecord, String> referenceUrl = createField(DSL.name("REFERENCE_URL"), SQLDataType.VARCHAR(255), this, "");
 
     /**
      * The column <code>FINDINGATTRIBUTION.UUID</code>.
      */
-    public final TableField<FindingAttributionRecord, java.util.UUID> UUID = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<FindingAttributionRecord, UUID> uuid = createField(DSL.name("UUID"), SQLDataType.UUID.nullable(false), this, "");
 
     /**
      * The column <code>FINDINGATTRIBUTION.VULNERABILITY_ID</code>.
      */
-    public final TableField<FindingAttributionRecord, Long> VULNERABILITY_ID = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<FindingAttributionRecord, Long> vulnerabilityId = createField(DSL.name("VULNERABILITY_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private FindingAttribution(Name alias, Table<FindingAttributionRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

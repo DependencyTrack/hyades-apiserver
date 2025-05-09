@@ -61,17 +61,17 @@ public class OidcGroup extends TableImpl<OidcGroupRecord> {
     /**
      * The column <code>OIDCGROUP.ID</code>.
      */
-    public final TableField<OidcGroupRecord, Long> ID = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
+    public final TableField<OidcGroupRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>OIDCGROUP.NAME</code>.
      */
-    public final TableField<OidcGroupRecord, String> NAME = createField(DSL.name("NAME"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
+    public final TableField<OidcGroupRecord, String> name = createField(DSL.name("NAME"), SQLDataType.VARCHAR(1024).nullable(false), this, "");
 
     /**
      * The column <code>OIDCGROUP.UUID</code>.
      */
-    public final TableField<OidcGroupRecord, String> UUID = createField(DSL.name("UUID"), SQLDataType.VARCHAR(36).nullable(false), this, "");
+    public final TableField<OidcGroupRecord, String> uuid = createField(DSL.name("UUID"), SQLDataType.VARCHAR(36).nullable(false), this, "");
 
     private OidcGroup(Name alias, Table<OidcGroupRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);

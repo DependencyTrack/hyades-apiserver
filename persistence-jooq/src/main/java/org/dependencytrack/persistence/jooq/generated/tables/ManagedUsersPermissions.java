@@ -59,12 +59,12 @@ public class ManagedUsersPermissions extends TableImpl<ManagedUsersPermissionsRe
     /**
      * The column <code>MANAGEDUSERS_PERMISSIONS.MANAGEDUSER_ID</code>.
      */
-    public final TableField<ManagedUsersPermissionsRecord, Long> MANAGEDUSER_ID = createField(DSL.name("MANAGEDUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ManagedUsersPermissionsRecord, Long> managedUserId = createField(DSL.name("MANAGEDUSER_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>MANAGEDUSERS_PERMISSIONS.PERMISSION_ID</code>.
      */
-    public final TableField<ManagedUsersPermissionsRecord, Long> PERMISSION_ID = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<ManagedUsersPermissionsRecord, Long> permissionId = createField(DSL.name("PERMISSION_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private ManagedUsersPermissions(Name alias, Table<ManagedUsersPermissionsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
