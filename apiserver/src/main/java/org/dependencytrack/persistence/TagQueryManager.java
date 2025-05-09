@@ -20,7 +20,7 @@ package org.dependencytrack.persistence;
 
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.persistence.NotSortableException;
 import alpine.persistence.OrderDirection;
 import alpine.persistence.PaginatedResult;
@@ -251,7 +251,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                                                              || hasPermission(apiKey, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE);
                     hasvulnerabilityManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.VULNERABILITY_MANAGEMENT)
                             || hasPermission(apiKey, Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE);
-                } else if (principal instanceof final UserPrincipal user) {
+                } else if (principal instanceof final User user) {
                     hasPortfolioManagementUpdatePermission = hasPermission(user, Permissions.Constants.PORTFOLIO_MANAGEMENT, /* includeTeams */ true)
                                                              || hasPermission(user, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE, /* includeTeams */ true);
                     hasPolicyManagementUpdatePermission = hasPermission(user, Permissions.Constants.POLICY_MANAGEMENT, /* includeTeams */ true)

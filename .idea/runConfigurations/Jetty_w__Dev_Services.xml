@@ -14,7 +14,7 @@
               <option value="-pl" />
               <option value="apiserver" />
               <option value="-am" />
-              <option value="test" />
+              <option value="verify" />
             </list>
           </option>
           <option name="multimoduleDir" />

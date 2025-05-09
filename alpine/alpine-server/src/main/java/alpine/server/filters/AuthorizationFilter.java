@@ -20,7 +20,7 @@ package alpine.server.filters;
 
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.auth.PermissionRequired;
 import org.glassfish.jersey.server.ContainerRequest;
@@ -83,7 +83,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
                             SecurityMarkers.SECURITY_FAILURE,
                             "Unauthorized access attempt made by API Key %s to %s".formatted(
                                     apiKey.getMaskedKey(), requestUri));
-                } else if (principal instanceof final UserPrincipal user) {
+                } else if (principal instanceof final User user) {
                     LOGGER.info(
                             SecurityMarkers.SECURITY_FAILURE,
                             "Unauthorized access attempt made by %s to %s".formatted(user.getUsername(), requestUri));
