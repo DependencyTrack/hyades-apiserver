@@ -116,10 +116,9 @@ public class MetricsResource extends AbstractApiResource {
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getPortfolioCurrentMetrics() {
-        try (QueryManager qm = new QueryManager()) {
-            final PortfolioMetrics metrics = qm.getMostRecentPortfolioMetrics();
-            return Response.ok(metrics).build();
-        }
+        PortfolioMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
+        return Response.ok(metrics).build();
     }
 
     @GET
@@ -218,16 +217,15 @@ public class MetricsResource extends AbstractApiResource {
     public Response getProjectCurrentMetrics(
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project != null) {
-                requireAccess(qm, project);
-                final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
-                return Response.ok(metrics).build();
-            } else {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            var projectId = handle.attach(ProjectDao.class).getProjectId(UUID.fromString(uuid));
+            if (projectId == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
-        }
+            requireProjectAccess(handle, UUID.fromString(uuid));
+            final ProjectMetrics metrics = handle.attach(MetricsDao.class).getMostRecentProjectMetrics(projectId);
+            return Response.ok(metrics).build();
+        });
     }
 
     @GET
@@ -348,16 +346,15 @@ public class MetricsResource extends AbstractApiResource {
     public Response getComponentCurrentMetrics(
             @Parameter(description = "The UUID of the component to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final Component component = qm.getObjectByUuid(Component.class, uuid);
-            if (component != null) {
-                requireAccess(qm, component.getProject());
-                final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
-                return Response.ok(metrics).build();
-            } else {
+        return inJdbiTransaction(getAlpineRequest(), handle -> {
+            var componentId = handle.attach(ComponentDao.class).getComponentId(UUID.fromString(uuid));
+            if (componentId == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
-        }
+            requireComponentAccess(handle, UUID.fromString(uuid));
+            final DependencyMetrics metrics = handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(componentId);
+            return Response.ok(metrics).build();
+        });
     }
 
     @GET

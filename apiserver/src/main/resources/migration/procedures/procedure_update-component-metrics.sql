@@ -202,47 +202,7 @@ BEGIN
     + "v_policy_violations_security_audited";
   "v_policy_violations_unaudited" = "v_policy_violations_total" - "v_policy_violations_audited";
 
-  WITH "CTE_LATEST_METRICS" AS (
-    SELECT *
-      FROM "DEPENDENCYMETRICS"
-     WHERE "COMPONENT_ID" = "v_component"."ID"
-     ORDER BY "LAST_OCCURRENCE" DESC
-     LIMIT 1)
-  SELECT "ID"
-  FROM "CTE_LATEST_METRICS"
-  WHERE "VULNERABILITIES" = "v_vulnerabilities"
-    AND "CRITICAL" = "v_critical"
-    AND "HIGH" = "v_high"
-    AND "MEDIUM" = "v_medium"
-    AND "LOW" = "v_low"
-    AND "UNASSIGNED_SEVERITY" = "v_unassigned"
-    AND "RISKSCORE" = "v_risk_score"
-    AND "FINDINGS_TOTAL" = "v_findings_total"
-    AND "FINDINGS_AUDITED" = "v_findings_audited"
-    AND "FINDINGS_UNAUDITED" = "v_findings_unaudited"
-    AND "SUPPRESSED" = "v_findings_suppressed"
-    AND "POLICYVIOLATIONS_TOTAL" = "v_policy_violations_total"
-    AND "POLICYVIOLATIONS_FAIL" = "v_policy_violations_fail"
-    AND "POLICYVIOLATIONS_WARN" = "v_policy_violations_warn"
-    AND "POLICYVIOLATIONS_INFO" = "v_policy_violations_info"
-    AND "POLICYVIOLATIONS_AUDITED" = "v_policy_violations_audited"
-    AND "POLICYVIOLATIONS_UNAUDITED" = "v_policy_violations_unaudited"
-    AND "POLICYVIOLATIONS_LICENSE_TOTAL" = "v_policy_violations_license_total"
-    AND "POLICYVIOLATIONS_LICENSE_AUDITED" = "v_policy_violations_license_audited"
-    AND "POLICYVIOLATIONS_LICENSE_UNAUDITED" = "v_policy_violations_license_unaudited"
-    AND "POLICYVIOLATIONS_OPERATIONAL_TOTAL" = "v_policy_violations_operational_total"
-    AND "POLICYVIOLATIONS_OPERATIONAL_AUDITED" = "v_policy_violations_operational_audited"
-    AND "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" = "v_policy_violations_operational_unaudited"
-    AND "POLICYVIOLATIONS_SECURITY_TOTAL" = "v_policy_violations_security_total"
-    AND "POLICYVIOLATIONS_SECURITY_AUDITED" = "v_policy_violations_security_audited"
-    AND "POLICYVIOLATIONS_SECURITY_UNAUDITED" = "v_policy_violations_security_unaudited"
-  LIMIT 1
-  INTO "v_existing_id";
-
-  IF "v_existing_id" IS NOT NULL THEN
-    UPDATE "DEPENDENCYMETRICS" SET "LAST_OCCURRENCE" = NOW() WHERE "ID" = "v_existing_id";
-  ELSE
-    INSERT INTO "DEPENDENCYMETRICS" ("COMPONENT_ID",
+  INSERT INTO "DEPENDENCYMETRICS" ("COMPONENT_ID",
                                      "PROJECT_ID",
                                      "VULNERABILITIES",
                                      "CRITICAL",
@@ -303,7 +263,6 @@ BEGIN
             NOW(),
             NOW());
 
-    UPDATE "COMPONENT" SET "LAST_RISKSCORE" = "v_risk_score" WHERE "ID" = "v_component"."ID";
-  END IF;
+  UPDATE "COMPONENT" SET "LAST_RISKSCORE" = "v_risk_score" WHERE "ID" = "v_component"."ID";
 END;
 $$;

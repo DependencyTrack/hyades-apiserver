@@ -86,5 +86,4 @@ public final class Metrics {
                 .bind("uuid", componentUuid)
                 .invoke());
     }
-
 }

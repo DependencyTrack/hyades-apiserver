@@ -22,25 +22,27 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
 import jakarta.json.JsonArray;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.ws.rs.core.Response;
-
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.util.DateUtil.parseShortDate;
 
 public class MetricsResourceTest extends ResourceTest {
@@ -325,12 +327,14 @@ public class MetricsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createPartitionForDaysAgo("PORTFOLIOMETRICS", 30));
         var metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(3);
         metrics.setFirstOccurrence(new Date());
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
         qm.persist(metrics);
 
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createPartitionForDaysAgo("PORTFOLIOMETRICS", 20));
         metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(2);
         metrics.setFirstOccurrence(new Date());
@@ -355,12 +359,14 @@ public class MetricsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForDate("PORTFOLIOMETRICS", LocalDate.of(2025, 1, 1)));
         var metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(3);
         metrics.setFirstOccurrence(new Date());
         metrics.setLastOccurrence(parseShortDate("20250101"));
         qm.persist(metrics);
 
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForDate("PORTFOLIOMETRICS", LocalDate.of(2025, 2, 1)));
         metrics = new PortfolioMetrics();
         metrics.setVulnerabilities(2);
         metrics.setFirstOccurrence(new Date());

@@ -27,10 +27,12 @@ import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.jdbi.v3.core.Handle;
 
 import java.time.Duration;
+import java.time.LocalDate;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
@@ -76,6 +78,17 @@ public class MetricsMaintenanceTask implements Subscriber {
     private Statistics informLocked(final Handle jdbiHandle) {
         assertLocked();
 
+        // Create new partitions for today and tomorrow.
+        useJdbiHandle(handle -> {
+            var metricsHandle = handle.attach(MetricsDao.class);
+            metricsHandle.createMetricsPartitionsForDate(
+                    LocalDate.now().toString(),
+                    LocalDate.now().plusDays(1).toString());
+            metricsHandle.createMetricsPartitionsForDate(
+                    LocalDate.now().plusDays(1).toString(),
+                    LocalDate.now().plusDays(2).toString());
+        });
+
         final var configPropertyDao = jdbiHandle.attach(ConfigPropertyDao.class);
         final var metricsDao = jdbiHandle.attach(MetricsDao.class);
 
@@ -88,5 +101,4 @@ public class MetricsMaintenanceTask implements Subscriber {
 
         return new Statistics(retentionDuration, numDeletedComponent, numDeletedProject, numDeletedPortfolio);
     }
-
 }

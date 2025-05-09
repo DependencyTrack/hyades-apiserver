@@ -24,21 +24,23 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonValue;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
+import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.sqlmapping.ComponentProjection;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonValue;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.StringReader;
@@ -53,6 +55,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.model.sqlmapping.ComponentProjection.mapToComponent;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.PersistenceUtil.assertNonPersistent;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 
@@ -287,7 +290,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             if (includeMetrics) {
 //             Populate each Component object in the paginated result with transitive related
 //             data to minimize the number of round trips a client needs to make, process, and render.
-                component.setMetrics(getMostRecentDependencyMetricsById(component.getId()));
+                component.setMetrics(withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId())));
                 final PackageURL purl = component.getPurl();
                 if (purl != null) {
                     final RepositoryType type = RepositoryType.resolve(purl);
@@ -404,7 +407,8 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             // Populate each Component object in the paginated result with transitive related
             // data to minimize the number of round trips a client needs to make, process, and render.
             for (Component component : result.getList(Component.class)) {
-                component.setMetrics(getMostRecentDependencyMetrics(component));
+                final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
+                component.setMetrics(metrics);
                 final PackageURL purl = component.getPurl();
                 if (purl != null) {
                     final RepositoryType type = RepositoryType.resolve(purl);

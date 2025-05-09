@@ -32,6 +32,7 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -60,9 +61,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-        final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isZero();
         assertThat(metrics.getMedium()).isZero();
@@ -113,6 +114,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsUnchanged() {
+
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
@@ -120,24 +122,24 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // Create risk score configproperties
         createTestConfigProperties();
 
-        var component = new Component();
+        final var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
 
         // Record initial project metrics
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-        final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
         assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
 
         // Run the task a second time, without any metric being changed
         final var beforeSecondRun = new Date();
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
 
-        // Ensure that the lastOccurrence timestamp was correctly updated
-        qm.getPersistenceManager().refresh(metrics);
-        assertThat(metrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
-        assertThat(metrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
+        // Two records should be created in today's partition since it's append-only
+        var recentMetrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
+        assertThat(recentMetrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
+        assertThat(recentMetrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
     }
 
     @Test
@@ -186,7 +188,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
         new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);
 
-        final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isEqualTo(1);
         assertThat(metrics.getMedium()).isEqualTo(1); // One is suppressed
@@ -275,7 +277,8 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
         new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);
 
-        final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        final DependencyMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isEqualTo(1);
         assertThat(metrics.getMedium()).isEqualTo(1);
@@ -327,7 +330,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
 
         // Create an unaudited violation.
         createPolicyViolation(component, Policy.ViolationState.FAIL, PolicyViolation.Type.LICENSE);
@@ -341,7 +344,8 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.makeViolationAnalysis(component, suppressedViolation, ViolationAnalysisState.REJECTED, true);
 
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-        final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        final DependencyMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isZero();
         assertThat(metrics.getMedium()).isZero();
@@ -385,7 +389,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var component = new Component();
         component.setProject(project);
         component.setName("acme-lib");
-        component = qm.createComponent(component, false);
+        qm.createComponent(component, false);
 
         // Create four distinct vulnerabilities:
         //   A: INTERNAL -> INTERNAL-001
@@ -436,7 +440,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // Expectation is that both C and D will not be considered because they alias A.
 
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-        final DependencyMetrics metrics = qm.getMostRecentDependencyMetrics(component);
+        final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isEqualTo(1); // INTERNAL-001
         assertThat(metrics.getMedium()).isEqualTo(1); // GHSA-002

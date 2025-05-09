@@ -53,7 +53,6 @@ import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -66,9 +65,7 @@ import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
-import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -1051,44 +1048,8 @@ public class QueryManager extends AlpineQueryManager {
         return getMetricsQueryManager().getVulnerabilityMetrics();
     }
 
-    public PortfolioMetrics getMostRecentPortfolioMetrics() {
-        return getMetricsQueryManager().getMostRecentPortfolioMetrics();
-    }
-
-    public PaginatedResult getPortfolioMetrics() {
-        return getMetricsQueryManager().getPortfolioMetrics();
-    }
-
-    public ProjectMetrics getMostRecentProjectMetrics(Project project) {
-        return getMetricsQueryManager().getMostRecentProjectMetrics(project);
-    }
-
-    public PaginatedResult getProjectMetrics(Project project) {
-        return getMetricsQueryManager().getProjectMetrics(project);
-    }
-
-    public DependencyMetrics getMostRecentDependencyMetrics(Component component) {
-        return getMetricsQueryManager().getMostRecentDependencyMetrics(component);
-    }
-
-    public DependencyMetrics getMostRecentDependencyMetricsById(long component) {
-        return getMetricsQueryManager().getMostRecentDependencyMetricsById(component);
-    }
-
-    public PaginatedResult getDependencyMetrics(Component component) {
-        return getMetricsQueryManager().getDependencyMetrics(component);
-    }
-
     public void synchronizeVulnerabilityMetrics(List<VulnerabilityMetrics> metrics) {
         getMetricsQueryManager().synchronizeVulnerabilityMetrics(metrics);
-    }
-
-    void deleteMetrics(Project project) {
-        getMetricsQueryManager().deleteMetrics(project);
-    }
-
-    void deleteMetrics(Component component) {
-        getMetricsQueryManager().deleteMetrics(component);
     }
 
     public PaginatedResult getRepositories() {
