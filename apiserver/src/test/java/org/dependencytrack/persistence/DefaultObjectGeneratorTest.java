@@ -31,6 +31,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -153,11 +156,12 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
     public void testMetricsPartitionsForToday() {
         DefaultObjectGenerator generator = new DefaultObjectGenerator();
         generator.ensureMetricsPartitions();
+        var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         withJdbiHandle(handle -> {
             var metricsHandle = handle.attach(MetricsDao.class);
-            assertThat(metricsHandle.getPortfolioMetricsPartitions().size()).isEqualTo(1);
-            assertThat(metricsHandle.getProjectMetricsPartitions().size()).isEqualTo(1);
-            assertThat(metricsHandle.getDependencyMetricsPartitions().size()).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getPortfolioMetricsPartitions(), "\"PORTFOLIOMETRICS_%s\"".formatted(today))).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getProjectMetricsPartitions(), "\"PROJECTMETRICS_%s\"".formatted(today))).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getDependencyMetricsPartitions(), "\"DEPENDENCYMETRICS_%s\"".formatted(today))).isEqualTo(1);
             return null;
         });
     }
