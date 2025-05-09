@@ -14,4 +14,10 @@
     <include file="migration/changelog-v5.5.0.xml"/>
     <include file="migration/changelog-v5.6.0.xml"/>
     <include file="migration/changelog-procedures.xml"/>
+
+    <!--
+      TODO: Use context so this doesn't run when using a different DB for workflows.
+        https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html
+    -->
+    <include file="org/dependencytrack/workflow/engine/persistence/migration/changelog.xml"/>
 </databaseChangeLog>
