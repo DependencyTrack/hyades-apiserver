@@ -27,6 +27,7 @@ import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.jdbi.v3.core.Handle;
 
 import java.time.Duration;
+import java.time.LocalDate;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
@@ -77,8 +78,16 @@ public class MetricsMaintenanceTask implements Subscriber {
     private Statistics informLocked(final Handle jdbiHandle) {
         assertLocked();
 
-        // Create new partitions for today.
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
+        // Create new partitions for today and tomorrow.
+        useJdbiHandle(handle -> {
+            var metricsHandle = handle.attach(MetricsDao.class);
+            metricsHandle.createMetricsPartitionsForDate(
+                    LocalDate.now().toString(),
+                    LocalDate.now().plusDays(1).toString());
+            metricsHandle.createMetricsPartitionsForDate(
+                    LocalDate.now().plusDays(1).toString(),
+                    LocalDate.now().plusDays(2).toString());
+        });
 
         final var configPropertyDao = jdbiHandle.attach(ConfigPropertyDao.class);
         final var metricsDao = jdbiHandle.attach(MetricsDao.class);

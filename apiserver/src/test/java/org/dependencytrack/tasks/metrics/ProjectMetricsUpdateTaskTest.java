@@ -41,16 +41,12 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
 
     @Test
     public void testUpdateMetricsEmpty() {
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
-
         final var project = new Project();
         project.setName("acme-app");
         qm.createProject(project, List.of(), false);
@@ -96,9 +92,6 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
 
     @Test
     public void testUpdateMetricsUnchanged() {
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
-
         final var project = new Project();
         project.setName("acme-app");
         qm.createProject(project, List.of(), false);
@@ -123,9 +116,6 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
 
     @Test
     public void testUpdateMetricsVulnerabilities() {
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
-
         var project = new Project();
         project.setName("acme-app");
         qm.createProject(project, List.of(), false);
@@ -241,9 +231,6 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
 
     @Test
     public void testUpdateMetricsPolicyViolations() {
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
-
         final var project = new Project();
         project.setName("acme-app");
         qm.createProject(project, List.of(), false);

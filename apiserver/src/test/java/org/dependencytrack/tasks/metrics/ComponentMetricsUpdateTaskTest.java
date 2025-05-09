@@ -44,7 +44,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 
@@ -52,9 +51,6 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateCMetricsEmpty() {
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
-
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
@@ -118,8 +114,6 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsUnchanged() {
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         var project = new Project();
         project.setName("acme-app");
@@ -150,9 +144,6 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsVulnerabilities() {
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
-
         var project = new Project();
         project.setName("acme-app");
         qm.createProject(project, List.of(), false);
@@ -239,9 +230,6 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsVulnerabilitiesWhenSeverityIsOverridden() {
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
-
         var project = new Project();
         project.setName("acme-app");
         qm.createProject(project, List.of(), false);
@@ -332,9 +320,6 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsPolicyViolations() {
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
-
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);
@@ -394,9 +379,6 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsWithDuplicateAliases() {
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
-
         var project = new Project();
         project.setName("acme-app");
         project = qm.createProject(project, List.of(), false);

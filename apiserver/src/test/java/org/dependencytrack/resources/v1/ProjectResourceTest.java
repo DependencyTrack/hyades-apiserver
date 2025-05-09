@@ -63,7 +63,6 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
-import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -758,8 +757,6 @@ public class ProjectResourceTest extends ResourceTest {
         final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);
         final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
 
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
-
         final var projectMetricsOld = new ProjectMetrics();
         projectMetricsOld.setProject(project);
         projectMetricsOld.setCritical(666);
@@ -1238,8 +1235,6 @@ public class ProjectResourceTest extends ResourceTest {
         childProject.setParent(parentProject);
         childProject.setName("acme-child-app");
         qm.persist(childProject);
-
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         final Instant now = Instant.now();
         final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);

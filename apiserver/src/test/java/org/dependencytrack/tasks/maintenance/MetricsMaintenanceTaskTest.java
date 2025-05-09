@@ -26,6 +26,9 @@ import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.jdbi.v3.core.Handle;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -37,11 +40,28 @@ import java.util.function.BiConsumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.dependencytrack.metrics.Metrics.createPartitionForDaysAgo;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
+
+    private Handle jdbiHandle;
+    private MetricsDao metricsDao;
+
+    @Before
+    public void before() throws Exception {
+        super.before();
+        jdbiHandle = openJdbiHandle();
+        metricsDao = jdbiHandle.attach(MetricsDao.class);
+    }
+
+    @After
+    public void after() {
+        if (jdbiHandle != null) {
+            jdbiHandle.close();
+        }
+        super.after();
+    }
 
     @Test
     public void test() throws Exception {
@@ -92,27 +112,27 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         final Instant now = Instant.now();
 
         // Create component metrics partitions for dates required
-        createPartitionForDaysAgo("DEPENDENCYMETRICS", 91);
-        createPartitionForDaysAgo("DEPENDENCYMETRICS", 90);
-        createPartitionForDaysAgo("DEPENDENCYMETRICS", 89);
+        metricsDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 91);
+        metricsDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 90);
+        metricsDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 89);
 
         createComponentMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createComponentMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createComponentMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
 
         // Create project metrics partitions for dates required
-        createPartitionForDaysAgo("PROJECTMETRICS", 91);
-        createPartitionForDaysAgo("PROJECTMETRICS", 90);
-        createPartitionForDaysAgo("PROJECTMETRICS", 89);
+        metricsDao.createPartitionForDaysAgo("PROJECTMETRICS", 91);
+        metricsDao.createPartitionForDaysAgo("PROJECTMETRICS", 90);
+        metricsDao.createPartitionForDaysAgo("PROJECTMETRICS", 89);
 
         createProjectMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createProjectMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createProjectMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
 
         // Create portfolio metrics partitions for dates required
-        createPartitionForDaysAgo("PORTFOLIOMETRICS", 91);
-        createPartitionForDaysAgo("PORTFOLIOMETRICS", 90);
-        createPartitionForDaysAgo("PORTFOLIOMETRICS", 89);
+        metricsDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 91);
+        metricsDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 90);
+        metricsDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 89);
 
         createPortfolioMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createPortfolioMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
@@ -121,32 +141,31 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         final var task = new MetricsMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new MetricsMaintenanceEvent()));
 
-        assertThat(qm.getDependencyMetrics(component).getList(DependencyMetrics.class)).satisfiesExactly(
+        assertThat(metricsDao.getDependencyMetricsSince(component.getId(), now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
 
-        assertThat(qm.getProjectMetrics(project).getList(ProjectMetrics.class)).satisfiesExactly(
+        assertThat(metricsDao.getProjectMetricsSince(project.getId(), now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
 
-        assertThat(qm.getPortfolioMetrics().getList(PortfolioMetrics.class)).satisfiesExactly(
+        assertThat(metricsDao.getPortfolioMetricsSince(now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
     }
 
     @Test
     public void testCreateMetricsPartitions() {
-
         new MetricsMaintenanceTask().inform(new MetricsMaintenanceEvent());
-        withJdbiHandle(handle -> {
-            var metricsHandle = handle.attach(MetricsDao.class);
-            var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-            var metricsPartition = metricsHandle.getPortfolioMetricsPartitions();
-            assertThat(metricsPartition.getLast()).isEqualTo("\"PORTFOLIOMETRICS_%s\"".formatted(today));
+        var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        var tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
+        var metricsPartitions = metricsDao.getPortfolioMetricsPartitions();
+        assertThat(metricsPartitions.getFirst()).isEqualTo("\"PORTFOLIOMETRICS_%s\"".formatted(today));
+        assertThat(metricsPartitions.getLast()).isEqualTo("\"PORTFOLIOMETRICS_%s\"".formatted(tomorrow));
 
-            metricsPartition = metricsHandle.getProjectMetricsPartitions();
-            assertThat(metricsPartition.getLast()).isEqualTo("\"PROJECTMETRICS_%s\"".formatted(today));
+        metricsPartitions = metricsDao.getProjectMetricsPartitions();
+        assertThat(metricsPartitions.getFirst()).isEqualTo("\"PROJECTMETRICS_%s\"".formatted(today));
+        assertThat(metricsPartitions.getLast()).isEqualTo("\"PROJECTMETRICS_%s\"".formatted(tomorrow));
 
-            metricsPartition = metricsHandle.getDependencyMetricsPartitions();
-            assertThat(metricsPartition.getLast()).isEqualTo("\"DEPENDENCYMETRICS_%s\"".formatted(today));
-            return null;
-        });
+        metricsPartitions = metricsDao.getDependencyMetricsPartitions();
+        assertThat(metricsPartitions.getFirst()).isEqualTo("\"DEPENDENCYMETRICS_%s\"".formatted(today));
+        assertThat(metricsPartitions.getLast()).isEqualTo("\"DEPENDENCYMETRICS_%s\"".formatted(tomorrow));
     }
 }

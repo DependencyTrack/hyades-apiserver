@@ -53,7 +53,6 @@ import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -1049,32 +1048,8 @@ public class QueryManager extends AlpineQueryManager {
         return getMetricsQueryManager().getVulnerabilityMetrics();
     }
 
-    public PaginatedResult getPortfolioMetrics() {
-        return getMetricsQueryManager().getPortfolioMetrics();
-    }
-
-    public PaginatedResult getProjectMetrics(Project project) {
-        return getMetricsQueryManager().getProjectMetrics(project);
-    }
-
-    public DependencyMetrics getMostRecentDependencyMetricsById(long component) {
-        return getMetricsQueryManager().getMostRecentDependencyMetricsById(component);
-    }
-
-    public PaginatedResult getDependencyMetrics(Component component) {
-        return getMetricsQueryManager().getDependencyMetrics(component);
-    }
-
     public void synchronizeVulnerabilityMetrics(List<VulnerabilityMetrics> metrics) {
         getMetricsQueryManager().synchronizeVulnerabilityMetrics(metrics);
-    }
-
-    void deleteMetrics(Project project) {
-        getMetricsQueryManager().deleteMetrics(project);
-    }
-
-    void deleteMetrics(Component component) {
-        getMetricsQueryManager().deleteMetrics(component);
     }
 
     public PaginatedResult getRepositories() {

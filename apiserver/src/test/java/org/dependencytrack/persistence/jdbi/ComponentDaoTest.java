@@ -47,7 +47,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
 public class ComponentDaoTest extends PersistenceCapableTest {
 
@@ -136,9 +135,6 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
         integrityAnalysis.setUpdatedAt(new Date());
         qm.persist(integrityAnalysis);
-
-        // Create partitions for today
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
 
         // Create metrics for component.
         final var metrics = new DependencyMetrics();

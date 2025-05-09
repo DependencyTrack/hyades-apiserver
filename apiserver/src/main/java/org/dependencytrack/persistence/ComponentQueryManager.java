@@ -290,7 +290,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             if (includeMetrics) {
 //             Populate each Component object in the paginated result with transitive related
 //             data to minimize the number of round trips a client needs to make, process, and render.
-                component.setMetrics(getMostRecentDependencyMetricsById(component.getId()));
+                component.setMetrics(withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId())));
                 final PackageURL purl = component.getPurl();
                 if (purl != null) {
                     final RepositoryType type = RepositoryType.resolve(purl);

@@ -1431,8 +1431,8 @@
         <dropTable tableName="SCHEMAVERSION"/>
     </changeSet>
 
-    <changeSet id="v5.6.0-23" author="sahibamittal">
-        <!--Create procedure to migrate metrics to partitions-->
+    <changeSet id="v5.6.0-23.1" author="sahibamittal">
+        <!-- Step 1: Create procedure to migrate metrics to partitions-->
         <sql splitStatements="false">
             <![CDATA[
             CREATE OR REPLACE PROCEDURE "MIGRATE_METRICS_TO_PARTITIONS"(
@@ -1469,7 +1469,7 @@
                 INTO actual_data_start_date;
 
                 -- If no data exists, exit early
-                IF actual_data_start_date IS NULL THEN
+                IF actual_data_start_date IS NULL OR actual_data_start_date <> current_date THEN
                     RETURN;
                 END IF;
 
@@ -1517,9 +1517,8 @@
             $$;
             ]]>
         </sql>
-        <!--Migration for "PORTFOLIOMETRICS"-->
+        <!-- Step 2: Create partitioned table PORTFOLIOMETRICS_NEW -->
         <sql>
-            -- create new partitioned table with new PK
             CREATE TABLE "PORTFOLIOMETRICS_NEW"
             (
                 "ID" BIGSERIAL,
@@ -1555,31 +1554,14 @@
                 "VULNERABILITIES" int4 NOT NULL,
                 "VULNERABLECOMPONENTS" int4 NOT NULL,
                 "VULNERABLEPROJECTS" int4 NOT NULL,
-                CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" PRIMARY KEY ("ID", "LAST_OCCURRENCE")
+                CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" PRIMARY KEY ("LAST_OCCURRENCE")
             ) PARTITION BY RANGE ("LAST_OCCURRENCE");
 
             -- create new index
             CREATE INDEX "PORTFOLIOMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "PORTFOLIOMETRICS_NEW" ("LAST_OCCURRENCE");
-
-            -- call the migration procedure
-            CALL "MIGRATE_METRICS_TO_PARTITIONS"('PORTFOLIOMETRICS_NEW'::TEXT, 'PORTFOLIOMETRICS'::TEXT);
-
-            -- drop old table
-            DROP TABLE "PORTFOLIOMETRICS";
-
-            -- rename partitioned table
-            ALTER TABLE "PORTFOLIOMETRICS_NEW" RENAME TO "PORTFOLIOMETRICS";
-
-            -- rename PK
-            ALTER TABLE "PORTFOLIOMETRICS" RENAME CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" TO "PORTFOLIOMETRICS_PK";
-            ALTER SEQUENCE "PORTFOLIOMETRICS_NEW_ID_seq" RENAME TO "PORTFOLIOMETRICS_ID_seq";
-
-            -- rename index
-            ALTER INDEX "PORTFOLIOMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "PORTFOLIOMETRICS_LAST_OCCURRENCE_IDX";
         </sql>
-        <!--Migration for "PROJECTMETRICS"-->
+        <!-- Step 3: Create partitioned table PROJECTMETRICS_NEW -->
         <sql>
-            -- create new partitioned table with new PK
             CREATE TABLE "PROJECTMETRICS_NEW"
             (
                 "ID" BIGSERIAL,
@@ -1614,31 +1596,14 @@
                 "UNASSIGNED_SEVERITY" int4 NULL,
                 "VULNERABILITIES" int4 NOT NULL,
                 "VULNERABLECOMPONENTS" int4 NOT NULL,
-                CONSTRAINT "PROJECTMETRICS_NEW_PK" PRIMARY KEY ("ID", "LAST_OCCURRENCE")
+                CONSTRAINT "PROJECTMETRICS_NEW_PK" PRIMARY KEY ("PROJECT_ID", "LAST_OCCURRENCE")
             ) PARTITION BY RANGE ("LAST_OCCURRENCE");
 
             -- create new index
             CREATE INDEX "PROJECTMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "PROJECTMETRICS_NEW" ("LAST_OCCURRENCE");
-
-            -- call the migration procedure
-            CALL "MIGRATE_METRICS_TO_PARTITIONS"('PROJECTMETRICS_NEW'::TEXT, 'PROJECTMETRICS'::TEXT);
-
-            -- drop old table
-            DROP TABLE "PROJECTMETRICS";
-
-            -- rename partitioned table
-            ALTER TABLE "PROJECTMETRICS_NEW" RENAME TO "PROJECTMETRICS";
-
-            -- rename PK
-            ALTER TABLE "PROJECTMETRICS" RENAME CONSTRAINT "PROJECTMETRICS_NEW_PK" TO "PROJECTMETRICS_PK";
-            ALTER SEQUENCE "PROJECTMETRICS_NEW_ID_seq" RENAME TO "PROJECTMETRICS_ID_seq";
-
-            -- rename index
-            ALTER INDEX "PROJECTMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "PROJECTMETRICS_LAST_OCCURRENCE_IDX";
         </sql>
-        <!--Migration for "DEPENDENCYMETRICS"-->
+        <!-- Step 4: Create partitioned table DEPENDENCYMETRICS_NEW -->
         <sql>
-            -- create new partitioned table with new PK
             CREATE TABLE "DEPENDENCYMETRICS_NEW"
             (
                 "ID" BIGSERIAL,
@@ -1672,12 +1637,55 @@
                 "SUPPRESSED" int4 NOT NULL,
                 "UNASSIGNED_SEVERITY" int4 NULL,
                 "VULNERABILITIES" int4 NOT NULL,
-                CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" PRIMARY KEY ("ID", "LAST_OCCURRENCE")
+                CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" PRIMARY KEY ("PROJECT_ID", "COMPONENT_ID", "LAST_OCCURRENCE")
             ) PARTITION BY RANGE ("LAST_OCCURRENCE");
 
             -- create new index
             CREATE INDEX "DEPENDENCYMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "DEPENDENCYMETRICS_NEW" ("LAST_OCCURRENCE");
+        </sql>
+    </changeSet>
 
+    <changeSet id="v5.6.0-23.2" author="sahibamittal">
+        <!-- Step 5: Perform migration for "PORTFOLIOMETRICS" -->
+        <sql>
+            -- call the migration procedure
+            CALL "MIGRATE_METRICS_TO_PARTITIONS"('PORTFOLIOMETRICS_NEW'::TEXT, 'PORTFOLIOMETRICS'::TEXT);
+
+            -- drop old table
+            DROP TABLE "PORTFOLIOMETRICS";
+
+            -- rename partitioned table
+            ALTER TABLE "PORTFOLIOMETRICS_NEW" RENAME TO "PORTFOLIOMETRICS";
+
+            -- rename PK and index
+            ALTER TABLE "PORTFOLIOMETRICS" RENAME CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" TO "PORTFOLIOMETRICS_PK";
+            ALTER SEQUENCE "PORTFOLIOMETRICS_NEW_ID_seq" RENAME TO "PORTFOLIOMETRICS_ID_seq";
+            ALTER INDEX "PORTFOLIOMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "PORTFOLIOMETRICS_LAST_OCCURRENCE_IDX";
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-23.3" author="sahibamittal">
+        <!-- Step 6: Perform migration for "PROJECTMETRICS" -->
+        <sql>
+            -- call the migration procedure
+            CALL "MIGRATE_METRICS_TO_PARTITIONS"('PROJECTMETRICS_NEW'::TEXT, 'PROJECTMETRICS'::TEXT);
+
+            -- drop old table
+            DROP TABLE "PROJECTMETRICS";
+
+            -- rename partitioned table
+            ALTER TABLE "PROJECTMETRICS_NEW" RENAME TO "PROJECTMETRICS";
+
+            -- rename PK and index
+            ALTER TABLE "PROJECTMETRICS" RENAME CONSTRAINT "PROJECTMETRICS_NEW_PK" TO "PROJECTMETRICS_PK";
+            ALTER SEQUENCE "PROJECTMETRICS_NEW_ID_seq" RENAME TO "PROJECTMETRICS_ID_seq";
+            ALTER INDEX "PROJECTMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "PROJECTMETRICS_LAST_OCCURRENCE_IDX";
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-23.4" author="sahibamittal">
+        <!-- Step 7: Perform migration for "DEPENDENCYMETRICS" -->
+        <sql>
             -- call the migration procedure
             CALL "MIGRATE_METRICS_TO_PARTITIONS"('DEPENDENCYMETRICS_NEW'::TEXT, 'DEPENDENCYMETRICS'::TEXT);
 
@@ -1687,13 +1695,15 @@
             -- rename partitioned table
             ALTER TABLE "DEPENDENCYMETRICS_NEW" RENAME TO "DEPENDENCYMETRICS";
 
-            -- rename PK
+            -- rename PK and index
             ALTER TABLE "DEPENDENCYMETRICS" RENAME CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" TO "DEPENDENCYMETRICS_PK";
             ALTER SEQUENCE "DEPENDENCYMETRICS_NEW_ID_seq" RENAME TO "DEPENDENCYMETRICS_ID_seq";
-
-            -- rename index
             ALTER INDEX "DEPENDENCYMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "DEPENDENCYMETRICS_LAST_OCCURRENCE_IDX";
         </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-23.5" author="sahibamittal">
+        <!-- Step 8: Create FK constraints -->
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTMETRICS"
                                  constraintName="PROJECTMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
@@ -1706,6 +1716,8 @@
                                  constraintName="DEPENDENCYMETRICS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="COMPONENT" validate="true"/>
+
+        <!-- Step 9: Drop MIGRATE_METRICS_TO_PARTITIONS procedure -->
         <dropProcedure procedureName="MIGRATE_METRICS_TO_PARTITIONS"/>
     </changeSet>
 </databaseChangeLog>

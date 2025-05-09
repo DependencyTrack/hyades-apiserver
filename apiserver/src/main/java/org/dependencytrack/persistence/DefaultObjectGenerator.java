@@ -40,6 +40,7 @@ import org.dependencytrack.util.WaitingLockConfiguration;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -128,7 +129,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         }
 
         LOGGER.info("Checking the metrics partitions for today");
-        checkMetricsPartitions();
+        ensureMetricsPartitions();
     }
 
     /**
@@ -235,7 +236,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
     }
 
     @SuppressWarnings("unused")
-    private void loadDefaultPersonas() {
+    void loadDefaultPersonas() {
         try (final var qm = new QueryManager()) {
             loadDefaultPersonas(qm);
         }
@@ -330,7 +331,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
     }
 
     @SuppressWarnings("unused")
-    private void loadDefaultConfigProperties() {
+    void loadDefaultConfigProperties() {
         try (final var qm = new QueryManager()) {
             loadDefaultConfigProperties(qm);
         }
@@ -371,7 +372,9 @@ public class DefaultObjectGenerator implements ServletContextListener {
     /**
      * Checks if metrics partitions exist for today and create if they don't exist.
      */
-    private void checkMetricsPartitions() {
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForToday());
+    void ensureMetricsPartitions() {
+        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForDate(
+                LocalDate.now().toString(),
+                LocalDate.now().plusDays(1).toString()));
     }
 }
