@@ -23,15 +23,9 @@ import org.dependencytrack.persistence.jooq.generated.tables.Epss;
 import org.dependencytrack.persistence.jooq.generated.tables.FindingAttribution;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityAnalysis;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityMetaComponent;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUser;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersPermissions;
-import org.dependencytrack.persistence.jooq.generated.tables.LdapUsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.License;
 import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroup;
 import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroupLicense;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUser;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersPermissions;
-import org.dependencytrack.persistence.jooq.generated.tables.ManagedUsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.MappedLdapGroup;
 import org.dependencytrack.persistence.jooq.generated.tables.MappedOidcGroup;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationPublisher;
@@ -40,9 +34,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.NotificationRulePro
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTags;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.OidcGroup;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUser;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersPermissions;
-import org.dependencytrack.persistence.jooq.generated.tables.OidcUsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.Permission;
 import org.dependencytrack.persistence.jooq.generated.tables.Policy;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition;
@@ -64,7 +55,10 @@ import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponentsVu
 import org.dependencytrack.persistence.jooq.generated.tables.Tag;
 import org.dependencytrack.persistence.jooq.generated.tables.Team;
 import org.dependencytrack.persistence.jooq.generated.tables.TeamsPermissions;
+import org.dependencytrack.persistence.jooq.generated.tables.User;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions;
+import org.dependencytrack.persistence.jooq.generated.tables.UsersPermissions;
+import org.dependencytrack.persistence.jooq.generated.tables.UsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.Vex;
 import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis;
 import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysisComment;
@@ -178,21 +172,6 @@ public class DefaultSchema extends SchemaImpl {
     public final IntegrityMetaComponent INTEGRITY_META_COMPONENT = IntegrityMetaComponent.INTEGRITY_META_COMPONENT;
 
     /**
-     * The table <code>LDAPUSER</code>.
-     */
-    public final LdapUser LDAPUSER = LdapUser.LDAPUSER;
-
-    /**
-     * The table <code>LDAPUSERS_PERMISSIONS</code>.
-     */
-    public final LdapUsersPermissions LDAPUSERS_PERMISSIONS = LdapUsersPermissions.LDAPUSERS_PERMISSIONS;
-
-    /**
-     * The table <code>LDAPUSERS_TEAMS</code>.
-     */
-    public final LdapUsersTeams LDAPUSERS_TEAMS = LdapUsersTeams.LDAPUSERS_TEAMS;
-
-    /**
      * The table <code>LICENSE</code>.
      */
     public final License LICENSE = License.LICENSE;
@@ -206,21 +185,6 @@ public class DefaultSchema extends SchemaImpl {
      * The table <code>LICENSEGROUP_LICENSE</code>.
      */
     public final LicenseGroupLicense LICENSEGROUP_LICENSE = LicenseGroupLicense.LICENSEGROUP_LICENSE;
-
-    /**
-     * The table <code>MANAGEDUSER</code>.
-     */
-    public final ManagedUser MANAGEDUSER = ManagedUser.MANAGEDUSER;
-
-    /**
-     * The table <code>MANAGEDUSERS_PERMISSIONS</code>.
-     */
-    public final ManagedUsersPermissions MANAGEDUSERS_PERMISSIONS = ManagedUsersPermissions.MANAGEDUSERS_PERMISSIONS;
-
-    /**
-     * The table <code>MANAGEDUSERS_TEAMS</code>.
-     */
-    public final ManagedUsersTeams MANAGEDUSERS_TEAMS = ManagedUsersTeams.MANAGEDUSERS_TEAMS;
 
     /**
      * The table <code>MAPPEDLDAPGROUP</code>.
@@ -261,21 +225,6 @@ public class DefaultSchema extends SchemaImpl {
      * The table <code>OIDCGROUP</code>.
      */
     public final OidcGroup OIDCGROUP = OidcGroup.OIDCGROUP;
-
-    /**
-     * The table <code>OIDCUSER</code>.
-     */
-    public final OidcUser OIDCUSER = OidcUser.OIDCUSER;
-
-    /**
-     * The table <code>OIDCUSERS_PERMISSIONS</code>.
-     */
-    public final OidcUsersPermissions OIDCUSERS_PERMISSIONS = OidcUsersPermissions.OIDCUSERS_PERMISSIONS;
-
-    /**
-     * The table <code>OIDCUSERS_TEAMS</code>.
-     */
-    public final OidcUsersTeams OIDCUSERS_TEAMS = OidcUsersTeams.OIDCUSERS_TEAMS;
 
     /**
      * The table <code>PERMISSION</code>.
@@ -383,9 +332,24 @@ public class DefaultSchema extends SchemaImpl {
     public final TeamsPermissions TEAMS_PERMISSIONS = TeamsPermissions.TEAMS_PERMISSIONS;
 
     /**
+     * The table <code>USER</code>.
+     */
+    public final User USER = User.USER;
+
+    /**
      * The table <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code>.
      */
     public final UserProjectEffectivePermissions USER_PROJECT_EFFECTIVE_PERMISSIONS = UserProjectEffectivePermissions.USER_PROJECT_EFFECTIVE_PERMISSIONS;
+
+    /**
+     * The table <code>USERS_PERMISSIONS</code>.
+     */
+    public final UsersPermissions USERS_PERMISSIONS = UsersPermissions.USERS_PERMISSIONS;
+
+    /**
+     * The table <code>USERS_TEAMS</code>.
+     */
+    public final UsersTeams USERS_TEAMS = UsersTeams.USERS_TEAMS;
 
     /**
      * The table <code>VEX</code>.
@@ -484,15 +448,9 @@ public class DefaultSchema extends SchemaImpl {
             FindingAttribution.FINDINGATTRIBUTION,
             IntegrityAnalysis.INTEGRITY_ANALYSIS,
             IntegrityMetaComponent.INTEGRITY_META_COMPONENT,
-            LdapUser.LDAPUSER,
-            LdapUsersPermissions.LDAPUSERS_PERMISSIONS,
-            LdapUsersTeams.LDAPUSERS_TEAMS,
             License.LICENSE,
             LicenseGroup.LICENSEGROUP,
             LicenseGroupLicense.LICENSEGROUP_LICENSE,
-            ManagedUser.MANAGEDUSER,
-            ManagedUsersPermissions.MANAGEDUSERS_PERMISSIONS,
-            ManagedUsersTeams.MANAGEDUSERS_TEAMS,
             MappedLdapGroup.MAPPEDLDAPGROUP,
             MappedOidcGroup.MAPPEDOIDCGROUP,
             NotificationPublisher.NOTIFICATIONPUBLISHER,
@@ -501,9 +459,6 @@ public class DefaultSchema extends SchemaImpl {
             NotificationRuleTags.NOTIFICATIONRULE_TAGS,
             NotificationRuleTeams.NOTIFICATIONRULE_TEAMS,
             OidcGroup.OIDCGROUP,
-            OidcUser.OIDCUSER,
-            OidcUsersPermissions.OIDCUSERS_PERMISSIONS,
-            OidcUsersTeams.OIDCUSERS_TEAMS,
             Permission.PERMISSION,
             Policy.POLICY,
             PolicyProjects.POLICY_PROJECTS,
@@ -525,7 +480,10 @@ public class DefaultSchema extends SchemaImpl {
             Tag.TAG,
             Team.TEAM,
             TeamsPermissions.TEAMS_PERMISSIONS,
+            User.USER,
             UserProjectEffectivePermissions.USER_PROJECT_EFFECTIVE_PERMISSIONS,
+            UsersPermissions.USERS_PERMISSIONS,
+            UsersTeams.USERS_TEAMS,
             Vex.VEX,
             ViolationAnalysis.VIOLATIONANALYSIS,
             ViolationAnalysisComment.VIOLATIONANALYSISCOMMENT,
