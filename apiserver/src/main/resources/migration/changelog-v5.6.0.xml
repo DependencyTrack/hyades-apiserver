@@ -1896,7 +1896,8 @@
 
         <sql splitStatements="true">
             -- Remove all duplicate projects that would violate the unique indices before creating
-            DELETE FROM "PROJECT"
+            UPDATE "PROJECT"
+               SET "VERSION" = format('%s-%s', "VERSION", split_part("UUID"::TEXT, '-', 1))
              WHERE "ID" NOT IN (
                SELECT MIN("ID")
                  FROM "PROJECT"
