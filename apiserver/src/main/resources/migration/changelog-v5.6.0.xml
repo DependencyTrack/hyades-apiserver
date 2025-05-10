@@ -1891,6 +1891,8 @@
     </changeSet>
 
     <changeSet id="v5.6.0-25" author="jhoward-lm">
+        <dropIndex tableName="PROJECT" indexName="PROJECT_NAME_IDX" />
+        <dropIndex tableName="PROJECT" indexName="PROJECT_VERSION_IDX" />
         <dropIndex tableName="PROJECT" indexName="PROJECT_NAME_VERSION_IDX" />
         <dropIndex tableName="PROJECT" indexName="PROJECT_NAME_VERSION_NULL_IDX" />
 
@@ -1907,19 +1909,25 @@
                     COALESCE("VERSION", 'NULL_PLACEHOLDER')
             );
 
-            -- Unique index that excludes rows where PARENT_PROJECT_ID or VERSION is NULL
+            -- Unique index that excludes rows where both VERSION and PARENT_PROJECT_ID are unset
+            CREATE UNIQUE INDEX "PROJECT_NAME_IDX"
+                ON "PROJECT" ("NAME")
+             WHERE "VERSION" IS NULL
+               AND "PARENT_PROJECT_ID" IS NULL;
+            
+            -- Unique index that excludes rows where VERSION and PARENT_PROJECT_ID are set
             CREATE UNIQUE INDEX "PROJECT_NAME_VERSION_PARENT_IDX"
                 ON "PROJECT" ("NAME", "PARENT_PROJECT_ID", "VERSION")
              WHERE "PARENT_PROJECT_ID" IS NOT NULL
                AND "VERSION" IS NOT NULL;
 
-            -- Unique index to handle cases where PARENT_PROJECT_ID is NULL
+            -- Unique index to handle cases where VERSION is set and PARENT_PROJECT_ID is unset
             CREATE UNIQUE INDEX "PROJECT_NAME_VERSION_NULL_PARENT_IDX"
                 ON "PROJECT" ("NAME", "VERSION")
              WHERE "PARENT_PROJECT_ID" IS NULL
                AND "VERSION" IS NOT NULL;
 
-            -- Unique index to handle cases where VERSION is NULL
+            -- Unique index to handle cases where PARENT_PROJECT_ID is set and VERSION is unset
             CREATE UNIQUE INDEX "PROJECT_NAME_PARENT_NULL_VERSION_IDX"
                 ON "PROJECT" ("NAME", "PARENT_PROJECT_ID")
              WHERE "VERSION" IS NULL

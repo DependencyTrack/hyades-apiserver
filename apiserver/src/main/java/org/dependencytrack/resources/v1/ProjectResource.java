@@ -256,12 +256,12 @@ public class ProjectResource extends AbstractApiResource {
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
             final Project project = qm.getProject(uuid);
-            if (project != null) {
-                requireAccess(qm, project);
-                return Response.ok(project).build();
-            } else {
+            if (project == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
+
+            requireAccess(qm, project);
+
+            return Response.ok(project).build();
         }
     }
 
@@ -332,9 +332,9 @@ public class ProjectResource extends AbstractApiResource {
             if (project != null) {
                 requireAccess(qm, project);
                 return Response.ok(project).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
             }
+
+            return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
         }
     }
 
@@ -924,7 +924,10 @@ public class ProjectResource extends AbstractApiResource {
                             .build());
                 }
                 requireAccess(qm, sourceProject);
-                if (qm.doesProjectExist(sourceProject.getName(), StringUtils.trimToNull(jsonRequest.getVersion()))) {
+                if (qm.doesProjectExist(
+                        sourceProject.getName(),
+                        StringUtils.trimToNull(jsonRequest.getVersion()),
+                        sourceProject.getParent())) {
                     throw new ClientErrorException(Response
                             .status(Response.Status.CONFLICT)
                             .entity("A project with the specified name and version already exists.")

@@ -253,7 +253,7 @@ public class Project implements Serializable {
     @Persistent
     @ForeignKey(name = "PROJECT_PROJECT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
     @Column(name = "PARENT_PROJECT_ID")
-    @JsonIncludeProperties(value = {"name", "version", "uuid"})
+    @JsonIncludeProperties(value = {"name", "version", "uuid", "parent"})
     private Project parent;
 
     @Persistent(mappedBy = "parent")
