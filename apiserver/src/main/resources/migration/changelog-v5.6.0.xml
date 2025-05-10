@@ -1915,12 +1915,14 @@
             -- Unique index to handle cases where PARENT_PROJECT_ID is NULL
             CREATE UNIQUE INDEX "PROJECT_NAME_VERSION_NULL_PARENT_IDX"
                 ON "PROJECT" ("NAME", "VERSION")
-             WHERE "PARENT_PROJECT_ID" IS NULL;
+             WHERE "PARENT_PROJECT_ID" IS NULL
+               AND "VERSION" IS NOT NULL;
 
             -- Unique index to handle cases where VERSION is NULL
             CREATE UNIQUE INDEX "PROJECT_NAME_PARENT_NULL_VERSION_IDX"
                 ON "PROJECT" ("NAME", "PARENT_PROJECT_ID")
-             WHERE "VERSION" IS NULL;
+             WHERE "VERSION" IS NULL
+               AND "PARENT_PROJECT_ID" IS NOT NULL;
         </sql>
     </changeSet>
 </databaseChangeLog>
