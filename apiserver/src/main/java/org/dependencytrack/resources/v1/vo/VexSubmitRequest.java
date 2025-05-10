@@ -50,6 +50,9 @@ public final class VexSubmitRequest {
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The project version may only contain printable characters")
     private final String projectVersion;
 
+    @Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", message = "The project must be a valid 36 character UUID")
+    private final String parent;
+
     @NotNull
     @Pattern(regexp = "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$", message = "The VEX must be Base64 encoded")
     private final String vex;
@@ -59,10 +62,12 @@ public final class VexSubmitRequest {
     public VexSubmitRequest(@JsonProperty(value = "project", required = false) String project,
                             @JsonProperty(value = "projectName", required = false) String projectName,
                             @JsonProperty(value = "projectVersion", required = false) String projectVersion,
+                            @JsonProperty(value = "parent", required = false) String parent,
                             @JsonProperty(value = "vex", required = true) String vex) {
         this.project = project;
         this.projectName = projectName;
         this.projectVersion = projectVersion;
+        this.parent = parent;
         this.vex = vex;
     }
 
@@ -76,6 +81,10 @@ public final class VexSubmitRequest {
 
     public String getProjectVersion() {
         return projectVersion;
+    }
+
+    public String getParent() {
+        return parent;
     }
 
     public String getVex() {

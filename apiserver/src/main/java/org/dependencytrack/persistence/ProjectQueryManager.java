@@ -326,10 +326,23 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     @Override
     public Project getLatestProjectVersion(final String name) {
+        return getLatestProjectVersion(name, null);
+    }
+
+        /**
+     * Returns the latest version of a project by its name.
+     *
+     * @param name the name of the Project (required)
+     * @param parentUuid  UUID of the parent {@link Project}
+     * @return a Project object representing the latest version, or null if not found
+     */
+    @Override
+    public Project getLatestProjectVersion(final String name, final UUID parentUuid) {
         final Query<Project> query = pm.newQuery(Project.class);
 
         final var filterBuilder = new ProjectQueryFilterBuilder()
                 .withName(name)
+                .withParent(parentUuid)
                 .onlyLatestVersion();
 
         final String queryFilter = filterBuilder.buildFilter();
@@ -1402,7 +1415,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final ProjectQueryFilterBuilder filterBuilder = new ProjectQueryFilterBuilder()
                 .withName(project.getName())
                 .withParent(project.getParent() != null ? project.getParent().getUuid() : null);
-        
+
         final Query<Project> query = pm.newQuery(Project.class)
                 .filter(filterBuilder.buildFilter())
                 .setNamedParameters(filterBuilder.getParams())
