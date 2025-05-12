@@ -67,12 +67,19 @@ jobs:
           mvn -B -Pquick -Dservices.bom.merge.skip=false package
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # tag=v4.6.2
         with:
           name: assembled-wars
           path: |-
             apiserver/target/*.jar
             apiserver/target/bom.json
+
+      - name: Upload OpenAPI Spec
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # tag=v4.6.2
+        with:
+          name: openapi-spec
+          path: |-
+            api/target/classes/**/openapi.yaml
 
   build-container:
     runs-on: ubuntu-latest

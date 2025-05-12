@@ -29,6 +29,7 @@
     <modules>
         <module>support/datanucleus-plugin</module>
         <module>support/liquibase</module>
+        <module>api</module>
         <module>alpine</module>
         <module>proto</module>
         <module>persistence-migration</module>
@@ -147,6 +148,11 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.dependencytrack</groupId>
                 <artifactId>apiserver</artifactId>
