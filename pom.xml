@@ -29,6 +29,7 @@
     <modules>
         <module>support/datanucleus-plugin</module>
         <module>support/liquibase</module>
+        <module>api</module>
         <module>alpine</module>
         <module>proto</module>
         <module>persistence-migration</module>
@@ -106,6 +107,9 @@
         <lib.testcontainers.version>1.21.2</lib.testcontainers.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
 
+        <!-- Whether to skip OpenAPI spec linting -->
+        <openapi-lint.skip>false</openapi-lint.skip>
+
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
 
@@ -141,6 +145,11 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.dependencytrack</groupId>
                 <artifactId>apiserver</artifactId>
@@ -395,6 +404,7 @@
                 <checkstyle.skip>true</checkstyle.skip>
                 <jacoco.skip>true</jacoco.skip>
                 <maven.test.skip>true</maven.test.skip>
+                <openapi-lint.skip>true</openapi-lint.skip>
             </properties>
         </profile>
 

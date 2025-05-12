@@ -80,6 +80,10 @@
     <dependencies>
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>datanucleus-plugin</artifactId>
         </dependency>
         <dependency>
