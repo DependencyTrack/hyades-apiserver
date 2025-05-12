@@ -128,7 +128,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
             recordDefaultObjectsVersion(qm);
         }
 
-        LOGGER.info("Checking the metrics partitions for today");
+        LOGGER.info("Ensuring the metrics partitions for today");
         ensureMetricsPartitions();
     }
 
