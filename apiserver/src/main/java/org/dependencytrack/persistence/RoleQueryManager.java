@@ -11,6 +11,11 @@ import org.dependencytrack.model.Role;
 import org.apache.commons.lang3.StringUtils;
 
 import alpine.common.logging.Logger;
+import alpine.model.LdapUser;
+import alpine.model.ManagedUser;
+import alpine.model.OidcUser;
+import alpine.model.Permission;
+import alpine.model.User;
 import alpine.resources.AlpineRequest;
 
 final class RoleQueryManager extends QueryManager implements IQueryManager {
@@ -51,26 +56,19 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
         return getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
     }
 
-    public Role updateRole(Role role) {
-        // TODO:Implement role update logic
-        return role;
+    @Override
+    public List<ProjectRole> getUserRoles(final User user) {
+        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class)
+                .getUserRoles(user.getUsername()));
     }
 
-    public boolean deleteRole(String uuid, boolean value) {
-        // TODO:Implement role deletion logic
-        return false;
+    public List<Project> getUnassignedProjects(final String username) {
+        return getUnassignedProjects(getUser(username));
     }
 
-    boolean addRoleToUser(UserPrincipal principal, Role role, String roleName, String projectName){
-        //WARNING: This method is a stub.
-        //TODO: Implement addRoleToUser
-        return true;
-    }
-
-    boolean removeRoleFromUser(UserPrincipal principal, Role role, String roleName, String projectName){
-        //WARNING: This method is a stub.
-        //TODO: Implement removeRoleFromUser
-        return true;
+    public List<Project> getUnassignedProjects(final User user) {
+        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class)
+                .getUserUnassignedProjects(user.getUsername()));
     }
 
     public List<Permission> getUnassignedRolePermissions(final Role role) {
@@ -102,7 +100,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public List<Permission> getUserProjectPermissions(final String username, final String projectName) {
-        final UserPrincipal user = getUserPrincipal(username);
+        final User user = getUser(username);
         final String columnName;
 
         switch (user) {
@@ -151,19 +149,17 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public boolean addRoleToUser(final UserPrincipal user, final Role role, final Project project) {
+    public boolean addRoleToUser(final User user, final Role role, final Project project) {
         return JdbiFactory.withJdbiHandle(
                 handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        user.getClass(),
                         user.getId(),
                         project.getId(),
                         role.getId())) == 1;
     }
 
     @Override
-    public boolean removeRoleFromUser(final UserPrincipal user, final Role role, final Project project) {
+    public boolean removeRoleFromUser(final User user, final Role role, final Project project) {
         return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).removeRoleFromUser(
-                user.getClass(),
                 user.getId(),
                 project.getName(),
                 role.getId())) > 0;

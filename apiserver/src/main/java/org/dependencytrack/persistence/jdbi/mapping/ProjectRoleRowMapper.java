@@ -18,11 +18,13 @@
  */
 package org.dependencytrack.persistence.jdbi.mapping;
 
+import alpine.model.LdapUser;
+import alpine.model.ManagedUser;
+import alpine.model.OidcUser;
+import alpine.model.User;
+
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectRole;
-import org.dependencytrack.model.ProjectRole.LdapUserProjectRole;
-import org.dependencytrack.model.ProjectRole.ManagedUserProjectRole;
-import org.dependencytrack.model.ProjectRole.OidcUserProjectRole;
 import org.dependencytrack.model.Role;
 
 import org.jdbi.v3.core.mapper.RowMapper;
@@ -30,27 +32,34 @@ import org.jdbi.v3.core.statement.StatementContext;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.hasColumn;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
 public class ProjectRoleRowMapper implements RowMapper<ProjectRole> {
 
     public ProjectRole map(final ResultSet resultSet, final StatementContext ctx) throws SQLException {
-        final ProjectRole projectRole;
+        final ProjectRole projectRole = new ProjectRole();
+        projectRole.setProject(new Project());
+        projectRole.setRole(new Role());
 
-        switch (resultSet) {
-            case ResultSet rs when hasColumn(rs, "LDAPUSER_ID") -> projectRole = new LdapUserProjectRole();
-            case ResultSet rs when hasColumn(rs, "MANAGEDUSER_ID") -> projectRole = new ManagedUserProjectRole();
-            case ResultSet rs when hasColumn(rs, "OIDCUSER_ID") -> projectRole = new OidcUserProjectRole();
-            default -> {
-                return null;
-            }
-        }
+        final String type = resultSet.getString("USER_TYPE");
+        final User user = switch (type) {
+            case "LDAP" -> new LdapUser();
+            case "MANAGED" -> new ManagedUser();
+            case "OIDC" -> new OidcUser();
+            default -> null;
+        };
 
-        maybeSet(resultSet, "PROJECT_ID", ResultSet::getLong, value -> {
-            var project = new Project();
-            project.setId(value);
-            projectRole.setProject(project);
+        if (user == null)
+            return projectRole;
+
+        maybeSet(resultSet, "USER_ID", ResultSet::getLong, user::setId);
+        maybeSet(resultSet, "USER_NAME", ResultSet::getString, user::setUsername);
+        projectRole.addUsers(user);
+
+        maybeSet(resultSet, "PROJECT_ID", ResultSet::getLong, projectRole.getProject()::setId);
+        maybeSet(resultSet, "PROJECT_NAME", ResultSet::getString, projectRole.getProject()::setName);
+        maybeSet(resultSet, "PROJECT_UUID", ResultSet::getString, value -> {
+            projectRole.getProject().setUuid(UUID.fromString(value));
         });
 
         maybeSet(resultSet, "ROLE_ID", ResultSet::getLong, value -> {

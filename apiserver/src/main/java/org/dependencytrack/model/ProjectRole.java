@@ -21,9 +21,7 @@ package org.dependencytrack.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
+import alpine.model.User;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -37,7 +35,6 @@ import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.FetchGroup;
 import javax.jdo.annotations.Order;
-import javax.jdo.annotations.PersistenceAware;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.Unique;
@@ -48,9 +45,15 @@ import javax.jdo.annotations.Unique;
  * @author Jonathan Howard
  * @since 5.6.0
  */
-@PersistenceAware
+@PersistenceCapable(table = "USERS_PROJECTS_ROLES")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public abstract class ProjectRole implements Serializable {
+@Unique(name = "USERS_PROJECTS_ROLES_COMPOSITE_IDX", members = { "users", "project", "role" })
+@FetchGroup(name = "ALL", members = {
+        @Persistent(name = "role"),
+        @Persistent(name = "project"),
+        @Persistent(name = "users")
+})
+public class ProjectRole implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "ROLE_ID", allowsNull = "false")
@@ -61,6 +64,27 @@ public abstract class ProjectRole implements Serializable {
     @Column(name = "PROJECT_ID", allowsNull = "false")
     @JsonIgnore
     private Project project;
+
+    @Persistent(defaultFetchGroup = "true")
+    @Column(name = "USER_ID", allowsNull = "false")
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
+    private List<User> users;
+
+    public List<User> getUsers() {
+        return users;
+    }
+
+    public void setUsers(List<User> users) {
+        this.users = users;
+    }
+
+    public void addUsers(User... users) {
+        this.users = Objects.requireNonNullElse(this.users, new ArrayList<User>());
+        this.users = Stream.concat(this.users.stream(), Arrays.stream(users))
+                .distinct()
+                .sorted(Comparator.comparing(User::getUsername))
+                .toList();
+    }
 
     public Role getRole() {
         return role;
@@ -76,150 +100,6 @@ public abstract class ProjectRole implements Serializable {
 
     public void setProject(Project project) {
         this.project = project;
-    }
-
-    /**
-     * Model for associating a role on a given project with LDAP users.
-     *
-     * @author Allen Shearin
-     * @since 5.6.0
-     */
-    @PersistenceCapable(table = "LDAPUSERS_PROJECTS_ROLES")
-    @Unique(name = "LDAPUSERS_PROJECTS_ROLES_COMPOSITE_IDX", members = { "ldapUsers", "project", "role" })
-    @FetchGroup(name = "ALL", members = {
-            @Persistent(name = "role"),
-            @Persistent(name = "project"),
-            @Persistent(name = "ldapUsers")
-    })
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class LdapUserProjectRole extends ProjectRole {
-
-        private static final long serialVersionUID = 6018553054343647649L;
-
-        /**
-         * Defines JDO fetch groups for this class.
-         */
-        public enum FetchGroup {
-            ALL
-        }
-
-        @Persistent(defaultFetchGroup = "true")
-        @Column(name = "LDAPUSER_ID", allowsNull = "false")
-        @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
-        private List<LdapUser> ldapUsers;
-
-        public List<LdapUser> getLdapUsers() {
-            return ldapUsers;
-        }
-
-        public void setLdapUsers(List<LdapUser> ldapUsers) {
-            this.ldapUsers = ldapUsers;
-        }
-
-        public void addLdapUsers(LdapUser... ldapUsers) {
-            this.ldapUsers = Objects.requireNonNullElse(this.ldapUsers, new ArrayList<LdapUser>());
-            this.ldapUsers = Stream.concat(this.ldapUsers.stream(), Arrays.stream(ldapUsers))
-                    .distinct()
-                    .sorted(Comparator.comparing(LdapUser::getUsername))
-                    .toList();
-        }
-
-    }
-
-    /**
-     * Model for associating a role on a given project with managed users.
-     *
-     * @author Allen Shearin
-     * @since 5.6.0
-     */
-    @PersistenceCapable(table = "MANAGEDUSERS_PROJECTS_ROLES")
-    @Unique(name = "MANAGEDUSERS_PROJECTS_ROLES_COMPOSITE_IDX", members = { "managedUsers", "project", "role" })
-    @FetchGroup(name = "ALL", members = {
-            @Persistent(name = "role"),
-            @Persistent(name = "project"),
-            @Persistent(name = "managedUsers")
-    })
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class ManagedUserProjectRole extends ProjectRole {
-
-        private static final long serialVersionUID = -380122087527236991L;
-
-        /**
-         * Defines JDO fetch groups for this class.
-         */
-        public enum FetchGroup {
-            ALL
-        }
-
-        @Persistent(defaultFetchGroup = "true")
-        @Column(name = "MANAGEDUSER_ID", allowsNull = "false")
-        @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
-        private List<ManagedUser> managedUsers;
-
-        public List<ManagedUser> getManagedUsers() {
-            return managedUsers;
-        }
-
-        public void setManagedUsers(List<ManagedUser> managedUsers) {
-            this.managedUsers = managedUsers;
-        }
-
-        public void addManagedUsers(ManagedUser... managedUsers) {
-            this.managedUsers = Objects.requireNonNullElse(this.managedUsers, new ArrayList<ManagedUser>());
-            this.managedUsers = Stream.concat(this.managedUsers.stream(), Arrays.stream(managedUsers))
-                    .distinct()
-                    .sorted(Comparator.comparing(ManagedUser::getUsername))
-                    .toList();
-        }
-
-    }
-
-    /**
-     * Model for associating a role on a given project with OIDC users.
-     *
-     * @author Allen Shearin
-     * @since 5.6.0
-     */
-    @PersistenceCapable(table = "OIDCUSERS_PROJECTS_ROLES")
-    @Unique(name = "OIDCUSERS_PROJECTS_ROLES_COMPOSITE_IDX", members = { "oidcUsers", "project", "role" })
-    @FetchGroup(name = "ALL", members = {
-            @Persistent(name = "role"),
-            @Persistent(name = "project"),
-            @Persistent(name = "oidcUsers")
-    })
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class OidcUserProjectRole extends ProjectRole {
-
-        private static final long serialVersionUID = -5029209056240375886L;
-
-        /**
-         * Defines JDO fetch groups for this class.
-         */
-        public enum FetchGroup {
-            ALL
-        }
-
-        @Persistent(defaultFetchGroup = "true")
-        @Column(name = "OIDCUSER_ID", allowsNull = "false")
-        @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
-        private List<OidcUser> oidcUsers;
-
-        public List<OidcUser> getOidcUsers() {
-            return oidcUsers;
-        }
-
-        public void setOidcUsers(List<OidcUser> oidcUsers) {
-            this.oidcUsers = oidcUsers;
-        }
-
-        public void addOidcUsers(OidcUser... oidcUsers) {
-            this.oidcUsers = Objects.requireNonNullElse(this.oidcUsers, new ArrayList<OidcUser>());
-            this.oidcUsers = Stream.concat(this.oidcUsers.stream(), Arrays.stream(oidcUsers))
-                    .distinct()
-                    .sorted(Comparator.comparing(OidcUser::getUsername))
-                    .toList();
-        }
-
     }
 
 }

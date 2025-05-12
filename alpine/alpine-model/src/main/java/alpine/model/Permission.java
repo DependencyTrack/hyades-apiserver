@@ -45,7 +45,7 @@ import java.util.Objects;
  * @since 1.0.0
  */
 @PersistenceCapable
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class Permission implements Serializable {
 
     private static final long serialVersionUID = 1420020753285692448L;

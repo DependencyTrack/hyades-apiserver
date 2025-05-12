@@ -19,6 +19,7 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 /**
@@ -40,37 +41,73 @@ public interface RoleDao {
               (:roleId, :permissionId)
             ON CONFLICT DO NOTHING
             """)
-    @DefineNamedBindings
-    <T extends UserPrincipal> int addPermissionToRole(
-            @Bind long roleId,
-            @Bind long permissionId);
+    int addPermissionToRole(@Bind long roleId, @Bind long permissionId);
 
     @SqlUpdate(/* language=sql */ """
-            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
-            <#assign prefix = userClass.getSimpleName()?upper_case>
-            INSERT INTO "${prefix}S_PROJECTS_ROLES"
-              ("${prefix}_ID", "PROJECT_ID", "ROLE_ID")
+            INSERT INTO "USERS_PROJECTS_ROLES"
+              ("USER_ID", "PROJECT_ID", "ROLE_ID")
             VALUES
               (:userId, :projectId, :roleId)
             ON CONFLICT DO NOTHING
             """)
-    @DefineNamedBindings
-    <T extends UserPrincipal> int addRoleToUser(
-            @Define Class<T> userClass,
-            @Bind long userId,
-            @Bind long projectId,
-            @Bind long roleId);
+    int addRoleToUser(@Bind long userId, @Bind long projectId, @Bind long roleId);
 
     @SqlUpdate(/* language=sql */ """
             DELETE
-              FROM "OIDCUSERS_PROJECTS_ROLES"
-             WHERE "OIDCUSER_ID" = :userId
-               AND "PROJECT_ACCESS_ROLE_ID" IN (
-                   SELECT "ID"
-                     FROM "PROJECT_ACCESS_ROLES"
-                    WHERE "ROLE_ID" = :roleId
-                      AND "PROJECT_ID" = :projectId)
+              FROM "USERS_PROJECTS_ROLES"
+             WHERE "USER_ID" = :userId
+               AND "ROLE_ID" = :roleId
+               AND "PROJECT_ID" IN (
+                 SELECT "ID"
+                   FROM "PROJECT"
+                  WHERE "NAME" = :projectName
+               )
             """)
-    int removeRoleFromOidcUser(@Bind final long userId, @Bind final long projectId, @Bind final long roleId);
+    int removeRoleFromUser(@Bind long userId, @Bind String projectName, @Bind long roleId);
+
+    @SqlQuery(/* language=sql */ """
+            SELECT
+                p."ID"       AS "PROJECT_ID",
+                p."NAME"     AS "PROJECT_NAME",
+                p."UUID"     AS "PROJECT_UUID",
+                r."ID"       AS "ROLE_ID",
+                r."NAME"     AS "ROLE_NAME",
+                r."UUID"     AS "ROLE_UUID",
+                u."ID"       AS "USER_ID",
+                u."USERNAME" AS "USER_NAME",
+                u."TYPE"     AS "USER_TYPE"
+              FROM "PROJECT" p
+             INNER JOIN "USERS_PROJECTS_ROLES" pr
+                ON pr."PROJECT_ID" = p."ID"
+             INNER JOIN "USER" u
+                ON u."ID" = pr."USER_ID"
+             INNER JOIN "ROLE" r
+                ON r."ID" = pr."ROLE_ID"
+             WHERE u."USERNAME" = :username
+            """)
+    @RegisterRowMapper(ProjectRoleRowMapper.class)
+    List<ProjectRole> getUserRoles(@Bind String username);
+
+    @SqlQuery(/* language=sql */ """
+            SELECT p."ID", p."NAME", p."UUID"
+              FROM "PROJECT" p
+              LEFT JOIN "USERS_PROJECTS_ROLES" pr
+                ON pr."PROJECT_ID" = p."ID"
+              LEFT JOIN "USER" u
+                ON u."ID" = pr."USER_ID"
+             WHERE u."USERNAME" != :username
+                OR u."USERNAME" IS NULL
+            """)
+    @RegisterFieldMapper(Project.class)
+    List<Project> getUserUnassignedProjects(@Bind String username);
+
+    @SqlUpdate(/* language=sql */ """
+            INSERT INTO "USERS_PROJECTS_ROLES"
+              ("USER_ID", "PROJECT_ID", "ROLE_ID")
+            VALUES (:userId, (SELECT "ID" FROM "PROJECT" WHERE "NAME" = :projectName), :roleId)
+                ON CONFLICT ("USER_ID", "PROJECT_ID") DO
+            UPDATE SET "ROLE_ID" = EXCLUDED."ROLE_ID"
+            """)
+    int setUserProjectRole(@Bind long userId, @Bind String projectName, @Bind long roleId);
 
 }
