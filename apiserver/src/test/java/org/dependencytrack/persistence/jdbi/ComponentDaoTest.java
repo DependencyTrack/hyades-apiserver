@@ -25,7 +25,6 @@ import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.Policy;
@@ -41,12 +40,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.jdo.JDOObjectNotFoundException;
+import java.time.Instant;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ComponentDaoTest extends PersistenceCapableTest {
 
@@ -137,12 +138,8 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         qm.persist(integrityAnalysis);
 
         // Create metrics for component.
-        final var metrics = new DependencyMetrics();
-        metrics.setProject(project);
-        metrics.setComponent(component);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(new Date());
-        qm.persist(metrics);
+        withJdbiHandle(handle ->  handle.attach(MetricsDao.class).createDependencyMetrics(component.getId(), project.getId(),
+                Instant.now(), Instant.now(), 0, 0, 0, 0, 0, 0, 0));
 
         componentDao.deleteComponent(component.getUuid());
 
@@ -150,7 +147,6 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         assertThat(qm.getAllComponents(project)).isEmpty();
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(Component.class, component.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(Component.class, componentChild.getId()));
-        assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(DependencyMetrics.class, metrics.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(PolicyViolation.class, policyViolation.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(IntegrityAnalysis.class, integrityAnalysis.getId()));
 
@@ -159,6 +155,9 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         assertThatNoException().isThrownBy(() -> qm.getObjectById(Vulnerability.class, vuln.getId()));
         assertThatNoException().isThrownBy(() -> qm.getObjectById(PolicyCondition.class, policyCondition.getId()));
         assertThatNoException().isThrownBy(() -> qm.getObjectById(Policy.class, policy.getId()));
+
+        // Ensure that metrics have been deleted.
+        assertThat(withJdbiHandle(handle ->  handle.attach(MetricsDao.class).getDependencyMetricsSince(component.getId(), Instant.now())).isEmpty());
     }
 
     @Test

@@ -863,7 +863,7 @@ public class ModelConverter {
         }
         return metadata;
     }
-
+// TODO
     public static org.cyclonedx.model.Service convert(final QueryManager qm, final ServiceComponent service) {
         final org.cyclonedx.model.Service cycloneService = new org.cyclonedx.model.Service();
         cycloneService.setBomRef(service.getUuid().toString());

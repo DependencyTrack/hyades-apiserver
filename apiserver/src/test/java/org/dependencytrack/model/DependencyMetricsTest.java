@@ -26,13 +26,6 @@ import java.util.Date;
 public class DependencyMetricsTest {
 
     @Test
-    public void testId() {
-        DependencyMetrics metric = new DependencyMetrics();
-        metric.setId(111L);
-        Assert.assertEquals(111L, metric.getId());
-    }
-
-    @Test
     public void testProject() {
         Project project = new Project();
         DependencyMetrics metric = new DependencyMetrics();

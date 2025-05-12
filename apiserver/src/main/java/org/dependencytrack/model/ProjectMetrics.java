@@ -26,11 +26,9 @@ import jakarta.validation.constraints.NotNull;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.ForeignKey;
 import javax.jdo.annotations.ForeignKeyAction;
-import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
-import javax.jdo.annotations.PrimaryKey;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -45,11 +43,6 @@ import java.util.Date;
 public class ProjectMetrics implements Serializable {
 
     private static final long serialVersionUID = 8741534340846353210L;
-
-    @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
-    @JsonIgnore
-    private long id;
 
     @Persistent
     @ForeignKey(name = "PROJECTMETRICS_PROJECT_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE, deferred = "true")
@@ -198,14 +191,6 @@ public class ProjectMetrics implements Serializable {
     @Index(name = "PROJECTMETRICS_LAST_OCCURRENCE_IDX")
     @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.REQUIRED, description = "UNIX epoch timestamp in milliseconds")
     private Date lastOccurrence;
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
 
     public Project getProject() {
         return project;

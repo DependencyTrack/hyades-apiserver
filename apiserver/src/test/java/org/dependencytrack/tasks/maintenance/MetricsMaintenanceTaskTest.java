@@ -21,10 +21,7 @@ package org.dependencytrack.tasks.maintenance;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.DependencyMetrics;
-import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.jdbi.v3.core.Handle;
 import org.junit.After;
@@ -35,13 +32,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
 import java.util.function.BiConsumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
@@ -83,30 +80,18 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         qm.persist(component);
 
         final BiConsumer<Instant, Integer> createComponentMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            final var metrics = new DependencyMetrics();
-            metrics.setProject(project);
-            metrics.setComponent(component);
-            metrics.setVulnerabilities(vulns);
-            metrics.setFirstOccurrence(Date.from(lastOccurrence));
-            metrics.setLastOccurrence(Date.from(lastOccurrence));
-            qm.persist(metrics);
+            withJdbiHandle(handle ->  handle.attach(MetricsDao.class).createDependencyMetrics(component.getId(), project.getId(),
+                    lastOccurrence, lastOccurrence, 0, 0, 0, 0, 0, 0, vulns));
         };
 
         final BiConsumer<Instant, Integer> createProjectMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            final var metrics = new ProjectMetrics();
-            metrics.setProject(project);
-            metrics.setVulnerabilities(vulns);
-            metrics.setFirstOccurrence(Date.from(lastOccurrence));
-            metrics.setLastOccurrence(Date.from(lastOccurrence));
-            qm.persist(metrics);
+            withJdbiHandle(handle ->  handle.attach(MetricsDao.class).createProjectMetrics(project.getId(), 0, lastOccurrence,
+                    lastOccurrence, 0, 0, 0, 0, 0, 0, vulns, 0));
         };
 
         final BiConsumer<Instant, Integer> createPortfolioMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            final var metrics = new PortfolioMetrics();
-            metrics.setVulnerabilities(vulns);
-            metrics.setFirstOccurrence(Date.from(lastOccurrence));
-            metrics.setLastOccurrence(Date.from(lastOccurrence));
-            qm.persist(metrics);
+            withJdbiHandle(handle ->  handle.attach(MetricsDao.class).createPortfolioMetrics(1, 0, lastOccurrence,
+                    lastOccurrence, 0, 0, 0, 0, 0, 0, vulns, 0, 0));
         };
 
         final Instant now = Instant.now();

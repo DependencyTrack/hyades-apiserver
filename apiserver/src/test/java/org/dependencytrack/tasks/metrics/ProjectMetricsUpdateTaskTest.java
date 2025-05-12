@@ -22,7 +22,6 @@ import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
@@ -41,6 +40,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
@@ -158,27 +158,15 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         // When the calculating project metrics, only the latest data point for each component
         // must be considered. Because the update task calculates new component metrics data points,
         // the ones created below must be ignored.
-        final var componentUnauditedOldMetrics = new DependencyMetrics();
-        componentUnauditedOldMetrics.setProject(project);
-        componentUnauditedOldMetrics.setComponent(componentUnaudited);
-        componentUnauditedOldMetrics.setCritical(666);
-        componentUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        componentUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(componentUnauditedOldMetrics);
-        final var componentAuditedOldMetrics = new DependencyMetrics();
-        componentAuditedOldMetrics.setProject(project);
-        componentAuditedOldMetrics.setComponent(componentUnaudited);
-        componentAuditedOldMetrics.setHigh(666);
-        componentAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        componentAuditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(componentAuditedOldMetrics);
-        final var componentSuppressedOldMetrics = new DependencyMetrics();
-        componentSuppressedOldMetrics.setProject(project);
-        componentSuppressedOldMetrics.setComponent(componentUnaudited);
-        componentSuppressedOldMetrics.setMedium(666);
-        componentSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        componentSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(componentSuppressedOldMetrics);
+        useJdbiHandle(handle ->  {
+            var dao = handle.attach(MetricsDao.class);
+            dao.createDependencyMetrics(componentUnaudited.getId(), project.getId(),
+                    Instant.ofEpochSecond(1670843532), Instant.now(), 1, 0, 0, 0, 0, 0, 0);
+            dao.createDependencyMetrics(componentAudited.getId(), project.getId(),
+                    Instant.ofEpochSecond(1670843532), Instant.now(), 1, 0, 0, 0, 0, 0, 0);
+            dao.createDependencyMetrics(componentSuppressed.getId(), project.getId(),
+                    Instant.ofEpochSecond(1670843532), Instant.now(), 1, 0, 0, 0, 0, 0, 0);
+        });
 
         var projectMetricsUpdateEvent = new ProjectMetricsUpdateEvent(project.getUuid());
         qm.createWorkflowSteps(projectMetricsUpdateEvent.getChainIdentifier());
@@ -242,14 +230,14 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         var componentUnaudited = new Component();
         componentUnaudited.setProject(project);
         componentUnaudited.setName("acme-lib-a");
-        componentUnaudited = qm.createComponent(componentUnaudited, false);
+        qm.createComponent(componentUnaudited, false);
         createPolicyViolation(componentUnaudited, Policy.ViolationState.FAIL, PolicyViolation.Type.LICENSE);
 
         // Create a component with an audited violation.
         var componentAudited = new Component();
         componentAudited.setProject(project);
         componentAudited.setName("acme-lib-b");
-        componentAudited = qm.createComponent(componentAudited, false);
+        qm.createComponent(componentAudited, false);
         final var violationAudited = createPolicyViolation(componentAudited, Policy.ViolationState.WARN, PolicyViolation.Type.OPERATIONAL);
         qm.makeViolationAnalysis(componentAudited, violationAudited, ViolationAnalysisState.APPROVED, false);
 
@@ -257,7 +245,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         var componentSuppressed = new Component();
         componentSuppressed.setProject(project);
         componentSuppressed.setName("acme-lib-c");
-        componentSuppressed = qm.createComponent(componentSuppressed, false);
+        qm.createComponent(componentSuppressed, false);
         final var violationSuppressed = createPolicyViolation(componentSuppressed, Policy.ViolationState.INFO, PolicyViolation.Type.SECURITY);
         qm.makeViolationAnalysis(componentSuppressed, violationSuppressed, ViolationAnalysisState.REJECTED, true);
 
@@ -265,27 +253,15 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         // When the calculating project metrics, only the latest data point for each component
         // must be considered. Because the update task calculates new component metrics data points,
         // the ones created below must be ignored.
-        final var componentUnauditedOldMetrics = new DependencyMetrics();
-        componentUnauditedOldMetrics.setProject(project);
-        componentUnauditedOldMetrics.setComponent(componentUnaudited);
-        componentUnauditedOldMetrics.setPolicyViolationsFail(666);
-        componentUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        componentUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(componentUnauditedOldMetrics);
-        final var componentAuditedOldMetrics = new DependencyMetrics();
-        componentAuditedOldMetrics.setProject(project);
-        componentAuditedOldMetrics.setComponent(componentUnaudited);
-        componentAuditedOldMetrics.setPolicyViolationsWarn(666);
-        componentAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        componentAuditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(componentAuditedOldMetrics);
-        final var componentSuppressedOldMetrics = new DependencyMetrics();
-        componentSuppressedOldMetrics.setProject(project);
-        componentSuppressedOldMetrics.setComponent(componentUnaudited);
-        componentSuppressedOldMetrics.setPolicyViolationsInfo(666);
-        componentSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        componentSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(componentSuppressedOldMetrics);
+        useJdbiHandle(handle ->  {
+            var dao = handle.attach(MetricsDao.class);
+            dao.createDependencyMetrics(componentUnaudited.getId(), project.getId(),
+                    Instant.ofEpochSecond(1670843532), Instant.now(), 1, 0, 0, 0, 0, 0, 0);
+            dao.createDependencyMetrics(componentAudited.getId(), project.getId(),
+                    Instant.ofEpochSecond(1670843532), Instant.now(), 1, 0, 0, 0, 0, 0, 0);
+            dao.createDependencyMetrics(componentSuppressed.getId(), project.getId(),
+                    Instant.ofEpochSecond(1670843532), Instant.now(), 1, 0, 0, 0, 0, 0, 0);
+        });
 
         new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.getUuid()));
 

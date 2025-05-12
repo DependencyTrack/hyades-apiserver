@@ -30,7 +30,6 @@ import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
@@ -48,6 +47,7 @@ import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask.partition;
 
@@ -200,24 +200,15 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // When the calculating portfolio metrics, only the latest data point for each project
         // must be considered. Because the update task calculates new project metrics data points,
         // the ones created below must be ignored.
-        final var projectUnauditedOldMetrics = new ProjectMetrics();
-        projectUnauditedOldMetrics.setProject(projectUnaudited);
-        projectUnauditedOldMetrics.setCritical(666);
-        projectUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        projectUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(projectUnauditedOldMetrics);
-        final var projectAuditedOldMetrics = new ProjectMetrics();
-        projectAuditedOldMetrics.setProject(projectAudited);
-        projectAuditedOldMetrics.setHigh(666);
-        projectAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        projectAuditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(projectAuditedOldMetrics);
-        final var projectSuppressedOldMetrics = new ProjectMetrics();
-        projectSuppressedOldMetrics.setProject(projectSuppressed);
-        projectSuppressedOldMetrics.setMedium(666);
-        projectSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        projectSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(projectSuppressedOldMetrics);
+        useJdbiHandle(handle ->  {
+            var dao = handle.attach(MetricsDao.class);
+            dao.createProjectMetrics(projectUnaudited.getId(), 0, Instant.ofEpochSecond(1670843532), Instant.now(),
+                    0, 0, 0, 0, 0, 1, 0, 0);
+            dao.createProjectMetrics(projectAudited.getId(), 0, Instant.ofEpochSecond(1670843532), Instant.now(),
+                    0, 0, 0, 0, 0, 1, 0, 0);
+            dao.createProjectMetrics(projectSuppressed.getId(), 0, Instant.ofEpochSecond(1670843532), Instant.now(),
+                    0, 0, 0, 0, 0, 1, 0, 0);
+        });
 
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
 
@@ -268,7 +259,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // Create a project with an unaudited violation.
         var projectUnaudited = new Project();
         projectUnaudited.setName("acme-app-a");
-        projectUnaudited = qm.createProject(projectUnaudited, List.of(), false);
+        qm.createProject(projectUnaudited, List.of(), false);
         
         // Create risk score configproperties
         createTestConfigProperties();
@@ -276,30 +267,30 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var componentUnaudited = new Component();
         componentUnaudited.setProject(projectUnaudited);
         componentUnaudited.setName("acme-lib-a");
-        componentUnaudited = qm.createComponent(componentUnaudited, false);
+        qm.createComponent(componentUnaudited, false);
         createPolicyViolation(componentUnaudited, Policy.ViolationState.FAIL, PolicyViolation.Type.LICENSE);
 
         // Create a project with an audited violation.
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
-        projectAudited = qm.createProject(projectAudited, List.of(), false);
+        qm.createProject(projectAudited, List.of(), false);
         
         var componentAudited = new Component();
         componentAudited.setProject(projectAudited);
         componentAudited.setName("acme-lib-b");
-        componentAudited = qm.createComponent(componentAudited, false);
+        qm.createComponent(componentAudited, false);
         final var violationAudited = createPolicyViolation(componentAudited, Policy.ViolationState.WARN, PolicyViolation.Type.OPERATIONAL);
         qm.makeViolationAnalysis(componentAudited, violationAudited, ViolationAnalysisState.APPROVED, false);
 
         // Create a project with a suppressed violation.
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
-        projectSuppressed = qm.createProject(projectSuppressed, List.of(), false);
+        qm.createProject(projectSuppressed, List.of(), false);
         
         var componentSuppressed = new Component();
         componentSuppressed.setProject(projectSuppressed);
         componentSuppressed.setName("acme-lib-c");
-        componentSuppressed = qm.createComponent(componentSuppressed, false);
+        qm.createComponent(componentSuppressed, false);
         final var violationSuppressed = createPolicyViolation(componentSuppressed, Policy.ViolationState.INFO, PolicyViolation.Type.SECURITY);
         qm.makeViolationAnalysis(componentSuppressed, violationSuppressed, ViolationAnalysisState.REJECTED, true);
 
@@ -307,24 +298,15 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // When the calculating portfolio metrics, only the latest data point for each project
         // must be considered. Because the update task calculates new project metrics data points,
         // the ones created below must be ignored.
-        final var projectUnauditedOldMetrics = new ProjectMetrics();
-        projectUnauditedOldMetrics.setProject(projectUnaudited);
-        projectUnauditedOldMetrics.setPolicyViolationsFail(666);
-        projectUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        projectUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(projectUnauditedOldMetrics);
-        final var projectAuditedOldMetrics = new ProjectMetrics();
-        projectAuditedOldMetrics.setProject(projectAudited);
-        projectAuditedOldMetrics.setPolicyViolationsWarn(666);
-        projectAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        projectAuditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(projectAuditedOldMetrics);
-        final var projectSuppressedOldMetrics = new ProjectMetrics();
-        projectSuppressedOldMetrics.setProject(projectSuppressed);
-        projectSuppressedOldMetrics.setPolicyViolationsInfo(666);
-        projectSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
-        projectSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-        qm.persist(projectSuppressedOldMetrics);
+        useJdbiHandle(handle ->  {
+            var dao = handle.attach(MetricsDao.class);
+            dao.createProjectMetrics(projectUnaudited.getId(), 0, Instant.ofEpochSecond(1670843532), Instant.now(),
+                    0, 0, 0, 0, 0, 1, 0, 0);
+            dao.createProjectMetrics(projectAudited.getId(), 0, Instant.ofEpochSecond(1670843532), Instant.now(),
+                    0, 0, 0, 0, 0, 1, 0, 0);
+            dao.createProjectMetrics(projectSuppressed.getId(), 0, Instant.ofEpochSecond(1670843532), Instant.now(),
+                    0, 0, 0, 0, 0, 1, 0, 0);
+        });
 
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
 

@@ -20,9 +20,6 @@ package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.DependencyMetrics;
-import org.dependencytrack.model.PortfolioMetrics;
-import org.dependencytrack.model.ProjectMetrics;
 import org.jdbi.v3.core.Handle;
 import org.junit.After;
 import org.junit.Before;
@@ -33,7 +30,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
-import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
@@ -60,27 +56,50 @@ public class MetricsDaoTest extends PersistenceCapableTest {
     }
 
     @Test
+    public void testCreatePortfolioMetrics() {
+        var metrics = metricsDao.createPortfolioMetrics(1, 0, Instant.now(), Instant.now(),
+                0, 0, 0, 0, 0, 0, 0, 0, 0);
+        assertThat(metrics).isNotNull();
+        assertThat(metrics.getProjects()).isEqualTo(1);
+    }
+
+    @Test
+    public void testCreateProjectMetrics() {
+        final var project = qm.createProject("acme-app", null, "1.0.0", null, null, null, null, false);
+        var metrics = metricsDao.createProjectMetrics(project.getId(), 0, Instant.now(), Instant.now(),
+                0, 0, 0, 0, 0, 1, 0, 0);
+        assertThat(metrics).isNotNull();
+        assertThat(metrics.getSuppressed()).isEqualTo(1);
+    }
+
+    @Test
+    public void testCreateDependencyMetrics() {
+        final var project = qm.createProject("acme-app", null, "1.0.0", null, null, null, null, false);
+        var component = new Component();
+        component.setProject(project);
+        component.setName("Acme Component");
+        component.setVersion("1.0");
+        qm.createComponent(component, false);
+
+        var metrics = metricsDao.createDependencyMetrics(component.getId(), project.getId(), Instant.now(),
+                Instant.now(), 1, 0, 0, 0, 0, 0, 0);
+        assertThat(metrics).isNotNull();
+        assertThat(metrics.getCritical()).isEqualTo(1);
+    }
+
+    @Test
     public void testGetPortfolioMetricsForXDays() {
         metricsDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 40);
-        var metrics = new PortfolioMetrics();
-        metrics.setVulnerabilities(4);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(40))));
-        qm.persist(metrics);
+        metricsDao.createPortfolioMetrics(0, 0, Instant.now(), Instant.now().minus(Duration.ofDays(40)),
+                0, 0, 0, 0, 0, 0, 4, 0, 0);
 
         metricsDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 30);
-        metrics = new PortfolioMetrics();
-        metrics.setVulnerabilities(3);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
-        qm.persist(metrics);
+        metricsDao.createPortfolioMetrics(0, 0, Instant.now(), Instant.now().minus(Duration.ofDays(30)),
+                0, 0, 0, 0, 0, 0, 3, 0, 0);
 
         metricsDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 20);
-        metrics = new PortfolioMetrics();
-        metrics.setVulnerabilities(2);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
-        qm.persist(metrics);
+        metricsDao.createPortfolioMetrics(0, 0, Instant.now(), Instant.now().minus(Duration.ofDays(20)),
+                0, 0, 0, 0, 0, 0, 2, 0, 0);
 
         var portfolioMetrics = metricsDao.getPortfolioMetricsSince(Instant.now().minus(Duration.ofDays(35)));
         assertThat(portfolioMetrics.size()).isEqualTo(2);
@@ -93,28 +112,16 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         final var project = qm.createProject("acme-app", null, "1.0.0", null, null, null, null, false);
 
         metricsDao.createPartitionForDaysAgo("PROJECTMETRICS", 40);
-        var metrics = new ProjectMetrics();
-        metrics.setProject(project);
-        metrics.setVulnerabilities(4);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(40))));
-        qm.persist(metrics);
+        metricsDao.createProjectMetrics(project.getId(), 0, Instant.now(), Instant.now().minus(Duration.ofDays(40)),
+                0, 0, 0, 0, 0, 0, 4, 0);
 
         metricsDao.createPartitionForDaysAgo("PROJECTMETRICS", 30);
-        metrics = new ProjectMetrics();
-        metrics.setProject(project);
-        metrics.setVulnerabilities(3);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
-        qm.persist(metrics);
+        metricsDao.createProjectMetrics(project.getId(), 0, Instant.now(), Instant.now().minus(Duration.ofDays(30)),
+                0, 0, 0, 0, 0, 0, 3, 0);
 
         metricsDao.createPartitionForDaysAgo("PROJECTMETRICS", 20);
-        metrics = new ProjectMetrics();
-        metrics.setProject(project);
-        metrics.setVulnerabilities(2);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
-        qm.persist(metrics);
+        metricsDao.createProjectMetrics(project.getId(), 0, Instant.now(), Instant.now().minus(Duration.ofDays(20)),
+                0, 0, 0, 0, 0, 0, 2, 0);
 
         var projectMetrics = withJdbiHandle(handle ->
                 handle.attach(MetricsDao.class).getProjectMetricsSince(project.getId(), Instant.now().minus(Duration.ofDays(35))));
@@ -133,31 +140,16 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         qm.createComponent(component, false);
 
         metricsDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 40);
-        var metrics = new DependencyMetrics();
-        metrics.setProject(project);
-        metrics.setComponent(component);
-        metrics.setVulnerabilities(4);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(40))));
-        qm.persist(metrics);
+        metricsDao.createDependencyMetrics(component.getId(), project.getId(), Instant.now(),
+                Instant.now().minus(Duration.ofDays(40)), 0, 0, 0, 0, 0, 0, 4);
 
         metricsDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 30);
-        metrics = new DependencyMetrics();
-        metrics.setProject(project);
-        metrics.setComponent(component);
-        metrics.setVulnerabilities(3);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
-        qm.persist(metrics);
+        metricsDao.createDependencyMetrics(component.getId(), project.getId(), Instant.now(),
+                Instant.now().minus(Duration.ofDays(30)), 0, 0, 0, 0, 0, 0, 3);
 
         metricsDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 20);
-        metrics = new DependencyMetrics();
-        metrics.setProject(project);
-        metrics.setComponent(component);
-        metrics.setVulnerabilities(2);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
-        qm.persist(metrics);
+        metricsDao.createDependencyMetrics(component.getId(), project.getId(), Instant.now(),
+                Instant.now().minus(Duration.ofDays(20)), 0, 0, 0, 0, 0, 0, 2);
 
         var dependencyMetrics = metricsDao.getDependencyMetricsSince(component.getId(), Instant.now().minus(Duration.ofDays(35)));
         assertThat(dependencyMetrics.size()).isEqualTo(2);
