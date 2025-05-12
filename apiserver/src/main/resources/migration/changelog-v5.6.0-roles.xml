@@ -55,21 +55,19 @@
 
         <createTable ifNotExists="true" tableName="USERS_PROJECTS_ROLES">
             <column name="USER_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="USERS_PROJECTS_ROLES_COMPOSITE_IDX"
+                <constraints nullable="false"
                     foreignKeyName="USERS_PROJECTS_ROLES_USER_FK"
                     referencedTableName="USER" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="false"
-                    validateUnique="true" validateForeignKey="true" />
+                    validateForeignKey="true" />
             </column>
 
             <column name="PROJECT_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="USERS_PROJECTS_ROLES_COMPOSITE_IDX"
+                <constraints nullable="false"
                     foreignKeyName="USERS_PROJECTS_ROLES_PROJECT_FK"
                     referencedTableName="PROJECT" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
+                    validateForeignKey="true" />
             </column>
 
             <column name="ROLE_ID" type="BIGINT">
@@ -81,18 +79,12 @@
             </column>
         </createTable>
 
-        <createIndex indexName="USERS_PROJECTS_ROLES_USER_ID_IDX"
-            tableName="USERS_PROJECTS_ROLES">
+        <createIndex unique="true" indexName="USERS_PROJECTS_ROLES_USER_PROJECT_IDX" tableName="USERS_PROJECTS_ROLES">
             <column name="USER_ID" />
-        </createIndex>
-
-        <createIndex indexName="USERS_PROJECTS_ROLES_PROJECT_ID_IDX"
-            tableName="USERS_PROJECTS_ROLES">
             <column name="PROJECT_ID" />
         </createIndex>
 
-        <createIndex indexName="USERS_PROJECTS_ROLES_ROLE_ID_IDX"
-            tableName="USERS_PROJECTS_ROLES">
+        <createIndex indexName="USERS_PROJECTS_ROLES_ROLE_ID_IDX" tableName="USERS_PROJECTS_ROLES">
             <column name="ROLE_ID" />
         </createIndex>
 

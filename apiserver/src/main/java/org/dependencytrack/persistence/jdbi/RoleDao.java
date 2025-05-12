@@ -109,4 +109,13 @@ public interface RoleDao {
     @RegisterFieldMapper(Project.class)
     List<Project> getUserUnassignedProjects(@Bind String username);
 
+    @SqlUpdate(/* language=sql */ """
+            INSERT INTO "USERS_PROJECTS_ROLES"
+              ("USER_ID", "PROJECT_ID", "ROLE_ID")
+            VALUES (:userId, (SELECT "ID" FROM "PROJECT" WHERE "NAME" = :projectName), :roleId)
+                ON CONFLICT ("USER_ID", "PROJECT_ID") DO
+            UPDATE SET "ROLE_ID" = EXCLUDED."ROLE_ID"
+            """)
+    int setUserProjectRole(@Bind long userId, @Bind String projectName, @Bind long roleId);
+
 }
