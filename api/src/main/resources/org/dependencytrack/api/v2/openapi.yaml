@@ -1,0 +1,37 @@
+openapi: 3.1.0
+info:
+  title: Minimal API
+  description: A minimal API specification example
+  version: 2.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+- url: https://api.example.com/v1
+  description: Production server
+paths:
+  /hello:
+    get:
+      summary: Hello World endpoint
+      description: Returns a greeting message
+      operationId: getHello
+      parameters:
+      - name: name
+        in: query
+        description: Name of the person to greet
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Hello, world!
+components:
+  schemas: { }
+  securitySchemes: { }
