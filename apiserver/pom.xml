@@ -27,8 +27,6 @@
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>10.2.1</lib.cyclonedx-java.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.jackson.version>2.19.1</lib.jackson.version>
-        <lib.jackson-databind.version>2.18.3</lib.jackson-databind.version>
         <lib.jersey.version>3.1.10</lib.jersey.version>
         <lib.jdbi.version>3.49.5</lib.jdbi.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
@@ -78,6 +76,10 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>api</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>datanucleus-plugin</artifactId>
@@ -233,12 +235,10 @@
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-json-org</artifactId>
-            <version>${lib.jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>${lib.jackson.version}</version>
         </dependency>
 
         <!-- Package URL -->
@@ -372,7 +372,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
-            <version>${lib.jackson.version}</version>
         </dependency>
 
         <dependency>
@@ -458,17 +457,14 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>${lib.jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${lib.jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>${lib.jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>org.owasp</groupId>
