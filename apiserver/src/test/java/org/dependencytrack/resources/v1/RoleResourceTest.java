@@ -107,7 +107,7 @@ public class RoleResourceTest extends ResourceTest {
 
     @Test
     public void createRoleTest() {
-        initializeWithPermissions(Permissions.ROLE_MANAGEMENT_CREATE);
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
 
         Response response = jersey.target(V1_ROLE).request()
                 .header(X_API_KEY, apiKey)
@@ -174,7 +174,6 @@ public class RoleResourceTest extends ResourceTest {
 
         JdbiFactory.withJdbiHandle(
                 handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        testUser.getClass(),
                         testUser.getId(),
                         testProject.getId(),
                         expectedRole.getId()));

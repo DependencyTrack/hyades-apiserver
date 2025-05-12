@@ -38,7 +38,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.junit.After;
@@ -53,7 +52,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class RoleQueryManagerTest extends PersistenceCapableTest {
 
     private PostgreSQLContainer<?> postgresContainer;
-    private Jdbi jdbi;
 
     @Before
     public void setUp() {
@@ -63,7 +61,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"));
         postgresContainer.start();
 
-        jdbi = Jdbi.create(
+        Jdbi.create(
                 postgresContainer.getJdbcUrl(),
                 postgresContainer.getUsername(),
                 postgresContainer.getPassword());
@@ -166,12 +164,11 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
         JdbiFactory.withJdbiHandle(
                 handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        testUser.getClass(),
                         testUser.getId(),
                         testProject.getId(),
                         expectedRole.getId()));
 
-        List<? extends ProjectRole> actualRoles = qm.getUserRoles(testUser);
+        List<ProjectRole> actualRoles = qm.getUserRoles(testUser);
 
         Assert.assertEquals(actualRoles.size(), 1);
         Assert.assertEquals(expectedRole.toString(), actualRoles.get(0).getRole().toString());
@@ -213,7 +210,6 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
         JdbiFactory.withJdbiHandle(
                 handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        testUser.getClass(),
                         testUser.getId(),
                         assignedProject.getId(),
                         maintainerRole.getId()));
@@ -347,7 +343,6 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
         JdbiFactory.withJdbiHandle(
                 handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        testUser.getClass(),
                         testUser.getId(),
                         testProject.getId(),
                         maintainerRole.getId()));
@@ -411,11 +406,11 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
         JdbiFactory.withJdbiHandle(
                 handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        testUser.getClass(),
                         testUser.getId(),
                         testProject.getId(),
                         maintainerRole.getId()));
 
         Assert.assertTrue(qm.removeRoleFromUser(testUser, maintainerRole, testProject));
     }
+
 }

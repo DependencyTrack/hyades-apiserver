@@ -29,7 +29,6 @@ import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.FetchGroup;
-import javax.jdo.annotations.FetchGroups;
 import javax.jdo.annotations.ForeignKeyAction;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
@@ -40,7 +39,9 @@ import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -50,20 +51,16 @@ import java.util.UUID;
  * @since 1.0.0
  */
 @PersistenceCapable
-@FetchGroups({
-        @FetchGroup(name = "ALL", members = {
-                @Persistent(name = "uuid"),
-                @Persistent(name = "name"),
-                @Persistent(name = "apiKeys"),
-                @Persistent(name = "ldapUsers"),
-                @Persistent(name = "managedUsers"),
-                @Persistent(name = "oidcUsers"),
-                @Persistent(name = "mappedLdapGroups"),
-                @Persistent(name = "mappedOidcGroups"),
-                @Persistent(name = "permissions")
-        })
+@FetchGroup(name = "ALL", members = {
+        @Persistent(name = "uuid"),
+        @Persistent(name = "name"),
+        @Persistent(name = "apiKeys"),
+        @Persistent(name = "users"),
+        @Persistent(name = "mappedLdapGroups"),
+        @Persistent(name = "mappedOidcGroups"),
+        @Persistent(name = "permissions")
 })
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class Team implements Serializable {
 
     private static final long serialVersionUID = 6938424919898277944L;
@@ -100,15 +97,7 @@ public class Team implements Serializable {
 
     @Persistent(mappedBy = "teams")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
-    private List<LdapUser> ldapUsers;
-
-    @Persistent(mappedBy = "teams")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
-    private List<ManagedUser> managedUsers;
-
-    @Persistent(mappedBy = "teams")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
-    private List<OidcUser> oidcUsers;
+    private List<User> users;
 
     @Persistent(mappedBy = "team")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "dn ASC"))
@@ -157,27 +146,59 @@ public class Team implements Serializable {
     }
 
     public List<LdapUser> getLdapUsers() {
-        return ldapUsers;
+        if (users == null) {
+            return null;
+        }
+
+        return users.stream()
+                .filter(user -> user instanceof LdapUser)
+                .map(user -> (LdapUser) user)
+                .toList();
     }
 
     public void setLdapUsers(List<LdapUser> ldapUsers) {
-        this.ldapUsers = ldapUsers;
+        this.users = Objects.requireNonNullElseGet(this.users, ArrayList::new);
+        this.users.addAll(ldapUsers);
     }
 
     public List<ManagedUser> getManagedUsers() {
-        return managedUsers;
+        if (users == null) {
+            return null;
+        }
+
+        return users.stream()
+                .filter(user -> user instanceof ManagedUser)
+                .map(user -> (ManagedUser) user)
+                .toList();
     }
 
     public void setManagedUsers(List<ManagedUser> managedUsers) {
-        this.managedUsers = managedUsers;
+        this.users = Objects.requireNonNullElseGet(this.users, ArrayList::new);
+        this.users.addAll(managedUsers);
     }
 
     public List<OidcUser> getOidcUsers() {
-        return oidcUsers;
+        if (users == null) {
+            return null;
+        }
+
+        return users.stream()
+                .filter(user -> user instanceof OidcUser)
+                .map(user -> (OidcUser) user)
+                .toList();
     }
 
     public void setOidcUsers(List<OidcUser> oidcUsers) {
-        this.oidcUsers = oidcUsers;
+        this.users = Objects.requireNonNullElseGet(this.users, ArrayList::new);
+        this.users.addAll(oidcUsers);
+    }
+
+    public List<User> getUsers() {
+        return users;
+    }
+
+    public void setUsers(List<User> users) {
+        this.users = users;
     }
 
     public List<MappedLdapGroup> getMappedLdapGroups() {

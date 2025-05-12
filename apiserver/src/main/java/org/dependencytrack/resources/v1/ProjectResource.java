@@ -22,7 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.model.ApiKey;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import io.jsonwebtoken.lang.Collections;
@@ -494,8 +494,8 @@ public class ProjectResource extends AbstractApiResource {
 
                 if (!chosenTeams.isEmpty()) {
                     List<Team> userTeams;
-                    if (principal instanceof final UserPrincipal userPrincipal) {
-                        userTeams = userPrincipal.getTeams();
+                    if (principal instanceof final User user) {
+                        userTeams = user.getTeams();
                     } else if (principal instanceof final ApiKey apiKey) {
                         userTeams = apiKey.getTeams();
                     } else {

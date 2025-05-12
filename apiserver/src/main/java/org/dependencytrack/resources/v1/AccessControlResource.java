@@ -20,7 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
@@ -137,19 +137,17 @@ public class AccessControlResource extends AlpineResource {
             @Parameter(description = "The username to retrieve projects for", required = true) @PathParam("username") String username) {
 
         try (QueryManager qm = new QueryManager()) {
-            UserPrincipal principal = qm.getUserPrincipal(username);
+            User user = qm.getUser(username);
 
-            if (principal == null) {
+            if (user == null)
                 return Response.status(Response.Status.NOT_FOUND).build();
-            }
 
             try (final Handle jdbiHandle = openJdbiHandle()) {
                 var dao = jdbiHandle.attach(RoleDao.class);
-                List<Project> projects = dao.getUserUnassignedProjects(principal.getClass(), principal.getUsername());
+                List<Project> projects = dao.getUserUnassignedProjects(user.getUsername());
 
-                if (projects == null || projects.isEmpty()) {
+                if (projects == null || projects.isEmpty())
                     return Response.noContent().build();
-                }
 
                 return Response.ok(projects).header(TOTAL_COUNT_HEADER, projects.size()).build();
             }
