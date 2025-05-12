@@ -27,12 +27,8 @@ import org.dependencytrack.persistence.jdbi.mapping.ProjectRoleRowMapper;
 import org.jdbi.v3.sqlobject.config.RegisterFieldMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.Define;
-import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
-
-import alpine.model.UserPrincipal;
 
 /**
  * @since 5.6.0
@@ -47,27 +43,27 @@ public interface RoleDao {
     int deleteRole(@Bind final long roleId);
 
     @SqlUpdate(/* language=sql */ """
-            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
-            <#assign prefix = userClass.getSimpleName()?upper_case>
-            INSERT INTO "${prefix}S_PROJECTS_ROLES"
-              ("${prefix}_ID", "PROJECT_ID", "ROLE_ID")
+            INSERT INTO "ROLES_PERMISSIONS"
+              ("ROLE_ID", "PERMISSION_ID")
+            VALUES
+              (:roleId, :permissionId)
+            ON CONFLICT DO NOTHING
+            """)
+    int addPermissionToRole(@Bind long roleId, @Bind long permissionId);
+
+    @SqlUpdate(/* language=sql */ """
+            INSERT INTO "USERS_PROJECTS_ROLES"
+              ("USER_ID", "PROJECT_ID", "ROLE_ID")
             VALUES
               (:userId, :projectId, :roleId)
             ON CONFLICT DO NOTHING
             """)
-    @DefineNamedBindings
-    <T extends UserPrincipal> int addRoleToUser(
-            @Define Class<T> userClass,
-            @Bind long userId,
-            @Bind long projectId,
-            @Bind long roleId);
+    int addRoleToUser(@Bind long userId, @Bind long projectId, @Bind long roleId);
 
     @SqlUpdate(/* language=sql */ """
-            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
-            <#assign prefix = userClass.getSimpleName()?upper_case>
             DELETE
-              FROM "${prefix}S_PROJECTS_ROLES"
-             WHERE "${prefix}_ID" = :userId
+              FROM "USERS_PROJECTS_ROLES"
+             WHERE "USER_ID" = :userId
                AND "ROLE_ID" = :roleId
                AND "PROJECT_ID" IN (
                  SELECT "ID"
@@ -75,52 +71,51 @@ public interface RoleDao {
                   WHERE "NAME" = :projectName
                )
             """)
-    @DefineNamedBindings
-    <T extends UserPrincipal> int removeRoleFromUser(
-            @Define Class<T> userClass,
-            @Bind long userId,
-            @Bind String projectName,
-            @Bind long roleId);
+    int removeRoleFromUser(@Bind long userId, @Bind String projectName, @Bind long roleId);
 
     @SqlQuery(/* language=sql */ """
-            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
-            <#assign prefix = userClass.getSimpleName()?upper_case>
             SELECT
-                p."ID"   AS "PROJECT_ID",
-                p."NAME" AS "PROJECT_NAME",
-                p."UUID" AS "PROJECT_UUID",
-                r."ID"   AS "ROLE_ID",
-                r."NAME" AS "ROLE_NAME",
-                r."UUID" AS "ROLE_UUID",
-                u."ID"   AS "${prefix}_ID"
+                p."ID"       AS "PROJECT_ID",
+                p."NAME"     AS "PROJECT_NAME",
+                p."UUID"     AS "PROJECT_UUID",
+                r."ID"       AS "ROLE_ID",
+                r."NAME"     AS "ROLE_NAME",
+                r."UUID"     AS "ROLE_UUID",
+                u."ID"       AS "USER_ID",
+                u."USERNAME" AS "USER_NAME",
+                u."TYPE"     AS "USER_TYPE"
               FROM "PROJECT" p
-             INNER JOIN "${prefix}S_PROJECTS_ROLES" pr
+             INNER JOIN "USERS_PROJECTS_ROLES" pr
                 ON pr."PROJECT_ID" = p."ID"
-             INNER JOIN "${prefix}" u
-                ON u."ID" = pr."${prefix}_ID"
+             INNER JOIN "USER" u
+                ON u."ID" = pr."USER_ID"
              INNER JOIN "ROLE" r
                 ON r."ID" = pr."ROLE_ID"
              WHERE u."USERNAME" = :username
             """)
     @RegisterRowMapper(ProjectRoleRowMapper.class)
-    @DefineNamedBindings
-    <T extends UserPrincipal> List<ProjectRole> getUserRoles(@Define Class<T> userClass, @Bind String username);
+    List<ProjectRole> getUserRoles(@Bind String username);
 
     @SqlQuery(/* language=sql */ """
-            <#-- @ftlvariable name="user" type="alpine.model.UserPrincipal" -->
-            <#assign prefix = userClass.getSimpleName()?upper_case>
             SELECT p."ID", p."NAME", p."UUID"
               FROM "PROJECT" p
-              LEFT JOIN "${prefix}S_PROJECTS_ROLES" pr
+              LEFT JOIN "USERS_PROJECTS_ROLES" pr
                 ON pr."PROJECT_ID" = p."ID"
-              LEFT JOIN "${prefix}" u
-                ON u."ID" = pr."${prefix}_ID"
+              LEFT JOIN "USER" u
+                ON u."ID" = pr."USER_ID"
              WHERE u."USERNAME" != :username
                 OR u."USERNAME" IS NULL
             """)
     @RegisterFieldMapper(Project.class)
-    <T extends UserPrincipal> List<Project> getUserUnassignedProjects(
-            @Define Class<T> userClass,
-            @Bind String username);
+    List<Project> getUserUnassignedProjects(@Bind String username);
+
+    @SqlUpdate(/* language=sql */ """
+            INSERT INTO "USERS_PROJECTS_ROLES"
+              ("USER_ID", "PROJECT_ID", "ROLE_ID")
+            VALUES (:userId, (SELECT "ID" FROM "PROJECT" WHERE "NAME" = :projectName), :roleId)
+                ON CONFLICT ("USER_ID", "PROJECT_ID") DO
+            UPDATE SET "ROLE_ID" = EXCLUDED."ROLE_ID"
+            """)
+    int setUserProjectRole(@Bind long userId, @Bind String projectName, @Bind long roleId);
 
 }

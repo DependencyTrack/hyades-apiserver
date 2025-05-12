@@ -39,7 +39,7 @@ import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.model.Permission;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.resources.AlpineRequest;
 
 final class RoleQueryManager extends QueryManager implements IQueryManager {
@@ -105,19 +105,18 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public List<? extends ProjectRole> getUserRoles(final UserPrincipal user) {
+    public List<ProjectRole> getUserRoles(final User user) {
         return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class)
-                .getUserRoles(user.getClass(), user.getUsername()));
+                .getUserRoles(user.getUsername()));
     }
 
     public List<Project> getUnassignedProjects(final String username) {
-        return getUnassignedProjects(getUserPrincipal(username));
+        return getUnassignedProjects(getUser(username));
     }
 
-    public List<Project> getUnassignedProjects(final UserPrincipal user) {
-        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).getUserUnassignedProjects(
-                user.getClass(),
-                user.getUsername()));
+    public List<Project> getUnassignedProjects(final User user) {
+        return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class)
+                .getUserUnassignedProjects(user.getUsername()));
     }
 
     public List<Permission> getUnassignedRolePermissions(final Role role) {
@@ -149,7 +148,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public List<Permission> getUserProjectPermissions(final String username, final String projectName) {
-        final UserPrincipal user = getUserPrincipal(username);
+        final User user = getUser(username);
         final String columnName;
 
         switch (user) {
@@ -168,7 +167,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
         final String projectIds = executeAndCloseList(projectsQuery).stream()
                 .map(Project::getId)
                 .map(String::valueOf)
-                .collect(Collectors.joining(", ", "'{", "}'"));
+                .collect(Collectors.joining(", ", "(", ")"));
 
         // language=SQL
         final var queryString = """
@@ -181,7 +180,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
                     upep."PERMISSION_NAME"
                   FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" upep
                  WHERE upep."%s" = :userId
-                   AND upep."PROJECT_ID" = ANY(%s)
+                   AND upep."PROJECT_ID" IN %s
                 """.formatted(columnName, projectIds);
 
         final Query<?> query = pm.newQuery(Query.SQL, queryString);
@@ -198,19 +197,17 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public boolean addRoleToUser(final UserPrincipal user, final Role role, final Project project) {
+    public boolean addRoleToUser(final User user, final Role role, final Project project) {
         return JdbiFactory.withJdbiHandle(
                 handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        user.getClass(),
                         user.getId(),
                         project.getId(),
                         role.getId())) == 1;
     }
 
     @Override
-    public boolean removeRoleFromUser(final UserPrincipal user, final Role role, final Project project) {
+    public boolean removeRoleFromUser(final User user, final Role role, final Project project) {
         return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class).removeRoleFromUser(
-                user.getClass(),
                 user.getId(),
                 project.getName(),
                 role.getId())) > 0;

@@ -20,26 +20,19 @@ package alpine.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
-import javax.jdo.annotations.Element;
-import javax.jdo.annotations.Extension;
-import javax.jdo.annotations.ForeignKeyAction;
-import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Join;
-import javax.jdo.annotations.Order;
+import javax.jdo.annotations.Discriminator;
+import javax.jdo.annotations.Inheritance;
+import javax.jdo.annotations.InheritanceStrategy;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
-import javax.jdo.annotations.PrimaryKey;
-import javax.jdo.annotations.Unique;
-import java.io.Serializable;
-import java.security.Principal;
 import java.util.Date;
-import java.util.List;
 
 /**
  * Persistable object representing an ManagedUser.
@@ -48,23 +41,22 @@ import java.util.List;
  * @since 1.0.0
  */
 @PersistenceCapable
+@Inheritance(strategy = InheritanceStrategy.SUPERCLASS_TABLE)
+@Discriminator(value = "MANAGED")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ManagedUser implements Serializable, Principal, UserPrincipal {
+@JsonPropertyOrder(value = {
+        "username",
+        "lastPasswordChange",
+        "fullname",
+        "email",
+        "suspended",
+        "forcePasswordChange",
+        "nonExpiryPassword",
+        "teams",
+        "permissions" })
+public class ManagedUser extends User {
 
     private static final long serialVersionUID = 7944779964068911025L;
-
-    @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
-    @JsonIgnore
-    private long id;
-
-    @Persistent
-    @Unique(name = "MANAGEDUSER_USERNAME_IDX")
-    @Column(name = "USERNAME")
-    @NotBlank
-    @Size(min = 1, max = 255)
-    @Pattern(regexp = "[\\P{Cc}]+", message = "The username must not contain control characters")
-    private String username;
 
     @Persistent
     @Column(name = "PASSWORD", allowsNull = "false")
@@ -94,12 +86,6 @@ public class ManagedUser implements Serializable, Principal, UserPrincipal {
     private String fullname;
 
     @Persistent
-    @Column(name = "EMAIL")
-    @Size(max = 255)
-    @Pattern(regexp = "[\\P{Cc}]+", message = "The email address must not contain control characters")
-    private String email;
-
-    @Persistent
     @Column(name = "SUSPENDED")
     private boolean suspended;
 
@@ -110,34 +96,6 @@ public class ManagedUser implements Serializable, Principal, UserPrincipal {
     @Persistent
     @Column(name = "NON_EXPIRY_PASSWORD")
     private boolean nonExpiryPassword;
-
-    @Persistent(table = "MANAGEDUSERS_TEAMS", defaultFetchGroup = "true")
-    @Join(column = "MANAGEDUSER_ID", primaryKey = "MANAGEDUSERS_TEAMS_PK", foreignKey = "MANAGEDUSERS_TEAMS_MANAGEDUSER_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Element(column = "TEAM_ID", foreignKey = "MANAGEDUSERS_TEAMS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    private List<Team> teams;
-
-    @Persistent(table = "MANAGEDUSERS_PERMISSIONS", defaultFetchGroup = "true")
-    @Join(column = "MANAGEDUSER_ID", primaryKey = "MANAGEDUSERS_PERMISSIONS_PK", foreignKey = "MANAGEDUSERS_PERMISSIONS_MANAGEDUSER_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Element(column = "PERMISSION_ID", foreignKey = "MANAGEDUSERS_PERMISSIONS_PERMISSION_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    private List<Permission> permissions;
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
 
     public String getPassword() {
         return password;
@@ -179,14 +137,6 @@ public class ManagedUser implements Serializable, Principal, UserPrincipal {
         this.fullname = fullname;
     }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
     public boolean isSuspended() {
         return suspended;
     }
@@ -209,33 +159,6 @@ public class ManagedUser implements Serializable, Principal, UserPrincipal {
 
     public void setNonExpiryPassword(boolean nonExpiryPassword) {
         this.nonExpiryPassword = nonExpiryPassword;
-    }
-
-    public List<Team> getTeams() {
-        return teams;
-    }
-
-    public void setTeams(List<Team> teams) {
-        this.teams = teams;
-    }
-
-    public List<Permission> getPermissions() {
-        return permissions;
-    }
-
-    public void setPermissions(List<Permission> permissions) {
-        this.permissions = permissions;
-    }
-
-    /**
-     * Do not use - only here to satisfy Principal implementation requirement.
-     * @deprecated use {@link ManagedUser#getUsername()}
-     * @return the value of {@link #getUsername()}
-     */
-    @Deprecated
-    @JsonIgnore
-    public String getName() {
-        return getUsername();
     }
 
 }

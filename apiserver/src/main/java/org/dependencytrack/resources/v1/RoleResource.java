@@ -57,7 +57,7 @@ import org.jdbi.v3.core.Handle;
 import org.owasp.security.logging.SecurityMarkers;
 
 import alpine.model.Permission;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
@@ -255,13 +255,13 @@ public class RoleResource extends AlpineResource {
     public Response getUserRoles(
             @Parameter(description = "A valid username", required = true) @PathParam("username") String username) {
         try (QueryManager qm = new QueryManager()) {
-            UserPrincipal principal = qm.getUserPrincipal(username);
-            if (principal == null) {
+            User user = qm.getUser(username);
+            if (user == null) {
                 LOGGER.warn("User not found: " + username);
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
 
-            List<? extends ProjectRole> roles = qm.getUserRoles(principal);
+            List<ProjectRole> roles = qm.getUserRoles(user);
             if (roles == null || roles.isEmpty()) {
                 LOGGER.info("No roles found for user: " + username);
                 return Response.ok(List.of()).build();

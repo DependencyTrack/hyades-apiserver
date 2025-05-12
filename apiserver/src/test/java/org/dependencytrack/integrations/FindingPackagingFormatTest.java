@@ -74,8 +74,8 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
                 "Test", "Sample project", "1.0", null, null, null, null, false);
 
         FindingDao.FindingRow findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
-                "component-name-1", null, "component-version", null, null, UUID.randomUUID(),
-                Vulnerability.Source.GITHUB, "vuln-vulnId-1", "vuln-title", "vuln-subtitle", "vuln-description",
+                "component-name-1", null, "component-version", null, null, true,
+                UUID.randomUUID(), Vulnerability.Source.GITHUB, "vuln-vulnId-1", "vuln-title", "vuln-subtitle", "vuln-description",
                 "vuln-recommendation", Instant.now(), Severity.CRITICAL, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
                 "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
                 "owasp-vector", null, BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),
@@ -103,8 +103,8 @@ public class FindingPackagingFormatTest extends PersistenceCapableTest {
         other.setVulnDbId(null);
 
         findingRow = new FindingDao.FindingRow(project.getUuid(), UUID.randomUUID(), project.getName(), project.getVersion(),
-                "component-name-2", null, "component-version", null, null, UUID.randomUUID(),
-                Vulnerability.Source.NVD, "vuln-vulnId-2", "vuln-title", "vuln-subtitle", "vuln-description",
+                "component-name-2", null, "component-version", null, null, true,
+                UUID.randomUUID(), Vulnerability.Source.NVD, "vuln-vulnId-2", "vuln-title", "vuln-subtitle", "vuln-description",
                 "vuln-recommendation", Instant.now(), Severity.HIGH, null, BigDecimal.valueOf(7.2), BigDecimal.valueOf(8.4),
                 "cvssV2-vector", "cvssV3-vector", BigDecimal.valueOf(1.25), BigDecimal.valueOf(1.75), BigDecimal.valueOf(1.3),
                 "owasp-vector", List.of(alias, other), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.9),

@@ -324,6 +324,12 @@ public class DefaultObjectGenerator implements ServletContextListener {
         return names.stream().map(PERMISSIONS_MAP::get).filter(Objects::nonNull).toList();
     }
 
+    public void loadDefaultRoles() {
+        try (final var qm = new QueryManager()) {
+            loadDefaultRoles(qm);
+        }
+    }
+
     /**
      * Loads the default Roles
      */

@@ -156,7 +156,7 @@ public class TeamResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("My Team", json.getString("name"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
-        Assert.assertTrue(json.getJsonArray("apiKeys").isEmpty());
+        Assert.assertFalse(json.containsKey("apiKeys"));
     }
 
     @Test
