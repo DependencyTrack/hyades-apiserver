@@ -73,12 +73,11 @@
             </column>
 
             <column name="ROLE_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="USERS_PROJECTS_ROLES_COMPOSITE_IDX"
+                <constraints nullable="false"
                     foreignKeyName="USERS_PROJECTS_ROLES_ROLE_FK"
                     referencedTableName="ROLE" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
+                    validateForeignKey="true" />
             </column>
         </createTable>
 
