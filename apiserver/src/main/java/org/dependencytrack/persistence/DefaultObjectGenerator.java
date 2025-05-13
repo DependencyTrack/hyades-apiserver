@@ -128,7 +128,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
             recordDefaultObjectsVersion(qm);
         }
 
-        LOGGER.info("Ensuring the metrics partitions for today");
+        LOGGER.info("Ensuring the metrics partitions for today and tomorrow exist.");
         ensureMetricsPartitions();
     }
 
@@ -370,11 +370,13 @@ public class DefaultObjectGenerator implements ServletContextListener {
     }
 
     /**
-     * Checks if metrics partitions exist for today and create if they don't exist.
+     * Create metrics partitions for today and tomorrow if they don't exist.
      */
     void ensureMetricsPartitions() {
-        useJdbiHandle(handle -> handle.attach(MetricsDao.class).createMetricsPartitionsForDate(
-                LocalDate.now().toString(),
-                LocalDate.now().plusDays(1).toString()));
+        useJdbiHandle(handle -> {
+            var metricsHandle = handle.attach(MetricsDao.class);
+            metricsHandle.createMetricsPartitionsForDate(LocalDate.now().toString(), LocalDate.now().plusDays(1).toString());
+            metricsHandle.createMetricsPartitionsForDate(LocalDate.now().plusDays(1).toString(), LocalDate.now().plusDays(2).toString());
+        });
     }
 }

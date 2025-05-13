@@ -23,10 +23,9 @@ import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.ProjectMetrics;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
-import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.customizer.BindBean;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -37,41 +36,35 @@ public interface MetricsUtil extends SqlObject {
             INSERT INTO "PORTFOLIOMETRICS"(
                 "PROJECTS", "COMPONENTS", "FIRST_OCCURRENCE", "LAST_OCCURRENCE", "CRITICAL", "HIGH", "MEDIUM", "LOW", "RISKSCORE",
                 "SUPPRESSED", "VULNERABILITIES", "VULNERABLEPROJECTS", "VULNERABLECOMPONENTS")
-            VALUES (:projects, :components, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :riskScore,
+            VALUES (:projects, :components, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :inheritedRiskScore,
                  :suppressed, :vulnerabilities, :vulnerableProjects, :vulnerableComponents)
             RETURNING *
             """)
     @RegisterBeanMapper(PortfolioMetrics.class)
-    PortfolioMetrics createPortfolioMetrics(@Bind int projects, @Bind int components, @Bind Instant firstOccurrence, @Bind Instant lastOccurrence,
-                                            @Bind int critical, @Bind int high, @Bind int medium, @Bind int low, @Bind double riskScore,
-                                            @Bind int suppressed, @Bind int vulnerabilities, @Bind int vulnerableProjects, @Bind int vulnerableComponents);
+    PortfolioMetrics createPortfolioMetrics(@BindBean PortfolioMetrics portfolioMetrics);
 
 
     @SqlQuery("""
             INSERT INTO "PROJECTMETRICS"(
                 "PROJECT_ID", "COMPONENTS", "FIRST_OCCURRENCE", "LAST_OCCURRENCE", "CRITICAL", "HIGH", "MEDIUM", "LOW", "RISKSCORE",
                 "SUPPRESSED", "VULNERABILITIES", "VULNERABLECOMPONENTS")
-            VALUES (:projectId, :components, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :riskScore,
+            VALUES (:project.id, :components, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :inheritedRiskScore,
                  :suppressed, :vulnerabilities, :vulnerableComponents)
             RETURNING *
             """)
     @RegisterBeanMapper(ProjectMetrics.class)
-    ProjectMetrics createProjectMetrics(@Bind long projectId, @Bind int components, @Bind Instant firstOccurrence, @Bind Instant lastOccurrence,
-                                        @Bind int critical, @Bind int high, @Bind int medium, @Bind int low, @Bind double riskScore,
-                                        @Bind int suppressed, @Bind int vulnerabilities, @Bind int vulnerableComponents);
+    ProjectMetrics createProjectMetrics(@BindBean ProjectMetrics projectMetrics);
 
     @SqlQuery("""
             INSERT INTO "DEPENDENCYMETRICS"(
                 "COMPONENT_ID", "PROJECT_ID", "FIRST_OCCURRENCE", "LAST_OCCURRENCE", "CRITICAL", "HIGH", "MEDIUM", "LOW", "RISKSCORE",
                 "SUPPRESSED", "VULNERABILITIES")
-            VALUES (:componentId, :projectId, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :riskScore,
+            VALUES (:component.id, :project.id, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :inheritedRiskScore,
                  :suppressed, :vulnerabilities)
             RETURNING *
             """)
     @RegisterBeanMapper(DependencyMetrics.class)
-    DependencyMetrics createDependencyMetrics(@Bind long componentId, @Bind long projectId, @Bind Instant firstOccurrence,
-                                              @Bind Instant lastOccurrence, @Bind int critical, @Bind int high, @Bind int medium,
-                                              @Bind int low, @Bind double riskScore, @Bind int suppressed, @Bind int vulnerabilities);
+    DependencyMetrics createDependencyMetrics(@BindBean DependencyMetrics dependencyMetrics);
 
     default void createMetricsPartitionsForDate(String tableName, LocalDate targetDate) {
         LocalDate nextDay = targetDate.plusDays(1);

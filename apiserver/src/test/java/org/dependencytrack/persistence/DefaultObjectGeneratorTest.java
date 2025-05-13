@@ -153,15 +153,19 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testMetricsPartitionsForToday() {
+    public void testMetricsPartitionsForTodayAndTomorrow() {
         DefaultObjectGenerator generator = new DefaultObjectGenerator();
         generator.ensureMetricsPartitions();
         var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        var tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
         withJdbiHandle(handle -> {
             var metricsHandle = handle.attach(MetricsDao.class);
             assertThat(Collections.frequency(metricsHandle.getPortfolioMetricsPartitions(), "\"PORTFOLIOMETRICS_%s\"".formatted(today))).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getPortfolioMetricsPartitions(), "\"PORTFOLIOMETRICS_%s\"".formatted(tomorrow))).isEqualTo(1);
             assertThat(Collections.frequency(metricsHandle.getProjectMetricsPartitions(), "\"PROJECTMETRICS_%s\"".formatted(today))).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getProjectMetricsPartitions(), "\"PROJECTMETRICS_%s\"".formatted(tomorrow))).isEqualTo(1);
             assertThat(Collections.frequency(metricsHandle.getDependencyMetricsPartitions(), "\"DEPENDENCYMETRICS_%s\"".formatted(today))).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getDependencyMetricsPartitions(), "\"DEPENDENCYMETRICS_%s\"".formatted(tomorrow))).isEqualTo(1);
             return null;
         });
     }

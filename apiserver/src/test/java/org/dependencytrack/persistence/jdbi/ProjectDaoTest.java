@@ -28,6 +28,7 @@ import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.NotificationPublisher;
@@ -38,12 +39,14 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
+import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Vex;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.util.DateUtil;
 import org.jdbi.v3.core.Handle;
 import org.junit.After;
 import org.junit.Before;
@@ -51,6 +54,7 @@ import org.junit.Test;
 
 import javax.jdo.JDOObjectNotFoundException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -59,6 +63,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ProjectDaoTest extends PersistenceCapableTest {
@@ -157,13 +162,25 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         integrityAnalysis.setUpdatedAt(new Date());
         qm.persist(integrityAnalysis);
 
-        // Create metrics for component.
-        jdbiHandle.attach(MetricsUtil.class).createDependencyMetrics(component.getId(), project.getId(), Instant.now(), Instant.now(),
-                0, 0, 0, 0, 0, 0, 0);
+        // Create metrics for project and component.
+        useJdbiHandle(handle ->  {
+            var dao = handle.attach(MetricsUtil.class);
+            dao.createMetricsPartitionsForDate("PROJECTMETRICS", LocalDate.of(2025, 1, 1));
+            dao.createMetricsPartitionsForDate("DEPENDENCYMETRICS", LocalDate.of(2025, 1, 1));
 
-        // Create metrics for project.
-        jdbiHandle.attach(MetricsUtil.class).createProjectMetrics(project.getId(), 0, Instant.now(), Instant.now(),
-                0, 0, 0, 0, 0, 0, 0, 0);
+            var projectMetrics = new ProjectMetrics();
+            projectMetrics.setProject(project);
+            projectMetrics.setFirstOccurrence(Date.from(Instant.now()));
+            projectMetrics.setLastOccurrence(DateUtil.parseShortDate("20250101"));
+            dao.createProjectMetrics(projectMetrics);
+
+            var dependencyMetrics = new DependencyMetrics();
+            dependencyMetrics.setProject(project);
+            dependencyMetrics.setComponent(component);
+            dependencyMetrics.setFirstOccurrence(Date.from(Instant.now()));
+            dependencyMetrics.setLastOccurrence(DateUtil.parseShortDate("20250101"));
+            dao.createDependencyMetrics(dependencyMetrics);
+        });
 
         // Create a BOM.
         final Bom bom = qm.createBom(project, new Date(), Bom.Format.CYCLONEDX, "1.4", 1, "serialNumber", UUID.randomUUID(), null);
@@ -223,8 +240,8 @@ public class ProjectDaoTest extends PersistenceCapableTest {
 
         // Ensure that metrics have been deleted.
         MetricsDao dao = jdbiHandle.attach(MetricsDao.class);
-        assertThat(dao.getProjectMetricsSince(project.getId(), Instant.now())).isEmpty();
-        assertThat(dao.getDependencyMetricsSince(component.getId(), Instant.now())).isEmpty();
+        assertThat(dao.getProjectMetricsSince(project.getId(), DateUtil.parseShortDate("20250101").toInstant())).isEmpty();
+        assertThat(dao.getDependencyMetricsSince(component.getId(), DateUtil.parseShortDate("20250101").toInstant())).isEmpty();
     }
 
     @Test

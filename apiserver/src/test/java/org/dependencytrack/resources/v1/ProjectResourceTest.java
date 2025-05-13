@@ -55,6 +55,7 @@ import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
+import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
@@ -759,10 +760,33 @@ public class ProjectResourceTest extends ResourceTest {
 
         useJdbiHandle(handle ->  {
             var dao = handle.attach(MetricsUtil.class);
-            dao.createProjectMetrics(project.getId(), 0, projectMetricsOldOccurrence, projectMetricsOldOccurrence,
-                    666, 0, 0, 0, 0, 0, 0, 0);
-            dao.createProjectMetrics(project.getId(), 1, projectMetricsLatestOccurrence, projectMetricsLatestOccurrence,
-                    2, 3, 5, 4, 13.13, 0, 15, 0);
+            final var projectMetricsOld = new ProjectMetrics();
+            projectMetricsOld.setProject(project);
+            projectMetricsOld.setCritical(666);
+            projectMetricsOld.setFirstOccurrence(Date.from(projectMetricsOldOccurrence));
+            projectMetricsOld.setLastOccurrence(Date.from(projectMetricsOldOccurrence));
+            dao.createProjectMetrics(projectMetricsOld);
+
+            final var projectMetricsLatest = new ProjectMetrics();
+            projectMetricsLatest.setProject(project);
+            projectMetricsLatest.setComponents(1);
+            projectMetricsLatest.setCritical(2);
+            projectMetricsLatest.setHigh(3);
+            projectMetricsLatest.setLow(4);
+            projectMetricsLatest.setMedium(5);
+            projectMetricsLatest.setPolicyViolationsFail(6);
+            projectMetricsLatest.setPolicyViolationsInfo(7);
+            projectMetricsLatest.setPolicyViolationsLicenseTotal(8);
+            projectMetricsLatest.setPolicyViolationsOperationalTotal(9);
+            projectMetricsLatest.setPolicyViolationsSecurityTotal(10);
+            projectMetricsLatest.setPolicyViolationsTotal(11);
+            projectMetricsLatest.setPolicyViolationsWarn(12);
+            projectMetricsLatest.setInheritedRiskScore(13.13);
+            projectMetricsLatest.setUnassigned(14);
+            projectMetricsLatest.setVulnerabilities(15);
+            projectMetricsLatest.setFirstOccurrence(Date.from(projectMetricsLatestOccurrence));
+            projectMetricsLatest.setLastOccurrence(Date.from(projectMetricsLatestOccurrence));
+            dao.createProjectMetrics(projectMetricsLatest);
         });
 
         // Should not include metrics if not explicitly requested.
@@ -1222,10 +1246,33 @@ public class ProjectResourceTest extends ResourceTest {
 
         useJdbiHandle(handle ->  {
             var dao = handle.attach(MetricsUtil.class);
-            dao.createProjectMetrics(childProject.getId(), 0, projectMetricsOldOccurrence, projectMetricsOldOccurrence,
-                    666, 0, 0, 0, 0, 0, 0, 0);
-            dao.createProjectMetrics(childProject.getId(), 1, projectMetricsLatestOccurrence, projectMetricsLatestOccurrence,
-                    2, 3, 5, 4, 13.13, 0, 15, 0);
+            final var projectMetricsOld = new ProjectMetrics();
+            projectMetricsOld.setProject(childProject);
+            projectMetricsOld.setCritical(666);
+            projectMetricsOld.setFirstOccurrence(Date.from(projectMetricsOldOccurrence));
+            projectMetricsOld.setLastOccurrence(Date.from(projectMetricsOldOccurrence));
+            dao.createProjectMetrics(projectMetricsOld);
+
+            final var projectMetricsLatest = new ProjectMetrics();
+            projectMetricsLatest.setProject(childProject);
+            projectMetricsLatest.setComponents(1);
+            projectMetricsLatest.setCritical(2);
+            projectMetricsLatest.setHigh(3);
+            projectMetricsLatest.setLow(4);
+            projectMetricsLatest.setMedium(5);
+            projectMetricsLatest.setPolicyViolationsFail(6);
+            projectMetricsLatest.setPolicyViolationsInfo(7);
+            projectMetricsLatest.setPolicyViolationsLicenseTotal(8);
+            projectMetricsLatest.setPolicyViolationsOperationalTotal(9);
+            projectMetricsLatest.setPolicyViolationsSecurityTotal(10);
+            projectMetricsLatest.setPolicyViolationsTotal(11);
+            projectMetricsLatest.setPolicyViolationsWarn(12);
+            projectMetricsLatest.setInheritedRiskScore(13.13);
+            projectMetricsLatest.setUnassigned(14);
+            projectMetricsLatest.setVulnerabilities(15);
+            projectMetricsLatest.setFirstOccurrence(Date.from(projectMetricsLatestOccurrence));
+            projectMetricsLatest.setLastOccurrence(Date.from(projectMetricsLatestOccurrence));
+            dao.createProjectMetrics(projectMetricsLatest);
         });
 
         // Should not include metrics if not explicitly requested.

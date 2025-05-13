@@ -28,6 +28,7 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.util.DateUtil;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -37,6 +38,7 @@ import org.junit.Test;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Date;
 import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -328,11 +330,18 @@ public class MetricsResourceTest extends ResourceTest {
         useJdbiHandle(handle -> {
             var dao = handle.attach(MetricsUtil.class);
             dao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 30);
-            dao.createPortfolioMetrics(1, 0, Instant.now(), Instant.now().minus(Duration.ofDays(30)),
-                    0, 0, 0, 0, 0, 0, 3, 0, 0);
+            var metrics = new PortfolioMetrics();
+            metrics.setVulnerabilities(3);
+            metrics.setFirstOccurrence(Date.from(Instant.now()));
+            metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(30))));
+            dao.createPortfolioMetrics(metrics);
+
             dao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 20);
-            dao.createPortfolioMetrics(1, 0, Instant.now(), Instant.now().minus(Duration.ofDays(20)),
-                    0, 0, 0, 0, 0, 0, 2, 0, 0);
+            metrics = new PortfolioMetrics();
+            metrics.setVulnerabilities(2);
+            metrics.setFirstOccurrence(Date.from(Instant.now()));
+            metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
+            dao.createPortfolioMetrics(metrics);
         });
 
         final Supplier<Response> responseSupplier = () -> jersey
@@ -356,11 +365,18 @@ public class MetricsResourceTest extends ResourceTest {
         useJdbiHandle(handle -> {
             var dao = handle.attach(MetricsUtil.class);
             dao.createMetricsPartitionsForDate("PORTFOLIOMETRICS", LocalDate.of(2025, 1, 1));
-            dao.createPortfolioMetrics(1, 0, Instant.now(), DateUtil.parseShortDate("20250101").toInstant(),
-                    0, 0, 0, 0, 0, 0, 3, 0, 0);
+            var metrics = new PortfolioMetrics();
+            metrics.setVulnerabilities(3);
+            metrics.setFirstOccurrence(Date.from(Instant.now()));
+            metrics.setLastOccurrence(DateUtil.parseShortDate("20250101"));
+            dao.createPortfolioMetrics(metrics);
+
             dao.createMetricsPartitionsForDate("PORTFOLIOMETRICS", LocalDate.of(2025, 2, 1));
-            dao.createPortfolioMetrics(1, 0, Instant.now(), DateUtil.parseShortDate("20250201").toInstant(),
-                    0, 0, 0, 0, 0, 0, 2, 0, 0);
+            metrics = new PortfolioMetrics();
+            metrics.setVulnerabilities(2);
+            metrics.setFirstOccurrence(Date.from(Instant.now()));
+            metrics.setLastOccurrence(DateUtil.parseShortDate("20250201"));
+            dao.createPortfolioMetrics(metrics);
         });
 
         final Supplier<Response> responseSupplier = () -> jersey

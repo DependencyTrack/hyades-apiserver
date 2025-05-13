@@ -66,7 +66,7 @@ public interface MetricsDao extends SqlObject {
     List<DependencyMetrics> getDependencyMetricsSince(@Bind Long componentId,@Bind Instant since);
 
     @SqlQuery("""
-            SELECT *, "RISKSCORE" AS "inheritedRiskScore"
+            SELECT *
             FROM "PORTFOLIOMETRICS"
             ORDER BY "LAST_OCCURRENCE" DESC
             LIMIT 1
