@@ -19,6 +19,7 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -138,7 +139,7 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         qm.persist(integrityAnalysis);
 
         // Create metrics for component.
-        withJdbiHandle(handle ->  handle.attach(MetricsDao.class).createDependencyMetrics(component.getId(), project.getId(),
+        withJdbiHandle(handle ->  handle.attach(MetricsUtil.class).createDependencyMetrics(component.getId(), project.getId(),
                 Instant.now(), Instant.now(), 0, 0, 0, 0, 0, 0, 0));
 
         componentDao.deleteComponent(component.getUuid());

@@ -20,6 +20,7 @@ package org.dependencytrack.tasks.maintenance;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
+import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
@@ -38,18 +39,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
     private Handle jdbiHandle;
     private MetricsDao metricsDao;
+    private MetricsUtil metricsUtil;
 
     @Before
     public void before() throws Exception {
         super.before();
         jdbiHandle = openJdbiHandle();
         metricsDao = jdbiHandle.attach(MetricsDao.class);
+        metricsUtil = jdbiHandle.attach(MetricsUtil.class);
     }
 
     @After
@@ -80,44 +82,44 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         qm.persist(component);
 
         final BiConsumer<Instant, Integer> createComponentMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            withJdbiHandle(handle ->  handle.attach(MetricsDao.class).createDependencyMetrics(component.getId(), project.getId(),
-                    lastOccurrence, lastOccurrence, 0, 0, 0, 0, 0, 0, vulns));
+            metricsUtil.createDependencyMetrics(component.getId(), project.getId(),
+                    lastOccurrence, lastOccurrence, 0, 0, 0, 0, 0, 0, vulns);
         };
 
         final BiConsumer<Instant, Integer> createProjectMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            withJdbiHandle(handle ->  handle.attach(MetricsDao.class).createProjectMetrics(project.getId(), 0, lastOccurrence,
-                    lastOccurrence, 0, 0, 0, 0, 0, 0, vulns, 0));
+            metricsUtil.createProjectMetrics(project.getId(), 0, lastOccurrence,
+                    lastOccurrence, 0, 0, 0, 0, 0, 0, vulns, 0);
         };
 
         final BiConsumer<Instant, Integer> createPortfolioMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            withJdbiHandle(handle ->  handle.attach(MetricsDao.class).createPortfolioMetrics(1, 0, lastOccurrence,
-                    lastOccurrence, 0, 0, 0, 0, 0, 0, vulns, 0, 0));
+            metricsUtil.createPortfolioMetrics(1, 0, lastOccurrence,
+                    lastOccurrence, 0, 0, 0, 0, 0, 0, vulns, 0, 0);
         };
 
         final Instant now = Instant.now();
 
         // Create component metrics partitions for dates required
-        metricsDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 91);
-        metricsDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 90);
-        metricsDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 89);
+        metricsUtil.createPartitionForDaysAgo("DEPENDENCYMETRICS", 91);
+        metricsUtil.createPartitionForDaysAgo("DEPENDENCYMETRICS", 90);
+        metricsUtil.createPartitionForDaysAgo("DEPENDENCYMETRICS", 89);
 
         createComponentMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createComponentMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createComponentMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
 
         // Create project metrics partitions for dates required
-        metricsDao.createPartitionForDaysAgo("PROJECTMETRICS", 91);
-        metricsDao.createPartitionForDaysAgo("PROJECTMETRICS", 90);
-        metricsDao.createPartitionForDaysAgo("PROJECTMETRICS", 89);
+        metricsUtil.createPartitionForDaysAgo("PROJECTMETRICS", 91);
+        metricsUtil.createPartitionForDaysAgo("PROJECTMETRICS", 90);
+        metricsUtil.createPartitionForDaysAgo("PROJECTMETRICS", 89);
 
         createProjectMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createProjectMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createProjectMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
 
         // Create portfolio metrics partitions for dates required
-        metricsDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 91);
-        metricsDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 90);
-        metricsDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 89);
+        metricsUtil.createPartitionForDaysAgo("PORTFOLIOMETRICS", 91);
+        metricsUtil.createPartitionForDaysAgo("PORTFOLIOMETRICS", 90);
+        metricsUtil.createPartitionForDaysAgo("PORTFOLIOMETRICS", 89);
 
         createPortfolioMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createPortfolioMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);

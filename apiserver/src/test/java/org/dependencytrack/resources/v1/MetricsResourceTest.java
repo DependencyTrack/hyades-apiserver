@@ -26,9 +26,9 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.util.DateUtil;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
@@ -326,7 +326,7 @@ public class MetricsResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
 
         useJdbiHandle(handle -> {
-            var dao = handle.attach(MetricsDao.class);
+            var dao = handle.attach(MetricsUtil.class);
             dao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 30);
             dao.createPortfolioMetrics(1, 0, Instant.now(), Instant.now().minus(Duration.ofDays(30)),
                     0, 0, 0, 0, 0, 0, 3, 0, 0);
@@ -354,7 +354,7 @@ public class MetricsResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
 
         useJdbiHandle(handle -> {
-            var dao = handle.attach(MetricsDao.class);
+            var dao = handle.attach(MetricsUtil.class);
             dao.createMetricsPartitionsForDate("PORTFOLIOMETRICS", LocalDate.of(2025, 1, 1));
             dao.createPortfolioMetrics(1, 0, Instant.now(), DateUtil.parseShortDate("20250101").toInstant(),
                     0, 0, 0, 0, 0, 0, 3, 0, 0);

@@ -23,6 +23,7 @@ import net.jcip.annotations.NotThreadSafe;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -201,7 +202,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // must be considered. Because the update task calculates new project metrics data points,
         // the ones created below must be ignored.
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsDao.class);
+            var dao = handle.attach(MetricsUtil.class);
             dao.createProjectMetrics(projectUnaudited.getId(), 0, Instant.ofEpochSecond(1670843532), Instant.now(),
                     0, 0, 0, 0, 0, 1, 0, 0);
             dao.createProjectMetrics(projectAudited.getId(), 0, Instant.ofEpochSecond(1670843532), Instant.now(),
@@ -299,7 +300,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // must be considered. Because the update task calculates new project metrics data points,
         // the ones created below must be ignored.
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsDao.class);
+            var dao = handle.attach(MetricsUtil.class);
             dao.createProjectMetrics(projectUnaudited.getId(), 0, Instant.ofEpochSecond(1670843532), Instant.now(),
                     0, 0, 0, 0, 0, 1, 0, 0);
             dao.createProjectMetrics(projectAudited.getId(), 0, Instant.ofEpochSecond(1670843532), Instant.now(),

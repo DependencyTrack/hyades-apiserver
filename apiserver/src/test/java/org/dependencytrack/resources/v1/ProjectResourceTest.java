@@ -39,6 +39,7 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
+import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -62,7 +63,6 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
-import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -758,7 +758,7 @@ public class ProjectResourceTest extends ResourceTest {
         final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
 
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsDao.class);
+            var dao = handle.attach(MetricsUtil.class);
             dao.createProjectMetrics(project.getId(), 0, projectMetricsOldOccurrence, projectMetricsOldOccurrence,
                     666, 0, 0, 0, 0, 0, 0, 0);
             dao.createProjectMetrics(project.getId(), 1, projectMetricsLatestOccurrence, projectMetricsLatestOccurrence,
@@ -1221,7 +1221,7 @@ public class ProjectResourceTest extends ResourceTest {
         final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
 
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsDao.class);
+            var dao = handle.attach(MetricsUtil.class);
             dao.createProjectMetrics(childProject.getId(), 0, projectMetricsOldOccurrence, projectMetricsOldOccurrence,
                     666, 0, 0, 0, 0, 0, 0, 0);
             dao.createProjectMetrics(childProject.getId(), 1, projectMetricsLatestOccurrence, projectMetricsLatestOccurrence,

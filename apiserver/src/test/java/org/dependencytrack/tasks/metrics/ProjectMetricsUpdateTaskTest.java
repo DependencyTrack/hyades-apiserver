@@ -19,6 +19,7 @@
 package org.dependencytrack.tasks.metrics;
 
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -159,7 +160,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         // must be considered. Because the update task calculates new component metrics data points,
         // the ones created below must be ignored.
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsDao.class);
+            var dao = handle.attach(MetricsUtil.class);
             dao.createDependencyMetrics(componentUnaudited.getId(), project.getId(),
                     Instant.ofEpochSecond(1670843532), Instant.now(), 1, 0, 0, 0, 0, 0, 0);
             dao.createDependencyMetrics(componentAudited.getId(), project.getId(),
@@ -254,7 +255,7 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         // must be considered. Because the update task calculates new component metrics data points,
         // the ones created below must be ignored.
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsDao.class);
+            var dao = handle.attach(MetricsUtil.class);
             dao.createDependencyMetrics(componentUnaudited.getId(), project.getId(),
                     Instant.ofEpochSecond(1670843532), Instant.now(), 1, 0, 0, 0, 0, 0, 0);
             dao.createDependencyMetrics(componentAudited.getId(), project.getId(),

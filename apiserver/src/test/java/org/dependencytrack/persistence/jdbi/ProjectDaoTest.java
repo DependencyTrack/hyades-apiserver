@@ -20,6 +20,7 @@ package org.dependencytrack.persistence.jdbi;
 
 import alpine.notification.NotificationLevel;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -27,7 +28,6 @@ import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.NotificationPublisher;
@@ -38,7 +38,6 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Vex;
 import org.dependencytrack.model.ViolationAnalysis;
@@ -159,13 +158,11 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         qm.persist(integrityAnalysis);
 
         // Create metrics for component.
-        final var componentMetrics = new DependencyMetrics();
-        jdbiHandle.attach(MetricsDao.class).createDependencyMetrics(component.getId(), project.getId(), Instant.now(), Instant.now(),
+        jdbiHandle.attach(MetricsUtil.class).createDependencyMetrics(component.getId(), project.getId(), Instant.now(), Instant.now(),
                 0, 0, 0, 0, 0, 0, 0);
 
         // Create metrics for project.
-        final var projectMetrics = new ProjectMetrics();
-        jdbiHandle.attach(MetricsDao.class).createProjectMetrics(project.getId(), 0, Instant.now(), Instant.now(),
+        jdbiHandle.attach(MetricsUtil.class).createProjectMetrics(project.getId(), 0, Instant.now(), Instant.now(),
                 0, 0, 0, 0, 0, 0, 0, 0);
 
         // Create a BOM.
