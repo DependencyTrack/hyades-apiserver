@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.common.config.BuildInfoConfig;
+import alpine.common.config.BuildInfoConfig.ApplicationBuildInfo;
 import alpine.server.auth.PasswordService;
 import org.apache.commons.lang3.SerializationUtils;
 import org.dependencytrack.auth.Permissions;
@@ -53,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static alpine.common.config.ConfigUtil.getConfigMapping;
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_DEFAULT_OBJECTS_VERSION;
 import static org.dependencytrack.model.ConfigPropertyConstants.NOTIFICATION_TEMPLATE_BASE_DIR;
 import static org.dependencytrack.model.ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED;
@@ -130,14 +133,17 @@ public final class DatabaseSeedingInitTask implements InitTask {
         jdbi.useTransaction(handle -> {
             final var configPropertyDao = handle.attach(ConfigPropertyDao.class);
 
+            final ApplicationBuildInfo appBuildInfo =
+                    getConfigMapping(ctx.config(), BuildInfoConfig.class).application();
+            final String appBuildUuid = appBuildInfo.uuid();
             final String defaultObjectsVersion = configPropertyDao
                     .getOptionalValue(INTERNAL_DEFAULT_OBJECTS_VERSION)
                     .orElse(null);
-            if (ctx.config().getApplicationBuildUuid().equals(defaultObjectsVersion)) {
+            if (appBuildUuid.equals(defaultObjectsVersion)) {
                 LOGGER.info(
                         "Default objects already populated for build {} (timestamp: {}); Skipping",
-                        ctx.config().getApplicationBuildUuid(),
-                        ctx.config().getApplicationBuildTimestamp());
+                        appBuildUuid,
+                        appBuildInfo.timestamp());
                 return;
             }
 
@@ -157,7 +163,7 @@ public final class DatabaseSeedingInitTask implements InitTask {
 
             configPropertyDao.setValue(
                     INTERNAL_DEFAULT_OBJECTS_VERSION,
-                    ctx.config().getApplicationBuildUuid());
+                    appBuildUuid);
         });
     }
 

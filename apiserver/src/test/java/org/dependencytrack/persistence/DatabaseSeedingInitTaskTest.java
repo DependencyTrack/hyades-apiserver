@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.Config;
 import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
@@ -34,6 +33,7 @@ import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.Before;
 import org.junit.Test;
 import org.postgresql.ds.PGSimpleDataSource;
@@ -41,21 +41,14 @@ import org.postgresql.ds.PGSimpleDataSource;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 
 public class DatabaseSeedingInitTaskTest extends PersistenceCapableTest {
 
-    private Config configMock;
     private PGSimpleDataSource dataSource;
 
     @Before
     public void before() throws Exception {
         super.before();
-
-        configMock = mock(Config.class);
-        doReturn("25b88cc9-ff96-4ec5-9921-6212e954a46f").when(configMock).getApplicationBuildUuid();
-        doReturn("1970-01-01 00:00:00").when(configMock).getApplicationBuildTimestamp();
 
         dataSource = new PGSimpleDataSource();
         dataSource.setUrl(postgresContainer.getJdbcUrl());
@@ -65,7 +58,7 @@ public class DatabaseSeedingInitTaskTest extends PersistenceCapableTest {
 
     @Test
     public void test() throws Exception {
-        new DatabaseSeedingInitTask().execute(new InitTaskContext(configMock, dataSource));
+        new DatabaseSeedingInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
 
         final List<ConfigProperty> configProperties = qm.getConfigProperties();
         assertThat(configProperties).hasSize(ConfigPropertyConstants.values().length);
@@ -160,14 +153,14 @@ public class DatabaseSeedingInitTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testWithDefaultObjectsAlreadyPopulated() throws Exception {
-        new DatabaseSeedingInitTask().execute(new InitTaskContext(configMock, dataSource));
+        new DatabaseSeedingInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
 
         List<License> licenses = qm.getLicenses().getList(License.class);
         assertThat(licenses).isNotEmpty();
 
         qm.delete(licenses);
 
-        new DatabaseSeedingInitTask().execute(new InitTaskContext(configMock, dataSource));
+        new DatabaseSeedingInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
 
         // Default objects must not have been populated again, since their
         // version is already current for this application build.
@@ -187,7 +180,7 @@ public class DatabaseSeedingInitTaskTest extends PersistenceCapableTest {
         license.setText("text");
         qm.persist(license);
 
-        new DatabaseSeedingInitTask().execute(new InitTaskContext(configMock, dataSource));
+        new DatabaseSeedingInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
 
         qm.getPersistenceManager().refresh(license);
         assertThat(license.getLicenseId()).isEqualTo("LGPL-2.1+");

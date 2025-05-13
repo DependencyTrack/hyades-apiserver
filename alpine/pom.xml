@@ -34,6 +34,7 @@
         <module>alpine-infra</module>
         <module>alpine-server</module>
         <module>alpine-executable-war</module>
+        <module>alpine-test</module>
     </modules>
 
     <name>alpine-parent</name>

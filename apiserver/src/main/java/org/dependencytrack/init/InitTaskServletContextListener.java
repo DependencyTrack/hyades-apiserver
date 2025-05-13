@@ -18,8 +18,9 @@
  */
 package org.dependencytrack.init;
 
-import alpine.Config;
 import org.dependencytrack.common.ConfigKey;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +32,6 @@ import javax.sql.DataSource;
 import static alpine.Config.AlpineKey.DATABASE_PASSWORD;
 import static alpine.Config.AlpineKey.DATABASE_URL;
 import static alpine.Config.AlpineKey.DATABASE_USERNAME;
-import static java.util.Objects.requireNonNullElseGet;
 import static org.dependencytrack.common.ConfigKey.INIT_TASKS_DATABASE_PASSWORD;
 import static org.dependencytrack.common.ConfigKey.INIT_TASKS_DATABASE_URL;
 import static org.dependencytrack.common.ConfigKey.INIT_TASKS_DATABASE_USERNAME;
@@ -47,7 +47,7 @@ public final class InitTaskServletContextListener implements ServletContextListe
 
     @SuppressWarnings("unused")
     public InitTaskServletContextListener() {
-        this(Config.getInstance());
+        this(ConfigProvider.getConfig());
     }
 
     InitTaskServletContextListener(final Config config) {
@@ -56,7 +56,7 @@ public final class InitTaskServletContextListener implements ServletContextListe
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!config.getPropertyAsBoolean(ConfigKey.INIT_TASKS_ENABLED)) {
+        if (!config.getValue(ConfigKey.INIT_TASKS_ENABLED.getPropertyName(), Boolean.class)) {
             LOGGER.debug(
                     "Not executing init tasks because {} is disabled",
                     ConfigKey.INIT_TASKS_ENABLED.getPropertyName());
@@ -73,7 +73,7 @@ public final class InitTaskServletContextListener implements ServletContextListe
         final var taskExecutor = new InitTaskExecutor(config, dataSource);
         taskExecutor.execute();
 
-        if (config.getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
+        if (config.getValue(ConfigKey.INIT_AND_EXIT.getPropertyName(), Boolean.class)) {
             LOGGER.info(
                     "Exiting because {} is enabled",
                     ConfigKey.INIT_AND_EXIT.getPropertyName());
@@ -83,15 +83,18 @@ public final class InitTaskServletContextListener implements ServletContextListe
 
     private DataSource createDataSource(final Config config) {
         final var dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(requireNonNullElseGet(
-                config.getProperty(INIT_TASKS_DATABASE_URL),
-                () -> config.getProperty(DATABASE_URL)));
-        dataSource.setUser(requireNonNullElseGet(
-                config.getProperty(INIT_TASKS_DATABASE_USERNAME),
-                () -> config.getProperty(DATABASE_USERNAME)));
-        dataSource.setPassword(requireNonNullElseGet(
-                config.getProperty(INIT_TASKS_DATABASE_PASSWORD),
-                () -> config.getPropertyOrFile(DATABASE_PASSWORD)));
+        dataSource.setUrl(
+                config.getOptionalValue(INIT_TASKS_DATABASE_URL.getPropertyName(), String.class)
+                        .or(() -> config.getOptionalValue(DATABASE_URL.getPropertyName(), String.class))
+                        .orElseThrow());
+        dataSource.setUser(
+                config.getOptionalValue(INIT_TASKS_DATABASE_USERNAME.getPropertyName(), String.class)
+                        .or(() -> config.getOptionalValue(DATABASE_USERNAME.getPropertyName(), String.class))
+                        .orElseThrow());
+        dataSource.setPassword(
+                config.getOptionalValue(INIT_TASKS_DATABASE_PASSWORD.getPropertyName(), String.class)
+                        .or(() -> config.getOptionalValue(DATABASE_PASSWORD.getPropertyName(), String.class))
+                        .orElseThrow());
 
         return dataSource;
     }

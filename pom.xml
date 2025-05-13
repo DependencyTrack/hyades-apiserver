@@ -29,6 +29,7 @@
     <modules>
         <module>support/datanucleus-plugin</module>
         <module>support/liquibase</module>
+        <module>support/smallrye-config-source-memory</module>
         <module>api</module>
         <module>alpine</module>
         <module>proto</module>
@@ -107,13 +108,14 @@
         <lib.jersey.version>3.1.11</lib.jersey.version>
         <lib.jetty.version>12.0.24</lib.jetty.version>
         <lib.jooq.version>3.20.6</lib.jooq.version>
+        <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.postgresql.version>42.7.7</lib.postgresql.version>
         <lib.protobuf-java.version>4.31.1</lib.protobuf-java.version>
-        <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
-
+        <lib.smallrye-config.version>3.13.4</lib.smallrye-config.version>
+        <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
 
@@ -218,6 +220,12 @@
             </dependency>
 
             <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${lib.junit4.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
                 <version>${lib.junit-jupiter.version}</version>
@@ -257,6 +265,14 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-nop</artifactId>
                 <version>${lib.slf4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.smallrye.config</groupId>
+                <artifactId>smallrye-config-bom</artifactId>
+                <version>${lib.smallrye-config.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
 
             <dependency>

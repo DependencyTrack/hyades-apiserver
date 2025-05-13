@@ -377,7 +377,7 @@ public class ProcessorManager implements AutoCloseable {
         final String fullPrefix = "kafka.processor.%s".formatted(prefix);
         final Pattern fullPrefixPattern = Pattern.compile(Pattern.quote("%s.".formatted(fullPrefix)));
 
-        final Map<String, String> properties = ConfigUtil.getPassThroughProperties(config, fullPrefix);
+        final Map<String, String> properties = ConfigUtil.getPassThroughProperties(fullPrefix);
         if (properties.isEmpty()) {
             return properties;
         }
