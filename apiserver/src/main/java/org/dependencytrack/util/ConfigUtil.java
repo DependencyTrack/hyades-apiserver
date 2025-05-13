@@ -19,11 +19,10 @@
 package org.dependencytrack.util;
 
 import alpine.Config;
+import io.smallrye.config.SmallRyeConfig;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 /**
  * @since 5.6.0
@@ -42,37 +41,15 @@ public final class ConfigUtil {
      * @see Config#getPassThroughProperties(String)
      */
     public static Map<String, String> getPassThroughProperties(final Config config, final String prefix) {
-        final Properties properties;
-        try {
-            final Field propertiesField = Config.class.getDeclaredField("properties");
-            propertiesField.setAccessible(true);
-            properties = (Properties) propertiesField.get(config);
-        } catch (final NoSuchFieldException | IllegalAccessException e) {
-            throw new IllegalStateException("Unable to access Config properties", e);
-        }
-
         final var passThroughProperties = new HashMap<String, String>();
-        try {
-            for (final Map.Entry<String, String> envVar : System.getenv().entrySet()) {
-                if (envVar.getKey().startsWith("%s_".formatted(prefix.toUpperCase().replace(".", "_")))) {
-                    final String key = envVar.getKey().toLowerCase().replace("_", ".");
-                    passThroughProperties.put(key, envVar.getValue());
-                }
-            }
-        } catch (SecurityException e) {
-            throw new IllegalStateException("""
-                    Unable to retrieve pass-through properties for prefix "%s" \
-                    from environment variables""".formatted(prefix), e);
-        }
 
-        for (final Map.Entry<Object, Object> property : properties.entrySet()) {
-            if (property.getKey() instanceof String key
-                && key.startsWith("%s.".formatted(prefix))
-                && property.getValue() instanceof final String value) {
-                if (!passThroughProperties.containsKey(key)) { // Environment variables take precedence
-                    passThroughProperties.put(key, value);
-                }
+        for (final String propertyName : config.getDelegate().unwrap(SmallRyeConfig.class).getLatestPropertyNames()) {
+            if (propertyName.startsWith("%s.".formatted(prefix))) {
+                config.getDelegate()
+                        .getOptionalValue(propertyName, String.class)
+                        .ifPresent(value -> passThroughProperties.put(propertyName, value));
             }
+
         }
 
         return passThroughProperties;

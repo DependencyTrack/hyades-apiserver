@@ -93,11 +93,13 @@
         <lib.assertj.version>3.27.3</lib.assertj.version>
         <lib.jooq.version>3.20.4</lib.jooq.version>
         <lib.junit-jupiter.version>5.12.2</lib.junit-jupiter.version>
+        <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.liquibase.version>4.31.1</lib.liquibase.version>
         <lib.postgresql.version>42.7.5</lib.postgresql.version>
         <lib.protobuf-java.version>4.31.0</lib.protobuf-java.version>
-        <lib.testcontainers.version>1.21.0</lib.testcontainers.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
+        <lib.smallrye-config.version>3.12.4</lib.smallrye-config.version>
+        <lib.testcontainers.version>1.21.0</lib.testcontainers.version>
 
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
@@ -133,6 +135,11 @@
                 <artifactId>alpine-executable-war</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>alpine-test</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.dependencytrack</groupId>
@@ -166,6 +173,12 @@
                 <groupId>org.jooq</groupId>
                 <artifactId>jooq</artifactId>
                 <version>${lib.jooq.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${lib.junit4.version}</version>
             </dependency>
 
             <dependency>
@@ -206,6 +219,12 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-nop</artifactId>
                 <version>${lib.slf4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.smallrye.config</groupId>
+                <artifactId>smallrye-config-core</artifactId>
+                <version>${lib.smallrye-config.version}</version>
             </dependency>
 
             <dependency>
