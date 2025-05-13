@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.tasks;
 
+import alpine.test.config.ConfigPropertyRule;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.IntegrityMetaInitializerEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -26,7 +27,6 @@ import org.dependencytrack.model.IntegrityMetaComponent;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.sql.Date;
 import java.time.Instant;
@@ -39,13 +39,13 @@ import static org.dependencytrack.model.FetchStatus.IN_PROGRESS;
 public class IntegrityMetaInitializerTaskTest extends PersistenceCapableTest {
 
     @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule()
+            .withProperty("integrity.initializer.enabled", "true");
 
     final Component componentPersisted = new Component();
 
     @Before
     public void persistComponentData() {
-        environmentVariables.set("INTEGRITY_INITIALIZER_ENABLED", "true");
         final var projectA = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
         componentPersisted.setProject(projectA);
         componentPersisted.setName("acme-lib-a");

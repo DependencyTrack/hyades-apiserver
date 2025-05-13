@@ -88,7 +88,9 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
+        <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.protobuf-java.version>4.31.0</lib.protobuf-java.version>
+        <lib.smallrye-config.version>3.12.4</lib.smallrye-config.version>
 
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
@@ -124,6 +126,11 @@
                 <artifactId>alpine-executable-war</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>alpine-test</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.dependencytrack</groupId>
@@ -138,6 +145,12 @@
             </dependency>
 
             <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${lib.junit4.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
                 <version>${lib.protobuf-java.version}</version>
@@ -146,6 +159,12 @@
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java-util</artifactId>
                 <version>${lib.protobuf-java.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.smallrye.config</groupId>
+                <artifactId>smallrye-config-core</artifactId>
+                <version>${lib.smallrye-config.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

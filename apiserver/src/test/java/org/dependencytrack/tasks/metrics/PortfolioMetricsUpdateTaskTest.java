@@ -19,6 +19,8 @@
 package org.dependencytrack.tasks.metrics;
 
 import alpine.event.framework.EventService;
+import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.WithConfigProperty;
 import net.jcip.annotations.NotThreadSafe;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
@@ -38,6 +40,7 @@ import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.tasks.CallbackTask;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -51,6 +54,9 @@ import static org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask.parti
 
 @NotThreadSafe
 public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest {
+
+    @Rule
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
 
     @BeforeClass
     public static void setUpClass() {
@@ -105,6 +111,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     }
 
     @Test
+    @WithConfigProperty("task.portfolio.metrics.update.lock.min.duration=PT2S")
     public void testUpdateMetricsUnchanged() throws Exception {
         // Create risk score configproperties
         createTestConfigProperties();
