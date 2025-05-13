@@ -139,6 +139,8 @@ public class DevServicesInitializer implements ServletContextListener {
                 """);
 
         final var configOverrides = new Properties();
+        // Set bcrypt rounds to 4 to reduce computational overhead during development and testing.
+        // This configuration is not suitable for production environments, where higher rounds are required for security.
         configOverrides.put(BCRYPT_ROUNDS.getPropertyName(), "4");
         configOverrides.put(DATABASE_URL.getPropertyName(), postgresJdbcUrl);
         configOverrides.put(DATABASE_USERNAME.getPropertyName(), postgresUsername);
