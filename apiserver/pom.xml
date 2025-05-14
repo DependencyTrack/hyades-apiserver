@@ -740,7 +740,7 @@
             <plugin>
                 <groupId>org.eclipse.jetty.ee10</groupId>
                 <artifactId>jetty-ee10-maven-plugin</artifactId>
-                <version>12.0.20</version>
+                <version>12.0.21</version>
                 <configuration>
                     <webApp>
                         <!-- Disable classpath scanning. -->
