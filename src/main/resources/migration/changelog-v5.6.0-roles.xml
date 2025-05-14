@@ -71,7 +71,7 @@
                 <constraints nullable="false"
                     foreignKeyName="USERS_PROJECTS_ROLES_USER_FK"
                     referencedTableName="USER" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
                     validateForeignKey="true" />
             </column>
 
