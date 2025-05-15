@@ -105,11 +105,6 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public Role getRole(final String uuid) {
-        return getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
-    }
-
-    @Override
     public List<ProjectRole> getUserRoles(final User user) {
         return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class)
                 .getUserRoles(user.getUsername()));
