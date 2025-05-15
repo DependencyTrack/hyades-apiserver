@@ -1,8 +1,31 @@
+fragment projectsWithTopics on Query {
+  withTopics: projects(
+    archived: $archived
+    topics: $topics
+    membership: true
+    first: 100
+    after: $cursor
+  ) {
+    ...projectFields
+  }
+}
+
+fragment projectsWithoutTopics on Query {
+  withoutTopics: projects(
+    archived: $archived
+    membership: true
+    first: 100
+    after: $cursor
+  ) {
+    ...projectFields
+  }
+}
+
 fragment projectFields on ProjectConnection {
   nodes {
     fullPath
     maxAccessLevel {
-      humanAccess
+      stringValue
     }
   }
   pageInfo {
@@ -17,22 +40,6 @@ query (
   $topics: [String!] = []
   $includeTopics: Boolean! = false
 ) {
-  withTopic: projects(
-    archived: $archived
-    topics: $topics
-    membership: true
-    first: 100
-    after: $cursor
-  ) @include(if: $includeTopics) {
-    ...projectFields
-  }
-
-  projects(
-    archived: $archived
-    membership: true
-    first: 100
-    after: $cursor
-  ) @skip(if: $includeTopics) {
-    ...projectFields
-  }
+  ...projectsWithTopics @include(if: $includeTopics)
+  ...projectsWithoutTopics @skip(if: $includeTopics)
 }

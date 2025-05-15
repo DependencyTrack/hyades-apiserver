@@ -94,16 +94,6 @@ public class GitLabSyncTask implements LoggableSubscriber {
         }
 
         LOGGER.info("GitLab sync complete");
-
-        // TODO:
-        // - [X] Assign authenticated OIDC user the VIEW_PORTFOLIO permission
-        // - [ ] Get user GitLab project memberships (use alpine.security.crypto.DataEncryption for request)
-        // - [X] Create Dependency-Track hierarchical project structure for user's GitLab projects
-        // - [X] Create Dependency-Track teams such as <GitLab project name>-maintainer
-        // - [ ] Come up with a set of Dependency-Track project permissions per GitLab role
-        // - [ ] Assign Dependency-Track permissions (TBD) to teams based on GitLab role
-        // - [ ] Map user OIDC groups to Dependency-Track teams
-        // - [ ] Configure portfolio access control (map team to project access)
     }
 
 }
