@@ -57,6 +57,7 @@ public class GitLabClient {
     private final URI baseURL;
     private final Config config;
     private final List<String> topics;
+    private final boolean includeArchived;
 
     private final Map<GitLabRole, List<Permissions>> rolePermissions = Map.of(
             GitLabRole.GUEST, List.of(
@@ -111,17 +112,19 @@ public class GitLabClient {
                     Permissions.TAG_MANAGEMENT_DELETE));
 
     public GitLabClient(final String accessToken) {
-        this(accessToken, Config.getInstance(), null);
+        this(accessToken, Config.getInstance(), null, false);
     }
 
-    public GitLabClient(final String accessToken, final List<String> topics) {
-        this(accessToken, Config.getInstance(), topics);
+    public GitLabClient(final String accessToken, final List<String> topics, final boolean includeArchived) {
+        this(accessToken, Config.getInstance(), topics, includeArchived);
     }
 
-    public GitLabClient(final String accessToken, final Config config, final List<String> topics) {
-        this.config = config;
+    public GitLabClient(final String accessToken, final Config config, final List<String> topics,
+            final boolean includeArchived) {
         this.accessToken = accessToken;
         this.baseURL = URI.create(config.getProperty(Config.AlpineKey.OIDC_ISSUER));
+        this.config = config;
+        this.includeArchived = includeArchived;
         this.topics = topics;
     }
 
@@ -131,9 +134,15 @@ public class GitLabClient {
         JSONObject variables = new JSONObject();
         JSONObject queryObject = new JSONObject();
 
+        variables.put("includeTopics", false);
+
         if (topics != null && !topics.isEmpty()) {
             variables.put("includeTopics", true);
             variables.put("topics", topics);
+        }
+
+        if (includeArchived) {
+            variables.put("archived", "INCLUDE");
         }
 
         queryObject.put("query", resourceToString("/graphql/gitlab-projects.graphql", StandardCharsets.UTF_8));
@@ -158,9 +167,10 @@ public class GitLabClient {
 
                 String responseBody = EntityUtils.toString(responseEntity);
                 JSONObject responseData = JSONValue.parse(responseBody, JSONObject.class);
-                JSONObject dataObject = (JSONObject) responseData.get("data");
-                JSONObject projectsObject = (JSONObject) dataObject.get("projects");
-                JSONArray nodes = (JSONArray) projectsObject.get("nodes");
+                JSONObject dataObject = (JSONObject) responseData.getOrDefault("data", new JSONObject());
+                JSONObject projectsObject = (JSONObject) dataObject.getOrDefault("withoutTopics",
+                        dataObject.getOrDefault("withTopics", new JSONObject()));
+                JSONArray nodes = (JSONArray) projectsObject.getOrDefault("nodes", new JSONArray());
 
                 for (Object nodeObject : nodes) {
                     JSONObject node = (JSONObject) nodeObject;

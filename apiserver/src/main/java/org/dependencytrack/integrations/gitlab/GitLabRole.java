@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.integrations.gitlab;
 
-import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.dependencytrack.auth.Permissions;
@@ -94,16 +94,10 @@ public enum GitLabRole {
      *
      * @return A sorted set of permissions for this role.
      */
-    public Set<String> getPermissions() {
-        var permissions = Set.copyOf(this.permissions);
-
-        permissions.addAll(Stream.of(GitLabRole.values())
-                .filter(value -> value.getAccessLevel() <= getAccessLevel())
-                .map(GitLabRole::getPermissions)
-                .flatMap(Collection::stream)
-                .toList());
-
-        return new LinkedHashSet<>(permissions.stream().distinct().sorted().toList());
-    }
-
+public Set<String> getPermissions() {
+    return Stream.of(GitLabRole.values())
+            .filter(value -> value.getAccessLevel() <= this.accessLevel) // Include current and lower access levels
+            .flatMap(value -> value.permissions.stream()) // Flatten permissions from all roles
+            .collect(Collectors.toCollection(LinkedHashSet::new)); // Collect into a LinkedHashSet to maintain order
+}
 }

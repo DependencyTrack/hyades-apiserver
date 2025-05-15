@@ -1,11 +1,5 @@
 fragment projectFields on ProjectConnection {
   nodes {
-    group {
-      fullPath
-      maxAccessLevel {
-        humanAccess
-      }
-    }
     fullPath
     maxAccessLevel {
       humanAccess

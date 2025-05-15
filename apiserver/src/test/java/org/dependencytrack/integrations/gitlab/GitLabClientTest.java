@@ -86,7 +86,7 @@ public class GitLabClientTest {
 
         when(configMock.getProperty(eq(Config.AlpineKey.OIDC_ISSUER))).thenReturn(wireMockRule.baseUrl());
 
-        GitLabClient gitLabClient = new GitLabClient(accessToken, configMock, null);
+        GitLabClient gitLabClient = new GitLabClient(accessToken, configMock, null, false);
 
         List<GitLabProject> gitLabProjects = gitLabClient.getGitLabProjects();
 

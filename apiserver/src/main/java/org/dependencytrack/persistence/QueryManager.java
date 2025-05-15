@@ -45,6 +45,7 @@ import io.github.resilience4j.retry.RetryConfig;
 import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -74,6 +75,9 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ProjectRole;
+import org.dependencytrack.model.ProjectRole.LdapUserProjectRole;
+import org.dependencytrack.model.ProjectRole.ManagedUserProjectRole;
+import org.dependencytrack.model.ProjectRole.OidcUserProjectRole;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -98,6 +102,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.persistence.jdbi.RoleDao;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanStatus;
 import org.dependencytrack.proto.vulnanalysis.v1.ScannerResult;
@@ -122,6 +127,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -491,6 +498,55 @@ public class QueryManager extends AlpineQueryManager {
     public QueryManager withL2CacheDisabled() {
         disableL2Cache();
         return this;
+    }
+
+    public List<Permission> getPermissionsByName(String... permissionNames) {
+        final Query<Permission> query = pm.newQuery(Permission.class)
+                .filter(":permissions.contains(name)")
+                .setNamedParameters(Map.of("permissions", Arrays.asList(permissionNames)))
+                .orderBy("name ASC");
+
+        return executeAndCloseList(query);
+    }
+
+    @Override
+    public List<Permission> getEffectivePermissions(UserPrincipal user) {
+        // Get effective permissions for the user principal, either
+        // directly assigned or based on their team membership
+        final String[] permissionNames = super.getEffectivePermissions((Principal) user).toArray(String[]::new);
+        final HashSet<Permission> permissions = new LinkedHashSet<>(getPermissionsByName(permissionNames));
+
+        final Class<? extends ProjectRole> cls;
+        final String fieldName;
+
+        switch (user) {
+            case LdapUser ldapUser -> {
+                fieldName = "ldapUsers";
+                cls = LdapUserProjectRole.class;
+            }
+            case ManagedUser managedUser -> {
+                fieldName = "managedUsers";
+                cls = ManagedUserProjectRole.class;
+            }
+            case OidcUser oidcUser -> {
+                fieldName = "oidcUsers";
+                cls = OidcUserProjectRole.class;
+            }
+            default -> {
+                return Collections.emptyList();
+            }
+        }
+
+        List<ProjectRole> userRoles = JdbiFactory.withJdbiHandle(request, handle -> handle.attach(RoleDao.class)
+                .getUserRoles(user.getClass(), user.getUsername()));
+
+        final Permission viewPortfolio = getPermission(Permissions.Constants.VIEW_PORTFOLIO);
+
+        // If a user has no permissions, assign view portfolio to allow access to dashboard
+        if (userRoles.isEmpty())
+            permissions.add(viewPortfolio);
+
+        return permissions.stream().toList();
     }
 
     /**

@@ -23,7 +23,6 @@ import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.model.ConfigProperty;
 import alpine.model.OidcUser;
-
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONValue;
 
@@ -33,6 +32,7 @@ import org.dependencytrack.integrations.gitlab.GitLabSyncer;
 import org.dependencytrack.persistence.QueryManager;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_INCLUDE_ARCHIVED;
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_TOPICS;
 
 import java.util.List;
@@ -82,7 +82,12 @@ public class GitLabSyncTask implements LoggableSubscriber {
                     GITLAB_TOPICS.getGroupName(), GITLAB_TOPICS.getPropertyName()).getPropertyValue();
             List<String> topics = List.of(JSONValue.parse(topicsProperty, JSONArray.class).toArray(String[]::new));
 
-            GitLabClient gitLabClient = new GitLabClient(accessToken, topics);
+            String includeArchivedString = qm.getConfigProperty(
+                    GITLAB_INCLUDE_ARCHIVED.getGroupName(), GITLAB_INCLUDE_ARCHIVED.getPropertyName())
+                    .getPropertyValue();
+            boolean includeArchived = Boolean.parseBoolean(includeArchivedString);
+
+            GitLabClient gitLabClient = new GitLabClient(accessToken, topics, includeArchived);
             GitLabSyncer syncer = new GitLabSyncer(user, gitLabClient);
             syncer.setQueryManager(qm);
             syncer.synchronize();
