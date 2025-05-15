@@ -23,7 +23,7 @@ import alpine.model.ApiKey;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.server.auth.ApiKeyAuthenticationService;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.JwtAuthenticationService;
@@ -137,7 +137,7 @@ public class BadgeResource extends AbstractApiResource {
             LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by API Key "
                     + apiKey.getMaskedKey() + " to " + ((ContainerRequest) super.getRequestContext()).getRequestUri().toString());
         } else {
-            UserPrincipal user = null;
+            User user = null;
             if (principal instanceof ManagedUser) {
                 user = qm.getManagedUser(((ManagedUser) principal).getUsername());
             } else if (principal instanceof LdapUser) {

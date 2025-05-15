@@ -23,7 +23,7 @@ import alpine.Config;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.assertj.core.api.Assertions;
@@ -174,19 +174,11 @@ public class JwtAuthenticationServiceTest {
 
     @Test
     public void authenticateShouldReturnOidcUserWhenIdentityProviderIsLocal() throws AuthenticationException {
-        try (final AlpineQueryManager qm = new AlpineQueryManager()) {
-            qm.createManagedUser("username", "passwordHash");
-            qm.createLdapUser("username");
-
-            final OidcUser oidcUser = new OidcUser();
-            oidcUser.setUsername("username");
-            oidcUser.setSubjectIdentifier("subjectIdentifier");
-            qm.persist(oidcUser);
-        }
+        createTestUsers();
 
         final Principal principalMock = Mockito.mock(Principal.class);
         Mockito.when(principalMock.getName())
-                .thenReturn("username");
+                .thenReturn("mgd-user");
 
         final String token = new JsonWebToken().createToken(principalMock, null, IdentityProvider.LOCAL);
 
@@ -196,26 +188,18 @@ public class JwtAuthenticationServiceTest {
 
         final JwtAuthenticationService authService = new JwtAuthenticationService(containerRequestMock);
 
-        final UserPrincipal authenticatedUser = (UserPrincipal) authService.authenticate();
+        final User authenticatedUser = (User) authService.authenticate();
         Assertions.assertThat(authenticatedUser).isNotNull();
         Assertions.assertThat(authenticatedUser).isInstanceOf(ManagedUser.class);
     }
 
     @Test
     public void authenticateShouldReturnLdapUserWhenIdentityProviderIsLdap() throws AuthenticationException {
-        try (final AlpineQueryManager qm = new AlpineQueryManager()) {
-            qm.createManagedUser("username", "passwordHash");
-            qm.createLdapUser("username");
-
-            final OidcUser oidcUser = new OidcUser();
-            oidcUser.setUsername("username");
-            oidcUser.setSubjectIdentifier("subjectIdentifier");
-            qm.persist(oidcUser);
-        }
+        createTestUsers();
 
         final Principal principalMock = Mockito.mock(Principal.class);
         Mockito.when(principalMock.getName())
-                .thenReturn("username");
+                .thenReturn("ldap-user");
 
         final String token = new JsonWebToken().createToken(principalMock, null, IdentityProvider.LDAP);
 
@@ -225,26 +209,18 @@ public class JwtAuthenticationServiceTest {
 
         final JwtAuthenticationService authService = new JwtAuthenticationService(containerRequestMock);
 
-        final UserPrincipal authenticatedUser = (UserPrincipal) authService.authenticate();
+        final User authenticatedUser = (User) authService.authenticate();
         Assertions.assertThat(authenticatedUser).isNotNull();
         Assertions.assertThat(authenticatedUser).isInstanceOf(LdapUser.class);
     }
 
     @Test
     public void authenticateShouldReturnOidcUserWhenIdentityProviderIsOpenIdConnect() throws AuthenticationException {
-        try (final AlpineQueryManager qm = new AlpineQueryManager()) {
-            qm.createManagedUser("username", "passwordHash");
-            qm.createLdapUser("username");
-
-            final OidcUser oidcUser = new OidcUser();
-            oidcUser.setUsername("username");
-            oidcUser.setSubjectIdentifier("subjectIdentifier");
-            qm.persist(oidcUser);
-        }
+        createTestUsers();
 
         final Principal principalMock = Mockito.mock(Principal.class);
         Mockito.when(principalMock.getName())
-                .thenReturn("username");
+                .thenReturn("oidc-user");
 
         final String token = new JsonWebToken().createToken(principalMock, null, IdentityProvider.OPENID_CONNECT);
 
@@ -254,9 +230,21 @@ public class JwtAuthenticationServiceTest {
 
         final JwtAuthenticationService authService = new JwtAuthenticationService(containerRequestMock);
 
-        final UserPrincipal authenticatedUser = (UserPrincipal) authService.authenticate();
+        final User authenticatedUser = (User) authService.authenticate();
         Assertions.assertThat(authenticatedUser).isNotNull();
         Assertions.assertThat(authenticatedUser).isInstanceOf(OidcUser.class);
+    }
+
+    private void createTestUsers() {
+        try (final AlpineQueryManager qm = new AlpineQueryManager()) {
+            qm.createManagedUser("mgd-user", "passwordHash");
+            qm.createLdapUser("ldap-user");
+
+            final OidcUser oidcUser = new OidcUser();
+            oidcUser.setUsername("oidc-user");
+            oidcUser.setSubjectIdentifier("subjectIdentifier");
+            qm.persist(oidcUser);
+        }
     }
 
 }

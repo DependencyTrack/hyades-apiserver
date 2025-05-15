@@ -53,135 +53,38 @@
             <column name="PERMISSION_ID" />
         </createIndex>
 
-        <createTable ifNotExists="true" tableName="LDAPUSERS_PROJECTS_ROLES">
-            <column name="LDAPUSER_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="LDAPUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
-                    foreignKeyName="LDAPUSERS_PROJECTS_ROLES_LDAPUSER_FK"
-                    referencedTableName="LDAPUSER" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
-                    validateUnique="true" validateForeignKey="true" />
+        <createTable ifNotExists="true" tableName="USERS_PROJECTS_ROLES">
+            <column name="USER_ID" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="USERS_PROJECTS_ROLES_USER_FK"
+                    referencedTableName="USER" referencedColumnNames="ID"
+                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
+                    validateForeignKey="true" />
             </column>
 
             <column name="PROJECT_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="LDAPUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
-                    foreignKeyName="LDAPUSERS_PROJECTS_ROLES_PROJECT_FK"
+                <constraints nullable="false"
+                    foreignKeyName="USERS_PROJECTS_ROLES_PROJECT_FK"
                     referencedTableName="PROJECT" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
+                    validateForeignKey="true" />
             </column>
 
             <column name="ROLE_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="LDAPUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
-                    foreignKeyName="LDAPUSERS_PROJECTS_ROLES_ROLE_FK"
+                <constraints nullable="false"
+                    foreignKeyName="USERS_PROJECTS_ROLES_ROLE_FK"
                     referencedTableName="ROLE" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
+                    validateForeignKey="true" />
             </column>
         </createTable>
 
-        <createIndex indexName="LDAPUSERS_PROJECTS_ROLES_LDAPUSER_ID_IDX"
-            tableName="LDAPUSERS_PROJECTS_ROLES">
-            <column name="LDAPUSER_ID" />
-        </createIndex>
-
-        <createIndex indexName="LDAPUSERS_PROJECTS_ROLES_PROJECT_ID_IDX"
-            tableName="LDAPUSERS_PROJECTS_ROLES">
+        <createIndex unique="true" indexName="USERS_PROJECTS_ROLES_USER_PROJECT_IDX" tableName="USERS_PROJECTS_ROLES">
+            <column name="USER_ID" />
             <column name="PROJECT_ID" />
         </createIndex>
 
-        <createIndex indexName="LDAPUSERS_PROJECTS_ROLES_ROLE_ID_IDX"
-            tableName="LDAPUSERS_PROJECTS_ROLES">
-            <column name="ROLE_ID" />
-        </createIndex>
-
-        <createTable ifNotExists="true" tableName="MANAGEDUSERS_PROJECTS_ROLES">
-            <column name="MANAGEDUSER_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="MANAGEDUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
-                    foreignKeyName="MANAGEDUSERS_PROJECTS_ROLES_MANAGEDUSER_FK"
-                    referencedTableName="MANAGEDUSER" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
-                    validateUnique="true" validateForeignKey="true" />
-            </column>
-
-            <column name="PROJECT_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="MANAGEDUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
-                    foreignKeyName="MANAGEDUSERS_PROJECTS_ROLES_PROJECT_FK"
-                    referencedTableName="PROJECT" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
-            </column>
-
-            <column name="ROLE_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="MANAGEDUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
-                    foreignKeyName="MANAGEDUSERS_PROJECTS_ROLES_ROLE_FK"
-                    referencedTableName="ROLE" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
-            </column>
-        </createTable>
-
-        <createIndex indexName="MANAGEDUSERS_PROJECTS_ROLES_MANAGEDUSER_ID_IDX"
-            tableName="MANAGEDUSERS_PROJECTS_ROLES">
-            <column name="MANAGEDUSER_ID" />
-        </createIndex>
-
-        <createIndex indexName="MANAGEDUSERS_PROJECTS_ROLES_PROJECT_ID_IDX"
-            tableName="MANAGEDUSERS_PROJECTS_ROLES">
-            <column name="PROJECT_ID" />
-        </createIndex>
-
-        <createIndex indexName="MANAGEDUSERS_PROJECTS_ROLES_ROLE_ID_IDX"
-            tableName="MANAGEDUSERS_PROJECTS_ROLES">
-            <column name="ROLE_ID" />
-        </createIndex>
-
-        <createTable ifNotExists="true" tableName="OIDCUSERS_PROJECTS_ROLES">
-            <column name="OIDCUSER_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="OIDCUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
-                    foreignKeyName="OIDCUSERS_PROJECTS_ROLES_OIDCUSER_FK"
-                    referencedTableName="OIDCUSER" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="false"
-                    validateUnique="true" validateForeignKey="true" />
-            </column>
-
-            <column name="PROJECT_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="OIDCUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
-                    foreignKeyName="OIDCUSERS_PROJECTS_ROLES_PROJECT_FK"
-                    referencedTableName="PROJECT" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
-            </column>
-
-            <column name="ROLE_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="OIDCUSERS_PROJECTS_ROLES_COMPOSITE_IDX"
-                    foreignKeyName="OIDCUSERS_PROJECTS_ROLES_ROLE_FK"
-                    referencedTableName="ROLE" referencedColumnNames="ID"
-                    deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
-            </column>
-        </createTable>
-
-        <createIndex indexName="OIDCUSERS_PROJECTS_ROLES_OIDCUSER_ID_IDX"
-            tableName="OIDCUSERS_PROJECTS_ROLES">
-            <column name="OIDCUSER_ID" />
-        </createIndex>
-
-        <createIndex indexName="OIDCUSERS_PROJECTS_ROLES_PROJECT_ID_IDX"
-            tableName="OIDCUSERS_PROJECTS_ROLES">
-            <column name="PROJECT_ID" />
-        </createIndex>
-
-        <createIndex indexName="OIDCUSERS_PROJECTS_ROLES_ROLE_ID_IDX"
-            tableName="OIDCUSERS_PROJECTS_ROLES">
+        <createIndex indexName="USERS_PROJECTS_ROLES_ROLE_ID_IDX" tableName="USERS_PROJECTS_ROLES">
             <column name="ROLE_ID" />
         </createIndex>
 
@@ -197,25 +100,16 @@
               DELETE FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS"
               WHERE "PROJECT_ID" = ANY(project_ids);
 
-              -- Rebuild effective permissions for all user types
-              FOREACH tbl_prefix IN ARRAY ARRAY['LDAP', 'MANAGED', 'OIDC']
-              LOOP
-                EXECUTE format($query$
-                  INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
-                    (%I, "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
-                  SELECT DISTINCT upr.%I, upr."PROJECT_ID", rp."PERMISSION_ID", p."NAME"
-                    FROM %I upr
-                   INNER JOIN "ROLES_PERMISSIONS" rp
-                      ON rp."ROLE_ID" = upr."ROLE_ID"
-                   INNER JOIN "PERMISSION" p
-                      ON p."ID" = rp."PERMISSION_ID"
-                   WHERE upr."PROJECT_ID" = ANY($1);
-                  $query$,
-                  tbl_prefix || 'USER_ID',
-                  tbl_prefix || 'USER_ID',
-                  tbl_prefix || 'USERS_PROJECTS_ROLES')
-                USING project_ids;
-              END LOOP;
+              -- Rebuild effective permissions for all users
+              INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ("USER_ID", "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
+              SELECT DISTINCT upr."USER_ID", upr."PROJECT_ID", rp."PERMISSION_ID", p."NAME"
+                FROM "USERS_PROJECTS_ROLES" upr
+               INNER JOIN "ROLES_PERMISSIONS" rp
+                  ON rp."ROLE_ID" = upr."ROLE_ID"
+               INNER JOIN "PERMISSION" p
+                  ON p."ID" = rp."PERMISSION_ID"
+               WHERE upr."PROJECT_ID" = ANY(project_ids);
             END;
             $$ LANGUAGE plpgsql;
         </sql>
@@ -235,29 +129,16 @@
                 SELECT ARRAY_AGG(sub."PROJECT_ID")
                   INTO project_ids
                   FROM (
-                    SELECT lpr."PROJECT_ID"
-                      FROM "LDAPUSERS_PROJECTS_ROLES" lpr
+                    SELECT upr."PROJECT_ID"
+                      FROM "USERS_PROJECTS_ROLES" upr
                      INNER JOIN old_table
-                        ON old_table."ROLE_ID" = lpr."ROLE_ID"
-                     UNION
-                    SELECT mpr."PROJECT_ID"
-                      FROM "MANAGEDUSERS_PROJECTS_ROLES" mpr
-                     INNER JOIN old_table
-                        ON old_table."ROLE_ID" = mpr."ROLE_ID"
-                     UNION
-                    SELECT opr."PROJECT_ID"
-                      FROM "OIDCUSERS_PROJECTS_ROLES" opr
-                     INNER JOIN old_table
-                        ON old_table."ROLE_ID" = opr."ROLE_ID"
+                        ON old_table."ROLE_ID" = upr."ROLE_ID"
                   ) sub;
               ELSE
-                EXECUTE format($query$
-                  SELECT ARRAY_AGG(DISTINCT t."PROJECT_ID")
-                    FROM %I AS t
-                   WHERE t."ROLE_ID" = ANY($1)
-                  $query$, TG_TABLE_NAME)
-                USING role_ids
-                 INTO project_ids;
+                SELECT ARRAY_AGG(DISTINCT "PROJECT_ID")
+                  INTO project_ids
+                  FROM "USERS_PROJECTS_ROLES"
+                 WHERE "ROLE_ID" = ANY(role_ids);
               END IF;
 
               PERFORM recalc_user_project_role_effective_permissions(project_ids);
@@ -281,29 +162,16 @@
                 SELECT ARRAY_AGG(sub."PROJECT_ID")
                   INTO project_ids
                   FROM (
-                    SELECT lpr."PROJECT_ID"
-                      FROM "LDAPUSERS_PROJECTS_ROLES" lpr
+                    SELECT upr."PROJECT_ID"
+                      FROM "USERS_PROJECTS_ROLES" upr
                      INNER JOIN new_table
-                        ON new_table."ROLE_ID" = lpr."ROLE_ID"
-                     UNION
-                    SELECT mpr."PROJECT_ID"
-                      FROM "MANAGEDUSERS_PROJECTS_ROLES" mpr
-                     INNER JOIN new_table
-                        ON new_table."ROLE_ID" = mpr."ROLE_ID"
-                     UNION
-                    SELECT opr."PROJECT_ID"
-                      FROM "OIDCUSERS_PROJECTS_ROLES" opr
-                     INNER JOIN new_table
-                        ON new_table."ROLE_ID" = opr."ROLE_ID"
+                        ON new_table."ROLE_ID" = upr."ROLE_ID"
                   ) sub;
               ELSE
-                EXECUTE format($query$
-                  SELECT ARRAY_AGG(DISTINCT t."PROJECT_ID")
-                    FROM %I AS t
-                   WHERE t."ROLE_ID" = ANY($1)
-                  $query$, TG_TABLE_NAME)
-                USING role_ids
-                 INTO project_ids;
+                SELECT ARRAY_AGG(DISTINCT "PROJECT_ID")
+                  INTO project_ids
+                  FROM "USERS_PROJECTS_ROLES"
+                 WHERE "ROLE_ID" = ANY(role_ids);
               END IF;
 
               PERFORM recalc_user_project_role_effective_permissions(project_ids);
@@ -331,35 +199,18 @@
                 SELECT ARRAY_AGG(sub."PROJECT_ID")
                   INTO project_ids
                   FROM (
-                    SELECT lpr."PROJECT_ID"
-                      FROM "LDAPUSERS_PROJECTS_ROLES" lpr
+                    SELECT upr."PROJECT_ID"
+                      FROM "USERS_PROJECTS_ROLES" upr
                      INNER JOIN new_table
-                        ON new_table."ROLE_ID" = lpr."ROLE_ID"
-                      FULL OUTER JOIN old_table
-                        ON new_table."ROLE_ID" = old_table."ROLE_ID"
-                     UNION
-                    SELECT mpr."PROJECT_ID"
-                      FROM "MANAGEDUSERS_PROJECTS_ROLES" mpr
-                     INNER JOIN new_table
-                        ON new_table."ROLE_ID" = mpr."ROLE_ID"
-                      FULL OUTER JOIN old_table
-                        ON new_table."ROLE_ID" = old_table."ROLE_ID"
-                     UNION
-                    SELECT opr."PROJECT_ID"
-                      FROM "OIDCUSERS_PROJECTS_ROLES" opr
-                     INNER JOIN new_table
-                        ON new_table."ROLE_ID" = opr."ROLE_ID"
+                        ON new_table."ROLE_ID" = upr."ROLE_ID"
                       FULL OUTER JOIN old_table
                         ON new_table."ROLE_ID" = old_table."ROLE_ID"
                   ) sub;
               ELSE
-                EXECUTE format($query$
-                  SELECT ARRAY_AGG(DISTINCT t."PROJECT_ID")
-                    FROM %I AS t
-                   WHERE t."ROLE_ID" = ANY($1)
-                  $query$, TG_TABLE_NAME)
-                USING role_ids
-                 INTO project_ids;
+                SELECT ARRAY_AGG(DISTINCT "PROJECT_ID")
+                  INTO project_ids
+                  FROM "USERS_PROJECTS_ROLES"
+                 WHERE "ROLE_ID" = ANY(role_ids);
               END IF;
 
               PERFORM recalc_user_project_role_effective_permissions(project_ids);
@@ -369,65 +220,23 @@
         </sql>
 
         <sql splitStatements="true">
-            -- INSERT trigger for LDAPUSERS_PROJECTS_ROLES
-            CREATE TRIGGER trigger_effective_permissions_mx_on_ldapusers_roles_insert
-            AFTER INSERT ON "LDAPUSERS_PROJECTS_ROLES"
+            -- INSERT trigger for USERS_PROJECTS_ROLES
+            CREATE TRIGGER trigger_effective_permissions_mx_on_users_roles_insert
+            AFTER INSERT ON "USERS_PROJECTS_ROLES"
             REFERENCING NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION role_effective_permissions_mx_on_insert();
 
-            -- DELETE trigger for LDAPUSERS_PROJECTS_ROLES
-            CREATE TRIGGER trigger_effective_permissions_mx_on_ldapusers_roles_delete
-            AFTER DELETE ON "LDAPUSERS_PROJECTS_ROLES"
+            -- DELETE trigger for USERS_PROJECTS_ROLES
+            CREATE TRIGGER trigger_effective_permissions_mx_on_users_roles_delete
+            AFTER DELETE ON "USERS_PROJECTS_ROLES"
             REFERENCING OLD TABLE AS old_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION role_effective_permissions_mx_on_delete();
 
-            -- UPDATE trigger for LDAPUSERS_PROJECTS_ROLES
-            CREATE TRIGGER trigger_effective_permissions_mx_on_ldapusers_roles_update
-            AFTER UPDATE ON "LDAPUSERS_PROJECTS_ROLES"
-            REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
-            FOR EACH STATEMENT
-            EXECUTE FUNCTION role_effective_permissions_mx_on_update();
-
-            -- INSERT trigger for MANAGEDUSERS_PROJECTS_ROLES
-            CREATE TRIGGER trigger_effective_permissions_mx_on_mgdusers_roles_insert
-            AFTER INSERT ON "MANAGEDUSERS_PROJECTS_ROLES"
-            REFERENCING NEW TABLE AS new_table
-            FOR EACH STATEMENT
-            EXECUTE FUNCTION role_effective_permissions_mx_on_insert();
-
-            -- DELETE trigger for MANAGEDUSERS_PROJECTS_ROLES
-            CREATE TRIGGER trigger_effective_permissions_mx_on_mgdusers_roles_delete
-            AFTER DELETE ON "MANAGEDUSERS_PROJECTS_ROLES"
-            REFERENCING OLD TABLE AS old_table
-            FOR EACH STATEMENT
-            EXECUTE FUNCTION role_effective_permissions_mx_on_delete();
-
-            -- UPDATE trigger for MANAGEDUSERS_PROJECTS_ROLES
-            CREATE TRIGGER trigger_effective_permissions_mx_on_mgdusers_roles_update
-            AFTER UPDATE ON "MANAGEDUSERS_PROJECTS_ROLES"
-            REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
-            FOR EACH STATEMENT
-            EXECUTE FUNCTION role_effective_permissions_mx_on_update();
-
-            -- INSERT trigger for OIDCUSERS_PROJECTS_ROLES
-            CREATE TRIGGER trigger_effective_permissions_mx_on_oidcusers_roles_insert
-            AFTER INSERT ON "OIDCUSERS_PROJECTS_ROLES"
-            REFERENCING NEW TABLE AS new_table
-            FOR EACH STATEMENT
-            EXECUTE FUNCTION role_effective_permissions_mx_on_insert();
-
-            -- DELETE trigger for OIDCUSERS_PROJECTS_ROLES
-            CREATE TRIGGER trigger_effective_permissions_mx_on_oidcusers_roles_delete
-            AFTER DELETE ON "OIDCUSERS_PROJECTS_ROLES"
-            REFERENCING OLD TABLE AS old_table
-            FOR EACH STATEMENT
-            EXECUTE FUNCTION role_effective_permissions_mx_on_delete();
-
-            -- UPDATE trigger for OIDCUSERS_PROJECTS_ROLES
-            CREATE TRIGGER trigger_effective_permissions_mx_on_oidcusers_roles_update
-            AFTER UPDATE ON "OIDCUSERS_PROJECTS_ROLES"
+            -- UPDATE trigger for USERS_PROJECTS_ROLES
+            CREATE TRIGGER trigger_effective_permissions_mx_on_users_roles_update
+            AFTER UPDATE ON "USERS_PROJECTS_ROLES"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION role_effective_permissions_mx_on_update();
