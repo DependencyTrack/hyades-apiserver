@@ -46,7 +46,7 @@
         <lib.pebble.version>3.2.4</lib.pebble.version>
         <lib.testcontainers.version>1.21.0</lib.testcontainers.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
-        <lib.swagger.version>2.2.30</lib.swagger.version>
+        <lib.swagger.version>2.2.32</lib.swagger.version>
         <lib.swagger-parser.version>2.1.27</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
