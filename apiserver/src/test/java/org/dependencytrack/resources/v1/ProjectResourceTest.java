@@ -99,6 +99,7 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.dependencytrack.assertion.Assertions.assertConditionWithTimeout;
+import static org.dependencytrack.model.Vulnerability.Source.NVD;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_PROJECT_CREATED;
@@ -837,6 +838,52 @@ public class ProjectResourceTest extends ResourceTest {
                       "unassigned": 14,
                       "vulnerabilities": 15
                     }
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectsConciseWithAnalysisTest() {
+        // Project with no analysis
+        final var p1 = new Project();
+        p1.setName("acme-app-A");
+        qm.persist(p1);
+
+        // Project with analysis
+        final var p2 = new Project();
+        p2.setName("acme-app-B");
+        qm.persist(p2);
+
+        final var c1 = new Component();
+        c1.setProject(p2);
+        c1.setName("acme-lib");
+        c1.setVersion("2.0.0");
+        qm.persist(c1);
+
+        final var vuln1 = new Vulnerability();
+        vuln1.setVulnId("INT-123");
+        vuln1.setSource(NVD);
+        qm.persist(vuln1);
+
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class).makeAnalysis(p2.getId(), c1.getId(), vuln1.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, false));
+
+        // Should only include projects with existing analysis.
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("hasAnalysis", true)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name" : "acme-app-B",
+                    "active" : true,
+                    "isLatest" : false,
+                    "hasChildren" : false
                   }
                 ]
                 """);

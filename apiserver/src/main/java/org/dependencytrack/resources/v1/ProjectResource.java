@@ -178,10 +178,12 @@ public class ProjectResource extends AbstractApiResource {
             @Parameter(description = "Whether to show only root projects, i.e. those without a parent.")
             @QueryParam("onlyRoot") final Boolean onlyRootFilter,
             @Parameter(description = "Whether to include metrics in the response.")
-            @QueryParam("includeMetrics") final boolean includeMetrics
+            @QueryParam("includeMetrics") final boolean includeMetrics,
+            @Parameter(description = "Whether to include projects with existing analysis.")
+            @QueryParam("hasAnalysis") final boolean hasAnalysis
     ) {
         final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
+                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics, hasAnalysis));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
@@ -220,10 +222,12 @@ public class ProjectResource extends AbstractApiResource {
             @Parameter(description = "Whether to show only active, or only inactive projects. Omitting the filter will show both.")
             @QueryParam("active") final Boolean activeFilter,
             @Parameter(description = "Whether to include metrics in the response.")
-            @QueryParam("includeMetrics") final boolean includeMetrics
+            @QueryParam("includeMetrics") final boolean includeMetrics,
+            @Parameter(description = "Whether to include only projects with existing analysis.")
+            @QueryParam("hasAnalysis") final boolean hasAnalysis
     ) {
         final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
+                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics, hasAnalysis));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
