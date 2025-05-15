@@ -96,7 +96,7 @@ public enum GitLabRole {
      */
 public Set<String> getPermissions() {
     return Stream.of(GitLabRole.values())
-            .filter(value -> value.getAccessLevel() <= this.accessLevel) // Include current and lower access levels
+            .filter(value -> value.accessLevel <= this.accessLevel) // Include current and lower access levels
             .flatMap(value -> value.permissions.stream()) // Flatten permissions from all roles
             .collect(Collectors.toCollection(LinkedHashSet::new)); // Collect into a LinkedHashSet to maintain order
 }

@@ -60,13 +60,12 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
             if (isEnabled) {
                 LOGGER.info("Enabling GitLab integration");
                 createGitLabRoles();
-                LOGGER.info("GitLab integration enabled");
-            } else {
-                LOGGER.info("Disabling GitLab integration");
-                removeGitlabRoles();
-                LOGGER.info("GitLab integration disabled");
+
+                return;
             }
 
+            LOGGER.info("Disabling GitLab integration");
+            removeGitlabRoles();
         } catch (RuntimeException ex) {
             LOGGER.error("An error occurred while changing Gitlab Integration State", ex);
             handleException(LOGGER, ex);
