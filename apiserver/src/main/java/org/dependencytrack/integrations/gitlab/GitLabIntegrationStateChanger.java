@@ -80,7 +80,7 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
         for (GitLabRole role : GitLabRole.values()) {
             try {
                 if (qm.getRoleByName(role.getDescription()) == null) {
-                    qm.createRole(role.getDescription(), qm.getPermissionsByName(role.getPermissions().toArray(String[]::new)));
+                    qm.createRole(role.getDescription(), qm.getPermissionsByName(role.getPermissions()));
                     LOGGER.info("Created GitLab role: " + role.getDescription());
                 } else {
                     LOGGER.info("GitLab role already exists: " + role.getDescription());

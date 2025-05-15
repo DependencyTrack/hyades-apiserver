@@ -493,15 +493,6 @@ public class QueryManager extends AlpineQueryManager {
         return this;
     }
 
-    public List<Permission> getPermissionsByName(String... permissionNames) {
-        final Query<Permission> query = pm.newQuery(Permission.class)
-                .filter(":permissions.contains(name)")
-                .setNamedParameters(Map.of("permissions", Arrays.asList(permissionNames)))
-                .orderBy("name ASC");
-
-        return executeAndCloseList(query);
-    }
-
     /**
      * Get the IDs of the {@link ProjectRole}s a given {@link Principal} is a member of.
      *
