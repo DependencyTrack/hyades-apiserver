@@ -134,7 +134,9 @@ public class GitLabClient {
         JSONObject variables = new JSONObject();
         JSONObject queryObject = new JSONObject();
 
+        // Set the default values for the GraphQL query
         variables.put("includeTopics", false);
+        variables.put("archived", "EXCLUDE");
 
         if (topics != null && !topics.isEmpty()) {
             variables.put("includeTopics", true);

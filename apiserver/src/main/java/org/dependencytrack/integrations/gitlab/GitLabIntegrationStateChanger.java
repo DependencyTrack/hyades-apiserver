@@ -122,10 +122,6 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
         }
     }
 
-    private List<Permission> getPermissionsByName(List<String> names) {
-        return names.stream().map(PERMISSIONS_MAP::get).filter(Objects::nonNull).toList();
-    }
-
     public Map<String, Permission> getPermissionsMap() {
         if (PERMISSIONS_MAP.isEmpty()) {
             populatePermissionsMap(qm);
