@@ -21,7 +21,7 @@ package org.dependencytrack.event;
 import alpine.event.framework.Event;
 
 /**
- * Defines an event used to start a sync task of current user's GitLab groups.
+ * Defines an event used to start a state change task for the GitLab Integration.
  *
  * @author Allen Shearin
  */
