@@ -21,14 +21,16 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.event.framework.EventService;
 import alpine.model.IConfigProperty.PropertyType;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ManagedUser;
+import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisJustification;
@@ -3489,7 +3491,7 @@ public class ProjectResourceTest extends ResourceTest {
                 ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
                 ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
 
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null));
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
@@ -3571,7 +3573,7 @@ public class ProjectResourceTest extends ResourceTest {
                 ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
                 ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
 
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null));
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);

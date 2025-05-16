@@ -20,10 +20,12 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.validation.RegexSequence;
 import alpine.common.validation.ValidationTask;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
-import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.AccessRequired;
 import com.google.protobuf.Any;
 import com.google.protobuf.util.Timestamps;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,7 +38,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
@@ -108,7 +109,7 @@ public class AnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response retrieveAnalysis(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"))
                                      @QueryParam("project") @ValidUuid String projectUuid,
                                      @Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -164,7 +165,8 @@ public class AnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.UPDATE)
+    @AccessRequired(resource = AccessResource.FINDING, accessLevel = AccessLevel.UPDATE)
     public Response updateAnalysis(AnalysisRequest request) {
         final Validator validator = getValidator();
         failOnValidationError(

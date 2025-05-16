@@ -18,13 +18,15 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
@@ -47,7 +49,7 @@ public class AccessControlResourceTest extends ResourceTest {
 
     @Test
     public void addMappingTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -72,7 +74,7 @@ public class AccessControlResourceTest extends ResourceTest {
 
     @Test
     public void addMappingTeamNotFoundTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -99,7 +101,7 @@ public class AccessControlResourceTest extends ResourceTest {
 
     @Test
     public void addMappingProjectNotFoundTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null));
 
         final Response response = jersey.target(V1_ACL + "/mapping")
                 .request()
@@ -122,7 +124,7 @@ public class AccessControlResourceTest extends ResourceTest {
 
     @Test
     public void addMappingConflictTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -150,7 +152,7 @@ public class AccessControlResourceTest extends ResourceTest {
 
     @Test
     public void deleteMappingTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null));
 
         final var otherTeam = new Team();
         otherTeam.setName("other-team");
@@ -175,7 +177,7 @@ public class AccessControlResourceTest extends ResourceTest {
 
     @Test
     public void deleteMappingTeamNotFoundTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -198,7 +200,7 @@ public class AccessControlResourceTest extends ResourceTest {
 
     @Test
     public void deleteMappingProjectNotFoundTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null));
 
         final var project = new Project();
         project.setName("acme-app");

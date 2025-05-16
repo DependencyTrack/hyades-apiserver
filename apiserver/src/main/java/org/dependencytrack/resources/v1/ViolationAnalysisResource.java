@@ -20,8 +20,10 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.validation.RegexSequence;
 import alpine.common.validation.ValidationTask;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.User;
-import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.AccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -32,7 +34,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.ViolationAnalysis;
@@ -86,7 +87,7 @@ public class ViolationAnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component or policy violation could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
+    @AccessRequired(resource = AccessResource.POLICY_VIOLATION, accessLevel = AccessLevel.READ)
     public Response retrieveAnalysis(@Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
                                      @QueryParam("component") @ValidUuid String componentUuid,
                                      @Parameter(description = "The UUID of the policy violation", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -130,7 +131,7 @@ public class ViolationAnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component or policy violation could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_VIOLATION_ANALYSIS)
+    @AccessRequired(resource = AccessResource.POLICY_VIOLATION, accessLevel = AccessLevel.UPDATE)
     public Response updateAnalysis(ViolationAnalysisRequest request) {
         final Validator validator = getValidator();
         failOnValidationError(

@@ -20,10 +20,9 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
 import alpine.model.User;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.server.auth.ApiKeyAuthenticationService;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.JwtAuthenticationService;
@@ -37,7 +36,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.validation.ValidUuid;
@@ -127,35 +125,24 @@ public class BadgeResource extends AbstractApiResource {
             return false;
         }
 
-        final String[] permissions = { Permissions.Constants.VIEW_BADGES };
+        if (principal instanceof ApiKey apiKey) {
+            if (qm.hasPermission(apiKey, AccessResource.BADGES, AccessLevel.READ))
+                return true;
 
-        if (principal instanceof ApiKey) {
-            final ApiKey apiKey = (ApiKey)principal;
-            for (final String permission: permissions) {
-                if (qm.hasPermission(apiKey, permission)) {
-                    return true;
-                }
-            }
             LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by API Key "
                     + apiKey.getMaskedKey() + " to " + ((ContainerRequest) super.getRequestContext()).getRequestUri().toString());
         } else {
-            User user = null;
-            if (principal instanceof ManagedUser) {
-                user = qm.getManagedUser(((ManagedUser) principal).getUsername());
-            } else if (principal instanceof LdapUser) {
-                user = qm.getLdapUser(((LdapUser) principal).getUsername());
-            } else if (principal instanceof OidcUser) {
-                user = qm.getOidcUser(((OidcUser) principal).getUsername());
-            }
+            User user = qm.getUser(principal.getName());
+
             if (user == null) {
                 LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "A request was made but the system in unable to find the user principal");
+
                 return false;
             }
-            for (final String permission : permissions) {
-                if (qm.hasPermission(user, permission, true)) {
-                    return true;
-                }
-            }
+
+            if (qm.hasPermission(user, true, AccessResource.BADGES, AccessLevel.READ))
+                return true;
+
             LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by "
                     + user.getUsername() + " to " + ((ContainerRequest) super.getRequestContext()).getRequestUri().toString());
         }

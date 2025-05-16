@@ -113,10 +113,7 @@ public class JsonWebToken {
                 .issuedAt(now)
                 .issuer(ISSUER)
                 .expiration(expiration)
-                .claim(PERMISSIONS_CLAIM, this.permissions == null ? null
-                        : permissions.stream()
-                                .map(Permission::getName)
-                                .collect(Collectors.joining(",")))
+                .claim(PERMISSIONS_CLAIM, this.permissions)
                 .claim(IDENTITY_PROVIDER_CLAIM, identityProvider)
                 .claims(extraClaims)
                 .signWith(key)

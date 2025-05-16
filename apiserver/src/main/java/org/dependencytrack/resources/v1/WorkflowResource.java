@@ -19,7 +19,9 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.server.auth.PermissionRequired;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.server.auth.AccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -35,7 +37,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
@@ -69,7 +70,7 @@ public class WorkflowResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "Workflow does not exist")
     })
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD) // TODO: Should be a more generic permission.
+    @AccessRequired(resource = AccessResource.BOM, accessLevel = AccessLevel.CREATE) // TODO: Should be a more generic permission.
     public Response getWorkflowStates(
             @Parameter(description = "The UUID of the token to query", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

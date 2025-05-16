@@ -18,13 +18,15 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ConfigProperty;
+import alpine.model.Permission;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Policy;
@@ -59,7 +61,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -111,7 +115,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsByProjectTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -183,7 +189,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsByProjectIssue2766() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
 
         final Project projectA = qm.createProject("acme-app-a", null, "1.0", null, null, null, null, false);
         final var componentA = new Component();
@@ -234,7 +242,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsByProjectNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
 
         final Response response = jersey.target(V1_POLICY_VIOLATION)
                 .path("/project/" + UUID.randomUUID())
@@ -248,7 +258,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsByProjectAclTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -279,7 +291,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsByComponentTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -332,7 +346,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsByComponentNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
 
         final Response response = jersey.target(V1_POLICY_VIOLATION)
                 .path("/component/" + UUID.randomUUID())
@@ -346,7 +362,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsByComponentAclTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -381,7 +399,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsWithAclEnabledTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
 
         final Project projectA = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         final Project projectA_child = qm.createProject("Acme Example - Child", null, "1.0", null, projectA, null, null, false);
@@ -500,7 +520,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsWithArrayFilter() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -605,7 +627,9 @@ public class PolicyViolationResourceTest extends ResourceTest {
 
     @Test
     public void getViolationsWithInputFilter() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.READ, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null));
 
         final Project projectA = qm.createProject("Project A", null, "1.0", null, null, null, null, false);
         final Project projectB = qm.createProject("Project B", null, "1.0", null, null, null, null, false);

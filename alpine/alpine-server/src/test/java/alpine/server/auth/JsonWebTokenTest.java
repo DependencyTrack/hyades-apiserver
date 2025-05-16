@@ -50,9 +50,7 @@ public class JsonWebTokenTest {
     public void createTokenPermissionsTest() {
         List<Permission> permissions = new ArrayList<>();
         Permission p1 = Mockito.mock(Permission.class);
-        Mockito.when(p1.getName()).thenReturn("PERM-1");
         Permission p2 = Mockito.mock(Permission.class);
-        Mockito.when(p2.getName()).thenReturn("PERM-2");
         permissions.add(p1);
         permissions.add(p2);
         Principal user = Mockito.mock(Principal.class);

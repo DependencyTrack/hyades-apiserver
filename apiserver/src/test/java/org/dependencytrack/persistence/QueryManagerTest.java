@@ -18,12 +18,13 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
 import alpine.server.auth.PasswordService;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.FetchStatus;
@@ -197,11 +198,11 @@ public class QueryManagerTest extends PersistenceCapableTest {
                 new String(PasswordService.createHash("mgduser".toCharArray())), true, false, false);
         var oidcUser = qm.createOidcUser("oidcuser");
 
-        BiFunction<String, List<Permissions>, Team> teamCreator = (name, permissions) -> {
+        BiFunction<String, List<Permission>, Team> teamCreator = (name, permissions) -> {
             return qm.callInTransaction(() -> {
                 var team = qm.createTeam(name);
                 team.setPermissions(permissions.stream()
-                        .map(permission -> qm.createPermission(permission.name(), permission.getDescription()))
+                        .map(permission -> qm.createPermission(permission.getResource(), permission.getAccessLevel(), permission.getDescription()))
                         .toList());
 
                 return qm.persist(team);
@@ -209,30 +210,29 @@ public class QueryManagerTest extends PersistenceCapableTest {
         };
 
         var team1 = teamCreator.apply("Effective Permissions Test Team 1", List.of(
-                Permissions.PORTFOLIO_MANAGEMENT,
-                Permissions.VULNERABILITY_ANALYSIS,
-                Permissions.VULNERABILITY_MANAGEMENT,
-                Permissions.ACCESS_MANAGEMENT,
-                Permissions.SYSTEM_CONFIGURATION,
-                Permissions.POLICY_MANAGEMENT));
+                new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null)));
 
         var team2 = teamCreator.apply("Effective Permissions Test Team 2", List.of(
-                Permissions.VIEW_PORTFOLIO,
-                Permissions.VIEW_VULNERABILITY,
-                Permissions.VIEW_POLICY_VIOLATION,
-                Permissions.VIEW_BADGES));
+                new Permission(AccessResource.BADGES, AccessLevel.READ, null),
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.POLICY_VIOLATION, AccessLevel.READ, null)));
 
         var team3 = teamCreator.apply("Effective Permissions Test Team 3", List.of(
-                Permissions.PORTFOLIO_MANAGEMENT_UPDATE,
-                Permissions.VULNERABILITY_ANALYSIS_UPDATE,
-                Permissions.VULNERABILITY_MANAGEMENT_UPDATE,
-                Permissions.ACCESS_MANAGEMENT_UPDATE,
-                Permissions.SYSTEM_CONFIGURATION_UPDATE,
-                Permissions.POLICY_MANAGEMENT_UPDATE));
+                new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null)));
 
         var noAccessTeam = teamCreator.apply("Effective Permissions Test with No Access", List.of(
-                Permissions.BOM_UPLOAD,
-                Permissions.PROJECT_CREATION_UPLOAD));
+            new Permission(AccessResource.BOM, AccessLevel.CREATE, null),
+            new Permission(AccessResource.PROJECT, AccessLevel.CREATE, null)));
 
         qm.addUserToTeam(ldapUser, team1);
         qm.addUserToTeam(mgdUser, team2);
@@ -268,37 +268,40 @@ public class QueryManagerTest extends PersistenceCapableTest {
         project3.addAccessTeam(team3);
         qm.persist(project3);
 
-        Function<List<Permission>, String[]> getPermissionNames = permissions -> permissions
-                .stream()
-                .map(Permission::getName)
-                .toArray(String[]::new);
+        record TestAccessResult(AccessResource resource, AccessLevel accessLevel) {
+        }
 
         record TestMatrixEntry(User user, Project project, Team team, List<Project> noAccessProjects) {
-            String[] getPermissionNames(List<Permission> permissions) {
+            TestAccessResult[] getPermissionAccess(List<Permission> permissions) {
                 return permissions
                         .stream()
-                        .map(Permission::getName)
-                        .toArray(String[]::new);
+                        .map(permission -> new TestAccessResult(permission.getResource(), permission.getAccessLevel()))
+                        .toArray(TestAccessResult[]::new);
             }
         }
 
-        var permission = qm.createPermission(
-                Permissions.POLICY_VIOLATION_ANALYSIS.name(),
-                Permissions.POLICY_VIOLATION_ANALYSIS.getDescription());
+        Function<List<Permission>, TestAccessResult[]> getPermissionAccess = permissions -> permissions
+                .stream()
+                .map(permission -> new TestAccessResult(permission.getResource(), permission.getAccessLevel()))
+                .toArray(TestAccessResult[]::new);
+
+        var permission = qm.createPermission(AccessResource.POLICY_VIOLATION, AccessLevel.UPDATE, null);
 
         for (var entry : new TestMatrixEntry[] {
                 new TestMatrixEntry(ldapUser, project1, team1, List.of(project2, project3)),
                 new TestMatrixEntry(mgdUser, project2, team2, List.of(project1, project3)),
                 new TestMatrixEntry(oidcUser, project3, team3, List.of(project1, project2))
         }) {
-            assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), entry.project())))
-                    .containsExactlyInAnyOrder(entry.getPermissionNames(entry.team().getPermissions()));
+            var effectivePermissions = qm.getEffectivePermissions(entry.user(), entry.project());
+
+            assertThat(entry.getPermissionAccess(effectivePermissions))
+                    .containsExactlyInAnyOrder(entry.getPermissionAccess(entry.team().getPermissions()));
 
             for (var project : entry.noAccessProjects())
-                assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), project))).isEmpty();
+                assertThat(qm.getEffectivePermissions(entry.user(), project)).isEmpty();
 
-            assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), entry.project())))
-                    .doesNotContain(getPermissionNames.apply(noAccessTeam.getPermissions()));
+            assertThat(entry.getPermissionAccess(effectivePermissions))
+                    .doesNotContain(getPermissionAccess.apply(noAccessTeam.getPermissions()));
 
             // Add a permission to team and verify effective permissions are updated accordingly
             qm.runInTransaction(() -> {
@@ -307,8 +310,8 @@ public class QueryManagerTest extends PersistenceCapableTest {
                 qm.persist(team);
             });
 
-            assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), entry.project())))
-                    .contains(Permissions.POLICY_VIOLATION_ANALYSIS.name());
+            assertThat(entry.getPermissionAccess(effectivePermissions))
+                    .contains(new TestAccessResult(AccessResource.POLICY_VIOLATION, AccessLevel.UPDATE));
         }
     }
 

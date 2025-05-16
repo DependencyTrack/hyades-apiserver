@@ -20,6 +20,8 @@ package org.dependencytrack.resources.v1;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
@@ -29,13 +31,13 @@ import alpine.model.User;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.security.crypto.KeyManager;
+import alpine.server.auth.AccessRequired;
 import alpine.server.auth.AlpineAuthenticationException;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.Authenticator;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.auth.OidcAuthenticationService;
 import alpine.server.auth.PasswordService;
-import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,7 +51,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.notification.NotificationConstants;
@@ -267,7 +268,7 @@ public class UserResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response getManagedUsers() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final long totalCount = qm.getCount(ManagedUser.class);
@@ -292,7 +293,7 @@ public class UserResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response getLdapUsers() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final long totalCount = qm.getCount(LdapUser.class);
@@ -319,7 +320,7 @@ public class UserResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response getOidcUsers() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final long totalCount = qm.getCount(OidcUser.class);
@@ -432,7 +433,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A user with the same username already exists. Cannot create new user")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response createLdapUser(LdapUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
             if (StringUtils.isBlank(jsonUser.getUsername())) {
@@ -463,7 +464,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response deleteLdapUser(LdapUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
             final LdapUser user = qm.getLdapUser(jsonUser.getUsername());
@@ -497,7 +498,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A user with the same username already exists. Cannot create new user")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response createManagedUser(ManagedUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
 
@@ -549,7 +550,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response updateManagedUser(ManagedUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
             ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
@@ -591,7 +592,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response deleteManagedUser(ManagedUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
             final ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
@@ -625,7 +626,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A user with the same username already exists. Cannot create new user")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response createOidcUser(final OidcUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
             if (StringUtils.isBlank(jsonUser.getUsername())) {
@@ -656,7 +657,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response deleteOidcUser(final OidcUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
             final OidcUser user = qm.getOidcUser(jsonUser.getUsername());
@@ -690,7 +691,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or team could not be found")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response addTeamToUser(
             @Parameter(description = "A valid username", required = true)
             @PathParam("username") String username,
@@ -734,7 +735,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or team could not be found")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response removeTeamFromUser(
             @Parameter(description = "A valid username", required = true)
             @PathParam("username") String username,
@@ -774,7 +775,7 @@ public class UserResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user or team(s) could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response setUserTeams(
             @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {

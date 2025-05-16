@@ -2286,4 +2286,86 @@
             <column name="NAME"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-27" author="jhoward-lm">
+        <sql splitStatements="true">
+            CREATE TYPE access_resource AS ENUM (
+                'ACCESS_MANAGEMENT',
+                'BADGES',
+                'BOM',
+                'FINDING',
+                'NOTIFICATION_RULE',
+                'POLICY',
+                'POLICY_VIOLATION',
+                'PORTFOLIO',
+                'PROJECT',
+                'SYSTEM_CONFIGURATION',
+                'TAG',
+                'VULNERABILITY'
+            );
+
+            CREATE TYPE access_level AS ENUM (
+                'READ',
+                'UPDATE',
+                'CREATE',
+                'DELETE',
+                'SYSTEM'
+            );
+
+            CREATE CAST (VARCHAR AS access_resource) WITH INOUT AS IMPLICIT;
+            CREATE CAST (VARCHAR AS access_level) WITH INOUT AS IMPLICIT;
+        </sql>
+
+        <addColumn tableName="PERMISSION">
+            <column name="RESOURCE" type="access_resource">
+                <constraints nullable="false" validateNullable="true" />
+            </column>
+
+            <column name="ACCESS_LEVEL" type="access_level">
+                <constraints nullable="false" validateNullable="true" />
+            </column>
+        </addColumn>
+
+        <dropForeignKeyConstraint baseTableName="USER_PROJECT_EFFECTIVE_PERMISSIONS" constraintName="USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK" />
+        <dropUniqueConstraint tableName="PERMISSION" constraintName="PERMISSION_IDX" />
+
+        <dropColumn tableName="PERMISSION">
+            <column name="NAME" />
+        </dropColumn>
+
+        <dropColumn tableName="USER_PROJECT_EFFECTIVE_PERMISSIONS">
+            <column name="PERMISSION_NAME" />
+        </dropColumn>
+
+        <createIndex unique="true" tableName="PERMISSION" indexName="PERMISSION_RESOURCE_ACCESS_LEVEL_IDX">
+            <column name="RESOURCE" />
+            <column name="ACCESS_LEVEL" />
+        </createIndex>
+
+        <sql splitStatements="false">
+            -- Helper function to recalculate all user permissions for a project.
+            -- Called by trigger functions to update the values in the USER_PROJECT_EFFECTIVE_PERMISSIONS table.
+            CREATE OR REPLACE FUNCTION recalc_user_project_effective_permissions(project_ids BIGINT[])
+            RETURNS void AS $$
+            BEGIN
+              -- Remove any existing effective permissions for this project.
+              DELETE FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+              WHERE "PROJECT_ID" = ANY(project_ids);
+
+              -- Rebuild effective permissions for users
+              INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+                ("USER_ID", "PROJECT_ID", "PERMISSION_ID")
+              SELECT DISTINCT ut."USER_ID", pat."PROJECT_ID", tp."PERMISSION_ID"
+                FROM "PROJECT_ACCESS_TEAMS" pat
+               INNER JOIN "TEAMS_PERMISSIONS" tp
+                  ON tp."TEAM_ID" = pat."TEAM_ID"
+               INNER JOIN "PERMISSION" p
+                  ON p."ID" = tp."PERMISSION_ID"
+               INNER JOIN "USERS_TEAMS" ut
+                  ON ut."TEAM_ID" = pat."TEAM_ID"
+               WHERE pat."PROJECT_ID" = ANY(project_ids);
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

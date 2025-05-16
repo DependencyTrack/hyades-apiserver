@@ -61,7 +61,7 @@ public abstract class User implements Serializable, Principal {
     @Persistent(table = "USERS_PERMISSIONS", defaultFetchGroup = "true")
     @Join(column = "USER_ID", primaryKey = "USERS_PERMISSIONS_PK", foreignKey = "USERS_PERMISSIONS_USER_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Element(column = "PERMISSION_ID", foreignKey = "USERS_PERMISSIONS_PERMISSION_FK", updateAction = ForeignKeyAction.NONE, deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "resource ASC"))
     private List<Permission> permissions;
 
     @Persistent

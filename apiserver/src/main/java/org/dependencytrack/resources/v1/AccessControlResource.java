@@ -19,9 +19,11 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.Team;
 import alpine.persistence.PaginatedResult;
-import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.AccessRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -34,7 +36,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
@@ -89,7 +90,7 @@ public class AccessControlResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the team could not be found"),
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.READ )
     public Response retrieveProjects(@Parameter(description = "The UUID of the team to retrieve mappings for", schema = @Schema(type = "string", format = "uuid"), required = true)
                                      @PathParam("uuid") @ValidUuid String uuid,
                                      @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
@@ -129,7 +130,7 @@ public class AccessControlResource extends AlpineResource {
                     description = "A mapping with the same team and project already exists",
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON))
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.CREATE)
     public Response addMapping(AclMappingRequest request) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -179,7 +180,7 @@ public class AccessControlResource extends AlpineResource {
                     description = "Team or project could not be found",
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON))
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.DELETE)
     public Response deleteMapping(
             @Parameter(description = "The UUID of the team to delete the mapping for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("teamUuid") @ValidUuid String teamUuid,

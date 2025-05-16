@@ -18,7 +18,10 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ManagedUser;
+import alpine.model.Permission;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
@@ -33,7 +36,6 @@ import net.jcip.annotations.NotThreadSafe;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -82,7 +84,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void retrieveAnalysisTest() {
-        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -131,7 +133,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void retrieveAnalysisWithoutExistingAnalysisTest() {
-        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -162,7 +164,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void noAnalysisExists() {
-        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
         var component = new Component();
@@ -190,7 +192,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void retrieveAnalysisWithProjectNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -221,7 +223,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void retrieveAnalysisWithComponentNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -252,7 +254,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void retrieveAnalysisWithVulnerabilityNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -298,7 +300,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void retrieveAnalysisWithAclTest() {
         enablePortfolioAccessControl();
 
-        initializeWithPermissions(Permissions.VIEW_VULNERABILITY);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -346,7 +348,9 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisCreateNewTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -403,7 +407,9 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisCreateNewWithUserTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         String jwt = new JsonWebToken().createToken(testUser);
@@ -464,7 +470,9 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisCreateNewWithEmptyRequestTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -514,7 +522,9 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisUpdateExistingTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -595,7 +605,9 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithNoChangesTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -648,7 +660,9 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisUpdateExistingWithEmptyRequestTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -718,7 +732,9 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithProjectNotFoundTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -750,7 +766,9 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithComponentNotFoundTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -782,7 +800,9 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithVulnerabilityNotFoundTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -818,7 +838,9 @@ public class AnalysisResourceTest extends ResourceTest {
     // see https://github.com/DependencyTrack/dependency-track/issues/1409
     @Test
     public void updateAnalysisIssue1409Test() throws InterruptedException {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -905,7 +927,9 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisWithAclTest() {
         enablePortfolioAccessControl();
 
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -954,7 +978,9 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithAssociatedVulnerabilityPolicyTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
+        initializeWithPermissions(
+                new Permission(AccessResource.PROJECT, AccessLevel.UPDATE, null),
+                new Permission(AccessResource.FINDING, AccessLevel.UPDATE, null));
 
         final var project = new Project();
         project.setName("acme-app");

@@ -34,7 +34,8 @@ public class OidcUserTest {
         team.setName("teamName");
 
         final Permission permission = new Permission();
-        permission.setName("permissionName");
+        permission.setResource(AccessResource.ACCESS_MANAGEMENT);
+        permission.setAccessLevel(AccessLevel.SYSTEM);
 
         final OidcUser oidcUser = new OidcUser();
         oidcUser.setId(666);
@@ -44,27 +45,29 @@ public class OidcUserTest {
         oidcUser.setTeams(Collections.singletonList(team));
         oidcUser.setPermissions(Collections.singletonList(permission));
 
-        Assertions.assertThat(new ObjectMapper().writeValueAsString(oidcUser)).isEqualTo("" +
-                "{" +
-                "\"username\":\"username\"," +
-                "\"subjectIdentifier\":\"subjectIdentifier\"," +
-                "\"email\":\"username@mail.local\"," +
-                "\"teams\":[{\"name\":\"teamName\"}]," +
-                "\"permissions\":[{\"name\":\"permissionName\"}]" +
-                "}");
+        Assertions.assertThat(new ObjectMapper().writeValueAsString(oidcUser)).isEqualTo("""
+                {
+                    "username": "username",
+                    "subjectIdentifier": "subjectIdentifier",
+                    "email": "username@mail.local",
+                    "teams": [{"name": "teamName"}],
+                    "permissions": [{"resource": "ACCESS_MANAGEMENT", "accessLevel": "SYSTEM"}]
+                }
+                """.replaceAll("\s|\n", ""));
     }
 
     @Test
     public void testJsonDeserialization() throws JsonProcessingException {
-        final OidcUser oidcUser = new ObjectMapper().readValue("" +
-                "{" +
-                "\"id\":666," +
-                "\"username\":\"username\"," +
-                "\"subjectIdentifier\":\"subjectIdentifier\"," +
-                "\"email\":\"username@mail.local\"," +
-                "\"teams\":[{\"name\":\"teamName\"}]," +
-                "\"permissions\":[{\"name\":\"permissionName\"}]" +
-                "}", OidcUser.class);
+        final OidcUser oidcUser = new ObjectMapper().readValue("""
+                {
+                    "id": 666,
+                    "username": "username",
+                    "subjectIdentifier": "subjectIdentifier",
+                    "email": "username@mail.local",
+                    "teams": [{"name": "teamName"}],
+                    "permissions": [{"resource": "ACCESS_MANAGEMENT", "accessLevel": "SYSTEM"}]
+                }
+                """, OidcUser.class);
 
         Assertions.assertThat(oidcUser.getId()).isZero();
         Assertions.assertThat(oidcUser.getUsername()).isEqualTo("username");

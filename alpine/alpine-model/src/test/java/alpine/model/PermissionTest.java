@@ -34,10 +34,17 @@ public class PermissionTest {
     }
 
     @Test
-    public void nameTest() {
+    public void accessLevelTest() {
         Permission permission = new Permission();
-        permission.setName("Permission-A");
-        Assertions.assertEquals("Permission-A", permission.getName());
+        permission.setAccessLevel(AccessLevel.DELETE);
+        Assertions.assertEquals(AccessLevel.DELETE, permission.getAccessLevel());
+    }
+
+    @Test
+    public void resourceTest() {
+        Permission permission = new Permission();
+        permission.setResource(AccessResource.ACCESS_MANAGEMENT);
+        Assertions.assertEquals(AccessResource.ACCESS_MANAGEMENT, permission.getResource());
     }
 
     @Test

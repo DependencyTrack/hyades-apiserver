@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.persistence.PaginatedResult;
-import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.AccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -31,7 +33,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
@@ -82,7 +83,7 @@ public class PolicyResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response getPolicies() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final PaginatedResult result = qm.getPolicies();
@@ -106,7 +107,7 @@ public class PolicyResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The policy could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response getPolicy(
             @Parameter(description = "The UUID of the policy to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -136,7 +137,7 @@ public class PolicyResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A policy with the specified name already exists")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_CREATE})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response createPolicy(Policy jsonPolicy) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -180,7 +181,7 @@ public class PolicyResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The policy could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response updatePolicy(Policy jsonPolicy) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -215,7 +216,7 @@ public class PolicyResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the policy could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response deletePolicy(
             @Parameter(description = "The UUID of the policy to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -252,7 +253,7 @@ public class PolicyResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The policy or project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response addProjectToPolicy(
             @Parameter(description = "The UUID of the policy to add a project to", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("policyUuid") @ValidUuid String policyUuid,
@@ -300,7 +301,7 @@ public class PolicyResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The policy or project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response removeProjectFromPolicy(
             @Parameter(description = "The UUID of the policy to remove the project from", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("policyUuid") @ValidUuid String policyUuid,

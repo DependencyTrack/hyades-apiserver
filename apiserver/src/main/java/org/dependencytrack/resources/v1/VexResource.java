@@ -20,7 +20,9 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
-import alpine.server.auth.PermissionRequired;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.server.auth.AccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -35,7 +37,6 @@ import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.VexUploadEvent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
@@ -102,7 +103,8 @@ public class VexResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_READ})
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
+    @AccessRequired(resource = AccessResource.FINDING, accessLevel = AccessLevel.READ)
     public Response exportProjectAsCycloneDx(
             @Parameter(description = "The UUID of the project to export", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -175,7 +177,8 @@ public class VexResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.UPDATE)
+    @AccessRequired(resource = AccessResource.FINDING, accessLevel = AccessLevel.UPDATE)
     public Response uploadVex(VexSubmitRequest request) {
         final Validator validator = getValidator();
         if (request.getProject() != null) {
@@ -238,7 +241,8 @@ public class VexResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.UPDATE)
+    @AccessRequired(resource = AccessResource.FINDING, accessLevel = AccessLevel.UPDATE)
     public Response uploadVex(@FormDataParam("project") String projectUuid,
                               @FormDataParam("projectName") String projectName,
                               @FormDataParam("projectVersion") String projectVersion,

@@ -21,6 +21,8 @@ package alpine.server.resources;
 import alpine.common.logging.Logger;
 import alpine.common.validation.ValidationException;
 import alpine.common.validation.ValidationTask;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ApiKey;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
@@ -29,6 +31,7 @@ import alpine.model.User;
 import alpine.persistence.AlpineQueryManager;
 import alpine.resources.AlpineRequest;
 import alpine.server.filters.AuthorizationFilter;
+
 import io.jsonwebtoken.lang.Collections;
 import org.apache.commons.lang3.StringUtils;
 import org.glassfish.jersey.server.validation.ValidationError;
@@ -324,18 +327,13 @@ public abstract class AlpineResource {
      * @return true if principal has permission assigned, false if not
      * @since 1.2.0
      */
-    protected boolean hasPermission(final String permission) {
-        if (getPrincipal() == null) {
-            return false;
-        }
+    protected boolean hasPermission(final AccessResource resource, final AccessLevel accessLevel) {
         try (AlpineQueryManager qm = new AlpineQueryManager()) {
-            boolean hasPermission = false;
-            if (getPrincipal() instanceof ApiKey) {
-                hasPermission = qm.hasPermission((ApiKey)getPrincipal(), permission);
-            } else if (getPrincipal() instanceof User) {
-                hasPermission = qm.hasPermission((User)getPrincipal(), permission, true);
-            }
-            return hasPermission;
+            return switch (getPrincipal()) {
+                case ApiKey apiKey -> qm.hasPermission(apiKey, resource, accessLevel);
+                case User user -> qm.hasPermission(user, true, resource, accessLevel);
+                default -> false;
+            };
         }
     }
 

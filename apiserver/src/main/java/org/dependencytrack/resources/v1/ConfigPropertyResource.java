@@ -18,9 +18,11 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ConfigProperty;
+import alpine.server.auth.AccessRequired;
 import alpine.server.auth.AuthenticationNotRequired;
-import alpine.server.auth.PermissionRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -40,7 +42,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
 
@@ -75,7 +76,7 @@ public class ConfigPropertyResource extends AbstractConfigPropertyResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM)
     public Response getConfigProperties() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final List<ConfigProperty> configProperties = qm.getConfigProperties();
@@ -108,7 +109,7 @@ public class ConfigPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The config property could not be found"),
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM)
     public Response updateConfigProperty(ConfigProperty json) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -139,7 +140,7 @@ public class ConfigPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "One or more config properties could not be found"),
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM)
     public Response updateConfigProperty(List<ConfigProperty> list) {
         final Validator validator = super.getValidator();
         for (ConfigProperty item : list) {

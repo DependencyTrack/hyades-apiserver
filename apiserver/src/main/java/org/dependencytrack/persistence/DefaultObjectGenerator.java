@@ -20,6 +20,8 @@ package org.dependencytrack.persistence;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
@@ -42,9 +44,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
@@ -217,11 +221,14 @@ public class DefaultObjectGenerator implements ServletContextListener {
         LOGGER.info("Synchronizing permissions to datastore");
 
         for (final Permissions permission : Permissions.values()) {
-            if (qm.getPermission(permission.name()) == null) {
-                LOGGER.debug("Creating permission: " + permission.name());
-                permissionsMap.put(permission.name(),
-                        qm.createPermission(permission.name(), permission.getDescription()));
-            }
+            LOGGER.debug("Creating permission: %s[%s]".formatted(
+                    permission.getResource().toString(),
+                    permission.getAccessLevel().toString()));
+
+            permissionsMap.put(permission.name(), qm.createPermission(
+                    permission.getResource(),
+                    permission.getAccessLevel(),
+                    permission.getDescription()));
         }
     }
 
@@ -268,21 +275,15 @@ public class DefaultObjectGenerator implements ServletContextListener {
     }
 
     private List<Permission> getPortfolioManagersPermissions() {
-        return getPermissionsByName(Permissions.Constants.VIEW_PORTFOLIO,
-                Permissions.Constants.PORTFOLIO_MANAGEMENT,
-                Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
-                Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-                Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
-                Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE);
+        return getPermissionsByName(Permissions.Constants.PORTFOLIO);
     }
 
     private List<Permission> getAutomationPermissions() {
-        return getPermissionsByName(Permissions.Constants.VIEW_PORTFOLIO,
-                Permissions.Constants.BOM_UPLOAD);
+        return getPermissionsByName(Permissions.Constants.PORTFOLIO, Permissions.Constants.BOM_CREATE);
     }
 
     private List<Permission> getBadgesPermissions() {
-        return getPermissionsByName(Permissions.Constants.VIEW_BADGES);
+        return getPermissionsByName(Permissions.Constants.BADGES_READ);
     }
 
     /**
@@ -305,8 +306,8 @@ public class DefaultObjectGenerator implements ServletContextListener {
     }
 
     /**
-    * Loads the default repositories
-    */
+     * Loads the default repositories
+     */
     private void loadDefaultRepositories(final QueryManager qm) {
         LOGGER.info("Synchronizing default repositories to datastore");
         // @formatter:off

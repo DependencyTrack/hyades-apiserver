@@ -22,6 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.User;
 import alpine.persistence.AlpineQueryManager;
+import alpine.server.auth.AccessRequired;
 import alpine.server.auth.PermissionRequired;
 import org.glassfish.jersey.server.ContainerRequest;
 import org.owasp.security.logging.SecurityMarkers;
@@ -67,7 +68,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
             }
 
             final PermissionRequired annotation = resourceInfo.getResourceMethod().getDeclaredAnnotation(PermissionRequired.class);
-            final Set<String> permissions = Set.of(annotation.value());
+            final Set<AccessRequired> permissions = Set.of(annotation.value());
 
             final Set<String> effectivePermissions;
             try (final var qm = new AlpineQueryManager()) {

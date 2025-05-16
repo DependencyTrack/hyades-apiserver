@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.persistence.PaginatedResult;
-import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.AccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -32,7 +34,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.validation.ValidUuid;
@@ -93,7 +94,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getAllServices(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                    @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
@@ -128,7 +129,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The service could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getServiceByUuid(
             @Parameter(description = "The UUID of the service to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -165,7 +166,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response createService(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                   @PathParam("uuid") @ValidUuid String uuid, ServiceComponent jsonService) {
         final Validator validator = super.getValidator();
@@ -223,7 +224,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the service could not be found"),
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response updateService(ServiceComponent jsonService) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -275,7 +276,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the service could not be found")
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response deleteService(
             @Parameter(description = "The UUID of the service to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

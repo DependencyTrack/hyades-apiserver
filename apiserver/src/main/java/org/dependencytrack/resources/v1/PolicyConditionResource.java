@@ -18,7 +18,9 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.server.auth.PermissionRequired;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.server.auth.AccessRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -30,7 +32,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.validation.ValidUuid;
@@ -87,7 +88,7 @@ public class PolicyConditionResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the policy could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response createPolicyCondition(
             @Parameter(description = "The UUID of the policy", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -132,7 +133,7 @@ public class PolicyConditionResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the policy condition could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response updatePolicyCondition(PolicyCondition jsonPolicyCondition) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -168,7 +169,7 @@ public class PolicyConditionResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the policy condition could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response deletePolicyCondition(
             @Parameter(description = "The UUID of the policy condition to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

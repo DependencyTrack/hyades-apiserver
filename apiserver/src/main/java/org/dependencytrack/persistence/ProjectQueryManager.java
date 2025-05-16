@@ -19,6 +19,7 @@
 package org.dependencytrack.persistence;
 
 import alpine.common.logging.Logger;
+import alpine.model.AccessResource;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
@@ -32,7 +33,6 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.packageurl.PackageURL;
 import org.apache.commons.collections4.CollectionUtils;
 import org.datanucleus.api.jdo.JDOQuery;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
@@ -1137,12 +1137,12 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean hasAccessManagementPermission(final User user) {
-        return hasPermission(user, Permissions.Constants.ACCESS_MANAGEMENT, true);
+        return hasPermission(user, true, AccessResource.ACCESS_MANAGEMENT);
     }
 
     @Override
     public boolean hasAccessManagementPermission(final ApiKey apiKey) {
-        return hasPermission(apiKey, Permissions.ACCESS_MANAGEMENT.name());
+        return hasPermission(apiKey, AccessResource.ACCESS_MANAGEMENT);
     }
 
     @Override

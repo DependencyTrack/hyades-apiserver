@@ -18,12 +18,14 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.model.Permission;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Policy.Operator;
 import org.dependencytrack.model.Policy.ViolationState;
@@ -54,7 +56,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
 
     @Test
     public void testCreateCondition() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final var policy = new Policy();
         policy.setName("foo");
@@ -86,7 +88,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
 
     @Test
     public void testCreateConditionWhenPolicyDoesNotExist() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final Response response = jersey.target("%s/cec42e01-62a7-4c86-9b8f-cd6650be2888/condition".formatted(V1_POLICY))
                 .request()
@@ -119,7 +121,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
 
     @Test
     public void testCreateConditionWithExpression() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final Policy policy = qm.createPolicy("policy", Operator.ANY, ViolationState.FAIL);
 
@@ -148,7 +150,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
 
     @Test
     public void testCreateConditionWithInvalidExpression() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final Policy policy = qm.createPolicy("policy", Operator.ANY, ViolationState.FAIL);
 
@@ -180,7 +182,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
 
     @Test
     public void testUpdateCondition() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final var policy = new Policy();
         policy.setName("foo");
@@ -222,7 +224,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
 
     @Test
     public void testUpdateConditionWhenConditionDoesNotExist() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final Response response = jersey.target("%s/condition".formatted(V1_POLICY))
                 .request()
@@ -257,7 +259,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
 
     @Test
     public void testUpdateConditionWithExpression() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final Policy policy = qm.createPolicy("policy", Operator.ANY, ViolationState.FAIL);
         final PolicyCondition condition = qm.createPolicyCondition(policy,
@@ -290,7 +292,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
 
     @Test
     public void testUpdateConditionWithInvalidExpression() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final Policy policy = qm.createPolicy("policy", Operator.ANY, ViolationState.FAIL);
         final PolicyCondition condition = qm.createPolicyCondition(policy,
@@ -325,7 +327,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
 
     @Test
     public void testDeleteCondition() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final var policy = new Policy();
         policy.setName("foo");
@@ -354,7 +356,7 @@ public class PolicyConditionResourceTest extends ResourceTest {
 
     @Test
     public void testDeleteConditionWhenConditionDoesNotExist() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT_UPDATE);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final Response response = jersey.target("%s/condition/%s".formatted(V1_POLICY, UUID.randomUUID()))
                 .request()
