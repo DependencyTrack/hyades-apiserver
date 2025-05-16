@@ -44,6 +44,7 @@ import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -60,6 +61,7 @@ import java.util.function.Supplier;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.resources.v1.FindingResource.MEDIA_TYPE_SARIF_JSON;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
@@ -201,6 +203,64 @@ public class FindingResourceTest extends ResourceTest {
 
         response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    public void getFindingsByProjectWithAnalysisTest() {
+        Project p1 = qm.createProject("Acme Example 1", null, "1.0", null, null, null, null, false);
+
+        Component c1 = createComponent(p1, "Component A", "1.0"); // with analysis
+        Component c2 = createComponent(p1, "Component B", "1.0"); // without analysis
+
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
+        Vulnerability v2 = createVulnerability("Vuln-2", Severity.CRITICAL);
+
+        qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
+        qm.addVulnerability(v2, c2, AnalyzerIdentity.NONE);
+
+        withJdbiHandle(handle -> handle.attach(AnalysisDao.class).makeAnalysis(p1.getId(), c1.getId(), v1.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, false));
+
+        // Should include all findings with or without analysis.
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+
+        // Should only include project with existing analysis.
+        response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString())
+                .queryParam("hasAnalysis", true)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        JsonArray json = parseJsonArray(response);
+        assertNotNull(json);
+        assertThat(json).satisfiesExactly(
+                jsonValue -> {
+                    final JsonObject finding = jsonValue.asJsonObject();
+                    assertEquals("Component A", finding.getJsonObject("component").getString("name"));
+                    assertEquals("FALSE_POSITIVE", finding.getJsonObject("analysis").getString("state"));
+                }
+        );
+
+        // Should only include project without existing analysis.
+        response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString())
+                .queryParam("hasAnalysis", false)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        json = parseJsonArray(response);
+        assertNotNull(json);
+        assertThat(json).satisfiesExactly(
+                jsonValue -> {
+                    final JsonObject finding = jsonValue.asJsonObject();
+                    assertEquals("Component B", finding.getJsonObject("component").getString("name"));
+                }
+        );
     }
 
     @Test

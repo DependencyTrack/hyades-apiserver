@@ -129,13 +129,15 @@ public class FindingResource extends AbstractApiResource {
                                          @QueryParam("suppressed") boolean suppressed,
                                          @Parameter(description = "Optionally limit findings to specific sources of vulnerability intelligence")
                                          @QueryParam("source") Vulnerability.Source source,
-                                         @HeaderParam("accept") String acceptHeader) {
+                                         @HeaderParam("accept") String acceptHeader,
+                                         @Parameter(description = "Whether to include only projects with existing analysis.")
+                                         @QueryParam("hasAnalysis") final Boolean hasAnalysis) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);
                 List<FindingDao.FindingRow> findingRows = withJdbiHandle(getAlpineRequest(), handle ->
-                        handle.attach(FindingDao.class).getFindingsByProject(project.getId(), suppressed));
+                        handle.attach(FindingDao.class).getFindingsByProject(project.getId(), suppressed, hasAnalysis));
                 final long totalCount = findingRows.isEmpty() ? 0 : findingRows.getFirst().totalCount();
                 List<Finding> findings = findingRows.stream().map(Finding::new).toList();
                 findings = mapComponentLatestVersion(findings);
