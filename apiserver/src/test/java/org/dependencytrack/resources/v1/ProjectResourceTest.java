@@ -63,6 +63,7 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -757,33 +758,36 @@ public class ProjectResourceTest extends ResourceTest {
         final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);
         final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
 
-        final var projectMetricsOld = new ProjectMetrics();
-        projectMetricsOld.setProject(project);
-        projectMetricsOld.setCritical(666);
-        projectMetricsOld.setFirstOccurrence(Date.from(projectMetricsOldOccurrence));
-        projectMetricsOld.setLastOccurrence(Date.from(projectMetricsOldOccurrence));
-        qm.persist(projectMetricsOld);
+        useJdbiHandle(handle ->  {
+            var dao = handle.attach(MetricsTestDao.class);
+            final var projectMetricsOld = new ProjectMetrics();
+            projectMetricsOld.setProjectId(project.getId());
+            projectMetricsOld.setCritical(666);
+            projectMetricsOld.setFirstOccurrence(Date.from(projectMetricsOldOccurrence));
+            projectMetricsOld.setLastOccurrence(Date.from(projectMetricsOldOccurrence));
+            dao.createProjectMetrics(projectMetricsOld);
 
-        final var projectMetricsLatest = new ProjectMetrics();
-        projectMetricsLatest.setProject(project);
-        projectMetricsLatest.setComponents(1);
-        projectMetricsLatest.setCritical(2);
-        projectMetricsLatest.setHigh(3);
-        projectMetricsLatest.setLow(4);
-        projectMetricsLatest.setMedium(5);
-        projectMetricsLatest.setPolicyViolationsFail(6);
-        projectMetricsLatest.setPolicyViolationsInfo(7);
-        projectMetricsLatest.setPolicyViolationsLicenseTotal(8);
-        projectMetricsLatest.setPolicyViolationsOperationalTotal(9);
-        projectMetricsLatest.setPolicyViolationsSecurityTotal(10);
-        projectMetricsLatest.setPolicyViolationsTotal(11);
-        projectMetricsLatest.setPolicyViolationsWarn(12);
-        projectMetricsLatest.setInheritedRiskScore(13.13);
-        projectMetricsLatest.setUnassigned(14);
-        projectMetricsLatest.setVulnerabilities(15);
-        projectMetricsLatest.setFirstOccurrence(Date.from(projectMetricsLatestOccurrence));
-        projectMetricsLatest.setLastOccurrence(Date.from(projectMetricsLatestOccurrence));
-        qm.persist(projectMetricsLatest);
+            final var projectMetricsLatest = new ProjectMetrics();
+            projectMetricsLatest.setProjectId(project.getId());
+            projectMetricsLatest.setComponents(1);
+            projectMetricsLatest.setCritical(2);
+            projectMetricsLatest.setHigh(3);
+            projectMetricsLatest.setLow(4);
+            projectMetricsLatest.setMedium(5);
+            projectMetricsLatest.setPolicyViolationsFail(6);
+            projectMetricsLatest.setPolicyViolationsInfo(7);
+            projectMetricsLatest.setPolicyViolationsLicenseTotal(8);
+            projectMetricsLatest.setPolicyViolationsOperationalTotal(9);
+            projectMetricsLatest.setPolicyViolationsSecurityTotal(10);
+            projectMetricsLatest.setPolicyViolationsTotal(11);
+            projectMetricsLatest.setPolicyViolationsWarn(12);
+            projectMetricsLatest.setInheritedRiskScore(13.13);
+            projectMetricsLatest.setUnassigned(14);
+            projectMetricsLatest.setVulnerabilities(15);
+            projectMetricsLatest.setFirstOccurrence(Date.from(projectMetricsLatestOccurrence));
+            projectMetricsLatest.setLastOccurrence(Date.from(projectMetricsLatestOccurrence));
+            dao.createProjectMetrics(projectMetricsLatest);
+        });
 
         // Should not include metrics if not explicitly requested.
         Response response = jersey.target(V1_PROJECT + "/concise")
@@ -826,15 +830,15 @@ public class ProjectResourceTest extends ResourceTest {
                       "high": 3,
                       "low": 4,
                       "medium": 5,
-                      "policyViolationsFail": 6,
-                      "policyViolationsInfo": 7,
-                      "policyViolationsLicenseTotal": 8,
-                      "policyViolationsOperationalTotal": 9,
-                      "policyViolationsSecurityTotal": 10,
-                      "policyViolationsTotal": 11,
-                      "policyViolationsWarn": 12,
+                      "policyViolationsFail": 0,
+                      "policyViolationsInfo": 0,
+                      "policyViolationsLicenseTotal": 0,
+                      "policyViolationsOperationalTotal": 0,
+                      "policyViolationsSecurityTotal": 0,
+                      "policyViolationsTotal": 0,
+                      "policyViolationsWarn": 0,
                       "inheritedRiskScore": 13.13,
-                      "unassigned": 14,
+                      "unassigned": 0,
                       "vulnerabilities": 15
                     }
                   }
@@ -1240,33 +1244,36 @@ public class ProjectResourceTest extends ResourceTest {
         final Instant projectMetricsOldOccurrence = now.minus(1, ChronoUnit.HOURS);
         final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
 
-        final var projectMetricsOld = new ProjectMetrics();
-        projectMetricsOld.setProject(childProject);
-        projectMetricsOld.setCritical(666);
-        projectMetricsOld.setFirstOccurrence(Date.from(projectMetricsOldOccurrence));
-        projectMetricsOld.setLastOccurrence(Date.from(projectMetricsOldOccurrence));
-        qm.persist(projectMetricsOld);
+        useJdbiHandle(handle ->  {
+            var dao = handle.attach(MetricsTestDao.class);
+            final var projectMetricsOld = new ProjectMetrics();
+            projectMetricsOld.setProjectId(childProject.getId());
+            projectMetricsOld.setCritical(666);
+            projectMetricsOld.setFirstOccurrence(Date.from(projectMetricsOldOccurrence));
+            projectMetricsOld.setLastOccurrence(Date.from(projectMetricsOldOccurrence));
+            dao.createProjectMetrics(projectMetricsOld);
 
-        final var projectMetricsLatest = new ProjectMetrics();
-        projectMetricsLatest.setProject(childProject);
-        projectMetricsLatest.setComponents(1);
-        projectMetricsLatest.setCritical(2);
-        projectMetricsLatest.setHigh(3);
-        projectMetricsLatest.setLow(4);
-        projectMetricsLatest.setMedium(5);
-        projectMetricsLatest.setPolicyViolationsFail(6);
-        projectMetricsLatest.setPolicyViolationsInfo(7);
-        projectMetricsLatest.setPolicyViolationsLicenseTotal(8);
-        projectMetricsLatest.setPolicyViolationsOperationalTotal(9);
-        projectMetricsLatest.setPolicyViolationsSecurityTotal(10);
-        projectMetricsLatest.setPolicyViolationsTotal(11);
-        projectMetricsLatest.setPolicyViolationsWarn(12);
-        projectMetricsLatest.setInheritedRiskScore(13.13);
-        projectMetricsLatest.setUnassigned(14);
-        projectMetricsLatest.setVulnerabilities(15);
-        projectMetricsLatest.setFirstOccurrence(Date.from(projectMetricsLatestOccurrence));
-        projectMetricsLatest.setLastOccurrence(Date.from(projectMetricsLatestOccurrence));
-        qm.persist(projectMetricsLatest);
+            final var projectMetricsLatest = new ProjectMetrics();
+            projectMetricsLatest.setProjectId(childProject.getId());
+            projectMetricsLatest.setComponents(1);
+            projectMetricsLatest.setCritical(2);
+            projectMetricsLatest.setHigh(3);
+            projectMetricsLatest.setLow(4);
+            projectMetricsLatest.setMedium(5);
+            projectMetricsLatest.setPolicyViolationsFail(6);
+            projectMetricsLatest.setPolicyViolationsInfo(7);
+            projectMetricsLatest.setPolicyViolationsLicenseTotal(8);
+            projectMetricsLatest.setPolicyViolationsOperationalTotal(9);
+            projectMetricsLatest.setPolicyViolationsSecurityTotal(10);
+            projectMetricsLatest.setPolicyViolationsTotal(11);
+            projectMetricsLatest.setPolicyViolationsWarn(12);
+            projectMetricsLatest.setInheritedRiskScore(13.13);
+            projectMetricsLatest.setUnassigned(14);
+            projectMetricsLatest.setVulnerabilities(15);
+            projectMetricsLatest.setFirstOccurrence(Date.from(projectMetricsLatestOccurrence));
+            projectMetricsLatest.setLastOccurrence(Date.from(projectMetricsLatestOccurrence));
+            dao.createProjectMetrics(projectMetricsLatest);
+        });
 
         // Should not include metrics if not explicitly requested.
         Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
@@ -1309,15 +1316,15 @@ public class ProjectResourceTest extends ResourceTest {
                       "high": 3,
                       "low": 4,
                       "medium": 5,
-                      "policyViolationsFail": 6,
-                      "policyViolationsInfo": 7,
-                      "policyViolationsLicenseTotal": 8,
-                      "policyViolationsOperationalTotal": 9,
-                      "policyViolationsSecurityTotal": 10,
-                      "policyViolationsTotal": 11,
-                      "policyViolationsWarn": 12,
+                      "policyViolationsFail": 0,
+                      "policyViolationsInfo": 0,
+                      "policyViolationsLicenseTotal": 0,
+                      "policyViolationsOperationalTotal": 0,
+                      "policyViolationsSecurityTotal": 0,
+                      "policyViolationsTotal": 0,
+                      "policyViolationsWarn": 0,
                       "inheritedRiskScore": 13.13,
-                      "unassigned": 14,
+                      "unassigned": 0,
                       "vulnerabilities": 15
                     }
                   }

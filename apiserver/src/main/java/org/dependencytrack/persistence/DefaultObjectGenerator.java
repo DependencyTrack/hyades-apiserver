@@ -24,6 +24,8 @@ import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.auth.PasswordService;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -31,14 +33,14 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.WaitingLockConfiguration;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,7 @@ import java.util.stream.Stream;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_DEFAULT_OBJECTS_VERSION;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 
 /**
@@ -124,6 +127,9 @@ public class DefaultObjectGenerator implements ServletContextListener {
             loadDefaultNotificationPublishers(qm);
             recordDefaultObjectsVersion(qm);
         }
+
+        LOGGER.info("Ensuring the metrics partitions for today and tomorrow exist.");
+        ensureMetricsPartitions();
     }
 
     /**
@@ -230,7 +236,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
     }
 
     @SuppressWarnings("unused")
-    private void loadDefaultPersonas() {
+    void loadDefaultPersonas() {
         try (final var qm = new QueryManager()) {
             loadDefaultPersonas(qm);
         }
@@ -325,7 +331,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
     }
 
     @SuppressWarnings("unused")
-    private void loadDefaultConfigProperties() {
+    void loadDefaultConfigProperties() {
         try (final var qm = new QueryManager()) {
             loadDefaultConfigProperties(qm);
         }
@@ -361,5 +367,16 @@ public class DefaultObjectGenerator implements ServletContextListener {
         } catch (IOException e) {
             LOGGER.error("An error occurred while synchronizing a default notification publisher", e);
         }
+    }
+
+    /**
+     * Create metrics partitions for today and tomorrow if they don't exist.
+     */
+    void ensureMetricsPartitions() {
+        useJdbiHandle(handle -> {
+            var metricsHandle = handle.attach(MetricsDao.class);
+            metricsHandle.createMetricsPartitionsForDate(LocalDate.now().toString(), LocalDate.now().plusDays(1).toString());
+            metricsHandle.createMetricsPartitionsForDate(LocalDate.now().plusDays(1).toString(), LocalDate.now().plusDays(2).toString());
+        });
     }
 }

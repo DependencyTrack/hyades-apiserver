@@ -26,26 +26,19 @@ import java.util.Date;
 public class DependencyMetricsTest {
 
     @Test
-    public void testId() {
-        DependencyMetrics metric = new DependencyMetrics();
-        metric.setId(111L);
-        Assert.assertEquals(111L, metric.getId());
-    }
-
-    @Test
     public void testProject() {
         Project project = new Project();
         DependencyMetrics metric = new DependencyMetrics();
-        metric.setProject(project);
-        Assert.assertEquals(project, metric.getProject());
+        metric.setProjectId(project.getId());
+        Assert.assertEquals(project.getId(), metric.getProjectId());
     }
 
     @Test
     public void testComponent() {
         Component component = new Component();
         DependencyMetrics metric = new DependencyMetrics();
-        metric.setComponent(component);
-        Assert.assertEquals(component, metric.getComponent());
+        metric.setComponentId(component.getId());
+        Assert.assertEquals(component.getId(), metric.getComponentId());
     }
 
     @Test
