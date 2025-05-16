@@ -58,15 +58,16 @@ public class OidcUserTest {
 
     @Test
     public void testJsonDeserialization() throws JsonProcessingException {
-        final OidcUser oidcUser = new ObjectMapper().readValue("" +
-                "{" +
-                "\"id\":666," +
-                "\"username\":\"username\"," +
-                "\"subjectIdentifier\":\"subjectIdentifier\"," +
-                "\"email\":\"username@mail.local\"," +
-                "\"teams\":[{\"name\":\"teamName\"}]," +
-                "\"permissions\":[{\"name\":\"permissionName\"}]" +
-                "}", OidcUser.class);
+        final OidcUser oidcUser = new ObjectMapper().readValue("""
+                {
+                    "id": 666,
+                    "username": "username",
+                    "subjectIdentifier": "subjectIdentifier",
+                    "email": "username@mail.local",
+                    "teams": [{"name": "teamName"}],
+                    "permissions": [{"resource": "ACCESS_MANAGEMENT", "accessLevel": "SYSTEM"}]
+                }
+                """, OidcUser.class);
 
         Assertions.assertThat(oidcUser.getId()).isZero();
         Assertions.assertThat(oidcUser.getUsername()).isEqualTo("username");
