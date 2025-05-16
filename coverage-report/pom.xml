@@ -49,6 +49,10 @@
             <classifier>classes</classifier>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>workflow-engine</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
