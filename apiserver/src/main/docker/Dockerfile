@@ -51,7 +51,7 @@ RUN mkdir -p ${APP_DIR} ${DATA_DIR} \
     && adduser -S -D -G dtrack -H -h ${DATA_DIR} -g "dtrack user" -s /bin/false -u ${UID} dtrack || true \
     && chown -R dtrack:0 ${DATA_DIR} ${APP_DIR} \
     && chmod -R g=u ${DATA_DIR} ${APP_DIR} \
-    && apk add --no-cache tzdata
+    && apk add --no-cache tzdata wget
 
 # Copy the compiled WAR to the application directory created above
 COPY ./target/dependency-track-apiserver.jar ./src/main/docker/logback-json.xml ${APP_DIR}
