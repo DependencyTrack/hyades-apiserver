@@ -30,7 +30,7 @@ public class DependencyMetricsTest {
         Project project = new Project();
         DependencyMetrics metric = new DependencyMetrics();
         metric.setProjectId(project.getId());
-        Assert.assertEquals(project, metric.getProjectId());
+        Assert.assertEquals(project.getId(), metric.getProjectId());
     }
 
     @Test
@@ -38,7 +38,7 @@ public class DependencyMetricsTest {
         Component component = new Component();
         DependencyMetrics metric = new DependencyMetrics();
         metric.setComponentId(component.getId());
-        Assert.assertEquals(component, metric.getComponentId());
+        Assert.assertEquals(component.getId(), metric.getComponentId());
     }
 
     @Test
