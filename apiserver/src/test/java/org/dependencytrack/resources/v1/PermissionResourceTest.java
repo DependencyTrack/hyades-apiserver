@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
@@ -25,7 +27,6 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
@@ -42,6 +43,7 @@ import jakarta.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
 
 public class PermissionResourceTest extends ResourceTest {
 
@@ -117,7 +119,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void addPermissionToUserDuplicateTest() {
         ManagedUser user = qm.createManagedUser("user1", TEST_USER_PASSWORD_HASH);
         String username = user.getUsername();
-        Permission permission = qm.getPermission(Permissions.PORTFOLIO_MANAGEMENT.name());
+        Permission permission = qm.getPermission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM);
         user.getPermissions().add(permission);
         qm.persist(user);
         qm.close();
@@ -132,7 +134,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void removePermissionFromUserTest() {
         ManagedUser user = qm.createManagedUser("user1", TEST_USER_PASSWORD_HASH);
         String username = user.getUsername();
-        Permission permission = qm.getPermission(Permissions.PORTFOLIO_MANAGEMENT.name());
+        Permission permission = qm.getPermission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM);
         user.getPermissions().add(permission);
         qm.persist(user);
         qm.close();
@@ -227,7 +229,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void addPermissionToTeamDuplicateTest() {
         Team team = qm.createTeam("team1");
         String teamUuid = team.getUuid().toString();
-        Permission permission = qm.getPermission(Permissions.PORTFOLIO_MANAGEMENT.name());
+        Permission permission = qm.getPermission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM);
         team.getPermissions().add(permission);
         qm.persist(team);
         qm.close();
@@ -242,7 +244,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void removePermissionFromTeamTest() {
         Team team = qm.createTeam("team1");
         String teamUuid = team.getUuid().toString();
-        Permission permission = qm.getPermission(Permissions.PORTFOLIO_MANAGEMENT.name());
+        Permission permission = qm.getPermission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM);
         team.getPermissions().add(permission);
         qm.persist(team);
         qm.close();
@@ -298,24 +300,24 @@ public class PermissionResourceTest extends ResourceTest {
         String endpoint = V1_PERMISSION + "/user";
 
         List<Permission> permissionSet1 = List.of(
-                qm.getPermission("ACCESS_MANAGEMENT"),
-                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
-                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
+                qm.getPermission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM),
+                qm.getPermission(AccessResource.TAG, AccessLevel.SYSTEM),
+                qm.getPermission(AccessResource.POLICY_VIOLATION, AccessLevel.READ));
 
         List<Permission> permissionSet2 = List.of(
-                qm.getPermission("BOM_UPLOAD"),
-                qm.getPermission("VIEW_PORTFOLIO"),
-                qm.getPermission("PORTFOLIO_MANAGEMENT"),
-                qm.getPermission("PORTFOLIO_MANAGEMENT_CREATE"));
+                qm.getPermission(AccessResource.BOM, AccessLevel.UPDATE),
+                qm.getPermission(AccessResource.PROJECT, AccessLevel.READ),
+                qm.getPermission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM),
+                qm.getPermission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM));
 
         JsonObject permissionRequest1 = Json.createObjectBuilder()
                 .add("username", username)
-                .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Permission::getName).toList()))
+                .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Function.identity()).toList()))
                 .build();
 
         JsonObject permissionRequest2 = Json.createObjectBuilder()
                 .add("username", username)
-                .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Permission::getName).toList()))
+                .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Function.identity()).toList()))
                 .build();
 
         // Test initial assignment.
@@ -363,10 +365,10 @@ public class PermissionResourceTest extends ResourceTest {
         JsonObject requestBody = Json.createObjectBuilder()
                 .add("username", "user2")
                 .add("permissions", Json.createArrayBuilder()
-                        .add("Invalid")
-                        .add("Permission")
-                        .add("List")
-                        .add("Four"))
+                        .add("{\"resource\": \"Invalid\", \"accessLevel\": \"READ\"}")
+                        .add("{\"resource\": \"Permission\", \"accessLevel\": \"READ\"}")
+                        .add("{\"resource\": \"List\", \"accessLevel\": \"READ\"}")
+                        .add("{\"resource\": \"Four\", \"accessLevel\": \"READ\"}"))
                 .build();
 
         Response response = jersey.target(V1_PERMISSION + "/user")
@@ -379,12 +381,12 @@ public class PermissionResourceTest extends ResourceTest {
         String detail = jsonResponse.get("detail").toString();
         Assert.assertNotNull(jsonResponse);
 
-        List<String> allPerms = qm.getPermissions().stream()
-                .map(Permission::getName)
-                .toList();
+        var allPerms = qm.getPermissions();
 
         // Verify that the request was parsed correctly but contained invalid permissions.
-        Assert.assertTrue(allPerms.stream().allMatch(perm -> detail.contains(perm)));
+        Assert.assertTrue(allPerms.stream().allMatch(perm ->
+                detail.contains("\"resource\": \"%s\"".formatted(perm.getResource().toString()))
+                && detail.contains("\"accessLevel\": \"READ\"")));
     }
 
     @Test
@@ -393,24 +395,24 @@ public class PermissionResourceTest extends ResourceTest {
         String endpoint = V1_PERMISSION + "/team";
 
         List<Permission> permissionSet1 = List.of(
-                qm.getPermission("ACCESS_MANAGEMENT"),
-                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
-                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
+                qm.getPermission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM),
+                qm.getPermission(AccessResource.TAG, AccessLevel.SYSTEM),
+                qm.getPermission(AccessResource.POLICY_VIOLATION, AccessLevel.READ));
 
         List<Permission> permissionSet2 = List.of(
-                qm.getPermission("BOM_UPLOAD"),
-                qm.getPermission("VIEW_PORTFOLIO"),
-                qm.getPermission("PORTFOLIO_MANAGEMENT"),
-                qm.getPermission("PORTFOLIO_MANAGEMENT_CREATE"));
+                qm.getPermission(AccessResource.BOM, AccessLevel.UPDATE),
+                qm.getPermission(AccessResource.PROJECT, AccessLevel.READ),
+                qm.getPermission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM),
+                qm.getPermission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM));
 
         JsonObject permissionRequet1 = Json.createObjectBuilder()
                 .add("team", teamUuid.toString())
-                .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Permission::getName).toList()))
+                .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Function.identity()).toList()))
                 .build();
 
         JsonObject permissionRequet2 = Json.createObjectBuilder()
                 .add("team", teamUuid.toString())
-                .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Permission::getName).toList()))
+                .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Function.identity()).toList()))
                 .build();
 
         // Test initial assignment.

@@ -19,7 +19,10 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.util.UuidUtil;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.IConfigProperty;
+import alpine.model.Permission;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.fasterxml.jackson.core.StreamReadConstraints;
@@ -37,7 +40,6 @@ import org.apache.http.HttpStatus;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -950,7 +952,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
@@ -1005,7 +1007,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadNonCycloneDxBomTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         String bomString = Base64.getEncoder().encodeToString("""
                 SPDXVersion: SPDX-2.2
@@ -1027,7 +1029,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadInvalidCycloneDxBomTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         String bomString = Base64.getEncoder().encodeToString("""
                 {
@@ -1063,7 +1065,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadInvalidFormatBomTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         File file = new File(IOUtils.resourceToURL("/unit/bom-invalid.json").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
@@ -1083,7 +1085,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomInvalidProjectTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         BomSubmitRequest request = new BomSubmitRequest(UUID.randomUUID().toString(), null, null, null, false, false, bomString);
@@ -1098,7 +1100,9 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        initializeWithPermissions(
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null),
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, false, bomString);
@@ -1129,7 +1133,9 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateTestWithParentTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        initializeWithPermissions(
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null),
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         // Upload parent project
@@ -1193,7 +1199,9 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomInvalidParentTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        initializeWithPermissions(
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null),
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, UUID.randomUUID().toString(), null, null, false, bomString);
@@ -1235,7 +1243,7 @@ public class BomResourceTest extends ResourceTest {
     @Test
     @Parameters(method = "uploadBomSchemaValidationTestParameters")
     public void uploadBomSchemaValidationTest(final Path filePath) throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         File file = filePath.toFile();
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
@@ -1248,7 +1256,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomInvalidJsonTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -1316,7 +1324,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomInvalidXmlTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -1380,7 +1388,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomTooLargeViaPutTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -1411,7 +1419,9 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateWithTagsMultipartTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        initializeWithPermissions(
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null),
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         final var multiPart = new FormDataMultiPart()
                 .field("bom", resourceToString("/unit/bom-1.xml", StandardCharsets.UTF_8), MediaType.APPLICATION_XML_TYPE)
                 .field("projectName", "Acme Example")
@@ -1444,7 +1454,9 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomProtobufFormatTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        initializeWithPermissions(
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null),
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         final var bomProto = Bom.newBuilder().setSpecVersion("1.6").build();
         final var multiPart = new FormDataMultiPart()
@@ -1475,7 +1487,9 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateWithTagsTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        initializeWithPermissions(
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null),
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         List<Tag> tags = Stream.of("tag1", "tag2").map(name -> {
@@ -1507,7 +1521,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomWithValidationModeDisabledTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -1552,7 +1566,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomWithValidationModeEnabledForTagsTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -1619,7 +1633,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomWithValidationModeDisabledForTagsTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -1686,7 +1700,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomWithValidationTagsInvalidTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -1756,7 +1770,9 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateLatestWithAclTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        initializeWithPermissions(
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null),
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         enablePortfolioAccessControl();
 
         final var accessLatestProject = new Project();
@@ -1780,7 +1796,9 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateLatestWithAclNoAccessTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        initializeWithPermissions(
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null),
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
         enablePortfolioAccessControl();
 
         final var noAccessLatestProject = new Project();

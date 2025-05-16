@@ -19,10 +19,12 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.MappedLdapGroup;
 import alpine.model.Team;
+import alpine.server.auth.AccessRequired;
 import alpine.server.auth.LdapConnectionWrapper;
-import alpine.server.auth.PermissionRequired;
 import alpine.server.cache.CacheManager;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,7 +47,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.MappedLdapGroupRequest;
@@ -94,7 +95,7 @@ public class LdapResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response retrieveLdapGroups() {
         if (!LdapConnectionWrapper.LDAP_CONFIGURED) {
             return Response.ok().build();
@@ -143,7 +144,7 @@ public class LdapResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the team could not be found"),
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response retrieveLdapGroups(@Parameter(description = "The UUID of the team to retrieve mappings for", schema = @Schema(type = "string", format = "uuid"), required = true)
                                        @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
@@ -174,7 +175,7 @@ public class LdapResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the team could not be found"),
             @ApiResponse(responseCode = "409", description = "A mapping with the same team and dn already exists")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response addMapping(MappedLdapGroupRequest request) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -208,7 +209,7 @@ public class LdapResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the mapping could not be found"),
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response deleteMapping(
             @Parameter(description = "The UUID of the mapping to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

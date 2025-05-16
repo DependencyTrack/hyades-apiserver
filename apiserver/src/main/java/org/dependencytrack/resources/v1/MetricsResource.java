@@ -19,7 +19,9 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.event.framework.Event;
-import alpine.server.auth.PermissionRequired;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.server.auth.AccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -37,7 +39,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.time.DateUtils;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
@@ -91,7 +92,7 @@ public class MetricsResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.VULNERABILITY, accessLevel = AccessLevel.SYSTEM)
     public Response getVulnerabilityMetrics() {
         try (QueryManager qm = new QueryManager()) {
             final List<VulnerabilityMetrics> metrics = qm.getVulnerabilityMetrics();
@@ -114,7 +115,7 @@ public class MetricsResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response getPortfolioCurrentMetrics() {
         PortfolioMetrics metrics = withJdbiHandle(handle ->
                 handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
@@ -137,7 +138,7 @@ public class MetricsResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response getPortfolioMetricsSince(
             @Parameter(description = "The start date to retrieve metrics for", required = true)
             @PathParam("date") String date) {
@@ -166,7 +167,7 @@ public class MetricsResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response getPortfolioMetricsXDays(
             @Parameter(description = "The number of days back to retrieve metrics for", required = true)
             @PathParam("days") int days) {
@@ -187,7 +188,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "200", description = "Refresh requested successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response RefreshPortfolioMetrics() {
         Event.dispatch(new PortfolioMetricsUpdateEvent());
         return Response.ok().build();
@@ -213,7 +214,7 @@ public class MetricsResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getProjectCurrentMetrics(
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -250,7 +251,7 @@ public class MetricsResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getProjectMetricsSince(
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -280,7 +281,7 @@ public class MetricsResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getProjectMetricsXDays(
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -306,7 +307,7 @@ public class MetricsResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response RefreshProjectMetrics(
             @Parameter(description = "The UUID of the project to refresh metrics on", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -342,7 +343,7 @@ public class MetricsResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getComponentCurrentMetrics(
             @Parameter(description = "The UUID of the component to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -379,7 +380,7 @@ public class MetricsResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getComponentMetricsSince(
             @Parameter(description = "The UUID of the component to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -412,7 +413,7 @@ public class MetricsResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getComponentMetricsXDays(
             @Parameter(description = "The UUID of the component to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -438,7 +439,7 @@ public class MetricsResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response RefreshComponentMetrics(
             @Parameter(description = "The UUID of the component to refresh metrics on", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

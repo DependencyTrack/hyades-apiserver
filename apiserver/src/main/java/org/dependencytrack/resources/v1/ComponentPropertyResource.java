@@ -18,7 +18,9 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.server.auth.PermissionRequired;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.server.auth.AccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -30,7 +32,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.validation.ValidUuid;
@@ -80,7 +81,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getProperties(
             @Parameter(description = "The UUID of the component to retrieve properties for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -127,7 +128,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
             @ApiResponse(responseCode = "404", description = "The component could not be found"),
             @ApiResponse(responseCode = "409", description = "A property with the specified component/group/name combination already exists")
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response createProperty(
             @Parameter(description = "The UUID of the component to create a property for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -184,7 +185,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component or component property could not be found"),
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response deleteProperty(
             @Parameter(description = "The UUID of the component to delete a property from", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid final String componentUuid,

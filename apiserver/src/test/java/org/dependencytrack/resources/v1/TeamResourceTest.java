@@ -19,6 +19,8 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.util.UuidUtil;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
@@ -34,7 +36,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
@@ -72,7 +73,7 @@ public class TeamResourceTest extends ResourceTest {
             final var generator = new DefaultObjectGenerator();
             generator.loadDefaultPermissions();
             List<Permission> permissionsList = new ArrayList<>();
-            final Permission adminPermission = qm.getPermission("ACCESS_MANAGEMENT");
+            final Permission adminPermission = qm.getPermission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM);
             permissionsList.add(adminPermission);
             testUser.setPermissions(permissionsList);
         }
@@ -118,7 +119,9 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void getTeamSelfTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD, Permissions.PROJECT_CREATION_UPLOAD);
+        initializeWithPermissions(
+                new Permission(AccessResource.BOM, AccessLevel.CREATE, null),
+                new Permission(AccessResource.PROJECT, AccessLevel.CREATE, null));
         var response = jersey.target(V1_TEAM + "/self").request().header(X_API_KEY, apiKey).get(Response.class);
         Assert.assertEquals(200, response.getStatus());
         final var json = parseJsonObject(response);
@@ -126,8 +129,10 @@ public class TeamResourceTest extends ResourceTest {
         Assert.assertEquals(team.getUuid().toString(), json.getString("uuid"));
         final var permissions = json.getJsonArray("permissions");
         Assert.assertEquals(2, permissions.size());
-        Assert.assertEquals(Permissions.BOM_UPLOAD.toString(), permissions.get(0).asJsonObject().getString("name"));
-        Assert.assertEquals(Permissions.PROJECT_CREATION_UPLOAD.toString(), permissions.get(1).asJsonObject().getString("name"));
+        Assert.assertEquals(AccessResource.BOM.toString(), permissions.get(0).asJsonObject().getString("resource"));
+        Assert.assertEquals(AccessLevel.CREATE.toString(), permissions.get(0).asJsonObject().getString("accessLevel"));
+        Assert.assertEquals(AccessResource.PROJECT.toString(), permissions.get(1).asJsonObject().getString("resource"));
+        Assert.assertEquals(AccessLevel.CREATE.toString(), permissions.get(1).asJsonObject().getString("accessLevel"));
 
         // missing api-key
         response = jersey.target(V1_TEAM + "/self").request().get(Response.class);
@@ -425,7 +430,7 @@ public class TeamResourceTest extends ResourceTest {
         final var generator = new DefaultObjectGenerator();
         generator.loadDefaultPermissions();
         List<Permission> permissionsList = new ArrayList<>();
-        final Permission adminPermission = qm.getPermission("ACCESS_MANAGEMENT");
+        final Permission adminPermission = qm.getPermission(AccessResource.ACCESS_MANAGEMENT, AccessLevel.SYSTEM);
         permissionsList.add(adminPermission);
         this.team.setPermissions(permissionsList);
 

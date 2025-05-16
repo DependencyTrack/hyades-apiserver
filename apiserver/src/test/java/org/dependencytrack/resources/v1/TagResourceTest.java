@@ -18,12 +18,14 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.model.Permission;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.Project;
@@ -61,7 +63,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -147,7 +149,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsWithPaginationTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         for (int i = 0; i < 5; i++) {
             qm.createTag("tag-" + (i + 1));
         }
@@ -216,7 +218,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsWithFilterTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         qm.createTag("foo");
         qm.createTag("bar");
 
@@ -242,7 +244,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsSortByProjectCountTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -287,7 +289,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsTest() {
-        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
 
         qm.createTag("foo");
 
@@ -304,7 +306,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenNotExistsTest() {
-        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
 
         final Response response = jersey.target(V1_TAG)
                 .request()
@@ -327,7 +329,9 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenAssignedToProjectTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT, Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(
+                new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
 
         final Tag unusedTag = qm.createTag("foo");
         final Tag usedTag = qm.createTag("bar");
@@ -351,7 +355,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenAssignedToProjectWithoutPortfolioManagementPermissionTest() {
-        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
 
         final Tag unusedTag = qm.createTag("foo");
         final Tag usedTag = qm.createTag("bar");
@@ -386,7 +390,9 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenAssignedToInaccessibleProjectTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT, Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(
+                new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
 
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
@@ -437,7 +443,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenAssignedToPolicyTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT, Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final Tag unusedTag = qm.createTag("foo");
         final Tag usedTag = qm.createTag("bar");
@@ -464,7 +470,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenAssignedToPolicyWithoutPolicyManagementPermissionTest() {
-        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
 
         final Tag unusedTag = qm.createTag("foo");
         final Tag usedTag = qm.createTag("bar");
@@ -502,7 +508,9 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(
+                new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -559,7 +567,9 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithPaginationTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(
+                new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         final Tag tag = qm.createTag("foo");
 
         for (int i = 0; i < 5; i++) {
@@ -619,7 +629,9 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(
+                new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         qm.createTag("foo");
         final Response response = jersey.target(V1_TAG + "/foo/project")
                 .request()
@@ -632,7 +644,9 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithNonLowerCaseTagNameTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(
+                new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         final Response response = jersey.target(V1_TAG + "/Foo/project")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -644,7 +658,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagProjectsTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -679,7 +693,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagProjectsWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         final var project = new Project();
         project.setName("acme-app-a");
         qm.persist(project);
@@ -701,7 +715,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagProjectsWithNoProjectUuidsTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         qm.createTag("foo");
 
         final Response response = jersey.target(V1_TAG + "/foo/project")
@@ -723,7 +737,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagProjectsWithAclTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -757,7 +771,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagProjectsWhenAlreadyTaggedTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         final var project = new Project();
         project.setName("acme-app-a");
         qm.persist(project);
@@ -777,7 +791,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -804,7 +818,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsWithAclTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -841,7 +855,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         final var project = new Project();
         project.setName("acme-app-a");
         qm.persist(project);
@@ -864,7 +878,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsWithNoProjectUuidsTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         qm.createTag("foo");
 
         final Response response = jersey.target(V1_TAG + "/foo/project")
@@ -887,7 +901,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsWithTooManyProjectUuidsTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         qm.createTag("foo");
 
         final List<String> projectUuids = IntStream.range(0, 101)
@@ -915,7 +929,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagProjectsWhenNotTaggedTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.PORTFOLIO, AccessLevel.SYSTEM, null));
         final var project = new Project();
         project.setName("acme-app-a");
         qm.persist(project);
@@ -935,7 +949,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
         final Tag tagFoo = qm.createTag("foo");
         final Tag tagBar = qm.createTag("bar");
 
@@ -974,7 +988,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesWithPaginationTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
         final Tag tag = qm.createTag("foo");
 
         for (int i = 0; i < 5; i++) {
@@ -1035,7 +1049,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
         qm.createTag("foo");
         final Response response = jersey.target(V1_TAG + "/foo/policy")
                 .request()
@@ -1048,7 +1062,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedPoliciesWithNonLowerCaseTagNameTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
         final Response response = jersey.target(V1_TAG + "/Foo/policy")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1060,7 +1074,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagPoliciesTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final var policyA = new Policy();
         policyA.setName("policy-a");
@@ -1102,7 +1116,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagPoliciesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final var policy = new Policy();
         policy.setName("policy");
@@ -1127,7 +1141,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagPoliciesWithNoPolicyUuidsTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         qm.createTag("foo");
 
@@ -1150,7 +1164,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagPoliciesTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final var policyA = new Policy();
         policyA.setName("policy-a");
@@ -1182,7 +1196,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagPoliciesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final var policy = new Policy();
         policy.setName("policy");
@@ -1208,7 +1222,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagPoliciesWithNoProjectUuidsTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         qm.createTag("foo");
 
@@ -1232,7 +1246,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagPoliciesWithTooManyPolicyUuidsTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         qm.createTag("foo");
 
@@ -1261,7 +1275,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagPoliciesWhenNotTaggedTest() {
-        initializeWithPermissions(Permissions.POLICY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null));
 
         final var policy = new Policy();
         policy.setName("policy");
@@ -1284,7 +1298,9 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsForPolicyWithOrderingTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(
+                new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         for (int i = 1; i < 5; i++) {
             qm.createTag("Tag " + i);
         }
@@ -1307,7 +1323,9 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsForPolicyWithPolicyProjectsFilterTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(
+                new Permission(AccessResource.POLICY, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         for (int i = 1; i < 5; i++) {
             qm.createTag("Tag " + i);
         }
@@ -1333,7 +1351,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagWithNonUuidNameTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
         // NB: This is just to ensure that requests to /api/v1/tag/<value>
         // are not matched with the deprecated "getTagsForPolicy" endpoint.
         // Once we implement an endpoint to request individual tags,
@@ -1349,7 +1367,9 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenAssignedToNotificationRuleTest() {
-        initializeWithPermissions(Permissions.TAG_MANAGEMENT, Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(
+                new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         final Tag unusedTag = qm.createTag("foo");
         final Tag usedTag = qm.createTag("bar");
@@ -1375,7 +1395,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenAssignedToNotificationRuleWithoutSystemConfigurationPermissionTest() {
-        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
 
         final Tag unusedTag = qm.createTag("foo");
         final Tag usedTag = qm.createTag("bar");
@@ -1412,7 +1432,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedNotificationRulesTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         final Tag tagFoo = qm.createTag("foo");
         final Tag tagBar = qm.createTag("bar");
@@ -1450,7 +1470,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedNotificationRulesWithPaginationTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         final Tag tag = qm.createTag("foo");
 
@@ -1512,7 +1532,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedNotificationRulesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         final Response response = jersey.target(V1_TAG + "/foo/notificationRule")
                 .request()
@@ -1525,7 +1545,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedNotificationRulesWithNonLowerCaseTagNameTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         qm.createTag("foo");
 
@@ -1540,7 +1560,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagNotificationRulesTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         final var notificationRuleA = new NotificationRule();
         notificationRuleA.setName("rule-a");
@@ -1579,7 +1599,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagNotificationRulesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         final var notificationRule = new NotificationRule();
         notificationRule.setName("rule");
@@ -1603,7 +1623,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void tagNotificationRulesWithNoRuleUuidsTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         qm.createTag("foo");
 
@@ -1626,7 +1646,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagNotificationRulesTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         final var notificationRuleA = new NotificationRule();
         notificationRuleA.setName("rule-a");
@@ -1656,7 +1676,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagNotificationRulesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         final var notificationRule = new NotificationRule();
         notificationRule.setName("rule");
@@ -1681,7 +1701,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagNotificationRulesWithNoProjectUuidsTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         qm.createTag("foo");
 
@@ -1705,7 +1725,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagNotificationRulesWithTooManyRuleUuidsTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         qm.createTag("foo");
 
@@ -1734,7 +1754,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagNotificationRulesWhenNotTaggedTest() {
-        initializeWithPermissions(Permissions.SYSTEM_CONFIGURATION);
+        initializeWithPermissions(new Permission(AccessResource.SYSTEM_CONFIGURATION, AccessLevel.SYSTEM, null));
 
         final var notificationRule = new NotificationRule();
         notificationRule.setName("rule");
@@ -1756,7 +1776,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedVulnerabilitiesTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         final var vulnA = new Vulnerability();
         vulnA.setVulnId("vuln-a");
@@ -1801,7 +1821,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedVulnerabilitiesWithPaginationTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
         final Tag tag = qm.createTag("foo");
 
         for (int i = 0; i < 5; i++) {
@@ -1866,7 +1886,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedVulnerabilitiesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
         qm.createTag("foo");
         final Response response = jersey.target(V1_TAG + "/foo/vulnerability")
                 .request()
@@ -1879,7 +1899,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedVulnerabilitiesWithNonLowerCaseTagNameTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
         final Response response = jersey.target(V1_TAG + "/Foo/vulnerability")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1891,7 +1911,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagVulnerabilitiesTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         final var vulnA = new Vulnerability();
         vulnA.setVulnId("vuln-a");
@@ -1922,7 +1942,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagVulnerabilitiesWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         final var vulnA = new Vulnerability();
         vulnA.setVulnId("vuln-a");
@@ -1948,7 +1968,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagVulnerabilitiesWithNoVulnerabilityUuidsTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         qm.createTag("foo");
 
@@ -1973,7 +1993,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagVulnerabilitiesWithTooManyVulnerabilityUuidsTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         qm.createTag("foo");
 
@@ -2003,7 +2023,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void untagVulnerabilitiesWhenNotTaggedTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null));
 
         final var vulnA = new Vulnerability();
         vulnA.setVulnId("vuln-a");
@@ -2025,7 +2045,9 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenAssignedToVulnerabilityTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT, Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(
+                new Permission(AccessResource.VULNERABILITY, AccessLevel.SYSTEM, null),
+                new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
 
         final Tag unusedTag = qm.createTag("foo");
         final Tag usedTag = qm.createTag("bar");
@@ -2051,7 +2073,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void deleteTagsWhenAssignedToVulnerabilityWithoutVulnerabilityManagementPermissionTest() {
-        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
+        initializeWithPermissions(new Permission(AccessResource.TAG, AccessLevel.SYSTEM, null));
 
         final Tag unusedTag = qm.createTag("foo");
         final Tag usedTag = qm.createTag("bar");

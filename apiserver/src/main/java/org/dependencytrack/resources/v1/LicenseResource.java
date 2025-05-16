@@ -19,8 +19,10 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.persistence.PaginatedResult;
-import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.AccessRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -42,7 +44,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.License;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
@@ -152,7 +153,7 @@ public class LicenseResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A license with the specified ID already exists.")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM)
     public Response createLicense(License jsonLicense) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -184,7 +185,7 @@ public class LicenseResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The license could not be found"),
             @ApiResponse(responseCode = "409", description = "Only custom licenses can be deleted.")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_DELETE})
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM)
     public Response deleteLicense(
             @Parameter(description = "The SPDX License ID of the license to delete", required = true)
             @PathParam("licenseId") String licenseId) {

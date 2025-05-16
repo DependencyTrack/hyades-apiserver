@@ -19,11 +19,13 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.MappedOidcGroup;
 import alpine.model.OidcGroup;
 import alpine.model.Team;
+import alpine.server.auth.AccessRequired;
 import alpine.server.auth.AuthenticationNotRequired;
-import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import alpine.server.util.OidcUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,7 +49,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.MappedOidcGroupRequest;
@@ -100,7 +101,7 @@ public class OidcResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response retrieveGroups() {
         try (QueryManager qm = new QueryManager()) {
             final List<OidcGroup> oidcGroups = qm.getOidcGroups();
@@ -124,7 +125,7 @@ public class OidcResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response createGroup(final OidcGroup jsonGroup) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -158,7 +159,7 @@ public class OidcResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response updateGroup(final OidcGroup jsonGroup) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -191,7 +192,7 @@ public class OidcResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The group could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE })
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response deleteGroup(@Parameter(description = "The UUID of the group to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
                                 @PathParam("uuid") @ValidUuid final String uuid) {
         try (QueryManager qm = new QueryManager()) {
@@ -223,7 +224,7 @@ public class OidcResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the mapping could not be found"),
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response retrieveTeamsMappedToGroup(@Parameter(description = "The UUID of the mapping to retrieve the team for", schema = @Schema(type = "string", format = "uuid"), required = true)
                                                @PathParam("uuid") @ValidUuid final String uuid) {
         try (final QueryManager qm = new QueryManager()) {
@@ -257,7 +258,7 @@ public class OidcResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the team or group could not be found"),
             @ApiResponse(responseCode = "409", description = "A mapping with the same team and group name already exists")
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response addMapping(final MappedOidcGroupRequest request) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -298,7 +299,7 @@ public class OidcResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the mapping could not be found"),
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE })
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response deleteMappingByUuid(@Parameter(description = "The UUID of the mapping to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
                                         @PathParam("uuid") @ValidUuid final String uuid) {
         try (QueryManager qm = new QueryManager()) {
@@ -325,7 +326,7 @@ public class OidcResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the mapping could not be found"),
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE })
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response deleteMapping(@Parameter(description = "The UUID of the group to delete a mapping for", schema = @Schema(type = "string", format = "uuid"), required = true)
                                   @PathParam("groupUuid") @ValidUuid final String groupUuid,
                                   @Parameter(description = "The UUID of the team to delete a mapping for", schema = @Schema(type = "string", format = "uuid"), required = true)

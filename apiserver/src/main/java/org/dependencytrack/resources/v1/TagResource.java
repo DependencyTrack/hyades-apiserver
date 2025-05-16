@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.persistence.PaginatedResult;
-import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.AccessRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -42,7 +44,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
@@ -82,7 +83,7 @@ public class TagResource extends AlpineResource {
             )
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.TAG, accessLevel = AccessLevel.SYSTEM)
     public Response getAllTags() {
         final List<TagQueryManager.TagListRow> tagListRows;
         try (final var qm = new QueryManager(getAlpineRequest())) {
@@ -132,7 +133,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = TagOperationProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired({Permissions.Constants.TAG_MANAGEMENT, Permissions.Constants.TAG_MANAGEMENT_DELETE})
+    @AccessRequired(resource = AccessResource.TAG, accessLevel = AccessLevel.SYSTEM)
     public Response deleteTags(
             @Parameter(description = "Names of the tags to delete")
             @Size(min = 1, max = 100) final Set<@NotBlank String> tagNames
@@ -160,7 +161,8 @@ public class TagResource extends AlpineResource {
             )
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
+    @AccessRequired(resource = AccessResource.TAG, accessLevel = AccessLevel.SYSTEM)
     public Response getTaggedProjects(
             @Parameter(description = "Name of the tag to get projects for.", required = true)
             @PathParam("name") final String tagName
@@ -200,7 +202,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response tagProjects(
             @Parameter(description = "Name of the tag to assign", required = true)
             @PathParam("name") final String tagName,
@@ -237,7 +239,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.PORTFOLIO, accessLevel = AccessLevel.SYSTEM)
     public Response untagProjects(
             @Parameter(description = "Name of the tag", required = true)
             @PathParam("name") final String tagName,
@@ -271,7 +273,7 @@ public class TagResource extends AlpineResource {
             )
     })
     @PaginatedApi
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response getTaggedPolicies(
             @Parameter(description = "Name of the tag to get policies for.", required = true)
             @PathParam("name") final String tagName
@@ -311,7 +313,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response tagPolicies(
             @Parameter(description = "Name of the tag to assign", required = true)
             @PathParam("name") final String tagName,
@@ -348,7 +350,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
     public Response untagPolicies(
             @Parameter(description = "Name of the tag", required = true)
             @PathParam("name") final String tagName,
@@ -382,7 +384,8 @@ public class TagResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.POLICY, accessLevel = AccessLevel.SYSTEM)
+    @AccessRequired(resource = AccessResource.TAG, accessLevel = AccessLevel.SYSTEM)
     public Response getTagsForPolicy(
             @Parameter(description = "The UUID of the policy", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid final String uuid
@@ -409,7 +412,7 @@ public class TagResource extends AlpineResource {
             )
     })
     @PaginatedApi
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM)
     public Response getTaggedNotificationRules(
             @Parameter(description = "Name of the tag to get notification rules for", required = true)
             @PathParam("name") final String tagName
@@ -449,7 +452,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM)
     public Response tagNotificationRules(
             @Parameter(description = "Name of the tag to assign", required = true)
             @PathParam("name") final String tagName,
@@ -486,7 +489,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM)
     public Response untagNotificationRules(
             @Parameter(description = "Name of the tag", required = true)
             @PathParam("name") final String tagName,
@@ -520,7 +523,7 @@ public class TagResource extends AlpineResource {
             )
     })
     @PaginatedApi
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_MANAGEMENT, Permissions.Constants.VULNERABILITY_MANAGEMENT_READ})
+    @AccessRequired(resource = AccessResource.VULNERABILITY, accessLevel = AccessLevel.SYSTEM)
     public Response getTaggedVulnerabilities(
             @Parameter(description = "Name of the tag to get vulnerabilities for.", required = true)
             @PathParam("name") final String tagName
@@ -560,7 +563,7 @@ public class TagResource extends AlpineResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)
             )
     })
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_MANAGEMENT, Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE})
+    @AccessRequired(resource = AccessResource.VULNERABILITY, accessLevel = AccessLevel.SYSTEM)
     public Response untagVulnerabilities(
             @Parameter(description = "Name of the tag", required = true)
             @PathParam("name") final String tagName,

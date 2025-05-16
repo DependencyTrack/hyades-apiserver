@@ -18,6 +18,9 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.model.Permission;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import com.fasterxml.jackson.core.StreamReadConstraints;
@@ -27,7 +30,6 @@ import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -260,7 +262,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexInvalidJsonTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -308,7 +310,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexInvalidXmlTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         final var project = new Project();
         project.setName("acme-app");
@@ -654,7 +656,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeDisabledTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -699,7 +701,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeEnabledForTagsTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -766,7 +768,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeDisabledForTagsTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(new Permission(AccessResource.BOM, AccessLevel.CREATE, null));
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),

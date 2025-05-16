@@ -20,10 +20,12 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
-import alpine.server.auth.PermissionRequired;
+import alpine.server.auth.AccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -38,7 +40,6 @@ import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.cyclonedx.CycloneDxMediaType;
 import org.cyclonedx.exception.GeneratorException;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.BomValidationMode;
@@ -134,7 +135,7 @@ public class BomResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response exportProjectAsCycloneDx(
             @Parameter(description = "The UUID of the project to export", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -209,7 +210,7 @@ public class BomResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @AccessRequired(resource = AccessResource.ACCESS_MANAGEMENT, accessLevel = AccessLevel.SYSTEM)
     public Response exportComponentAsCycloneDx(
             @Parameter(description = "The UUID of the component to export", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -289,7 +290,8 @@ public class BomResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
+    @AccessRequired(resource = AccessResource.BOM, accessLevel = AccessLevel.CREATE)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.CREATE)
     public Response uploadBom(@Parameter(required = true) BomSubmitRequest request) {
         final Validator validator = getValidator();
         if (request.getProject() != null) { // behavior in v3.0.0
@@ -310,7 +312,7 @@ public class BomResource extends AbstractApiResource {
             try (QueryManager qm = new QueryManager()) {
                 Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
                 if (project == null && request.isAutoCreate()) {
-                    if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
+                    if (hasPermission(AccessResource.PORTFOLIO, AccessLevel.CREATE) || hasPermission(AccessResource.BOM, AccessLevel.CREATE)) {
                         Project parent = null;
                         if (request.getParentUUID() != null || request.getParentName() != null) {
                             if (request.getParentUUID() != null) {
@@ -397,7 +399,8 @@ public class BomResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
+    @AccessRequired(resource = AccessResource.BOM, accessLevel = AccessLevel.CREATE)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.CREATE)
     public Response uploadBom(
             @FormDataParam("project") String projectUuid,
             @DefaultValue("false") @FormDataParam("autoCreate") boolean autoCreate,
@@ -421,7 +424,7 @@ public class BomResource extends AbstractApiResource {
                 final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
                 Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
                 if (project == null && autoCreate) {
-                    if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
+                    if (hasPermission(AccessResource.PORTFOLIO, AccessLevel.CREATE) || hasPermission(AccessResource.BOM, AccessLevel.CREATE)) {
                         Project parent = null;
                         if (parentUUID != null || parentName != null) {
                             if (parentUUID != null) {

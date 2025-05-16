@@ -150,11 +150,11 @@ public abstract class ResourceTest {
         }
     }
 
-    public void initializeWithPermissions(Permissions... permissions) {
-        List<Permission> permissionList = new ArrayList<>();
-        for (Permissions permission : permissions) {
-            permissionList.add(qm.createPermission(permission.name(), null));
-        }
+    public void initializeWithPermissions(Permission... permissions) {
+        List<Permission> permissionList = List.of(qm.callInTransaction(() -> {
+            return qm.getPersistenceManager().makePersistentAll(permissions);
+        }));
+
         team.setPermissions(permissionList);
         qm.persist(team);
     }

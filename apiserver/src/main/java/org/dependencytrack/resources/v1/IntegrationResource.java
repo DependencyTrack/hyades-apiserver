@@ -18,7 +18,9 @@
  */
 package org.dependencytrack.resources.v1;
 
-import alpine.server.auth.PermissionRequired;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.server.auth.AccessRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -34,7 +36,6 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.tasks.OsvMirrorTask;
 
 import java.util.List;
@@ -63,7 +64,7 @@ public class IntegrationResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM)
     public Response getAllEcosystems() {
         OsvMirrorTask osvMirrorTask = new OsvMirrorTask();
         final List<String> ecosystems = osvMirrorTask.getEcosystems();
@@ -85,7 +86,7 @@ public class IntegrationResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM)
     public Response getInactiveEcosystems() {
         OsvMirrorTask osvMirrorTask = new OsvMirrorTask();
         var selectedEcosystems = osvMirrorTask.getEnabledEcosystems();

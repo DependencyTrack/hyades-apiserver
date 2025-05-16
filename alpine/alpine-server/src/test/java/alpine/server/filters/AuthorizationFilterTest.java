@@ -19,14 +19,16 @@
 package alpine.server.filters;
 
 import alpine.Config;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.persistence.AlpineQueryManager;
+import alpine.server.auth.AccessRequired;
 import alpine.server.auth.JsonWebToken;
-import alpine.server.auth.PermissionRequired;
 import alpine.server.persistence.PersistenceManagerFactory;
 import alpine.server.resources.AlpineResource;
 import net.javacrumbs.jsonunit.core.Option;
@@ -55,7 +57,7 @@ public class AuthorizationFilterTest extends JerseyTest {
 
         @GET
         @Produces(MediaType.APPLICATION_JSON)
-        @PermissionRequired(value = {"FOO", "BAR"})
+        @AccessRequired(resource = AccessResource.FINDING, accessLevel = { AccessLevel.READ, AccessLevel.CREATE })
         public Response get() {
             return Response.ok(Map.of(
                     "effectivePermissions",
@@ -104,11 +106,7 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldRejectApiKeyRequestWithNoRequiredPermission() {
         final String apiKey;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
-
             final Team team = qm.createTeam("foo");
-            team.getPermissions().add(bazPermission);
-
             apiKey = qm.createApiKey(team).getKey();
         }
 
@@ -123,12 +121,12 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldAllowApiKeyRequestWithAtLeastOneRequiredPermission() {
         final String apiKey;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission fooPermission = qm.createPermission("FOO", null);
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.FINDING, AccessLevel.READ, null);
+            final Permission updatePermission = qm.createPermission(AccessResource.FINDING, AccessLevel.UPDATE, null); // Non-required.
 
             final Team team = qm.createTeam("foo");
-            team.getPermissions().add(fooPermission);
-            team.getPermissions().add(bazPermission);
+            team.getPermissions().add(readPermission);
+            team.getPermissions().add(updatePermission);
 
             apiKey = qm.createApiKey(team).getKey();
         }
@@ -151,14 +149,14 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldAllowApiKeyRequestWithAllRequiredPermissions() {
         final String apiKey;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission fooPermission = qm.createPermission("FOO", null);
-            final Permission barPermission = qm.createPermission("BAR", null);
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.FINDING, AccessLevel.READ, null);
+            final Permission createPermission = qm.createPermission(AccessResource.FINDING, AccessLevel.CREATE, null);
+            final Permission updatePermission = qm.createPermission(AccessResource.FINDING, AccessLevel.UPDATE, null); // Non-required.
 
             final Team team = qm.createTeam("foo");
-            team.getPermissions().add(fooPermission);
-            team.getPermissions().add(barPermission);
-            team.getPermissions().add(bazPermission);
+            team.getPermissions().add(updatePermission);
+            team.getPermissions().add(readPermission);
+            team.getPermissions().add(createPermission);
 
             apiKey = qm.createApiKey(team).getKey();
         }
@@ -197,10 +195,10 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldRejectManagedUserRequestWithNoRequiredPermission() {
         final String bearerToken;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.PROJECT, AccessLevel.READ, null); // Non-required.
 
             final ManagedUser managedUser = qm.createManagedUser("test", "test");
-            managedUser.getPermissions().add(bazPermission);
+            managedUser.getPermissions().add(readPermission);
 
             bearerToken = new JsonWebToken().createToken(managedUser);
         }
@@ -216,12 +214,12 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldAllowManagedUserRequestWithAtLeastOneRequiredPermission() {
         final String bearerToken;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission fooPermission = qm.createPermission("FOO", null);
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.FINDING, AccessLevel.READ, null);
+            final Permission updatePermission = qm.createPermission(AccessResource.FINDING, AccessLevel.UPDATE, null); // Non-required.
 
             final ManagedUser managedUser = qm.createManagedUser("test", "test");
-            managedUser.getPermissions().add(fooPermission);
-            managedUser.getPermissions().add(bazPermission);
+            managedUser.getPermissions().add(readPermission);
+            managedUser.getPermissions().add(updatePermission);
 
             bearerToken = new JsonWebToken().createToken(managedUser);
         }
@@ -244,14 +242,14 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldAllowManagedUserRequestWhenMemberOfTeamWithAtLeastOneRequiredPermission() {
         final String bearerToken;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission fooPermission = qm.createPermission("FOO", null);
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.FINDING, AccessLevel.READ, null);
+            final Permission updatePermission = qm.createPermission(AccessResource.FINDING, AccessLevel.UPDATE, null); // Non-required.
 
             final Team team = qm.createTeam("foo");
-            team.getPermissions().add(fooPermission);
+            team.getPermissions().add(readPermission);
 
             final ManagedUser managedUser = qm.createManagedUser("test", "test");
-            managedUser.getPermissions().add(bazPermission);
+            managedUser.getPermissions().add(updatePermission);
             managedUser.getTeams().add(team);
 
             bearerToken = new JsonWebToken().createToken(managedUser);
@@ -291,10 +289,10 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldRejectLdapUserRequestWithNoRequiredPermission() {
         final String bearerToken;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.PROJECT, AccessLevel.READ, null); // Non-required.
 
             final LdapUser ldapUser = qm.createLdapUser("test");
-            ldapUser.getPermissions().add(bazPermission);
+            ldapUser.getPermissions().add(readPermission);
 
             bearerToken = new JsonWebToken().createToken(ldapUser);
         }
@@ -310,12 +308,12 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldAllowLdapUserRequestWithAtLeastOneRequiredPermission() {
         final String bearerToken;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission fooPermission = qm.createPermission("FOO", null);
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.FINDING, AccessLevel.READ, null);
+            final Permission updatePermission = qm.createPermission(AccessResource.FINDING, AccessLevel.UPDATE, null); // Non-required.
 
             final LdapUser ldapUser = qm.createLdapUser("test");
-            ldapUser.getPermissions().add(fooPermission);
-            ldapUser.getPermissions().add(bazPermission);
+            ldapUser.getPermissions().add(readPermission);
+            ldapUser.getPermissions().add(updatePermission);
 
             bearerToken = new JsonWebToken().createToken(ldapUser);
         }
@@ -338,14 +336,14 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldAllowLdapUserRequestWhenMemberOfTeamWithAtLeastOneRequiredPermission() {
         final String bearerToken;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission fooPermission = qm.createPermission("FOO", null);
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.FINDING, AccessLevel.READ, null);
+            final Permission updatePermission = qm.createPermission(AccessResource.FINDING, AccessLevel.UPDATE, null); // Non-required.
 
             final Team team = qm.createTeam("foo");
-            team.getPermissions().add(fooPermission);
+            team.getPermissions().add(readPermission);
 
             final LdapUser ldapUser = qm.createLdapUser("test");
-            ldapUser.getPermissions().add(bazPermission);
+            ldapUser.getPermissions().add(updatePermission);
             ldapUser.getTeams().add(team);
 
             bearerToken = new JsonWebToken().createToken(ldapUser);
@@ -385,10 +383,10 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldRejectOidcUserRequestWithNoRequiredPermission() {
         final String bearerToken;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.PROJECT, AccessLevel.READ, null); // Non-required.
 
             final OidcUser oidcUser = qm.createOidcUser("test");
-            oidcUser.getPermissions().add(bazPermission);
+            oidcUser.getPermissions().add(readPermission);
 
             bearerToken = new JsonWebToken().createToken(oidcUser);
         }
@@ -404,12 +402,12 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldAllowOidcUserRequestWithAtLeastOneRequiredPermission() {
         final String bearerToken;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission fooPermission = qm.createPermission("FOO", null);
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.FINDING, AccessLevel.READ, null);
+            final Permission updatePermission = qm.createPermission(AccessResource.FINDING, AccessLevel.UPDATE, null); // Non-required.
 
             final OidcUser oidcUser = qm.createOidcUser("test");
-            oidcUser.getPermissions().add(fooPermission);
-            oidcUser.getPermissions().add(bazPermission);
+            oidcUser.getPermissions().add(readPermission);
+            oidcUser.getPermissions().add(updatePermission);
 
             bearerToken = new JsonWebToken().createToken(oidcUser);
         }
@@ -432,14 +430,14 @@ public class AuthorizationFilterTest extends JerseyTest {
     void shouldAllowOidcUserRequestWhenMemberOfTeamWithAtLeastOneRequiredPermission() {
         final String bearerToken;
         try (final var qm = new AlpineQueryManager()) {
-            final Permission fooPermission = qm.createPermission("FOO", null);
-            final Permission bazPermission = qm.createPermission("BAZ", null); // Non-required.
+            final Permission readPermission = qm.createPermission(AccessResource.FINDING, AccessLevel.READ, null);
+            final Permission updatePermission = qm.createPermission(AccessResource.FINDING, AccessLevel.UPDATE, null); // Non-required.
 
             final Team team = qm.createTeam("foo");
-            team.getPermissions().add(fooPermission);
+            team.getPermissions().add(readPermission);
 
             final OidcUser oidcUser = qm.createOidcUser("test");
-            oidcUser.getPermissions().add(bazPermission);
+            oidcUser.getPermissions().add(updatePermission);
             oidcUser.getTeams().add(team);
 
             bearerToken = new JsonWebToken().createToken(oidcUser);

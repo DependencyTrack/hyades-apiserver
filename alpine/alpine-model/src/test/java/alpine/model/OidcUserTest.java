@@ -34,7 +34,8 @@ public class OidcUserTest {
         team.setName("teamName");
 
         final Permission permission = new Permission();
-        permission.setName("permissionName");
+        permission.setResource(AccessResource.ACCESS_MANAGEMENT);
+        permission.setAccessLevel(AccessLevel.SYSTEM);
 
         final OidcUser oidcUser = new OidcUser();
         oidcUser.setId(666);
@@ -44,14 +45,15 @@ public class OidcUserTest {
         oidcUser.setTeams(Collections.singletonList(team));
         oidcUser.setPermissions(Collections.singletonList(permission));
 
-        Assertions.assertThat(new ObjectMapper().writeValueAsString(oidcUser)).isEqualTo("" +
-                "{" +
-                "\"username\":\"username\"," +
-                "\"subjectIdentifier\":\"subjectIdentifier\"," +
-                "\"email\":\"username@mail.local\"," +
-                "\"teams\":[{\"name\":\"teamName\"}]," +
-                "\"permissions\":[{\"name\":\"permissionName\"}]" +
-                "}");
+        Assertions.assertThat(new ObjectMapper().writeValueAsString(oidcUser)).isEqualTo("""
+                {
+                    "username": "username",
+                    "subjectIdentifier": "subjectIdentifier",
+                    "email": "username@mail.local",
+                    "teams": [{"name": "teamName"}],
+                    "permissions": [{"resource": "ACCESS_MANAGEMENT", "accessLevel": "SYSTEM"}]
+                }
+                """.replaceAll("\s|\n", ""));
     }
 
     @Test

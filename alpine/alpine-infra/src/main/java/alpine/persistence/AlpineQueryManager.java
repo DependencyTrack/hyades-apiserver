@@ -19,10 +19,12 @@
 package alpine.persistence;
 
 import alpine.common.logging.Logger;
-import alpine.event.LdapSyncEvent;
 import alpine.event.framework.EventService;
 import alpine.event.framework.LoggableSubscriber;
 import alpine.event.framework.Subscriber;
+import alpine.event.LdapSyncEvent;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
 import alpine.model.EventServiceLog;
@@ -40,6 +42,7 @@ import alpine.security.ApiKeyGenerator;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+
 import java.security.Principal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -48,7 +51,12 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * This QueryManager provides a concrete extension of {@link AbstractAlpineQueryManager} by
@@ -673,15 +681,17 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
 
     /**
      * Creates a Permission object.
-     * @param name The name of the permission
+     * @param resource The resource of the permission
+     * @param accessLevel The access level for the specified resource
      * @param description the permissions description
      * @return a Permission
      * @since 1.1.0
      */
-    public Permission createPermission(final String name, final String description) {
+    public Permission createPermission(final AccessResource resource, final AccessLevel accessLevel, final String description) {
         return callInTransaction(() -> {
             final var permission = new Permission();
-            permission.setName(name);
+            permission.setResource(resource);
+            permission.setAccessLevel(accessLevel);
             permission.setDescription(description);
             return pm.makePersistent(permission);
         });
@@ -689,14 +699,45 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
 
     /**
      * Retrieves a Permission by its name.
-     * @param name The name of the permission
+     * 
+     * @param name A string representation of the requested {@link Permission}
+     *             consisting of a resource and access level joined by a {@code _}
      * @return a Permission
      * @since 1.1.0
      */
     public Permission getPermission(final String name) {
-        final Query<Permission> query = pm.newQuery(Permission.class, "name == :name");
-        query.setParameters(name);
-        return executeAndCloseUnique(query);
+        final Pattern pattern = Pattern.compile("^(?<resource>%s)(_(?<accessLevel>%s))?$".formatted(
+                Stream.of(AccessResource.values()).map(AccessResource::name).collect(Collectors.joining("|")),
+                Stream.of(AccessLevel.values()).map(AccessLevel::name).collect(Collectors.joining("|"))));
+
+        final Matcher matcher = pattern.matcher(name);
+        if (!matcher.find())
+            return null;
+
+        String resourceMatch = matcher.group("resource");
+        String accessLevelMatch = Objects.requireNonNullElse(matcher.group("accessLevel"), "SYSTEM");
+
+        return getPermission(AccessResource.valueOf(resourceMatch), AccessLevel.valueOf(accessLevelMatch));
+    }
+
+    /**
+     * Retrieves a Permission by its resource and access level.
+     * 
+     * @param resource    The resource of the permission
+     * @param accessLevel The access level for the specified resource
+     * @return a Permission
+     * @since 5.6.0
+     */
+    public Permission getPermission(final AccessResource resource, final AccessLevel accessLevel) {
+        final Query<Permission> query = pm.newQuery(Permission.class)
+                .filter(String.join(" && ",
+                        "resource.toString() == :resource.toString()",
+                        "accessLevel.toString() == :accessLevel.toString()"))
+                .setNamedParameters(Map.of(
+                        "resource", resource,
+                        "accessLevel", accessLevel));
+
+        return executeAndCloseResultUnique(query, Permission.class);
     }
 
     /**
@@ -720,8 +761,9 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * @since 1.1.0
      */
     public List<Permission> getPermissions() {
-        final Query<Permission> query = pm.newQuery(Permission.class);
-        query.setOrdering("name asc");
+        final Query<Permission> query = pm.newQuery(Permission.class)
+            .orderBy("resource ASC");
+
         return executeAndCloseList(query);
     }
 
@@ -796,58 +838,84 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     /**
      * Determines if the specified User has been assigned the specified permission.
      * @param user the User to query
-     * @param permissionName the name of the permission
      * @param includeTeams if true, will query all Team membership assigned to the user for the specified permission
+     * @param resource The resource of the permission
+     * @param accessLevels The access level(s) for the specified resource
      * @return true if the user has the permission assigned, false if not
      * @since 1.0.0
      */
-    public boolean hasPermission(final User user, String permissionName, boolean includeTeams) {
+    public boolean hasPermission(final User user, boolean includeTeams, AccessResource resource, AccessLevel... accessLevels) {
+        accessLevels = Objects.requireNonNullElse(accessLevels,
+                new AccessLevel[] { AccessLevel.READ, AccessLevel.UPDATE, AccessLevel.CREATE, AccessLevel.DELETE });
+
         Query<Permission> query = pm.newQuery(Permission.class)
-                .filter("name == :permissionName && users.contains(user) && user.id == :userId")
+                .filter(String.join(" && ",
+                        "resource == :resourceName",
+                        ":accessLevels.contains(accessLevel)",
+                        "users.contains(user)",
+                        "user.id == :userId"))
                 .variables("alpine.model.User user")
-                .setParameters(permissionName, user.getId())
+                .setNamedParameters(Map.of(
+                        "resourceName", resource.name(),
+                        "accessLevels", accessLevels,
+                        "userId", user.getId()))
                 .result("count(id)");
 
         final long count = query.executeResultUnique(Long.class);
+        final AccessLevel[] levels = accessLevels;
 
         return count > 0 || (includeTeams && user.getTeams().stream()
-                .anyMatch(team -> hasPermission(team, permissionName)));
+                .anyMatch(team -> hasPermission(team, resource, levels)));
     }
 
     /**
      * Determines if the specified Team has been assigned the specified permission.
      * @param team the Team to query
-     * @param permissionName the name of the permission
+     * @param resource The resource of the permission
+     * @param accessLevels The access level(s) for the specified resource
      * @return true if the team has the permission assigned, false if not
      * @since 1.0.0
      */
-    public boolean hasPermission(final Team team, String permissionName) {
-        final Query<Permission> query = pm.newQuery(Permission.class, "name == :permissionName && teams.contains(team) && team.id == :teamId");
-        query.declareVariables("alpine.model.Team team");
-        query.setParameters(permissionName, team.getId());
-        query.setResult("count(id)");
+    public boolean hasPermission(final Team team, AccessResource resource, AccessLevel... accessLevels) {
+        accessLevels = Objects.requireNonNullElse(accessLevels,
+                new AccessLevel[] { AccessLevel.READ, AccessLevel.UPDATE, AccessLevel.CREATE, AccessLevel.DELETE });
+
+        final Query<Permission> query = pm.newQuery(Permission.class)
+                .filter("resource == :resourceName && :accessLevels.contains(accessLevel) && teams.contains(team) && team.id == :teamId")
+                .variables("alpine.model.Team team")
+                .setNamedParameters(Map.of(
+                        "resourceName", resource.name(),
+                        "accessLevels", accessLevels,
+                        "teamId", team.getId()))
+                .result("count(id)");
+
         return executeAndCloseResultUnique(query, Long.class) > 0;
     }
 
     /**
      * Determines if the specified ApiKey has been assigned the specified permission.
      * @param apiKey the ApiKey to query
-     * @param permissionName the name of the permission
+     * @param resource The resource of the permission
+     * @param accessLevels The access level(s) for the specified resource
      * @return true if the apiKey has the permission assigned, false if not
      * @since 1.1.1
      */
-    public boolean hasPermission(final ApiKey apiKey, String permissionName) {
-        if (apiKey.getTeams() == null) {
+    public boolean hasPermission(final ApiKey apiKey, AccessResource resource, AccessLevel... accessLevels) {
+        List<Team> teams = apiKey.getTeams();
+        if (teams == null)
             return false;
-        }
-        for (final Team team: apiKey.getTeams()) {
+
+        accessLevels = Objects.requireNonNullElse(accessLevels,
+                new AccessLevel[] { AccessLevel.READ, AccessLevel.UPDATE, AccessLevel.CREATE, AccessLevel.DELETE });
+
+        for (final Team team : teams) {
             final List<Permission> teamPermissions = getObjectById(Team.class, team.getId()).getPermissions();
-            for (final Permission permission: teamPermissions) {
-                if (permission.getName().equals(permissionName)) {
+            for (final Permission permission : teamPermissions)
+                if (permission.getResource().equals(resource) &&
+                        Stream.of(accessLevels).anyMatch(permission.getAccessLevel()::equals))
                     return true;
-                }
-            }
         }
+
         return false;
     }
 

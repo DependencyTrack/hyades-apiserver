@@ -18,13 +18,9 @@
  */
 package alpine.model;
 
-import alpine.common.validation.RegexSequence;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -32,7 +28,7 @@ import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
-import javax.jdo.annotations.Unique;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,18 +46,27 @@ public class Permission implements Serializable {
 
     private static final long serialVersionUID = 1420020753285692448L;
 
+    public Permission() {
+    }
+
+    public Permission(AccessResource resource, AccessLevel accessLevel, String description) {
+        this.resource = resource;
+        this.accessLevel = accessLevel;
+        this.description = description;
+    }
+
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore
     private long id;
 
     @Persistent
-    @Unique(name = "PERMISSION_IDX")
-    @Column(name = "NAME", allowsNull = "false")
-    @NotBlank
-    @Size(min = 1, max = 255)
-    @Pattern(regexp = RegexSequence.Definition.WORD_CHARS, message = "The permission name must contain only alpha and/or numeric characters")
-    private String name;
+    @Column(name = "RESOURCE", allowsNull = "false", jdbcType = "VARCHAR")
+    private AccessResource resource;
+
+    @Persistent
+    @Column(name = "ACCESS_LEVEL", allowsNull = "false", jdbcType = "VARCHAR")
+    private AccessLevel accessLevel;
 
     @Persistent
     @Column(name = "DESCRIPTION", jdbcType = "CLOB")
@@ -85,12 +90,20 @@ public class Permission implements Serializable {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public AccessResource getResource() {
+        return resource;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setResource(AccessResource resource) {
+        this.resource = resource;
+    }
+
+    public AccessLevel getAccessLevel() {
+        return accessLevel;
+    }
+
+    public void setAccessLevel(AccessLevel accessLevel) {
+        this.accessLevel = accessLevel;
     }
 
     public String getDescription() {
@@ -164,4 +177,14 @@ public class Permission implements Serializable {
     public void setUsers(List<User> users) {
         this.users = users;
     }
+
+    @Override
+    public String toString() {
+        return "%s{resource=%s, accessLevel=%s, description='%s'}".formatted(
+                getClass().getSimpleName(),
+                resource.name(),
+                accessLevel.name(),
+                description);
+    }
+
 }

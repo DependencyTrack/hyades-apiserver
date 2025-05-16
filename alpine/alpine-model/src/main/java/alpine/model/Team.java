@@ -110,7 +110,7 @@ public class Team implements Serializable {
     @Persistent(table = "TEAMS_PERMISSIONS", defaultFetchGroup = "true")
     @Join(column = "TEAM_ID", primaryKey = "TEAMS_PERMISSIONS_PK", foreignKey = "TEAMS_PERMISSIONS_TEAM_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Element(column = "PERMISSION_ID", foreignKey = "TEAMS_PERMISSIONS_PERMISSION_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
+    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "resource ASC"))
     private List<Permission> permissions;
 
     public long getId() {

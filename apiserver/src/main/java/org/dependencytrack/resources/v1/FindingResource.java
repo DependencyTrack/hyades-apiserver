@@ -21,7 +21,9 @@ package org.dependencytrack.resources.v1;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.model.About;
-import alpine.server.auth.PermissionRequired;
+import alpine.model.AccessLevel;
+import alpine.model.AccessResource;
+import alpine.server.auth.AccessRequired;
 import com.github.packageurl.PackageURL;
 import io.pebbletemplates.pebble.PebbleEngine;
 import io.pebbletemplates.pebble.template.PebbleTemplate;
@@ -45,7 +47,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.ProjectRepositoryMetaAnalysisEvent;
@@ -122,7 +123,7 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getFindingsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                          @PathParam("uuid") @ValidUuid String uuid,
                                          @Parameter(description = "Optionally includes suppressed findings")
@@ -181,7 +182,7 @@ public class FindingResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response exportFindingsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
@@ -211,7 +212,7 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "304", description = "Analysis is already in progress"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE}) // Require admin privileges due to system impact
+    @AccessRequired(resource = AccessResource.SYSTEM_CONFIGURATION, accessLevel = AccessLevel.SYSTEM) // Require admin privileges due to system impact
     public Response analyzePortfolio() {
         LOGGER.info("Portfolio analysis requested by " + super.getPrincipal().getName());
         if (Event.isEventBeingProcessed(PortfolioRepositoryMetaAnalysisEvent.CHAIN_IDENTIFIER)) {
@@ -243,7 +244,7 @@ public class FindingResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response analyzeProject(
             @Parameter(description = "The UUID of the project to analyze", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -282,7 +283,7 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getAllFindings(@Parameter(description = "Show inactive projects")
                                    @QueryParam("showInactive") boolean showInactive,
                                    @Parameter(description = "Show suppressed findings")
@@ -352,7 +353,7 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @AccessRequired(resource = AccessResource.PROJECT, accessLevel = AccessLevel.READ)
     public Response getAllFindings(@Parameter(description = "Show inactive projects")
                                    @QueryParam("showInactive") boolean showInactive,
                                    @Parameter(description = "Filter by severity")
