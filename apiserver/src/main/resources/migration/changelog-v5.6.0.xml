@@ -1889,4 +1889,49 @@
             EXECUTE FUNCTION prevent_direct_effective_permissions_writes();
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-25" author="jhoward-lm">
+        <dropIndex tableName="PROJECT" indexName="PROJECT_NAME_IDX" />
+        <dropIndex tableName="PROJECT" indexName="PROJECT_VERSION_IDX" />
+        <dropIndex tableName="PROJECT" indexName="PROJECT_NAME_VERSION_IDX" />
+        <dropIndex tableName="PROJECT" indexName="PROJECT_NAME_VERSION_NULL_IDX" />
+
+        <sql splitStatements="true">
+            -- Remove all duplicate projects that would violate the unique indices before creating
+            UPDATE "PROJECT"
+               SET "VERSION" = format('%s-%s', "VERSION", split_part("UUID"::TEXT, '-', 1))
+             WHERE "ID" NOT IN (
+               SELECT MIN("ID")
+                 FROM "PROJECT"
+                GROUP BY 
+                    "NAME", 
+                    COALESCE("PARENT_PROJECT_ID", -1), 
+                    COALESCE("VERSION", 'NULL_PLACEHOLDER')
+            );
+
+            -- Unique index that excludes rows where both VERSION and PARENT_PROJECT_ID are unset
+            CREATE UNIQUE INDEX "PROJECT_NAME_IDX"
+                ON "PROJECT" ("NAME")
+             WHERE "VERSION" IS NULL
+               AND "PARENT_PROJECT_ID" IS NULL;
+
+            -- Unique index that excludes rows where VERSION and PARENT_PROJECT_ID are set
+            CREATE UNIQUE INDEX "PROJECT_NAME_VERSION_PARENT_IDX"
+                ON "PROJECT" ("NAME", "PARENT_PROJECT_ID", "VERSION")
+             WHERE "PARENT_PROJECT_ID" IS NOT NULL
+               AND "VERSION" IS NOT NULL;
+
+            -- Unique index to handle cases where VERSION is set and PARENT_PROJECT_ID is unset
+            CREATE UNIQUE INDEX "PROJECT_NAME_VERSION_NULL_PARENT_IDX"
+                ON "PROJECT" ("NAME", "VERSION")
+             WHERE "PARENT_PROJECT_ID" IS NULL
+               AND "VERSION" IS NOT NULL;
+
+            -- Unique index to handle cases where PARENT_PROJECT_ID is set and VERSION is unset
+            CREATE UNIQUE INDEX "PROJECT_NAME_PARENT_NULL_VERSION_IDX"
+                ON "PROJECT" ("NAME", "PARENT_PROJECT_ID")
+             WHERE "VERSION" IS NULL
+               AND "PARENT_PROJECT_ID" IS NOT NULL;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

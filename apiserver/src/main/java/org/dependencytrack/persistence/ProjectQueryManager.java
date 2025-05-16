@@ -280,11 +280,25 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     @Override
     public Project getProject(final String name, final String version) {
+        return getProject(name, version, null);
+    }
+
+    /**
+     * Returns a project by its name, version, and parent project.
+     *
+     * @param name    the name of the Project (required)
+     * @param version the version of the Project (or null)
+     * @param parent  the UUID of the parent Project
+     * @return a Project object, or null if not found
+     */
+    @Override
+    public Project getProject(final String name, final String version, final UUID parentUuid) {
         final Query<Project> query = pm.newQuery(Project.class);
 
-        final var filterBuilder = new ProjectQueryFilterBuilder()
+        final ProjectQueryFilterBuilder filterBuilder = new ProjectQueryFilterBuilder()
                 .withName(name)
-                .withVersion(version);
+                .withVersion(version)
+                .withParent(parentUuid);
 
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
@@ -292,6 +306,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         preprocessACLs(query, queryFilter, params, false);
         query.setFilter(queryFilter);
         query.setRange(0, 1);
+
         final Project project = singleResult(query.executeWithMap(params));
         if (project != null) {
             // set Metrics to prevent extra round trip
@@ -299,6 +314,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             // set ProjectVersions to prevent extra round trip
             project.setVersions(getProjectVersions(project));
         }
+
         return project;
     }
 
@@ -310,10 +326,23 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     @Override
     public Project getLatestProjectVersion(final String name) {
+        return getLatestProjectVersion(name, null);
+    }
+
+        /**
+     * Returns the latest version of a project by its name.
+     *
+     * @param name the name of the Project (required)
+     * @param parentUuid  UUID of the parent {@link Project}
+     * @return a Project object representing the latest version, or null if not found
+     */
+    @Override
+    public Project getLatestProjectVersion(final String name, final UUID parentUuid) {
         final Query<Project> query = pm.newQuery(Project.class);
 
         final var filterBuilder = new ProjectQueryFilterBuilder()
                 .withName(name)
+                .withParent(parentUuid)
                 .onlyLatestVersion();
 
         final String queryFilter = filterBuilder.buildFilter();
@@ -636,7 +665,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             if (source == null) {
                 throw new IllegalStateException("Project was supposed to be cloned, but it does not exist anymore");
             }
-            if (doesProjectExist(source.getName(), newVersion)) {
+            UUID parentUuid = source.getParent() != null ? source.getParent().getUuid() : null;
+            if (doesProjectExist(source.getName(), newVersion, parentUuid)) {
                 // Project cloning is an asynchronous process. When receiving the clone request, we already perform
                 // this check. It is possible though that a project with the new version is created synchronously
                 // between the clone event being dispatched, and it being processed.
@@ -1317,28 +1347,31 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     @Override
     public boolean doesProjectExist(final String name, final String version) {
-        final Query<Project> query = pm.newQuery(Project.class);
-        if (version != null) {
-            query.setFilter("name == :name && version == :version");
-            query.setNamedParameters(Map.of(
-                    "name", name,
-                    "version", version
-            ));
-        } else {
-            // Version is optional for projects, but using null
-            // for parameter values bypasses the query compilation cache.
-            // https://github.com/DependencyTrack/dependency-track/issues/2540
-            query.setFilter("name == :name && version == null");
-            query.setNamedParameters(Map.of(
-                    "name", name
-            ));
-        }
-        query.setResult("count(this)");
-        try {
-            return query.executeResultUnique(Long.class) > 0;
-        } finally {
-            query.closeAll();
-        }
+        return doesProjectExist(name, version, null);
+    }
+
+    /**
+     * Check whether a {@link Project} with a given {@code name} and {@code version} exists.
+     *
+     * @param name    Name of the {@link Project} to check for
+     * @param version Version of the {@link Project} to check for
+     * @param parentUuid  UUID of the parent {@link Project} to check for
+     * @return {@code true} when a matching {@link Project} exists, otherwise {@code false}
+     * @since 5.6.0
+     */
+    @Override
+    public boolean doesProjectExist(final String name, final String version, final UUID parentUuid) {
+        ProjectQueryFilterBuilder builder = new ProjectQueryFilterBuilder()
+                .withName(name)
+                .withVersion(version)
+                .withParent(parentUuid);
+
+        final Query<Project> query = pm.newQuery(Project.class)
+                .filter(builder.buildFilter())
+                .setNamedParameters(builder.getParams())
+                .result("count(this)");
+
+        return executeAndCloseResultUnique(query, Long.class) > 0;
     }
 
     private boolean isChildOf(Project project, UUID uuid) {
@@ -1378,12 +1411,18 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         }
     }
 
-    private List<ProjectVersion> getProjectVersions(Project project) {
-        final Query<Project> query = pm.newQuery(Project.class);
-        query.setFilter("name == :name");
-        query.setParameters(project.getName());
-        query.setResult("uuid, version, inactiveSince");
-        query.setOrdering("id asc"); // Ensure consistent ordering
+    private List<ProjectVersion> getProjectVersions(Project project) { 
+        final ProjectQueryFilterBuilder filterBuilder = new ProjectQueryFilterBuilder()
+                .withName(project.getName())
+                .withParent(project.getParent() != null ? project.getParent().getUuid() : null);
+
+        final Query<Project> query = pm.newQuery(Project.class)
+                .filter(filterBuilder.buildFilter())
+                .setNamedParameters(filterBuilder.getParams())
+                .result("uuid, version, inactiveSince")
+                .orderBy("id asc"); // Ensure consistent ordering
+
         return query.executeResultList(ProjectVersion.class);
     }
+
 }

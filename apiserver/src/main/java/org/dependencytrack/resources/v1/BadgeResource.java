@@ -52,9 +52,11 @@ import jakarta.ws.rs.HttpMethod;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 import javax.naming.AuthenticationException;
 import java.security.Principal;
+import java.util.UUID;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BADGE_ENABLED;
 
@@ -231,7 +233,9 @@ public class BadgeResource extends AbstractApiResource {
             @Parameter(description = "The name of the project to query on", required = true)
             @PathParam("name") String name,
             @Parameter(description = "The version of the project to query on", required = true)
-            @PathParam("version") String version) {
+            @PathParam("version") String version,
+            @Parameter(description = "The UUID of the parent project to query on", required = false)
+            @QueryParam("parent") @ValidUuid String parentUuid) {
         try (QueryManager qm = new QueryManager()) {
             final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
             if (!shouldBypassAuth && !passesAuthentication()) {
@@ -240,7 +244,8 @@ public class BadgeResource extends AbstractApiResource {
             if (!shouldBypassAuth && !passesAuthorization(qm)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
-            final Project project = qm.getProject(name, version);
+            final UUID uuid = parentUuid != null ? UUID.fromString(parentUuid) : null;
+            final Project project = qm.getProject(name, version, uuid);
             if (project != null) {
                 if (!shouldBypassAuth) {
                     requireAccess(qm, project);
@@ -325,7 +330,9 @@ public class BadgeResource extends AbstractApiResource {
             @Parameter(description = "The name of the project to query on", required = true)
             @PathParam("name") String name,
             @Parameter(description = "The version of the project to query on", required = true)
-            @PathParam("version") String version) {
+            @PathParam("version") String version,
+            @Parameter(description = "The UUID of the parent project to query on", required = false)
+            @QueryParam("parent") @ValidUuid String parentUuid) {
         try (QueryManager qm = new QueryManager()) {
             final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
             if (!shouldBypassAuth && !passesAuthentication()) {
@@ -334,7 +341,8 @@ public class BadgeResource extends AbstractApiResource {
             if (!shouldBypassAuth && !passesAuthorization(qm)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
-            final Project project = qm.getProject(name, version);
+            final UUID uuid = parentUuid != null ? UUID.fromString(parentUuid) : null;
+            final Project project = qm.getProject(name, version, uuid);
             if (project != null) {
                 if (!shouldBypassAuth) {
                     requireAccess(qm, project);

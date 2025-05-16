@@ -537,12 +537,20 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getProject(name, version);
     }
 
+    public Project getProject(final String name, final String version, final UUID parentUuid) {
+        return getProjectQueryManager().getProject(name, version, parentUuid);
+    }
+
     public PaginatedResult getProjects(final Team team, final boolean excludeInactive, final boolean bypass, final boolean onlyRoot) {
         return getProjectQueryManager().getProjects(team, excludeInactive, bypass, onlyRoot);
     }
 
     public Project getLatestProjectVersion(final String name) {
         return getProjectQueryManager().getLatestProjectVersion(name);
+    }
+
+    public Project getLatestProjectVersion(final String name, final UUID parentUuid) {
+        return getProjectQueryManager().getLatestProjectVersion(name, parentUuid);
     }
 
     public PaginatedResult getProjectsWithoutDescendantsOf(final boolean excludeInactive, final Project project) {
@@ -583,6 +591,10 @@ public class QueryManager extends AlpineQueryManager {
 
     public boolean doesProjectExist(final String name, final String version) {
         return getProjectQueryManager().doesProjectExist(name, version);
+    }
+
+    public boolean doesProjectExist(final String name, final String version, final UUID parentUuid) {
+        return getProjectQueryManager().doesProjectExist(name, version, parentUuid);
     }
 
     public Tag getTagByName(final String name) {
