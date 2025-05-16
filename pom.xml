@@ -29,6 +29,7 @@
     <modules>
         <module>alpine</module>
         <module>proto</module>
+        <module>persistence-migration</module>
         <module>apiserver</module>
         <module>coverage-report</module>
     </modules>
@@ -88,7 +89,13 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
+        <lib.assertj.version>3.26.3</lib.assertj.version>
+        <lib.junit-jupiter.version>5.12.2</lib.junit-jupiter.version>
+        <lib.liquibase.version>4.31.1</lib.liquibase.version>
+        <lib.postgresql.version>42.7.5</lib.postgresql.version>
         <lib.protobuf-java.version>4.31.0</lib.protobuf-java.version>
+        <lib.testcontainers.version>1.21.0</lib.testcontainers.version>
+        <lib.slf4j.version>2.0.17</lib.slf4j.version>
 
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
@@ -133,8 +140,37 @@
             </dependency>
             <dependency>
                 <groupId>org.dependencytrack</groupId>
+                <artifactId>persistence-migration</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
                 <artifactId>proto</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${lib.assertj.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${lib.junit-jupiter.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.liquibase</groupId>
+                <artifactId>liquibase-core</artifactId>
+                <version>${lib.liquibase.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${lib.postgresql.version}</version>
             </dependency>
 
             <dependency>
@@ -146,6 +182,28 @@
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java-util</artifactId>
                 <version>${lib.protobuf-java.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${lib.slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-nop</artifactId>
+                <version>${lib.slf4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${lib.testcontainers.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${lib.testcontainers.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

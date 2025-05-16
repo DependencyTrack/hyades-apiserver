@@ -18,7 +18,6 @@
         <maven.install.skip>true</maven.install.skip>
 
         <!-- Dependency Versions -->
-        <lib.assertj.version>3.26.3</lib.assertj.version>
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.cel-tools.version>0.5.3</lib.cel-tools.version>
         <lib.cloud-sql-postgres-socket-factory.version>1.25.0</lib.cloud-sql-postgres-socket-factory.version>
@@ -36,7 +35,6 @@
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.9.0</lib.kafka.version>
-        <lib.liquibase.version>4.31.1</lib.liquibase.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.17</lib.minio.version>
         <lib.kotlin-stdlib.version>2.1.21</lib.kotlin-stdlib.version>
@@ -44,7 +42,6 @@
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.3.2</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.4</lib.pebble.version>
-        <lib.testcontainers.version>1.21.0</lib.testcontainers.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
         <lib.swagger.version>2.2.32</lib.swagger.version>
         <lib.swagger-parser.version>2.1.27</lib.swagger-parser.version>
@@ -56,7 +53,6 @@
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
         <lib.net.javacrumbs.shedlock.version>6.6.1</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
-        <lib.jdbc-driver.postgresql.version>42.7.5</lib.jdbc-driver.postgresql.version>
 
         <!-- CycloneDX CLI -->
         <cyclonedx-cli.path>cyclonedx</cyclonedx-cli.path>
@@ -83,6 +79,10 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>persistence-migration</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>proto</artifactId>
@@ -333,18 +333,11 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>${lib.jdbc-driver.postgresql.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.cloud.sql</groupId>
             <artifactId>postgres-socket-factory</artifactId>
             <version>${lib.cloud-sql-postgres-socket-factory.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.liquibase</groupId>
-            <artifactId>liquibase-core</artifactId>
-            <version>${lib.liquibase.version}</version>
         </dependency>
 
         <!-- Commons Compress -->
@@ -444,7 +437,6 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
-            <version>${lib.testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -748,12 +740,6 @@
                         <webInfIncludeJarPattern>^$</webInfIncludeJarPattern>
                     </webApp>
                 </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.liquibase</groupId>
-                <artifactId>liquibase-maven-plugin</artifactId>
-                <version>${lib.liquibase.version}</version>
             </plugin>
         </plugins>
     </build>
