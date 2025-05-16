@@ -20,7 +20,6 @@ package org.dependencytrack.persistence.jdbi;
 
 import alpine.notification.NotificationLevel;
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -164,19 +163,19 @@ public class ProjectDaoTest extends PersistenceCapableTest {
 
         // Create metrics for project and component.
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsUtil.class);
+            var dao = handle.attach(MetricsTestDao.class);
             dao.createMetricsPartitionsForDate("PROJECTMETRICS", LocalDate.of(2025, 1, 1));
             dao.createMetricsPartitionsForDate("DEPENDENCYMETRICS", LocalDate.of(2025, 1, 1));
 
             var projectMetrics = new ProjectMetrics();
-            projectMetrics.setProject(project);
+            projectMetrics.setProjectId(project.getId());
             projectMetrics.setFirstOccurrence(Date.from(Instant.now()));
             projectMetrics.setLastOccurrence(DateUtil.parseShortDate("20250101"));
             dao.createProjectMetrics(projectMetrics);
 
             var dependencyMetrics = new DependencyMetrics();
-            dependencyMetrics.setProject(project);
-            dependencyMetrics.setComponent(component);
+            dependencyMetrics.setProjectId(project.getId());
+            dependencyMetrics.setComponentId(component.getId());
             dependencyMetrics.setFirstOccurrence(Date.from(Instant.now()));
             dependencyMetrics.setLastOccurrence(DateUtil.parseShortDate("20250101"));
             dao.createDependencyMetrics(dependencyMetrics);

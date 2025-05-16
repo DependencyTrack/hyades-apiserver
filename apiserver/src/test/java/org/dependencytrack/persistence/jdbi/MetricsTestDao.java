@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.metrics;
+package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
@@ -29,7 +29,7 @@ import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-public interface MetricsUtil extends SqlObject {
+public interface MetricsTestDao extends SqlObject {
 
 
     @SqlQuery("""
@@ -48,7 +48,7 @@ public interface MetricsUtil extends SqlObject {
             INSERT INTO "PROJECTMETRICS"(
                 "PROJECT_ID", "COMPONENTS", "FIRST_OCCURRENCE", "LAST_OCCURRENCE", "CRITICAL", "HIGH", "MEDIUM", "LOW", "RISKSCORE",
                 "SUPPRESSED", "VULNERABILITIES", "VULNERABLECOMPONENTS")
-            VALUES (:project.id, :components, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :inheritedRiskScore,
+            VALUES (:projectId, :components, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :inheritedRiskScore,
                  :suppressed, :vulnerabilities, :vulnerableComponents)
             RETURNING *
             """)
@@ -59,7 +59,7 @@ public interface MetricsUtil extends SqlObject {
             INSERT INTO "DEPENDENCYMETRICS"(
                 "COMPONENT_ID", "PROJECT_ID", "FIRST_OCCURRENCE", "LAST_OCCURRENCE", "CRITICAL", "HIGH", "MEDIUM", "LOW", "RISKSCORE",
                 "SUPPRESSED", "VULNERABILITIES")
-            VALUES (:component.id, :project.id, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :inheritedRiskScore,
+            VALUES (:componentId, :projectId, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :inheritedRiskScore,
                  :suppressed, :vulnerabilities)
             RETURNING *
             """)

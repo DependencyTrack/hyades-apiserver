@@ -29,16 +29,16 @@ public class DependencyMetricsTest {
     public void testProject() {
         Project project = new Project();
         DependencyMetrics metric = new DependencyMetrics();
-        metric.setProject(project);
-        Assert.assertEquals(project, metric.getProject());
+        metric.setProjectId(project.getId());
+        Assert.assertEquals(project, metric.getProjectId());
     }
 
     @Test
     public void testComponent() {
         Component component = new Component();
         DependencyMetrics metric = new DependencyMetrics();
-        metric.setComponent(component);
-        Assert.assertEquals(component, metric.getComponent());
+        metric.setComponentId(component.getId());
+        Assert.assertEquals(component, metric.getComponentId());
     }
 
     @Test

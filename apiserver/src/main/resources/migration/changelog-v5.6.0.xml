@@ -2016,9 +2016,6 @@
             "VULNERABLEPROJECTS" int4 NOT NULL,
             CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" PRIMARY KEY ("LAST_OCCURRENCE")
             ) PARTITION BY RANGE ("LAST_OCCURRENCE");
-
-            -- create new index
-            CREATE INDEX "PORTFOLIOMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "PORTFOLIOMETRICS_NEW" ("LAST_OCCURRENCE");
         </sql>
         <!-- Step 3: Create partitioned table PROJECTMETRICS_NEW -->
         <sql>
@@ -2057,9 +2054,6 @@
             "VULNERABLECOMPONENTS" int4 NOT NULL,
             CONSTRAINT "PROJECTMETRICS_NEW_PK" PRIMARY KEY ("PROJECT_ID", "LAST_OCCURRENCE")
             ) PARTITION BY RANGE ("LAST_OCCURRENCE");
-
-            -- create new index
-            CREATE INDEX "PROJECTMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "PROJECTMETRICS_NEW" ("LAST_OCCURRENCE");
         </sql>
         <!-- Step 4: Create partitioned table DEPENDENCYMETRICS_NEW -->
         <sql>
@@ -2097,9 +2091,6 @@
             "VULNERABILITIES" int4 NOT NULL,
             CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" PRIMARY KEY ("PROJECT_ID", "COMPONENT_ID", "LAST_OCCURRENCE")
             ) PARTITION BY RANGE ("LAST_OCCURRENCE");
-
-            -- create new index
-            CREATE INDEX "DEPENDENCYMETRICS_NEW_LAST_OCCURRENCE_IDX" ON "DEPENDENCYMETRICS_NEW" ("LAST_OCCURRENCE");
         </sql>
     </changeSet>
 
@@ -2116,9 +2107,8 @@
             -- rename partitioned table
             ALTER TABLE "PORTFOLIOMETRICS_NEW" RENAME TO "PORTFOLIOMETRICS";
 
-            -- rename PK and index
+            -- rename PK
             ALTER TABLE "PORTFOLIOMETRICS" RENAME CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" TO "PORTFOLIOMETRICS_PK";
-            ALTER INDEX "PORTFOLIOMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "PORTFOLIOMETRICS_LAST_OCCURRENCE_IDX";
         </sql>
     </changeSet>
 
@@ -2135,9 +2125,8 @@
             -- rename partitioned table
             ALTER TABLE "PROJECTMETRICS_NEW" RENAME TO "PROJECTMETRICS";
 
-            -- rename PK and index
+            -- rename PK
             ALTER TABLE "PROJECTMETRICS" RENAME CONSTRAINT "PROJECTMETRICS_NEW_PK" TO "PROJECTMETRICS_PK";
-            ALTER INDEX "PROJECTMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "PROJECTMETRICS_LAST_OCCURRENCE_IDX";
         </sql>
     </changeSet>
 
@@ -2154,9 +2143,8 @@
             -- rename partitioned table
             ALTER TABLE "DEPENDENCYMETRICS_NEW" RENAME TO "DEPENDENCYMETRICS";
 
-            -- rename PK and index
+            -- rename PK
             ALTER TABLE "DEPENDENCYMETRICS" RENAME CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" TO "DEPENDENCYMETRICS_PK";
-            ALTER INDEX "DEPENDENCYMETRICS_NEW_LAST_OCCURRENCE_IDX" RENAME TO "DEPENDENCYMETRICS_LAST_OCCURRENCE_IDX";
         </sql>
     </changeSet>
 

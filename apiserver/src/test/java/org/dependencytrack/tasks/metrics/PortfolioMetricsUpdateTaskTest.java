@@ -23,7 +23,6 @@ import net.jcip.annotations.NotThreadSafe;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
-import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -37,6 +36,7 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.dependencytrack.tasks.CallbackTask;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -203,23 +203,23 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // must be considered. Because the update task calculates new project metrics data points,
         // the ones created below must be ignored.
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsUtil.class);
+            var dao = handle.attach(MetricsTestDao.class);
             final var projectUnauditedOldMetrics = new ProjectMetrics();
-            projectUnauditedOldMetrics.setProject(projectUnaudited);
+            projectUnauditedOldMetrics.setProjectId(projectUnaudited.getId());
             projectUnauditedOldMetrics.setCritical(666);
             projectUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
             projectUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
             dao.createProjectMetrics(projectUnauditedOldMetrics);
 
             final var projectAuditedOldMetrics = new ProjectMetrics();
-            projectAuditedOldMetrics.setProject(projectAudited);
+            projectAuditedOldMetrics.setProjectId(projectAudited.getId());
             projectAuditedOldMetrics.setHigh(666);
             projectAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
             projectAuditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
             dao.createProjectMetrics(projectAuditedOldMetrics);
 
             final var projectSuppressedOldMetrics = new ProjectMetrics();
-            projectSuppressedOldMetrics.setProject(projectSuppressed);
+            projectSuppressedOldMetrics.setProjectId(projectSuppressed.getId());
             projectSuppressedOldMetrics.setMedium(666);
             projectSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
             projectSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
@@ -315,23 +315,23 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // must be considered. Because the update task calculates new project metrics data points,
         // the ones created below must be ignored.
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsUtil.class);
+            var dao = handle.attach(MetricsTestDao.class);
             final var projectUnauditedOldMetrics = new ProjectMetrics();
-            projectUnauditedOldMetrics.setProject(projectUnaudited);
+            projectUnauditedOldMetrics.setProjectId(projectUnaudited.getId());
             projectUnauditedOldMetrics.setPolicyViolationsFail(666);
             projectUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
             projectUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
             dao.createProjectMetrics(projectUnauditedOldMetrics);
 
             final var projectAuditedOldMetrics = new ProjectMetrics();
-            projectAuditedOldMetrics.setProject(projectAudited);
+            projectAuditedOldMetrics.setProjectId(projectAudited.getId());
             projectAuditedOldMetrics.setPolicyViolationsWarn(666);
             projectAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
             projectAuditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
             dao.createProjectMetrics(projectAuditedOldMetrics);
 
             final var projectSuppressedOldMetrics = new ProjectMetrics();
-            projectSuppressedOldMetrics.setProject(projectSuppressed);
+            projectSuppressedOldMetrics.setProjectId(projectSuppressed.getId());
             projectSuppressedOldMetrics.setPolicyViolationsInfo(666);
             projectSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
             projectSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.now()));

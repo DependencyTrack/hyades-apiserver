@@ -19,7 +19,6 @@
 package org.dependencytrack.tasks.metrics;
 
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
-import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
@@ -33,6 +32,7 @@ import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -161,26 +161,26 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         // must be considered. Because the update task calculates new component metrics data points,
         // the ones created below must be ignored.
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsUtil.class);
+            var dao = handle.attach(MetricsTestDao.class);
             final var componentUnauditedOldMetrics = new DependencyMetrics();
-            componentUnauditedOldMetrics.setProject(project);
-            componentUnauditedOldMetrics.setComponent(componentUnaudited);
+            componentUnauditedOldMetrics.setProjectId(project.getId());
+            componentUnauditedOldMetrics.setComponentId(componentUnaudited.getId());
             componentUnauditedOldMetrics.setCritical(666);
             componentUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
             componentUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
             dao.createDependencyMetrics(componentUnauditedOldMetrics);
 
             final var componentAuditedOldMetrics = new DependencyMetrics();
-            componentAuditedOldMetrics.setProject(project);
-            componentAuditedOldMetrics.setComponent(componentAudited);
+            componentAuditedOldMetrics.setProjectId(project.getId());
+            componentAuditedOldMetrics.setComponentId(componentAudited.getId());
             componentAuditedOldMetrics.setHigh(666);
             componentAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
             componentAuditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
             dao.createDependencyMetrics(componentAuditedOldMetrics);
 
             final var componentSuppressedOldMetrics = new DependencyMetrics();
-            componentSuppressedOldMetrics.setProject(project);
-            componentSuppressedOldMetrics.setComponent(componentSuppressed);
+            componentSuppressedOldMetrics.setProjectId(project.getId());
+            componentSuppressedOldMetrics.setComponentId(componentSuppressed.getId());
             componentSuppressedOldMetrics.setMedium(666);
             componentSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
             componentSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
@@ -273,26 +273,26 @@ public class ProjectMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTest 
         // must be considered. Because the update task calculates new component metrics data points,
         // the ones created below must be ignored.
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsUtil.class);
+            var dao = handle.attach(MetricsTestDao.class);
             final var componentUnauditedOldMetrics = new DependencyMetrics();
-            componentUnauditedOldMetrics.setProject(project);
-            componentUnauditedOldMetrics.setComponent(componentUnaudited);
+            componentUnauditedOldMetrics.setProjectId(project.getId());
+            componentUnauditedOldMetrics.setComponentId(componentUnaudited.getId());
             componentUnauditedOldMetrics.setPolicyViolationsFail(666);
             componentUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
             componentUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
             dao.createDependencyMetrics(componentUnauditedOldMetrics);
 
             final var componentAuditedOldMetrics = new DependencyMetrics();
-            componentAuditedOldMetrics.setProject(project);
-            componentAuditedOldMetrics.setComponent(componentAudited);
+            componentAuditedOldMetrics.setProjectId(project.getId());
+            componentAuditedOldMetrics.setComponentId(componentAudited.getId());
             componentAuditedOldMetrics.setHigh(666);
             componentAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
             componentAuditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
             dao.createDependencyMetrics(componentAuditedOldMetrics);
 
             final var componentSuppressedOldMetrics = new DependencyMetrics();
-            componentSuppressedOldMetrics.setProject(project);
-            componentSuppressedOldMetrics.setComponent(componentSuppressed);
+            componentSuppressedOldMetrics.setProjectId(project.getId());
+            componentSuppressedOldMetrics.setComponentId(componentSuppressed.getId());
             componentSuppressedOldMetrics.setMedium(666);
             componentSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.ofEpochSecond(1670843532)));
             componentSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.now()));

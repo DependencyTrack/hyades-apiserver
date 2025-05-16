@@ -19,7 +19,6 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
@@ -144,11 +143,11 @@ public class ComponentDaoTest extends PersistenceCapableTest {
 
         // Create metrics for component.
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsUtil.class);
+            var dao = handle.attach(MetricsTestDao.class);
             dao.createMetricsPartitionsForDate("DEPENDENCYMETRICS", LocalDate.of(2025, 1, 1));
             var metrics = new DependencyMetrics();
-            metrics.setProject(project);
-            metrics.setComponent(component);
+            metrics.setProjectId(project.getId());
+            metrics.setComponentId(component.getId());
             metrics.setFirstOccurrence(Date.from(Instant.now()));
             metrics.setLastOccurrence(DateUtil.parseShortDate("20250101"));
             dao.createDependencyMetrics(metrics);

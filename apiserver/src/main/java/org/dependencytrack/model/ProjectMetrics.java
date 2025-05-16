@@ -37,8 +37,9 @@ public class ProjectMetrics implements Serializable {
 
     private static final long serialVersionUID = 8741534340846353210L;
 
+    @JsonIgnore
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private Project project;
+    private long projectId;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private int critical;
@@ -120,12 +121,12 @@ public class ProjectMetrics implements Serializable {
     @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.REQUIRED, description = "UNIX epoch timestamp in milliseconds")
     private Date lastOccurrence;
 
-    public Project getProject() {
-        return project;
+    public long getProjectId() {
+        return projectId;
     }
 
-    public void setProject(Project project) {
-        this.project = project;
+    public void setProjectId(long projectId) {
+        this.projectId = projectId;
     }
 
     public int getCritical() {

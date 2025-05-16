@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -36,11 +37,13 @@ public class DependencyMetrics implements Serializable {
 
     private static final long serialVersionUID = 5231823328085979791L;
 
+    @JsonIgnore
     @NotNull
-    private Project project;
+    private long projectId;
 
+    @JsonIgnore
     @NotNull
-    private Component component;
+    private long componentId;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private int critical;
@@ -118,20 +121,20 @@ public class DependencyMetrics implements Serializable {
     @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.REQUIRED, description = "UNIX epoch timestamp in milliseconds")
     private Date lastOccurrence;
 
-    public Project getProject() {
-        return project;
+    public long getProjectId() {
+        return projectId;
     }
 
-    public void setProject(Project project) {
-        this.project = project;
+    public void setProjectId(long projectId) {
+        this.projectId = projectId;
     }
 
-    public Component getComponent() {
-        return component;
+    public long getComponentId() {
+        return componentId;
     }
 
-    public void setComponent(Component component) {
-        this.component = component;
+    public void setComponentId(long componentId) {
+        this.componentId = componentId;
     }
 
     public int getCritical() {

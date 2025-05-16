@@ -39,7 +39,6 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.event.kafka.KafkaTopics;
-import org.dependencytrack.metrics.MetricsUtil;
 import org.dependencytrack.model.AnalysisJustification;
 import org.dependencytrack.model.AnalysisResponse;
 import org.dependencytrack.model.AnalysisState;
@@ -64,6 +63,7 @@ import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -759,16 +759,16 @@ public class ProjectResourceTest extends ResourceTest {
         final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
 
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsUtil.class);
+            var dao = handle.attach(MetricsTestDao.class);
             final var projectMetricsOld = new ProjectMetrics();
-            projectMetricsOld.setProject(project);
+            projectMetricsOld.setProjectId(project.getId());
             projectMetricsOld.setCritical(666);
             projectMetricsOld.setFirstOccurrence(Date.from(projectMetricsOldOccurrence));
             projectMetricsOld.setLastOccurrence(Date.from(projectMetricsOldOccurrence));
             dao.createProjectMetrics(projectMetricsOld);
 
             final var projectMetricsLatest = new ProjectMetrics();
-            projectMetricsLatest.setProject(project);
+            projectMetricsLatest.setProjectId(project.getId());
             projectMetricsLatest.setComponents(1);
             projectMetricsLatest.setCritical(2);
             projectMetricsLatest.setHigh(3);
@@ -1245,16 +1245,16 @@ public class ProjectResourceTest extends ResourceTest {
         final Instant projectMetricsLatestOccurrence = now.minus(5, ChronoUnit.MINUTES);
 
         useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsUtil.class);
+            var dao = handle.attach(MetricsTestDao.class);
             final var projectMetricsOld = new ProjectMetrics();
-            projectMetricsOld.setProject(childProject);
+            projectMetricsOld.setProjectId(childProject.getId());
             projectMetricsOld.setCritical(666);
             projectMetricsOld.setFirstOccurrence(Date.from(projectMetricsOldOccurrence));
             projectMetricsOld.setLastOccurrence(Date.from(projectMetricsOldOccurrence));
             dao.createProjectMetrics(projectMetricsOld);
 
             final var projectMetricsLatest = new ProjectMetrics();
-            projectMetricsLatest.setProject(childProject);
+            projectMetricsLatest.setProjectId(childProject.getId());
             projectMetricsLatest.setComponents(1);
             projectMetricsLatest.setCritical(2);
             projectMetricsLatest.setHigh(3);

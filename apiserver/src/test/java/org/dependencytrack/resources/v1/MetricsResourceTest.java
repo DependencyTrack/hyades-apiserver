@@ -26,7 +26,7 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.metrics.MetricsUtil;
+import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
@@ -328,7 +328,7 @@ public class MetricsResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
 
         useJdbiHandle(handle -> {
-            var dao = handle.attach(MetricsUtil.class);
+            var dao = handle.attach(MetricsTestDao.class);
             dao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 30);
             var metrics = new PortfolioMetrics();
             metrics.setVulnerabilities(3);
@@ -363,7 +363,7 @@ public class MetricsResourceTest extends ResourceTest {
         enablePortfolioAccessControl();
 
         useJdbiHandle(handle -> {
-            var dao = handle.attach(MetricsUtil.class);
+            var dao = handle.attach(MetricsTestDao.class);
             dao.createMetricsPartitionsForDate("PORTFOLIOMETRICS", LocalDate.of(2025, 1, 1));
             var metrics = new PortfolioMetrics();
             metrics.setVulnerabilities(3);
