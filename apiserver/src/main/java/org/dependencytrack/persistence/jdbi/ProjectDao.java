@@ -133,12 +133,6 @@ public interface ProjectDao {
             <#if activeFilter && activeFilter == true>
                 AND "PROJECT"."INACTIVE_SINCE" IS NULL
             </#if>
-            <#if hasAnalysis>
-                AND EXISTS(
-                 SELECT 1
-                   FROM "ANALYSIS"
-                  WHERE "ANALYSIS"."PROJECT_ID" = "PROJECT"."ID")
-            </#if>
             <#if onlyRootFilter>
                AND (NOT :onlyRootFilter OR "PROJECT"."PARENT_PROJECT_ID" IS NULL)
             <#elseif parentUuidFilter>
@@ -188,8 +182,7 @@ public interface ProjectDao {
             @Bind Boolean activeFilter,
             @Bind Boolean onlyRootFilter,
             @Bind UUID parentUuidFilter,
-            @Define boolean includeMetrics,
-            @Define boolean hasAnalysis
+            @Define boolean includeMetrics
     );
 
     record ConciseProjectListRow(
