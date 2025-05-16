@@ -23,8 +23,6 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
-import org.junit.Rule;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.util.Date;
 import java.util.UUID;
@@ -36,10 +34,6 @@ import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCOR
 import static org.dependencytrack.model.ConfigPropertyConstants.CUSTOM_RISK_SCORE_UNASSIGNED;
 
 abstract class AbstractMetricsUpdateTaskTest extends PersistenceCapableTest {
-
-    @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables()
-            .set("TASK_PORTFOLIO_METRICS_UPDATE_LOCK_MIN_DURATION", "PT2S");
 
     protected PolicyViolation createPolicyViolation(final Component component, final Policy.ViolationState violationState, final PolicyViolation.Type type) {
         final var policy = qm.createPolicy(UUID.randomUUID().toString(), Policy.Operator.ALL, violationState);
