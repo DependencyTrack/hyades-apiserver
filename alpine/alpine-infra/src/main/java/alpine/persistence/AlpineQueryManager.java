@@ -881,7 +881,11 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
                 new AccessLevel[] { AccessLevel.READ, AccessLevel.UPDATE, AccessLevel.CREATE, AccessLevel.DELETE });
 
         final Query<Permission> query = pm.newQuery(Permission.class)
-                .filter("resource == :resourceName && :accessLevels.contains(accessLevel) && teams.contains(team) && team.id == :teamId")
+                .filter(String.join(" && ",
+                        "resource == :resourceName",
+                        ":accessLevels.contains(accessLevel)",
+                        "teams.contains(team)",
+                        "team.id == :teamId"))
                 .variables("alpine.model.Team team")
                 .setNamedParameters(Map.of(
                         "resourceName", resource.name(),
