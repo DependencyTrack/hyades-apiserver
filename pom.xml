@@ -88,7 +88,7 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
-        <lib.protobuf-java.version>4.30.2</lib.protobuf-java.version>
+        <lib.protobuf-java.version>4.31.0</lib.protobuf-java.version>
 
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
