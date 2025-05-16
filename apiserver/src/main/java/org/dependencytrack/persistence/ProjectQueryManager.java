@@ -66,6 +66,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -488,7 +489,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
+    public Project createProject(String name, String description, String version, Collection<Tag> tags, Project parent,
                                  PackageURL purl, Date inactiveSince, boolean commitIndex) {
         return createProject(name, description, version, tags, parent, purl, inactiveSince, false, commitIndex);
     }
@@ -508,7 +509,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @return the created Project
      */
     @Override
-    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
+    public Project createProject(String name, String description, String version, Collection<Tag> tags, Project parent,
                                  PackageURL purl, Date inactiveSince, boolean isLatest, boolean commitIndex) {
         final Project project = new Project();
         project.setName(name);
@@ -530,7 +531,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @return the created Project
      */
     @Override
-    public Project createProject(final Project project, List<Tag> tags, boolean commitIndex) {
+    public Project createProject(final Project project, Collection<Tag> tags, boolean commitIndex) {
         if (project.getParent() != null && project.getParent().getInactiveSince() != null) {
             throw new IllegalArgumentException("An inactive Parent cannot be selected as parent");
         }
@@ -542,7 +543,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 persist(oldLatestProject);
             }
             final Project newProject = persist(project);
-            final List<Tag> resolvedTags = resolveTags(tags);
+            final Set<Tag> resolvedTags = resolveTags(tags);
             bind(project, resolvedTags);
             return newProject;
         });
@@ -617,7 +618,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                 persist(oldLatestProject);
             }
 
-            final List<Tag> resolvedTags = resolveTags(transientProject.getTags());
+            final Set<Tag> resolvedTags = resolveTags(transientProject.getTags());
             bind(project, resolvedTags);
             return persist(project);
         });
@@ -981,9 +982,11 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             boolean modified = false;
 
             if (!keepExisting) {
-                for (final Tag existingTag : project.getTags()) {
+                final Iterator<Tag> existingTagsIterator = project.getTags().iterator();
+                while (existingTagsIterator.hasNext()) {
+                    final Tag existingTag = existingTagsIterator.next();
                     if (!tags.contains(existingTag)) {
-                        project.getTags().remove(existingTag);
+                        existingTagsIterator.remove();
                         existingTag.getProjects().remove(project);
                         modified = true;
                     }
@@ -994,8 +997,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                     project.getTags().add(tag);
 
                     if (tag.getProjects() == null) {
-                        tag.setProjects(new ArrayList<>(List.of(project)));
-                    } else if (!tag.getProjects().contains(project)) {
+                        tag.setProjects(new HashSet<>(Set.of(project)));
+                    } else {
                         tag.getProjects().add(project);
                     }
 
@@ -1012,7 +1015,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @param tags a List of Tag objects
      */
     @Override
-    public void bind(final Project project, final List<Tag> tags) {
+    public void bind(final Project project, final Collection<Tag> tags) {
         bind(project, tags, /* keepExisting */ false);
     }
 

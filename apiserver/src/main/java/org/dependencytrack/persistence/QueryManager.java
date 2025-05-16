@@ -594,15 +594,15 @@ public class QueryManager extends AlpineQueryManager {
         return getTagQueryManager().createTags(names);
     }
 
-    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent, PackageURL purl, Date inactiveSince, boolean commitIndex) {
+    public Project createProject(String name, String description, String version, Collection<Tag> tags, Project parent, PackageURL purl, Date inactiveSince, boolean commitIndex) {
         return getProjectQueryManager().createProject(name, description, version, tags, parent, purl, inactiveSince, commitIndex);
     }
 
-    public Project createProject(final Project project, List<Tag> tags, boolean commitIndex) {
+    public Project createProject(final Project project, Collection<Tag> tags, boolean commitIndex) {
         return getProjectQueryManager().createProject(project, tags, commitIndex);
     }
 
-    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
+    public Project createProject(String name, String description, String version, Collection<Tag> tags, Project parent,
                                  PackageURL purl, Date inactiveSince, boolean isLatest, boolean commitIndex) {
         return getProjectQueryManager().createProject(name, description, version, tags, parent, purl, inactiveSince, isLatest, commitIndex);
     }
@@ -1158,7 +1158,7 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().bind(project, tags, keepExisting);
     }
 
-    public void bind(Project project, List<Tag> tags) {
+    public void bind(Project project, Collection<Tag> tags) {
         getProjectQueryManager().bind(project, tags);
     }
 
@@ -1768,15 +1768,19 @@ public class QueryManager extends AlpineQueryManager {
         return getEpssQueryManager().getEpssForCveIds(cveIds);
     }
 
-    public List<Tag> resolveTags(final List<Tag> tags) {
+    public Set<Tag> resolveTags(final Collection<Tag> tags) {
         return getTagQueryManager().resolveTags(tags);
     }
 
-    public List<Tag> resolveTagsByName(final List<String> tagNames) {
+    public Set<Tag> resolveTagsByName(final Collection<String> tagNames) {
         return getTagQueryManager().resolveTagsByName(tagNames);
     }
 
-    public void bind(Vulnerability vulnerability, List<Tag> tags) {
+    public boolean bind(final Vulnerability vuln, final Collection<Tag> tags, final boolean keepExisting) {
+        return getVulnerabilityQueryManager().bind(vuln, tags, keepExisting);
+    }
+
+    public void bind(Vulnerability vulnerability, Collection<Tag> tags) {
         getVulnerabilityQueryManager().bind(vulnerability, tags);
     }
 

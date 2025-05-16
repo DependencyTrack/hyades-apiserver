@@ -119,10 +119,9 @@ public class NotificationRule implements Serializable {
     private List<Project> projects;
 
     @Persistent(table = "NOTIFICATIONRULE_TAGS", defaultFetchGroup = "true", mappedBy = "notificationRules")
-    @Join(column = "NOTIFICATIONRULE_ID", foreignKey = "NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Join(column = "NOTIFICATIONRULE_ID", primaryKey = "NOTIFICATIONRULE_TAGS_PK", foreignKey = "NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Element(column = "TAG_ID", foreignKey = "NOTIFICATIONRULE_TAGS_TAG_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    private List<Tag> tags;
+    private Set<Tag> tags;
 
     @Persistent(table = "NOTIFICATIONRULE_TEAMS", defaultFetchGroup = "true")
     @Join(column = "NOTIFICATIONRULE_ID", primaryKey = "NOTIFICATIONRULE_TEAMS_PK", foreignKey = "NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK", deleteAction = ForeignKeyAction.CASCADE)
@@ -223,11 +222,11 @@ public class NotificationRule implements Serializable {
         this.projects = projects;
     }
 
-    public List<Tag> getTags() {
+    public Set<Tag> getTags() {
         return tags;
     }
 
-    public void setTags(final List<Tag> tags) {
+    public void setTags(final Set<Tag> tags) {
         this.tags = tags;
     }
 

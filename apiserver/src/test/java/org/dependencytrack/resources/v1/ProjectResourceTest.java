@@ -26,14 +26,6 @@ import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonObjectBuilder;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -77,6 +69,14 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -1763,7 +1763,7 @@ public class ProjectResourceTest extends ResourceTest {
             var t = new Tag();
             t.setName(name);
             return t;
-        }).collect(Collectors.toList()));
+        }).collect(Collectors.toSet()));
 
         // update the 1st time and add another tag
         var response = jersey.target(V1_PROJECT)
@@ -1795,7 +1795,7 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals("tag3", jsonTags.get(2).asJsonObject().getString("name"));
 
         // and finally delete one of the tags
-        jsonProject.getTags().remove(0);
+        jsonProject.getTags().removeIf(tag -> "tag1".equals(tag.getName()));
         response = jersey.target(V1_PROJECT)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -2189,7 +2189,7 @@ public class ProjectResourceTest extends ResourceTest {
             var t = new Tag();
             t.setName(name);
             return t;
-        }).collect(Collectors.toUnmodifiableList()));
+        }).collect(Collectors.toSet()));
         final var jsonProjectManufacturerContact = new OrganizationalContact();
         jsonProjectManufacturerContact.setName("newManufacturerContactName");
         final var jsonProjectManufacturer = new OrganizationalEntity();
