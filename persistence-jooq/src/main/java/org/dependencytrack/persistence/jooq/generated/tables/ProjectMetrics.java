@@ -10,15 +10,12 @@ import java.util.Collection;
 import java.util.List;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
-import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectMetricsRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
-import org.jooq.Identity;
-import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -58,11 +55,6 @@ public class ProjectMetrics extends TableImpl<ProjectMetricsRecord> {
     public Class<ProjectMetricsRecord> getRecordType() {
         return ProjectMetricsRecord.class;
     }
-
-    /**
-     * The column <code>PROJECTMETRICS.ID</code>.
-     */
-    public final TableField<ProjectMetricsRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>PROJECTMETRICS.COMPONENTS</code>.
@@ -289,16 +281,6 @@ public class ProjectMetrics extends TableImpl<ProjectMetricsRecord> {
     @Override
     public Schema getSchema() {
         return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
-    }
-
-    @Override
-    public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.PROJECTMETRICS_FIRST_OCCURRENCE_IDX, Indexes.PROJECTMETRICS_LAST_OCCURRENCE_IDX, Indexes.PROJECTMETRICS_PROJECT_ID_IDX);
-    }
-
-    @Override
-    public Identity<ProjectMetricsRecord, Long> getIdentity() {
-        return (Identity<ProjectMetricsRecord, Long>) super.getIdentity();
     }
 
     @Override

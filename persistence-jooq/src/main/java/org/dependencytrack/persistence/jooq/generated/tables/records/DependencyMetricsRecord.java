@@ -7,7 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables.records;
 import java.time.OffsetDateTime;
 
 import org.dependencytrack.persistence.jooq.generated.tables.DependencyMetrics;
-import org.jooq.Record1;
+import org.jooq.Record3;
 import org.jooq.impl.UpdatableRecordImpl;
 
 
@@ -20,25 +20,10 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>DEPENDENCYMETRICS.ID</code>.
-     */
-    public DependencyMetricsRecord setId(Long value) {
-        set(0, value);
-        return this;
-    }
-
-    /**
-     * Getter for <code>DEPENDENCYMETRICS.ID</code>.
-     */
-    public Long getId() {
-        return (Long) get(0);
-    }
-
-    /**
      * Setter for <code>DEPENDENCYMETRICS.COMPONENT_ID</code>.
      */
     public DependencyMetricsRecord setComponentId(Long value) {
-        set(1, value);
+        set(0, value);
         return this;
     }
 
@@ -46,14 +31,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.COMPONENT_ID</code>.
      */
     public Long getComponentId() {
-        return (Long) get(1);
+        return (Long) get(0);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.CRITICAL</code>.
      */
     public DependencyMetricsRecord setCritical(Integer value) {
-        set(2, value);
+        set(1, value);
         return this;
     }
 
@@ -61,14 +46,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.CRITICAL</code>.
      */
     public Integer getCritical() {
-        return (Integer) get(2);
+        return (Integer) get(1);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.FINDINGS_AUDITED</code>.
      */
     public DependencyMetricsRecord setFindingsAudited(Integer value) {
-        set(3, value);
+        set(2, value);
         return this;
     }
 
@@ -76,14 +61,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.FINDINGS_AUDITED</code>.
      */
     public Integer getFindingsAudited() {
-        return (Integer) get(3);
+        return (Integer) get(2);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.FINDINGS_TOTAL</code>.
      */
     public DependencyMetricsRecord setFindingsTotal(Integer value) {
-        set(4, value);
+        set(3, value);
         return this;
     }
 
@@ -91,14 +76,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.FINDINGS_TOTAL</code>.
      */
     public Integer getFindingsTotal() {
-        return (Integer) get(4);
+        return (Integer) get(3);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.FINDINGS_UNAUDITED</code>.
      */
     public DependencyMetricsRecord setFindingsUnaudited(Integer value) {
-        set(5, value);
+        set(4, value);
         return this;
     }
 
@@ -106,14 +91,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.FINDINGS_UNAUDITED</code>.
      */
     public Integer getFindingsUnaudited() {
-        return (Integer) get(5);
+        return (Integer) get(4);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.FIRST_OCCURRENCE</code>.
      */
     public DependencyMetricsRecord setFirstOccurrence(OffsetDateTime value) {
-        set(6, value);
+        set(5, value);
         return this;
     }
 
@@ -121,14 +106,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.FIRST_OCCURRENCE</code>.
      */
     public OffsetDateTime getFirstOccurrence() {
-        return (OffsetDateTime) get(6);
+        return (OffsetDateTime) get(5);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.HIGH</code>.
      */
     public DependencyMetricsRecord setHigh(Integer value) {
-        set(7, value);
+        set(6, value);
         return this;
     }
 
@@ -136,14 +121,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.HIGH</code>.
      */
     public Integer getHigh() {
-        return (Integer) get(7);
+        return (Integer) get(6);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.RISKSCORE</code>.
      */
     public DependencyMetricsRecord setRiskscore(Double value) {
-        set(8, value);
+        set(7, value);
         return this;
     }
 
@@ -151,14 +136,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.RISKSCORE</code>.
      */
     public Double getRiskscore() {
-        return (Double) get(8);
+        return (Double) get(7);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.LAST_OCCURRENCE</code>.
      */
     public DependencyMetricsRecord setLastOccurrence(OffsetDateTime value) {
-        set(9, value);
+        set(8, value);
         return this;
     }
 
@@ -166,14 +151,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.LAST_OCCURRENCE</code>.
      */
     public OffsetDateTime getLastOccurrence() {
-        return (OffsetDateTime) get(9);
+        return (OffsetDateTime) get(8);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.LOW</code>.
      */
     public DependencyMetricsRecord setLow(Integer value) {
-        set(10, value);
+        set(9, value);
         return this;
     }
 
@@ -181,14 +166,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.LOW</code>.
      */
     public Integer getLow() {
-        return (Integer) get(10);
+        return (Integer) get(9);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.MEDIUM</code>.
      */
     public DependencyMetricsRecord setMedium(Integer value) {
-        set(11, value);
+        set(10, value);
         return this;
     }
 
@@ -196,14 +181,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.MEDIUM</code>.
      */
     public Integer getMedium() {
-        return (Integer) get(11);
+        return (Integer) get(10);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsAudited(Integer value) {
-        set(12, value);
+        set(11, value);
         return this;
     }
 
@@ -211,14 +196,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
     public Integer getPolicyviolationsAudited() {
-        return (Integer) get(12);
+        return (Integer) get(11);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsFail(Integer value) {
-        set(13, value);
+        set(12, value);
         return this;
     }
 
@@ -226,14 +211,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
     public Integer getPolicyviolationsFail() {
-        return (Integer) get(13);
+        return (Integer) get(12);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsInfo(Integer value) {
-        set(14, value);
+        set(13, value);
         return this;
     }
 
@@ -241,7 +226,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
     public Integer getPolicyviolationsInfo() {
-        return (Integer) get(14);
+        return (Integer) get(13);
     }
 
     /**
@@ -249,7 +234,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsLicenseAudited(Integer value) {
-        set(15, value);
+        set(14, value);
         return this;
     }
 
@@ -258,14 +243,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
     public Integer getPolicyviolationsLicenseAudited() {
-        return (Integer) get(15);
+        return (Integer) get(14);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsLicenseTotal(Integer value) {
-        set(16, value);
+        set(15, value);
         return this;
     }
 
@@ -273,7 +258,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
     public Integer getPolicyviolationsLicenseTotal() {
-        return (Integer) get(16);
+        return (Integer) get(15);
     }
 
     /**
@@ -281,7 +266,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsLicenseUnaudited(Integer value) {
-        set(17, value);
+        set(16, value);
         return this;
     }
 
@@ -290,7 +275,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsLicenseUnaudited() {
-        return (Integer) get(17);
+        return (Integer) get(16);
     }
 
     /**
@@ -298,7 +283,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsOperationalAudited(Integer value) {
-        set(18, value);
+        set(17, value);
         return this;
     }
 
@@ -307,7 +292,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
     public Integer getPolicyviolationsOperationalAudited() {
-        return (Integer) get(18);
+        return (Integer) get(17);
     }
 
     /**
@@ -315,7 +300,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsOperationalTotal(Integer value) {
-        set(19, value);
+        set(18, value);
         return this;
     }
 
@@ -324,7 +309,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
     public Integer getPolicyviolationsOperationalTotal() {
-        return (Integer) get(19);
+        return (Integer) get(18);
     }
 
     /**
@@ -332,7 +317,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsOperationalUnaudited(Integer value) {
-        set(20, value);
+        set(19, value);
         return this;
     }
 
@@ -341,7 +326,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsOperationalUnaudited() {
-        return (Integer) get(20);
+        return (Integer) get(19);
     }
 
     /**
@@ -349,7 +334,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsSecurityAudited(Integer value) {
-        set(21, value);
+        set(20, value);
         return this;
     }
 
@@ -358,7 +343,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
     public Integer getPolicyviolationsSecurityAudited() {
-        return (Integer) get(21);
+        return (Integer) get(20);
     }
 
     /**
@@ -366,7 +351,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsSecurityTotal(Integer value) {
-        set(22, value);
+        set(21, value);
         return this;
     }
 
@@ -375,7 +360,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
     public Integer getPolicyviolationsSecurityTotal() {
-        return (Integer) get(22);
+        return (Integer) get(21);
     }
 
     /**
@@ -383,7 +368,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsSecurityUnaudited(Integer value) {
-        set(23, value);
+        set(22, value);
         return this;
     }
 
@@ -392,14 +377,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsSecurityUnaudited() {
-        return (Integer) get(23);
+        return (Integer) get(22);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsTotal(Integer value) {
-        set(24, value);
+        set(23, value);
         return this;
     }
 
@@ -407,14 +392,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
     public Integer getPolicyviolationsTotal() {
-        return (Integer) get(24);
+        return (Integer) get(23);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsUnaudited(Integer value) {
-        set(25, value);
+        set(24, value);
         return this;
     }
 
@@ -422,14 +407,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsUnaudited() {
-        return (Integer) get(25);
+        return (Integer) get(24);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
     public DependencyMetricsRecord setPolicyviolationsWarn(Integer value) {
-        set(26, value);
+        set(25, value);
         return this;
     }
 
@@ -437,14 +422,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
     public Integer getPolicyviolationsWarn() {
-        return (Integer) get(26);
+        return (Integer) get(25);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.PROJECT_ID</code>.
      */
     public DependencyMetricsRecord setProjectId(Long value) {
-        set(27, value);
+        set(26, value);
         return this;
     }
 
@@ -452,14 +437,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
-        return (Long) get(27);
+        return (Long) get(26);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.SUPPRESSED</code>.
      */
     public DependencyMetricsRecord setSuppressed(Integer value) {
-        set(28, value);
+        set(27, value);
         return this;
     }
 
@@ -467,14 +452,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.SUPPRESSED</code>.
      */
     public Integer getSuppressed() {
-        return (Integer) get(28);
+        return (Integer) get(27);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.UNASSIGNED_SEVERITY</code>.
      */
     public DependencyMetricsRecord setUnassignedSeverity(Integer value) {
-        set(29, value);
+        set(28, value);
         return this;
     }
 
@@ -482,14 +467,14 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.UNASSIGNED_SEVERITY</code>.
      */
     public Integer getUnassignedSeverity() {
-        return (Integer) get(29);
+        return (Integer) get(28);
     }
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.VULNERABILITIES</code>.
      */
     public DependencyMetricsRecord setVulnerabilities(Integer value) {
-        set(30, value);
+        set(29, value);
         return this;
     }
 
@@ -497,7 +482,7 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
      * Getter for <code>DEPENDENCYMETRICS.VULNERABILITIES</code>.
      */
     public Integer getVulnerabilities() {
-        return (Integer) get(30);
+        return (Integer) get(29);
     }
 
     // -------------------------------------------------------------------------
@@ -505,8 +490,8 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
     // -------------------------------------------------------------------------
 
     @Override
-    public Record1<Long> key() {
-        return (Record1) super.key();
+    public Record3<Long, Long, OffsetDateTime> key() {
+        return (Record3) super.key();
     }
 
     // -------------------------------------------------------------------------
@@ -523,10 +508,9 @@ public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetri
     /**
      * Create a detached, initialised DependencyMetricsRecord
      */
-    public DependencyMetricsRecord(Long id, Long componentId, Integer critical, Integer findingsAudited, Integer findingsTotal, Integer findingsUnaudited, OffsetDateTime firstOccurrence, Integer high, Double riskscore, OffsetDateTime lastOccurrence, Integer low, Integer medium, Integer policyviolationsAudited, Integer policyviolationsFail, Integer policyviolationsInfo, Integer policyviolationsLicenseAudited, Integer policyviolationsLicenseTotal, Integer policyviolationsLicenseUnaudited, Integer policyviolationsOperationalAudited, Integer policyviolationsOperationalTotal, Integer policyviolationsOperationalUnaudited, Integer policyviolationsSecurityAudited, Integer policyviolationsSecurityTotal, Integer policyviolationsSecurityUnaudited, Integer policyviolationsTotal, Integer policyviolationsUnaudited, Integer policyviolationsWarn, Long projectId, Integer suppressed, Integer unassignedSeverity, Integer vulnerabilities) {
+    public DependencyMetricsRecord(Long componentId, Integer critical, Integer findingsAudited, Integer findingsTotal, Integer findingsUnaudited, OffsetDateTime firstOccurrence, Integer high, Double riskscore, OffsetDateTime lastOccurrence, Integer low, Integer medium, Integer policyviolationsAudited, Integer policyviolationsFail, Integer policyviolationsInfo, Integer policyviolationsLicenseAudited, Integer policyviolationsLicenseTotal, Integer policyviolationsLicenseUnaudited, Integer policyviolationsOperationalAudited, Integer policyviolationsOperationalTotal, Integer policyviolationsOperationalUnaudited, Integer policyviolationsSecurityAudited, Integer policyviolationsSecurityTotal, Integer policyviolationsSecurityUnaudited, Integer policyviolationsTotal, Integer policyviolationsUnaudited, Integer policyviolationsWarn, Long projectId, Integer suppressed, Integer unassignedSeverity, Integer vulnerabilities) {
         super(DependencyMetrics.DEPENDENCYMETRICS);
 
-        setId(id);
         setComponentId(componentId);
         setCritical(critical);
         setFindingsAudited(findingsAudited);

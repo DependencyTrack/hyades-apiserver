@@ -5,18 +5,13 @@ package org.dependencytrack.persistence.jooq.generated.tables;
 
 
 import java.time.OffsetDateTime;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
-import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.records.PortfolioMetricsRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
-import org.jooq.Identity;
-import org.jooq.Index;
 import org.jooq.Name;
 import org.jooq.PlainSQL;
 import org.jooq.QueryPart;
@@ -53,11 +48,6 @@ public class PortfolioMetrics extends TableImpl<PortfolioMetricsRecord> {
     public Class<PortfolioMetricsRecord> getRecordType() {
         return PortfolioMetricsRecord.class;
     }
-
-    /**
-     * The column <code>PORTFOLIOMETRICS.ID</code>.
-     */
-    public final TableField<PortfolioMetricsRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>PORTFOLIOMETRICS.COMPONENTS</code>.
@@ -258,16 +248,6 @@ public class PortfolioMetrics extends TableImpl<PortfolioMetricsRecord> {
     @Override
     public Schema getSchema() {
         return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
-    }
-
-    @Override
-    public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.PORTFOLIOMETRICS_FIRST_OCCURRENCE_IDX, Indexes.PORTFOLIOMETRICS_LAST_OCCURRENCE_IDX);
-    }
-
-    @Override
-    public Identity<PortfolioMetricsRecord, Long> getIdentity() {
-        return (Identity<PortfolioMetricsRecord, Long>) super.getIdentity();
     }
 
     @Override

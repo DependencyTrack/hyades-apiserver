@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
-import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationRulePath;
 import org.dependencytrack.persistence.jooq.generated.tables.Tag.TagPath;
@@ -17,7 +16,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.records.Notificatio
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
-import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -31,6 +29,7 @@ import org.jooq.Stringly;
 import org.jooq.Table;
 import org.jooq.TableField;
 import org.jooq.TableOptions;
+import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
@@ -65,7 +64,7 @@ public class NotificationRuleTags extends TableImpl<NotificationRuleTagsRecord> 
     /**
      * The column <code>NOTIFICATIONRULE_TAGS.TAG_ID</code>.
      */
-    public final TableField<NotificationRuleTagsRecord, Long> tagId = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<NotificationRuleTagsRecord, Long> tagId = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private NotificationRuleTags(Name alias, Table<NotificationRuleTagsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -135,8 +134,8 @@ public class NotificationRuleTags extends TableImpl<NotificationRuleTagsRecord> 
     }
 
     @Override
-    public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_ID_IDX, Indexes.NOTIFICATIONRULE_TAGS_TAG_ID_IDX);
+    public UniqueKey<NotificationRuleTagsRecord> getPrimaryKey() {
+        return Keys.NOTIFICATIONRULE_TAGS_PK;
     }
 
     @Override

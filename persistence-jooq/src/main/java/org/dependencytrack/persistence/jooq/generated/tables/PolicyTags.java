@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
-import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.Policy.PolicyPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Tag.TagPath;
@@ -17,7 +16,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.records.PolicyTagsR
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
-import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -31,6 +29,7 @@ import org.jooq.Stringly;
 import org.jooq.Table;
 import org.jooq.TableField;
 import org.jooq.TableOptions;
+import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
@@ -65,7 +64,7 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
     /**
      * The column <code>POLICY_TAGS.TAG_ID</code>.
      */
-    public final TableField<PolicyTagsRecord, Long> tagId = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT, this, "");
+    public final TableField<PolicyTagsRecord, Long> tagId = createField(DSL.name("TAG_ID"), SQLDataType.BIGINT.nullable(false), this, "");
 
     private PolicyTags(Name alias, Table<PolicyTagsRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
@@ -135,8 +134,8 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
     }
 
     @Override
-    public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.POLICY_TAGS_POLICY_ID_IDX, Indexes.POLICY_TAGS_TAG_ID_IDX);
+    public UniqueKey<PolicyTagsRecord> getPrimaryKey() {
+        return Keys.POLICY_TAGS_PK;
     }
 
     @Override

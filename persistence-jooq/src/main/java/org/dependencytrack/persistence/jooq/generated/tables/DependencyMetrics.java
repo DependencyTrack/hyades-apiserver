@@ -10,7 +10,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
-import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
@@ -18,8 +17,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.records.DependencyM
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
-import org.jooq.Identity;
-import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -59,11 +56,6 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
     public Class<DependencyMetricsRecord> getRecordType() {
         return DependencyMetricsRecord.class;
     }
-
-    /**
-     * The column <code>DEPENDENCYMETRICS.ID</code>.
-     */
-    public final TableField<DependencyMetricsRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>DEPENDENCYMETRICS.COMPONENT_ID</code>.
@@ -288,16 +280,6 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
     @Override
     public Schema getSchema() {
         return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
-    }
-
-    @Override
-    public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.DEPENDENCYMETRICS_COMPONENT_ID_IDX, Indexes.DEPENDENCYMETRICS_COMPOSITE_IDX, Indexes.DEPENDENCYMETRICS_FIRST_OCCURRENCE_IDX, Indexes.DEPENDENCYMETRICS_LAST_OCCURRENCE_IDX);
-    }
-
-    @Override
-    public Identity<DependencyMetricsRecord, Long> getIdentity() {
-        return (Identity<DependencyMetricsRecord, Long>) super.getIdentity();
     }
 
     @Override

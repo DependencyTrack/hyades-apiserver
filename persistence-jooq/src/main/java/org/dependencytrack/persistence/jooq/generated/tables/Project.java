@@ -29,6 +29,7 @@ import org.dependencytrack.persistence.jooq.generated.tables.ProjectMetrics.Proj
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectProperty.ProjectPropertyPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectsTags.ProjectsTagsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponent.ServiceComponentPath;
+import org.dependencytrack.persistence.jooq.generated.tables.Tag.TagPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions.UserProjectEffectivePermissionsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Vex.VexPath;
@@ -544,6 +545,13 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public TeamPath team() {
         return projectAccessTeams().team();
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>TAG</code> table
+     */
+    public TagPath tag() {
+        return projectsTags().tag();
     }
 
     @Override

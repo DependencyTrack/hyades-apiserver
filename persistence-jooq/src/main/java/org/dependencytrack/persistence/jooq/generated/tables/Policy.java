@@ -15,6 +15,7 @@ import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition.PolicyConditionPath;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyProjects.PolicyProjectsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyTags.PolicyTagsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.Tag.TagPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.PolicyRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
@@ -219,6 +220,13 @@ public class Policy extends TableImpl<PolicyRecord> {
             _policyCondition = new PolicyConditionPath(this, null, Keys.POLICYCONDITION_POLICY_FK.getInverseKey());
 
         return _policyCondition;
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>TAG</code> table
+     */
+    public TagPath tag() {
+        return policyTags().tag();
     }
 
     @Override

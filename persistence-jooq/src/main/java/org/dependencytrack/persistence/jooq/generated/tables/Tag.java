@@ -4,19 +4,26 @@
 package org.dependencytrack.persistence.jooq.generated.tables;
 
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
+import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTags.NotificationRuleTagsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.Policy.PolicyPath;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyTags.PolicyTagsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectsTags.ProjectsTagsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.VulnerabilitiesTags.VulnerabilitiesTagsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.Vulnerability.VulnerabilityPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.TagRecord;
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
 import org.jooq.Identity;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -135,6 +142,11 @@ public class Tag extends TableImpl<TagRecord> {
     }
 
     @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.TAG_NAME_IDX);
+    }
+
+    @Override
     public Identity<TagRecord, Long> getIdentity() {
         return (Identity<TagRecord, Long>) super.getIdentity();
     }
@@ -193,6 +205,28 @@ public class Tag extends TableImpl<TagRecord> {
             _vulnerabilitiesTags = new VulnerabilitiesTagsPath(this, null, Keys.VULNERABILITIES_TAGS__VULNERABILITIES_TAGS_TAG_FK.getInverseKey());
 
         return _vulnerabilitiesTags;
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>POLICY</code> table
+     */
+    public PolicyPath policy() {
+        return policyTags().policy();
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>PROJECT</code> table
+     */
+    public ProjectPath project() {
+        return projectsTags().project();
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>VULNERABILITY</code>
+     * table
+     */
+    public VulnerabilityPath vulnerability() {
+        return vulnerabilitiesTags().vulnerability();
     }
 
     @Override

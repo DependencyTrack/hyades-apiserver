@@ -7,7 +7,7 @@ package org.dependencytrack.persistence.jooq.generated.tables.records;
 import java.time.OffsetDateTime;
 
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectMetrics;
-import org.jooq.Record1;
+import org.jooq.Record2;
 import org.jooq.impl.UpdatableRecordImpl;
 
 
@@ -20,25 +20,10 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
     private static final long serialVersionUID = 1L;
 
     /**
-     * Setter for <code>PROJECTMETRICS.ID</code>.
-     */
-    public ProjectMetricsRecord setId(Long value) {
-        set(0, value);
-        return this;
-    }
-
-    /**
-     * Getter for <code>PROJECTMETRICS.ID</code>.
-     */
-    public Long getId() {
-        return (Long) get(0);
-    }
-
-    /**
      * Setter for <code>PROJECTMETRICS.COMPONENTS</code>.
      */
     public ProjectMetricsRecord setComponents(Integer value) {
-        set(1, value);
+        set(0, value);
         return this;
     }
 
@@ -46,14 +31,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.COMPONENTS</code>.
      */
     public Integer getComponents() {
-        return (Integer) get(1);
+        return (Integer) get(0);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.CRITICAL</code>.
      */
     public ProjectMetricsRecord setCritical(Integer value) {
-        set(2, value);
+        set(1, value);
         return this;
     }
 
@@ -61,14 +46,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.CRITICAL</code>.
      */
     public Integer getCritical() {
-        return (Integer) get(2);
+        return (Integer) get(1);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.FINDINGS_AUDITED</code>.
      */
     public ProjectMetricsRecord setFindingsAudited(Integer value) {
-        set(3, value);
+        set(2, value);
         return this;
     }
 
@@ -76,14 +61,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.FINDINGS_AUDITED</code>.
      */
     public Integer getFindingsAudited() {
-        return (Integer) get(3);
+        return (Integer) get(2);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.FINDINGS_TOTAL</code>.
      */
     public ProjectMetricsRecord setFindingsTotal(Integer value) {
-        set(4, value);
+        set(3, value);
         return this;
     }
 
@@ -91,14 +76,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.FINDINGS_TOTAL</code>.
      */
     public Integer getFindingsTotal() {
-        return (Integer) get(4);
+        return (Integer) get(3);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.FINDINGS_UNAUDITED</code>.
      */
     public ProjectMetricsRecord setFindingsUnaudited(Integer value) {
-        set(5, value);
+        set(4, value);
         return this;
     }
 
@@ -106,14 +91,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.FINDINGS_UNAUDITED</code>.
      */
     public Integer getFindingsUnaudited() {
-        return (Integer) get(5);
+        return (Integer) get(4);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.FIRST_OCCURRENCE</code>.
      */
     public ProjectMetricsRecord setFirstOccurrence(OffsetDateTime value) {
-        set(6, value);
+        set(5, value);
         return this;
     }
 
@@ -121,14 +106,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.FIRST_OCCURRENCE</code>.
      */
     public OffsetDateTime getFirstOccurrence() {
-        return (OffsetDateTime) get(6);
+        return (OffsetDateTime) get(5);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.HIGH</code>.
      */
     public ProjectMetricsRecord setHigh(Integer value) {
-        set(7, value);
+        set(6, value);
         return this;
     }
 
@@ -136,14 +121,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.HIGH</code>.
      */
     public Integer getHigh() {
-        return (Integer) get(7);
+        return (Integer) get(6);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.RISKSCORE</code>.
      */
     public ProjectMetricsRecord setRiskscore(Double value) {
-        set(8, value);
+        set(7, value);
         return this;
     }
 
@@ -151,14 +136,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.RISKSCORE</code>.
      */
     public Double getRiskscore() {
-        return (Double) get(8);
+        return (Double) get(7);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.LAST_OCCURRENCE</code>.
      */
     public ProjectMetricsRecord setLastOccurrence(OffsetDateTime value) {
-        set(9, value);
+        set(8, value);
         return this;
     }
 
@@ -166,14 +151,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.LAST_OCCURRENCE</code>.
      */
     public OffsetDateTime getLastOccurrence() {
-        return (OffsetDateTime) get(9);
+        return (OffsetDateTime) get(8);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.LOW</code>.
      */
     public ProjectMetricsRecord setLow(Integer value) {
-        set(10, value);
+        set(9, value);
         return this;
     }
 
@@ -181,14 +166,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.LOW</code>.
      */
     public Integer getLow() {
-        return (Integer) get(10);
+        return (Integer) get(9);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.MEDIUM</code>.
      */
     public ProjectMetricsRecord setMedium(Integer value) {
-        set(11, value);
+        set(10, value);
         return this;
     }
 
@@ -196,14 +181,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.MEDIUM</code>.
      */
     public Integer getMedium() {
-        return (Integer) get(11);
+        return (Integer) get(10);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsAudited(Integer value) {
-        set(12, value);
+        set(11, value);
         return this;
     }
 
@@ -211,14 +196,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_AUDITED</code>.
      */
     public Integer getPolicyviolationsAudited() {
-        return (Integer) get(12);
+        return (Integer) get(11);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsFail(Integer value) {
-        set(13, value);
+        set(12, value);
         return this;
     }
 
@@ -226,14 +211,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_FAIL</code>.
      */
     public Integer getPolicyviolationsFail() {
-        return (Integer) get(13);
+        return (Integer) get(12);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsInfo(Integer value) {
-        set(14, value);
+        set(13, value);
         return this;
     }
 
@@ -241,14 +226,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_INFO</code>.
      */
     public Integer getPolicyviolationsInfo() {
-        return (Integer) get(14);
+        return (Integer) get(13);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsLicenseAudited(Integer value) {
-        set(15, value);
+        set(14, value);
         return this;
     }
 
@@ -256,14 +241,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_AUDITED</code>.
      */
     public Integer getPolicyviolationsLicenseAudited() {
-        return (Integer) get(15);
+        return (Integer) get(14);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsLicenseTotal(Integer value) {
-        set(16, value);
+        set(15, value);
         return this;
     }
 
@@ -271,7 +256,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_TOTAL</code>.
      */
     public Integer getPolicyviolationsLicenseTotal() {
-        return (Integer) get(16);
+        return (Integer) get(15);
     }
 
     /**
@@ -279,7 +264,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsLicenseUnaudited(Integer value) {
-        set(17, value);
+        set(16, value);
         return this;
     }
 
@@ -288,7 +273,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_LICENSE_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsLicenseUnaudited() {
-        return (Integer) get(17);
+        return (Integer) get(16);
     }
 
     /**
@@ -296,7 +281,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsOperationalAudited(Integer value) {
-        set(18, value);
+        set(17, value);
         return this;
     }
 
@@ -305,7 +290,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_AUDITED</code>.
      */
     public Integer getPolicyviolationsOperationalAudited() {
-        return (Integer) get(18);
+        return (Integer) get(17);
     }
 
     /**
@@ -313,7 +298,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsOperationalTotal(Integer value) {
-        set(19, value);
+        set(18, value);
         return this;
     }
 
@@ -322,7 +307,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_TOTAL</code>.
      */
     public Integer getPolicyviolationsOperationalTotal() {
-        return (Integer) get(19);
+        return (Integer) get(18);
     }
 
     /**
@@ -330,7 +315,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsOperationalUnaudited(Integer value) {
-        set(20, value);
+        set(19, value);
         return this;
     }
 
@@ -339,14 +324,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_OPERATIONAL_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsOperationalUnaudited() {
-        return (Integer) get(20);
+        return (Integer) get(19);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsSecurityAudited(Integer value) {
-        set(21, value);
+        set(20, value);
         return this;
     }
 
@@ -354,14 +339,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_AUDITED</code>.
      */
     public Integer getPolicyviolationsSecurityAudited() {
-        return (Integer) get(21);
+        return (Integer) get(20);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsSecurityTotal(Integer value) {
-        set(22, value);
+        set(21, value);
         return this;
     }
 
@@ -369,7 +354,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_TOTAL</code>.
      */
     public Integer getPolicyviolationsSecurityTotal() {
-        return (Integer) get(22);
+        return (Integer) get(21);
     }
 
     /**
@@ -377,7 +362,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsSecurityUnaudited(Integer value) {
-        set(23, value);
+        set(22, value);
         return this;
     }
 
@@ -386,14 +371,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * <code>PROJECTMETRICS.POLICYVIOLATIONS_SECURITY_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsSecurityUnaudited() {
-        return (Integer) get(23);
+        return (Integer) get(22);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsTotal(Integer value) {
-        set(24, value);
+        set(23, value);
         return this;
     }
 
@@ -401,14 +386,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_TOTAL</code>.
      */
     public Integer getPolicyviolationsTotal() {
-        return (Integer) get(24);
+        return (Integer) get(23);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsUnaudited(Integer value) {
-        set(25, value);
+        set(24, value);
         return this;
     }
 
@@ -416,14 +401,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_UNAUDITED</code>.
      */
     public Integer getPolicyviolationsUnaudited() {
-        return (Integer) get(25);
+        return (Integer) get(24);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
     public ProjectMetricsRecord setPolicyviolationsWarn(Integer value) {
-        set(26, value);
+        set(25, value);
         return this;
     }
 
@@ -431,14 +416,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.POLICYVIOLATIONS_WARN</code>.
      */
     public Integer getPolicyviolationsWarn() {
-        return (Integer) get(26);
+        return (Integer) get(25);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.PROJECT_ID</code>.
      */
     public ProjectMetricsRecord setProjectId(Long value) {
-        set(27, value);
+        set(26, value);
         return this;
     }
 
@@ -446,14 +431,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.PROJECT_ID</code>.
      */
     public Long getProjectId() {
-        return (Long) get(27);
+        return (Long) get(26);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.SUPPRESSED</code>.
      */
     public ProjectMetricsRecord setSuppressed(Integer value) {
-        set(28, value);
+        set(27, value);
         return this;
     }
 
@@ -461,14 +446,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.SUPPRESSED</code>.
      */
     public Integer getSuppressed() {
-        return (Integer) get(28);
+        return (Integer) get(27);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.UNASSIGNED_SEVERITY</code>.
      */
     public ProjectMetricsRecord setUnassignedSeverity(Integer value) {
-        set(29, value);
+        set(28, value);
         return this;
     }
 
@@ -476,14 +461,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.UNASSIGNED_SEVERITY</code>.
      */
     public Integer getUnassignedSeverity() {
-        return (Integer) get(29);
+        return (Integer) get(28);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.VULNERABILITIES</code>.
      */
     public ProjectMetricsRecord setVulnerabilities(Integer value) {
-        set(30, value);
+        set(29, value);
         return this;
     }
 
@@ -491,14 +476,14 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.VULNERABILITIES</code>.
      */
     public Integer getVulnerabilities() {
-        return (Integer) get(30);
+        return (Integer) get(29);
     }
 
     /**
      * Setter for <code>PROJECTMETRICS.VULNERABLECOMPONENTS</code>.
      */
     public ProjectMetricsRecord setVulnerablecomponents(Integer value) {
-        set(31, value);
+        set(30, value);
         return this;
     }
 
@@ -506,7 +491,7 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
      * Getter for <code>PROJECTMETRICS.VULNERABLECOMPONENTS</code>.
      */
     public Integer getVulnerablecomponents() {
-        return (Integer) get(31);
+        return (Integer) get(30);
     }
 
     // -------------------------------------------------------------------------
@@ -514,8 +499,8 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
     // -------------------------------------------------------------------------
 
     @Override
-    public Record1<Long> key() {
-        return (Record1) super.key();
+    public Record2<Long, OffsetDateTime> key() {
+        return (Record2) super.key();
     }
 
     // -------------------------------------------------------------------------
@@ -532,10 +517,9 @@ public class ProjectMetricsRecord extends UpdatableRecordImpl<ProjectMetricsReco
     /**
      * Create a detached, initialised ProjectMetricsRecord
      */
-    public ProjectMetricsRecord(Long id, Integer components, Integer critical, Integer findingsAudited, Integer findingsTotal, Integer findingsUnaudited, OffsetDateTime firstOccurrence, Integer high, Double riskscore, OffsetDateTime lastOccurrence, Integer low, Integer medium, Integer policyviolationsAudited, Integer policyviolationsFail, Integer policyviolationsInfo, Integer policyviolationsLicenseAudited, Integer policyviolationsLicenseTotal, Integer policyviolationsLicenseUnaudited, Integer policyviolationsOperationalAudited, Integer policyviolationsOperationalTotal, Integer policyviolationsOperationalUnaudited, Integer policyviolationsSecurityAudited, Integer policyviolationsSecurityTotal, Integer policyviolationsSecurityUnaudited, Integer policyviolationsTotal, Integer policyviolationsUnaudited, Integer policyviolationsWarn, Long projectId, Integer suppressed, Integer unassignedSeverity, Integer vulnerabilities, Integer vulnerablecomponents) {
+    public ProjectMetricsRecord(Integer components, Integer critical, Integer findingsAudited, Integer findingsTotal, Integer findingsUnaudited, OffsetDateTime firstOccurrence, Integer high, Double riskscore, OffsetDateTime lastOccurrence, Integer low, Integer medium, Integer policyviolationsAudited, Integer policyviolationsFail, Integer policyviolationsInfo, Integer policyviolationsLicenseAudited, Integer policyviolationsLicenseTotal, Integer policyviolationsLicenseUnaudited, Integer policyviolationsOperationalAudited, Integer policyviolationsOperationalTotal, Integer policyviolationsOperationalUnaudited, Integer policyviolationsSecurityAudited, Integer policyviolationsSecurityTotal, Integer policyviolationsSecurityUnaudited, Integer policyviolationsTotal, Integer policyviolationsUnaudited, Integer policyviolationsWarn, Long projectId, Integer suppressed, Integer unassignedSeverity, Integer vulnerabilities, Integer vulnerablecomponents) {
         super(ProjectMetrics.PROJECTMETRICS);
 
-        setId(id);
         setComponents(components);
         setCritical(critical);
         setFindingsAudited(findingsAudited);

@@ -16,6 +16,7 @@ import org.dependencytrack.persistence.jooq.generated.tables.NotificationPublish
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleProjects.NotificationRuleProjectsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTags.NotificationRuleTagsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleTeams.NotificationRuleTeamsPath;
+import org.dependencytrack.persistence.jooq.generated.tables.Tag.TagPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.NotificationRuleRecord;
 import org.jooq.Condition;
@@ -265,6 +266,13 @@ public class NotificationRule extends TableImpl<NotificationRuleRecord> {
             _notificationRuleTeams = new NotificationRuleTeamsPath(this, null, Keys.NOTIFICATIONRULE_TEAMS_NOTIFICATIONRULE_FK.getInverseKey());
 
         return _notificationRuleTeams;
+    }
+
+    /**
+     * Get the implicit many-to-many join path to the <code>TAG</code> table
+     */
+    public TagPath tag() {
+        return notificationRuleTags().tag();
     }
 
     /**
