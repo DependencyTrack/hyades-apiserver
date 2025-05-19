@@ -136,7 +136,7 @@
                                     </database>
                                     <target>
                                         <packageName>org.dependencytrack.persistence.jooq.generated</packageName>
-                                        <directory>${project.basedir}/src/main/java</directory>
+                                        <directory>${project.build.directory}/generated-sources/jooq</directory>
                                     </target>
                                     <generate>
                                         <fluentSetters>true</fluentSetters>
