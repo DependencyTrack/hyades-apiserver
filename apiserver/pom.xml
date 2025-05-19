@@ -81,6 +81,10 @@
     <dependencies>
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>persistence-jooq</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>persistence-migration</artifactId>
         </dependency>
         <dependency>
