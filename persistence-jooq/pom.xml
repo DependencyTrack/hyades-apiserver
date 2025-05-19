@@ -97,7 +97,7 @@
                                 <databaseName>test</databaseName>
                             </database>
                             <liquibase>
-                                <changeLogPath>changelog-main.xml</changeLogPath>
+                                <changeLogPath>migration/changelog-main.xml</changeLogPath>
                                 <changeLogDirectory>${project.parentBaseDir}/persistence-migration/src/main/resources/</changeLogDirectory>
                                 <liquibaseSchemaName>public</liquibaseSchemaName>
                                 <defaultSchemaName>public</defaultSchemaName>
@@ -109,7 +109,10 @@
                                         <excludes>
                                             databasechangelog
                                             | databasechangeloglock
+                                            | dependencymetrics_\d{8}
                                             | eventservicelog
+                                            | portfoliometrics_\d{8}
+                                            | projectmetrics_\d{8}
                                             | shedlock
                                         </excludes>
                                         <inputSchema>public</inputSchema>
