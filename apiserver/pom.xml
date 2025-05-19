@@ -122,10 +122,6 @@
             <artifactId>alpine-executable-war</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>persistence-migration</artifactId>
-        </dependency>
         <!-- Common Expression Language (CEL) -->
         <dependency>
             <groupId>org.projectnessie.cel</groupId>
