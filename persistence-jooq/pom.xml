@@ -16,7 +16,6 @@
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
         <checkstyle.skip>true</checkstyle.skip>
 
-        <lib.jooq.version>3.20.3</lib.jooq.version>
         <matcher.pattern>
             AFFECTED | ALIAS | ALSO | ANALYSIS | ANALYZER | API | APPROVED | ATTRIBUTION | AUDITED
             | AUTHENTICATION | BASE | BUSINESS | CLASS | COMMENT | COMPONENTS? | CONDITION
@@ -37,7 +36,6 @@
         <dependency>
             <groupId>org.jooq</groupId>
             <artifactId>jooq</artifactId>
-            <version>${lib.jooq.version}</version>
         </dependency>
     </dependencies>
 

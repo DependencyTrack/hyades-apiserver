@@ -91,6 +91,7 @@
 
         <!-- Dependency versions -->
         <lib.assertj.version>3.26.3</lib.assertj.version>
+        <lib.jooq.version>3.20.4</lib.jooq.version>
         <lib.junit-jupiter.version>5.12.2</lib.junit-jupiter.version>
         <lib.liquibase.version>4.31.1</lib.liquibase.version>
         <lib.postgresql.version>42.7.5</lib.postgresql.version>
@@ -159,6 +160,12 @@
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
                 <version>${lib.assertj.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq</artifactId>
+                <version>${lib.jooq.version}</version>
             </dependency>
 
             <dependency>
