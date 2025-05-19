@@ -26,13 +26,6 @@ import java.util.Date;
 public class ProjectMetricsTest {
 
     @Test
-    public void testId() {
-        ProjectMetrics metric = new ProjectMetrics();
-        metric.setId(111L);
-        Assert.assertEquals(111L, metric.getId());
-    }
-
-    @Test
     public void testCritical() {
         ProjectMetrics metric = new ProjectMetrics();
         metric.setCritical(10);

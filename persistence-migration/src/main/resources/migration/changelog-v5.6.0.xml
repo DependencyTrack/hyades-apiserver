@@ -1889,4 +1889,401 @@
             EXECUTE FUNCTION prevent_direct_effective_permissions_writes();
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-25.1" author="sahibamittal">
+        <!-- Step 1: Create procedure to migrate metrics to partitions-->
+        <sql splitStatements="false">
+            <![CDATA[
+            CREATE OR REPLACE PROCEDURE "MIGRATE_METRICS_TO_PARTITIONS"(
+                target_table TEXT,
+                source_table TEXT,
+                columns TEXT
+            )
+            LANGUAGE plpgsql
+            AS $$
+            DECLARE
+                retention_days INTEGER := 90;
+                configured_start_date DATE;
+                actual_data_start_date DATE;
+                start_date DATE;
+                end_date DATE := current_date + INTERVAL '1 day';
+                partition_date DATE;
+                partition_name TEXT;
+                partition_exists BOOLEAN;
+                next_day DATE;
+            BEGIN
+                -- Fetch retention value from config
+                SELECT COALESCE((
+                    SELECT cp."PROPERTYVALUE"::INTEGER
+                    FROM "CONFIGPROPERTY" cp
+                    WHERE cp."GROUPNAME" = 'maintenance'
+                    AND cp."PROPERTYNAME" = 'metrics.retention.days'
+                ), 90)
+                INTO retention_days;
+
+                -- Calculate configured start date
+                configured_start_date := current_date - (retention_days * INTERVAL '1 day');
+
+                -- Get earliest date in source_table
+                EXECUTE format('SELECT MIN("LAST_OCCURRENCE") FROM %I', source_table)
+                INTO actual_data_start_date;
+
+                IF actual_data_start_date IS NULL THEN
+                    start_date := current_date;
+                ELSE
+                    start_date := GREATEST(configured_start_date, actual_data_start_date);
+                END IF;
+
+                partition_date := start_date;
+
+                -- Create partitions for each day starting from retention period
+                WHILE partition_date < end_date LOOP
+                    next_day := partition_date + INTERVAL '1 day';
+                    partition_name := format('%s_%s', source_table, to_char(partition_date, 'YYYYMMDD'));
+
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_class WHERE relname = partition_name
+                    ) INTO partition_exists;
+
+                    -- Create partition if it doesn't exist already.
+                    IF NOT partition_exists THEN
+                        EXECUTE format(
+                            'CREATE TABLE IF NOT EXISTS %I (LIKE %I INCLUDING ALL);',
+                            partition_name,
+                            target_table
+                        );
+                        EXECUTE format(
+                            'ALTER TABLE %I ATTACH PARTITION %I FOR VALUES FROM (%L) TO (%L);',
+                            target_table,
+                            partition_name,
+                            partition_date,
+                            next_day
+                        );
+                    END IF;
+
+                    -- Insert data from existing table into this partition
+                    EXECUTE format(
+                        'INSERT INTO %I (%s) SELECT %s FROM %I WHERE "LAST_OCCURRENCE" >= %L AND "LAST_OCCURRENCE" < %L;',
+                        target_table,
+                        columns,
+                        columns,
+                        source_table,
+                        partition_date,
+                        next_day
+                    );
+
+                    partition_date := next_day;
+                END LOOP;
+            END;
+            $$;
+            ]]>
+        </sql>
+        <!-- Step 2: Create partitioned table PORTFOLIOMETRICS_NEW -->
+        <sql>
+            CREATE TABLE "PORTFOLIOMETRICS_NEW"
+            (
+            "COMPONENTS" int4 NOT NULL,
+            "CRITICAL" int4 NOT NULL,
+            "FINDINGS_AUDITED" int4 NULL,
+            "FINDINGS_TOTAL" int4 NULL,
+            "FINDINGS_UNAUDITED" int4 NULL,
+            "FIRST_OCCURRENCE" timestamptz NOT NULL,
+            "HIGH" int4 NOT NULL,
+            "RISKSCORE" float8 NOT NULL,
+            "LAST_OCCURRENCE" timestamptz NOT NULL,
+            "LOW" int4 NOT NULL,
+            "MEDIUM" int4 NOT NULL,
+            "POLICYVIOLATIONS_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_FAIL" int4 NULL,
+            "POLICYVIOLATIONS_INFO" int4 NULL,
+            "POLICYVIOLATIONS_LICENSE_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_LICENSE_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_LICENSE_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_OPERATIONAL_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_OPERATIONAL_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_SECURITY_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_SECURITY_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_SECURITY_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_WARN" int4 NULL,
+            "PROJECTS" int4 NOT NULL,
+            "SUPPRESSED" int4 NOT NULL,
+            "UNASSIGNED_SEVERITY" int4 NULL,
+            "VULNERABILITIES" int4 NOT NULL,
+            "VULNERABLECOMPONENTS" int4 NOT NULL,
+            "VULNERABLEPROJECTS" int4 NOT NULL,
+            CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" PRIMARY KEY ("LAST_OCCURRENCE")
+            ) PARTITION BY RANGE ("LAST_OCCURRENCE");
+        </sql>
+        <!-- Step 3: Create partitioned table PROJECTMETRICS_NEW -->
+        <sql>
+            CREATE TABLE "PROJECTMETRICS_NEW"
+            (
+            "COMPONENTS" int4 NOT NULL,
+            "CRITICAL" int4 NOT NULL,
+            "FINDINGS_AUDITED" int4 NULL,
+            "FINDINGS_TOTAL" int4 NULL,
+            "FINDINGS_UNAUDITED" int4 NULL,
+            "FIRST_OCCURRENCE" timestamptz NOT NULL,
+            "HIGH" int4 NOT NULL,
+            "RISKSCORE" float8 NOT NULL,
+            "LAST_OCCURRENCE" timestamptz NOT NULL,
+            "LOW" int4 NOT NULL,
+            "MEDIUM" int4 NOT NULL,
+            "POLICYVIOLATIONS_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_FAIL" int4 NULL,
+            "POLICYVIOLATIONS_INFO" int4 NULL,
+            "POLICYVIOLATIONS_LICENSE_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_LICENSE_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_LICENSE_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_OPERATIONAL_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_OPERATIONAL_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_SECURITY_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_SECURITY_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_SECURITY_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_WARN" int4 NULL,
+            "PROJECT_ID" int8 NOT NULL,
+            "SUPPRESSED" int4 NOT NULL,
+            "UNASSIGNED_SEVERITY" int4 NULL,
+            "VULNERABILITIES" int4 NOT NULL,
+            "VULNERABLECOMPONENTS" int4 NOT NULL,
+            CONSTRAINT "PROJECTMETRICS_NEW_PK" PRIMARY KEY ("PROJECT_ID", "LAST_OCCURRENCE")
+            ) PARTITION BY RANGE ("LAST_OCCURRENCE");
+        </sql>
+        <!-- Step 4: Create partitioned table DEPENDENCYMETRICS_NEW -->
+        <sql>
+            CREATE TABLE "DEPENDENCYMETRICS_NEW"
+            (
+            "COMPONENT_ID" int8 NOT NULL,
+            "CRITICAL" int4 NOT NULL,
+            "FINDINGS_AUDITED" int4 NULL,
+            "FINDINGS_TOTAL" int4 NULL,
+            "FINDINGS_UNAUDITED" int4 NULL,
+            "FIRST_OCCURRENCE" timestamptz NOT NULL,
+            "HIGH" int4 NOT NULL,
+            "RISKSCORE" float8 NOT NULL,
+            "LAST_OCCURRENCE" timestamptz NOT NULL,
+            "LOW" int4 NOT NULL,
+            "MEDIUM" int4 NOT NULL,
+            "POLICYVIOLATIONS_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_FAIL" int4 NULL,
+            "POLICYVIOLATIONS_INFO" int4 NULL,
+            "POLICYVIOLATIONS_LICENSE_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_LICENSE_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_LICENSE_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_OPERATIONAL_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_OPERATIONAL_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_SECURITY_AUDITED" int4 NULL,
+            "POLICYVIOLATIONS_SECURITY_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_SECURITY_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_TOTAL" int4 NULL,
+            "POLICYVIOLATIONS_UNAUDITED" int4 NULL,
+            "POLICYVIOLATIONS_WARN" int4 NULL,
+            "PROJECT_ID" int8 NOT NULL,
+            "SUPPRESSED" int4 NOT NULL,
+            "UNASSIGNED_SEVERITY" int4 NULL,
+            "VULNERABILITIES" int4 NOT NULL,
+            CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" PRIMARY KEY ("PROJECT_ID", "COMPONENT_ID", "LAST_OCCURRENCE")
+            ) PARTITION BY RANGE ("LAST_OCCURRENCE");
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-25.2" author="sahibamittal">
+        <!-- Step 5: Perform migration for "PORTFOLIOMETRICS" -->
+        <sql>
+            -- call the migration procedure
+            CALL "MIGRATE_METRICS_TO_PARTITIONS"('PORTFOLIOMETRICS_NEW'::TEXT, 'PORTFOLIOMETRICS'::TEXT,
+            '"COMPONENTS", "CRITICAL", "FINDINGS_AUDITED", "FINDINGS_TOTAL", "FINDINGS_UNAUDITED", "FIRST_OCCURRENCE", "HIGH", "RISKSCORE", "LAST_OCCURRENCE", "LOW", "MEDIUM", "POLICYVIOLATIONS_AUDITED", "POLICYVIOLATIONS_FAIL", "POLICYVIOLATIONS_INFO", "POLICYVIOLATIONS_LICENSE_AUDITED", "POLICYVIOLATIONS_LICENSE_TOTAL", "POLICYVIOLATIONS_LICENSE_UNAUDITED", "POLICYVIOLATIONS_OPERATIONAL_AUDITED", "POLICYVIOLATIONS_OPERATIONAL_TOTAL", "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED", "POLICYVIOLATIONS_SECURITY_AUDITED", "POLICYVIOLATIONS_SECURITY_TOTAL", "POLICYVIOLATIONS_SECURITY_UNAUDITED", "POLICYVIOLATIONS_TOTAL", "POLICYVIOLATIONS_UNAUDITED", "POLICYVIOLATIONS_WARN", "PROJECTS", "SUPPRESSED", "UNASSIGNED_SEVERITY", "VULNERABILITIES", "VULNERABLECOMPONENTS", "VULNERABLEPROJECTS"');
+
+            -- drop old table
+            DROP TABLE "PORTFOLIOMETRICS";
+
+            -- rename partitioned table
+            ALTER TABLE "PORTFOLIOMETRICS_NEW" RENAME TO "PORTFOLIOMETRICS";
+
+            -- rename PK
+            ALTER TABLE "PORTFOLIOMETRICS" RENAME CONSTRAINT "PORTFOLIOMETRICS_NEW_PK" TO "PORTFOLIOMETRICS_PK";
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-25.3" author="sahibamittal">
+        <!-- Step 6: Perform migration for "PROJECTMETRICS" -->
+        <sql>
+            -- call the migration procedure
+            CALL "MIGRATE_METRICS_TO_PARTITIONS"('PROJECTMETRICS_NEW'::TEXT, 'PROJECTMETRICS'::TEXT,
+            '"COMPONENTS", "CRITICAL", "FINDINGS_AUDITED", "FINDINGS_TOTAL", "FINDINGS_UNAUDITED", "FIRST_OCCURRENCE", "HIGH", "RISKSCORE", "LAST_OCCURRENCE", "LOW", "MEDIUM", "POLICYVIOLATIONS_AUDITED", "POLICYVIOLATIONS_FAIL", "POLICYVIOLATIONS_INFO", "POLICYVIOLATIONS_LICENSE_AUDITED", "POLICYVIOLATIONS_LICENSE_TOTAL", "POLICYVIOLATIONS_LICENSE_UNAUDITED", "POLICYVIOLATIONS_OPERATIONAL_AUDITED", "POLICYVIOLATIONS_OPERATIONAL_TOTAL", "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED", "POLICYVIOLATIONS_SECURITY_AUDITED", "POLICYVIOLATIONS_SECURITY_TOTAL", "POLICYVIOLATIONS_SECURITY_UNAUDITED", "POLICYVIOLATIONS_TOTAL", "POLICYVIOLATIONS_UNAUDITED", "POLICYVIOLATIONS_WARN", "PROJECT_ID", "SUPPRESSED", "UNASSIGNED_SEVERITY", "VULNERABILITIES", "VULNERABLECOMPONENTS"');
+
+            -- drop old table
+            DROP TABLE "PROJECTMETRICS";
+
+            -- rename partitioned table
+            ALTER TABLE "PROJECTMETRICS_NEW" RENAME TO "PROJECTMETRICS";
+
+            -- rename PK
+            ALTER TABLE "PROJECTMETRICS" RENAME CONSTRAINT "PROJECTMETRICS_NEW_PK" TO "PROJECTMETRICS_PK";
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-25.4" author="sahibamittal">
+        <!-- Step 7: Perform migration for "DEPENDENCYMETRICS" -->
+        <sql>
+            -- call the migration procedure
+            CALL "MIGRATE_METRICS_TO_PARTITIONS"('DEPENDENCYMETRICS_NEW'::TEXT, 'DEPENDENCYMETRICS'::TEXT,
+            '"COMPONENT_ID", "CRITICAL", "FINDINGS_AUDITED", "FINDINGS_TOTAL", "FINDINGS_UNAUDITED", "FIRST_OCCURRENCE", "HIGH", "RISKSCORE", "LAST_OCCURRENCE", "LOW", "MEDIUM", "POLICYVIOLATIONS_AUDITED", "POLICYVIOLATIONS_FAIL", "POLICYVIOLATIONS_INFO", "POLICYVIOLATIONS_LICENSE_AUDITED", "POLICYVIOLATIONS_LICENSE_TOTAL", "POLICYVIOLATIONS_LICENSE_UNAUDITED", "POLICYVIOLATIONS_OPERATIONAL_AUDITED", "POLICYVIOLATIONS_OPERATIONAL_TOTAL", "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED", "POLICYVIOLATIONS_SECURITY_AUDITED", "POLICYVIOLATIONS_SECURITY_TOTAL", "POLICYVIOLATIONS_SECURITY_UNAUDITED", "POLICYVIOLATIONS_TOTAL", "POLICYVIOLATIONS_UNAUDITED", "POLICYVIOLATIONS_WARN", "PROJECT_ID", "SUPPRESSED", "UNASSIGNED_SEVERITY", "VULNERABILITIES"');
+
+            -- drop old table
+            DROP TABLE "DEPENDENCYMETRICS";
+
+            -- rename partitioned table
+            ALTER TABLE "DEPENDENCYMETRICS_NEW" RENAME TO "DEPENDENCYMETRICS";
+
+            -- rename PK
+            ALTER TABLE "DEPENDENCYMETRICS" RENAME CONSTRAINT "DEPENDENCYMETRICS_NEW_PK" TO "DEPENDENCYMETRICS_PK";
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.6.0-25.5" author="sahibamittal">
+        <!-- Step 8: Create FK constraints -->
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="PROJECTMETRICS"
+                                 constraintName="PROJECTMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="DEPENDENCYMETRICS"
+                                 constraintName="DEPENDENCYMETRICS_PROJECT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="PROJECT" validate="true"/>
+        <addForeignKeyConstraint baseColumnNames="COMPONENT_ID" baseTableName="DEPENDENCYMETRICS"
+                                 constraintName="DEPENDENCYMETRICS_COMPONENT_FK" deferrable="true" initiallyDeferred="true"
+                                 onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
+                                 referencedTableName="COMPONENT" validate="true"/>
+
+        <!-- Step 9: Drop MIGRATE_METRICS_TO_PARTITIONS procedure -->
+        <dropProcedure procedureName="MIGRATE_METRICS_TO_PARTITIONS"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-26" author="nscuro">
+        <!--
+          Disable deferred constraint checking during this transaction.
+          Without this, we would not be able to add primary keys after
+          having deleted records from a table before.
+        -->
+        <sql>SET CONSTRAINTS ALL IMMEDIATE</sql>
+
+        <dropIndex tableName="NOTIFICATIONRULE_TAGS" indexName="NOTIFICATIONRULE_TAGS_NOTIFICATIONRULE_ID_IDX"/>
+        <dropIndex tableName="NOTIFICATIONRULE_TAGS" indexName="NOTIFICATIONRULE_TAGS_TAG_ID_IDX"/>
+        <dropIndex tableName="POLICY_TAGS" indexName="POLICY_TAGS_POLICY_ID_IDX"/>
+        <dropIndex tableName="POLICY_TAGS" indexName="POLICY_TAGS_TAG_ID_IDX"/>
+        <dropIndex tableName="PROJECTS_TAGS" indexName="PROJECTS_TAGS_PROJECT_ID_IDX"/>
+        <dropIndex tableName="PROJECTS_TAGS" indexName="PROJECTS_TAGS_TAG_ID_IDX"/>
+        <dropIndex tableName="VULNERABILITIES_TAGS" indexName="VULNERABILITIES_TAGS_TAG_ID_IDX"/>
+        <dropIndex tableName="VULNERABILITIES_TAGS" indexName="VULNERABILITIES_TAGS_VULNERABILITY_ID_IDX"/>
+        <sql>DROP INDEX IF EXISTS "TAG_NAME_IDX"</sql> <!-- dropIndex doesn't support IF EXISTS -->
+
+        <!-- Collect all tags with duplicate names into a temporary table for reuse. -->
+        <sql splitStatements="false">
+            CREATE TEMPORARY TABLE tmp_duplicate_tag
+              ON COMMIT DROP
+            AS
+              SELECT "NAME" AS name
+                   , MIN("ID") AS canonical_id
+                FROM "TAG"
+               GROUP BY "NAME"
+              HAVING COUNT(*) &gt; 1;
+        </sql>
+
+        <!--
+          To avoid excessive repetition, define a function to re-wire relationships of
+          duplicate tags, and to ensure that there exist no duplicates in relationship
+          tables either.
+        -->
+        <sql splitStatements="false">
+            CREATE FUNCTION cleanup_duplicate_tag_relationships(
+              table_name         TEXT,
+              relation_id_column TEXT
+            )
+            RETURNS void AS $$
+            BEGIN
+              EXECUTE format($q$
+                UPDATE %1$I AS tag_relationship
+                   SET "TAG_ID" = tmp_duplicate_tag.canonical_id
+                  FROM tmp_duplicate_tag
+                 INNER JOIN "TAG"
+                    ON "TAG"."NAME" = tmp_duplicate_tag.name
+                   AND "TAG"."ID" != tmp_duplicate_tag.canonical_id
+                 WHERE tag_relationship."TAG_ID" = "TAG"."ID";
+                $q$, table_name, relation_id_column
+              );
+
+              EXECUTE format($q$
+                WITH cte_dupe AS (
+                  SELECT "TAG_ID"
+                       , %2$I
+                    FROM %1$I AS tag_relationship
+                   GROUP BY "TAG_ID"
+                          , %2$I
+                  HAVING COUNT(*) &gt; 1
+                ),
+                cte_deleted_dupe AS (
+                  DELETE FROM %1$I AS tag_relationship
+                   USING cte_dupe
+                   WHERE tag_relationship."TAG_ID" = cte_dupe."TAG_ID"
+                     AND tag_relationship.%2$I = cte_dupe.%2$I
+                  RETURNING tag_relationship."TAG_ID"
+                          , tag_relationship.%2$I
+                )
+                INSERT INTO %1$I ("TAG_ID", %2$I)
+                SELECT DISTINCT "TAG_ID", %2$I FROM cte_deleted_dupe;
+              $q$, table_name, relation_id_column
+            );
+            END;
+            $$ LANGUAGE plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            DO $$
+            BEGIN
+              PERFORM cleanup_duplicate_tag_relationships('NOTIFICATIONRULE_TAGS', 'NOTIFICATIONRULE_ID');
+              PERFORM cleanup_duplicate_tag_relationships('POLICY_TAGS', 'POLICY_ID');
+              PERFORM cleanup_duplicate_tag_relationships('PROJECTS_TAGS', 'PROJECT_ID');
+              PERFORM cleanup_duplicate_tag_relationships('VULNERABILITIES_TAGS', 'VULNERABILITY_ID');
+            END
+            $$;
+        </sql>
+
+        <sql splitStatements="true">
+            DROP FUNCTION cleanup_duplicate_tag_relationships;
+
+            DELETE FROM "TAG"
+             USING tmp_duplicate_tag
+             WHERE "TAG"."NAME" = tmp_duplicate_tag.name
+               AND "TAG"."ID" != tmp_duplicate_tag.canonical_id;
+        </sql>
+
+        <!-- Ensure no more duplicates can be introduced. -->
+        <addPrimaryKey
+                tableName="NOTIFICATIONRULE_TAGS"
+                columnNames="NOTIFICATIONRULE_ID, TAG_ID"
+                constraintName="NOTIFICATIONRULE_TAGS_PK"/>
+        <addPrimaryKey
+                tableName="POLICY_TAGS"
+                columnNames="POLICY_ID, TAG_ID"
+                constraintName="POLICY_TAGS_PK"/>
+        <addPrimaryKey
+                tableName="PROJECTS_TAGS"
+                columnNames="PROJECT_ID, TAG_ID"
+                constraintName="PROJECTS_TAGS_PK"/>
+        <addPrimaryKey
+                tableName="VULNERABILITIES_TAGS"
+                columnNames="VULNERABILITY_ID, TAG_ID"
+                constraintName="VULNERABILITIES_TAGS_PK"/>
+        <createIndex tableName="TAG" indexName="TAG_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

@@ -19,44 +19,34 @@
 package org.dependencytrack.persistence.migration.change.v530;
 
 import liquibase.database.jvm.JdbcConnection;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.dependencytrack.persistence.migration.MigrationExecutor;
+import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.persistence.migration.MigrationInitializer.runMigration;
 import static org.dependencytrack.persistence.migration.change.v530.RenameForeignKeysChange.getForeignNameMappings;
 
-public class RenameForeignKeysChangeTest {
+@Testcontainers
+class RenameForeignKeysChangeTest {
 
-    private PostgreSQLContainer<?> postgresContainer;
-
-    @Before
+    @Container
     @SuppressWarnings("resource")
-    public void setUp() {
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
-                .withInitScript("migration/custom/schema-v5.2.0-postgresql.sql");
-        postgresContainer.start();
-    }
-
-    @After
-    public void tearDown() {
-        if (postgresContainer != null) {
-            postgresContainer.stop();
-        }
-    }
+    private final PostgreSQLContainer<?> postgresContainer =
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"))
+                    .withInitScript("org/dependencytrack/persistence/migration/change/schema-v5.2.0-postgresql.sql");
 
     @Test
-    public void test() throws Exception {
+    void test() throws Exception {
         final var dataSource = new PGSimpleDataSource();
         dataSource.setUrl(postgresContainer.getJdbcUrl());
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
 
-        runMigration(dataSource, "migration/custom/RenameForeignKeysChangeTest-changelog.xml");
+        new MigrationExecutor(dataSource, "org/dependencytrack/persistence/migration/change/RenameForeignKeysChangeTest-changelog.xml").executeMigration();
 
         assertThat(getForeignNameMappings(new JdbcConnection(dataSource.getConnection()))).isEmpty();
     }

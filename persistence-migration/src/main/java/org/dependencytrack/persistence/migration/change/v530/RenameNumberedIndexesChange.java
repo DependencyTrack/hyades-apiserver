@@ -382,14 +382,14 @@ public class RenameNumberedIndexesChange implements CustomTaskChange {
         return null;
     }
 
-    private static List<IndexNameMapping> getIndexNameMappings(final JdbcConnection connection) throws DatabaseException, SQLException {
+    static List<IndexNameMapping> getIndexNameMappings(final JdbcConnection connection) throws DatabaseException, SQLException {
         return switch (connection.getDatabaseProductName()) {
             case "PostgreSQL" -> getIndexNameMappingsFromPostgres(connection);
             default -> throw new IllegalStateException();
         };
     }
 
-    static List<IndexNameMapping> getIndexNameMappingsFromPostgres(final JdbcConnection connection) throws DatabaseException, SQLException {
+    private static List<IndexNameMapping> getIndexNameMappingsFromPostgres(final JdbcConnection connection) throws DatabaseException, SQLException {
         final var indexNameMapping = new ArrayList<IndexNameMapping>();
 
         try (final var stmt = connection.createStatement()) {

@@ -25,15 +25,19 @@ import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
-import java.lang.reflect.Method;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
 
@@ -84,9 +88,7 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
     @Test
     public void testLoadDefaultLicenses() throws Exception {
         DefaultObjectGenerator generator = new DefaultObjectGenerator();
-        Method method = generator.getClass().getDeclaredMethod("loadDefaultLicenses");
-        method.setAccessible(true);
-        method.invoke(generator);
+        generator.loadDefaultLicenses();
         Assert.assertEquals(738, qm.getAllLicensesConcise().size());
     }
 
@@ -103,9 +105,7 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
         qm.persist(license);
 
         final var generator = new DefaultObjectGenerator();
-        final Method method = generator.getClass().getDeclaredMethod("loadDefaultLicenses");
-        method.setAccessible(true);
-        method.invoke(generator);
+        generator.loadDefaultLicenses();
 
         qm.getPersistenceManager().refresh(license);
         assertThat(license.getLicenseId()).isEqualTo("LGPL-2.1+");
@@ -120,45 +120,53 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
     @Test
     public void testLoadDefaultPermissions() throws Exception {
         DefaultObjectGenerator generator = new DefaultObjectGenerator();
-        Method method = generator.getClass().getDeclaredMethod("loadDefaultPermissions");
-        method.setAccessible(true);
-        method.invoke(generator);
+        generator.loadDefaultPermissions();
         Assert.assertEquals(Permissions.values().length, qm.getPermissions().size());
     }
 
     @Test
     public void testLoadDefaultPersonas() throws Exception {
         DefaultObjectGenerator generator = new DefaultObjectGenerator();
-        Method method = generator.getClass().getDeclaredMethod("loadDefaultPersonas");
-        method.setAccessible(true);
-        method.invoke(generator);
+        generator.loadDefaultPersonas();
         Assert.assertEquals(4, qm.getTeams().size());
     }
 
     @Test
     public void testLoadDefaultRepositories() throws Exception {
         DefaultObjectGenerator generator = new DefaultObjectGenerator();
-        Method method = generator.getClass().getDeclaredMethod("loadDefaultRepositories");
-        method.setAccessible(true);
-        method.invoke(generator);
+        generator.loadDefaultRepositories();
         Assert.assertEquals(17, qm.getAllRepositories().size());
     }
 
     @Test
     public void testLoadDefaultConfigProperties() throws Exception {
         DefaultObjectGenerator generator = new DefaultObjectGenerator();
-        Method method = generator.getClass().getDeclaredMethod("loadDefaultConfigProperties");
-        method.setAccessible(true);
-        method.invoke(generator);
+        generator.loadDefaultConfigProperties();
         Assert.assertEquals(ConfigPropertyConstants.values().length, qm.getConfigProperties().size());
     }
 
     @Test
     public void testLoadDefaultNotificationPublishers() throws Exception {
         DefaultObjectGenerator generator = new DefaultObjectGenerator();
-        Method method = generator.getClass().getDeclaredMethod("loadDefaultNotificationPublishers");
-        method.setAccessible(true);
-        method.invoke(generator);
+        generator.loadDefaultNotificationPublishers();
         Assert.assertEquals(DefaultNotificationPublishers.values().length, qm.getAllNotificationPublishers().size());
+    }
+
+    @Test
+    public void testMetricsPartitionsForTodayAndTomorrow() {
+        DefaultObjectGenerator generator = new DefaultObjectGenerator();
+        generator.ensureMetricsPartitions();
+        var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        var tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
+        withJdbiHandle(handle -> {
+            var metricsHandle = handle.attach(MetricsDao.class);
+            assertThat(Collections.frequency(metricsHandle.getPortfolioMetricsPartitions(), "\"PORTFOLIOMETRICS_%s\"".formatted(today))).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getPortfolioMetricsPartitions(), "\"PORTFOLIOMETRICS_%s\"".formatted(tomorrow))).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getProjectMetricsPartitions(), "\"PROJECTMETRICS_%s\"".formatted(today))).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getProjectMetricsPartitions(), "\"PROJECTMETRICS_%s\"".formatted(tomorrow))).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getDependencyMetricsPartitions(), "\"DEPENDENCYMETRICS_%s\"".formatted(today))).isEqualTo(1);
+            assertThat(Collections.frequency(metricsHandle.getDependencyMetricsPartitions(), "\"DEPENDENCYMETRICS_%s\"".formatted(tomorrow))).isEqualTo(1);
+            return null;
+        });
     }
 }
