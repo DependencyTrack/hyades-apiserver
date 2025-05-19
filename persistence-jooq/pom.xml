@@ -35,13 +35,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>persistence-migration</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.jooq</groupId>
             <artifactId>jooq</artifactId>
             <version>${lib.jooq.version}</version>
@@ -111,9 +104,27 @@
                                             | databasechangeloglock
                                             | dependencymetrics_\d{8}
                                             | eventservicelog
+                                            | gin_.*
+                                            | gtrgm_.*
                                             | portfoliometrics_\d{8}
                                             | projectmetrics_\d{8}
+                                            | set_limit
                                             | shedlock
+                                            | show_limit
+                                            | show_trgm
+                                            | similarity
+                                            | similarity_dist
+                                            | similarity_op
+                                            | strict_word_similarity
+                                            | strict_word_similarity_commutator_op
+                                            | strict_word_similarity_dist_commutator_op
+                                            | strict_word_similarity_dist_op
+                                            | strict_word_similarity_op
+                                            | word_similarity
+                                            | word_similarity_commutator_op
+                                            | word_similarity_dist_commutator_op
+                                            | word_similarity_dist_op
+                                            | word_similarity_op
                                         </excludes>
                                         <inputSchema>public</inputSchema>
                                         <outputSchemaToDefault>true</outputSchemaToDefault>
