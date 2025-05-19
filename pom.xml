@@ -28,9 +28,9 @@
 
     <modules>
         <module>alpine</module>
+        <module>proto</module>
         <module>persistence-migration</module>
         <module>persistence-jooq</module>
-        <module>proto</module>
         <module>apiserver</module>
         <module>coverage-report</module>
     </modules>
