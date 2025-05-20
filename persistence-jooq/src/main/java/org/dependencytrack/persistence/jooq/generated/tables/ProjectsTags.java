@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -269722386;
 
     /**
      * The reference instance of <code>PROJECTS_TAGS</code>
@@ -122,7 +122,7 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
     )
     public static class ProjectsTagsPath extends ProjectsTags implements Path<ProjectsTagsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -269722386;
         public <O extends Record> ProjectsTagsPath(Table<O> path, ForeignKey<O, ProjectsTagsRecord> childPath, InverseForeignKey<O, ProjectsTagsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -158,7 +158,7 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
 
     @Override
     public List<ForeignKey<ProjectsTagsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.PROJECTS_TAGS__PROJECTS_TAGS_PROJECT_FK, Keys.PROJECTS_TAGS__PROJECTS_TAGS_TAG_FK);
+        return Arrays.asList(Keys.PROJECTS_TAGS_PROJECT_FK, Keys.PROJECTS_TAGS_TAG_FK);
     }
 
     private transient ProjectPath _project;
@@ -168,7 +168,7 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.PROJECTS_TAGS__PROJECTS_TAGS_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.PROJECTS_TAGS_PROJECT_FK, null);
 
         return _project;
     }
@@ -180,7 +180,7 @@ public class ProjectsTags extends TableImpl<ProjectsTagsRecord> {
      */
     public TagPath tag() {
         if (_tag == null)
-            _tag = new TagPath(this, Keys.PROJECTS_TAGS__PROJECTS_TAGS_TAG_FK, null);
+            _tag = new TagPath(this, Keys.PROJECTS_TAGS_TAG_FK, null);
 
         return _tag;
     }

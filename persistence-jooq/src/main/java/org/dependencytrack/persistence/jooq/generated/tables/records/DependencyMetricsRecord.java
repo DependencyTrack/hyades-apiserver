@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class DependencyMetricsRecord extends UpdatableRecordImpl<DependencyMetricsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -80477003;
 
     /**
      * Setter for <code>DEPENDENCYMETRICS.COMPONENT_ID</code>.

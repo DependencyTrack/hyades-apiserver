@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class PortfolioMetricsRecord extends UpdatableRecordImpl<PortfolioMetricsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1414503296;
 
     /**
      * Setter for <code>PORTFOLIOMETRICS.COMPONENTS</code>.

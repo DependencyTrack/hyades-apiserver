@@ -53,7 +53,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class OidcGroup extends TableImpl<OidcGroupRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 306753486;
 
     /**
      * The reference instance of <code>OIDCGROUP</code>
@@ -129,7 +129,7 @@ public class OidcGroup extends TableImpl<OidcGroupRecord> {
     )
     public static class OidcGroupPath extends OidcGroup implements Path<OidcGroupRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 306753486;
         public <O extends Record> OidcGroupPath(Table<O> path, ForeignKey<O, OidcGroupRecord> childPath, InverseForeignKey<O, OidcGroupRecord> parentPath) {
             super(path, childPath, parentPath);
         }

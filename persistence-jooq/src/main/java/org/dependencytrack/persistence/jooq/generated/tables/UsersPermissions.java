@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class UsersPermissions extends TableImpl<UsersPermissionsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1724545700;
 
     /**
      * The reference instance of <code>USERS_PERMISSIONS</code>
@@ -122,7 +122,7 @@ public class UsersPermissions extends TableImpl<UsersPermissionsRecord> {
     )
     public static class UsersPermissionsPath extends UsersPermissions implements Path<UsersPermissionsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1724545700;
         public <O extends Record> UsersPermissionsPath(Table<O> path, ForeignKey<O, UsersPermissionsRecord> childPath, InverseForeignKey<O, UsersPermissionsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -158,7 +158,7 @@ public class UsersPermissions extends TableImpl<UsersPermissionsRecord> {
 
     @Override
     public List<ForeignKey<UsersPermissionsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.USERS_PERMISSIONS__USERS_PERMISSIONS_PERMISSION_FK, Keys.USERS_PERMISSIONS__USERS_PERMISSIONS_USER_FK);
+        return Arrays.asList(Keys.USERS_PERMISSIONS_PERMISSION_FK, Keys.USERS_PERMISSIONS_USER_FK);
     }
 
     private transient PermissionPath _permission;
@@ -168,7 +168,7 @@ public class UsersPermissions extends TableImpl<UsersPermissionsRecord> {
      */
     public PermissionPath permission() {
         if (_permission == null)
-            _permission = new PermissionPath(this, Keys.USERS_PERMISSIONS__USERS_PERMISSIONS_PERMISSION_FK, null);
+            _permission = new PermissionPath(this, Keys.USERS_PERMISSIONS_PERMISSION_FK, null);
 
         return _permission;
     }
@@ -180,7 +180,7 @@ public class UsersPermissions extends TableImpl<UsersPermissionsRecord> {
      */
     public UserPath user() {
         if (_user == null)
-            _user = new UserPath(this, Keys.USERS_PERMISSIONS__USERS_PERMISSIONS_USER_FK, null);
+            _user = new UserPath(this, Keys.USERS_PERMISSIONS_USER_FK, null);
 
         return _user;
     }

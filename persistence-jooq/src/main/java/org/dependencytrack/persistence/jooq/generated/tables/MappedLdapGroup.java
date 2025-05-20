@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class MappedLdapGroup extends TableImpl<MappedLdapGroupRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 109596849;
 
     /**
      * The reference instance of <code>MAPPEDLDAPGROUP</code>
@@ -132,7 +132,7 @@ public class MappedLdapGroup extends TableImpl<MappedLdapGroupRecord> {
     )
     public static class MappedLdapGroupPath extends MappedLdapGroup implements Path<MappedLdapGroupRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 109596849;
         public <O extends Record> MappedLdapGroupPath(Table<O> path, ForeignKey<O, MappedLdapGroupRecord> childPath, InverseForeignKey<O, MappedLdapGroupRecord> parentPath) {
             super(path, childPath, parentPath);
         }

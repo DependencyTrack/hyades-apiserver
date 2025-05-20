@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class UsersPermissionsRecord extends UpdatableRecordImpl<UsersPermissionsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1186764856;
 
     /**
      * Setter for <code>USERS_PERMISSIONS.USER_ID</code>.

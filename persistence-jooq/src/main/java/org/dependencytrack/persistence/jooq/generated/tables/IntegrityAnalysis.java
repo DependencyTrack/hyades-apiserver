@@ -54,7 +54,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class IntegrityAnalysis extends TableImpl<IntegrityAnalysisRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1603200635;
 
     /**
      * The reference instance of <code>INTEGRITY_ANALYSIS</code>
@@ -155,7 +155,7 @@ public class IntegrityAnalysis extends TableImpl<IntegrityAnalysisRecord> {
     )
     public static class IntegrityAnalysisPath extends IntegrityAnalysis implements Path<IntegrityAnalysisRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1603200635;
         public <O extends Record> IntegrityAnalysisPath(Table<O> path, ForeignKey<O, IntegrityAnalysisRecord> childPath, InverseForeignKey<O, IntegrityAnalysisRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -201,7 +201,7 @@ public class IntegrityAnalysis extends TableImpl<IntegrityAnalysisRecord> {
 
     @Override
     public List<ForeignKey<IntegrityAnalysisRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.INTEGRITY_ANALYSIS__INTEGRITY_ANALYSIS_COMPONENT_FK);
+        return Arrays.asList(Keys.INTEGRITY_ANALYSIS_COMPONENT_FK);
     }
 
     private transient ComponentPath _component;
@@ -211,7 +211,7 @@ public class IntegrityAnalysis extends TableImpl<IntegrityAnalysisRecord> {
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, Keys.INTEGRITY_ANALYSIS__INTEGRITY_ANALYSIS_COMPONENT_FK, null);
+            _component = new ComponentPath(this, Keys.INTEGRITY_ANALYSIS_COMPONENT_FK, null);
 
         return _component;
     }

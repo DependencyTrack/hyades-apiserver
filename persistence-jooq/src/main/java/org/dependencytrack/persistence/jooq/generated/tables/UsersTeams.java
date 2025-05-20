@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class UsersTeams extends TableImpl<UsersTeamsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 666645532;
 
     /**
      * The reference instance of <code>USERS_TEAMS</code>
@@ -122,7 +122,7 @@ public class UsersTeams extends TableImpl<UsersTeamsRecord> {
     )
     public static class UsersTeamsPath extends UsersTeams implements Path<UsersTeamsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 666645532;
         public <O extends Record> UsersTeamsPath(Table<O> path, ForeignKey<O, UsersTeamsRecord> childPath, InverseForeignKey<O, UsersTeamsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -158,7 +158,7 @@ public class UsersTeams extends TableImpl<UsersTeamsRecord> {
 
     @Override
     public List<ForeignKey<UsersTeamsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.USERS_TEAMS__USERS_TEAMS_TEAM_FK, Keys.USERS_TEAMS__USERS_TEAMS_USER_FK);
+        return Arrays.asList(Keys.USERS_TEAMS_TEAM_FK, Keys.USERS_TEAMS_USER_FK);
     }
 
     private transient TeamPath _team;
@@ -168,7 +168,7 @@ public class UsersTeams extends TableImpl<UsersTeamsRecord> {
      */
     public TeamPath team() {
         if (_team == null)
-            _team = new TeamPath(this, Keys.USERS_TEAMS__USERS_TEAMS_TEAM_FK, null);
+            _team = new TeamPath(this, Keys.USERS_TEAMS_TEAM_FK, null);
 
         return _team;
     }
@@ -180,7 +180,7 @@ public class UsersTeams extends TableImpl<UsersTeamsRecord> {
      */
     public UserPath user() {
         if (_user == null)
-            _user = new UserPath(this, Keys.USERS_TEAMS__USERS_TEAMS_USER_FK, null);
+            _user = new UserPath(this, Keys.USERS_TEAMS_USER_FK, null);
 
         return _user;
     }

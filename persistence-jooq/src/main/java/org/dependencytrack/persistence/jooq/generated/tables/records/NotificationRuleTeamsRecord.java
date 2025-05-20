@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class NotificationRuleTeamsRecord extends UpdatableRecordImpl<NotificationRuleTeamsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 932661529;
 
     /**
      * Setter for <code>NOTIFICATIONRULE_TEAMS.NOTIFICATIONRULE_ID</code>.

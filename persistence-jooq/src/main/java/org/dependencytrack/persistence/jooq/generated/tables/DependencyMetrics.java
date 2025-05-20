@@ -52,7 +52,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -302376119;
 
     /**
      * The reference instance of <code>DEPENDENCYMETRICS</code>
@@ -271,7 +271,7 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
     )
     public static class DependencyMetricsPath extends DependencyMetrics implements Path<DependencyMetricsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -302376119;
         public <O extends Record> DependencyMetricsPath(Table<O> path, ForeignKey<O, DependencyMetricsRecord> childPath, InverseForeignKey<O, DependencyMetricsRecord> parentPath) {
             super(path, childPath, parentPath);
         }

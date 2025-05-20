@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectProperty extends TableImpl<ProjectPropertyRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1953659189;
 
     /**
      * The reference instance of <code>PROJECT_PROPERTY</code>
@@ -147,7 +147,7 @@ public class ProjectProperty extends TableImpl<ProjectPropertyRecord> {
     )
     public static class ProjectPropertyPath extends ProjectProperty implements Path<ProjectPropertyRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1953659189;
         public <O extends Record> ProjectPropertyPath(Table<O> path, ForeignKey<O, ProjectPropertyRecord> childPath, InverseForeignKey<O, ProjectPropertyRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -193,7 +193,7 @@ public class ProjectProperty extends TableImpl<ProjectPropertyRecord> {
 
     @Override
     public List<ForeignKey<ProjectPropertyRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.PROJECT_PROPERTY__PROJECT_PROPERTY_PROJECT_FK);
+        return Arrays.asList(Keys.PROJECT_PROPERTY_PROJECT_FK);
     }
 
     private transient ProjectPath _project;
@@ -203,7 +203,7 @@ public class ProjectProperty extends TableImpl<ProjectPropertyRecord> {
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.PROJECT_PROPERTY__PROJECT_PROPERTY_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.PROJECT_PROPERTY_PROJECT_FK, null);
 
         return _project;
     }

@@ -53,7 +53,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1057573236;
 
     /**
      * The reference instance of <code>PROJECT_METADATA</code>
@@ -139,7 +139,7 @@ public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
     )
     public static class ProjectMetadataPath extends ProjectMetadata implements Path<ProjectMetadataRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1057573236;
         public <O extends Record> ProjectMetadataPath(Table<O> path, ForeignKey<O, ProjectMetadataRecord> childPath, InverseForeignKey<O, ProjectMetadataRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -185,7 +185,7 @@ public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
 
     @Override
     public List<ForeignKey<ProjectMetadataRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.PROJECT_METADATA__PROJECT_METADATA_PROJECT_ID_FK);
+        return Arrays.asList(Keys.PROJECT_METADATA_PROJECT_ID_FK);
     }
 
     private transient ProjectPath _project;
@@ -195,7 +195,7 @@ public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.PROJECT_METADATA__PROJECT_METADATA_PROJECT_ID_FK, null);
+            _project = new ProjectPath(this, Keys.PROJECT_METADATA_PROJECT_ID_FK, null);
 
         return _project;
     }

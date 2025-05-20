@@ -28,7 +28,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ComponentOccurrenceRecord extends UpdatableRecordImpl<ComponentOccurrenceRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1231563309;
 
     /**
      * Setter for <code>COMPONENT_OCCURRENCE.ID</code>.

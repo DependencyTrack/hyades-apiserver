@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class RepositoryMetaComponentRecord extends UpdatableRecordImpl<RepositoryMetaComponentRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -2012991409;
 
     /**
      * Setter for <code>REPOSITORY_META_COMPONENT.ID</code>.

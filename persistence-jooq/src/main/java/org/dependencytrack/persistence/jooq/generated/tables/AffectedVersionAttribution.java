@@ -56,7 +56,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class AffectedVersionAttribution extends TableImpl<AffectedVersionAttributionRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1249866150;
 
     /**
      * The reference instance of <code>AFFECTEDVERSIONATTRIBUTION</code>
@@ -152,7 +152,7 @@ public class AffectedVersionAttribution extends TableImpl<AffectedVersionAttribu
     )
     public static class AffectedVersionAttributionPath extends AffectedVersionAttribution implements Path<AffectedVersionAttributionRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1249866150;
         public <O extends Record> AffectedVersionAttributionPath(Table<O> path, ForeignKey<O, AffectedVersionAttributionRecord> childPath, InverseForeignKey<O, AffectedVersionAttributionRecord> parentPath) {
             super(path, childPath, parentPath);
         }

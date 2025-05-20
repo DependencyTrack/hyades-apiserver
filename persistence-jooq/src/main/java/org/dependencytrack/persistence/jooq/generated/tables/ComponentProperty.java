@@ -56,7 +56,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ComponentProperty extends TableImpl<ComponentPropertyRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2092165140;
 
     /**
      * The reference instance of <code>COMPONENT_PROPERTY</code>
@@ -157,7 +157,7 @@ public class ComponentProperty extends TableImpl<ComponentPropertyRecord> {
     )
     public static class ComponentPropertyPath extends ComponentProperty implements Path<ComponentPropertyRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 2092165140;
         public <O extends Record> ComponentPropertyPath(Table<O> path, ForeignKey<O, ComponentPropertyRecord> childPath, InverseForeignKey<O, ComponentPropertyRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -203,7 +203,7 @@ public class ComponentProperty extends TableImpl<ComponentPropertyRecord> {
 
     @Override
     public List<ForeignKey<ComponentPropertyRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.COMPONENT_PROPERTY__COMPONENT_PROPERTY_COMPONENT_ID_FK);
+        return Arrays.asList(Keys.COMPONENT_PROPERTY_COMPONENT_ID_FK);
     }
 
     private transient ComponentPath _component;
@@ -213,7 +213,7 @@ public class ComponentProperty extends TableImpl<ComponentPropertyRecord> {
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, Keys.COMPONENT_PROPERTY__COMPONENT_PROPERTY_COMPONENT_ID_FK, null);
+            _component = new ComponentPath(this, Keys.COMPONENT_PROPERTY_COMPONENT_ID_FK, null);
 
         return _component;
     }

@@ -24,7 +24,7 @@ import org.jooq.impl.TableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class VulnerableSoftwareVulnerabilitiesRecord extends TableRecordImpl<VulnerableSoftwareVulnerabilitiesRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1050450335;
 
     /**
      * Setter for

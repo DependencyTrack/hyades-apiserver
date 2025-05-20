@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class PolicyTags extends TableImpl<PolicyTagsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -2032947896;
 
     /**
      * The reference instance of <code>POLICY_TAGS</code>
@@ -122,7 +122,7 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
     )
     public static class PolicyTagsPath extends PolicyTags implements Path<PolicyTagsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -2032947896;
         public <O extends Record> PolicyTagsPath(Table<O> path, ForeignKey<O, PolicyTagsRecord> childPath, InverseForeignKey<O, PolicyTagsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -158,7 +158,7 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
 
     @Override
     public List<ForeignKey<PolicyTagsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.POLICY_TAGS__POLICY_TAGS_POLICY_FK, Keys.POLICY_TAGS__POLICY_TAGS_TAG_FK);
+        return Arrays.asList(Keys.POLICY_TAGS_POLICY_FK, Keys.POLICY_TAGS_TAG_FK);
     }
 
     private transient PolicyPath _policy;
@@ -168,7 +168,7 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
      */
     public PolicyPath policy() {
         if (_policy == null)
-            _policy = new PolicyPath(this, Keys.POLICY_TAGS__POLICY_TAGS_POLICY_FK, null);
+            _policy = new PolicyPath(this, Keys.POLICY_TAGS_POLICY_FK, null);
 
         return _policy;
     }
@@ -180,7 +180,7 @@ public class PolicyTags extends TableImpl<PolicyTagsRecord> {
      */
     public TagPath tag() {
         if (_tag == null)
-            _tag = new TagPath(this, Keys.POLICY_TAGS__POLICY_TAGS_TAG_FK, null);
+            _tag = new TagPath(this, Keys.POLICY_TAGS_TAG_FK, null);
 
         return _tag;
     }

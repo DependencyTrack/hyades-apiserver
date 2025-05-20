@@ -24,7 +24,7 @@ import org.jooq.impl.TableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class LicenseGroupLicenseRecord extends TableRecordImpl<LicenseGroupLicenseRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1265959473;
 
     /**
      * Setter for <code>LICENSEGROUP_LICENSE.LICENSEGROUP_ID</code>.

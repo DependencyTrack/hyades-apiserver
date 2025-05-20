@@ -59,7 +59,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Tag extends TableImpl<TagRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -488236356;
 
     /**
      * The reference instance of <code>TAG</code>
@@ -130,7 +130,7 @@ public class Tag extends TableImpl<TagRecord> {
     )
     public static class TagPath extends Tag implements Path<TagRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -488236356;
         public <O extends Record> TagPath(Table<O> path, ForeignKey<O, TagRecord> childPath, InverseForeignKey<O, TagRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -194,7 +194,7 @@ public class Tag extends TableImpl<TagRecord> {
      */
     public PolicyTagsPath policyTags() {
         if (_policyTags == null)
-            _policyTags = new PolicyTagsPath(this, null, Keys.POLICY_TAGS__POLICY_TAGS_TAG_FK.getInverseKey());
+            _policyTags = new PolicyTagsPath(this, null, Keys.POLICY_TAGS_TAG_FK.getInverseKey());
 
         return _policyTags;
     }
@@ -207,7 +207,7 @@ public class Tag extends TableImpl<TagRecord> {
      */
     public ProjectsTagsPath projectsTags() {
         if (_projectsTags == null)
-            _projectsTags = new ProjectsTagsPath(this, null, Keys.PROJECTS_TAGS__PROJECTS_TAGS_TAG_FK.getInverseKey());
+            _projectsTags = new ProjectsTagsPath(this, null, Keys.PROJECTS_TAGS_TAG_FK.getInverseKey());
 
         return _projectsTags;
     }
@@ -220,7 +220,7 @@ public class Tag extends TableImpl<TagRecord> {
      */
     public VulnerabilitiesTagsPath vulnerabilitiesTags() {
         if (_vulnerabilitiesTags == null)
-            _vulnerabilitiesTags = new VulnerabilitiesTagsPath(this, null, Keys.VULNERABILITIES_TAGS__VULNERABILITIES_TAGS_TAG_FK.getInverseKey());
+            _vulnerabilitiesTags = new VulnerabilitiesTagsPath(this, null, Keys.VULNERABILITIES_TAGS_TAG_FK.getInverseKey());
 
         return _vulnerabilitiesTags;
     }

@@ -54,7 +54,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class LicenseGroup extends TableImpl<LicenseGroupRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1380687068;
 
     /**
      * The reference instance of <code>LICENSEGROUP</code>
@@ -135,7 +135,7 @@ public class LicenseGroup extends TableImpl<LicenseGroupRecord> {
     )
     public static class LicenseGroupPath extends LicenseGroup implements Path<LicenseGroupRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1380687068;
         public <O extends Record> LicenseGroupPath(Table<O> path, ForeignKey<O, LicenseGroupRecord> childPath, InverseForeignKey<O, LicenseGroupRecord> parentPath) {
             super(path, childPath, parentPath);
         }

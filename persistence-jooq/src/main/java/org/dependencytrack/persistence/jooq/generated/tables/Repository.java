@@ -49,7 +49,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Repository extends TableImpl<RepositoryRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -307753654;
 
     /**
      * The reference instance of <code>REPOSITORY</code>

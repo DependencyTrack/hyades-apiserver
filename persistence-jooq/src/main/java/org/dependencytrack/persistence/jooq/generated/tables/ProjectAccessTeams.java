@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1439520474;
 
     /**
      * The reference instance of <code>PROJECT_ACCESS_TEAMS</code>
@@ -122,7 +122,7 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
     )
     public static class ProjectAccessTeamsPath extends ProjectAccessTeams implements Path<ProjectAccessTeamsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1439520474;
         public <O extends Record> ProjectAccessTeamsPath(Table<O> path, ForeignKey<O, ProjectAccessTeamsRecord> childPath, InverseForeignKey<O, ProjectAccessTeamsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -158,7 +158,7 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
 
     @Override
     public List<ForeignKey<ProjectAccessTeamsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.PROJECT_ACCESS_TEAMS__PROJECT_ACCESS_TEAMS_PROJECT_FK, Keys.PROJECT_ACCESS_TEAMS__PROJECT_ACCESS_TEAMS_TEAM_FK);
+        return Arrays.asList(Keys.PROJECT_ACCESS_TEAMS_PROJECT_FK, Keys.PROJECT_ACCESS_TEAMS_TEAM_FK);
     }
 
     private transient ProjectPath _project;
@@ -168,7 +168,7 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.PROJECT_ACCESS_TEAMS__PROJECT_ACCESS_TEAMS_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.PROJECT_ACCESS_TEAMS_PROJECT_FK, null);
 
         return _project;
     }
@@ -180,7 +180,7 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
      */
     public TeamPath team() {
         if (_team == null)
-            _team = new TeamPath(this, Keys.PROJECT_ACCESS_TEAMS__PROJECT_ACCESS_TEAMS_TEAM_FK, null);
+            _team = new TeamPath(this, Keys.PROJECT_ACCESS_TEAMS_TEAM_FK, null);
 
         return _team;
     }

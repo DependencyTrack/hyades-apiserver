@@ -57,7 +57,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class WorkflowState extends TableImpl<WorkflowStateRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -89590387;
 
     /**
      * The reference instance of <code>WORKFLOW_STATE</code>
@@ -158,7 +158,7 @@ public class WorkflowState extends TableImpl<WorkflowStateRecord> {
     )
     public static class WorkflowStatePath extends WorkflowState implements Path<WorkflowStateRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -89590387;
         public <O extends Record> WorkflowStatePath(Table<O> path, ForeignKey<O, WorkflowStateRecord> childPath, InverseForeignKey<O, WorkflowStateRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -209,7 +209,7 @@ public class WorkflowState extends TableImpl<WorkflowStateRecord> {
 
     @Override
     public List<ForeignKey<WorkflowStateRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.WORKFLOW_STATE__WORKFLOW_STATE_WORKFLOW_STATE_FK);
+        return Arrays.asList(Keys.WORKFLOW_STATE_WORKFLOW_STATE_FK);
     }
 
     private transient WorkflowStatePath _workflowState;
@@ -219,7 +219,7 @@ public class WorkflowState extends TableImpl<WorkflowStateRecord> {
      */
     public WorkflowStatePath workflowState() {
         if (_workflowState == null)
-            _workflowState = new WorkflowStatePath(this, Keys.WORKFLOW_STATE__WORKFLOW_STATE_WORKFLOW_STATE_FK, null);
+            _workflowState = new WorkflowStatePath(this, Keys.WORKFLOW_STATE_WORKFLOW_STATE_FK, null);
 
         return _workflowState;
     }

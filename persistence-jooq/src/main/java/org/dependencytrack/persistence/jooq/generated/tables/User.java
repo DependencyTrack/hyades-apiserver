@@ -60,7 +60,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class User extends TableImpl<UserRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 885897955;
 
     /**
      * The reference instance of <code>USER</code>
@@ -181,7 +181,7 @@ public class User extends TableImpl<UserRecord> {
     )
     public static class UserPath extends User implements Path<UserRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 885897955;
         public <O extends Record> UserPath(Table<O> path, ForeignKey<O, UserRecord> childPath, InverseForeignKey<O, UserRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -233,7 +233,7 @@ public class User extends TableImpl<UserRecord> {
      */
     public UserProjectEffectivePermissionsPath userProjectEffectivePermissions() {
         if (_userProjectEffectivePermissions == null)
-            _userProjectEffectivePermissions = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK.getInverseKey());
+            _userProjectEffectivePermissions = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK.getInverseKey());
 
         return _userProjectEffectivePermissions;
     }
@@ -246,7 +246,7 @@ public class User extends TableImpl<UserRecord> {
      */
     public UsersPermissionsPath usersPermissions() {
         if (_usersPermissions == null)
-            _usersPermissions = new UsersPermissionsPath(this, null, Keys.USERS_PERMISSIONS__USERS_PERMISSIONS_USER_FK.getInverseKey());
+            _usersPermissions = new UsersPermissionsPath(this, null, Keys.USERS_PERMISSIONS_USER_FK.getInverseKey());
 
         return _usersPermissions;
     }
@@ -258,7 +258,7 @@ public class User extends TableImpl<UserRecord> {
      */
     public UsersTeamsPath usersTeams() {
         if (_usersTeams == null)
-            _usersTeams = new UsersTeamsPath(this, null, Keys.USERS_TEAMS__USERS_TEAMS_USER_FK.getInverseKey());
+            _usersTeams = new UsersTeamsPath(this, null, Keys.USERS_TEAMS_USER_FK.getInverseKey());
 
         return _usersTeams;
     }

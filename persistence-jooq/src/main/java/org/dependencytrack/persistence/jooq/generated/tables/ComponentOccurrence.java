@@ -54,7 +54,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1203110904;
 
     /**
      * The reference instance of <code>COMPONENT_OCCURRENCE</code>
@@ -150,7 +150,7 @@ public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
     )
     public static class ComponentOccurrencePath extends ComponentOccurrence implements Path<ComponentOccurrenceRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1203110904;
         public <O extends Record> ComponentOccurrencePath(Table<O> path, ForeignKey<O, ComponentOccurrenceRecord> childPath, InverseForeignKey<O, ComponentOccurrenceRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -191,7 +191,7 @@ public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
 
     @Override
     public List<ForeignKey<ComponentOccurrenceRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.COMPONENT_OCCURRENCE__COMPONENT_OCCURRENCE_COMPONENT_FK);
+        return Arrays.asList(Keys.COMPONENT_OCCURRENCE_COMPONENT_FK);
     }
 
     private transient ComponentPath _component;
@@ -201,7 +201,7 @@ public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, Keys.COMPONENT_OCCURRENCE__COMPONENT_OCCURRENCE_COMPONENT_FK, null);
+            _component = new ComponentPath(this, Keys.COMPONENT_OCCURRENCE_COMPONENT_FK, null);
 
         return _component;
     }

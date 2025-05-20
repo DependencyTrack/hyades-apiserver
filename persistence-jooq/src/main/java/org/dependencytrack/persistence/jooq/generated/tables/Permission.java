@@ -55,7 +55,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Permission extends TableImpl<PermissionRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -710656376;
 
     /**
      * The reference instance of <code>PERMISSION</code>
@@ -131,7 +131,7 @@ public class Permission extends TableImpl<PermissionRecord> {
     )
     public static class PermissionPath extends Permission implements Path<PermissionRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -710656376;
         public <O extends Record> PermissionPath(Table<O> path, ForeignKey<O, PermissionRecord> childPath, InverseForeignKey<O, PermissionRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -183,7 +183,7 @@ public class Permission extends TableImpl<PermissionRecord> {
      */
     public TeamsPermissionsPath teamsPermissions() {
         if (_teamsPermissions == null)
-            _teamsPermissions = new TeamsPermissionsPath(this, null, Keys.TEAMS_PERMISSIONS__TEAMS_PERMISSIONS_PERMISSION_FK.getInverseKey());
+            _teamsPermissions = new TeamsPermissionsPath(this, null, Keys.TEAMS_PERMISSIONS_PERMISSION_FK.getInverseKey());
 
         return _teamsPermissions;
     }
@@ -197,7 +197,7 @@ public class Permission extends TableImpl<PermissionRecord> {
      */
     public UserProjectEffectivePermissionsPath userProjectEffectivePermissionsPermissionIdFk() {
         if (_userProjectEffectivePermissionsPermissionIdFk == null)
-            _userProjectEffectivePermissionsPermissionIdFk = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK.getInverseKey());
+            _userProjectEffectivePermissionsPermissionIdFk = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK.getInverseKey());
 
         return _userProjectEffectivePermissionsPermissionIdFk;
     }
@@ -211,7 +211,7 @@ public class Permission extends TableImpl<PermissionRecord> {
      */
     public UserProjectEffectivePermissionsPath userProjectEffectivePermissionsPermissionNameFk() {
         if (_userProjectEffectivePermissionsPermissionNameFk == null)
-            _userProjectEffectivePermissionsPermissionNameFk = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK.getInverseKey());
+            _userProjectEffectivePermissionsPermissionNameFk = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK.getInverseKey());
 
         return _userProjectEffectivePermissionsPermissionNameFk;
     }
@@ -224,7 +224,7 @@ public class Permission extends TableImpl<PermissionRecord> {
      */
     public UsersPermissionsPath usersPermissions() {
         if (_usersPermissions == null)
-            _usersPermissions = new UsersPermissionsPath(this, null, Keys.USERS_PERMISSIONS__USERS_PERMISSIONS_PERMISSION_FK.getInverseKey());
+            _usersPermissions = new UsersPermissionsPath(this, null, Keys.USERS_PERMISSIONS_PERMISSION_FK.getInverseKey());
 
         return _usersPermissions;
     }
