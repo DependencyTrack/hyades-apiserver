@@ -18,10 +18,17 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import org.dependencytrack.model.DependencyMetrics;
+import org.dependencytrack.model.PortfolioMetrics;
+import org.dependencytrack.model.ProjectMetrics;
+import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 
 /**
  * @since 5.6.0
@@ -55,4 +62,29 @@ public interface MetricsDao {
             """)
     int deletePortfolioMetricsForRetentionDuration(@Bind Duration duration);
 
+    @SqlQuery("""
+            SELECT * FROM "PORTFOLIOMETRICS"
+            WHERE "LAST_OCCURRENCE" >= :since
+            ORDER BY "LAST_OCCURRENCE" ASC
+            """)
+    @RegisterBeanMapper(PortfolioMetrics.class)
+    List<PortfolioMetrics> getPortfolioMetricsSince(@Bind Instant since);
+
+    @SqlQuery("""
+            SELECT * FROM "PROJECTMETRICS"
+            WHERE "PROJECT_ID" = :projectId
+            AND "LAST_OCCURRENCE" >= :since
+            ORDER BY "LAST_OCCURRENCE" ASC
+            """)
+    @RegisterBeanMapper(ProjectMetrics.class)
+    List<ProjectMetrics> getProjectMetricsSince(@Bind Long projectId, @Bind Instant since);
+
+    @SqlQuery("""
+            SELECT * FROM "DEPENDENCYMETRICS"
+            WHERE "COMPONENT_ID" = :componentId
+            AND "LAST_OCCURRENCE" >= :since
+            ORDER BY "LAST_OCCURRENCE" ASC
+            """)
+    @RegisterBeanMapper(DependencyMetrics.class)
+    List<DependencyMetrics> getDependencyMetricsSince(@Bind Long componentId,@Bind Instant since);
 }

@@ -21,7 +21,6 @@ package org.dependencytrack.persistence;
 import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.ConfigProperty;
-import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.auth.PasswordService;
@@ -33,7 +32,6 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
-import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
@@ -324,6 +322,12 @@ public class DefaultObjectGenerator implements ServletContextListener {
      */
     private List<Permission> getPermissionsByName(List<String> names) {
         return names.stream().map(PERMISSIONS_MAP::get).filter(Objects::nonNull).toList();
+    }
+
+    public void loadDefaultRoles() {
+        try (final var qm = new QueryManager()) {
+            loadDefaultRoles(qm);
+        }
     }
 
     /**

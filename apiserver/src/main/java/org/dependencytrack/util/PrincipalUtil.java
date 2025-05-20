@@ -20,7 +20,7 @@ package org.dependencytrack.util;
 
 import alpine.model.ApiKey;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
 
 import java.security.Principal;
 import java.util.HashSet;
@@ -37,9 +37,9 @@ public final class PrincipalUtil {
     public static Set<Long> getPrincipalTeamIds(final Principal principal) {
         final Set<Long> principalTeamIds = new HashSet<>();
 
-        if (principal instanceof final UserPrincipal userPrincipal
-                && userPrincipal.getTeams() != null) {
-            for (final Team userInTeam : userPrincipal.getTeams()) {
+        if (principal instanceof final User user
+            && user.getTeams() != null) {
+            for (final Team userInTeam : user.getTeams()) {
                 principalTeamIds.add(userInTeam.getId());
             }
         } else if (principal instanceof final ApiKey apiKey

@@ -86,15 +86,14 @@ public enum ConfigPropertyConstants {
     FORTIFY_SSC_SYNC_CADENCE("integrations", "fortify.ssc.sync.cadence", "60", PropertyType.INTEGER, "The cadence (in minutes) to upload to Fortify SSC", ConfigPropertyAccessMode.READ_WRITE),
     FORTIFY_SSC_URL("integrations", "fortify.ssc.url", null, PropertyType.URL, "Base URL to Fortify SSC", ConfigPropertyAccessMode.READ_WRITE),
     FORTIFY_SSC_TOKEN("integrations", "fortify.ssc.token", null, PropertyType.ENCRYPTEDSTRING, "The token to use to authenticate to Fortify SSC", ConfigPropertyAccessMode.READ_WRITE),
+    GITLAB_APP_ID("integrations", "gitlab.app.id", null, PropertyType.STRING, "ID for the configured GitLab application", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_AUDIENCE("integrations", "gitlab.audience", null, PropertyType.STRING, "The audience to use when authenticating to GitLab", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_AUTOCREATE_PROJECTS("integrations", "gitlab.autocreate.projects", "false", PropertyType.BOOLEAN, "Flag to enable/disable auto-creation of projects in GitLab", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_ENABLED("integrations", "gitlab.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable GitLab integration", ConfigPropertyAccessMode.READ_WRITE),
-    GITLAB_GROUPS("integrations", "gitlab.groups", "[]", PropertyType.STRING, "JSON array of GitLab group names for which to create teams/roles", ConfigPropertyAccessMode.READ_WRITE),
-    GITLAB_URL("integrations", "gitlab.url", "https://gitlab.com", PropertyType.URL, "Base URL to GitLab instance", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_INCLUDE_ARCHIVED("integrations", "gitlab.include.archived", "false", PropertyType.BOOLEAN, "Flag to enable/disable syncing of archived GitLab projects", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_SBOM_PUSH_ENABLED("integrations", "sbom.push.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable SBOM generation for GitLab projects", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_TOPICS("integrations", "gitlab.topics", "[]", PropertyType.STRING, "JSON array of topics to include when syncing GitLab projects", ConfigPropertyAccessMode.READ_WRITE),
-    GITLAB_APP_ID("integrations", "gitlab.app.id", null, PropertyType.STRING, "ID for the configured GitLab application", ConfigPropertyAccessMode.READ_WRITE),
+    GITLAB_URL("integrations", "gitlab.url", "https://gitlab.com", PropertyType.URL, "Base URL to GitLab instance", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_ENABLED("integrations", "defectdojo.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable DefectDojo integration", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_REIMPORT_ENABLED("integrations", "defectdojo.reimport.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable DefectDojo reimport-scan API endpoint", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_SYNC_CADENCE("integrations", "defectdojo.sync.cadence", "60", PropertyType.INTEGER, "The cadence (in minutes) to upload to DefectDojo", ConfigPropertyAccessMode.READ_WRITE),
@@ -125,8 +124,8 @@ public enum ConfigPropertyConstants {
     CUSTOM_RISK_SCORE_MEDIUM("risk-score", "weight.medium", "3", PropertyType.INTEGER, "Medium severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_LOW("risk-score", "weight.low", "1", PropertyType.INTEGER, "Low severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
     CUSTOM_RISK_SCORE_UNASSIGNED("risk-score", "weight.unassigned", "5", PropertyType.INTEGER, "Unassigned severity vulnerability weight (between 1-10)", ConfigPropertyAccessMode.READ_WRITE),
-    WELCOME_MESSAGE("general", "welcome.message.html", "%20%3Chtml%3E%3Ch1%3EYour%20Welcome%20Message%3C%2Fh1%3E%3C%2Fhtml%3E", PropertyType.STRING, "Custom HTML Code that is displayed before login", ConfigPropertyAccessMode.READ_WRITE, true),
-    IS_WELCOME_MESSAGE("general", "welcome.message.enabled", "false", PropertyType.BOOLEAN, "Bool that says wheter to show the welcome message or not", ConfigPropertyAccessMode.READ_WRITE, true),
+    WELCOME_MESSAGE("general", "welcome.message.html", "%3Chtml%3E%3Ch1%3EYour%20Welcome%20Message%3C%2Fh1%3E%3C%2Fhtml%3E", PropertyType.STRING, "Custom HTML Code that is displayed before login", ConfigPropertyAccessMode.READ_WRITE, true),
+    IS_WELCOME_MESSAGE("general", "welcome.message.enabled", "false", PropertyType.BOOLEAN, "Bool that says whether to show the welcome message or not", ConfigPropertyAccessMode.READ_WRITE, true),
     DEFAULT_LANGUAGE("general", "default.locale", null, PropertyType.STRING, "Determine the default Language to use", ConfigPropertyAccessMode.READ_WRITE, true);
 
     private final String groupName;

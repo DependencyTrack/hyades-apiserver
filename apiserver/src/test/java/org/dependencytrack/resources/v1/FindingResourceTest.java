@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.Config;
 import alpine.model.About;
+import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
@@ -31,8 +32,11 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.model.Analysis;
+import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
@@ -471,6 +475,73 @@ public class FindingResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getFindingsByProjectWithComponentOccurrence() {
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Component c1 = createComponent(p1, "Component A", "1.0");
+        Component c2 = createComponent(p1, "Component B", "1.0");
+
+        var componentOccurrence = new ComponentOccurrence();
+        componentOccurrence.setComponent(c2);
+        componentOccurrence.setLocation("/foo/bar");
+        componentOccurrence.setLine(666);
+        componentOccurrence.setOffset(123);
+        componentOccurrence.setSymbol("someSymbol");
+        qm.persist(componentOccurrence);
+
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
+        qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
+        qm.addVulnerability(v1, c2, AnalyzerIdentity.NONE);
+
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertEquals(200, response.getStatus(), 0);
+        assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray jsonArray = parseJsonArray(response);
+        assertNotNull(jsonArray);
+        assertEquals(2, jsonArray.size());
+        JsonObject json  = jsonArray.getJsonObject(0);
+        assertEquals("Component A", json.getJsonObject("component").getString("name"));
+        assertEquals(false, json.getJsonObject("component").getBoolean("hasOccurrences"));
+        json  = jsonArray.getJsonObject(1);
+        assertEquals("Component B", json.getJsonObject("component").getString("name"));
+        assertEquals(true, json.getJsonObject("component").getBoolean("hasOccurrences"));
+    }
+
+    @Test
+    public void getFindingsByProjectWithRatingOverride() {
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Component c1 = createComponent(p1, "Component A", "1.0");
+        c1.setPurl("pkg:/maven/org.acme/component-a@1.0.0");
+
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
+        v1.setCvssV2BaseScore(BigDecimal.valueOf(0.2));
+        v1.setCvssV2Vector("v-cvssV2-vector");
+        qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
+
+        var analysis = new Analysis();
+        analysis.setVulnerability(v1);
+        analysis.setComponent(c1);
+        analysis.setAnalysisState(AnalysisState.NOT_AFFECTED);
+        analysis.setCvssV2Score(BigDecimal.valueOf(0.4));
+        analysis.setCvssV2Vector("a-cvssV2-vector");
+        analysis.setSeverity(Severity.HIGH);
+        qm.persist(analysis);
+
+        Response response = jersey.target(V1_FINDING + "/project/" + p1.getUuid().toString()).request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertEquals(200, response.getStatus(), 0);
+        assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray json = parseJsonArray(response);
+        assertNotNull(json);
+        assertEquals(1, json.size());
+        assertEquals(0.4, json.getJsonObject(0).getJsonObject("vulnerability").getJsonNumber("cvssV2BaseScore").doubleValue(), 0);
+        assertEquals(analysis.getCvssV2Vector(), json.getJsonObject(0).getJsonObject("vulnerability").getString("cvssV2Vector"));
+        assertEquals(analysis.getSeverity().name(), json.getJsonObject(0).getJsonObject("vulnerability").getString("severity"));
+    }
+
+    @Test
     public void testWorkflowStepsShouldBeCreatedOnReanalyze() {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -595,7 +666,8 @@ public class FindingResourceTest extends ResourceTest {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
-        Team team = qm.createTeam("Team Acme", true);
+        Team team = qm.createTeam("Team Acme");
+        ApiKey apiKey = qm.createApiKey(team);
         p1.addAccessTeam(team);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
@@ -625,7 +697,7 @@ public class FindingResourceTest extends ResourceTest {
             qm.persist(aclToggle);
         }
         Response response = jersey.target(V1_FINDING).request()
-                .header(X_API_KEY, team.getApiKeys().get(0).getKey())
+                .header(X_API_KEY, apiKey.getKey())
                 .get(Response.class);
         assertEquals(200, response.getStatus(), 0);
         assertEquals(String.valueOf(4), response.getHeaderString(TOTAL_COUNT_HEADER));
@@ -650,6 +722,41 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals(p1_child.getName(), json.getJsonObject(2).getJsonObject("component").getString("projectName"));
         assertEquals(p1_child.getVersion(), json.getJsonObject(2).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1_child.getUuid().toString(), json.getJsonObject(2).getJsonObject("component").getString("project"));
+    }
+
+    @Test
+    public void getAllFindingsWithComponentOccurrence() {
+        Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        Component c1 = createComponent(p1, "Component A", "1.0");
+        Component c2 = createComponent(p1, "Component B", "1.0");
+
+        var componentOccurrence = new ComponentOccurrence();
+        componentOccurrence.setComponent(c2);
+        componentOccurrence.setLocation("/foo/bar");
+        componentOccurrence.setLine(666);
+        componentOccurrence.setOffset(123);
+        componentOccurrence.setSymbol("someSymbol");
+        qm.persist(componentOccurrence);
+
+        Vulnerability v1 = createVulnerability("Vuln-1", Severity.CRITICAL);
+        qm.addVulnerability(v1, c1, AnalyzerIdentity.NONE);
+        qm.addVulnerability(v1, c2, AnalyzerIdentity.NONE);
+
+        Response response = jersey.target(V1_FINDING)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertEquals(200, response.getStatus(), 0);
+        assertEquals(String.valueOf(2), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray jsonArray = parseJsonArray(response);
+        assertNotNull(jsonArray);
+        assertEquals(2, jsonArray.size());
+        JsonObject json  = jsonArray.getJsonObject(0);
+        assertEquals("Component A", json.getJsonObject("component").getString("name"));
+        assertEquals(false, json.getJsonObject("component").getBoolean("hasOccurrences"));
+        json  = jsonArray.getJsonObject(1);
+        assertEquals("Component B", json.getJsonObject("component").getString("name"));
+        assertEquals(true, json.getJsonObject("component").getBoolean("hasOccurrences"));
     }
 
     @Test
@@ -733,7 +840,8 @@ public class FindingResourceTest extends ResourceTest {
         Project p1 = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Project p1_child = qm.createProject("Acme Example Child", null, "1.0", null, p1, null, null, false);
         Project p2 = qm.createProject("Acme Example", null, "2.0", null, null, null, null, false);
-        Team team = qm.createTeam("Team Acme", true);
+        Team team = qm.createTeam("Team Acme");
+        ApiKey apiKey = qm.createApiKey(team);
         p1.addAccessTeam(team);
         Component c1 = createComponent(p1, "Component A", "1.0");
         Component c2 = createComponent(p1, "Component B", "1.0");
@@ -765,7 +873,7 @@ public class FindingResourceTest extends ResourceTest {
             qm.persist(aclToggle);
         }
         Response response = jersey.target(V1_FINDING + "/grouped").request()
-                .header(X_API_KEY, team.getApiKeys().get(0).getKey())
+                .header(X_API_KEY, apiKey.getKey())
                 .get(Response.class);
         assertEquals(200, response.getStatus(), 0);
         assertEquals(String.valueOf(3), response.getHeaderString(TOTAL_COUNT_HEADER));

@@ -22,7 +22,9 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.Team;
-import alpine.model.UserPrincipal;
+import alpine.model.User;
+import alpine.security.ApiKeyDecoder;
+import alpine.security.InvalidApiKeyFormatException;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,6 +38,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.TeamDao;
+import org.dependencytrack.resources.v1.vo.TeamSelfResponse;
+import org.dependencytrack.resources.v1.vo.VisibleTeams;
+import org.jdbi.v3.core.Handle;
+import org.owasp.security.logging.SecurityMarkers;
+
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -47,16 +58,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.TeamDao;
-import org.dependencytrack.resources.v1.vo.TeamSelfResponse;
-import org.dependencytrack.resources.v1.vo.VisibleTeams;
-import org.jdbi.v3.core.Handle;
-import org.owasp.security.logging.SecurityMarkers;
-
-import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -158,7 +159,7 @@ public class TeamResource extends AlpineResource {
         );
 
         try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.createTeam(jsonTeam.getName(), false);
+            final Team team = qm.createTeam(jsonTeam.getName());
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Team created: " + team.getName());
             return Response.status(Response.Status.CREATED).entity(team).build();
         }
@@ -240,15 +241,14 @@ public class TeamResource extends AlpineResource {
     })
     public Response availableTeams() {
         try (QueryManager qm = new QueryManager()) {
-            Principal user = getPrincipal();
-            boolean isAllTeams = qm.hasAccessManagementPermission(user);
+            boolean isAllTeams = qm.hasAccessManagementPermission(getPrincipal());
             List<Team> teams = new ArrayList<>();
             if (isAllTeams) {
                 teams = qm.getTeams();
             } else {
-                if (user instanceof final UserPrincipal userPrincipal) {
-                    teams = userPrincipal.getTeams();
-                } else if (user instanceof final ApiKey apiKey) {
+                if (getPrincipal() instanceof final User user) {
+                    teams = user.getTeams();
+                } else if (getPrincipal() instanceof final ApiKey apiKey) {
                     teams = apiKey.getTeams();
                 }
             }
@@ -293,7 +293,7 @@ public class TeamResource extends AlpineResource {
     }
 
     @POST
-    @Path("/key/{apikey}")
+    @Path("/key/{publicIdOrKey}")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Regenerates an API key by removing the specified key, generating a new one and returning its value",
@@ -310,10 +310,18 @@ public class TeamResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response regenerateApiKey(
-            @Parameter(description = "The API key to regenerate", required = true)
-            @PathParam("apikey") String apikey) {
+            @Parameter(description = "The public ID for the API key or for Legacy the complete Key to regenerate", required = true)
+            @PathParam("publicIdOrKey") String publicIdOrKey) {
         try (QueryManager qm = new QueryManager()) {
-            ApiKey apiKey = qm.getApiKey(apikey);
+            ApiKey apiKey = qm.getApiKeyByPublicId(publicIdOrKey);
+            if (apiKey == null) {
+                try {
+                    final ApiKey deocdedApiKey = ApiKeyDecoder.decode(publicIdOrKey);
+                    apiKey = qm.getApiKeyByPublicId(deocdedApiKey.getPublicId());
+                } catch (InvalidApiKeyFormatException e) {
+                    LOGGER.debug("Failed to decode value as API key", e);
+                }
+            }
             if (apiKey != null) {
                 apiKey = qm.regenerateApiKey(apiKey);
                 return Response.ok(apiKey).build();
@@ -324,7 +332,7 @@ public class TeamResource extends AlpineResource {
     }
 
     @POST
-    @Path("/key/{apikey}/comment")
+    @Path("/key/{publicIdOrKey}/comment")
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
@@ -341,13 +349,23 @@ public class TeamResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The API key could not be found")
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
-    public Response updateApiKeyComment(@PathParam("apikey") final String apikey,
-                                        final String comment) {
+    public Response updateApiKeyComment(
+            @Parameter(description = "The public ID for the API key or for Legacy the complete Key to comment on", required = true)
+            @PathParam("publicIdOrKey") final String publicIdOrKey,
+            final String comment) {
         try (final var qm = new QueryManager()) {
             qm.getPersistenceManager().setProperty(PROPERTY_RETAIN_VALUES, "true");
 
             return qm.callInTransaction(() -> {
-                final ApiKey apiKey = qm.getApiKey(apikey);
+                ApiKey apiKey = qm.getApiKeyByPublicId(publicIdOrKey);
+                if (apiKey == null) {
+                    try {
+                        final ApiKey deocdedApiKey = ApiKeyDecoder.decode(publicIdOrKey);
+                        apiKey = qm.getApiKeyByPublicId(deocdedApiKey.getPublicId());
+                    } catch (InvalidApiKeyFormatException e) {
+                        LOGGER.debug("Failed to decode value as API key", e);
+                    }
+                }
                 if (apiKey == null) {
                     return Response
                             .status(Response.Status.NOT_FOUND)
@@ -361,7 +379,7 @@ public class TeamResource extends AlpineResource {
     }
 
     @DELETE
-    @Path("/key/{apikey}")
+    @Path("/key/{publicIdOrKey}")
     @Operation(
             summary = "Deletes the specified API key",
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
@@ -373,10 +391,18 @@ public class TeamResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteApiKey(
-            @Parameter(description = "The API key to delete", required = true)
-            @PathParam("apikey") String apikey) {
+            @Parameter(description = "The public ID for the API key or for Legacy the full Key to delete", required = true)
+            @PathParam("publicIdOrKey") String publicIdOrKey) {
         try (QueryManager qm = new QueryManager()) {
-            final ApiKey apiKey = qm.getApiKey(apikey);
+            ApiKey apiKey = qm.getApiKeyByPublicId(publicIdOrKey);
+            if (apiKey == null) {
+                try {
+                    final ApiKey deocdedApiKey = ApiKeyDecoder.decode(publicIdOrKey);
+                    apiKey = qm.getApiKeyByPublicId(deocdedApiKey.getPublicId());
+                } catch (InvalidApiKeyFormatException e) {
+                    LOGGER.debug("Failed to decode value as API key", e);
+                }
+            }
             if (apiKey != null) {
                 qm.delete(apiKey);
                 return Response.status(Response.Status.NO_CONTENT).build();
@@ -406,7 +432,7 @@ public class TeamResource extends AlpineResource {
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.ENFORCE_AUTHENTICATION)) {
             try (var qm = new QueryManager()) {
                 if (isApiKey()) {
-                    final var apiKey = qm.getApiKey(((ApiKey) getPrincipal()).getKey());
+                    final var apiKey = qm.getApiKeyByPublicId(((ApiKey) getPrincipal()).getPublicId());
                     final var team = apiKey.getTeams().stream().findFirst();
                     if (team.isPresent()) {
                         return Response.ok(new TeamSelfResponse(team.get())).build();

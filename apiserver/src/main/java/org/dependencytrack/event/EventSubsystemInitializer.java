@@ -40,6 +40,7 @@ import org.dependencytrack.tasks.DefectDojoUploadTask;
 import org.dependencytrack.tasks.EpssMirrorTask;
 import org.dependencytrack.tasks.FortifySscUploadTask;
 import org.dependencytrack.tasks.GitHubAdvisoryMirrorTask;
+import org.dependencytrack.tasks.GitLabIntegrationStateTask;
 import org.dependencytrack.tasks.GitLabSyncTask;
 import org.dependencytrack.tasks.IntegrityAnalysisTask;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
@@ -97,6 +98,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(VexUploadEvent.class, VexUploadProcessingTask.class);
         EVENT_SERVICE.subscribe(LdapSyncEvent.class, LdapSyncTaskWrapper.class);
         EVENT_SERVICE.subscribe(GitHubAdvisoryMirrorEvent.class, GitHubAdvisoryMirrorTask.class);
+        EVENT_SERVICE.subscribe(GitLabIntegrationStateEvent.class, GitLabIntegrationStateTask.class);
         EVENT_SERVICE.subscribe(GitLabSyncEvent.class, GitLabSyncTask.class);
         EVENT_SERVICE.subscribe(OsvMirrorEvent.class, OsvMirrorTask.class);
         EVENT_SERVICE.subscribe(ProjectVulnerabilityAnalysisEvent.class, VulnerabilityAnalysisTask.class);
@@ -145,6 +147,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(VexUploadProcessingTask.class);
         EVENT_SERVICE.unsubscribe(LdapSyncTaskWrapper.class);
         EVENT_SERVICE.unsubscribe(GitHubAdvisoryMirrorTask.class);
+        EVENT_SERVICE.unsubscribe(GitLabIntegrationStateTask.class);
         EVENT_SERVICE.unsubscribe(GitLabSyncTask.class);
         EVENT_SERVICE.unsubscribe(OsvMirrorTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityAnalysisTask.class);

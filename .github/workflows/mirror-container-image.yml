@@ -27,6 +27,7 @@ jobs:
   mirror-to-dockerhub:
     name: Mirror to Docker Hub
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     # * Only mirror images to Docker Hub for the official repository.
     # * Ensure only container packages are considered for this workflow.
     # * Deal with multiplatform images where only the final manifest has a tag name.

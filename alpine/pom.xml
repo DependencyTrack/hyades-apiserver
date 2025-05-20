@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ This file is part of Alpine.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~ Copyright (c) Steve Springett. All Rights Reserved.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.dependencytrack</groupId>
+        <artifactId>dependency-track-parent</artifactId>
+        <version>5.6.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>alpine-parent</artifactId>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>alpine-common</module>
+        <module>alpine-model</module>
+        <module>alpine-infra</module>
+        <module>alpine-server</module>
+        <module>alpine-executable-war</module>
+    </modules>
+
+    <name>alpine-parent</name>
+    <description>
+        An opinionated scaffolding library that jumpstarts Java projects with an API-first design,
+        secure defaults, and minimal dependencies.
+    </description>
+    <url>https://github.com/stevespringett/Alpine</url>
+    <inceptionYear>2016</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>Apache-2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Steve Springett</name>
+            <organizationUrl>http://stevespringett.com/</organizationUrl>
+            <roles>
+                <role>Architect</role>
+                <role>Developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <properties>
+        <!-- Maven Build Properties -->
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <checkstyle.skip>true</checkstyle.skip>
+
+        <!-- Maven Plugin Versions -->
+        <maven.dependency.plugin.version>3.8.1</maven.dependency.plugin.version>
+        <maven.shade.plugin.version>3.6.0</maven.shade.plugin.version>
+        <maven.datanucleus.plugin.version>6.0.0-release</maven.datanucleus.plugin.version>
+        <maven.uuidgenerator.plugin.version>1.0.1</maven.uuidgenerator.plugin.version>
+
+        <!-- Dependency Versions -->
+        <lib.angus-mail.version>2.0.3</lib.angus-mail.version>
+        <lib.bcrypt.version>0.4</lib.bcrypt.version>
+        <lib.caffeine.version>3.2.0</lib.caffeine.version>
+        <lib.commons.collections4.version>4.4</lib.commons.collections4.version>
+        <lib.commons.io.version>2.19.0</lib.commons.io.version>
+        <lib.commons.lang3.version>3.17.0</lib.commons.lang3.version>
+        <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
+        <lib.datanucleus.version>6.0.11</lib.datanucleus.version>
+        <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
+        <lib.h2.version>2.3.232</lib.h2.version>
+        <lib.hikaricp.version>6.3.0</lib.hikaricp.version>
+        <lib.javassist.version>3.30.2-GA</lib.javassist.version>
+        <lib.jackson.version>2.19.0</lib.jackson.version>
+        <lib.jackson-databind.version>2.19.0</lib.jackson-databind.version>
+        <lib.jakarta-json-api.version>2.1.3</lib.jakarta-json-api.version>
+        <lib.jakarta-mail-api.version>2.1.3</lib.jakarta-mail-api.version>
+        <lib.jakarta-servlet-api.version>6.1.0</lib.jakarta-servlet-api.version>
+        <lib.jakarta-xml-bind-api.version>4.0.2</lib.jakarta-xml-bind-api.version>
+        <lib.jaxb-runtime.version>4.0.5</lib.jaxb-runtime.version>
+        <lib.jdo.api.version>3.2.1</lib.jdo.api.version>
+        <lib.jersey.version>3.1.10</lib.jersey.version>
+        <lib.json-unit.version>4.1.0</lib.json-unit.version>
+        <lib.jsonwebtoken.version>0.12.6</lib.jsonwebtoken.version>
+        <lib.jsr305.version>3.0.2</lib.jsr305.version>
+        <lib.logback.version>1.5.18</lib.logback.version>
+        <lib.logstash-logback-encoder.version>8.1</lib.logstash-logback-encoder.version>
+        <lib.micrometer.version>1.14.6</lib.micrometer.version>
+        <lib.microprofile-health-api.version>4.0.1</lib.microprofile-health-api.version>
+        <lib.nimbus-oauth2-oidc-sdk.version>11.23.1</lib.nimbus-oauth2-oidc-sdk.version>
+        <lib.owasp.encoder.version>1.3.1</lib.owasp.encoder.version>
+        <lib.owasp.security-logging.version>1.1.7</lib.owasp.security-logging.version>
+        <lib.parsson.version>1.1.7</lib.parsson.version>
+        <lib.slf4j.version>2.0.17</lib.slf4j.version>
+        <lib.swagger.version>2.2.30</lib.swagger.version>
+        <!-- Unit test libraries -->
+        <lib.junit-jupiter.version>5.11.4</lib.junit-jupiter.version>
+        <lib.junit-pioneer.version>2.3.0</lib.junit-pioneer.version>
+        <lib.mockito.version>5.16.1</lib.mockito.version>
+        <lib.assertj.version>3.27.3</lib.assertj.version>
+        <lib.wiremock.version>2.35.2</lib.wiremock.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Misc helper libraries -->
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${lib.commons.io.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${lib.commons.lang3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>${lib.commons.collections4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-client</artifactId>
+                <version>${lib.jersey.version}</version>
+            </dependency>
+            <!-- Server architecture -->
+            <dependency>
+                <groupId>jakarta.servlet</groupId>
+                <artifactId>jakarta.servlet-api</artifactId>
+                <version>${lib.jakarta-servlet-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.containers</groupId>
+                <artifactId>jersey-container-servlet</artifactId>
+                <version>${lib.jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.media</groupId>
+                <artifactId>jersey-media-json-jackson</artifactId>
+                <version>${lib.jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.media</groupId>
+                <artifactId>jersey-media-multipart</artifactId>
+                <version>${lib.jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.ext</groupId>
+                <artifactId>jersey-bean-validation</artifactId>
+                <version>${lib.jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.inject</groupId>
+                <artifactId>jersey-hk2</artifactId>
+                <version>${lib.jersey.version}</version>
+            </dependency>
+            <!-- JAXB -->
+            <dependency>
+                <groupId>jakarta.xml.bind</groupId>
+                <artifactId>jakarta.xml.bind-api</artifactId>
+                <version>${lib.jakarta-xml-bind-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>${lib.jaxb-runtime.version}</version>
+            </dependency>
+            <!-- JSON API specification and default implementation -->
+            <dependency>
+                <groupId>jakarta.json</groupId>
+                <artifactId>jakarta.json-api</artifactId>
+                <version>${lib.jakarta-json-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.parsson</groupId>
+                <artifactId>jakarta.json</artifactId>
+                <version>${lib.parsson.version}</version>
+            </dependency>
+            <!-- OpenAPI -->
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations-jakarta</artifactId>
+                <version>${lib.swagger.version}</version>
+            </dependency>
+            <!-- Persistence -->
+            <dependency>
+                <groupId>org.datanucleus</groupId>
+                <artifactId>javax.jdo</artifactId>
+                <version>${lib.jdo.api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.datanucleus</groupId>
+                <artifactId>datanucleus-api-jdo</artifactId>
+                <version>${lib.datanucleus-api-jdo.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.datanucleus</groupId>
+                <artifactId>datanucleus-core</artifactId>
+                <version>${lib.datanucleus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.datanucleus</groupId>
+                <artifactId>datanucleus-rdbms</artifactId>
+                <version>${lib.datanucleus-rdbms.version}</version>
+            </dependency>
+            <!--
+            <dependency>
+                <groupId>org.datanucleus</groupId>
+                <artifactId>datanucleus-jdo-query</artifactId>
+                <version>${lib.datanucleus-jdo-query.version}</version>
+            </dependency>
+            -->
+            <dependency>
+                <groupId>com.zaxxer</groupId>
+                <artifactId>HikariCP</artifactId>
+                <version>${lib.hikaricp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.javassist</groupId>
+                <artifactId>javassist</artifactId>
+                <version>${lib.javassist.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>${lib.h2.version}</version>
+            </dependency>
+            <!-- Authentication and Authorization -->
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt</artifactId>
+                <version>${lib.jsonwebtoken.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mindrot</groupId>
+                <artifactId>jbcrypt</artifactId>
+                <version>${lib.bcrypt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>oauth2-oidc-sdk</artifactId>
+                <version>${lib.nimbus-oauth2-oidc-sdk.version}</version>
+            </dependency>
+            <!-- JAX-RS JSON -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${lib.jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${lib.jackson-databind.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${lib.jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.jakarta.rs</groupId>
+                <artifactId>jackson-jakarta-rs-base</artifactId>
+                <version>${lib.jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.jakarta.rs</groupId>
+                <artifactId>jackson-jakarta-rs-json-provider</artifactId>
+                <version>${lib.jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jdk8</artifactId>
+                <version>${lib.jackson.version}</version>
+            </dependency>
+            <!-- Metrics -->
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-registry-prometheus</artifactId>
+                <version>${lib.micrometer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-registry-prometheus-simpleclient</artifactId>
+                <version>${lib.micrometer.version}</version>
+            </dependency>
+            <!-- Health -->
+            <dependency>
+                <groupId>org.eclipse.microprofile.health</groupId>
+                <artifactId>microprofile-health-api</artifactId>
+                <version>${lib.microprofile-health-api.version}</version>
+            </dependency>
+            <!-- Logging -->
+            <!-- Overriding OWASP Security Logging dependencies with newer versions -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${lib.slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-nop</artifactId>
+                <version>${lib.slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${lib.logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
+                <version>${lib.logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.owasp</groupId>
+                <artifactId>security-logging-common</artifactId>
+                <version>${lib.owasp.security-logging.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.owasp</groupId>
+                <artifactId>security-logging-logback</artifactId>
+                <version>${lib.owasp.security-logging.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.logstash.logback</groupId>
+                <artifactId>logstash-logback-encoder</artifactId>
+                <version>${lib.logstash-logback-encoder.version}</version>
+            </dependency>
+            <!-- XSS prevention -->
+            <dependency>
+                <groupId>org.owasp.encoder</groupId>
+                <artifactId>encoder</artifactId>
+                <version>${lib.owasp.encoder.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.owasp.encoder</groupId>
+                <artifactId>encoder-jsp</artifactId>
+                <version>${lib.owasp.encoder.version}</version>
+            </dependency>
+            <!-- JavaMail API -->
+            <dependency>
+                <groupId>jakarta.mail</groupId>
+                <artifactId>jakarta.mail-api</artifactId>
+                <version>${lib.jakarta-mail-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.angus</groupId>
+                <artifactId>angus-mail</artifactId>
+                <version>${lib.angus-mail.version}</version>
+            </dependency>
+            <!-- Quality -->
+            <dependency>
+                <groupId>com.google.code.findbugs</groupId>
+                <artifactId>jsr305</artifactId>
+                <version>${lib.jsr305.version}</version>
+            </dependency>
+            <!-- Object cache -->
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${lib.caffeine.version}</version>
+            </dependency>
+            <!-- Unit Tests -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${lib.junit-jupiter.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit-pioneer</groupId>
+                <artifactId>junit-pioneer</artifactId>
+                <version>${lib.junit-pioneer.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+                <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+                <version>${lib.jersey.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${lib.mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${lib.assertj.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>net.javacrumbs.json-unit</groupId>
+                <artifactId>json-unit-assertj</artifactId>
+                <version>${lib.json-unit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.github.tomakehurst</groupId>
+                <artifactId>wiremock-jre8-standalone</artifactId>
+                <version>${lib.wiremock.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <prerequisites>
+        <maven>3.6.0</maven>
+    </prerequisites>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.datanucleus</groupId>
+                    <artifactId>datanucleus-maven-plugin</artifactId>
+                    <version>${maven.datanucleus.plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>
+                        @{argLine}
+                        -Xmx256m
+                        -XX:-TieredCompilation
+                        -XX:TieredStopAtLevel=1
+                        -javaagent:${settings.localRepository}/org/mockito/mockito-core/${lib.mockito.version}/mockito-core-${lib.mockito.version}.jar
+                        -Xshare:off
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                    </argLine>
+                    <!-- Some Alpine tests leave the JVM behind in a dirty state. -->
+                    <reuseForks>false</reuseForks>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>us.springett</groupId>
+                <artifactId>maven-uuid-generator</artifactId>
+                <version>${maven.uuidgenerator.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>generate-uuid</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>alpine.version</include>
+                    <include>application.properties</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
+
+</project>

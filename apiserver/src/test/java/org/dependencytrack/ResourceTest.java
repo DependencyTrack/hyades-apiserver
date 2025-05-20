@@ -73,6 +73,7 @@ public abstract class ResourceTest {
     protected final String V1_PROJECT = "/v1/project";
     protected final String V1_PROJECT_LATEST = "/v1/project/latest/";
     protected final String V1_REPOSITORY = "/v1/repository";
+    protected final String V1_ROLE = "/v1/role";
     protected final String V1_SCAN = "/v1/scan";
     protected final String V1_SEARCH = "/v1/search";
     protected final String V1_TEAM = "/v1/team";
@@ -122,8 +123,8 @@ public abstract class ResourceTest {
         this.qm = new QueryManager();
         PluginManagerTestUtil.loadPlugins();
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
-        team = qm.createTeam("Test Users", true);
-        this.apiKey = team.getApiKeys().get(0).getKey();
+        team = qm.createTeam("Test Users");
+        this.apiKey = qm.createApiKey(team).getKey();
     }
 
     @After

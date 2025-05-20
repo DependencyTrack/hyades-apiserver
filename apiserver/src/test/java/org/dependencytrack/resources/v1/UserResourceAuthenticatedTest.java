@@ -22,6 +22,7 @@ import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.model.Team;
+import alpine.model.User;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
@@ -37,12 +38,15 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -573,7 +577,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     @Test
     public void addTeamToUserTest() {
         qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
-        Team team = qm.createTeam("Pirates", false);
+        Team team = qm.createTeam("Pirates");
         IdentifiableObject ido = new IdentifiableObject();
         ido.setUuid(team.getUuid().toString());
         ManagedUser user = new ManagedUser();
@@ -610,7 +614,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addTeamToUserInvalidUserTest() {
-        Team team = qm.createTeam("Pirates", false);
+        Team team = qm.createTeam("Pirates");
         IdentifiableObject ido = new IdentifiableObject();
         ido.setUuid(team.getUuid().toString());
         ManagedUser user = new ManagedUser();
@@ -626,7 +630,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void addTeamToUserDuplicateMembershipTest() {
-        Team team = qm.createTeam("Pirates", false);
+        Team team = qm.createTeam("Pirates");
         ManagedUser user = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         qm.addUserToTeam(user, team);
         IdentifiableObject ido = new IdentifiableObject();
@@ -643,7 +647,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
     @Test
     public void removeTeamFromUserTest() {
-        Team team = qm.createTeam("Pirates", false);
+        Team team = qm.createTeam("Pirates");
         ManagedUser user = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com", TEST_USER_PASSWORD_HASH, false, false, false);
         qm.addUserToTeam(user, team);
         IdentifiableObject ido = new IdentifiableObject();
@@ -654,5 +658,95 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .method("DELETE", Entity.entity(ido, MediaType.APPLICATION_JSON)); // HACK
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
         Assert.assertEquals(200, response.getStatus(), 0);
+    }
+
+    @Test
+    public void setUserTeamsTest() {
+        String username = qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
+        TEST_USER_PASSWORD_HASH, false, false, false).getUsername();
+        String endpoint = V1_USER + "/membership";
+        List<Team> teamSet1 = List.of(
+            qm.createTeam("Pirates", false),
+            qm.createTeam("Penguins", false),
+            qm.createTeam("Steelers", false),
+            qm.createTeam("Red Sox", false),
+            qm.createTeam("Cubs", false)
+        );
+
+        List<Team> teamSet2 = List.of(
+            qm.createTeam("Yankees", false),
+            qm.createTeam("Dodgers", false),
+            qm.createTeam("Giants", false)
+        );
+
+        JsonObject teamRequest1 = Json.createObjectBuilder()
+                .add("username", username)
+                .add("teams", Json.createArrayBuilder(
+                    teamSet1.stream().map(Team::getUuid).map(UUID::toString).toList()))
+                .build();
+
+        JsonObject teamRequest2 = Json.createObjectBuilder()
+                .add("username", username)
+                .add("teams", Json.createArrayBuilder(
+                    teamSet2.stream().map(Team::getUuid).map(UUID::toString).toList()))
+                .build();
+
+        Response response = jersey.target(endpoint).request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .put(Entity.entity(teamRequest1.toString(), MediaType.APPLICATION_JSON));
+
+        Assert.assertEquals(200, response.getStatus());
+
+        User user = qm.getManagedUser("blackbeard");
+        List<Team> userTeams = user.getTeams();
+
+        Assert.assertEquals(userTeams.size(), teamSet1.size());
+        Assert.assertTrue(userTeams.containsAll(teamSet1));
+
+        response = jersey.target(endpoint).request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .put(Entity.entity(teamRequest2.toString(), MediaType.APPLICATION_JSON));
+
+        user = qm.getUser("blackbeard");
+        userTeams = user.getTeams();
+
+        Assert.assertEquals(200, response.getStatus());
+        Assert.assertEquals(userTeams.size(), teamSet2.size());
+        Assert.assertTrue(Collections.disjoint(userTeams, teamSet1));
+        Assert.assertTrue(userTeams.containsAll(teamSet2));
+    }
+
+    @Test
+    public void setUserTeamsInvalidTest() {
+        String endpoint = V1_USER + "/membership";
+        qm.createManagedUser("blackbeard", "Captain BlackBeard", "blackbeard@example.com",
+                TEST_USER_PASSWORD_HASH, false, false, false);
+        UUID teamUuid = qm.createTeam("Pirates", false).getUuid();
+
+        JsonObject badTeamBody = Json.createObjectBuilder()
+            .add("username", "blackbeard")
+            .add("teams", Json.createArrayBuilder().add(UUID.randomUUID().toString()))
+            .build();
+
+        JsonObject unknownUserBody = Json.createObjectBuilder()
+            .add("username", "unknown")
+            .add("teams", Json.createArrayBuilder().add(teamUuid.toString()))
+            .build();
+        // invalid uuid
+        Response response = jersey.target(endpoint).request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .put(Entity.entity(badTeamBody.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(400, response.getStatus());
+
+        // unknown user
+        response = jersey.target(endpoint).request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .put(Entity.entity(unknownUserBody.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(404, response.getStatus());
+
     }
 }

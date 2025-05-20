@@ -14,13 +14,14 @@
               <option value="-pl" />
               <option value="apiserver" />
               <option value="process-classes" />
-              <option value="-Dcheckstyle.skip" />
             </list>
           </option>
           <option name="multimoduleDir" />
           <option name="pomFileName" />
           <option name="profilesMap">
-            <map />
+            <map>
+              <entry key="quick" value="true" />
+            </map>
           </option>
           <option name="projectsCmdOptionValues">
             <list />
