@@ -31,9 +31,11 @@ import org.dependencytrack.notification.publisher.PublisherClass;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistentAll;
@@ -268,9 +270,11 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
             boolean modified = false;
 
             if (!keepExisting) {
-                for (final Tag existingTag : notificationRule.getTags()) {
+                final Iterator<Tag> existingTagsIterator = notificationRule.getTags().iterator();
+                while (existingTagsIterator.hasNext()) {
+                    final Tag existingTag = existingTagsIterator.next();
                     if (!tags.contains(existingTag)) {
-                        notificationRule.getTags().remove(existingTag);
+                        existingTagsIterator.remove();
                         existingTag.getNotificationRules().remove(notificationRule);
                         modified = true;
                     }
@@ -281,8 +285,8 @@ public class NotificationQueryManager extends QueryManager implements IQueryMana
                     notificationRule.getTags().add(tag);
 
                     if (tag.getNotificationRules() == null) {
-                        tag.setNotificationRules(new ArrayList<>(List.of(notificationRule)));
-                    } else if (!tag.getNotificationRules().contains(notificationRule)) {
+                        tag.setNotificationRules(new HashSet<>(Set.of(notificationRule)));
+                    } else {
                         tag.getNotificationRules().add(notificationRule);
                     }
 

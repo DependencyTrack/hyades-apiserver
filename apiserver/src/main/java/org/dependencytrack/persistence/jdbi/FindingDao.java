@@ -186,14 +186,15 @@ public interface FindingDao {
                 ON "COMPONENT"."PROJECT_ID" = "PROJECT"."ID"
              WHERE "COMPONENT"."PROJECT_ID" = :projectId
                AND (:includeSuppressed OR "A"."SUPPRESSED" IS NULL OR NOT "A"."SUPPRESSED")
+               AND (:hasAnalysis IS NULL OR ("A"."ID" IS NOT NULL) = :hasAnalysis)
              ORDER BY "FINDINGATTRIBUTION"."ID"
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(FindingRow.class)
-    List<FindingRow> getFindingsByProject(@Bind long projectId, @Bind boolean includeSuppressed);
+    List<FindingRow> getFindingsByProject(@Bind long projectId, @Bind boolean includeSuppressed, @Bind Boolean hasAnalysis);
 
     default List<Finding> getFindings(final long projectId, final boolean includeSuppressed) {
-        List<FindingRow> findingRows = getFindingsByProject(projectId, includeSuppressed);
+        List<FindingRow> findingRows = getFindingsByProject(projectId, includeSuppressed, null);
         List<Finding> findings = findingRows.stream().map(Finding::new).toList();
         findings = mapComponentLatestVersion(findings);
         return findings;

@@ -33,7 +33,7 @@
         <listener-class>org.dependencytrack.common.KeyManagerInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.persistence.migration.MigrationInitializer</listener-class>
+        <listener-class>org.dependencytrack.persistence.MigrationInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>alpine.server.persistence.PersistenceManagerFactory</listener-class>

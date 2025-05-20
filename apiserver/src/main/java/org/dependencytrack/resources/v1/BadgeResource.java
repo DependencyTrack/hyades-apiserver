@@ -42,6 +42,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.resources.v1.misc.Badger;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.glassfish.jersey.server.ContainerRequest;
@@ -57,6 +58,7 @@ import javax.naming.AuthenticationException;
 import java.security.Principal;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GENERAL_BADGE_ENABLED;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing metrics.
@@ -197,7 +199,8 @@ public class BadgeResource extends AbstractApiResource {
                 if (!shouldBypassAuth) {
                     requireAccess(qm, project);
                 }
-                final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
+                final ProjectMetrics metrics = withJdbiHandle(handle ->
+                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
                 final Badger badger = new Badger();
                 return Response.ok(badger.generateVulnerabilities(metrics)).build();
             } else {
@@ -245,7 +248,8 @@ public class BadgeResource extends AbstractApiResource {
                 if (!shouldBypassAuth) {
                     requireAccess(qm, project);
                 }
-                final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
+                final ProjectMetrics metrics = withJdbiHandle(handle ->
+                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
                 final Badger badger = new Badger();
                 return Response.ok(badger.generateVulnerabilities(metrics)).build();
             } else {
@@ -291,7 +295,8 @@ public class BadgeResource extends AbstractApiResource {
                 if (!shouldBypassAuth) {
                     requireAccess(qm, project);
                 }
-                final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
+                final ProjectMetrics metrics = withJdbiHandle(handle ->
+                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
                 final Badger badger = new Badger();
                 return Response.ok(badger.generateViolations(metrics)).build();
             } else {
@@ -339,7 +344,8 @@ public class BadgeResource extends AbstractApiResource {
                 if (!shouldBypassAuth) {
                     requireAccess(qm, project);
                 }
-                final ProjectMetrics metrics = qm.getMostRecentProjectMetrics(project);
+                final ProjectMetrics metrics = withJdbiHandle(handle ->
+                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId()));
                 final Badger badger = new Badger();
                 return Response.ok(badger.generateViolations(metrics)).build();
             } else {

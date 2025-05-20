@@ -60,7 +60,7 @@ import java.util.UUID;
         @Persistent(name = "mappedOidcGroups"),
         @Persistent(name = "permissions")
 })
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Team implements Serializable {
 
     private static final long serialVersionUID = 6938424919898277944L;
@@ -97,6 +97,7 @@ public class Team implements Serializable {
 
     @Persistent(mappedBy = "teams")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
+    @JsonIgnore
     private List<User> users;
 
     @Persistent(mappedBy = "team")

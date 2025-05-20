@@ -39,8 +39,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
@@ -634,9 +637,11 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
             boolean modified = false;
 
             if (!keepExisting) {
-                for (final Tag existingTag : policy.getTags()) {
+                final Iterator<Tag> existingTagsIterator = policy.getTags().iterator();
+                while (existingTagsIterator.hasNext()) {
+                    final Tag existingTag = existingTagsIterator.next();
                     if (!tags.contains(existingTag)) {
-                        policy.getTags().remove(existingTag);
+                        existingTagsIterator.remove();
                         existingTag.getPolicies().remove(policy);
                         modified = true;
                     }
@@ -647,8 +652,8 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
                 if (!policy.getTags().contains(tag)) {
                     policy.getTags().add(tag);
                     if (tag.getPolicies() == null) {
-                        tag.setPolicies(new ArrayList<>(List.of(policy)));
-                    } else if (!tag.getPolicies().contains(policy)) {
+                        tag.setPolicies(new HashSet<>(Set.of(policy)));
+                    } else {
                         tag.getPolicies().add(policy);
                     }
                     modified = true;

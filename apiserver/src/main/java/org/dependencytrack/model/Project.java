@@ -265,10 +265,9 @@ public class Project implements Serializable {
     private List<ProjectProperty> properties;
 
     @Persistent(table = "PROJECTS_TAGS", defaultFetchGroup = "true", mappedBy = "projects")
-    @Join(column = "PROJECT_ID", foreignKey = "PROJECTS_TAGS_PROJECT_FK", deleteAction = ForeignKeyAction.CASCADE)
+    @Join(column = "PROJECT_ID", primaryKey = "PROJECTS_TAGS_PK", foreignKey = "PROJECTS_TAGS_PROJECT_FK", deleteAction = ForeignKeyAction.CASCADE)
     @Element(column = "TAG_ID", foreignKey = "PROJECTS_TAGS_TAG_FK", deleteAction = ForeignKeyAction.CASCADE)
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
-    private List<Tag> tags;
+    private Set<Tag> tags;
 
     /**
      * Convenience field which will contain the date of the last entry in the {@link Bom} table
@@ -487,11 +486,11 @@ public class Project implements Serializable {
         this.properties = properties;
     }
 
-    public List<Tag> getTags() {
+    public Set<Tag> getTags() {
         return tags;
     }
 
-    public void setTags(List<Tag> tags) {
+    public void setTags(Set<Tag> tags) {
         this.tags = tags;
     }
 
