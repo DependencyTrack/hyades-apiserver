@@ -52,7 +52,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1682094743;
 
     /**
      * The reference instance of <code>POLICY_PROJECTS</code>
@@ -123,7 +123,7 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
     )
     public static class PolicyProjectsPath extends PolicyProjects implements Path<PolicyProjectsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1682094743;
         public <O extends Record> PolicyProjectsPath(Table<O> path, ForeignKey<O, PolicyProjectsRecord> childPath, InverseForeignKey<O, PolicyProjectsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -159,7 +159,7 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
 
     @Override
     public List<ForeignKey<PolicyProjectsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.POLICY_PROJECTS__POLICY_PROJECTS_POLICY_FK, Keys.POLICY_PROJECTS__POLICY_PROJECTS_PROJECT_FK);
+        return Arrays.asList(Keys.POLICY_PROJECTS_POLICY_FK, Keys.POLICY_PROJECTS_PROJECT_FK);
     }
 
     private transient PolicyPath _policy;
@@ -169,7 +169,7 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
      */
     public PolicyPath policy() {
         if (_policy == null)
-            _policy = new PolicyPath(this, Keys.POLICY_PROJECTS__POLICY_PROJECTS_POLICY_FK, null);
+            _policy = new PolicyPath(this, Keys.POLICY_PROJECTS_POLICY_FK, null);
 
         return _policy;
     }
@@ -181,7 +181,7 @@ public class PolicyProjects extends TableImpl<PolicyProjectsRecord> {
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.POLICY_PROJECTS__POLICY_PROJECTS_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.POLICY_PROJECTS_PROJECT_FK, null);
 
         return _project;
     }

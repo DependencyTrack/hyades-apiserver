@@ -57,7 +57,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class FindingAttribution extends TableImpl<FindingAttributionRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 739551873;
 
     /**
      * The reference instance of <code>FINDINGATTRIBUTION</code>
@@ -163,7 +163,7 @@ public class FindingAttribution extends TableImpl<FindingAttributionRecord> {
     )
     public static class FindingAttributionPath extends FindingAttribution implements Path<FindingAttributionRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 739551873;
         public <O extends Record> FindingAttributionPath(Table<O> path, ForeignKey<O, FindingAttributionRecord> childPath, InverseForeignKey<O, FindingAttributionRecord> parentPath) {
             super(path, childPath, parentPath);
         }

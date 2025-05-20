@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class OidcGroupRecord extends UpdatableRecordImpl<OidcGroupRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 669539251;
 
     /**
      * Setter for <code>OIDCGROUP.ID</code>.

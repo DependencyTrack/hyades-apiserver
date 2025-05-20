@@ -59,7 +59,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class NotificationRule extends TableImpl<NotificationRuleRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -829707404;
 
     /**
      * The reference instance of <code>NOTIFICATIONRULE</code>
@@ -180,7 +180,7 @@ public class NotificationRule extends TableImpl<NotificationRuleRecord> {
     )
     public static class NotificationRulePath extends NotificationRule implements Path<NotificationRuleRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -829707404;
         public <O extends Record> NotificationRulePath(Table<O> path, ForeignKey<O, NotificationRuleRecord> childPath, InverseForeignKey<O, NotificationRuleRecord> parentPath) {
             super(path, childPath, parentPath);
         }

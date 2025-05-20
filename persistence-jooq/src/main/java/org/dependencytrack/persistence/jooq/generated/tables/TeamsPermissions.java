@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1337517628;
 
     /**
      * The reference instance of <code>TEAMS_PERMISSIONS</code>
@@ -122,7 +122,7 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
     )
     public static class TeamsPermissionsPath extends TeamsPermissions implements Path<TeamsPermissionsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1337517628;
         public <O extends Record> TeamsPermissionsPath(Table<O> path, ForeignKey<O, TeamsPermissionsRecord> childPath, InverseForeignKey<O, TeamsPermissionsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -158,7 +158,7 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
 
     @Override
     public List<ForeignKey<TeamsPermissionsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.TEAMS_PERMISSIONS__TEAMS_PERMISSIONS_PERMISSION_FK, Keys.TEAMS_PERMISSIONS__TEAMS_PERMISSIONS_TEAM_FK);
+        return Arrays.asList(Keys.TEAMS_PERMISSIONS_PERMISSION_FK, Keys.TEAMS_PERMISSIONS_TEAM_FK);
     }
 
     private transient PermissionPath _permission;
@@ -168,7 +168,7 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
      */
     public PermissionPath permission() {
         if (_permission == null)
-            _permission = new PermissionPath(this, Keys.TEAMS_PERMISSIONS__TEAMS_PERMISSIONS_PERMISSION_FK, null);
+            _permission = new PermissionPath(this, Keys.TEAMS_PERMISSIONS_PERMISSION_FK, null);
 
         return _permission;
     }
@@ -180,7 +180,7 @@ public class TeamsPermissions extends TableImpl<TeamsPermissionsRecord> {
      */
     public TeamPath team() {
         if (_team == null)
-            _team = new TeamPath(this, Keys.TEAMS_PERMISSIONS__TEAMS_PERMISSIONS_TEAM_FK, null);
+            _team = new TeamPath(this, Keys.TEAMS_PERMISSIONS_TEAM_FK, null);
 
         return _team;
     }

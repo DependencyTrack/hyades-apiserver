@@ -55,7 +55,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Bom extends TableImpl<BomRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -781209064;
 
     /**
      * The reference instance of <code>BOM</code>
@@ -161,7 +161,7 @@ public class Bom extends TableImpl<BomRecord> {
     )
     public static class BomPath extends Bom implements Path<BomRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -781209064;
         public <O extends Record> BomPath(Table<O> path, ForeignKey<O, BomRecord> childPath, InverseForeignKey<O, BomRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -212,7 +212,7 @@ public class Bom extends TableImpl<BomRecord> {
 
     @Override
     public List<ForeignKey<BomRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.BOM__BOM_PROJECT_FK);
+        return Arrays.asList(Keys.BOM_PROJECT_FK);
     }
 
     private transient ProjectPath _project;
@@ -222,7 +222,7 @@ public class Bom extends TableImpl<BomRecord> {
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.BOM__BOM_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.BOM_PROJECT_FK, null);
 
         return _project;
     }

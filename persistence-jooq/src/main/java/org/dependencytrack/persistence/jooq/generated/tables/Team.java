@@ -60,7 +60,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Team extends TableImpl<TeamRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1459546599;
 
     /**
      * The reference instance of <code>TEAM</code>
@@ -136,7 +136,7 @@ public class Team extends TableImpl<TeamRecord> {
     )
     public static class TeamPath extends Team implements Path<TeamRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1459546599;
         public <O extends Record> TeamPath(Table<O> path, ForeignKey<O, TeamRecord> childPath, InverseForeignKey<O, TeamRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -240,7 +240,7 @@ public class Team extends TableImpl<TeamRecord> {
      */
     public ProjectAccessTeamsPath projectAccessTeams() {
         if (_projectAccessTeams == null)
-            _projectAccessTeams = new ProjectAccessTeamsPath(this, null, Keys.PROJECT_ACCESS_TEAMS__PROJECT_ACCESS_TEAMS_TEAM_FK.getInverseKey());
+            _projectAccessTeams = new ProjectAccessTeamsPath(this, null, Keys.PROJECT_ACCESS_TEAMS_TEAM_FK.getInverseKey());
 
         return _projectAccessTeams;
     }
@@ -253,7 +253,7 @@ public class Team extends TableImpl<TeamRecord> {
      */
     public TeamsPermissionsPath teamsPermissions() {
         if (_teamsPermissions == null)
-            _teamsPermissions = new TeamsPermissionsPath(this, null, Keys.TEAMS_PERMISSIONS__TEAMS_PERMISSIONS_TEAM_FK.getInverseKey());
+            _teamsPermissions = new TeamsPermissionsPath(this, null, Keys.TEAMS_PERMISSIONS_TEAM_FK.getInverseKey());
 
         return _teamsPermissions;
     }
@@ -265,7 +265,7 @@ public class Team extends TableImpl<TeamRecord> {
      */
     public UsersTeamsPath usersTeams() {
         if (_usersTeams == null)
-            _usersTeams = new UsersTeamsPath(this, null, Keys.USERS_TEAMS__USERS_TEAMS_TEAM_FK.getInverseKey());
+            _usersTeams = new UsersTeamsPath(this, null, Keys.USERS_TEAMS_TEAM_FK.getInverseKey());
 
         return _usersTeams;
     }

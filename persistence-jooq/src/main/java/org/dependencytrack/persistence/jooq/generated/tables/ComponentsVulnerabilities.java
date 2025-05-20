@@ -52,7 +52,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabilitiesRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2102850516;
 
     /**
      * The reference instance of <code>COMPONENTS_VULNERABILITIES</code>
@@ -123,7 +123,7 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
     )
     public static class ComponentsVulnerabilitiesPath extends ComponentsVulnerabilities implements Path<ComponentsVulnerabilitiesRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 2102850516;
         public <O extends Record> ComponentsVulnerabilitiesPath(Table<O> path, ForeignKey<O, ComponentsVulnerabilitiesRecord> childPath, InverseForeignKey<O, ComponentsVulnerabilitiesRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -159,7 +159,7 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
 
     @Override
     public List<ForeignKey<ComponentsVulnerabilitiesRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.COMPONENTS_VULNERABILITIES__COMPONENTS_VULNERABILITIES_COMPONENT_FK, Keys.COMPONENTS_VULNERABILITIES__COMPONENTS_VULNERABILITIES_VULNERABILITY_FK);
+        return Arrays.asList(Keys.COMPONENTS_VULNERABILITIES_COMPONENT_FK, Keys.COMPONENTS_VULNERABILITIES_VULNERABILITY_FK);
     }
 
     private transient ComponentPath _component;
@@ -169,7 +169,7 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, Keys.COMPONENTS_VULNERABILITIES__COMPONENTS_VULNERABILITIES_COMPONENT_FK, null);
+            _component = new ComponentPath(this, Keys.COMPONENTS_VULNERABILITIES_COMPONENT_FK, null);
 
         return _component;
     }
@@ -181,7 +181,7 @@ public class ComponentsVulnerabilities extends TableImpl<ComponentsVulnerabiliti
      */
     public VulnerabilityPath vulnerability() {
         if (_vulnerability == null)
-            _vulnerability = new VulnerabilityPath(this, Keys.COMPONENTS_VULNERABILITIES__COMPONENTS_VULNERABILITIES_VULNERABILITY_FK, null);
+            _vulnerability = new VulnerabilityPath(this, Keys.COMPONENTS_VULNERABILITIES_VULNERABILITY_FK, null);
 
         return _vulnerability;
     }

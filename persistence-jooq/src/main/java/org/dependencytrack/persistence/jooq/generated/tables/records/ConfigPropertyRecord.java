@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ConfigPropertyRecord extends UpdatableRecordImpl<ConfigPropertyRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -64011058;
 
     /**
      * Setter for <code>CONFIGPROPERTY.ID</code>.

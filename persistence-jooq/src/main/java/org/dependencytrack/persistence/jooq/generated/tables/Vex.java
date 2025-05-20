@@ -55,7 +55,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Vex extends TableImpl<VexRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1983143598;
 
     /**
      * The reference instance of <code>VEX</code>
@@ -156,7 +156,7 @@ public class Vex extends TableImpl<VexRecord> {
     )
     public static class VexPath extends Vex implements Path<VexRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1983143598;
         public <O extends Record> VexPath(Table<O> path, ForeignKey<O, VexRecord> childPath, InverseForeignKey<O, VexRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -207,7 +207,7 @@ public class Vex extends TableImpl<VexRecord> {
 
     @Override
     public List<ForeignKey<VexRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.VEX__VEX_PROJECT_FK);
+        return Arrays.asList(Keys.VEX_PROJECT_FK);
     }
 
     private transient ProjectPath _project;
@@ -217,7 +217,7 @@ public class Vex extends TableImpl<VexRecord> {
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.VEX__VEX_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.VEX_PROJECT_FK, null);
 
         return _project;
     }

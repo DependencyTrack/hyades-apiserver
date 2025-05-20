@@ -24,7 +24,7 @@ import org.jooq.impl.TableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class PolicyProjectsRecord extends TableRecordImpl<PolicyProjectsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1024547152;
 
     /**
      * Setter for <code>POLICY_PROJECTS.POLICY_ID</code>.

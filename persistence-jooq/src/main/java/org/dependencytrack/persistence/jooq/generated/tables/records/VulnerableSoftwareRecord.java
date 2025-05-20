@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class VulnerableSoftwareRecord extends UpdatableRecordImpl<VulnerableSoftwareRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 925913319;
 
     /**
      * Setter for <code>VULNERABLESOFTWARE.ID</code>.

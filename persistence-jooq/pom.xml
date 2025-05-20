@@ -143,6 +143,7 @@
                                         </target>
                                         <generate>
                                             <fluentSetters>true</fluentSetters>
+                                            <generatedSerialVersionUID>HASH</generatedSerialVersionUID>
                                         </generate>
                                         <strategy>
                                             <matchers>
@@ -165,6 +166,7 @@
                                                             <expression>$1_$2</expression>
                                                         </tableClass>
                                                     </table>
+
                                                     <!-- Matcher to fix casing of generated classes for 3-word entity tables -->
                                                     <table>
                                                         <expression>
@@ -184,6 +186,7 @@
                                                         </tableClass>
                                                     </table>
                                                 </tables>
+
                                                 <fields>
                                                     <field>
                                                         <expression>
@@ -228,14 +231,12 @@
                                                         </fieldIdentifier>
                                                     </field>
                                                 </fields>
+
                                                 <foreignKeys>
                                                     <foreignKey>
                                                         <expression>
                                                             ^(${matcher.pattern})(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_FK$
                                                         </expression>
-                                                        <keyIdentifier>
-                                                            <expression>$0</expression>
-                                                        </keyIdentifier>
                                                         <pathMethodNameInverse>
                                                             <transform>CAMEL</transform>
                                                             <expression>$1_$2_$3</expression>
@@ -249,9 +250,6 @@
                                                         <expression>
                                                             ^(${matcher.pattern})(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})(${matcher.pattern})_FK$
                                                         </expression>
-                                                        <keyIdentifier>
-                                                            <expression>$0</expression>
-                                                        </keyIdentifier>
                                                         <pathMethodName>
                                                             <transform>CAMEL</transform>
                                                             <expression>$4_$5</expression>
@@ -269,9 +267,6 @@
                                                         <expression>
                                                             ^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_FK$
                                                         </expression>
-                                                        <keyIdentifier>
-                                                            <expression>$0</expression>
-                                                        </keyIdentifier>
                                                         <pathMethodNameInverse>
                                                             <transform>CAMEL</transform>
                                                             <expression>$1_$2</expression>
@@ -285,9 +280,6 @@
                                                         <expression>
                                                             ^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})(${matcher.pattern})_FK$
                                                         </expression>
-                                                        <keyIdentifier>
-                                                            <expression>$0</expression>
-                                                        </keyIdentifier>
                                                         <pathMethodName>
                                                             <transform>CAMEL</transform>
                                                             <expression>$3_$4</expression>
@@ -305,9 +297,6 @@
                                                         <expression>
                                                             ^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_(${matcher.pattern})(${matcher.pattern})_FK$
                                                         </expression>
-                                                        <keyIdentifier>
-                                                            <expression>$0</expression>
-                                                        </keyIdentifier>
                                                         <pathMethodName>
                                                             <transform>CAMEL</transform>
                                                             <expression>$4_$5</expression>
@@ -325,9 +314,6 @@
                                                         <expression>
                                                             ^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_(${matcher.pattern})_FK$
                                                         </expression>
-                                                        <keyIdentifier>
-                                                            <expression>$0</expression>
-                                                        </keyIdentifier>
                                                         <pathMethodNameInverse>
                                                             <transform>CAMEL</transform>
                                                             <expression>$1_$2_$3</expression>
@@ -335,15 +321,18 @@
                                                     </foreignKey>
                                                     <foreignKey>
                                                         <expression>
-                                                            ^USER_PROJECT_EFFECTIVE_PERMISSIONS_(LDAP|MANAGED|OIDC)USER_FK$
+                                                            ^USER_PROJECT_EFFECTIVE_PERMISSIONS_(.*)_FK$
                                                         </expression>
+                                                        <pathMethodName>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1</expression>
+                                                        </pathMethodName>
+                                                    </foreignKey>
+                                                    <foreignKey>
+                                                        <!-- Generate all FK constant names to match database identifier -->
                                                         <keyIdentifier>
                                                             <expression>$0</expression>
                                                         </keyIdentifier>
-                                                        <pathMethodName>
-                                                            <transform>CAMEL</transform>
-                                                            <expression>$1_USER</expression>
-                                                        </pathMethodName>
                                                     </foreignKey>
                                                 </foreignKeys>
                                             </matchers>

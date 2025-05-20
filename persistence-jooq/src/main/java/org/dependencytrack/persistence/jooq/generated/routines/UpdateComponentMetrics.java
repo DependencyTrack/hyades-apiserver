@@ -30,7 +30,7 @@ import org.jooq.impl.SQLDataType;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class UpdateComponentMetrics extends AbstractRoutine<java.lang.Void> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 196404148;
 
     /**
      * The parameter <code>UPDATE_COMPONENT_METRICS.component_uuid</code>.

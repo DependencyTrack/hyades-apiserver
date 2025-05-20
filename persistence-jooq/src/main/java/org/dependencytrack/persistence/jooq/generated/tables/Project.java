@@ -78,7 +78,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Project extends TableImpl<ProjectRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -266564691;
 
     /**
      * The reference instance of <code>PROJECT</code>
@@ -249,7 +249,7 @@ public class Project extends TableImpl<ProjectRecord> {
     )
     public static class ProjectPath extends Project implements Path<ProjectRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -266564691;
         public <O extends Record> ProjectPath(Table<O> path, ForeignKey<O, ProjectRecord> childPath, InverseForeignKey<O, ProjectRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -300,7 +300,7 @@ public class Project extends TableImpl<ProjectRecord> {
 
     @Override
     public List<ForeignKey<ProjectRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.PROJECT__PROJECT_PROJECT_FK);
+        return Arrays.asList(Keys.PROJECT_PROJECT_FK);
     }
 
     private transient ProjectPath _project;
@@ -310,7 +310,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.PROJECT__PROJECT_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.PROJECT_PROJECT_FK, null);
 
         return _project;
     }
@@ -322,7 +322,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public AnalysisPath analysis() {
         if (_analysis == null)
-            _analysis = new AnalysisPath(this, null, Keys.ANALYSIS__ANALYSIS_PROJECT_FK.getInverseKey());
+            _analysis = new AnalysisPath(this, null, Keys.ANALYSIS_PROJECT_FK.getInverseKey());
 
         return _analysis;
     }
@@ -334,7 +334,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public BomPath bom() {
         if (_bom == null)
-            _bom = new BomPath(this, null, Keys.BOM__BOM_PROJECT_FK.getInverseKey());
+            _bom = new BomPath(this, null, Keys.BOM_PROJECT_FK.getInverseKey());
 
         return _bom;
     }
@@ -346,7 +346,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, null, Keys.COMPONENT__COMPONENT_PROJECT_FK.getInverseKey());
+            _component = new ComponentPath(this, null, Keys.COMPONENT_PROJECT_FK.getInverseKey());
 
         return _component;
     }
@@ -398,7 +398,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public PolicyProjectsPath policyProjects() {
         if (_policyProjects == null)
-            _policyProjects = new PolicyProjectsPath(this, null, Keys.POLICY_PROJECTS__POLICY_PROJECTS_PROJECT_FK.getInverseKey());
+            _policyProjects = new PolicyProjectsPath(this, null, Keys.POLICY_PROJECTS_PROJECT_FK.getInverseKey());
 
         return _policyProjects;
     }
@@ -424,7 +424,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public ProjectAccessTeamsPath projectAccessTeams() {
         if (_projectAccessTeams == null)
-            _projectAccessTeams = new ProjectAccessTeamsPath(this, null, Keys.PROJECT_ACCESS_TEAMS__PROJECT_ACCESS_TEAMS_PROJECT_FK.getInverseKey());
+            _projectAccessTeams = new ProjectAccessTeamsPath(this, null, Keys.PROJECT_ACCESS_TEAMS_PROJECT_FK.getInverseKey());
 
         return _projectAccessTeams;
     }
@@ -437,7 +437,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public ProjectHierarchyPath projectHierarchyChildProjectFk() {
         if (_projectHierarchyChildProjectFk == null)
-            _projectHierarchyChildProjectFk = new ProjectHierarchyPath(this, null, Keys.PROJECT_HIERARCHY__PROJECT_HIERARCHY_CHILD_PROJECT_FK.getInverseKey());
+            _projectHierarchyChildProjectFk = new ProjectHierarchyPath(this, null, Keys.PROJECT_HIERARCHY_CHILD_PROJECT_FK.getInverseKey());
 
         return _projectHierarchyChildProjectFk;
     }
@@ -450,7 +450,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public ProjectHierarchyPath projectHierarchyParentProjectFk() {
         if (_projectHierarchyParentProjectFk == null)
-            _projectHierarchyParentProjectFk = new ProjectHierarchyPath(this, null, Keys.PROJECT_HIERARCHY__PROJECT_HIERARCHY_PARENT_PROJECT_FK.getInverseKey());
+            _projectHierarchyParentProjectFk = new ProjectHierarchyPath(this, null, Keys.PROJECT_HIERARCHY_PARENT_PROJECT_FK.getInverseKey());
 
         return _projectHierarchyParentProjectFk;
     }
@@ -463,7 +463,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public ProjectMetadataPath projectMetadata() {
         if (_projectMetadata == null)
-            _projectMetadata = new ProjectMetadataPath(this, null, Keys.PROJECT_METADATA__PROJECT_METADATA_PROJECT_ID_FK.getInverseKey());
+            _projectMetadata = new ProjectMetadataPath(this, null, Keys.PROJECT_METADATA_PROJECT_ID_FK.getInverseKey());
 
         return _projectMetadata;
     }
@@ -476,7 +476,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public ProjectPropertyPath projectProperty() {
         if (_projectProperty == null)
-            _projectProperty = new ProjectPropertyPath(this, null, Keys.PROJECT_PROPERTY__PROJECT_PROPERTY_PROJECT_FK.getInverseKey());
+            _projectProperty = new ProjectPropertyPath(this, null, Keys.PROJECT_PROPERTY_PROJECT_FK.getInverseKey());
 
         return _projectProperty;
     }
@@ -502,7 +502,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public ProjectsTagsPath projectsTags() {
         if (_projectsTags == null)
-            _projectsTags = new ProjectsTagsPath(this, null, Keys.PROJECTS_TAGS__PROJECTS_TAGS_PROJECT_FK.getInverseKey());
+            _projectsTags = new ProjectsTagsPath(this, null, Keys.PROJECTS_TAGS_PROJECT_FK.getInverseKey());
 
         return _projectsTags;
     }
@@ -528,7 +528,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public UserProjectEffectivePermissionsPath userProjectEffectivePermissions() {
         if (_userProjectEffectivePermissions == null)
-            _userProjectEffectivePermissions = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK.getInverseKey());
+            _userProjectEffectivePermissions = new UserProjectEffectivePermissionsPath(this, null, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK.getInverseKey());
 
         return _userProjectEffectivePermissions;
     }
@@ -540,7 +540,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public VexPath vex() {
         if (_vex == null)
-            _vex = new VexPath(this, null, Keys.VEX__VEX_PROJECT_FK.getInverseKey());
+            _vex = new VexPath(this, null, Keys.VEX_PROJECT_FK.getInverseKey());
 
         return _vex;
     }

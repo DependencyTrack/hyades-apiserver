@@ -59,7 +59,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Analysis extends TableImpl<AnalysisRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1637442219;
 
     /**
      * The reference instance of <code>ANALYSIS</code>
@@ -205,7 +205,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
     )
     public static class AnalysisPath extends Analysis implements Path<AnalysisRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1637442219;
         public <O extends Record> AnalysisPath(Table<O> path, ForeignKey<O, AnalysisRecord> childPath, InverseForeignKey<O, AnalysisRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -256,7 +256,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
 
     @Override
     public List<ForeignKey<AnalysisRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.ANALYSIS__ANALYSIS_COMPONENT_FK, Keys.ANALYSIS__ANALYSIS_PROJECT_FK, Keys.ANALYSIS__ANALYSIS_VULNERABILITY_FK, Keys.ANALYSIS__ANALYSIS_VULNERABILITY_POLICY_ID_FK);
+        return Arrays.asList(Keys.ANALYSIS_COMPONENT_FK, Keys.ANALYSIS_PROJECT_FK, Keys.ANALYSIS_VULNERABILITY_FK, Keys.ANALYSIS_VULNERABILITY_POLICY_ID_FK);
     }
 
     private transient ComponentPath _component;
@@ -266,7 +266,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, Keys.ANALYSIS__ANALYSIS_COMPONENT_FK, null);
+            _component = new ComponentPath(this, Keys.ANALYSIS_COMPONENT_FK, null);
 
         return _component;
     }
@@ -278,7 +278,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.ANALYSIS__ANALYSIS_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.ANALYSIS_PROJECT_FK, null);
 
         return _project;
     }
@@ -290,7 +290,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
      */
     public VulnerabilityPath vulnerability() {
         if (_vulnerability == null)
-            _vulnerability = new VulnerabilityPath(this, Keys.ANALYSIS__ANALYSIS_VULNERABILITY_FK, null);
+            _vulnerability = new VulnerabilityPath(this, Keys.ANALYSIS_VULNERABILITY_FK, null);
 
         return _vulnerability;
     }
@@ -303,7 +303,7 @@ public class Analysis extends TableImpl<AnalysisRecord> {
      */
     public VulnerabilityPolicyPath vulnerabilityPolicy() {
         if (_vulnerabilityPolicy == null)
-            _vulnerabilityPolicy = new VulnerabilityPolicyPath(this, Keys.ANALYSIS__ANALYSIS_VULNERABILITY_POLICY_ID_FK, null);
+            _vulnerabilityPolicy = new VulnerabilityPolicyPath(this, Keys.ANALYSIS_VULNERABILITY_POLICY_ID_FK, null);
 
         return _vulnerabilityPolicy;
     }

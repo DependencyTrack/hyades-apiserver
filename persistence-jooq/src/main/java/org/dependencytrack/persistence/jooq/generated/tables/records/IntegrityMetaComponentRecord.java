@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class IntegrityMetaComponentRecord extends UpdatableRecordImpl<IntegrityMetaComponentRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 527104531;
 
     /**
      * Setter for <code>INTEGRITY_META_COMPONENT.ID</code>.

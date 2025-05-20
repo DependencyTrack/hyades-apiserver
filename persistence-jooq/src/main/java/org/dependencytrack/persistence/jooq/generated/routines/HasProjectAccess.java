@@ -29,7 +29,7 @@ import org.jooq.impl.SQLDataType;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class HasProjectAccess extends AbstractRoutine<Boolean> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 493440600;
 
     /**
      * The parameter <code>has_project_access.RETURN_VALUE</code>.

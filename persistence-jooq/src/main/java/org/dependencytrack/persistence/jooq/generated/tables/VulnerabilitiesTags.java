@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -28182264;
 
     /**
      * The reference instance of <code>VULNERABILITIES_TAGS</code>
@@ -122,7 +122,7 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
     )
     public static class VulnerabilitiesTagsPath extends VulnerabilitiesTags implements Path<VulnerabilitiesTagsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -28182264;
         public <O extends Record> VulnerabilitiesTagsPath(Table<O> path, ForeignKey<O, VulnerabilitiesTagsRecord> childPath, InverseForeignKey<O, VulnerabilitiesTagsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -158,7 +158,7 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
 
     @Override
     public List<ForeignKey<VulnerabilitiesTagsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.VULNERABILITIES_TAGS__VULNERABILITIES_TAGS_TAG_FK, Keys.VULNERABILITIES_TAGS__VULNERABILITIES_TAGS_VULNERABILITY_FK);
+        return Arrays.asList(Keys.VULNERABILITIES_TAGS_TAG_FK, Keys.VULNERABILITIES_TAGS_VULNERABILITY_FK);
     }
 
     private transient TagPath _tag;
@@ -168,7 +168,7 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
      */
     public TagPath tag() {
         if (_tag == null)
-            _tag = new TagPath(this, Keys.VULNERABILITIES_TAGS__VULNERABILITIES_TAGS_TAG_FK, null);
+            _tag = new TagPath(this, Keys.VULNERABILITIES_TAGS_TAG_FK, null);
 
         return _tag;
     }
@@ -180,7 +180,7 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
      */
     public VulnerabilityPath vulnerability() {
         if (_vulnerability == null)
-            _vulnerability = new VulnerabilityPath(this, Keys.VULNERABILITIES_TAGS__VULNERABILITIES_TAGS_VULNERABILITY_FK, null);
+            _vulnerability = new VulnerabilityPath(this, Keys.VULNERABILITIES_TAGS_VULNERABILITY_FK, null);
 
         return _vulnerability;
     }

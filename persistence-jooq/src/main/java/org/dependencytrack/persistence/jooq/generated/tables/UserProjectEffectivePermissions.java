@@ -52,7 +52,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffectivePermissionsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -391019753;
 
     /**
      * The reference instance of <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code>
@@ -136,7 +136,7 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
     )
     public static class UserProjectEffectivePermissionsPath extends UserProjectEffectivePermissions implements Path<UserProjectEffectivePermissionsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -391019753;
         public <O extends Record> UserProjectEffectivePermissionsPath(Table<O> path, ForeignKey<O, UserProjectEffectivePermissionsRecord> childPath, InverseForeignKey<O, UserProjectEffectivePermissionsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -172,33 +172,33 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
 
     @Override
     public List<ForeignKey<UserProjectEffectivePermissionsRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK);
+        return Arrays.asList(Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK);
     }
 
-    private transient PermissionPath _userProjectEffectivePermissionsPermissionIdFk;
+    private transient PermissionPath _permissionId;
 
     /**
      * Get the implicit join path to the <code>PERMISSION</code> table, via the
      * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK</code> key.
      */
-    public PermissionPath userProjectEffectivePermissionsPermissionIdFk() {
-        if (_userProjectEffectivePermissionsPermissionIdFk == null)
-            _userProjectEffectivePermissionsPermissionIdFk = new PermissionPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK, null);
+    public PermissionPath permissionId() {
+        if (_permissionId == null)
+            _permissionId = new PermissionPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_ID_FK, null);
 
-        return _userProjectEffectivePermissionsPermissionIdFk;
+        return _permissionId;
     }
 
-    private transient PermissionPath _userProjectEffectivePermissionsPermissionNameFk;
+    private transient PermissionPath _permissionName;
 
     /**
      * Get the implicit join path to the <code>PERMISSION</code> table, via the
      * <code>USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK</code> key.
      */
-    public PermissionPath userProjectEffectivePermissionsPermissionNameFk() {
-        if (_userProjectEffectivePermissionsPermissionNameFk == null)
-            _userProjectEffectivePermissionsPermissionNameFk = new PermissionPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK, null);
+    public PermissionPath permissionName() {
+        if (_permissionName == null)
+            _permissionName = new PermissionPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_PERMISSION_NAME_FK, null);
 
-        return _userProjectEffectivePermissionsPermissionNameFk;
+        return _permissionName;
     }
 
     private transient ProjectPath _project;
@@ -208,7 +208,7 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
      */
     public ProjectPath project() {
         if (_project == null)
-            _project = new ProjectPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK, null);
+            _project = new ProjectPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_PROJECT_FK, null);
 
         return _project;
     }
@@ -220,7 +220,7 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
      */
     public UserPath user() {
         if (_user == null)
-            _user = new UserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS__USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK, null);
+            _user = new UserPath(this, Keys.USER_PROJECT_EFFECTIVE_PERMISSIONS_USER_FK, null);
 
         return _user;
     }

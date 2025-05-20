@@ -55,7 +55,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class License extends TableImpl<LicenseRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -386899321;
 
     /**
      * The reference instance of <code>LICENSE</code>
@@ -181,7 +181,7 @@ public class License extends TableImpl<LicenseRecord> {
     )
     public static class LicensePath extends License implements Path<LicenseRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -386899321;
         public <O extends Record> LicensePath(Table<O> path, ForeignKey<O, LicenseRecord> childPath, InverseForeignKey<O, LicenseRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -237,7 +237,7 @@ public class License extends TableImpl<LicenseRecord> {
      */
     public ComponentPath component() {
         if (_component == null)
-            _component = new ComponentPath(this, null, Keys.COMPONENT__COMPONENT_LICENSE_FK.getInverseKey());
+            _component = new ComponentPath(this, null, Keys.COMPONENT_LICENSE_FK.getInverseKey());
 
         return _component;
     }

@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class PolicyRecord extends UpdatableRecordImpl<PolicyRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 54002621;
 
     /**
      * Setter for <code>POLICY.ID</code>.

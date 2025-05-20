@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ComponentPropertyRecord extends UpdatableRecordImpl<ComponentPropertyRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1838061987;
 
     /**
      * Setter for <code>COMPONENT_PROPERTY.ID</code>.

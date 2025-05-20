@@ -50,7 +50,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 573413810;
 
     /**
      * The reference instance of <code>PROJECT_HIERARCHY</code>
@@ -126,7 +126,7 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
     )
     public static class ProjectHierarchyPath extends ProjectHierarchy implements Path<ProjectHierarchyRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 573413810;
         public <O extends Record> ProjectHierarchyPath(Table<O> path, ForeignKey<O, ProjectHierarchyRecord> childPath, InverseForeignKey<O, ProjectHierarchyRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -162,7 +162,7 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
 
     @Override
     public List<ForeignKey<ProjectHierarchyRecord, ?>> getReferences() {
-        return Arrays.asList(Keys.PROJECT_HIERARCHY__PROJECT_HIERARCHY_CHILD_PROJECT_FK, Keys.PROJECT_HIERARCHY__PROJECT_HIERARCHY_PARENT_PROJECT_FK);
+        return Arrays.asList(Keys.PROJECT_HIERARCHY_CHILD_PROJECT_FK, Keys.PROJECT_HIERARCHY_PARENT_PROJECT_FK);
     }
 
     private transient ProjectPath _projectHierarchyChildProjectFk;
@@ -173,7 +173,7 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
      */
     public ProjectPath projectHierarchyChildProjectFk() {
         if (_projectHierarchyChildProjectFk == null)
-            _projectHierarchyChildProjectFk = new ProjectPath(this, Keys.PROJECT_HIERARCHY__PROJECT_HIERARCHY_CHILD_PROJECT_FK, null);
+            _projectHierarchyChildProjectFk = new ProjectPath(this, Keys.PROJECT_HIERARCHY_CHILD_PROJECT_FK, null);
 
         return _projectHierarchyChildProjectFk;
     }
@@ -186,7 +186,7 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
      */
     public ProjectPath projectHierarchyParentProjectFk() {
         if (_projectHierarchyParentProjectFk == null)
-            _projectHierarchyParentProjectFk = new ProjectPath(this, Keys.PROJECT_HIERARCHY__PROJECT_HIERARCHY_PARENT_PROJECT_FK, null);
+            _projectHierarchyParentProjectFk = new ProjectPath(this, Keys.PROJECT_HIERARCHY_PARENT_PROJECT_FK, null);
 
         return _projectHierarchyParentProjectFk;
     }
