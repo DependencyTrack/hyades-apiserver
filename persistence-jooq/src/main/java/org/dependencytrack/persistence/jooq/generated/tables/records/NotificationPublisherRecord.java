@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class NotificationPublisherRecord extends UpdatableRecordImpl<NotificationPublisherRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -140065302;
 
     /**
      * Setter for <code>NOTIFICATIONPUBLISHER.ID</code>.

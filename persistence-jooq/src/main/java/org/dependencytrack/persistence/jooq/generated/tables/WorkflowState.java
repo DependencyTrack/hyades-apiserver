@@ -57,7 +57,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class WorkflowState extends TableImpl<WorkflowStateRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 136710125;
 
     /**
      * The reference instance of <code>WORKFLOW_STATE</code>
@@ -158,7 +158,7 @@ public class WorkflowState extends TableImpl<WorkflowStateRecord> {
     )
     public static class WorkflowStatePath extends WorkflowState implements Path<WorkflowStateRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 136710125;
         public <O extends Record> WorkflowStatePath(Table<O> path, ForeignKey<O, WorkflowStateRecord> childPath, InverseForeignKey<O, WorkflowStateRecord> parentPath) {
             super(path, childPath, parentPath);
         }

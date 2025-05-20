@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class TeamsPermissionsRecord extends UpdatableRecordImpl<TeamsPermissionsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1282451951;
 
     /**
      * Setter for <code>TEAMS_PERMISSIONS.TEAM_ID</code>.

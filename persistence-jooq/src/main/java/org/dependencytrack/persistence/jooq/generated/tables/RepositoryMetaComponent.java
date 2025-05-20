@@ -49,7 +49,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class RepositoryMetaComponent extends TableImpl<RepositoryMetaComponentRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1187611547;
 
     /**
      * The reference instance of <code>REPOSITORY_META_COMPONENT</code>

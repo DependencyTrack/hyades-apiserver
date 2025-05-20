@@ -44,7 +44,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class PortfolioMetrics extends TableImpl<PortfolioMetricsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1604183279;
 
     /**
      * The reference instance of <code>PORTFOLIOMETRICS</code>

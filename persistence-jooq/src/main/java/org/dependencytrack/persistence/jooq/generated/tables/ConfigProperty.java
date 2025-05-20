@@ -46,7 +46,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ConfigProperty extends TableImpl<ConfigPropertyRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1963189124;
 
     /**
      * The reference instance of <code>CONFIGPROPERTY</code>

@@ -49,7 +49,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Epss extends TableImpl<EpssRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1806497615;
 
     /**
      * The reference instance of <code>EPSS</code>

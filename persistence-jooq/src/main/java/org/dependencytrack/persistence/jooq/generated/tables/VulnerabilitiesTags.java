@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1626926470;
 
     /**
      * The reference instance of <code>VULNERABILITIES_TAGS</code>
@@ -122,7 +122,7 @@ public class VulnerabilitiesTags extends TableImpl<VulnerabilitiesTagsRecord> {
     )
     public static class VulnerabilitiesTagsPath extends VulnerabilitiesTags implements Path<VulnerabilitiesTagsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1626926470;
         public <O extends Record> VulnerabilitiesTagsPath(Table<O> path, ForeignKey<O, VulnerabilitiesTagsRecord> childPath, InverseForeignKey<O, VulnerabilitiesTagsRecord> parentPath) {
             super(path, childPath, parentPath);
         }

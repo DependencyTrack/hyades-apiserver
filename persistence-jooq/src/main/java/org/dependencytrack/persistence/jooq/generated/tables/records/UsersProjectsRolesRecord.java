@@ -24,7 +24,7 @@ import org.jooq.impl.TableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class UsersProjectsRolesRecord extends TableRecordImpl<UsersProjectsRolesRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -147063056;
 
     /**
      * Setter for <code>USERS_PROJECTS_ROLES.USER_ID</code>.

@@ -52,7 +52,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffectivePermissionsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2035432985;
 
     /**
      * The reference instance of <code>USER_PROJECT_EFFECTIVE_PERMISSIONS</code>
@@ -136,7 +136,7 @@ public class UserProjectEffectivePermissions extends TableImpl<UserProjectEffect
     )
     public static class UserProjectEffectivePermissionsPath extends UserProjectEffectivePermissions implements Path<UserProjectEffectivePermissionsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 2035432985;
         public <O extends Record> UserProjectEffectivePermissionsPath(Table<O> path, ForeignKey<O, UserProjectEffectivePermissionsRecord> childPath, InverseForeignKey<O, UserProjectEffectivePermissionsRecord> parentPath) {
             super(path, childPath, parentPath);
         }

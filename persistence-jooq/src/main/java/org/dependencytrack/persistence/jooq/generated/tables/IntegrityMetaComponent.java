@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class IntegrityMetaComponent extends TableImpl<IntegrityMetaComponentRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1317194047;
 
     /**
      * The reference instance of <code>INTEGRITY_META_COMPONENT</code>

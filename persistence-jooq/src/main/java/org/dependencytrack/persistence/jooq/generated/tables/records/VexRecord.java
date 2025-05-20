@@ -28,7 +28,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class VexRecord extends UpdatableRecordImpl<VexRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 656810192;
 
     /**
      * Setter for <code>VEX.ID</code>.

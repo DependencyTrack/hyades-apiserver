@@ -30,7 +30,7 @@ import org.jooq.impl.SQLDataType;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class JsonbVulnAliases extends AbstractRoutine<JSONB> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1914958624;
 
     /**
      * The parameter <code>jsonb_vuln_aliases.RETURN_VALUE</code>.

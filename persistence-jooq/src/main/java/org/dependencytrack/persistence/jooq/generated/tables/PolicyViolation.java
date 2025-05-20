@@ -58,7 +58,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class PolicyViolation extends TableImpl<PolicyViolationRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1684309677;
 
     /**
      * The reference instance of <code>POLICYVIOLATION</code>
@@ -159,7 +159,7 @@ public class PolicyViolation extends TableImpl<PolicyViolationRecord> {
     )
     public static class PolicyViolationPath extends PolicyViolation implements Path<PolicyViolationRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1684309677;
         public <O extends Record> PolicyViolationPath(Table<O> path, ForeignKey<O, PolicyViolationRecord> childPath, InverseForeignKey<O, PolicyViolationRecord> parentPath) {
             super(path, childPath, parentPath);
         }

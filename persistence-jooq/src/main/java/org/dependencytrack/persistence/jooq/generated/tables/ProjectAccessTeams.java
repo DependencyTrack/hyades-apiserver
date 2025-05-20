@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 873948858;
 
     /**
      * The reference instance of <code>PROJECT_ACCESS_TEAMS</code>
@@ -122,7 +122,7 @@ public class ProjectAccessTeams extends TableImpl<ProjectAccessTeamsRecord> {
     )
     public static class ProjectAccessTeamsPath extends ProjectAccessTeams implements Path<ProjectAccessTeamsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 873948858;
         public <O extends Record> ProjectAccessTeamsPath(Table<O> path, ForeignKey<O, ProjectAccessTeamsRecord> childPath, InverseForeignKey<O, ProjectAccessTeamsRecord> parentPath) {
             super(path, childPath, parentPath);
         }

@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class UserProjectEffectivePermissionsRecord extends UpdatableRecordImpl<UserProjectEffectivePermissionsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -934414569;
 
     /**
      * Setter for <code>USER_PROJECT_EFFECTIVE_PERMISSIONS.PROJECT_ID</code>.

@@ -59,7 +59,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Tag extends TableImpl<TagRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -59691910;
 
     /**
      * The reference instance of <code>TAG</code>
@@ -130,7 +130,7 @@ public class Tag extends TableImpl<TagRecord> {
     )
     public static class TagPath extends Tag implements Path<TagRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -59691910;
         public <O extends Record> TagPath(Table<O> path, ForeignKey<O, TagRecord> childPath, InverseForeignKey<O, TagRecord> parentPath) {
             super(path, childPath, parentPath);
         }

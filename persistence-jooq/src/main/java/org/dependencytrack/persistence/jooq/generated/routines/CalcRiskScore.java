@@ -31,7 +31,7 @@ import org.jooq.impl.SQLDataType;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class CalcRiskScore extends AbstractRoutine<BigDecimal> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -2141815729;
 
     /**
      * The parameter <code>CALC_RISK_SCORE.RETURN_VALUE</code>.

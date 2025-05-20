@@ -55,7 +55,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ApiKey extends TableImpl<ApiKeyRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -711465365;
 
     /**
      * The reference instance of <code>APIKEY</code>
@@ -151,7 +151,7 @@ public class ApiKey extends TableImpl<ApiKeyRecord> {
     )
     public static class ApiKeyPath extends ApiKey implements Path<ApiKeyRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -711465365;
         public <O extends Record> ApiKeyPath(Table<O> path, ForeignKey<O, ApiKeyRecord> childPath, InverseForeignKey<O, ApiKeyRecord> parentPath) {
             super(path, childPath, parentPath);
         }

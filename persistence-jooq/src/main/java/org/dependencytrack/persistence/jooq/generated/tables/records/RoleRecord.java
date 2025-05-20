@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class RoleRecord extends UpdatableRecordImpl<RoleRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -404691591;
 
     /**
      * Setter for <code>ROLE.ID</code>.

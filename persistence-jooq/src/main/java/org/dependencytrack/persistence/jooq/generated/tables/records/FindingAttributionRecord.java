@@ -28,7 +28,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class FindingAttributionRecord extends UpdatableRecordImpl<FindingAttributionRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1597754647;
 
     /**
      * Setter for <code>FINDINGATTRIBUTION.ID</code>.

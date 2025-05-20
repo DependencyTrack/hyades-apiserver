@@ -143,6 +143,7 @@
                                         </target>
                                         <generate>
                                             <fluentSetters>true</fluentSetters>
+                                            <generatedSerialVersionUID>HASH</generatedSerialVersionUID>
                                         </generate>
                                         <strategy>
                                             <matchers>
@@ -230,6 +231,7 @@
                                                         </fieldIdentifier>
                                                     </field>
                                                 </fields>
+
                                                 <foreignKeys>
                                                     <foreignKey>
                                                         <expression>
@@ -327,6 +329,7 @@
                                                         </pathMethodName>
                                                     </foreignKey>
                                                     <foreignKey>
+                                                        <!-- Generate all FK constant names to match database identifier -->
                                                         <keyIdentifier>
                                                             <expression>$0</expression>
                                                         </keyIdentifier>

@@ -68,7 +68,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Component extends TableImpl<ComponentRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1731235713;
 
     /**
      * The reference instance of <code>COMPONENT</code>
@@ -329,7 +329,7 @@ public class Component extends TableImpl<ComponentRecord> {
     )
     public static class ComponentPath extends Component implements Path<ComponentRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1731235713;
         public <O extends Record> ComponentPath(Table<O> path, ForeignKey<O, ComponentRecord> childPath, InverseForeignKey<O, ComponentRecord> parentPath) {
             super(path, childPath, parentPath);
         }

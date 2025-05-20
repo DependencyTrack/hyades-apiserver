@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class NotificationRuleTeams extends TableImpl<NotificationRuleTeamsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 802684418;
 
     /**
      * The reference instance of <code>NOTIFICATIONRULE_TEAMS</code>
@@ -122,7 +122,7 @@ public class NotificationRuleTeams extends TableImpl<NotificationRuleTeamsRecord
     )
     public static class NotificationRuleTeamsPath extends NotificationRuleTeams implements Path<NotificationRuleTeamsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 802684418;
         public <O extends Record> NotificationRuleTeamsPath(Table<O> path, ForeignKey<O, NotificationRuleTeamsRecord> childPath, InverseForeignKey<O, NotificationRuleTeamsRecord> parentPath) {
             super(path, childPath, parentPath);
         }

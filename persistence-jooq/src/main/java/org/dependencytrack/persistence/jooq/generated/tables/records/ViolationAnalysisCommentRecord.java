@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ViolationAnalysisCommentRecord extends UpdatableRecordImpl<ViolationAnalysisCommentRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 392460294;
 
     /**
      * Setter for <code>VIOLATIONANALYSISCOMMENT.ID</code>.

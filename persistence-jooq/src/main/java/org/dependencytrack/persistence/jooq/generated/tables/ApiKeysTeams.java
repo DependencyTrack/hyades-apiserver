@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ApiKeysTeams extends TableImpl<ApiKeysTeamsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1570762444;
 
     /**
      * The reference instance of <code>APIKEYS_TEAMS</code>
@@ -122,7 +122,7 @@ public class ApiKeysTeams extends TableImpl<ApiKeysTeamsRecord> {
     )
     public static class ApiKeysTeamsPath extends ApiKeysTeams implements Path<ApiKeysTeamsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1570762444;
         public <O extends Record> ApiKeysTeamsPath(Table<O> path, ForeignKey<O, ApiKeysTeamsRecord> childPath, InverseForeignKey<O, ApiKeysTeamsRecord> parentPath) {
             super(path, childPath, parentPath);
         }

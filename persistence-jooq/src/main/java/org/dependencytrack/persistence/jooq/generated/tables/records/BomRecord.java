@@ -28,7 +28,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class BomRecord extends UpdatableRecordImpl<BomRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1158088535;
 
     /**
      * Setter for <code>BOM.ID</code>.

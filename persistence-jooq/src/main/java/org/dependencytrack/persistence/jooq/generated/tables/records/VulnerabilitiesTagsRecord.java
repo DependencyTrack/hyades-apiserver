@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class VulnerabilitiesTagsRecord extends UpdatableRecordImpl<VulnerabilitiesTagsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 822864282;
 
     /**
      * Setter for <code>VULNERABILITIES_TAGS.TAG_ID</code>.

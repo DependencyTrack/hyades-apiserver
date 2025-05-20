@@ -50,7 +50,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 75786160;
 
     /**
      * The reference instance of <code>PROJECT_HIERARCHY</code>
@@ -126,7 +126,7 @@ public class ProjectHierarchy extends TableImpl<ProjectHierarchyRecord> {
     )
     public static class ProjectHierarchyPath extends ProjectHierarchy implements Path<ProjectHierarchyRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 75786160;
         public <O extends Record> ProjectHierarchyPath(Table<O> path, ForeignKey<O, ProjectHierarchyRecord> childPath, InverseForeignKey<O, ProjectHierarchyRecord> parentPath) {
             super(path, childPath, parentPath);
         }

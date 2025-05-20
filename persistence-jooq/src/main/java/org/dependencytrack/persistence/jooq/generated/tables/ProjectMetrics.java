@@ -51,7 +51,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectMetrics extends TableImpl<ProjectMetricsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1382780670;
 
     /**
      * The reference instance of <code>PROJECTMETRICS</code>
@@ -272,7 +272,7 @@ public class ProjectMetrics extends TableImpl<ProjectMetricsRecord> {
     )
     public static class ProjectMetricsPath extends ProjectMetrics implements Path<ProjectMetricsRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1382780670;
         public <O extends Record> ProjectMetricsPath(Table<O> path, ForeignKey<O, ProjectMetricsRecord> childPath, InverseForeignKey<O, ProjectMetricsRecord> parentPath) {
             super(path, childPath, parentPath);
         }

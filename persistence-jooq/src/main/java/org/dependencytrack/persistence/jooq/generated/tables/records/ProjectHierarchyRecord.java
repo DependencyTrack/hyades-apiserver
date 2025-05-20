@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectHierarchyRecord extends UpdatableRecordImpl<ProjectHierarchyRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -407800101;
 
     /**
      * Setter for <code>PROJECT_HIERARCHY.PARENT_PROJECT_ID</code>.

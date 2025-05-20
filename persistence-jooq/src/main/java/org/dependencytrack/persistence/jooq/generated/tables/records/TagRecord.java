@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class TagRecord extends UpdatableRecordImpl<TagRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1486904060;
 
     /**
      * Setter for <code>TAG.ID</code>.

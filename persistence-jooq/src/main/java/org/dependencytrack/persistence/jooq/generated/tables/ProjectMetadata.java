@@ -53,7 +53,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 228933682;
 
     /**
      * The reference instance of <code>PROJECT_METADATA</code>
@@ -139,7 +139,7 @@ public class ProjectMetadata extends TableImpl<ProjectMetadataRecord> {
     )
     public static class ProjectMetadataPath extends ProjectMetadata implements Path<ProjectMetadataRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 228933682;
         public <O extends Record> ProjectMetadataPath(Table<O> path, ForeignKey<O, ProjectMetadataRecord> childPath, InverseForeignKey<O, ProjectMetadataRecord> parentPath) {
             super(path, childPath, parentPath);
         }

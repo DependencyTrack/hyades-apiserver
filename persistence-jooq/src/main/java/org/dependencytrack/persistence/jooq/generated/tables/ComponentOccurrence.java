@@ -54,7 +54,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1139580904;
 
     /**
      * The reference instance of <code>COMPONENT_OCCURRENCE</code>
@@ -150,7 +150,7 @@ public class ComponentOccurrence extends TableImpl<ComponentOccurrenceRecord> {
     )
     public static class ComponentOccurrencePath extends ComponentOccurrence implements Path<ComponentOccurrenceRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1139580904;
         public <O extends Record> ComponentOccurrencePath(Table<O> path, ForeignKey<O, ComponentOccurrenceRecord> childPath, InverseForeignKey<O, ComponentOccurrenceRecord> parentPath) {
             super(path, childPath, parentPath);
         }

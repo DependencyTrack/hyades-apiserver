@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ApiKeysTeamsRecord extends UpdatableRecordImpl<ApiKeysTeamsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -2091283289;
 
     /**
      * Setter for <code>APIKEYS_TEAMS.TEAM_ID</code>.

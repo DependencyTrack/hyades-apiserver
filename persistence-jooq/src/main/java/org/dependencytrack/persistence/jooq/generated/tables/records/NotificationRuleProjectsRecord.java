@@ -24,7 +24,7 @@ import org.jooq.impl.TableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class NotificationRuleProjectsRecord extends TableRecordImpl<NotificationRuleProjectsRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -458610639;
 
     /**
      * Setter for <code>NOTIFICATIONRULE_PROJECTS.NOTIFICATIONRULE_ID</code>.

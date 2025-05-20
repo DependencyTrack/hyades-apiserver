@@ -28,7 +28,7 @@ import org.jooq.impl.SQLDataType;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class RecalcUserProjectRoleEffectivePermissions extends AbstractRoutine<java.lang.Void> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2073358932;
 
     /**
      * The parameter

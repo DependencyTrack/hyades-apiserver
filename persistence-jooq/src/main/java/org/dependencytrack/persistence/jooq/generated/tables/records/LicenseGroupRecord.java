@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class LicenseGroupRecord extends UpdatableRecordImpl<LicenseGroupRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -2014332549;
 
     /**
      * Setter for <code>LICENSEGROUP.ID</code>.

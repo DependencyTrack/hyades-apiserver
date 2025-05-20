@@ -54,7 +54,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Role extends TableImpl<RoleRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1832423169;
 
     /**
      * The reference instance of <code>ROLE</code>
@@ -130,7 +130,7 @@ public class Role extends TableImpl<RoleRecord> {
     )
     public static class RolePath extends Role implements Path<RoleRecord> {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1832423169;
         public <O extends Record> RolePath(Table<O> path, ForeignKey<O, RoleRecord> childPath, InverseForeignKey<O, RoleRecord> parentPath) {
             super(path, childPath, parentPath);
         }

@@ -27,7 +27,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class RepositoryRecord extends UpdatableRecordImpl<RepositoryRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 193876256;
 
     /**
      * Setter for <code>REPOSITORY.ID</code>.

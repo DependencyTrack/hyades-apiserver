@@ -25,7 +25,7 @@ import org.jooq.impl.UpdatableRecordImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class ProjectMetadataRecord extends UpdatableRecordImpl<ProjectMetadataRecord> {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -462682031;
 
     /**
      * Setter for <code>PROJECT_METADATA.ID</code>.
