@@ -40,7 +40,7 @@
     <class>org.dependencytrack.model.Component</class>
     <class>org.dependencytrack.model.ComponentOccurrence</class>
     <class>org.dependencytrack.model.ComponentProperty</class>
-    <class>org.dependencytrack.model.DependencyMetrics</class>
+    <class>org.dependencytrack.model.IntegrityMetaComponent</class>
     <class>org.dependencytrack.model.Epss</class>
     <class>org.dependencytrack.model.FindingAttribution</class>
     <class>org.dependencytrack.model.IntegrityAnalysis</class>
@@ -52,10 +52,8 @@
     <class>org.dependencytrack.model.Policy</class>
     <class>org.dependencytrack.model.PolicyCondition</class>
     <class>org.dependencytrack.model.PolicyViolation</class>
-    <class>org.dependencytrack.model.PortfolioMetrics</class>
     <class>org.dependencytrack.model.Project</class>
     <class>org.dependencytrack.model.ProjectMetadata</class>
-    <class>org.dependencytrack.model.ProjectMetrics</class>
     <class>org.dependencytrack.model.ProjectProperty</class>
     <class>org.dependencytrack.model.ProjectRole</class>
     <class>org.dependencytrack.model.Repository</class>

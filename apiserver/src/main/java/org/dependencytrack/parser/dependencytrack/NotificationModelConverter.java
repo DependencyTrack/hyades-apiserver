@@ -339,7 +339,7 @@ public final class NotificationModelConverter {
         Optional.ofNullable(project.getDescription()).ifPresent(builder::setDescription);
         Optional.ofNullable(project.getPurl()).map(PackageURL::canonicalize).ifPresent(builder::setPurl);
         Optional.ofNullable(project.getTags())
-                .orElseGet(Collections::emptyList).stream()
+                .orElseGet(Collections::emptySet).stream()
                 .map(Tag::getName)
                 .forEach(builder::addTags);
 

@@ -53,7 +53,6 @@ import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -66,9 +65,7 @@ import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
-import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ProjectRole;
 import org.dependencytrack.model.Repository;
@@ -618,15 +615,15 @@ public class QueryManager extends AlpineQueryManager {
         return getTagQueryManager().createTags(names);
     }
 
-    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent, PackageURL purl, Date inactiveSince, boolean commitIndex) {
+    public Project createProject(String name, String description, String version, Collection<Tag> tags, Project parent, PackageURL purl, Date inactiveSince, boolean commitIndex) {
         return getProjectQueryManager().createProject(name, description, version, tags, parent, purl, inactiveSince, commitIndex);
     }
 
-    public Project createProject(final Project project, List<Tag> tags, boolean commitIndex) {
+    public Project createProject(final Project project, Collection<Tag> tags, boolean commitIndex) {
         return getProjectQueryManager().createProject(project, tags, commitIndex);
     }
 
-    public Project createProject(String name, String description, String version, List<Tag> tags, Project parent,
+    public Project createProject(String name, String description, String version, Collection<Tag> tags, Project parent,
                                  PackageURL purl, Date inactiveSince, boolean isLatest, boolean commitIndex) {
         return getProjectQueryManager().createProject(name, description, version, tags, parent, purl, inactiveSince, isLatest, commitIndex);
     }
@@ -1092,44 +1089,8 @@ public class QueryManager extends AlpineQueryManager {
         return getMetricsQueryManager().getVulnerabilityMetrics();
     }
 
-    public PortfolioMetrics getMostRecentPortfolioMetrics() {
-        return getMetricsQueryManager().getMostRecentPortfolioMetrics();
-    }
-
-    public PaginatedResult getPortfolioMetrics() {
-        return getMetricsQueryManager().getPortfolioMetrics();
-    }
-
-    public ProjectMetrics getMostRecentProjectMetrics(Project project) {
-        return getMetricsQueryManager().getMostRecentProjectMetrics(project);
-    }
-
-    public PaginatedResult getProjectMetrics(Project project) {
-        return getMetricsQueryManager().getProjectMetrics(project);
-    }
-
-    public DependencyMetrics getMostRecentDependencyMetrics(Component component) {
-        return getMetricsQueryManager().getMostRecentDependencyMetrics(component);
-    }
-
-    public DependencyMetrics getMostRecentDependencyMetricsById(long component) {
-        return getMetricsQueryManager().getMostRecentDependencyMetricsById(component);
-    }
-
-    public PaginatedResult getDependencyMetrics(Component component) {
-        return getMetricsQueryManager().getDependencyMetrics(component);
-    }
-
     public void synchronizeVulnerabilityMetrics(List<VulnerabilityMetrics> metrics) {
         getMetricsQueryManager().synchronizeVulnerabilityMetrics(metrics);
-    }
-
-    void deleteMetrics(Project project) {
-        getMetricsQueryManager().deleteMetrics(project);
-    }
-
-    void deleteMetrics(Component component) {
-        getMetricsQueryManager().deleteMetrics(component);
     }
 
     public PaginatedResult getRepositories() {
@@ -1266,7 +1227,7 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().bind(project, tags, keepExisting);
     }
 
-    public void bind(Project project, List<Tag> tags) {
+    public void bind(Project project, Collection<Tag> tags) {
         getProjectQueryManager().bind(project, tags);
     }
 
@@ -1876,15 +1837,19 @@ public class QueryManager extends AlpineQueryManager {
         return getEpssQueryManager().getEpssForCveIds(cveIds);
     }
 
-    public List<Tag> resolveTags(final List<Tag> tags) {
+    public Set<Tag> resolveTags(final Collection<Tag> tags) {
         return getTagQueryManager().resolveTags(tags);
     }
 
-    public List<Tag> resolveTagsByName(final List<String> tagNames) {
+    public Set<Tag> resolveTagsByName(final Collection<String> tagNames) {
         return getTagQueryManager().resolveTagsByName(tagNames);
     }
 
-    public void bind(Vulnerability vulnerability, List<Tag> tags) {
+    public boolean bind(final Vulnerability vuln, final Collection<Tag> tags, final boolean keepExisting) {
+        return getVulnerabilityQueryManager().bind(vuln, tags, keepExisting);
+    }
+
+    public void bind(Vulnerability vulnerability, Collection<Tag> tags) {
         getVulnerabilityQueryManager().bind(vulnerability, tags);
     }
 

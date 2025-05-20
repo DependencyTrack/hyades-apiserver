@@ -25,9 +25,16 @@ import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.dependencytrack.persistence.jdbi.MetricsTestDao;
+import org.jdbi.v3.core.Handle;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.function.BiConsumer;
@@ -35,11 +42,32 @@ import java.util.function.BiConsumer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
+    private Handle jdbiHandle;
+    private MetricsDao metricsDao;
+    private MetricsTestDao metricsTestDao;
+
+    @Before
+    public void before() throws Exception {
+        super.before();
+        jdbiHandle = openJdbiHandle();
+        metricsDao = jdbiHandle.attach(MetricsDao.class);
+        metricsTestDao = jdbiHandle.attach(MetricsTestDao.class);
+    }
+
+    @After
+    public void after() {
+        if (jdbiHandle != null) {
+            jdbiHandle.close();
+        }
+        super.after();
+    }
+
     @Test
-    public void test() {
+    public void test() throws Exception {
         qm.createConfigProperty(
                 MAINTENANCE_METRICS_RETENTION_DAYS.getGroupName(),
                 MAINTENANCE_METRICS_RETENTION_DAYS.getPropertyName(),
@@ -58,41 +86,56 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         qm.persist(component);
 
         final BiConsumer<Instant, Integer> createComponentMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            final var metrics = new DependencyMetrics();
-            metrics.setProject(project);
-            metrics.setComponent(component);
+            var metrics = new DependencyMetrics();
+            metrics.setProjectId(project.getId());
+            metrics.setComponentId(component.getId());
             metrics.setVulnerabilities(vulns);
             metrics.setFirstOccurrence(Date.from(lastOccurrence));
             metrics.setLastOccurrence(Date.from(lastOccurrence));
-            qm.persist(metrics);
+            metricsTestDao.createDependencyMetrics(metrics);
         };
 
         final BiConsumer<Instant, Integer> createProjectMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            final var metrics = new ProjectMetrics();
-            metrics.setProject(project);
+            var metrics = new ProjectMetrics();
+            metrics.setProjectId(project.getId());
             metrics.setVulnerabilities(vulns);
             metrics.setFirstOccurrence(Date.from(lastOccurrence));
             metrics.setLastOccurrence(Date.from(lastOccurrence));
-            qm.persist(metrics);
+            metricsTestDao.createProjectMetrics(metrics);
         };
 
         final BiConsumer<Instant, Integer> createPortfolioMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            final var metrics = new PortfolioMetrics();
+            var metrics = new PortfolioMetrics();
             metrics.setVulnerabilities(vulns);
             metrics.setFirstOccurrence(Date.from(lastOccurrence));
             metrics.setLastOccurrence(Date.from(lastOccurrence));
-            qm.persist(metrics);
+            metricsTestDao.createPortfolioMetrics(metrics);
         };
 
         final Instant now = Instant.now();
+
+        // Create component metrics partitions for dates required
+        metricsTestDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 91);
+        metricsTestDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 90);
+        metricsTestDao.createPartitionForDaysAgo("DEPENDENCYMETRICS", 89);
 
         createComponentMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createComponentMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createComponentMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
 
+        // Create project metrics partitions for dates required
+        metricsTestDao.createPartitionForDaysAgo("PROJECTMETRICS", 91);
+        metricsTestDao.createPartitionForDaysAgo("PROJECTMETRICS", 90);
+        metricsTestDao.createPartitionForDaysAgo("PROJECTMETRICS", 89);
+
         createProjectMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createProjectMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createProjectMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
+
+        // Create portfolio metrics partitions for dates required
+        metricsTestDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 91);
+        metricsTestDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 90);
+        metricsTestDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 89);
 
         createPortfolioMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
         createPortfolioMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
@@ -101,92 +144,31 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         final var task = new MetricsMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new MetricsMaintenanceEvent()));
 
-        assertThat(qm.getDependencyMetrics(component).getList(DependencyMetrics.class)).satisfiesExactly(
+        assertThat(metricsDao.getDependencyMetricsSince(component.getId(), now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
 
-        assertThat(qm.getProjectMetrics(project).getList(ProjectMetrics.class)).satisfiesExactly(
+        assertThat(metricsDao.getProjectMetricsSince(project.getId(), now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
 
-        assertThat(qm.getPortfolioMetrics().getList(PortfolioMetrics.class)).satisfiesExactly(
+        assertThat(metricsDao.getPortfolioMetricsSince(now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
     }
 
     @Test
-    public void testWithInactiveProject() {
-        qm.createConfigProperty(
-                MAINTENANCE_METRICS_RETENTION_DAYS.getGroupName(),
-                MAINTENANCE_METRICS_RETENTION_DAYS.getPropertyName(),
-                MAINTENANCE_METRICS_RETENTION_DAYS.getDefaultPropertyValue(),
-                MAINTENANCE_METRICS_RETENTION_DAYS.getPropertyType(),
-                MAINTENANCE_METRICS_RETENTION_DAYS.getDescription()
-        );
+    public void testCreateMetricsPartitions() {
+        new MetricsMaintenanceTask().inform(new MetricsMaintenanceEvent());
+        var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        var tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
+        var metricsPartitions = metricsDao.getPortfolioMetricsPartitions();
+        assertThat(metricsPartitions.getFirst()).isEqualTo("\"PORTFOLIOMETRICS_%s\"".formatted(today));
+        assertThat(metricsPartitions.getLast()).isEqualTo("\"PORTFOLIOMETRICS_%s\"".formatted(tomorrow));
 
-        final var project = new Project();
-        project.setName("acme-app");
-        project.setInactiveSince(new Date());
-        qm.persist(project);
+        metricsPartitions = metricsDao.getProjectMetricsPartitions();
+        assertThat(metricsPartitions.getFirst()).isEqualTo("\"PROJECTMETRICS_%s\"".formatted(today));
+        assertThat(metricsPartitions.getLast()).isEqualTo("\"PROJECTMETRICS_%s\"".formatted(tomorrow));
 
-        final var component = new Component();
-        component.setProject(project);
-        component.setName("acme-lib");
-        qm.persist(component);
-
-        final BiConsumer<Instant, Integer> createComponentMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            final var metrics = new DependencyMetrics();
-            metrics.setProject(project);
-            metrics.setComponent(component);
-            metrics.setVulnerabilities(vulns);
-            metrics.setFirstOccurrence(Date.from(lastOccurrence));
-            metrics.setLastOccurrence(Date.from(lastOccurrence));
-            qm.persist(metrics);
-        };
-
-        final BiConsumer<Instant, Integer> createProjectMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            final var metrics = new ProjectMetrics();
-            metrics.setProject(project);
-            metrics.setVulnerabilities(vulns);
-            metrics.setFirstOccurrence(Date.from(lastOccurrence));
-            metrics.setLastOccurrence(Date.from(lastOccurrence));
-            qm.persist(metrics);
-        };
-
-        final BiConsumer<Instant, Integer> createPortfolioMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            final var metrics = new PortfolioMetrics();
-            metrics.setVulnerabilities(vulns);
-            metrics.setFirstOccurrence(Date.from(lastOccurrence));
-            metrics.setLastOccurrence(Date.from(lastOccurrence));
-            qm.persist(metrics);
-        };
-
-        final Instant now = Instant.now();
-
-        createComponentMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
-        createComponentMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
-        createComponentMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
-
-        createProjectMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
-        createProjectMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
-        createProjectMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
-
-        createPortfolioMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
-        createPortfolioMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
-        createPortfolioMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
-
-        final var task = new MetricsMaintenanceTask();
-        assertThatNoException().isThrownBy(() -> task.inform(new MetricsMaintenanceEvent()));
-
-        assertThat(qm.getDependencyMetrics(component).getList(DependencyMetrics.class)).satisfiesExactlyInAnyOrder(
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89),
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(90), // Retained b/c project is inactive.
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(91)); // Retained b/c project is inactive.
-
-        assertThat(qm.getProjectMetrics(project).getList(ProjectMetrics.class)).satisfiesExactlyInAnyOrder(
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89),
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(90), // Retained b/c project is inactive.
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(91)); // Retained b/c project is inactive.
-
-        assertThat(qm.getPortfolioMetrics().getList(PortfolioMetrics.class)).satisfiesExactlyInAnyOrder(
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
+        metricsPartitions = metricsDao.getDependencyMetricsPartitions();
+        assertThat(metricsPartitions.getFirst()).isEqualTo("\"DEPENDENCYMETRICS_%s\"".formatted(today));
+        assertThat(metricsPartitions.getLast()).isEqualTo("\"DEPENDENCYMETRICS_%s\"".formatted(tomorrow));
     }
-
 }
