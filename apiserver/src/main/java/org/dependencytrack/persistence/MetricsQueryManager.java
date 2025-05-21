@@ -18,13 +18,7 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
-import org.dependencytrack.model.Component;
-import org.dependencytrack.model.DependencyMetrics;
-import org.dependencytrack.model.PortfolioMetrics;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 
 import javax.jdo.PersistenceManager;
@@ -64,94 +58,6 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Retrieves the most recent PortfolioMetrics.
-     *
-     * @return a PortfolioMetrics object
-     */
-    public PortfolioMetrics getMostRecentPortfolioMetrics() {
-        final Query<PortfolioMetrics> query = pm.newQuery(PortfolioMetrics.class);
-        query.setOrdering("lastOccurrence desc");
-        query.setRange(0, 1);
-        return singleResult(query.execute());
-    }
-
-    /**
-     * Retrieves PortfolioMetrics in descending order starting with the most recent.
-     *
-     * @return a PaginatedResult object
-     */
-    public PaginatedResult getPortfolioMetrics() {
-        final Query<PortfolioMetrics> query = pm.newQuery(PortfolioMetrics.class);
-        query.setOrdering("lastOccurrence desc");
-        return execute(query);
-    }
-
-    /**
-     * Retrieves the most recent ProjectMetrics.
-     *
-     * @param project the Project to retrieve metrics for
-     * @return a ProjectMetrics object
-     */
-    public ProjectMetrics getMostRecentProjectMetrics(Project project) {
-        final Query<ProjectMetrics> query = pm.newQuery(ProjectMetrics.class, "project == :project");
-        query.setOrdering("lastOccurrence desc");
-        query.setRange(0, 1);
-        return singleResult(query.execute(project));
-    }
-
-    /**
-     * Retrieves ProjectMetrics in descending order starting with the most recent.
-     *
-     * @param project the Project to retrieve metrics for
-     * @return a PaginatedResult object
-     */
-    public PaginatedResult getProjectMetrics(Project project) {
-        final Query<ProjectMetrics> query = pm.newQuery(ProjectMetrics.class, "project == :project");
-        query.setOrdering("lastOccurrence desc");
-        return execute(query, project);
-    }
-
-    /**
-     * Retrieves the most recent DependencyMetrics.
-     *
-     * @param component the Component to retrieve metrics for
-     * @return a DependencyMetrics object
-     */
-    public DependencyMetrics getMostRecentDependencyMetrics(Component component) {
-        final Query<DependencyMetrics> query = pm.newQuery(DependencyMetrics.class, "component == :component");
-        query.setOrdering("lastOccurrence desc");
-        query.setRange(0, 1);
-        return singleResult(query.execute(component));
-
-    }
-
-    /**
-     * Retrieves the most recent DependencyMetrics by component ID.
-     *
-     * @param componentId the Component ID to retrieve metrics for
-     * @return a DependencyMetrics object
-     */
-    public DependencyMetrics getMostRecentDependencyMetricsById(long componentId) {
-        final Query<DependencyMetrics> query = pm.newQuery(DependencyMetrics.class, "component.id == :componentId");
-        query.setOrdering("lastOccurrence desc");
-        query.setRange(0, 1);
-        return singleResult(query.execute(componentId));
-
-    }
-
-    /**
-     * Retrieves DependencyMetrics in descending order starting with the most recent.
-     *
-     * @param component the Component to retrieve metrics for
-     * @return a PaginatedResult object
-     */
-    public PaginatedResult getDependencyMetrics(Component component) {
-        final Query<DependencyMetrics> query = pm.newQuery(DependencyMetrics.class, "component == :component");
-        query.setOrdering("lastOccurrence desc");
-        return execute(query, component);
-    }
-
-    /**
      * Synchronizes VulnerabilityMetrics.
      */
     public void synchronizeVulnerabilityMetrics(List<VulnerabilityMetrics> metrics) {
@@ -159,28 +65,5 @@ public class MetricsQueryManager extends QueryManager implements IQueryManager {
             pm.newQuery("DELETE FROM org.dependencytrack.model.VulnerabilityMetrics").execute();
             pm.makePersistentAll(metrics);
         });
-    }
-
-    /**
-     * Delete all metrics associated for the specified Project.
-     *
-     * @param project the Project to delete metrics for
-     */
-    void deleteMetrics(Project project) {
-        final Query<ProjectMetrics> query = pm.newQuery(ProjectMetrics.class, "project == :project");
-        query.deletePersistentAll(project);
-
-        final Query<DependencyMetrics> query2 = pm.newQuery(DependencyMetrics.class, "project == :project");
-        query2.deletePersistentAll(project);
-    }
-
-    /**
-     * Delete all metrics associated for the specified Component.
-     *
-     * @param component the Component to delete metrics for
-     */
-    void deleteMetrics(Component component) {
-        final Query<DependencyMetrics> query = pm.newQuery(DependencyMetrics.class, "component == :component");
-        query.deletePersistentAll(component);
     }
 }

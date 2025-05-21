@@ -26,13 +26,6 @@ import java.util.Date;
 public class PortfolioMetricsTest {
 
     @Test
-    public void testId() {
-        PortfolioMetrics metric = new PortfolioMetrics();
-        metric.setId(111L);
-        Assert.assertEquals(111L, metric.getId());
-    }
-
-    @Test
     public void testCritical() {
         PortfolioMetrics metric = new PortfolioMetrics();
         metric.setCritical(10);

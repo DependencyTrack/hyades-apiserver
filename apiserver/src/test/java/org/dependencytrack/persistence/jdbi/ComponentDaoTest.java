@@ -35,18 +35,23 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.util.DateUtil;
 import org.jdbi.v3.core.Handle;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.jdo.JDOObjectNotFoundException;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class ComponentDaoTest extends PersistenceCapableTest {
 
@@ -137,12 +142,16 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         qm.persist(integrityAnalysis);
 
         // Create metrics for component.
-        final var metrics = new DependencyMetrics();
-        metrics.setProject(project);
-        metrics.setComponent(component);
-        metrics.setFirstOccurrence(new Date());
-        metrics.setLastOccurrence(new Date());
-        qm.persist(metrics);
+        useJdbiHandle(handle ->  {
+            var dao = handle.attach(MetricsTestDao.class);
+            dao.createMetricsPartitionsForDate("DEPENDENCYMETRICS", LocalDate.of(2025, 1, 1));
+            var metrics = new DependencyMetrics();
+            metrics.setProjectId(project.getId());
+            metrics.setComponentId(component.getId());
+            metrics.setFirstOccurrence(Date.from(Instant.now()));
+            metrics.setLastOccurrence(DateUtil.parseShortDate("20250101"));
+            dao.createDependencyMetrics(metrics);
+        });
 
         componentDao.deleteComponent(component.getUuid());
 
@@ -150,7 +159,6 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         assertThat(qm.getAllComponents(project)).isEmpty();
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(Component.class, component.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(Component.class, componentChild.getId()));
-        assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(DependencyMetrics.class, metrics.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(PolicyViolation.class, policyViolation.getId()));
         assertThatExceptionOfType(JDOObjectNotFoundException.class).isThrownBy(() -> qm.getObjectById(IntegrityAnalysis.class, integrityAnalysis.getId()));
 
@@ -159,6 +167,10 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         assertThatNoException().isThrownBy(() -> qm.getObjectById(Vulnerability.class, vuln.getId()));
         assertThatNoException().isThrownBy(() -> qm.getObjectById(PolicyCondition.class, policyCondition.getId()));
         assertThatNoException().isThrownBy(() -> qm.getObjectById(Policy.class, policy.getId()));
+
+        // Ensure that metrics have been deleted.
+        assertThat(withJdbiHandle(handle ->  handle.attach(MetricsDao.class).getDependencyMetricsSince(
+                component.getId(), DateUtil.parseShortDate("20250101").toInstant())).isEmpty());
     }
 
     @Test

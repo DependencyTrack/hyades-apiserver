@@ -160,7 +160,10 @@ performed, and exceptions as that shown above are raised. If this happens, you c
 enhancement like this:
 
 ```shell
-mvn -pl apiserver -Pquick process-classes
+mvn -Pquick \
+  -pl alpine/alpine-model,apiserver \
+  -Dmaven.build.cache.enabled=false \
+  process-classes
 ```
 
 Now just execute the test again, and it should just work.

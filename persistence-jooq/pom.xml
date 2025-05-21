@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.dependencytrack</groupId>
+        <artifactId>dependency-track-parent</artifactId>
+        <version>5.6.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>persistence-jooq</artifactId>
+    <packaging>jar</packaging>
+
+    <properties>
+        <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
+        <checkstyle.skip>true</checkstyle.skip>
+
+        <matcher.pattern>
+            AFFECTED | ALIAS | ALSO | ANALYSIS | ANALYZER | API | APPROVED | ATTRIBUTION | AUDITED
+            | AUTHENTICATION | BASE | BUSINESS | CLASS | COMMENT | COMPONENTS? | CONDITION
+            | CONFIG | COORDINATES | CUSTOM | CVSS | DB | DEPENDENCY | DEPRECATED | EDITION | END
+            | EXCLUDING | EXPLOIT | FAIL | FINDING | FIRST | FRIENDLY | FSF | GROUP | HW | ID
+            | IDENTITY | IMPACT | INCLUDING | INFO | INSTALLED | IS | KEYS? | LAST | LDAP | LIBRE
+            | LICENSE | LIKELIHOOD | MANAGED | MAPPED | METRICS | NAME | NOTIFICATION | OCCURRENCE
+            | OIDC | OPERATIONAL | OSI | OWASP | PARENT | PATCHED | PERMISSIONS? | POLICY
+            | PORTFOLIO | PROJECTS? | PROPERTY | PUBLISHER | PURL | REQUIRED | RISK | ROLES? | RR
+            | RULE | SCAN | SCHEMA | SCORE | SECURITY | SEE | SERVICE | SOFTWARE | START | STATE
+            | SUBSCRIBER | SW | SWID | TAGS? | TARGET | TEAMS? | TECHNICAL | TOTAL | TYPE
+            | UNAUDITED | UPGRADES | USER(?!NAME)S? | V2 | V3 | VALUE | VECTOR | VERSIONS?
+            | VIOLATIONS? | VULN | VULNERABILITIES | VULNERABILITY | VULNERABLE | WARN | WEIGHT
+        </matcher.pattern>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.testcontainers</groupId>
+                    <artifactId>testcontainers-jooq-codegen-maven-plugin</artifactId>
+                    <version>0.0.4</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.jooq</groupId>
+                            <artifactId>jooq-codegen</artifactId>
+                            <version>${lib.jooq.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.liquibase</groupId>
+                            <artifactId>liquibase-core</artifactId>
+                            <version>${lib.liquibase.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.dependencytrack</groupId>
+                            <artifactId>persistence-migration</artifactId>
+                            <version>${project.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.testcontainers</groupId>
+                            <artifactId>postgresql</artifactId>
+                            <version>${lib.testcontainers.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.postgresql</groupId>
+                            <artifactId>postgresql</artifactId>
+                            <version>${lib.postgresql.version}</version>
+                        </dependency>
+                    </dependencies>
+                    <executions>
+                        <execution>
+                            <id>generate-jooq-sources</id>
+                            <goals>
+                                <goal>generate</goal>
+                            </goals>
+                            <phase>generate-sources</phase>
+                            <configuration>
+                                <database>
+                                    <type>POSTGRES</type>
+                                    <containerImage>postgres:13-alpine</containerImage>
+                                    <username>test</username>
+                                    <password>test</password>
+                                    <databaseName>test</databaseName>
+                                </database>
+                                <liquibase>
+                                    <changeLogPath>migration/changelog-main.xml</changeLogPath>
+                                    <changeLogDirectory>
+                                        ${project.parentBaseDir}/persistence-migration/src/main/resources/
+                                    </changeLogDirectory>
+                                    <liquibaseSchemaName>public</liquibaseSchemaName>
+                                    <defaultSchemaName>public</defaultSchemaName>
+                                </liquibase>
+                                <jooq>
+                                    <generator>
+                                        <database>
+                                            <schemaVersionProvider>
+                                                select id
+                                                from databasechangelog
+                                                where id !~ '(function_|procedure_)'
+                                                order by dateexecuted desc
+                                                limit 1
+                                            </schemaVersionProvider>
+                                            <includes>.*</includes>
+                                            <excludes>
+                                                databasechangelog
+                                                | databasechangeloglock
+                                                | dependencymetrics_\d{8}
+                                                | eventservicelog
+                                                | gin_.*
+                                                | gtrgm_.*
+                                                | portfoliometrics_\d{8}
+                                                | projectmetrics_\d{8}
+                                                | set_limit
+                                                | shedlock
+                                                | show_limit
+                                                | show_trgm
+                                                | similarity
+                                                | similarity_dist
+                                                | similarity_op
+                                                | strict_word_similarity
+                                                | strict_word_similarity_commutator_op
+                                                | strict_word_similarity_dist_commutator_op
+                                                | strict_word_similarity_dist_op
+                                                | strict_word_similarity_op
+                                                | word_similarity
+                                                | word_similarity_commutator_op
+                                                | word_similarity_dist_commutator_op
+                                                | word_similarity_dist_op
+                                                | word_similarity_op
+                                            </excludes>
+                                            <inputSchema>public</inputSchema>
+                                            <outputSchemaToDefault>true</outputSchemaToDefault>
+                                        </database>
+                                        <target>
+                                            <packageName>org.dependencytrack.persistence.jooq.generated</packageName>
+                                            <directory>${project.basedir}/src/main/java</directory>
+                                        </target>
+                                        <generate>
+                                            <fluentSetters>true</fluentSetters>
+                                            <generatedSerialVersionUID>HASH</generatedSerialVersionUID>
+                                        </generate>
+                                        <strategy>
+                                            <matchers>
+                                                <tables>
+                                                    <!-- Matcher to fix casing of generated classes for 2-word entity tables -->
+                                                    <table>
+                                                        <expression>
+                                                            ^(${matcher.pattern})(${matcher.pattern})$
+                                                        </expression>
+                                                        <pathClass>
+                                                            <transform>PASCAL</transform>
+                                                            <expression>$1_$2_PATH</expression>
+                                                        </pathClass>
+                                                        <recordClass>
+                                                            <transform>PASCAL</transform>
+                                                            <expression>$1_$2_RECORD</expression>
+                                                        </recordClass>
+                                                        <tableClass>
+                                                            <transform>PASCAL</transform>
+                                                            <expression>$1_$2</expression>
+                                                        </tableClass>
+                                                    </table>
+
+                                                    <!-- Matcher to fix casing of generated classes for 3-word entity tables -->
+                                                    <table>
+                                                        <expression>
+                                                            ^(${matcher.pattern})(${matcher.pattern})_?(${matcher.pattern})$
+                                                        </expression>
+                                                        <pathClass>
+                                                            <transform>PASCAL</transform>
+                                                            <expression>$1_$2_$3_PATH</expression>
+                                                        </pathClass>
+                                                        <recordClass>
+                                                            <transform>PASCAL</transform>
+                                                            <expression>$1_$2_$3_RECORD</expression>
+                                                        </recordClass>
+                                                        <tableClass>
+                                                            <transform>PASCAL</transform>
+                                                            <expression>$1_$2_$3</expression>
+                                                        </tableClass>
+                                                    </table>
+                                                </tables>
+
+                                                <fields>
+                                                    <field>
+                                                        <expression>
+                                                            ^(${matcher.pattern})_?(${matcher.pattern})$
+                                                        </expression>
+                                                        <fieldIdentifier>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2</expression>
+                                                        </fieldIdentifier>
+                                                    </field>
+                                                    <field>
+                                                        <expression>
+                                                            ^(${matcher.pattern})_?(${matcher.pattern})_?(${matcher.pattern})$
+                                                        </expression>
+                                                        <fieldIdentifier>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2_$3</expression>
+                                                        </fieldIdentifier>
+                                                    </field>
+                                                    <field>
+                                                        <expression>
+                                                            ^(${matcher.pattern})_?(${matcher.pattern})_?(${matcher.pattern})_?(${matcher.pattern})$
+                                                        </expression>
+                                                        <fieldIdentifier>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2_$3_$4</expression>
+                                                        </fieldIdentifier>
+                                                    </field>
+                                                    <field>
+                                                        <expression>
+                                                            ^(${matcher.pattern})_?(${matcher.pattern})_?(${matcher.pattern})_?(${matcher.pattern})_?(${matcher.pattern})$
+                                                        </expression>
+                                                        <fieldIdentifier>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2_$3_$4_$5</expression>
+                                                        </fieldIdentifier>
+                                                    </field>
+                                                    <field>
+                                                        <expression>.*</expression>
+                                                        <fieldIdentifier>
+                                                            <transform>CAMEL</transform>
+                                                        </fieldIdentifier>
+                                                    </field>
+                                                </fields>
+
+                                                <foreignKeys>
+                                                    <foreignKey>
+                                                        <expression>
+                                                            ^(${matcher.pattern})(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_FK$
+                                                        </expression>
+                                                        <pathMethodNameInverse>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2_$3</expression>
+                                                        </pathMethodNameInverse>
+                                                        <pathMethodNameManyToMany>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2_$3</expression>
+                                                        </pathMethodNameManyToMany>
+                                                    </foreignKey>
+                                                    <foreignKey>
+                                                        <expression>
+                                                            ^(${matcher.pattern})(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})(${matcher.pattern})_FK$
+                                                        </expression>
+                                                        <pathMethodName>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$4_$5</expression>
+                                                        </pathMethodName>
+                                                        <pathMethodNameInverse>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2_$3</expression>
+                                                        </pathMethodNameInverse>
+                                                        <pathMethodNameManyToMany>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2_$3</expression>
+                                                        </pathMethodNameManyToMany>
+                                                    </foreignKey>
+                                                    <foreignKey>
+                                                        <expression>
+                                                            ^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_FK$
+                                                        </expression>
+                                                        <pathMethodNameInverse>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2</expression>
+                                                        </pathMethodNameInverse>
+                                                        <pathMethodNameManyToMany>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2</expression>
+                                                        </pathMethodNameManyToMany>
+                                                    </foreignKey>
+                                                    <foreignKey>
+                                                        <expression>
+                                                            ^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})(${matcher.pattern})_FK$
+                                                        </expression>
+                                                        <pathMethodName>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$3_$4</expression>
+                                                        </pathMethodName>
+                                                        <pathMethodNameInverse>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2</expression>
+                                                        </pathMethodNameInverse>
+                                                        <pathMethodNameManyToMany>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2</expression>
+                                                        </pathMethodNameManyToMany>
+                                                    </foreignKey>
+                                                    <foreignKey>
+                                                        <expression>
+                                                            ^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_(${matcher.pattern})(${matcher.pattern})_FK$
+                                                        </expression>
+                                                        <pathMethodName>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$4_$5</expression>
+                                                        </pathMethodName>
+                                                        <pathMethodNameInverse>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2_$3</expression>
+                                                        </pathMethodNameInverse>
+                                                        <pathMethodNameManyToMany>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2_$3</expression>
+                                                        </pathMethodNameManyToMany>
+                                                    </foreignKey>
+                                                    <foreignKey>
+                                                        <expression>
+                                                            ^(${matcher.pattern})(${matcher.pattern})_(${matcher.pattern})_(${matcher.pattern})_FK$
+                                                        </expression>
+                                                        <pathMethodNameInverse>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1_$2_$3</expression>
+                                                        </pathMethodNameInverse>
+                                                    </foreignKey>
+                                                    <foreignKey>
+                                                        <expression>
+                                                            ^USER_PROJECT_EFFECTIVE_PERMISSIONS_(.*)_FK$
+                                                        </expression>
+                                                        <pathMethodName>
+                                                            <transform>CAMEL</transform>
+                                                            <expression>$1</expression>
+                                                        </pathMethodName>
+                                                    </foreignKey>
+                                                    <foreignKey>
+                                                        <!-- Generate all FK constant names to match database identifier -->
+                                                        <keyIdentifier>
+                                                            <expression>$0</expression>
+                                                        </keyIdentifier>
+                                                    </foreignKey>
+                                                </foreignKeys>
+                                            </matchers>
+                                        </strategy>
+                                    </generator>
+                                </jooq>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>jooq-codegen</id>
+            <activation>
+                <property>
+                    <name>env.GITHUB_ACTIONS</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.testcontainers</groupId>
+                        <artifactId>testcontainers-jooq-codegen-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

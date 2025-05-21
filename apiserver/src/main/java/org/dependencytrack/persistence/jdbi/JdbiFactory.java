@@ -24,11 +24,8 @@ import alpine.resources.AlpineRequest;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.datanucleus.api.jdo.JDOPersistenceManagerFactory;
-import org.datanucleus.store.connection.ConnectionManagerImpl;
-import org.datanucleus.store.rdbms.ConnectionFactoryImpl;
-import org.datanucleus.store.rdbms.RDBMSStoreManager;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.util.PersistenceUtil;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.HandleCallback;
 import org.jdbi.v3.core.HandleConsumer;
@@ -44,8 +41,6 @@ import javax.jdo.PersistenceManagerFactory;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.apache.commons.lang3.reflect.FieldUtils.readField;
 
 public class JdbiFactory {
 
@@ -173,19 +168,7 @@ public class JdbiFactory {
     }
 
     private static Jdbi createFromPmf(final PersistenceManagerFactory pmf) {
-        try {
-            if (pmf instanceof final JDOPersistenceManagerFactory jdoPmf
-                && jdoPmf.getNucleusContext().getStoreManager() instanceof final RDBMSStoreManager storeManager
-                && storeManager.getConnectionManager() instanceof final ConnectionManagerImpl connectionManager
-                && readField(connectionManager, "primaryConnectionFactory", true) instanceof ConnectionFactoryImpl connectionFactory
-                && readField(connectionFactory, "dataSource", true) instanceof final DataSource dataSource) {
-                return customizeJdbi(Jdbi.create(dataSource));
-            }
-        } catch (IllegalAccessException e) {
-            throw new IllegalStateException("Failed to access datasource of PMF via reflection", e);
-        }
-
-        throw new IllegalStateException("Failed to access primary datasource of PMF");
+        return customizeJdbi(Jdbi.create(PersistenceUtil.getDataSource(pmf)));
     }
 
     private static Jdbi customizeJdbi(final Jdbi jdbi) {

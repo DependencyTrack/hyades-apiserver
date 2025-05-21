@@ -17,14 +17,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 
-set -euox pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$(cd -P -- "$(dirname "$0")" && pwd -P)"
 ROOT_DIR="$(cd -P -- "${SCRIPT_DIR}/../../" && pwd -P)"
-APISERVER_DIR="$(cd -P -- "${ROOT_DIR}/apiserver" && pwd -P)"
+MIGRATION_DIR="$(cd -P -- "${ROOT_DIR}/persistence-migration" && pwd -P)"
 CONTAINER_ID="$(docker run -d --rm -e 'POSTGRES_DB=dtrack' -e 'POSTGRES_USER=dtrack' -e 'POSTGRES_PASSWORD=dtrack' -p '5432' postgres:13-alpine)"
 CONTAINER_PORT="$(docker port "${CONTAINER_ID}" "5432/tcp" | cut -d ':' -f 2)"
-TMP_LIQUIBASE_CONFIG_FILE="$(mktemp -p "${APISERVER_DIR}")"
+TMP_LIQUIBASE_CONFIG_FILE="$(mktemp -p "${MIGRATION_DIR}")"
+
+while ! docker exec "${CONTAINER_ID}" pg_isready -U dtrack -d dtrack; do echo 'Waiting for Postgres readiness...'; sleep 1; done
 
 cat << EOF > "${TMP_LIQUIBASE_CONFIG_FILE}"
 changeLogFile=migration/changelog-main.xml
@@ -33,8 +35,8 @@ username=dtrack
 password=dtrack
 EOF
 
-mvn -pl apiserver liquibase:updateSQL \
+mvn -pl persistence-migration liquibase:updateSQL \
   -Dliquibase.propertyFile="$(basename "${TMP_LIQUIBASE_CONFIG_FILE}")"; \
-  mv -f "${APISERVER_DIR}/target/liquibase/migrate.sql" "${ROOT_DIR}/schema-migrate.sql"; \
+  mv -f "${MIGRATION_DIR}/target/liquibase/migrate.sql" "${ROOT_DIR}/schema-migrate.sql"; \
   docker stop "${CONTAINER_ID}"; \
   rm "${TMP_LIQUIBASE_CONFIG_FILE}"
