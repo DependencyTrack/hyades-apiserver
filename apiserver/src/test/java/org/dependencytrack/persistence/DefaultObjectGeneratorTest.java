@@ -18,9 +18,10 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Repository;
@@ -29,7 +30,6 @@ import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -42,7 +42,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
 
     @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
 
     @Test
     public void testContextInitialized() throws Exception {
@@ -55,9 +55,8 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
     }
 
     @Test
+    @WithConfigProperty("init.tasks.enabled=false")
     public void testWithInitTasksDisabled() {
-        environmentVariables.set(ConfigKey.INIT_TASKS_ENABLED.name(), "false");
-
         new DefaultObjectGenerator().contextInitialized(null);
 
         assertThat(qm.getPermissions()).isEmpty();

@@ -22,6 +22,8 @@ import alpine.Config;
 import alpine.event.framework.Event;
 import alpine.event.framework.EventService;
 import alpine.event.framework.Subscriber;
+import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.junit.After;
@@ -30,7 +32,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.time.Duration;
 import java.util.Queue;
@@ -40,9 +41,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 public class TaskSchedulerTest extends PersistenceCapableTest {
-
-    @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     private static final Queue<Event> EVENTS = new ConcurrentLinkedQueue<>();
 
@@ -54,6 +52,9 @@ public class TaskSchedulerTest extends PersistenceCapableTest {
         }
 
     }
+
+    @Rule
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
 
     @BeforeClass
     public static void setUpClass() {
@@ -69,10 +70,6 @@ public class TaskSchedulerTest extends PersistenceCapableTest {
 
     @Before
     public void before() throws Exception {
-        environmentVariables.set("TASK_PORTFOLIO_METRICS_UPDATE_CRON", "* * * * * *");
-        environmentVariables.set("TASK_SCHEDULER_INITIAL_DELAY", "5");
-        environmentVariables.set("TASK_SCHEDULER_POLLING_INTERVAL", "1000");
-
         super.before();
 
         // Force initialization of TaskScheduler.
@@ -88,6 +85,11 @@ public class TaskSchedulerTest extends PersistenceCapableTest {
     }
 
     @Test
+    @WithConfigProperty(value = {
+            "task.portfolio.metrics.update.cron=* * * * * *",
+            "task.scheduler.initial.delay=5",
+            "task.scheduler.polling.interval=1000"
+    })
     public void test() throws Exception {
         await("Event Dispatch")
                 .atMost(Duration.ofSeconds(3))

@@ -126,6 +126,11 @@
             <artifactId>alpine-executable-war</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>alpine-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- Common Expression Language (CEL) -->
         <dependency>
             <groupId>org.projectnessie.cel</groupId>
