@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -86,6 +87,20 @@ public interface MetricsDao extends SqlObject {
     ProjectMetrics getMostRecentProjectMetrics(@Bind final long projectId);
 
     @SqlQuery("""
+            SELECT metrics.*
+              FROM UNNEST(:projectIds) AS project(id)
+             INNER JOIN LATERAL (
+               SELECT *
+                 FROM "PROJECTMETRICS"
+                WHERE "PROJECT_ID" = project.id
+                ORDER BY "LAST_OCCURRENCE" DESC
+                LIMIT 1
+             ) AS metrics ON TRUE
+            """)
+    @RegisterBeanMapper(ProjectMetrics.class)
+    List<ProjectMetrics> getMostRecentProjectMetrics(@Bind Collection<Long> projectIds);
+
+    @SqlQuery("""
             SELECT *
             FROM "DEPENDENCYMETRICS"
             WHERE "COMPONENT_ID" = :componentId
@@ -94,6 +109,36 @@ public interface MetricsDao extends SqlObject {
             """)
     @RegisterBeanMapper(DependencyMetrics.class)
     DependencyMetrics getMostRecentDependencyMetrics(@Bind long projectId, @Bind long componentId);
+
+    @SqlQuery("""
+            SELECT metrics.*
+              FROM UNNEST(:componentIds) AS component(id)
+             INNER JOIN LATERAL (
+               SELECT *
+                 FROM "DEPENDENCYMETRICS"
+                WHERE "PROJECT_ID" = :projectId
+                  AND "COMPONENT_ID" = component.id
+                ORDER BY "LAST_OCCURRENCE" DESC
+                LIMIT 1
+             ) AS metrics ON TRUE
+            """)
+    @RegisterBeanMapper(DependencyMetrics.class)
+    List<DependencyMetrics> getMostRecentDependencyMetrics(@Bind long projectId, @Bind Collection<Long> componentIds);
+
+    @SqlQuery("""
+            SELECT metrics.*
+              FROM UNNEST(:projectIds, :componentIds) AS request(project_id, component_id)
+             INNER JOIN LATERAL (
+               SELECT *
+                 FROM "DEPENDENCYMETRICS"
+                WHERE "PROJECT_ID" = request.project_id
+                  AND "COMPONENT_ID" = request.component_id
+                ORDER BY "LAST_OCCURRENCE" DESC
+                LIMIT 1
+             ) AS metrics ON TRUE
+            """)
+    @RegisterBeanMapper(DependencyMetrics.class)
+    List<DependencyMetrics> getMostRecentDependencyMetrics(@Bind List<Long> projectIds, @Bind List<Long> componentIds);
 
     @SqlQuery("""
             SELECT inhrelid::regclass AS partition_name

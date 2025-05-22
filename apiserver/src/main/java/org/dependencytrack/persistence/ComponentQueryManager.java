@@ -34,7 +34,9 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.sqlmapping.ComponentProjection;
+import org.dependencytrack.persistence.RepositoryQueryManager.RepositoryMetaComponentSearch;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.dependencytrack.persistence.jdbi.RepositoryMetaDao;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
@@ -279,31 +281,23 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
         Query<?> query = pm.newQuery(Query.SQL, queryString);
         query.setNamedParameters(queryParams);
-        List<ComponentProjection> resultSet;
+        final var components = new ArrayList<Component>();
+        long totalCount = 0;
         try {
-            resultSet = List.copyOf(query.executeResultList(ComponentProjection.class));
+            for (final var componentProjection : query.executeResultList(ComponentProjection.class)) {
+                components.add(mapToComponent(componentProjection));
+                totalCount = componentProjection.totalCount;
+            }
         } finally {
             query.closeAll();
         }
-        for (final var result : resultSet) {
-            final org.dependencytrack.model.Component component = mapToComponent(result);
-            if (includeMetrics) {
-//             Populate each Component object in the paginated result with transitive related
-//             data to minimize the number of round trips a client needs to make, process, and render.
-                component.setMetrics(withJdbiHandle(handle -> handle.attach(MetricsDao.class)
-                        .getMostRecentDependencyMetrics(project.getId(), component.getId())));
-                final PackageURL purl = component.getPurl();
-                if (purl != null) {
-                    final RepositoryType type = RepositoryType.resolve(purl);
-                    if (RepositoryType.UNSUPPORTED != type) {
-                        final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
-                        component.setRepositoryMeta(repoMetaComponent);
-                    }
-                }
-            }
-            componentsResult.add(component);
+
+        if (!components.isEmpty() && includeMetrics) {
+            populateRepositoryMetadata(components);
+            populateMetrics(project.getId(), components);
         }
-        return (new PaginatedResult()).objects(componentsResult).total(resultSet.isEmpty() ? 0 : resultSet.get(0).totalCount);
+
+        return (new PaginatedResult()).objects(components).total(totalCount);
     }
 
     /**
@@ -404,24 +398,19 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             result = new PaginatedResult();
         }
 
-        if (includeMetrics) {
-            // Populate each Component object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Component component : result.getList(Component.class)) {
-                final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class)
-                        .getMostRecentDependencyMetrics(component.getProject().getId(), component.getId()));
-                component.setMetrics(metrics);
+        if (!result.getObjects().isEmpty() && includeMetrics) {
+            populateRepositoryMetadata(result.getList(Component.class));
+            populateMetrics(result.getList(Component.class));
+
+            // TODO: Make this a batch lookup.
+            for (final Component component : result.getList(Component.class)) {
                 final PackageURL purl = component.getPurl();
                 if (purl != null) {
-                    final RepositoryType type = RepositoryType.resolve(purl);
-                    if (RepositoryType.UNSUPPORTED != type) {
-                        final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
-                        component.setRepositoryMeta(repoMetaComponent);
-                        component.setComponentMetaInformation(getMetaInformation(component.getUuid()));
-                    }
+                    component.setComponentMetaInformation(getMetaInformation(component.getUuid()));
                 }
             }
         }
+
         for (Component component : result.getList(Component.class)) {
             component.getProject(); // Force loading of project
             component.getProject().getGroup();
@@ -907,6 +896,72 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             } else if (incomingOccurrence == null) {
                 component.getOccurrences().remove(existingOccurrence);
                 pm.deletePersistent(existingOccurrence);
+            }
+        }
+    }
+
+    private void populateMetrics(final long projectId, final Collection<Component> components) {
+        final Map<Long, Component> componentById = components.stream()
+                .collect(Collectors.toMap(Component::getId, Function.identity()));
+        final List<DependencyMetrics> metricsList = withJdbiHandle(
+                handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(
+                        projectId, componentById.keySet()));
+        for (final DependencyMetrics metrics : metricsList) {
+            final var component = componentById.get(metrics.getComponentId());
+            if (component != null) {
+                component.setMetrics(metrics);
+            }
+        }
+    }
+
+    private void populateMetrics(final Collection<Component> components) {
+        final var projectIds = new ArrayList<Long>(components.size());
+        final var componentIds = new ArrayList<Long>(components.size());
+        final var componentById = new HashMap<Long, Component>(components.size());
+
+        for (final Component component : components) {
+            projectIds.add(component.getProject().getId());
+            componentIds.add(component.getId());
+            componentById.put(component.getId(), component);
+        }
+
+        final List<DependencyMetrics> metricsList = withJdbiHandle(
+                handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(
+                        projectIds, componentIds));
+        for (final DependencyMetrics metrics : metricsList) {
+            final var component = componentById.get(metrics.getComponentId());
+            if (component != null) {
+                component.setMetrics(metrics);
+            }
+        }
+    }
+
+    private void populateRepositoryMetadata(final Collection<Component> components) {
+        final Map<RepositoryMetaComponentSearch, List<Component>> componentsByRepoMetaSearch = components.stream()
+                .filter(component -> component.getPurl() != null)
+                .filter(component -> RepositoryType.UNSUPPORTED != RepositoryType.resolve(component.getPurl()))
+                .collect(Collectors.groupingBy(component -> {
+                    final PackageURL purl = component.getPurl();
+                    final var repositoryType = RepositoryType.resolve(purl);
+                    return new RepositoryMetaComponentSearch(repositoryType, purl.getNamespace(), purl.getName());
+                }));
+        if (componentsByRepoMetaSearch.isEmpty()) {
+            return;
+        }
+
+        final List<RepositoryMetaComponent> repoMetaComponents = withJdbiHandle(
+                handle -> handle.attach(RepositoryMetaDao.class).getRepositoryMetaComponents(
+                        componentsByRepoMetaSearch.keySet()));
+        for (final RepositoryMetaComponent repoMetaComponent : repoMetaComponents) {
+            final var search = new RepositoryMetaComponentSearch(
+                    repoMetaComponent.getRepositoryType(),
+                    repoMetaComponent.getNamespace(),
+                    repoMetaComponent.getName());
+            final List<Component> searchComponents = componentsByRepoMetaSearch.get(search);
+            if (searchComponents != null) {
+                for (final Component component : searchComponents) {
+                    component.setRepositoryMeta(repoMetaComponent);
+                }
             }
         }
     }
