@@ -51,9 +51,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateCMetricsEmpty() {
-        var project = new Project();
+        final var project = new Project();
         project.setName("acme-app");
-        project = qm.createProject(project, List.of(), false);
+        qm.persist(project);
 
         // Create risk score configproperties
         createTestConfigProperties();
@@ -63,7 +63,8 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         component.setName("acme-lib");
         qm.createComponent(component, false);
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-        final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
+        final DependencyMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(project.getId(), component.getId()));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isZero();
         assertThat(metrics.getMedium()).isZero();
@@ -114,10 +115,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsUnchanged() {
-
-        var project = new Project();
+        final var project = new Project();
         project.setName("acme-app");
-        project = qm.createProject(project, List.of(), false);
+        qm.persist(project);
 
         // Create risk score configproperties
         createTestConfigProperties();
@@ -129,7 +129,8 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
         // Record initial project metrics
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-        final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
+        final DependencyMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(project.getId(), component.getId()));
         assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
 
         // Run the task a second time, without any metric being changed
@@ -137,7 +138,8 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
 
         // Two records should be created in today's partition since it's append-only
-        var recentMetrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
+        var recentMetrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(project.getId(), component.getId()));
         assertThat(recentMetrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
         assertThat(recentMetrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
     }
@@ -188,7 +190,8 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.createWorkflowSteps(componentMetricsUpdateEvent.getChainIdentifier());
         new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);
 
-        final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
+        final DependencyMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(project.getId(), component.getId()));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isEqualTo(1);
         assertThat(metrics.getMedium()).isEqualTo(1); // One is suppressed
@@ -278,7 +281,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         new ComponentMetricsUpdateTask().inform(componentMetricsUpdateEvent);
 
         final DependencyMetrics metrics = withJdbiHandle(handle ->
-                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
+                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(project.getId(), component.getId()));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isEqualTo(1);
         assertThat(metrics.getMedium()).isEqualTo(1);
@@ -320,9 +323,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsPolicyViolations() {
-        var project = new Project();
+        final var project = new Project();
         project.setName("acme-app");
-        project = qm.createProject(project, List.of(), false);
+        qm.persist(project);
 
         // Create risk score configproperties
         createTestConfigProperties();
@@ -345,7 +348,7 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
         final DependencyMetrics metrics = withJdbiHandle(handle ->
-                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
+                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(project.getId(), component.getId()));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isZero();
         assertThat(metrics.getMedium()).isZero();
@@ -379,9 +382,9 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
 
     @Test
     public void testUpdateMetricsWithDuplicateAliases() {
-        var project = new Project();
+        final var project = new Project();
         project.setName("acme-app");
-        project = qm.createProject(project, List.of(), false);
+        qm.persist(project);
 
         // Create risk score configproperties
         createTestConfigProperties();
@@ -440,7 +443,8 @@ public class ComponentMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         // Expectation is that both C and D will not be considered because they alias A.
 
         new ComponentMetricsUpdateTask().inform(new ComponentMetricsUpdateEvent(component.getUuid()));
-        final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
+        final DependencyMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(project.getId(), component.getId()));
         assertThat(metrics.getCritical()).isZero();
         assertThat(metrics.getHigh()).isEqualTo(1); // INTERNAL-001
         assertThat(metrics.getMedium()).isEqualTo(1); // GHSA-002

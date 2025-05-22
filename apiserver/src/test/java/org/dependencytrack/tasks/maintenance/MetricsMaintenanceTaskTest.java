@@ -144,7 +144,7 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         final var task = new MetricsMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new MetricsMaintenanceEvent()));
 
-        assertThat(metricsDao.getDependencyMetricsSince(component.getId(), now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(
+        assertThat(metricsDao.getDependencyMetricsSince(project.getId(), component.getId(), now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
 
         assertThat(metricsDao.getProjectMetricsSince(project.getId(), now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(

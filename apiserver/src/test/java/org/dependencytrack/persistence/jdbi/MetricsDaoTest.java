@@ -162,7 +162,7 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metrics.setLastOccurrence(Date.from(Instant.now().minus(Duration.ofDays(20))));
         metricsTestDao.createDependencyMetrics(metrics);
 
-        var dependencyMetrics = metricsDao.getDependencyMetricsSince(component.getId(), Instant.now().minus(Duration.ofDays(35)));
+        var dependencyMetrics = metricsDao.getDependencyMetricsSince(project.getId(), component.getId(), Instant.now().minus(Duration.ofDays(35)));
         assertThat(dependencyMetrics.size()).isEqualTo(2);
         assertThat(dependencyMetrics.get(0).getVulnerabilities()).isEqualTo(3);
         assertThat(dependencyMetrics.get(1).getVulnerabilities()).isEqualTo(2);

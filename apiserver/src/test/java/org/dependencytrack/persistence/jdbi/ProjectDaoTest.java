@@ -240,7 +240,7 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         // Ensure that metrics have been deleted.
         MetricsDao dao = jdbiHandle.attach(MetricsDao.class);
         assertThat(dao.getProjectMetricsSince(project.getId(), DateUtil.parseShortDate("20250101").toInstant())).isEmpty();
-        assertThat(dao.getDependencyMetricsSince(component.getId(), DateUtil.parseShortDate("20250101").toInstant())).isEmpty();
+        assertThat(dao.getDependencyMetricsSince(project.getId(), component.getId(), DateUtil.parseShortDate("20250101").toInstant())).isEmpty();
     }
 
     @Test

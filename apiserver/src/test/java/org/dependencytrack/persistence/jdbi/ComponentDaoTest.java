@@ -35,6 +35,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.persistence.jdbi.ComponentDao.ComponentAndProjectId;
 import org.dependencytrack.util.DateUtil;
 import org.jdbi.v3.core.Handle;
 import org.junit.After;
@@ -45,6 +46,7 @@ import javax.jdo.JDOObjectNotFoundException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Date;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -170,7 +172,7 @@ public class ComponentDaoTest extends PersistenceCapableTest {
 
         // Ensure that metrics have been deleted.
         assertThat(withJdbiHandle(handle ->  handle.attach(MetricsDao.class).getDependencyMetricsSince(
-                component.getId(), DateUtil.parseShortDate("20250101").toInstant())).isEmpty());
+                project.getId(), component.getId(), DateUtil.parseShortDate("20250101").toInstant())).isEmpty());
     }
 
     @Test
@@ -184,4 +186,24 @@ public class ComponentDaoTest extends PersistenceCapableTest {
         qm.persist(component);
         assertThat(componentDao.getComponentId(component.getUuid())).isEqualTo(component.getId());
     }
+
+    @Test
+    public void testGetComponentAndProjectId() {
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var component = new Component();
+        component.setProject(project);
+        component.setName("acme-lib");
+        qm.persist(component);
+
+        ComponentAndProjectId result = componentDao.getComponentAndProjectId(UUID.randomUUID());
+        assertThat(result).isEqualTo(null);
+
+        result = componentDao.getComponentAndProjectId(component.getUuid());
+        assertThat(result.componentId()).isEqualTo(component.getId());
+        assertThat(result.projectId()).isEqualTo(project.getId());
+    }
+
 }

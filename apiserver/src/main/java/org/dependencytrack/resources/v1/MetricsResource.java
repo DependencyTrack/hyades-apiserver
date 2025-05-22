@@ -30,12 +30,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.time.DateUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
@@ -55,6 +49,12 @@ import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.DateUtil;
 
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -347,12 +347,15 @@ public class MetricsResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the component to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
-            var componentId = handle.attach(ComponentDao.class).getComponentId(UUID.fromString(uuid));
-            if (componentId == null) {
+            var componentAndProjectId = handle.attach(ComponentDao.class).getComponentAndProjectId(UUID.fromString(uuid));
+            if (componentAndProjectId == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
             requireComponentAccess(handle, UUID.fromString(uuid));
-            final DependencyMetrics metrics = handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(componentId);
+            final DependencyMetrics metrics = handle.attach(MetricsDao.class)
+                    .getMostRecentDependencyMetrics(
+                            componentAndProjectId.projectId(),
+                            componentAndProjectId.componentId());
             return Response.ok(metrics).build();
         });
     }
@@ -482,12 +485,16 @@ public class MetricsResource extends AbstractApiResource {
      */
     private Response getComponentMetrics(String uuid, Date since) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
-            var componentId = handle.attach(ComponentDao.class).getComponentId(UUID.fromString(uuid));
-            if (componentId == null) {
+            var componentAndProjectId = handle.attach(ComponentDao.class).getComponentAndProjectId(UUID.fromString(uuid));
+            if (componentAndProjectId == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
             }
             requireComponentAccess(handle, UUID.fromString(uuid));
-            final List<DependencyMetrics> metrics = handle.attach(MetricsDao.class).getDependencyMetricsSince(componentId, since.toInstant());
+            final List<DependencyMetrics> metrics = handle.attach(MetricsDao.class)
+                    .getDependencyMetricsSince(
+                            componentAndProjectId.projectId(),
+                            componentAndProjectId.componentId(),
+                            since.toInstant());
             return Response.ok(metrics).build();
         });
     }
