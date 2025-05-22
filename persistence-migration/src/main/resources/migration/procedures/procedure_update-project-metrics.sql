@@ -78,15 +78,15 @@ BEGIN
     COALESCE(SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED")::INT, 0)
   FROM (
     SELECT metrics.*
-      FROM (SELECT "ID" FROM "COMPONENT" WHERE "PROJECT_ID" = "v_project_id") AS component(id)
+      FROM "COMPONENT"
      INNER JOIN LATERAL (
        SELECT *
          FROM "DEPENDENCYMETRICS"
-        WHERE "PROJECT_ID" = "v_project_id"
-          AND "COMPONENT_ID" = component.id
+        WHERE "COMPONENT_ID" = "COMPONENT"."ID"
         ORDER BY "LAST_OCCURRENCE" DESC
         LIMIT 1
      ) AS metrics ON TRUE
+     WHERE "COMPONENT"."PROJECT_ID" = "v_project_id"
   ) AS "LATEST_COMPONENT_METRICS"
   INTO
     "v_components",

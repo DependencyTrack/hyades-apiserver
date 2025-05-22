@@ -59,13 +59,12 @@ public interface MetricsDao extends SqlObject {
 
     @SqlQuery("""
             SELECT * FROM "DEPENDENCYMETRICS"
-            WHERE "PROJECT_ID" = :projectId
-            AND "COMPONENT_ID" = :componentId
+            WHERE "COMPONENT_ID" = :componentId
             AND "LAST_OCCURRENCE" >= :since
             ORDER BY "LAST_OCCURRENCE" ASC
             """)
     @RegisterBeanMapper(DependencyMetrics.class)
-    List<DependencyMetrics> getDependencyMetricsSince(@Bind long projectId, @Bind long componentId, @Bind Instant since);
+    List<DependencyMetrics> getDependencyMetricsSince(@Bind long componentId, @Bind Instant since);
 
     @SqlQuery("""
             SELECT *
@@ -108,7 +107,7 @@ public interface MetricsDao extends SqlObject {
             LIMIT 1
             """)
     @RegisterBeanMapper(DependencyMetrics.class)
-    DependencyMetrics getMostRecentDependencyMetrics(@Bind long projectId, @Bind long componentId);
+    DependencyMetrics getMostRecentDependencyMetrics(@Bind long componentId);
 
     @SqlQuery("""
             SELECT metrics.*
@@ -116,29 +115,13 @@ public interface MetricsDao extends SqlObject {
              INNER JOIN LATERAL (
                SELECT *
                  FROM "DEPENDENCYMETRICS"
-                WHERE "PROJECT_ID" = :projectId
-                  AND "COMPONENT_ID" = component.id
+                WHERE "COMPONENT_ID" = component.id
                 ORDER BY "LAST_OCCURRENCE" DESC
                 LIMIT 1
              ) AS metrics ON TRUE
             """)
     @RegisterBeanMapper(DependencyMetrics.class)
-    List<DependencyMetrics> getMostRecentDependencyMetrics(@Bind long projectId, @Bind Collection<Long> componentIds);
-
-    @SqlQuery("""
-            SELECT metrics.*
-              FROM UNNEST(:projectIds, :componentIds) AS request(project_id, component_id)
-             INNER JOIN LATERAL (
-               SELECT *
-                 FROM "DEPENDENCYMETRICS"
-                WHERE "PROJECT_ID" = request.project_id
-                  AND "COMPONENT_ID" = request.component_id
-                ORDER BY "LAST_OCCURRENCE" DESC
-                LIMIT 1
-             ) AS metrics ON TRUE
-            """)
-    @RegisterBeanMapper(DependencyMetrics.class)
-    List<DependencyMetrics> getMostRecentDependencyMetrics(@Bind List<Long> projectIds, @Bind List<Long> componentIds);
+    List<DependencyMetrics> getMostRecentDependencyMetrics(@Bind Collection<Long> componentIds);
 
     @SqlQuery("""
             SELECT inhrelid::regclass AS partition_name
@@ -162,40 +145,40 @@ public interface MetricsDao extends SqlObject {
     List<String> getDependencyMetricsPartitions();
 
     @SqlUpdate("""
-                DO $$
-                DECLARE
-                    today DATE := DATE '${targetDate}';
-                    tomorrow DATE := DATE '${nextDate}';
-                    partition_suffix TEXT := to_char(today, 'YYYYMMDD');
-                    partition_name TEXT;
-                    partition_exists BOOLEAN;
-                    table_name TEXT;
-                    metric_tables TEXT[] := ARRAY['PORTFOLIOMETRICS', 'PROJECTMETRICS', 'DEPENDENCYMETRICS'];
-                BEGIN
-                    FOREACH table_name IN ARRAY metric_tables
-                    LOOP
-                        partition_name := format('%s_%s', table_name, partition_suffix);
-                        SELECT EXISTS (
-                            SELECT 1 FROM pg_class WHERE relname = partition_name
-                        ) INTO partition_exists;
+            DO $$
+            DECLARE
+                today DATE := DATE '${targetDate}';
+                tomorrow DATE := DATE '${nextDate}';
+                partition_suffix TEXT := to_char(today, 'YYYYMMDD');
+                partition_name TEXT;
+                partition_exists BOOLEAN;
+                table_name TEXT;
+                metric_tables TEXT[] := ARRAY['PORTFOLIOMETRICS', 'PROJECTMETRICS', 'DEPENDENCYMETRICS'];
+            BEGIN
+                FOREACH table_name IN ARRAY metric_tables
+                LOOP
+                    partition_name := format('%s_%s', table_name, partition_suffix);
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_class WHERE relname = partition_name
+                    ) INTO partition_exists;
             
-                        IF NOT partition_exists THEN
-                            EXECUTE format(
-                                'CREATE TABLE IF NOT EXISTS %I (LIKE %I INCLUDING ALL);',
-                                partition_name,
-                                table_name
-                            );
-                            EXECUTE format(
-                                'ALTER TABLE %I ATTACH PARTITION %I FOR VALUES FROM (%L) TO (%L);',
-                                table_name,
-                                partition_name,
-                                today,
-                                tomorrow
-                            );
-                        END IF;
-                    END LOOP;
-                END;
-                $$;
+                    IF NOT partition_exists THEN
+                        EXECUTE format(
+                            'CREATE TABLE IF NOT EXISTS %I (LIKE %I INCLUDING ALL);',
+                            partition_name,
+                            table_name
+                        );
+                        EXECUTE format(
+                            'ALTER TABLE %I ATTACH PARTITION %I FOR VALUES FROM (%L) TO (%L);',
+                            table_name,
+                            partition_name,
+                            today,
+                            tomorrow
+                        );
+                    END IF;
+                END LOOP;
+            END;
+            $$;
             """)
     void createMetricsPartitionsForDate(@Define("targetDate") String targetDate, @Define("nextDate") String nextDate);
 

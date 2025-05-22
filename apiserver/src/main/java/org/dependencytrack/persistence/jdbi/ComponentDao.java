@@ -20,7 +20,6 @@ package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.ComponentOccurrence;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
-import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
@@ -73,17 +72,4 @@ public interface ComponentDao {
             SELECT "ID" FROM "COMPONENT" WHERE "UUID" = :componentUuid
             """)
     Long getComponentId(@Bind UUID componentUuid);
-
-    record ComponentAndProjectId(long componentId, long projectId) {
-    }
-
-    @SqlQuery("""
-            SELECT "ID" AS component_id
-                 , "PROJECT_ID"
-              FROM "COMPONENT"
-             WHERE "UUID" = :componentUuid
-            """)
-    @RegisterConstructorMapper(ComponentAndProjectId.class)
-    ComponentAndProjectId getComponentAndProjectId(@Bind UUID componentUuid);
-
 }

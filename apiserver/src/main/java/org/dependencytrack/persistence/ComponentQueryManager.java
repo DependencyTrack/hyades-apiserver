@@ -294,7 +294,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
         if (!components.isEmpty() && includeMetrics) {
             populateRepositoryMetadata(components);
-            populateMetrics(project.getId(), components);
+            populateMetrics(components);
         }
 
         return (new PaginatedResult()).objects(components).total(totalCount);
@@ -900,34 +900,11 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         }
     }
 
-    private void populateMetrics(final long projectId, final Collection<Component> components) {
+    private void populateMetrics(final Collection<Component> components) {
         final Map<Long, Component> componentById = components.stream()
                 .collect(Collectors.toMap(Component::getId, Function.identity()));
         final List<DependencyMetrics> metricsList = withJdbiHandle(
-                handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(
-                        projectId, componentById.keySet()));
-        for (final DependencyMetrics metrics : metricsList) {
-            final var component = componentById.get(metrics.getComponentId());
-            if (component != null) {
-                component.setMetrics(metrics);
-            }
-        }
-    }
-
-    private void populateMetrics(final Collection<Component> components) {
-        final var projectIds = new ArrayList<Long>(components.size());
-        final var componentIds = new ArrayList<Long>(components.size());
-        final var componentById = new HashMap<Long, Component>(components.size());
-
-        for (final Component component : components) {
-            projectIds.add(component.getProject().getId());
-            componentIds.add(component.getId());
-            componentById.put(component.getId(), component);
-        }
-
-        final List<DependencyMetrics> metricsList = withJdbiHandle(
-                handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(
-                        projectIds, componentIds));
+                handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(componentById.keySet()));
         for (final DependencyMetrics metrics : metricsList) {
             final var component = componentById.get(metrics.getComponentId());
             if (component != null) {
