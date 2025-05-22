@@ -1454,6 +1454,15 @@
     </changeSet>
 
     <changeSet id="v5.6.0-23" author="jhoward-lm">
+        <!--
+          A previous version of this changeset did not cater to duplicate usernames existing
+          across the MANAGEDUSER, LDAPUSER, and OIDCUSER tables.
+          Deployments that did not have duplicate usernames across user tables at the time
+          of the execution were able to successfully complete this changeset and do not have
+          to repeat it.
+        -->
+        <validCheckSum>9:aa6e0cecae0b4f050a56eb1bbcb686be</validCheckSum>
+
         <createTable ifNotExists="true" tableName="USER">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="USER_PK" />
@@ -1626,8 +1635,17 @@
 
         <!-- Migrate existing LDAP users. -->
         <sql splitStatements="true">
+            WITH cte_created_user AS (
+              INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "DN")
+              SELECT 'LDAP', "USERNAME", "EMAIL", "DN"
+                FROM "LDAPUSER"
+              ON CONFLICT ("USERNAME") DO NOTHING
+              RETURNING "USERNAME"
+            )
             INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "DN")
-            SELECT 'LDAP', "USERNAME", "EMAIL", "DN" FROM "LDAPUSER";
+            SELECT 'LDAP', ("USERNAME" || '-CONFLICT-LDAP') AS "USERNAME", "EMAIL", "DN"
+              FROM "LDAPUSER"
+             WHERE "USERNAME" NOT IN (SELECT "USERNAME" FROM cte_created_user);
 
             INSERT INTO "USERS_PERMISSIONS" ("PERMISSION_ID", "USER_ID")
             SELECT "LDAPUSERS_PERMISSIONS"."PERMISSION_ID"
@@ -1636,7 +1654,8 @@
              INNER JOIN "LDAPUSER"
                 ON "LDAPUSER"."ID" = "LDAPUSERS_PERMISSIONS"."LDAPUSER_ID"
              INNER JOIN "USER"
-                ON "USER"."USERNAME" = "LDAPUSER"."USERNAME"
+                ON ("USER"."USERNAME" = "LDAPUSER"."USERNAME"
+                    OR "USER"."USERNAME" = ("LDAPUSER"."USERNAME" || '-CONFLICT-LDAP'))
                AND "USER"."TYPE" = 'LDAP'
             ON CONFLICT ("PERMISSION_ID", "USER_ID") DO NOTHING;
 
@@ -1647,15 +1666,25 @@
              INNER JOIN "LDAPUSER"
                 ON "LDAPUSER"."ID" = "LDAPUSERS_TEAMS"."LDAPUSER_ID"
              INNER JOIN "USER"
-                ON "USER"."USERNAME" = "LDAPUSER"."USERNAME"
+                ON ("USER"."USERNAME" = "LDAPUSER"."USERNAME"
+                    OR "USER"."USERNAME" = ("LDAPUSER"."USERNAME" || '-CONFLICT-LDAP'))
                AND "USER"."TYPE" = 'LDAP'
             ON CONFLICT ("TEAM_ID", "USER_ID") DO NOTHING;
         </sql>
 
         <!-- Migrate existing OIDC users. -->
         <sql splitStatements="true">
+            WITH cte_created_user AS (
+              INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER")
+              SELECT 'OIDC', "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER"
+                FROM "OIDCUSER"
+              ON CONFLICT ("USERNAME") DO NOTHING
+              RETURNING "USERNAME"
+            )
             INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER")
-            SELECT 'OIDC', "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER" FROM "OIDCUSER";
+            SELECT 'OIDC', ("USERNAME" || '-CONFLICT-OIDC') AS "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER"
+              FROM "OIDCUSER"
+            WHERE "USERNAME" NOT IN (SELECT "USERNAME" FROM cte_created_user);
 
             INSERT INTO "USERS_PERMISSIONS" ("PERMISSION_ID", "USER_ID")
             SELECT "OIDCUSERS_PERMISSIONS"."PERMISSION_ID"
@@ -1664,7 +1693,8 @@
              INNER JOIN "OIDCUSER"
                 ON "OIDCUSER"."ID" = "OIDCUSERS_PERMISSIONS"."OIDCUSER_ID"
              INNER JOIN "USER"
-                ON "USER"."USERNAME" = "OIDCUSER"."USERNAME"
+                ON ("USER"."USERNAME" = "OIDCUSER"."USERNAME"
+                    OR "USER"."USERNAME" = ("OIDCUSER"."USERNAME" || '-CONFLICT-OIDC'))
                AND "USER"."TYPE" = 'OIDC'
             ON CONFLICT ("PERMISSION_ID", "USER_ID") DO NOTHING;
 
@@ -1675,7 +1705,8 @@
              INNER JOIN "OIDCUSER"
                 ON "OIDCUSER"."ID" = "OIDCUSERS_TEAMS"."OIDCUSERS_ID"
              INNER JOIN "USER"
-                ON "USER"."USERNAME" = "OIDCUSER"."USERNAME"
+                ON ("USER"."USERNAME" = "OIDCUSER"."USERNAME"
+                    OR "USER"."USERNAME" = ("OIDCUSER"."USERNAME" || '-CONFLICT-OIDC'))
                AND "USER"."TYPE" = 'OIDC'
             ON CONFLICT ("TEAM_ID", "USER_ID") DO NOTHING;
         </sql>
