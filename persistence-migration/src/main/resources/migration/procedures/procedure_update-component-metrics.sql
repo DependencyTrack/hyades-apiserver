@@ -36,7 +36,6 @@ DECLARE
   "v_policy_violations_security_total"        INT     := 0; -- Total number of policy violations of type security
   "v_policy_violations_security_audited"      INT     := 0; -- Number of audited policy violations of type security
   "v_policy_violations_security_unaudited"    INT     := 0; -- Number of unaudited policy violations of type security
-  "v_existing_id"                             BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
 BEGIN
   SELECT "ID", "PROJECT_ID" INTO "v_component" FROM "COMPONENT" WHERE "UUID" = "component_uuid";
   IF "v_component" IS NULL THEN

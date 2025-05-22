@@ -35,7 +35,6 @@ DECLARE
   "v_policy_violations_security_total"        INT; -- Total number of policy violations of type security
   "v_policy_violations_security_audited"      INT; -- Number of audited policy violations of type security
   "v_policy_violations_security_unaudited"    INT; -- Number of unaudited policy violations of type security
-  "v_existing_id"                             BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
 BEGIN
   SELECT "ID" FROM "PROJECT" WHERE "UUID" = "project_uuid" INTO "v_project_id";
   IF "v_project_id" IS NULL THEN
@@ -77,10 +76,18 @@ BEGIN
     COALESCE(SUM("POLICYVIOLATIONS_SECURITY_TOTAL")::INT, 0),
     COALESCE(SUM("POLICYVIOLATIONS_SECURITY_AUDITED")::INT, 0),
     COALESCE(SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED")::INT, 0)
-  FROM (SELECT DISTINCT ON ("DM"."COMPONENT_ID") *
-        FROM "DEPENDENCYMETRICS" AS "DM"
+  FROM (
+    SELECT metrics.*
+      FROM (SELECT "ID" FROM "COMPONENT" WHERE "PROJECT_ID" = "v_project_id") AS component(id)
+     INNER JOIN LATERAL (
+       SELECT *
+         FROM "DEPENDENCYMETRICS"
         WHERE "PROJECT_ID" = "v_project_id"
-        ORDER BY "DM"."COMPONENT_ID", "DM"."LAST_OCCURRENCE" DESC) AS "LATEST_COMPONENT_METRICS"
+          AND "COMPONENT_ID" = component.id
+        ORDER BY "LAST_OCCURRENCE" DESC
+        LIMIT 1
+     ) AS metrics ON TRUE
+  ) AS "LATEST_COMPONENT_METRICS"
   INTO
     "v_components",
     "v_vulnerable_components",
