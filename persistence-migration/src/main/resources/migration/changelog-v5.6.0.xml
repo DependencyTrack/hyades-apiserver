@@ -1189,6 +1189,22 @@
     </changeSet>
 
     <changeSet id="v5.6.0-17" author="jhoward-lm">
+        <!--
+          A previous version of this changeset was missing immediate constraint checking,
+          had a syntax issue when looping over duplicate teams, and did not properly clean
+          up duplicate relationship records after updating FK references of duplicate teams.
+          Deployments that did not have duplicate teams at the time of the execution
+          were able to successfully complete this changeset and do not have to repeat it.
+        -->
+        <validCheckSum>9:75a5b859b6131f15a841804da10c14dc</validCheckSum>
+
+        <!--
+          Disable deferred constraint checking during this transaction.
+          Without this, we would not be able to add primary keys after
+          having deleted records from a table before.
+        -->
+        <sql>SET CONSTRAINTS ALL IMMEDIATE</sql>
+
         <sql splitStatements="false">
             CREATE OR REPLACE FUNCTION remove_duplicate_rows(
               table_name TEXT,
@@ -1242,8 +1258,6 @@
               PERFORM remove_duplicate_rows('TEAMS_PERMISSIONS', 'TEAM_ID', 'PERMISSION_ID');
             END
             $$;
-
-            DROP FUNCTION remove_duplicate_rows;
         </sql>
 
         <sql splitStatements="false">
@@ -1266,7 +1280,7 @@
             -- Loop over each team name group that has duplicates.
               FOR rec IN
               SELECT
-                  "NAME",
+                  "NAME" AS name,
                   MIN("ID") AS canonical_id,
                   ARRAY_AGG("ID") AS all_ids
                 FROM "TEAM"
@@ -1300,6 +1314,14 @@
                     $delete$, dup_id);
                 END LOOP;
               END LOOP;
+
+              PERFORM remove_duplicate_rows('APIKEYS_TEAMS', 'TEAM_ID', 'APIKEY_ID');
+              PERFORM remove_duplicate_rows('LDAPUSERS_TEAMS', 'TEAM_ID', 'LDAPUSER_ID');
+              PERFORM remove_duplicate_rows('MANAGEDUSERS_TEAMS', 'TEAM_ID', 'MANAGEDUSER_ID');
+              PERFORM remove_duplicate_rows('NOTIFICATIONRULE_TEAMS', 'NOTIFICATIONRULE_ID', 'TEAM_ID');
+              PERFORM remove_duplicate_rows('OIDCUSERS_TEAMS', 'TEAM_ID', 'OIDCUSERS_ID');
+              PERFORM remove_duplicate_rows('TEAMS_PERMISSIONS', 'TEAM_ID', 'PERMISSION_ID');
+              DROP FUNCTION remove_duplicate_rows;
             END $$;
         </sql>
 
