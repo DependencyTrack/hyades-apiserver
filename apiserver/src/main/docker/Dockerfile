@@ -14,9 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-FROM eclipse-temurin:21.0.6_7-jre-jammy@sha256:02fc89fa8766a9ba221e69225f8d1c10bb91885ddbd3c112448e23488ba40ab6 AS jre-build
-
-FROM debian:stable-slim@sha256:00a24d7c50ebe46934e31f6154c0434e2ab51259a65e028be42413c636385f7f
+FROM eclipse-temurin:21.0.7_6-jre-alpine@sha256:8728e354e012e18310faa7f364d00185277dec741f4f6d593af6c61fc0eb15fd
 
 # Arguments that can be passed at build time
 # Directory names must end with / to avoid errors when ADDing and COPYing
@@ -38,9 +36,6 @@ ENV TZ=Etc/UTC \
     # The web context defaults to the root. To override, supply an alternative context which starts with a / but does not end with one
     # Example: /dtrack
     CONTEXT="/" \
-    # Set JAVA_HOME for the copied over JRE
-    JAVA_HOME=/opt/java/openjdk \
-    PATH="/opt/java/openjdk/bin:${PATH}" \
     LANG=C.UTF-8 \
     # Ensure user home is always set to DATA_DIR, even for arbitrary UIDs (such as used by OpenShift)
     HOME=${DATA_DIR} \
@@ -52,18 +47,11 @@ ENV TZ=Etc/UTC \
 # Create a user and assign home directory to a ${DATA_DIR}
 # Ensure UID 1000 & GID 1000 own all the needed directories
 RUN mkdir -p ${APP_DIR} ${DATA_DIR} \
-    && addgroup --system --gid ${GID} dtrack || true \
-    && adduser --system --disabled-login --ingroup dtrack --no-create-home --home ${DATA_DIR} --gecos "dtrack user" --shell /bin/false --uid ${UID} dtrack || true \
+    && addgroup -S -g ${GID} dtrack || true \
+    && adduser -S -D -G dtrack -H -h ${DATA_DIR} -g "dtrack user" -s /bin/false -u ${UID} dtrack || true \
     && chown -R dtrack:0 ${DATA_DIR} ${APP_DIR} \
     && chmod -R g=u ${DATA_DIR} ${APP_DIR} \
-    \
-    # Install wget for health check
-    && apt-get -yqq update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -yqq --no-install-recommends wget \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy JRE from temurin base image
-COPY --from=jre-build /opt/java/openjdk $JAVA_HOME
+    && apk add --no-cache tzdata wget
 
 # Copy the compiled WAR to the application directory created above
 COPY ./target/dependency-track-apiserver.jar ./src/main/docker/logback-json.xml ${APP_DIR}
@@ -81,7 +69,7 @@ CMD exec java ${JAVA_OPTIONS} ${EXTRA_JAVA_OPTIONS} --add-opens java.base/java.u
 EXPOSE 8080
 
 # Add a healthcheck using the Dependency-Track version API
-HEALTHCHECK --interval=30s --start-period=60s --timeout=3s CMD wget -t 1 -T 3 --no-proxy -q -O /dev/null http://127.0.0.1:8080${CONTEXT}health || exit 1
+HEALTHCHECK --interval=30s --start-period=60s --timeout=3s CMD wget -t 1 -T 3 --proxy off -q -O /dev/null http://127.0.0.1:8080${CONTEXT}health || exit 1
 
 # metadata labels
 LABEL \
