@@ -33,7 +33,6 @@ DECLARE
   "v_policy_violations_security_total"        INT; -- Total number of policy violations of type security
   "v_policy_violations_security_audited"      INT; -- Number of audited policy violations of type security
   "v_policy_violations_security_unaudited"    INT; -- Number of unaudited policy violations of type security
-  "v_existing_id"                             BIGINT; -- ID of the existing row that matches the data point calculated in this procedure
 BEGIN
   -- Aggregate over all most recent DEPENDENCYMETRICS.
   -- NOTE: SUM returns NULL when no rows match the query, but COUNT returns 0.
@@ -67,11 +66,18 @@ BEGIN
     COALESCE(SUM("POLICYVIOLATIONS_SECURITY_TOTAL")::INT, 0),
     COALESCE(SUM("POLICYVIOLATIONS_SECURITY_AUDITED")::INT, 0),
     COALESCE(SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED")::INT, 0)
-  FROM (SELECT DISTINCT ON ("PM"."PROJECT_ID") *
-        FROM "PROJECTMETRICS" AS "PM"
-               INNER JOIN "PROJECT" AS "P" ON "P"."ID" = "PM"."PROJECT_ID"
-        WHERE "P"."INACTIVE_SINCE" IS NULL  -- Only consider active projects
-        ORDER BY "PM"."PROJECT_ID", "PM"."LAST_OCCURRENCE" DESC) AS "LATEST_PROJECT_METRICS"
+  FROM (
+    SELECT metrics.*
+      FROM "PROJECT"
+     INNER JOIN LATERAL (
+       SELECT *
+         FROM "PROJECTMETRICS"
+        WHERE "PROJECT_ID" = "PROJECT"."ID"
+        ORDER BY "LAST_OCCURRENCE" DESC
+        LIMIT 1
+     ) AS metrics ON TRUE
+     WHERE "INACTIVE_SINCE" IS NULL
+  ) AS "LATEST_PROJECT_METRICS"
   INTO
     "v_projects",
     "v_vulnerable_projects",

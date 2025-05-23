@@ -24,12 +24,10 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonValue;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.DependencyMetrics;
@@ -37,10 +35,16 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.sqlmapping.ComponentProjection;
+import org.dependencytrack.persistence.RepositoryQueryManager.RepositoryMetaComponentSearch;
+import org.dependencytrack.persistence.jdbi.ComponentMetaDao;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.dependencytrack.persistence.jdbi.RepositoryMetaDao;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonValue;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.StringReader;
@@ -279,30 +283,23 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
         Query<?> query = pm.newQuery(Query.SQL, queryString);
         query.setNamedParameters(queryParams);
-        List<ComponentProjection> resultSet;
+        final var components = new ArrayList<Component>();
+        long totalCount = 0;
         try {
-            resultSet = List.copyOf(query.executeResultList(ComponentProjection.class));
+            for (final var componentProjection : query.executeResultList(ComponentProjection.class)) {
+                components.add(mapToComponent(componentProjection));
+                totalCount = componentProjection.totalCount;
+            }
         } finally {
             query.closeAll();
         }
-        for (final var result : resultSet) {
-            final org.dependencytrack.model.Component component = mapToComponent(result);
-            if (includeMetrics) {
-//             Populate each Component object in the paginated result with transitive related
-//             data to minimize the number of round trips a client needs to make, process, and render.
-                component.setMetrics(withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId())));
-                final PackageURL purl = component.getPurl();
-                if (purl != null) {
-                    final RepositoryType type = RepositoryType.resolve(purl);
-                    if (RepositoryType.UNSUPPORTED != type) {
-                        final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
-                        component.setRepositoryMeta(repoMetaComponent);
-                    }
-                }
-            }
-            componentsResult.add(component);
+
+        if (!components.isEmpty() && includeMetrics) {
+            populateRepositoryMetadata(components);
+            populateMetrics(components);
         }
-        return (new PaginatedResult()).objects(componentsResult).total(resultSet.isEmpty() ? 0 : resultSet.get(0).totalCount);
+
+        return (new PaginatedResult()).objects(components).total(totalCount);
     }
 
     /**
@@ -403,23 +400,13 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             result = new PaginatedResult();
         }
 
-        if (includeMetrics) {
-            // Populate each Component object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Component component : result.getList(Component.class)) {
-                final DependencyMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(component.getId()));
-                component.setMetrics(metrics);
-                final PackageURL purl = component.getPurl();
-                if (purl != null) {
-                    final RepositoryType type = RepositoryType.resolve(purl);
-                    if (RepositoryType.UNSUPPORTED != type) {
-                        final RepositoryMetaComponent repoMetaComponent = getRepositoryMetaComponent(type, purl.getNamespace(), purl.getName());
-                        component.setRepositoryMeta(repoMetaComponent);
-                        component.setComponentMetaInformation(getMetaInformation(component.getUuid()));
-                    }
-                }
-            }
+        if (!result.getObjects().isEmpty() && includeMetrics) {
+            final List<Component> components = result.getList(Component.class);
+            populateComponentMetadata(components);
+            populateRepositoryMetadata(components);
+            populateMetrics(components);
         }
+
         for (Component component : result.getList(Component.class)) {
             component.getProject(); // Force loading of project
             component.getProject().getGroup();
@@ -905,6 +892,63 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             } else if (incomingOccurrence == null) {
                 component.getOccurrences().remove(existingOccurrence);
                 pm.deletePersistent(existingOccurrence);
+            }
+        }
+    }
+
+    private void populateMetrics(final Collection<Component> components) {
+        final Map<Long, Component> componentById = components.stream()
+                .collect(Collectors.toMap(Component::getId, Function.identity()));
+        final List<DependencyMetrics> metricsList = withJdbiHandle(
+                handle -> handle.attach(MetricsDao.class).getMostRecentDependencyMetrics(componentById.keySet()));
+        for (final DependencyMetrics metrics : metricsList) {
+            final var component = componentById.get(metrics.getComponentId());
+            if (component != null) {
+                component.setMetrics(metrics);
+            }
+        }
+    }
+
+    private void populateComponentMetadata(final Collection<Component> components) {
+        final Map<UUID, Component> componentByUuid = components.stream()
+                .filter(component -> component.getPurl() != null)
+                .collect(Collectors.toMap(Component::getUuid, Function.identity()));
+        final Map<UUID, ComponentMetaInformation> metadataByUuid = withJdbiHandle(
+                handle -> handle.attach(ComponentMetaDao.class).getComponentMetaInfo(componentByUuid.keySet()));
+        for (final Map.Entry<UUID, ComponentMetaInformation> entry : metadataByUuid.entrySet()) {
+            final var component = componentByUuid.get(entry.getKey());
+            if (component != null) {
+                component.setComponentMetaInformation(entry.getValue());
+            }
+        }
+    }
+
+    private void populateRepositoryMetadata(final Collection<Component> components) {
+        final Map<RepositoryMetaComponentSearch, List<Component>> componentsByRepoMetaSearch = components.stream()
+                .filter(component -> component.getPurl() != null)
+                .filter(component -> RepositoryType.UNSUPPORTED != RepositoryType.resolve(component.getPurl()))
+                .collect(Collectors.groupingBy(component -> {
+                    final PackageURL purl = component.getPurl();
+                    final var repositoryType = RepositoryType.resolve(purl);
+                    return new RepositoryMetaComponentSearch(repositoryType, purl.getNamespace(), purl.getName());
+                }));
+        if (componentsByRepoMetaSearch.isEmpty()) {
+            return;
+        }
+
+        final List<RepositoryMetaComponent> repoMetaComponents = withJdbiHandle(
+                handle -> handle.attach(RepositoryMetaDao.class).getRepositoryMetaComponents(
+                        componentsByRepoMetaSearch.keySet()));
+        for (final RepositoryMetaComponent repoMetaComponent : repoMetaComponents) {
+            final var search = new RepositoryMetaComponentSearch(
+                    repoMetaComponent.getRepositoryType(),
+                    repoMetaComponent.getNamespace(),
+                    repoMetaComponent.getName());
+            final List<Component> searchComponents = componentsByRepoMetaSearch.get(search);
+            if (searchComponents != null) {
+                for (final Component component : searchComponents) {
+                    component.setRepositoryMeta(repoMetaComponent);
+                }
             }
         }
     }

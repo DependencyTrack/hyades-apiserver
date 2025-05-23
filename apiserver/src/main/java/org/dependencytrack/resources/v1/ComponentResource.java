@@ -57,6 +57,7 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
+import org.dependencytrack.persistence.jdbi.ComponentMetaDao;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
@@ -186,7 +187,8 @@ public class ComponentResource extends AbstractApiResource {
                             detachedComponent.setRepositoryMeta(repoMetaComponent);
                         }
                         if (includeIntegrityMetaData) {
-                            detachedComponent.setComponentMetaInformation(qm.getMetaInformation(component.getUuid()));
+                            detachedComponent.setComponentMetaInformation(withJdbiHandle(
+                                    handle -> handle.attach(ComponentMetaDao.class).getComponentMetaInfo(component.getUuid())));
                         }
                     }
                 }
