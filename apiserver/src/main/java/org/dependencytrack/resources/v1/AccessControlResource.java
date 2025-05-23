@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.model.Team;
+import alpine.model.User;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
@@ -58,7 +59,6 @@ import org.jdbi.v3.core.Handle;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 

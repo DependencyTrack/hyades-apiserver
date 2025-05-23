@@ -253,7 +253,7 @@ public class PermissionResourceTest extends ResourceTest {
         JsonObject json = parseJsonObject(response);
         Assert.assertNotNull(json);
         Assert.assertEquals("team1", json.getString("name"));
-        Assert.assertFalse(json.containsKey("permissions"));
+        Assert.assertEquals(0, json.getJsonArray("permissions").size());
     }
 
     @Test

@@ -52,6 +52,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.IdentifiableObject;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
@@ -59,6 +61,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.RoleProjectRequest;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
@@ -169,7 +172,7 @@ public class UserResource extends AlpineResource {
     @AuthenticationNotRequired
     public Response validateOidcAccessToken(@Parameter(description = "An OAuth2 access token", required = true)
                                             @FormParam("idToken") final String idToken,
-                                            @FormParam("accessToken") final String accessToken) {
+            @FormParam("accessToken") final String accessToken) {
         final OidcAuthenticationService authService = new OidcAuthenticationService(idToken, accessToken);
 
         if (!authService.isSpecified()) {
@@ -903,7 +906,6 @@ public class UserResource extends AlpineResource {
 
             qm.addRoleToUser(user, role, project);
 
-            principal = qm.getObjectById(principal.getClass(), principal.getId());
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
                     "Granted project role: user='%s', role='%s', project='%s'"
                             .formatted(user.getUsername(), role.getName(), project.getName()));

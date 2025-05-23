@@ -29,8 +29,10 @@ import org.dependencytrack.model.Role;
 
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
@@ -62,10 +64,10 @@ public class ProjectRoleRowMapper implements RowMapper<ProjectRole> {
             projectRole.getProject().setUuid(UUID.fromString(value));
         });
 
-        maybeSet(resultSet, "ROLE_ID", ResultSet::getLong, value -> {
-            var role = new Role();
-            role.setId(value);
-            projectRole.setRole(role);
+        maybeSet(resultSet, "ROLE_ID", ResultSet::getLong, projectRole.getRole()::setId);
+        maybeSet(resultSet, "ROLE_NAME", ResultSet::getString, projectRole.getRole()::setName);
+        maybeSet(resultSet, "ROLE_UUID", ResultSet::getString, value -> {
+            projectRole.getRole().setUuid(UUID.fromString(value));
         });
 
         return projectRole;

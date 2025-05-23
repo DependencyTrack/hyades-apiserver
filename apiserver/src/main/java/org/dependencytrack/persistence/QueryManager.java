@@ -23,9 +23,6 @@ import alpine.common.util.BooleanUtil;
 import alpine.common.validation.RegexSequence;
 import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.model.Permission;
 import alpine.model.Team;
@@ -70,9 +67,11 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.ProjectRole;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vex;
@@ -117,7 +116,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -150,6 +148,7 @@ public class QueryManager extends AlpineQueryManager {
     private PolicyQueryManager policyQueryManager;
     private ProjectQueryManager projectQueryManager;
     private RepositoryQueryManager repositoryQueryManager;
+    private RoleQueryManager roleQueryManager;
     private ServiceComponentQueryManager serviceComponentQueryManager;
     private VexQueryManager vexQueryManager;
     private VulnerabilityQueryManager vulnerabilityQueryManager;
@@ -426,6 +425,13 @@ public class QueryManager extends AlpineQueryManager {
             repositoryQueryManager = (request == null) ? new RepositoryQueryManager(getPersistenceManager()) : new RepositoryQueryManager(getPersistenceManager(), request);
         }
         return repositoryQueryManager;
+    }
+
+    private RoleQueryManager getRoleQueryManager(){
+        if (roleQueryManager == null) {
+            roleQueryManager = (request ==null) ? new RoleQueryManager(getPersistenceManager()) : new RoleQueryManager(getPersistenceManager(), request);
+        }
+        return roleQueryManager;
     }
 
     /**
@@ -860,11 +866,11 @@ public class QueryManager extends AlpineQueryManager {
         getPolicyQueryManager().deletePolicyCondition(policyCondition);
     }
 
-    public Role createRole(Role role) {
-        return getRoleQueryManager().createRole(role);
+    public Role createRole(final String name, final List<Permission> permissions) {
+        return getRoleQueryManager().createRole(name, permissions);
     }
 
-    public List getRoles() {
+    public List<Role> getRoles() {
         return getRoleQueryManager().getRoles();
     }
 

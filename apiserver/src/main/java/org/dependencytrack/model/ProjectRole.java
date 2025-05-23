@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import alpine.model.User;
@@ -57,12 +56,10 @@ public class ProjectRole implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "ROLE_ID", allowsNull = "false")
-    @JsonIgnore
     private Role role;
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "PROJECT_ID", allowsNull = "false")
-    @JsonIgnore
     private Project project;
 
     @Persistent(defaultFetchGroup = "true")

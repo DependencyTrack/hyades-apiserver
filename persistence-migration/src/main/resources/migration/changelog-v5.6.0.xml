@@ -1189,22 +1189,6 @@
     </changeSet>
 
     <changeSet id="v5.6.0-17" author="jhoward-lm">
-        <!--
-          A previous version of this changeset was missing immediate constraint checking,
-          had a syntax issue when looping over duplicate teams, and did not properly clean
-          up duplicate relationship records after updating FK references of duplicate teams.
-          Deployments that did not have duplicate teams at the time of the execution
-          were able to successfully complete this changeset and do not have to repeat it.
-        -->
-        <validCheckSum>9:75a5b859b6131f15a841804da10c14dc</validCheckSum>
-
-        <!--
-          Disable deferred constraint checking during this transaction.
-          Without this, we would not be able to add primary keys after
-          having deleted records from a table before.
-        -->
-        <sql>SET CONSTRAINTS ALL IMMEDIATE</sql>
-
         <sql splitStatements="false">
             CREATE OR REPLACE FUNCTION remove_duplicate_rows(
               table_name TEXT,
@@ -1258,6 +1242,8 @@
               PERFORM remove_duplicate_rows('TEAMS_PERMISSIONS', 'TEAM_ID', 'PERMISSION_ID');
             END
             $$;
+
+            DROP FUNCTION remove_duplicate_rows;
         </sql>
 
         <sql splitStatements="false">
@@ -1280,7 +1266,7 @@
             -- Loop over each team name group that has duplicates.
               FOR rec IN
               SELECT
-                  "NAME" AS name,
+                  "NAME",
                   MIN("ID") AS canonical_id,
                   ARRAY_AGG("ID") AS all_ids
                 FROM "TEAM"
@@ -1314,14 +1300,6 @@
                     $delete$, dup_id);
                 END LOOP;
               END LOOP;
-
-              PERFORM remove_duplicate_rows('APIKEYS_TEAMS', 'TEAM_ID', 'APIKEY_ID');
-              PERFORM remove_duplicate_rows('LDAPUSERS_TEAMS', 'TEAM_ID', 'LDAPUSER_ID');
-              PERFORM remove_duplicate_rows('MANAGEDUSERS_TEAMS', 'TEAM_ID', 'MANAGEDUSER_ID');
-              PERFORM remove_duplicate_rows('NOTIFICATIONRULE_TEAMS', 'NOTIFICATIONRULE_ID', 'TEAM_ID');
-              PERFORM remove_duplicate_rows('OIDCUSERS_TEAMS', 'TEAM_ID', 'OIDCUSERS_ID');
-              PERFORM remove_duplicate_rows('TEAMS_PERMISSIONS', 'TEAM_ID', 'PERMISSION_ID');
-              DROP FUNCTION remove_duplicate_rows;
             END $$;
         </sql>
 
@@ -1454,15 +1432,6 @@
     </changeSet>
 
     <changeSet id="v5.6.0-23" author="jhoward-lm">
-        <!--
-          A previous version of this changeset did not cater to duplicate usernames existing
-          across the MANAGEDUSER, LDAPUSER, and OIDCUSER tables.
-          Deployments that did not have duplicate usernames across user tables at the time
-          of the execution were able to successfully complete this changeset and do not have
-          to repeat it.
-        -->
-        <validCheckSum>9:aa6e0cecae0b4f050a56eb1bbcb686be</validCheckSum>
-
         <createTable ifNotExists="true" tableName="USER">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="USER_PK" />
@@ -1635,17 +1604,8 @@
 
         <!-- Migrate existing LDAP users. -->
         <sql splitStatements="true">
-            WITH cte_created_user AS (
-              INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "DN")
-              SELECT 'LDAP', "USERNAME", "EMAIL", "DN"
-                FROM "LDAPUSER"
-              ON CONFLICT ("USERNAME") DO NOTHING
-              RETURNING "USERNAME"
-            )
             INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "DN")
-            SELECT 'LDAP', ("USERNAME" || '-CONFLICT-LDAP') AS "USERNAME", "EMAIL", "DN"
-              FROM "LDAPUSER"
-             WHERE "USERNAME" NOT IN (SELECT "USERNAME" FROM cte_created_user);
+            SELECT 'LDAP', "USERNAME", "EMAIL", "DN" FROM "LDAPUSER";
 
             INSERT INTO "USERS_PERMISSIONS" ("PERMISSION_ID", "USER_ID")
             SELECT "LDAPUSERS_PERMISSIONS"."PERMISSION_ID"
@@ -1654,8 +1614,7 @@
              INNER JOIN "LDAPUSER"
                 ON "LDAPUSER"."ID" = "LDAPUSERS_PERMISSIONS"."LDAPUSER_ID"
              INNER JOIN "USER"
-                ON ("USER"."USERNAME" = "LDAPUSER"."USERNAME"
-                    OR "USER"."USERNAME" = ("LDAPUSER"."USERNAME" || '-CONFLICT-LDAP'))
+                ON "USER"."USERNAME" = "LDAPUSER"."USERNAME"
                AND "USER"."TYPE" = 'LDAP'
             ON CONFLICT ("PERMISSION_ID", "USER_ID") DO NOTHING;
 
@@ -1666,25 +1625,15 @@
              INNER JOIN "LDAPUSER"
                 ON "LDAPUSER"."ID" = "LDAPUSERS_TEAMS"."LDAPUSER_ID"
              INNER JOIN "USER"
-                ON ("USER"."USERNAME" = "LDAPUSER"."USERNAME"
-                    OR "USER"."USERNAME" = ("LDAPUSER"."USERNAME" || '-CONFLICT-LDAP'))
+                ON "USER"."USERNAME" = "LDAPUSER"."USERNAME"
                AND "USER"."TYPE" = 'LDAP'
             ON CONFLICT ("TEAM_ID", "USER_ID") DO NOTHING;
         </sql>
 
         <!-- Migrate existing OIDC users. -->
         <sql splitStatements="true">
-            WITH cte_created_user AS (
-              INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER")
-              SELECT 'OIDC', "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER"
-                FROM "OIDCUSER"
-              ON CONFLICT ("USERNAME") DO NOTHING
-              RETURNING "USERNAME"
-            )
             INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER")
-            SELECT 'OIDC', ("USERNAME" || '-CONFLICT-OIDC') AS "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER"
-              FROM "OIDCUSER"
-            WHERE "USERNAME" NOT IN (SELECT "USERNAME" FROM cte_created_user);
+            SELECT 'OIDC', "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER" FROM "OIDCUSER";
 
             INSERT INTO "USERS_PERMISSIONS" ("PERMISSION_ID", "USER_ID")
             SELECT "OIDCUSERS_PERMISSIONS"."PERMISSION_ID"
@@ -1693,8 +1642,7 @@
              INNER JOIN "OIDCUSER"
                 ON "OIDCUSER"."ID" = "OIDCUSERS_PERMISSIONS"."OIDCUSER_ID"
              INNER JOIN "USER"
-                ON ("USER"."USERNAME" = "OIDCUSER"."USERNAME"
-                    OR "USER"."USERNAME" = ("OIDCUSER"."USERNAME" || '-CONFLICT-OIDC'))
+                ON "USER"."USERNAME" = "OIDCUSER"."USERNAME"
                AND "USER"."TYPE" = 'OIDC'
             ON CONFLICT ("PERMISSION_ID", "USER_ID") DO NOTHING;
 
@@ -1705,8 +1653,7 @@
              INNER JOIN "OIDCUSER"
                 ON "OIDCUSER"."ID" = "OIDCUSERS_TEAMS"."OIDCUSERS_ID"
              INNER JOIN "USER"
-                ON ("USER"."USERNAME" = "OIDCUSER"."USERNAME"
-                    OR "USER"."USERNAME" = ("OIDCUSER"."USERNAME" || '-CONFLICT-OIDC'))
+                ON "USER"."USERNAME" = "OIDCUSER"."USERNAME"
                AND "USER"."TYPE" = 'OIDC'
             ON CONFLICT ("TEAM_ID", "USER_ID") DO NOTHING;
         </sql>

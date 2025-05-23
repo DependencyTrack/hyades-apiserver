@@ -1,12 +1,37 @@
+/*
+ * This file is part of Dependency-Track.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
+ */
 package org.dependencytrack.persistence;
 
-import java.nio.file.attribute.UserPrincipal;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
 
+import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
+import org.dependencytrack.model.ProjectRole;
+import org.dependencytrack.persistence.jdbi.JdbiFactory;
+import org.dependencytrack.persistence.jdbi.RoleDao;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -20,7 +45,21 @@ import alpine.resources.AlpineRequest;
 
 final class RoleQueryManager extends QueryManager implements IQueryManager {
 
-    private static final Logger LOGGER = Logger.getLogger(ProjectQueryManager.class);
+    /**
+     * Represents a row returned by the USER_PROJECT_EFFECTIVE_PERMISSIONS view.
+     *
+     * @since 5.6.0
+     */
+    public record UserProjectEffectivePermissionsRow(
+            Long ldapUserId,
+            Long managedUserId,
+            Long oidcUserId,
+            Long projectId,
+            Long permissionId,
+            String permissionName) {
+    }
+
+    private static final Logger LOGGER = Logger.getLogger(RoleQueryManager.class);
 
     RoleQueryManager(final PersistenceManager pm) {
         super(pm);
@@ -30,14 +69,24 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
         super(pm, request);
     }
 
-    public Role createRole(Role role) {
-        // TODO:Implement role creation logic
-        return role;
+    @Override
+    public Role createRole(final String name, final List<Permission> permissions) {
+        return callInTransaction(() -> {
+            final Role role = new Role();
+            role.setName(name);
+            role.setPermissions(Set.copyOf(permissions));
+
+            return persist(role);
+        });
     }
 
+    @Override
     public List<Role> getRoles() {
-        // TODO:Implement role retrieval logic
-        return Collections.emptyList();
+        final Query<Role> query = pm.newQuery(Role.class);
+        if (orderBy == null)
+            query.setOrdering("name asc");
+
+        return query.executeList();
     }
 
     @Override

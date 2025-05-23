@@ -60,14 +60,13 @@ import javax.jdo.annotations.Unique;
 @PersistenceCapable
 @FetchGroup(name = "ALL", members = {
         @Persistent(name = "name"),
-        @Persistent(name = "description"),
         @Persistent(name = "permissions"),
         @Persistent(name = "uuid"),
 })
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Role implements Serializable {
 
-    private static final long serialVersionUID = -7592438796591673355L;
+    private static final long serialVersionUID = -427858073810766917L;
 
     /**
      * Defines JDO fetch groups for this class.
@@ -89,14 +88,6 @@ public class Role implements Serializable {
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS, message = "The name may only contain printable characters")
     private String name;
-
-    @Persistent
-    @Column(name = "DESCRIPTION", jdbcType = "VARCHAR")
-    @Size(max = 255)
-    @JsonDeserialize(using = TrimmedStringDeserializer.class)
-    @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS,
-            message = "The description may only contain printable characters")
-    private String description;
 
     @Persistent(table = "ROLES_PERMISSIONS", defaultFetchGroup = "true")
     @Unique(name = "ROLES_PERMISSIONS_IDX")
@@ -160,7 +151,6 @@ public class Role implements Serializable {
                 id,
                 uuid,
                 name,
-                description != null ? description : "",
                 permissionStrings);
     }
 
