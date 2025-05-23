@@ -164,7 +164,7 @@ public class RoleResourceTest extends ResourceTest {
         testUser.setUsername("test-user");
         DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
         testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword("password");
+        testUser.setPassword(TEST_USER_PASSWORD_HASH);
         qm.persist(testUser);
 
         final var expectedRole = new Role();

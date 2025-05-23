@@ -27,6 +27,7 @@ import org.jdbi.v3.core.Jdbi;
 
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
+import alpine.server.auth.PasswordService;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -52,6 +53,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class RoleQueryManagerTest extends PersistenceCapableTest {
 
     private PostgreSQLContainer<?> postgresContainer;
+    private static final String TEST_ROLE_PASSWORD_HASH = new String(PasswordService.createHash("testuser".toCharArray()));
 
     @Before
     public void setUp() {
@@ -154,7 +156,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         testUser.setUsername("test-user");
         DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
         testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword("password");
+        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
         qm.persist(testUser);
 
         final var expectedRole = new Role();
@@ -184,7 +186,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         testUser.setUsername(testUserName);
         DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
         testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword("password");
+        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
         qm.persist(testUser);
 
         final var maintainerRole = new Role();
@@ -264,7 +266,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         testUser.setUsername("test-user");
         DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
         testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword("password");
+        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
         testUser.setPermissions(expectedPermissionsList);
         qm.persist(testUser);
 
@@ -321,7 +323,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         testUser.setUsername("test-user");
         DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
         testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword("password");
+        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
         testUser.setPermissions(expectedPermissionsList);
         qm.persist(testUser);
 
@@ -371,7 +373,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         testUser.setUsername("test-user");
         DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
         testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword("password");
+        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
         qm.persist(testUser);
 
         final var maintainerRole = new Role();
@@ -380,6 +382,13 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         qm.persist(maintainerRole);
 
         qm.addRoleToUser(testUser, maintainerRole, testProject);
+
+        Assert.assertEquals(
+                qm.getRoles().size(),
+                1);
+        Assert.assertEquals(
+                qm.getRoles().get(0).getName(),
+                maintainerRole.getName());
     }
 
     @Test
@@ -396,7 +405,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         testUser.setUsername("test-user");
         DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
         testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword("password");
+        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
         qm.persist(testUser);
 
         final var maintainerRole = new Role();
