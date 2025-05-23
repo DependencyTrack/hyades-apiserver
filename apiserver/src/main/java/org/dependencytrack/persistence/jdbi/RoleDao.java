@@ -89,6 +89,17 @@ public interface RoleDao {
     List<ProjectRole> getUserRoles(@Bind String username);
 
     @SqlQuery(/* language=sql */ """
+            SELECT EXISTS (
+              SELECT 1
+                FROM "USERS_PROJECTS_ROLES"
+               WHERE "ROLE_ID" = :roleId
+                 AND "PROJECT_ID" = :projectId
+                 AND "USER_ID" = :userId
+            )
+            """)
+    boolean userProjectRoleExists(@Bind long userId, @Bind long projectId, @Bind long roleId);
+
+    @SqlQuery(/* language=sql */ """
             SELECT p."ID", p."NAME", p."UUID"
               FROM "PROJECT" p
               LEFT JOIN "USERS_PROJECTS_ROLES" pr
