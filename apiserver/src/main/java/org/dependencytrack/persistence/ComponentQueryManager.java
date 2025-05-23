@@ -27,6 +27,7 @@ import com.github.packageurl.PackageURL;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
+import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.DependencyMetrics;
@@ -35,6 +36,7 @@ import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.sqlmapping.ComponentProjection;
 import org.dependencytrack.persistence.RepositoryQueryManager.RepositoryMetaComponentSearch;
+import org.dependencytrack.persistence.jdbi.ComponentMetaDao;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.RepositoryMetaDao;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
@@ -399,16 +401,10 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         }
 
         if (!result.getObjects().isEmpty() && includeMetrics) {
-            populateRepositoryMetadata(result.getList(Component.class));
-            populateMetrics(result.getList(Component.class));
-
-            // TODO: Make this a batch lookup.
-            for (final Component component : result.getList(Component.class)) {
-                final PackageURL purl = component.getPurl();
-                if (purl != null) {
-                    component.setComponentMetaInformation(getMetaInformation(component.getUuid()));
-                }
-            }
+            final List<Component> components = result.getList(Component.class);
+            populateComponentMetadata(components);
+            populateRepositoryMetadata(components);
+            populateMetrics(components);
         }
 
         for (Component component : result.getList(Component.class)) {
@@ -909,6 +905,20 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
             final var component = componentById.get(metrics.getComponentId());
             if (component != null) {
                 component.setMetrics(metrics);
+            }
+        }
+    }
+
+    private void populateComponentMetadata(final Collection<Component> components) {
+        final Map<UUID, Component> componentByUuid = components.stream()
+                .filter(component -> component.getPurl() != null)
+                .collect(Collectors.toMap(Component::getUuid, Function.identity()));
+        final Map<UUID, ComponentMetaInformation> metadataByUuid = withJdbiHandle(
+                handle -> handle.attach(ComponentMetaDao.class).getComponentMetaInfo(componentByUuid.keySet()));
+        for (final Map.Entry<UUID, ComponentMetaInformation> entry : metadataByUuid.entrySet()) {
+            final var component = componentByUuid.get(entry.getKey());
+            if (component != null) {
+                component.setComponentMetaInformation(entry.getValue());
             }
         }
     }
