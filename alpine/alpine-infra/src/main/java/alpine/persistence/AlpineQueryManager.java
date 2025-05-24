@@ -50,6 +50,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.datanucleus.store.rdbms.query.JDOQLQuery;
+
 /**
  * This QueryManager provides a concrete extension of {@link AbstractAlpineQueryManager} by
  * providing methods that operate on the default Alpine models such as ManagedUser and Team.
@@ -537,8 +539,11 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * @since 1.0.0
      */
     public User getUser(String username) {
-        final Query<User> query = pm.newQuery(User.class, "username == :username");
-        query.setParameters(username);
+        final Query<User> query = pm.newQuery(User.class)
+                .filter("username == :username")
+                .setNamedParameters(Map.of("username", username))
+                .extension(JDOQLQuery.EXTENSION_CANDIDATE_DONT_RESTRICT_DISCRIMINATOR, true);
+
         return executeAndCloseUnique(query);
     }
 

@@ -125,7 +125,7 @@ public class TeamResource extends AlpineResource {
             @Parameter(description = "The UUID of the team to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.getObjectByUuid(Team.class, uuid);
+            final Team team = qm.getObjectByUuid(Team.class, uuid, Team.FetchGroup.ALL.name());
             if (team != null) {
                 return Response.ok(team).build();
             } else {

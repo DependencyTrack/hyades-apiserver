@@ -30,7 +30,10 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.model.IdentifiableObject;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.resources.v1.vo.RoleProjectRequest;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
@@ -748,5 +751,105 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 .put(Entity.entity(unknownUserBody.toString(), MediaType.APPLICATION_JSON));
         Assert.assertEquals(404, response.getStatus());
 
+    }
+
+    @Test
+    public void assignProjectRoleToUserTest() {
+        // Arrange
+        ManagedUser user = qm.createManagedUser("roleuser", TEST_USER_PASSWORD_HASH);
+        Project project = qm.createProject(
+                "Test Project", "null",
+                "null", Collections.emptyList(),
+                null, null, null, false);
+
+        Role role = qm.createRole("Test Role", Collections.emptyList());
+
+        RoleProjectRequest request = new RoleProjectRequest(
+                user.getUsername(),
+                role.getUuid().toString(),
+                project.getUuid().toString());
+
+        // Act
+        Response response = jersey.target(V1_USER + "/role").request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(request, MediaType.APPLICATION_JSON));
+
+        // Assert
+        Assert.assertEquals(200, response.getStatus());
+        JsonObject json = parseJsonObject(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals("roleuser", json.getString("username"));
+        // Optionally, check if the user has the role for the project in the DB
+    }
+
+    @Test
+    public void assignProjectRoleToUserAlreadyAssignedTest() {
+        ManagedUser user = qm.createManagedUser("roleuser2", TEST_USER_PASSWORD_HASH);
+        Project project = qm.createProject(
+                "Test Project 2","null",
+                "null",Collections.emptyList(),
+                null,null,null,false);
+        Role role = qm.createRole("Test Role 2", Collections.emptyList());
+        qm.addRoleToUser(user, role, project);
+
+
+        RoleProjectRequest request = new RoleProjectRequest(
+                user.getUsername(),
+                role.getUuid().toString(),
+                project.getUuid().toString()
+        );
+
+        Response response = jersey.target(V1_USER + "/role").request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(request, MediaType.APPLICATION_JSON));
+
+        Assert.assertEquals(304, response.getStatus());
+    }
+
+    @Test
+    public void removeProjectRoleFromUserTest() {
+        ManagedUser user = qm.createManagedUser("roleuser3", TEST_USER_PASSWORD_HASH);
+        Project project = qm.createProject(
+                "Test Project 3","null",
+                "null",Collections.emptyList(),
+                null,null,null,false);
+        Role role = qm.createRole("Test Role 3", Collections.emptyList());
+        qm.addRoleToUser(user, role, project);
+
+        RoleProjectRequest request = new RoleProjectRequest(
+                user.getUsername(),
+                role.getUuid().toString(),
+                project.getUuid().toString()
+        );
+
+        Response response = jersey.target(V1_USER + "/role").request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method("DELETE", Entity.entity(request, MediaType.APPLICATION_JSON));
+
+        Assert.assertEquals(204, response.getStatus());
+    }
+
+    @Test
+    public void removeProjectRoleFromUserNotAssignedTest() {
+        ManagedUser user = qm.createManagedUser("roleuser4", TEST_USER_PASSWORD_HASH);
+        Project project = qm.createProject(
+                "Test Project 4","null",
+                "null",Collections.emptyList(),
+                null,null,null,false);
+        Role role = qm.createRole("Test Role 4", Collections.emptyList());
+
+        RoleProjectRequest request = new RoleProjectRequest(
+                user.getUsername(),
+                role.getUuid().toString(),
+                project.getUuid().toString()
+        );
+
+        Response response = jersey.target(V1_USER + "/role").request()
+                .header(X_API_KEY, apiKey)
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                .method("DELETE", Entity.entity(request, MediaType.APPLICATION_JSON));
+
+        Assert.assertEquals(304, response.getStatus());
     }
 }
