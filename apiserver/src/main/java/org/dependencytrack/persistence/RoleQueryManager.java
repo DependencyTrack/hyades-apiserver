@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -36,9 +35,6 @@ import org.dependencytrack.persistence.jdbi.RoleDao;
 import org.apache.commons.lang3.StringUtils;
 
 import alpine.common.logging.Logger;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.User;
 import alpine.resources.AlpineRequest;
@@ -51,12 +47,14 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
      * @since 5.6.0
      */
     public record UserProjectEffectivePermissionsRow(
-            Long ldapUserId,
-            Long managedUserId,
-            Long oidcUserId,
+            Long userId,
             Long projectId,
             Long permissionId,
             String permissionName) {
+
+        public UserProjectEffectivePermissionsRow () {
+            this(null, null, null, null);
+        }
     }
 
     private static final Logger LOGGER = Logger.getLogger(RoleQueryManager.class);
@@ -145,56 +143,6 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
         role.setName(transientRole.getName());
 
         return persist(role);
-    }
-
-    @Override
-    public List<Permission> getUserProjectPermissions(final String username, final String projectName) {
-        final User user = getUser(username);
-        final String columnName;
-
-        switch (user) {
-            case LdapUser ldapUser -> columnName = "LDAPUSER_ID";
-            case ManagedUser managedUser -> columnName = "MANAGEDUSER_ID";
-            case OidcUser oidcUser -> columnName = "OIDCUSER_ID";
-            default -> {
-                return null;
-            }
-        }
-
-        final Query<Project> projectsQuery = pm.newQuery(Project.class)
-                .filter("name == :projectName")
-                .setNamedParameters(Map.of("projectName", projectName));
-
-        final String projectIds = executeAndCloseList(projectsQuery).stream()
-                .map(Project::getId)
-                .map(String::valueOf)
-                .collect(Collectors.joining(", ", "(", ")"));
-
-        // language=SQL
-        final var queryString = """
-                SELECT
-                    upep."LDAPUSER_ID",
-                    upep."MANAGEDUSER_ID",
-                    upep."OIDCUSER_ID",
-                    upep."PROJECT_ID",
-                    upep."PERMISSION_ID",
-                    upep."PERMISSION_NAME"
-                  FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" upep
-                 WHERE upep."%s" = :userId
-                   AND upep."PROJECT_ID" IN %s
-                """.formatted(columnName, projectIds);
-
-        final Query<?> query = pm.newQuery(Query.SQL, queryString);
-        query.setNamedParameters(Map.of(
-                "userId", user.getId(),
-                "projectIds", projectIds));
-
-        return executeAndCloseResultList(query, UserProjectEffectivePermissionsRow.class)
-                .stream()
-                .map(UserProjectEffectivePermissionsRow::permissionName)
-                .map(this::getPermission)
-                .distinct()
-                .toList();
     }
 
     @Override

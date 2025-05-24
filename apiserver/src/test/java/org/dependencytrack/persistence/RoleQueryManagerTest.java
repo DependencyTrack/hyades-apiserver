@@ -34,8 +34,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -287,76 +285,6 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         Role actualRole = qm.updateRole(maintainerRole);
 
         Assert.assertEquals(maintainerRole, actualRole);
-
-        // TODO: Check requirements of `updateRole`.
-    }
-
-    @Test
-    public void testGetUserProjectPermissions() throws ParseException {
-        final var testProject = new Project();
-        testProject.setId(1);
-        testProject.setName("test-project");
-        testProject.setVersion("1.0.0");
-        qm.persist(testProject);
-
-        final var readPermission = new Permission();
-        readPermission.setId(1);
-        readPermission.setName("read");
-        readPermission.setDescription("permission to read");
-        qm.persist(readPermission);
-
-        final var writePermission = new Permission();
-        writePermission.setId(2);
-        writePermission.setName("write");
-        writePermission.setDescription("permission to write");
-        qm.persist(writePermission);
-
-        List<Permission> expectedPermissionsList = Arrays.asList(
-                readPermission,
-                writePermission);
-
-        Set<Permission> expectedPermissions = new HashSet<>(expectedPermissionsList);
-
-        final var testUser = new ManagedUser();
-        testUser.setFullname("test user created for testing");
-        testUser.setId(1);
-        testUser.setUsername("test-user");
-        DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
-        testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
-        testUser.setPermissions(expectedPermissionsList);
-        qm.persist(testUser);
-
-        final var maintainerRole = new Role();
-        maintainerRole.setId(1);
-        maintainerRole.setName("maintainer");
-        maintainerRole.setPermissions(expectedPermissions);
-        qm.persist(maintainerRole);
-
-        JdbiFactory.withJdbiHandle(
-                handle -> handle.attach(RoleDao.class).addPermissionToRole(
-                        maintainerRole.getId(),
-                        readPermission.getId()));
-
-        JdbiFactory.withJdbiHandle(
-                handle -> handle.attach(RoleDao.class).addPermissionToRole(
-                        maintainerRole.getId(),
-                        writePermission.getId()));
-
-        JdbiFactory.withJdbiHandle(
-                handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        testUser.getId(),
-                        testProject.getId(),
-                        maintainerRole.getId()));
-
-        List<Permission> actualPermissions = qm.getUserProjectPermissions("test-user", "test-project");
-        List<Permission> actualPermissionsSorted = new ArrayList<Permission>();
-        for (Permission p : actualPermissions) {
-            actualPermissionsSorted.add(p);
-        }
-        Collections.sort(actualPermissionsSorted, Comparator.comparing(Permission::getId));
-
-        Assert.assertEquals(expectedPermissionsList, actualPermissionsSorted);
     }
 
     @Test

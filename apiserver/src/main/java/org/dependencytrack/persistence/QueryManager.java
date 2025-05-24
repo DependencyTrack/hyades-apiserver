@@ -1149,10 +1149,6 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getUserRoles(user);
     }
 
-    public List<Permission> getUserProjectPermissions(final String username, final String projectName) {
-        return getRoleQueryManager().getUserProjectPermissions(username, projectName);
-    }
-
     public boolean removeRoleFromUser(final User user, final Role role, final Project project) {
         return getRoleQueryManager().removeRoleFromUser(user, role, project);
     }
