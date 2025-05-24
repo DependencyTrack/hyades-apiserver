@@ -51,10 +51,6 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
             Long projectId,
             Long permissionId,
             String permissionName) {
-
-        public UserProjectEffectivePermissionsRow () {
-            this(null, null, null, null);
-        }
     }
 
     private static final Logger LOGGER = Logger.getLogger(RoleQueryManager.class);

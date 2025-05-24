@@ -200,7 +200,6 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         final var assignedProject = new Project();
         assignedProject.setId(2);
         assignedProject.setName("test-project-2");
-
         qm.persist(assignedProject);
 
         final var unassignedProject2 = new Project();
@@ -220,7 +219,14 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
         List<Project> actualProjects = qm.getUnassignedProjects(testUserName);
 
-        Assert.assertEquals(expectedProjects.toString(), actualProjects.toString());
+        // Sort both lists by project name before asserting equivalence
+        expectedProjects.sort((p1, p2) -> p1.getName().compareTo(p2.getName()));
+        actualProjects.sort((p1, p2) -> p1.getName().compareTo(p2.getName()));
+
+        Assert.assertEquals(expectedProjects.size(), actualProjects.size());
+        for (int i = 0; i < expectedProjects.size(); i++) {
+            Assert.assertEquals(expectedProjects.get(i).getName(), actualProjects.get(i).getName());
+        }
     }
 
     @Test
