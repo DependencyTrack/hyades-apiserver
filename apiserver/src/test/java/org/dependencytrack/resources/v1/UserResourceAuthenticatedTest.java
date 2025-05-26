@@ -754,7 +754,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void assignProjectRoleToUserTest() {
+    public void assignProjectRoleBindingToUserTest() {
         // Arrange
         ManagedUser user = qm.createManagedUser("roleuser", TEST_USER_PASSWORD_HASH);
         Project project = qm.createProject(
@@ -783,7 +783,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void assignProjectRoleToUserAlreadyAssignedTest() {
+    public void assignProjectRoleBindingToUserAlreadyAssignedTest() {
         ManagedUser user = qm.createManagedUser("roleuser2", TEST_USER_PASSWORD_HASH);
         Project project = qm.createProject(
                 "Test Project 2","null",
@@ -807,7 +807,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void removeProjectRoleFromUserTest() {
+    public void removeProjectRoleBindingFromUserTest() {
         ManagedUser user = qm.createManagedUser("roleuser3", TEST_USER_PASSWORD_HASH);
         Project project = qm.createProject(
                 "Test Project 3","null",
@@ -831,7 +831,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     }
 
     @Test
-    public void removeProjectRoleFromUserNotAssignedTest() {
+    public void removeProjectRoleBindingFromUserNotAssignedTest() {
         ManagedUser user = qm.createManagedUser("roleuser4", TEST_USER_PASSWORD_HASH);
         Project project = qm.createProject(
                 "Test Project 4","null",

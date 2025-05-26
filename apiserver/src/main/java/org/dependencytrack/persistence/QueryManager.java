@@ -67,7 +67,7 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
-import org.dependencytrack.model.ProjectRole;
+import org.dependencytrack.model.ProjectRoleBinding;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
@@ -488,19 +488,19 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Get the IDs of the {@link ProjectRole}s a given {@link Principal} is a member of.
+     * Get the IDs of the {@link ProjectRoleBinding}s a given {@link Principal} is a member of.
      *
-     * @return A {@link Set} of {@link ProjectRole} IDs
+     * @return A {@link Set} of {@link ProjectRoleBinding} IDs
      */
     protected Set<Long> getRoleIds(final Principal principal, final Project project) {
-        final Query<ProjectRole> query = pm.newQuery(ProjectRole.class)
+        final Query<ProjectRoleBinding> query = pm.newQuery(ProjectRoleBinding.class)
                 .filter("project.id == :projectId && users.contains(:principal)")
                 .setNamedParameters(Map.ofEntries(
                     Map.entry("principal", principal),
                     Map.entry("projectId", project.getId())));
 
         return Set.of(executeAndCloseList(query).stream()
-                .map(ProjectRole::getRole)
+                .map(ProjectRoleBinding::getRole)
                 .map(Role::getId)
                 .toArray(Long[]::new));
     }
@@ -1145,7 +1145,7 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getUnassignedRolePermissions(role);
     }
 
-    public List<ProjectRole> getUserRoles(final User user) {
+    public List<ProjectRoleBinding> getUserRoles(final User user) {
         return getRoleQueryManager().getUserRoles(user);
     }
 

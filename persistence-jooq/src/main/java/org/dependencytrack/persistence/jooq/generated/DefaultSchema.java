@@ -62,7 +62,7 @@ import org.dependencytrack.persistence.jooq.generated.tables.TeamsPermissions;
 import org.dependencytrack.persistence.jooq.generated.tables.User;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions;
 import org.dependencytrack.persistence.jooq.generated.tables.UsersPermissions;
-import org.dependencytrack.persistence.jooq.generated.tables.UsersProjectsRoles;
+import org.dependencytrack.persistence.jooq.generated.tables.ProjectRoleBinding;
 import org.dependencytrack.persistence.jooq.generated.tables.UsersTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.Vex;
 import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis;
@@ -370,9 +370,9 @@ public class DefaultSchema extends SchemaImpl {
     public final UsersPermissions USERS_PERMISSIONS = UsersPermissions.USERS_PERMISSIONS;
 
     /**
-     * The table <code>USERS_PROJECTS_ROLES</code>.
+     * The table <code>PROJECT_ROLE_BINDING</code>.
      */
-    public final UsersProjectsRoles USERS_PROJECTS_ROLES = UsersProjectsRoles.USERS_PROJECTS_ROLES;
+    public final ProjectRoleBinding PROJECT_ROLE_BINDING = ProjectRoleBinding.PROJECT_ROLE_BINDING;
 
     /**
      * The table <code>USERS_TEAMS</code>.
@@ -513,7 +513,7 @@ public class DefaultSchema extends SchemaImpl {
             User.USER,
             UserProjectEffectivePermissions.USER_PROJECT_EFFECTIVE_PERMISSIONS,
             UsersPermissions.USERS_PERMISSIONS,
-            UsersProjectsRoles.USERS_PROJECTS_ROLES,
+            ProjectRoleBinding.PROJECT_ROLE_BINDING,
             UsersTeams.USERS_TEAMS,
             Vex.VEX,
             ViolationAnalysis.VIOLATIONANALYSIS,

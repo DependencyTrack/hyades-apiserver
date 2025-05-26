@@ -24,7 +24,7 @@ import alpine.model.OidcUser;
 import alpine.model.User;
 
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectRole;
+import org.dependencytrack.model.ProjectRoleBinding;
 import org.dependencytrack.model.Role;
 
 import org.jdbi.v3.core.mapper.RowMapper;
@@ -36,10 +36,10 @@ import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
-public class ProjectRoleRowMapper implements RowMapper<ProjectRole> {
+public class ProjectRoleRowBindingMapper implements RowMapper<ProjectRoleBinding> {
 
-    public ProjectRole map(final ResultSet resultSet, final StatementContext ctx) throws SQLException {
-        final ProjectRole projectRole = new ProjectRole();
+    public ProjectRoleBinding map(final ResultSet resultSet, final StatementContext ctx) throws SQLException {
+        final ProjectRoleBinding projectRole = new ProjectRoleBinding();
         projectRole.setProject(new Project());
         projectRole.setRole(new Role());
 

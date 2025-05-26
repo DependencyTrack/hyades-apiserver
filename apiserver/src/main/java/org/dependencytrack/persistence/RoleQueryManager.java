@@ -28,7 +28,7 @@ import javax.jdo.Query;
 
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.model.ProjectRole;
+import org.dependencytrack.model.ProjectRoleBinding;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.persistence.jdbi.RoleDao;
 
@@ -40,18 +40,6 @@ import alpine.model.User;
 import alpine.resources.AlpineRequest;
 
 final class RoleQueryManager extends QueryManager implements IQueryManager {
-
-    /**
-     * Represents a row returned by the USER_PROJECT_EFFECTIVE_PERMISSIONS view.
-     *
-     * @since 5.6.0
-     */
-    public record UserProjectEffectivePermissionsRow(
-            Long userId,
-            Long projectId,
-            Long permissionId,
-            String permissionName) {
-    }
 
     private static final Logger LOGGER = Logger.getLogger(RoleQueryManager.class);
 
@@ -70,6 +58,9 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
             role.setName(name);
             role.setPermissions(Set.copyOf(permissions));
 
+            LOGGER.debug(name + " role created with permissions: "
+                    + String.join(", ", permissions.stream().map(Permission::getName).toList()));
+
             return persist(role);
         });
     }
@@ -79,6 +70,8 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
         final Query<Role> query = pm.newQuery(Role.class);
         if (orderBy == null)
             query.setOrdering("name asc");
+
+        decorate(query);
 
         return query.executeList();
     }
@@ -100,7 +93,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public List<ProjectRole> getUserRoles(final User user) {
+    public List<ProjectRoleBinding> getUserRoles(final User user) {
         return JdbiFactory.withJdbiHandle(handle -> handle.attach(RoleDao.class)
                 .getUserRoles(user.getUsername()));
     }

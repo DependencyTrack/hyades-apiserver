@@ -19,11 +19,10 @@
 package org.dependencytrack.persistence;
 
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectRole;
+import org.dependencytrack.model.ProjectRoleBinding;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.persistence.jdbi.RoleDao;
-import org.jdbi.v3.core.Jdbi;
 
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
@@ -39,40 +38,14 @@ import java.util.List;
 import java.util.Set;
 
 import org.dependencytrack.PersistenceCapableTest;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class RoleQueryManagerTest extends PersistenceCapableTest {
 
-    private PostgreSQLContainer<?> postgresContainer;
     private static final String TEST_ROLE_PASSWORD_HASH = new String(PasswordService.createHash("testuser".toCharArray()));
-
-    @Before
-    public void setUp() {
-        System.setProperty("javax.jdo.PersistenceManagerFactoryClass",
-                "org.datanucleus.api.jdo.JDOPersistenceManagerFactory");
-
-        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11-alpine"));
-        postgresContainer.start();
-
-        Jdbi.create(
-                postgresContainer.getJdbcUrl(),
-                postgresContainer.getUsername(),
-                postgresContainer.getPassword());
-    }
-
-    @After
-    public void tearDown() {
-        if (postgresContainer != null) {
-            postgresContainer.stop();
-        }
-    }
 
     @Test
     public void testCreateRole() {
@@ -168,7 +141,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
                         testProject.getId(),
                         expectedRole.getId()));
 
-        List<ProjectRole> actualRoles = qm.getUserRoles(testUser);
+        List<ProjectRoleBinding> actualRoles = qm.getUserRoles(testUser);
 
         Assert.assertEquals(actualRoles.size(), 1);
         Assert.assertEquals(expectedRole.toString(), actualRoles.get(0).getRole().toString());

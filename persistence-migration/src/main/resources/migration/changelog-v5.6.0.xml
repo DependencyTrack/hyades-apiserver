@@ -34,7 +34,7 @@
     <changeSet id="v5.6.0-2" author="nscuro">
         <modifyDataType tableName="TEAM" columnName="NAME" newDataType="VARCHAR(255)"/>
     </changeSet>
-  
+
     <changeSet id="v5.6.0-3" author="rossmurphy974@gmail.com">
         <addColumn tableName="PROJECT">
             <column name="AUTHORS" type="TEXT"/>
@@ -42,7 +42,7 @@
         <addColumn tableName="COMPONENT">
             <column name="AUTHORS" type="TEXT"/>
         </addColumn>
-        
+
         <sql>
             UPDATE "PROJECT"
             SET "AUTHORS" = JSON_BUILD_ARRAY(JSON_BUILD_OBJECT('name', "AUTHOR"))::TEXT
@@ -61,7 +61,7 @@
             <column name="AUTHOR"/>
         </dropColumn>
     </changeSet>
-    
+
     <changeSet id="v5.6.0-4" author="nscuro">
         <dropIndex tableName="COMPONENT" indexName="COMPONENT_DIRECT_DEPENDENCIES_GIN_IDX"/>
         <modifyDataType tableName="COMPONENT" columnName="DIRECT_DEPENDENCIES" newDataType="JSONB"/>
@@ -146,7 +146,7 @@
                 <constraints nullable="true"/>
             </column>
         </addColumn>
-    
+
         <sql>UPDATE "PROJECT" SET "INACTIVE_SINCE" = NOW() WHERE "ACTIVE" IS FALSE</sql>
 
         <dropColumn tableName="PROJECT">
@@ -218,19 +218,19 @@
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
-        
+
         <dropForeignKeyConstraint baseTableName="ANALYSIS" constraintName="ANALYSIS_VULNERABILITY_FK"/>
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="ANALYSIS"
                                  constraintName="ANALYSIS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="VULNERABILITY" validate="true"/>
-        
+
         <dropForeignKeyConstraint baseTableName="APIKEYS_TEAMS" constraintName="APIKEYS_TEAMS_TEAM_FK"/>
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="APIKEYS_TEAMS"
                                  constraintName="APIKEYS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
-        
+
         <dropForeignKeyConstraint baseTableName="APIKEYS_TEAMS" constraintName="APIKEYS_TEAMS_APIKEY_FK"/>
         <addForeignKeyConstraint baseColumnNames="APIKEY_ID" baseTableName="APIKEYS_TEAMS"
                                  constraintName="APIKEYS_TEAMS_APIKEY_FK" deferrable="true" initiallyDeferred="true"
@@ -1189,6 +1189,22 @@
     </changeSet>
 
     <changeSet id="v5.6.0-17" author="jhoward-lm">
+        <!--
+          A previous version of this changeset was missing immediate constraint checking,
+          had a syntax issue when looping over duplicate teams, and did not properly clean
+          up duplicate relationship records after updating FK references of duplicate teams.
+          Deployments that did not have duplicate teams at the time of the execution
+          were able to successfully complete this changeset and do not have to repeat it.
+        -->
+        <validCheckSum>9:75a5b859b6131f15a841804da10c14dc</validCheckSum>
+
+        <!--
+          Disable deferred constraint checking during this transaction.
+          Without this, we would not be able to add primary keys after
+          having deleted records from a table before.
+        -->
+        <sql>SET CONSTRAINTS ALL IMMEDIATE</sql>
+
         <sql splitStatements="false">
             CREATE OR REPLACE FUNCTION remove_duplicate_rows(
               table_name TEXT,
@@ -1206,7 +1222,7 @@
                 $q$, table_name, table_name, column_1, column_1, column_2, column_2
               );
             END;
-            $$ LANGUAGE plpgsql;    
+            $$ LANGUAGE plpgsql;
         </sql>
 
         <dropIndex tableName="APIKEYS_TEAMS" indexName="APIKEYS_TEAMS_TEAM_ID_IDX" />
@@ -1229,7 +1245,7 @@
         <dropIndex tableName="TEAMS_PERMISSIONS" indexName="TEAMS_PERMISSIONS_PERMISSION_ID_IDX" />
 
         <sql splitStatements="false">
-            DO $$ 
+            DO $$
             BEGIN
               PERFORM remove_duplicate_rows('APIKEYS_TEAMS', 'TEAM_ID', 'APIKEY_ID');
               PERFORM remove_duplicate_rows('LDAPUSERS_PERMISSIONS', 'LDAPUSER_ID', 'PERMISSION_ID');
@@ -1242,8 +1258,6 @@
               PERFORM remove_duplicate_rows('TEAMS_PERMISSIONS', 'TEAM_ID', 'PERMISSION_ID');
             END
             $$;
-
-            DROP FUNCTION remove_duplicate_rows;
         </sql>
 
         <sql splitStatements="false">
@@ -1266,7 +1280,7 @@
             -- Loop over each team name group that has duplicates.
               FOR rec IN
               SELECT
-                  "NAME",
+                  "NAME" AS name,
                   MIN("ID") AS canonical_id,
                   ARRAY_AGG("ID") AS all_ids
                 FROM "TEAM"
@@ -1300,6 +1314,14 @@
                     $delete$, dup_id);
                 END LOOP;
               END LOOP;
+
+              PERFORM remove_duplicate_rows('APIKEYS_TEAMS', 'TEAM_ID', 'APIKEY_ID');
+              PERFORM remove_duplicate_rows('LDAPUSERS_TEAMS', 'TEAM_ID', 'LDAPUSER_ID');
+              PERFORM remove_duplicate_rows('MANAGEDUSERS_TEAMS', 'TEAM_ID', 'MANAGEDUSER_ID');
+              PERFORM remove_duplicate_rows('NOTIFICATIONRULE_TEAMS', 'NOTIFICATIONRULE_ID', 'TEAM_ID');
+              PERFORM remove_duplicate_rows('OIDCUSERS_TEAMS', 'TEAM_ID', 'OIDCUSERS_ID');
+              PERFORM remove_duplicate_rows('TEAMS_PERMISSIONS', 'TEAM_ID', 'PERMISSION_ID');
+              DROP FUNCTION remove_duplicate_rows;
             END $$;
         </sql>
 
@@ -1432,6 +1454,15 @@
     </changeSet>
 
     <changeSet id="v5.6.0-23" author="jhoward-lm">
+        <!--
+          A previous version of this changeset did not cater to duplicate usernames existing
+          across the MANAGEDUSER, LDAPUSER, and OIDCUSER tables.
+          Deployments that did not have duplicate usernames across user tables at the time
+          of the execution were able to successfully complete this changeset and do not have
+          to repeat it.
+        -->
+        <validCheckSum>9:aa6e0cecae0b4f050a56eb1bbcb686be</validCheckSum>
+
         <createTable ifNotExists="true" tableName="USER">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="USER_PK" />
@@ -1604,8 +1635,17 @@
 
         <!-- Migrate existing LDAP users. -->
         <sql splitStatements="true">
+            WITH cte_created_user AS (
+              INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "DN")
+              SELECT 'LDAP', "USERNAME", "EMAIL", "DN"
+                FROM "LDAPUSER"
+              ON CONFLICT ("USERNAME") DO NOTHING
+              RETURNING "USERNAME"
+            )
             INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "DN")
-            SELECT 'LDAP', "USERNAME", "EMAIL", "DN" FROM "LDAPUSER";
+            SELECT 'LDAP', ("USERNAME" || '-CONFLICT-LDAP') AS "USERNAME", "EMAIL", "DN"
+              FROM "LDAPUSER"
+             WHERE "USERNAME" NOT IN (SELECT "USERNAME" FROM cte_created_user);
 
             INSERT INTO "USERS_PERMISSIONS" ("PERMISSION_ID", "USER_ID")
             SELECT "LDAPUSERS_PERMISSIONS"."PERMISSION_ID"
@@ -1614,7 +1654,8 @@
              INNER JOIN "LDAPUSER"
                 ON "LDAPUSER"."ID" = "LDAPUSERS_PERMISSIONS"."LDAPUSER_ID"
              INNER JOIN "USER"
-                ON "USER"."USERNAME" = "LDAPUSER"."USERNAME"
+                ON ("USER"."USERNAME" = "LDAPUSER"."USERNAME"
+                    OR "USER"."USERNAME" = ("LDAPUSER"."USERNAME" || '-CONFLICT-LDAP'))
                AND "USER"."TYPE" = 'LDAP'
             ON CONFLICT ("PERMISSION_ID", "USER_ID") DO NOTHING;
 
@@ -1625,15 +1666,25 @@
              INNER JOIN "LDAPUSER"
                 ON "LDAPUSER"."ID" = "LDAPUSERS_TEAMS"."LDAPUSER_ID"
              INNER JOIN "USER"
-                ON "USER"."USERNAME" = "LDAPUSER"."USERNAME"
+                ON ("USER"."USERNAME" = "LDAPUSER"."USERNAME"
+                    OR "USER"."USERNAME" = ("LDAPUSER"."USERNAME" || '-CONFLICT-LDAP'))
                AND "USER"."TYPE" = 'LDAP'
             ON CONFLICT ("TEAM_ID", "USER_ID") DO NOTHING;
         </sql>
 
         <!-- Migrate existing OIDC users. -->
         <sql splitStatements="true">
+            WITH cte_created_user AS (
+              INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER")
+              SELECT 'OIDC', "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER"
+                FROM "OIDCUSER"
+              ON CONFLICT ("USERNAME") DO NOTHING
+              RETURNING "USERNAME"
+            )
             INSERT INTO "USER" ("TYPE", "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER")
-            SELECT 'OIDC', "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER" FROM "OIDCUSER";
+            SELECT 'OIDC', ("USERNAME" || '-CONFLICT-OIDC') AS "USERNAME", "EMAIL", "SUBJECT_IDENTIFIER"
+              FROM "OIDCUSER"
+            WHERE "USERNAME" NOT IN (SELECT "USERNAME" FROM cte_created_user);
 
             INSERT INTO "USERS_PERMISSIONS" ("PERMISSION_ID", "USER_ID")
             SELECT "OIDCUSERS_PERMISSIONS"."PERMISSION_ID"
@@ -1642,7 +1693,8 @@
              INNER JOIN "OIDCUSER"
                 ON "OIDCUSER"."ID" = "OIDCUSERS_PERMISSIONS"."OIDCUSER_ID"
              INNER JOIN "USER"
-                ON "USER"."USERNAME" = "OIDCUSER"."USERNAME"
+                ON ("USER"."USERNAME" = "OIDCUSER"."USERNAME"
+                    OR "USER"."USERNAME" = ("OIDCUSER"."USERNAME" || '-CONFLICT-OIDC'))
                AND "USER"."TYPE" = 'OIDC'
             ON CONFLICT ("PERMISSION_ID", "USER_ID") DO NOTHING;
 
@@ -1653,7 +1705,8 @@
              INNER JOIN "OIDCUSER"
                 ON "OIDCUSER"."ID" = "OIDCUSERS_TEAMS"."OIDCUSERS_ID"
              INNER JOIN "USER"
-                ON "USER"."USERNAME" = "OIDCUSER"."USERNAME"
+                ON ("USER"."USERNAME" = "OIDCUSER"."USERNAME"
+                    OR "USER"."USERNAME" = ("OIDCUSER"."USERNAME" || '-CONFLICT-OIDC'))
                AND "USER"."TYPE" = 'OIDC'
             ON CONFLICT ("TEAM_ID", "USER_ID") DO NOTHING;
         </sql>
@@ -2334,10 +2387,10 @@
             <column name="PERMISSION_ID" />
         </createIndex>
 
-        <createTable ifNotExists="true" tableName="USERS_PROJECTS_ROLES">
+        <createTable ifNotExists="true" tableName="PROJECT_ROLE_BINDING">
             <column name="USER_ID" type="BIGINT">
                 <constraints nullable="false"
-                    foreignKeyName="USERS_PROJECTS_ROLES_USER_FK"
+                    foreignKeyName="PROJECT_ROLE_BINDING_USER_FK"
                     referencedTableName="USER" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
                     validateForeignKey="true" />
@@ -2345,7 +2398,7 @@
 
             <column name="PROJECT_ID" type="BIGINT">
                 <constraints nullable="false"
-                    foreignKeyName="USERS_PROJECTS_ROLES_PROJECT_FK"
+                    foreignKeyName="PROJECT_ROLE_BINDING_PROJECT_FK"
                     referencedTableName="PROJECT" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
                     validateForeignKey="true" />
@@ -2353,19 +2406,19 @@
 
             <column name="ROLE_ID" type="BIGINT">
                 <constraints nullable="false"
-                    foreignKeyName="USERS_PROJECTS_ROLES_ROLE_FK"
+                    foreignKeyName="PROJECT_ROLE_BINDING_ROLE_FK"
                     referencedTableName="ROLE" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
                     validateForeignKey="true" />
             </column>
         </createTable>
 
-        <createIndex unique="true" indexName="USERS_PROJECTS_ROLES_USER_PROJECT_IDX" tableName="USERS_PROJECTS_ROLES">
+        <createIndex unique="true" indexName="PROJECT_ROLE_BINDING_USER_PROJECT_IDX" tableName="PROJECT_ROLE_BINDING">
             <column name="USER_ID" />
             <column name="PROJECT_ID" />
         </createIndex>
 
-        <createIndex indexName="USERS_PROJECTS_ROLES_ROLE_ID_IDX" tableName="USERS_PROJECTS_ROLES">
+        <createIndex indexName="PROJECT_ROLE_BINDING_ROLE_ID_IDX" tableName="PROJECT_ROLE_BINDING">
             <column name="ROLE_ID" />
         </createIndex>
 
@@ -2385,7 +2438,7 @@
               INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
                 ("USER_ID", "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
               SELECT DISTINCT upr."USER_ID", upr."PROJECT_ID", rp."PERMISSION_ID", p."NAME"
-                FROM "USERS_PROJECTS_ROLES" upr
+                FROM "PROJECT_ROLE_BINDING" upr
                INNER JOIN "ROLES_PERMISSIONS" rp
                   ON rp."ROLE_ID" = upr."ROLE_ID"
                INNER JOIN "PERMISSION" p
@@ -2411,14 +2464,14 @@
                   INTO project_ids
                   FROM (
                     SELECT upr."PROJECT_ID"
-                      FROM "USERS_PROJECTS_ROLES" upr
+                      FROM "PROJECT_ROLE_BINDING" upr
                      INNER JOIN old_table
                         ON old_table."ROLE_ID" = upr."ROLE_ID"
                   ) sub;
               ELSE
                 SELECT ARRAY_AGG(DISTINCT "PROJECT_ID")
                   INTO project_ids
-                  FROM "USERS_PROJECTS_ROLES"
+                  FROM "PROJECT_ROLE_BINDING"
                  WHERE "ROLE_ID" = ANY(role_ids);
               END IF;
 
@@ -2444,14 +2497,14 @@
                   INTO project_ids
                   FROM (
                     SELECT upr."PROJECT_ID"
-                      FROM "USERS_PROJECTS_ROLES" upr
+                      FROM "PROJECT_ROLE_BINDING" upr
                      INNER JOIN new_table
                         ON new_table."ROLE_ID" = upr."ROLE_ID"
                   ) sub;
               ELSE
                 SELECT ARRAY_AGG(DISTINCT "PROJECT_ID")
                   INTO project_ids
-                  FROM "USERS_PROJECTS_ROLES"
+                  FROM "PROJECT_ROLE_BINDING"
                  WHERE "ROLE_ID" = ANY(role_ids);
               END IF;
 
@@ -2481,7 +2534,7 @@
                   INTO project_ids
                   FROM (
                     SELECT upr."PROJECT_ID"
-                      FROM "USERS_PROJECTS_ROLES" upr
+                      FROM "PROJECT_ROLE_BINDING" upr
                      INNER JOIN new_table
                         ON new_table."ROLE_ID" = upr."ROLE_ID"
                       FULL OUTER JOIN old_table
@@ -2490,7 +2543,7 @@
               ELSE
                 SELECT ARRAY_AGG(DISTINCT "PROJECT_ID")
                   INTO project_ids
-                  FROM "USERS_PROJECTS_ROLES"
+                  FROM "PROJECT_ROLE_BINDING"
                  WHERE "ROLE_ID" = ANY(role_ids);
               END IF;
 
@@ -2501,23 +2554,23 @@
         </sql>
 
         <sql splitStatements="true">
-            -- INSERT trigger for USERS_PROJECTS_ROLES
+            -- INSERT trigger for PROJECT_ROLE_BINDING
             CREATE TRIGGER trigger_effective_permissions_mx_on_users_roles_insert
-            AFTER INSERT ON "USERS_PROJECTS_ROLES"
+            AFTER INSERT ON "PROJECT_ROLE_BINDING"
             REFERENCING NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION role_effective_permissions_mx_on_insert();
 
-            -- DELETE trigger for USERS_PROJECTS_ROLES
+            -- DELETE trigger for PROJECT_ROLE_BINDING
             CREATE TRIGGER trigger_effective_permissions_mx_on_users_roles_delete
-            AFTER DELETE ON "USERS_PROJECTS_ROLES"
+            AFTER DELETE ON "PROJECT_ROLE_BINDING"
             REFERENCING OLD TABLE AS old_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION role_effective_permissions_mx_on_delete();
 
-            -- UPDATE trigger for USERS_PROJECTS_ROLES
+            -- UPDATE trigger for PROJECT_ROLE_BINDING
             CREATE TRIGGER trigger_effective_permissions_mx_on_users_roles_update
-            AFTER UPDATE ON "USERS_PROJECTS_ROLES"
+            AFTER UPDATE ON "PROJECT_ROLE_BINDING"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION role_effective_permissions_mx_on_update();

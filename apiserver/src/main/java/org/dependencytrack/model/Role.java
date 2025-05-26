@@ -40,11 +40,9 @@ import java.util.UUID;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
-import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.FetchGroup;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Join;
-import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
@@ -93,7 +91,6 @@ public class Role implements Serializable {
     @Unique(name = "ROLES_PERMISSIONS_IDX")
     @Join(column = "ROLE_ID")
     @Element(column = "PERMISSION_ID")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private Set<Permission> permissions = new LinkedHashSet<>();
 
     @Persistent(customValueStrategy = "uuid")

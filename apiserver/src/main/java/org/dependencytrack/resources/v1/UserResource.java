@@ -878,7 +878,7 @@ public class UserResource extends AlpineResource {
             )
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
-    public Response assignProjectRoleToUser(
+    public Response assignProjectRoleBindingToUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid RoleProjectRequest request) {
         try (QueryManager qm = new QueryManager()) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
@@ -901,7 +901,7 @@ public class UserResource extends AlpineResource {
             }
 
             boolean exists = JdbiFactory.withJdbiHandle(getAlpineRequest(), handle -> handle.attach(RoleDao.class)
-                    .userProjectRoleExists(user.getId(), project.getId(), role.getId()));
+                    .userProjectRoleBindingExists(user.getId(), project.getId(), role.getId()));
             if (exists) return Response.notModified().build();
 
             qm.addRoleToUser(user, role, project);
@@ -937,7 +937,7 @@ public class UserResource extends AlpineResource {
             )
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
-    public Response removeProjectRoleFromUser(
+    public Response removeProjectRoleBindingFromUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid RoleProjectRequest request) {
         try (QueryManager qm = new QueryManager()) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());

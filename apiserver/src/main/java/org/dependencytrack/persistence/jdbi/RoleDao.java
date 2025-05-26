@@ -21,8 +21,8 @@ package org.dependencytrack.persistence.jdbi;
 import java.util.List;
 
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectRole;
-import org.dependencytrack.persistence.jdbi.mapping.ProjectRoleRowMapper;
+import org.dependencytrack.model.ProjectRoleBinding;
+import org.dependencytrack.persistence.jdbi.mapping.ProjectRoleRowBindingMapper;
 
 import org.jdbi.v3.sqlobject.config.RegisterFieldMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
@@ -52,7 +52,7 @@ public interface RoleDao {
     int addPermissionToRole(@Bind long roleId, @Bind long permissionId);
 
     @SqlUpdate(/* language=sql */ """
-            INSERT INTO "USERS_PROJECTS_ROLES"
+            INSERT INTO "PROJECT_ROLE_BINDING"
               ("USER_ID", "PROJECT_ID", "ROLE_ID")
             VALUES
               (:userId, :projectId, :roleId)
@@ -63,7 +63,7 @@ public interface RoleDao {
 
     @SqlUpdate(/* language=sql */ """
             DELETE
-              FROM "USERS_PROJECTS_ROLES"
+              FROM "PROJECT_ROLE_BINDING"
              WHERE "USER_ID" = :userId
                AND "ROLE_ID" = :roleId
                AND "PROJECT_ID" IN (
@@ -86,7 +86,7 @@ public interface RoleDao {
                 u."USERNAME" AS "USER_NAME",
                 u."TYPE"     AS "USER_TYPE"
               FROM "PROJECT" p
-             INNER JOIN "USERS_PROJECTS_ROLES" pr
+             INNER JOIN "PROJECT_ROLE_BINDING" pr
                 ON pr."PROJECT_ID" = p."ID"
              INNER JOIN "USER" u
                 ON u."ID" = pr."USER_ID"
@@ -94,24 +94,24 @@ public interface RoleDao {
                 ON r."ID" = pr."ROLE_ID"
              WHERE u."USERNAME" = :username
             """)
-    @RegisterRowMapper(ProjectRoleRowMapper.class)
-    List<ProjectRole> getUserRoles(@Bind String username);
+    @RegisterRowMapper(ProjectRoleRowBindingMapper.class)
+    List<ProjectRoleBinding> getUserRoles(@Bind String username);
 
     @SqlQuery(/* language=sql */ """
             SELECT EXISTS (
               SELECT 1
-                FROM "USERS_PROJECTS_ROLES"
+                FROM "PROJECT_ROLE_BINDING"
                WHERE "ROLE_ID" = :roleId
                  AND "PROJECT_ID" = :projectId
                  AND "USER_ID" = :userId
             )
             """)
-    boolean userProjectRoleExists(@Bind long userId, @Bind long projectId, @Bind long roleId);
+    boolean userProjectRoleBindingExists(@Bind long userId, @Bind long projectId, @Bind long roleId);
 
     @SqlQuery(/* language=sql */ """
             SELECT p."ID", p."NAME", p."UUID"
               FROM "PROJECT" p
-              LEFT JOIN "USERS_PROJECTS_ROLES" pr
+              LEFT JOIN "PROJECT_ROLE_BINDING" pr
                 ON pr."PROJECT_ID" = p."ID"
               LEFT JOIN "USER" u
                 ON u."ID" = pr."USER_ID"

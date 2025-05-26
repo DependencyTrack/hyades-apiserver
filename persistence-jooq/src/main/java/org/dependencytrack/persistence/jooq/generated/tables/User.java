@@ -18,7 +18,7 @@ import org.dependencytrack.persistence.jooq.generated.tables.Permission.Permissi
 import org.dependencytrack.persistence.jooq.generated.tables.Team.TeamPath;
 import org.dependencytrack.persistence.jooq.generated.tables.UserProjectEffectivePermissions.UserProjectEffectivePermissionsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.UsersPermissions.UsersPermissionsPath;
-import org.dependencytrack.persistence.jooq.generated.tables.UsersProjectsRoles.UsersProjectsRolesPath;
+import org.dependencytrack.persistence.jooq.generated.tables.ProjectRoleBinding.UsersProjectsRolesPath;
 import org.dependencytrack.persistence.jooq.generated.tables.UsersTeams.UsersTeamsPath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.UserRecord;
 import org.jooq.Check;
@@ -256,11 +256,11 @@ public class User extends TableImpl<UserRecord> {
 
     /**
      * Get the implicit to-many join path to the
-     * <code>USERS_PROJECTS_ROLES</code> table
+     * <code>PROJECT_ROLE_BINDING</code> table
      */
     public UsersProjectsRolesPath usersProjectsRoles() {
         if (_usersProjectsRoles == null)
-            _usersProjectsRoles = new UsersProjectsRolesPath(this, null, Keys.USERS_PROJECTS_ROLES_USER_FK.getInverseKey());
+            _usersProjectsRoles = new UsersProjectsRolesPath(this, null, Keys.PROJECT_ROLE_BINDING_USER_FK.getInverseKey());
 
         return _usersProjectsRoles;
     }

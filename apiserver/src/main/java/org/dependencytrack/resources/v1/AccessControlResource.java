@@ -142,7 +142,7 @@ public class AccessControlResource extends AlpineResource {
             if (user == null)
                 return Response.status(Response.Status.NOT_FOUND).build();
 
-            try (final Handle jdbiHandle = openJdbiHandle()) {
+            try (final Handle jdbiHandle = openJdbiHandle(getAlpineRequest())) {
                 var dao = jdbiHandle.attach(RoleDao.class);
                 List<Project> projects = dao.getUserUnassignedProjects(user.getUsername());
 

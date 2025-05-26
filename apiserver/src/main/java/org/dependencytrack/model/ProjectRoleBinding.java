@@ -44,15 +44,15 @@ import javax.jdo.annotations.Unique;
  * @author Jonathan Howard
  * @since 5.6.0
  */
-@PersistenceCapable(table = "USERS_PROJECTS_ROLES")
+@PersistenceCapable(table = "PROJECT_ROLE_BINDING")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Unique(name = "USERS_PROJECTS_ROLES_COMPOSITE_IDX", members = { "users", "project", "role" })
+@Unique(name = "PROJECT_ROLE_BINDING_COMPOSITE_IDX", members = { "users", "project", "role" })
 @FetchGroup(name = "ALL", members = {
         @Persistent(name = "role"),
         @Persistent(name = "project"),
         @Persistent(name = "users")
 })
-public class ProjectRole implements Serializable {
+public class ProjectRoleBinding implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "ROLE_ID", allowsNull = "false")
