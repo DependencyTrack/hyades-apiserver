@@ -20,8 +20,16 @@ package org.dependencytrack.persistence.jdbi;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.annotation.Nullable;
+import org.dependencytrack.model.ExternalReference;
+import org.dependencytrack.model.OrganizationalContact;
+import org.dependencytrack.model.OrganizationalEntity;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.persistence.jdbi.mapping.ExternalReferenceMapper;
+import org.dependencytrack.persistence.jdbi.mapping.OrganizationalContactMapper;
+import org.dependencytrack.persistence.jdbi.mapping.OrganizationalEntityMapper;
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
 import org.jdbi.v3.json.Json;
+import org.jdbi.v3.sqlobject.config.RegisterColumnMapper;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
@@ -221,6 +229,163 @@ public interface ProjectDao {
             int vulnerabilities
     ) {
     }
+
+    record ProjectListRow(
+            Long id,
+            String classifier,
+            String cpe,
+            String description,
+            String directDependencies,
+            List<ExternalReference> externalReferences,
+            String group,
+            @Nullable Instant lastBomImport,
+            @Nullable String lastBomImportFormat,
+            Double lastInheritedRiskScore,
+            String name,
+            String publisher,
+            String purl,
+            String swidTagId,
+            UUID uuid,
+            String version,
+            OrganizationalEntity supplier,
+            OrganizationalEntity manufacturer,
+            List<OrganizationalContact> authors,
+            boolean isLatest,
+            @Nullable Instant inactiveSince,
+            List<String> tags,
+            List<String> teams,
+            @Nullable @Json ConciseProjectMetricsRow metrics,
+            long totalCount
+    ) {
+    }
+
+    @SqlQuery(/* language=InjectedFreeMarker */ """
+            <#-- @ftlvariable name="nameFilter" type="Boolean" -->
+            <#-- @ftlvariable name="tagFilter" type="Boolean" -->
+            <#-- @ftlvariable name="teamFilter" type="Boolean" -->
+            <#-- @ftlvariable name="apiFilterParameter" type="String" -->
+            <#-- @ftlvariable name="apiOrderByClause" type="String" -->
+            <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
+            <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
+            <#-- @ftlvariable name="apiParentProjectAclCondition" type="String" -->
+            SELECT "P"."ID",
+                 , "P"."CLASSIFIER"
+                 , "P"."CPE"
+                 , "P"."DESCRIPTION"
+                 , "P"."DIRECT_DEPENDENCIES" AS "directDependencies"
+                 , "P"."EXTERNAL_REFERENCES" AS "externalReferences"
+                 , "P"."GROUP"
+                 , "P"."LAST_BOM_IMPORTED" AS "lastBomImport"
+                 , "P"."LAST_BOM_IMPORTED_FORMAT" AS "lastBomImportFormat"
+                 , "P"."LAST_RISKSCORE" AS "lastInheritedRiskScore"
+                 , "P"."NAME"
+                 , "P"."PUBLISHER"
+                 , "P"."PURL"
+                 , "P"."SWIDTAGID"
+                 , "P"."UUID"
+                 , "P"."VERSION"
+                 , "P"."SUPPLIER"
+                 , "P"."MANUFACTURER"
+                 , "P"."AUTHORS"
+                 , "P"."IS_LATEST" AS "isLatest"
+                 , "P"."INACTIVE_SINCE" AS "inactiveSince"
+                 , (SELECT ARRAY_AGG("TAG"."NAME")
+                      FROM "TAG"
+                     INNER JOIN "PROJECTS_TAGS"
+                        ON "PROJECTS_TAGS"."TAG_ID" = "TAG"."ID"
+                     WHERE "PROJECTS_TAGS"."PROJECT_ID" = "P"."ID") AS "tags"
+                 , (SELECT ARRAY_AGG("TEAM"."NAME")
+                      FROM "TEAM"
+                     INNER JOIN "PROJECT_ACCESS_TEAMS"
+                        ON "PROJECT_ACCESS_TEAMS"."TEAM_ID" = "TEAM"."ID"
+                     WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "P"."ID") AS "teams"
+            <#if includeMetrics>
+                 , TO_JSONB("metrics") AS "metrics"
+            </#if>
+                 , COUNT(*) OVER() AS "totalCount"
+              FROM "PROJECT" AS "P"
+            <#if includeMetrics>
+              LEFT JOIN LATERAL (
+                SELECT "COMPONENTS"
+                     , "CRITICAL"
+                     , "HIGH"
+                     , "LOW"
+                     , "MEDIUM"
+                     , "POLICYVIOLATIONS_FAIL"
+                     , "POLICYVIOLATIONS_INFO"
+                     , "POLICYVIOLATIONS_LICENSE_TOTAL"
+                     , "POLICYVIOLATIONS_OPERATIONAL_TOTAL"
+                     , "POLICYVIOLATIONS_SECURITY_TOTAL"
+                     , "POLICYVIOLATIONS_TOTAL"
+                     , "POLICYVIOLATIONS_WARN"
+                     , "RISKSCORE"
+                     , "UNASSIGNED_SEVERITY"
+                     , "VULNERABILITIES"
+                  FROM "PROJECTMETRICS"
+                 WHERE "PROJECTMETRICS"."PROJECT_ID" = "P"."ID"
+                 ORDER BY "PROJECTMETRICS"."LAST_OCCURRENCE" DESC
+                 LIMIT 1
+              ) AS "metrics" ON TRUE
+            </#if>
+             WHERE ${apiProjectAclCondition}
+            <#if nameFilter>
+               AND "P"."NAME" = :nameFilter
+            </#if>
+            <#if tagFilter>
+               AND EXISTS(
+                 SELECT 1
+                   FROM "PROJECTS_TAGS"
+                  INNER JOIN "TAG"
+                     ON "TAG"."ID" = "PROJECTS_TAGS"."TAG_ID"
+                  WHERE "PROJECTS_TAGS"."PROJECT_ID" = "P"."ID"
+                    AND "TAG"."NAME" = :tagFilter)
+            </#if>
+            <#if teamFilter>
+               AND EXISTS(
+                 SELECT 1
+                   FROM "PROJECT_ACCESS_TEAMS"
+                  INNER JOIN "TEAM"
+                     ON "TEAM"."ID" = "PROJECT_ACCESS_TEAMS"."TEAM_ID"
+                  WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "P"."ID"
+                    AND "TEAM"."NAME" = :teamFilter)
+            </#if>
+            <#if excludeInactive && excludeInactive == true>
+                AND "P"."INACTIVE_SINCE" IS NULL
+            </#if>
+            <#if onlyRootFilter>
+               AND (NOT :onlyRootFilter OR "P"."PARENT_PROJECT_ID" IS NULL)
+            <#if apiFilterParameter??>
+               AND (LOWER("P"."NAME") LIKE ('%' || LOWER(${apiFilterParameter}) || '%')
+                    OR EXISTS (SELECT 1 FROM "TAG" WHERE "TAG"."NAME" = ${apiFilterParameter}))
+            </#if>
+            <#if apiOrderByClause??>
+              ${apiOrderByClause}
+            <#else>
+             ORDER BY "P"."NAME" ASC, "P"."VERSION" DESC, "P"."ID" ASC
+            </#if>
+            ${apiOffsetLimitClause!}
+            """)
+    @DefineNamedBindings
+    @DefineApiProjectAclCondition(
+            name = "apiParentProjectAclCondition",
+            projectIdColumn = "\"PARENT_PROJECT\".\"ID\""
+    )
+    @AllowApiOrdering(alwaysBy = "id", by = {
+            @AllowApiOrdering.Column(name = "id"),
+            @AllowApiOrdering.Column(name = "name"),
+            @AllowApiOrdering.Column(name = "version")
+    })
+    @RegisterColumnMapper(ExternalReferenceMapper.class)
+    @RegisterColumnMapper(OrganizationalEntityMapper.class)
+    @RegisterColumnMapper(OrganizationalContactMapper.class)
+    List<ProjectListRow> getProjects(
+            @Bind String nameFilter,
+            @Bind String tagFilter,
+            @Bind String teamFilter,
+            @Bind boolean excludeInactive,
+            @Bind boolean onlyRoot,
+            @Define boolean includeMetrics
+    );
 
     @SqlUpdate("""
             DELETE
