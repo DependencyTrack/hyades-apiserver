@@ -27,10 +27,12 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.jdbi.mapping.ExternalReferenceMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalContactMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalEntityMapper;
+import org.dependencytrack.persistence.jdbi.mapping.ProjectRowMapper;
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
 import org.jdbi.v3.json.Json;
 import org.jdbi.v3.sqlobject.config.RegisterColumnMapper;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
+import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
@@ -259,77 +261,58 @@ public interface ProjectDao {
     ) {
     }
 
+    record ProjectRow(Project project, long totalCount) {
+    }
+
     @SqlQuery(/* language=InjectedFreeMarker */ """
-            <#-- @ftlvariable name="nameFilter" type="Boolean" -->
-            <#-- @ftlvariable name="tagFilter" type="Boolean" -->
-            <#-- @ftlvariable name="teamFilter" type="Boolean" -->
+            <#-- @ftlvariable name="nameFilter" type="String" -->
+            <#-- @ftlvariable name="tagFilter" type="String" -->
+            <#-- @ftlvariable name="notAssignedToTeamWithUuid" type="String" -->
+            <#-- @ftlvariable name="onlyRoot" type="Boolean" -->
             <#-- @ftlvariable name="apiFilterParameter" type="String" -->
             <#-- @ftlvariable name="apiOrderByClause" type="String" -->
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
             <#-- @ftlvariable name="apiParentProjectAclCondition" type="String" -->
-            SELECT "P"."ID",
-                 , "P"."CLASSIFIER"
-                 , "P"."CPE"
-                 , "P"."DESCRIPTION"
-                 , "P"."DIRECT_DEPENDENCIES" AS "directDependencies"
-                 , "P"."EXTERNAL_REFERENCES" AS "externalReferences"
-                 , "P"."GROUP"
-                 , "P"."LAST_BOM_IMPORTED" AS "lastBomImport"
-                 , "P"."LAST_BOM_IMPORTED_FORMAT" AS "lastBomImportFormat"
-                 , "P"."LAST_RISKSCORE" AS "lastInheritedRiskScore"
-                 , "P"."NAME"
-                 , "P"."PUBLISHER"
-                 , "P"."PURL"
-                 , "P"."SWIDTAGID"
-                 , "P"."UUID"
-                 , "P"."VERSION"
-                 , "P"."SUPPLIER"
-                 , "P"."MANUFACTURER"
-                 , "P"."AUTHORS"
-                 , "P"."IS_LATEST" AS "isLatest"
-                 , "P"."INACTIVE_SINCE" AS "inactiveSince"
-                 , (SELECT ARRAY_AGG("TAG"."NAME")
-                      FROM "TAG"
-                     INNER JOIN "PROJECTS_TAGS"
-                        ON "PROJECTS_TAGS"."TAG_ID" = "TAG"."ID"
-                     WHERE "PROJECTS_TAGS"."PROJECT_ID" = "P"."ID") AS "tags"
-                 , (SELECT ARRAY_AGG("TEAM"."NAME")
-                      FROM "TEAM"
-                     INNER JOIN "PROJECT_ACCESS_TEAMS"
-                        ON "PROJECT_ACCESS_TEAMS"."TEAM_ID" = "TEAM"."ID"
-                     WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "P"."ID") AS "teams"
-            <#if includeMetrics>
-                 , TO_JSONB("metrics") AS "metrics"
-            </#if>
+            SELECT "PROJECT"."ID" AS "id"
+                 , "PROJECT"."CLASSIFIER"
+                 , "PROJECT"."CPE"
+                 , "PROJECT"."DESCRIPTION"
+                 , "PROJECT"."DIRECT_DEPENDENCIES" AS "directDependencies"
+                 , "PROJECT"."EXTERNAL_REFERENCES" AS "externalReferences"
+                 , "PROJECT"."GROUP"
+                 , "PROJECT"."LAST_BOM_IMPORTED" AS "lastBomImport"
+                 , "PROJECT"."LAST_BOM_IMPORTED_FORMAT" AS "lastBomImportFormat"
+                 , "PROJECT"."LAST_RISKSCORE" AS "lastInheritedRiskScore"
+                 , "PROJECT"."NAME" AS "name"
+                 , "PROJECT"."PUBLISHER"
+                 , "PROJECT"."PURL" AS "projectPurl"
+                 , "PROJECT"."SWIDTAGID"
+                 , "PROJECT"."UUID"
+                 , "PROJECT"."VERSION" AS "version"
+                 , "PROJECT"."SUPPLIER"
+                 , "PROJECT"."MANUFACTURER"
+                 , "PROJECT"."AUTHORS"
+                 , "PROJECT"."IS_LATEST" AS "isLatest"
+                 , "PROJECT"."INACTIVE_SINCE" AS "inactiveSince"
+                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
+                        FROM "TAG"
+                        INNER JOIN "PROJECTS_TAGS"
+                            ON "PROJECTS_TAGS"."PROJECT_ID" = "PROJECT"."ID"
+                        WHERE "TAG"."ID" = "PROJECTS_TAGS"."TAG_ID"
+                    ) AS "tagsJson"
+                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
+                        FROM "TEAM"
+                        INNER JOIN "PROJECT_ACCESS_TEAMS"
+                            ON "PROJECT_ACCESS_TEAMS"."TEAM_ID" = "TEAM"."ID"
+                        WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
+                    ) AS "teamsJson"
                  , COUNT(*) OVER() AS "totalCount"
-              FROM "PROJECT" AS "P"
-            <#if includeMetrics>
-              LEFT JOIN LATERAL (
-                SELECT "COMPONENTS"
-                     , "CRITICAL"
-                     , "HIGH"
-                     , "LOW"
-                     , "MEDIUM"
-                     , "POLICYVIOLATIONS_FAIL"
-                     , "POLICYVIOLATIONS_INFO"
-                     , "POLICYVIOLATIONS_LICENSE_TOTAL"
-                     , "POLICYVIOLATIONS_OPERATIONAL_TOTAL"
-                     , "POLICYVIOLATIONS_SECURITY_TOTAL"
-                     , "POLICYVIOLATIONS_TOTAL"
-                     , "POLICYVIOLATIONS_WARN"
-                     , "RISKSCORE"
-                     , "UNASSIGNED_SEVERITY"
-                     , "VULNERABILITIES"
-                  FROM "PROJECTMETRICS"
-                 WHERE "PROJECTMETRICS"."PROJECT_ID" = "P"."ID"
-                 ORDER BY "PROJECTMETRICS"."LAST_OCCURRENCE" DESC
-                 LIMIT 1
-              ) AS "metrics" ON TRUE
+              FROM "PROJECT"
             </#if>
              WHERE ${apiProjectAclCondition}
             <#if nameFilter>
-               AND "P"."NAME" = :nameFilter
+               AND "PROJECT"."NAME" = :nameFilter
             </#if>
             <#if tagFilter>
                AND EXISTS(
@@ -337,31 +320,32 @@ public interface ProjectDao {
                    FROM "PROJECTS_TAGS"
                   INNER JOIN "TAG"
                      ON "TAG"."ID" = "PROJECTS_TAGS"."TAG_ID"
-                  WHERE "PROJECTS_TAGS"."PROJECT_ID" = "P"."ID"
+                  WHERE "PROJECTS_TAGS"."PROJECT_ID" = "PROJECT"."ID"
                     AND "TAG"."NAME" = :tagFilter)
             </#if>
-            <#if teamFilter>
-               AND EXISTS(
+            <#if notAssignedToTeamWithUuid>
+               AND NOT EXISTS(
                  SELECT 1
                    FROM "PROJECT_ACCESS_TEAMS"
                   INNER JOIN "TEAM"
                      ON "TEAM"."ID" = "PROJECT_ACCESS_TEAMS"."TEAM_ID"
-                  WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "P"."ID"
-                    AND "TEAM"."NAME" = :teamFilter)
+                  WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
+                    AND "TEAM"."UUID" = :notAssignedToTeamWithUuid)
             </#if>
-            <#if excludeInactive && excludeInactive == true>
-                AND "P"."INACTIVE_SINCE" IS NULL
+            <#if excludeInactive>
+                AND "PROJECT"."INACTIVE_SINCE" IS NULL
             </#if>
-            <#if onlyRootFilter>
-               AND (NOT :onlyRootFilter OR "P"."PARENT_PROJECT_ID" IS NULL)
+            <#if onlyRoot>
+               AND ("PROJECT"."PARENT_PROJECT_ID" IS NULL)
+            </#if>
             <#if apiFilterParameter??>
-               AND (LOWER("P"."NAME") LIKE ('%' || LOWER(${apiFilterParameter}) || '%')
+               AND (LOWER("PROJECT"."NAME") LIKE ('%' || LOWER(${apiFilterParameter}) || '%')
                     OR EXISTS (SELECT 1 FROM "TAG" WHERE "TAG"."NAME" = ${apiFilterParameter}))
             </#if>
             <#if apiOrderByClause??>
-              ${apiOrderByClause}
+                ${apiOrderByClause}
             <#else>
-             ORDER BY "P"."NAME" ASC, "P"."VERSION" DESC, "P"."ID" ASC
+                ORDER BY "name" ASC, "version" DESC, "id" ASC
             </#if>
             ${apiOffsetLimitClause!}
             """)
@@ -378,13 +362,13 @@ public interface ProjectDao {
     @RegisterColumnMapper(ExternalReferenceMapper.class)
     @RegisterColumnMapper(OrganizationalEntityMapper.class)
     @RegisterColumnMapper(OrganizationalContactMapper.class)
-    List<ProjectListRow> getProjects(
+    @RegisterRowMapper(ProjectRowMapper.class)
+    List<ProjectRow> getProjects(
             @Bind String nameFilter,
             @Bind String tagFilter,
-            @Bind String teamFilter,
-            @Bind boolean excludeInactive,
-            @Bind boolean onlyRoot,
-            @Define boolean includeMetrics
+            @Bind String notAssignedToTeamWithUuid,
+            @Define boolean excludeInactive,
+            @Define boolean onlyRoot
     );
 
     @SqlUpdate("""

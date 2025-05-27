@@ -36,6 +36,21 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.ServerErrorException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
@@ -56,21 +71,6 @@ import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.dependencytrack.resources.v1.vo.ConciseProject;
 import org.jdbi.v3.core.Handle;
 
-import jakarta.validation.Validator;
-import jakarta.ws.rs.ClientErrorException;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.PATCH;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.ServerErrorException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import javax.jdo.FetchGroup;
 import java.security.Principal;
 import java.util.Collection;
@@ -140,9 +140,18 @@ public class ProjectResource extends AbstractApiResource {
                     return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team could not be found.").build();
                 }
             }
-
-            final PaginatedResult result = (name != null) ? qm.getProjects(name, excludeInactive, onlyRoot, notAssignedToTeam) : qm.getProjects(true, excludeInactive, onlyRoot, notAssignedToTeam);
-            return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
+            final List<ProjectDao.ProjectRow> projectRows = withJdbiHandle(getAlpineRequest(), handle ->
+                    (name != null) ? handle.attach(ProjectDao.class).getProjects(name, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot)
+                    : handle.attach(ProjectDao.class).getProjects(null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot));
+            // include metrics if name filter is null
+            if (name == null) {
+                // TODO populate metrics
+            }
+            final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
+            final List<Project> projects = projectRows.stream()
+                    .map(ProjectDao.ProjectRow::project)
+                    .toList();
+            return Response.ok(projects).header(TOTAL_COUNT_HEADER, totalCount).build();
         }
     }
 
