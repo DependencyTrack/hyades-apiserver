@@ -2339,4 +2339,18 @@
             <column name="NAME"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-27" author="nscuro">
+        <!--
+          Omitting PROJECT_ID from the PK makes the table easier to query
+          and supports the ON DELETE CASCADE trigger of the FK to COMPONENT better.
+        -->
+        <dropPrimaryKey
+                tableName="DEPENDENCYMETRICS"
+                constraintName="DEPENDENCYMETRICS_PK"/>
+        <addPrimaryKey
+                tableName="DEPENDENCYMETRICS"
+                constraintName="DEPENDENCYMETRICS_PK"
+                columnNames="COMPONENT_ID, LAST_OCCURRENCE"/>
+    </changeSet>
 </databaseChangeLog>
