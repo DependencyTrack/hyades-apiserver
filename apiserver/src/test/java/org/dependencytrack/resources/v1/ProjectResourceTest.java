@@ -26,8 +26,15 @@ import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
-import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -72,14 +79,6 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonObjectBuilder;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -394,7 +393,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsWithMetricsTest() {
-        var project = qm.createProject("Acme Example ", null, "1.0", null, null, null, null, false);
+        var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         var projectMetrics = new ProjectMetrics();
         projectMetrics.setProjectId(project.getId());
         projectMetrics.setLow(10);
@@ -409,17 +408,11 @@ public class ProjectResourceTest extends ResourceTest {
                 .get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
         Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
-        assertThatJson(getPlainTextBody(response)).isEqualTo("""
-                [
-                  {
-                      "name" : "acme-app-3",
-                      "uuid" : "${json-unit.any-string}",
-                      "externalReferences" : [ ],
-                      "isLatest" : false,
-                      "active" : true
-                  }
-                ]
-                """);
+        JsonArray json = parseJsonArray(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals(1, json.size());
+        Assert.assertEquals("Acme Example", json.getJsonObject(0).getString("name"));
+        Assert.assertEquals(10, json.getJsonObject(0).getJsonObject("metrics").getInt("low"));
     }
 
     @Test

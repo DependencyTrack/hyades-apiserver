@@ -20,9 +20,6 @@ package org.dependencytrack.persistence.jdbi;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.annotation.Nullable;
-import org.dependencytrack.model.ExternalReference;
-import org.dependencytrack.model.OrganizationalContact;
-import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.jdbi.mapping.ExternalReferenceMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalContactMapper;
@@ -232,35 +229,6 @@ public interface ProjectDao {
     ) {
     }
 
-    record ProjectListRow(
-            Long id,
-            String classifier,
-            String cpe,
-            String description,
-            String directDependencies,
-            List<ExternalReference> externalReferences,
-            String group,
-            @Nullable Instant lastBomImport,
-            @Nullable String lastBomImportFormat,
-            Double lastInheritedRiskScore,
-            String name,
-            String publisher,
-            String purl,
-            String swidTagId,
-            UUID uuid,
-            String version,
-            OrganizationalEntity supplier,
-            OrganizationalEntity manufacturer,
-            List<OrganizationalContact> authors,
-            boolean isLatest,
-            @Nullable Instant inactiveSince,
-            List<String> tags,
-            List<String> teams,
-            @Nullable @Json ConciseProjectMetricsRow metrics,
-            long totalCount
-    ) {
-    }
-
     record ProjectRow(Project project, long totalCount) {
     }
 
@@ -309,7 +277,6 @@ public interface ProjectDao {
                     ) AS "teamsJson"
                  , COUNT(*) OVER() AS "totalCount"
               FROM "PROJECT"
-            </#if>
              WHERE ${apiProjectAclCondition}
             <#if nameFilter>
                AND "PROJECT"."NAME" = :nameFilter

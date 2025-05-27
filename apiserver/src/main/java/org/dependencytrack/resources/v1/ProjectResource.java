@@ -56,12 +56,14 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
@@ -83,6 +85,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static alpine.event.framework.Event.isEventBeingProcessed;
 import static java.util.Objects.requireNonNullElseGet;
@@ -143,14 +146,23 @@ public class ProjectResource extends AbstractApiResource {
             final List<ProjectDao.ProjectRow> projectRows = withJdbiHandle(getAlpineRequest(), handle ->
                     (name != null) ? handle.attach(ProjectDao.class).getProjects(name, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot)
                     : handle.attach(ProjectDao.class).getProjects(null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot));
-            // include metrics if name filter is null
-            if (name == null) {
-                // TODO populate metrics
-            }
             final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
             final List<Project> projects = projectRows.stream()
                     .map(ProjectDao.ProjectRow::project)
                     .toList();
+            if (name == null) {
+                // include metrics if name filter is null
+                final Map<Long, Project> projectById = projects.stream()
+                        .collect(Collectors.toMap(Project::getId, Function.identity()));
+                final List<ProjectMetrics> metricsList = withJdbiHandle(
+                        handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(projectById.keySet()));
+                for (final ProjectMetrics metrics : metricsList) {
+                    final Project project = projectById.get(metrics.getProjectId());
+                    if (project != null) {
+                        project.setMetrics(metrics);
+                    }
+                }
+            }
             return Response.ok(projects).header(TOTAL_COUNT_HEADER, totalCount).build();
         }
     }
