@@ -298,22 +298,20 @@ public class PermissionResource extends AlpineResource {
             @PathParam("permission") String permissionName) {
         try (QueryManager qm = new QueryManager()) {
             Role role = qm.getObjectByUuid(Role.class, uuid);
-            if (role == null) {
+            if (role == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
-            }
+
             final Permission permission = qm.getPermission(permissionName);
-            if (permission == null) {
+            if (permission == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The permission could not be found.").build();
-            }
-            final Set<Permission> permissions = role.getPermissions();
-            if (permissions != null && !permissions.contains(permission)) {
-                permissions.add(permission);
-                role.setPermissions(permissions);
-                role = qm.persist(role);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added permission for role: " + role.getName() + " / permission: " + permission.getName());
-                return Response.ok(role).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
+
+            if (!qm.addPermissionToRole(role, permission))
+                return Response.status(Response.Status.NOT_MODIFIED).build();
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Added permission for role: " + role.getName() + " / permission: " + permission.getName());
+
+            return Response.ok(role).build();
         }
     }
 

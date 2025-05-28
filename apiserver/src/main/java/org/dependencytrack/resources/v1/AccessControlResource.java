@@ -54,10 +54,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.persistence.jdbi.RoleDao;
-import org.jdbi.v3.core.Handle;
-
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -142,15 +138,12 @@ public class AccessControlResource extends AlpineResource {
             if (user == null)
                 return Response.status(Response.Status.NOT_FOUND).build();
 
-            try (final Handle jdbiHandle = openJdbiHandle(getAlpineRequest())) {
-                var dao = jdbiHandle.attach(RoleDao.class);
-                List<Project> projects = dao.getUserUnassignedProjects(user.getUsername());
+            List<Project> projects = qm.getUnassignedProjects(username);
 
-                if (projects == null || projects.isEmpty())
-                    return Response.noContent().build();
+            if (projects == null || projects.isEmpty())
+                return Response.noContent().build();
 
-                return Response.ok(projects).header(TOTAL_COUNT_HEADER, projects.size()).build();
-            }
+            return Response.ok(projects).header(TOTAL_COUNT_HEADER, projects.size()).build();
         }
     }
 

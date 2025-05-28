@@ -46,9 +46,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.model.ProjectRoleBinding;
+import org.dependencytrack.model.UserProjectRole;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CreateRoleRequest;
 
@@ -246,7 +246,7 @@ public class RoleResource extends AlpineResource {
             @ApiResponse(
                     responseCode = "200",
                     description = "A list of roles assigned to the user",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProjectRoleBinding.class)))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = UserProjectRole.class)))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
@@ -260,7 +260,7 @@ public class RoleResource extends AlpineResource {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
 
-            List<ProjectRoleBinding> roles = qm.getUserRoles(user);
+            List<UserProjectRole> roles = qm.getUserRoles(user);
             if (roles == null || roles.isEmpty()) {
                 LOGGER.info("No roles found for user: " + username);
                 return Response.ok(List.of()).build();

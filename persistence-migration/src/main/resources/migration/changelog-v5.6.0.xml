@@ -34,7 +34,7 @@
     <changeSet id="v5.6.0-2" author="nscuro">
         <modifyDataType tableName="TEAM" columnName="NAME" newDataType="VARCHAR(255)"/>
     </changeSet>
-
+  
     <changeSet id="v5.6.0-3" author="rossmurphy974@gmail.com">
         <addColumn tableName="PROJECT">
             <column name="AUTHORS" type="TEXT"/>
@@ -42,7 +42,7 @@
         <addColumn tableName="COMPONENT">
             <column name="AUTHORS" type="TEXT"/>
         </addColumn>
-
+        
         <sql>
             UPDATE "PROJECT"
             SET "AUTHORS" = JSON_BUILD_ARRAY(JSON_BUILD_OBJECT('name', "AUTHOR"))::TEXT
@@ -61,7 +61,7 @@
             <column name="AUTHOR"/>
         </dropColumn>
     </changeSet>
-
+    
     <changeSet id="v5.6.0-4" author="nscuro">
         <dropIndex tableName="COMPONENT" indexName="COMPONENT_DIRECT_DEPENDENCIES_GIN_IDX"/>
         <modifyDataType tableName="COMPONENT" columnName="DIRECT_DEPENDENCIES" newDataType="JSONB"/>
@@ -146,7 +146,7 @@
                 <constraints nullable="true"/>
             </column>
         </addColumn>
-
+    
         <sql>UPDATE "PROJECT" SET "INACTIVE_SINCE" = NOW() WHERE "ACTIVE" IS FALSE</sql>
 
         <dropColumn tableName="PROJECT">
@@ -218,19 +218,19 @@
         <addForeignKeyConstraint baseColumnNames="PROJECT_ID" baseTableName="ANALYSIS" constraintName="ANALYSIS_PROJECT_FK"
                                  deferrable="true" initiallyDeferred="true" onDelete="CASCADE" onUpdate="NO ACTION"
                                  referencedColumnNames="ID" referencedTableName="PROJECT" validate="true"/>
-
+        
         <dropForeignKeyConstraint baseTableName="ANALYSIS" constraintName="ANALYSIS_VULNERABILITY_FK"/>
         <addForeignKeyConstraint baseColumnNames="VULNERABILITY_ID" baseTableName="ANALYSIS"
                                  constraintName="ANALYSIS_VULNERABILITY_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="VULNERABILITY" validate="true"/>
-
+        
         <dropForeignKeyConstraint baseTableName="APIKEYS_TEAMS" constraintName="APIKEYS_TEAMS_TEAM_FK"/>
         <addForeignKeyConstraint baseColumnNames="TEAM_ID" baseTableName="APIKEYS_TEAMS"
                                  constraintName="APIKEYS_TEAMS_TEAM_FK" deferrable="true" initiallyDeferred="true"
                                  onDelete="CASCADE" onUpdate="NO ACTION" referencedColumnNames="ID"
                                  referencedTableName="TEAM" validate="true"/>
-
+        
         <dropForeignKeyConstraint baseTableName="APIKEYS_TEAMS" constraintName="APIKEYS_TEAMS_APIKEY_FK"/>
         <addForeignKeyConstraint baseColumnNames="APIKEY_ID" baseTableName="APIKEYS_TEAMS"
                                  constraintName="APIKEYS_TEAMS_APIKEY_FK" deferrable="true" initiallyDeferred="true"
@@ -1222,7 +1222,7 @@
                 $q$, table_name, table_name, column_1, column_1, column_2, column_2
               );
             END;
-            $$ LANGUAGE plpgsql;
+            $$ LANGUAGE plpgsql;    
         </sql>
 
         <dropIndex tableName="APIKEYS_TEAMS" indexName="APIKEYS_TEAMS_TEAM_ID_IDX" />
@@ -1245,7 +1245,7 @@
         <dropIndex tableName="TEAMS_PERMISSIONS" indexName="TEAMS_PERMISSIONS_PERMISSION_ID_IDX" />
 
         <sql splitStatements="false">
-            DO $$
+            DO $$ 
             BEGIN
               PERFORM remove_duplicate_rows('APIKEYS_TEAMS', 'TEAM_ID', 'APIKEY_ID');
               PERFORM remove_duplicate_rows('LDAPUSERS_PERMISSIONS', 'LDAPUSER_ID', 'PERMISSION_ID');
@@ -2340,7 +2340,21 @@
         </createIndex>
     </changeSet>
 
-    <changeSet id="v5.6.0-27" author="jhoward-lm">
+    <changeSet id="v5.6.0-27" author="nscuro">
+        <!--
+          Omitting PROJECT_ID from the PK makes the table easier to query
+          and supports the ON DELETE CASCADE trigger of the FK to COMPONENT better.
+        -->
+        <dropPrimaryKey
+                tableName="DEPENDENCYMETRICS"
+                constraintName="DEPENDENCYMETRICS_PK"/>
+        <addPrimaryKey
+                tableName="DEPENDENCYMETRICS"
+                constraintName="DEPENDENCYMETRICS_PK"
+                columnNames="COMPONENT_ID, LAST_OCCURRENCE"/>
+    </changeSet>
+
+    <changeSet id="v5.6.0-28" author="jhoward-lm">
         <createTable ifNotExists="true" tableName="ROLE">
             <column autoIncrement="true" name="ID" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="ROLE_PK" />
@@ -2361,66 +2375,52 @@
 
         <createTable ifNotExists="true" tableName="ROLES_PERMISSIONS">
             <column name="ROLE_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="ROLES_PERMISSIONS_COMPOSITE_IDX"
+                <constraints nullable="false" primaryKey="true"
+                    primaryKeyName="ROLES_PERMISSIONS_PK"
                     foreignKeyName="ROLES_PERMISSIONS_ROLE_FK"
                     referencedTableName="ROLE" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
+                    validatePrimaryKey="true" validateForeignKey="true" />
             </column>
 
             <column name="PERMISSION_ID" type="BIGINT">
-                <constraints nullable="false" unique="true"
-                    uniqueConstraintName="ROLES_PERMISSIONS_COMPOSITE_IDX"
+                <constraints nullable="false" primaryKey="true"
+                    primaryKeyName="ROLES_PERMISSIONS_PK"
                     foreignKeyName="ROLES_PERMISSIONS_PERMISSION_FK"
                     referencedTableName="PERMISSION" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateUnique="true" validateForeignKey="true" />
+                    validatePrimaryKey="true" validateForeignKey="true" />
             </column>
         </createTable>
 
-        <createIndex indexName="ROLES_PERMISSIONS_ROLE_ID_IDX" tableName="ROLES_PERMISSIONS">
-            <column name="ROLE_ID" />
-        </createIndex>
-
-        <createIndex indexName="ROLES_PERMISSIONS_PERMISSION_ID_IDX" tableName="ROLES_PERMISSIONS">
-            <column name="PERMISSION_ID" />
-        </createIndex>
-
-        <createTable ifNotExists="true" tableName="PROJECT_ROLE_BINDING">
+        <createTable ifNotExists="true" tableName="USER_PROJECT_ROLES">
             <column name="USER_ID" type="BIGINT">
-                <constraints nullable="false"
-                    foreignKeyName="PROJECT_ROLE_BINDING_USER_FK"
+                <constraints nullable="false" primaryKey="true"
+                    primaryKeyName="USER_PROJECT_ROLES_PK"
+                    foreignKeyName="USER_PROJECT_ROLES_USER_FK"
                     referencedTableName="USER" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateForeignKey="true" />
+                    validatePrimaryKey="true" validateForeignKey="true" />
             </column>
 
             <column name="PROJECT_ID" type="BIGINT">
-                <constraints nullable="false"
-                    foreignKeyName="PROJECT_ROLE_BINDING_PROJECT_FK"
+                <constraints nullable="false" primaryKey="true"
+                    primaryKeyName="USER_PROJECT_ROLES_PK"
+                    foreignKeyName="USER_PROJECT_ROLES_PROJECT_FK"
                     referencedTableName="PROJECT" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateForeignKey="true" />
+                    validatePrimaryKey="true" validateForeignKey="true" />
             </column>
 
             <column name="ROLE_ID" type="BIGINT">
-                <constraints nullable="false"
-                    foreignKeyName="PROJECT_ROLE_BINDING_ROLE_FK"
+                <constraints nullable="false" primaryKey="true"
+                    primaryKeyName="USER_PROJECT_ROLES_PK"
+                    foreignKeyName="USER_PROJECT_ROLES_ROLE_FK"
                     referencedTableName="ROLE" referencedColumnNames="ID"
                     deferrable="true" initiallyDeferred="true" deleteCascade="true"
-                    validateForeignKey="true" />
+                    validatePrimaryKey="true" validateForeignKey="true" />
             </column>
         </createTable>
-
-        <createIndex unique="true" indexName="PROJECT_ROLE_BINDING_USER_PROJECT_IDX" tableName="PROJECT_ROLE_BINDING">
-            <column name="USER_ID" />
-            <column name="PROJECT_ID" />
-        </createIndex>
-
-        <createIndex indexName="PROJECT_ROLE_BINDING_ROLE_ID_IDX" tableName="PROJECT_ROLE_BINDING">
-            <column name="ROLE_ID" />
-        </createIndex>
 
         <sql splitStatements="false">
             -- Helper function to recalculate all user permissions for a project.
@@ -2438,7 +2438,7 @@
               INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
                 ("USER_ID", "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
               SELECT DISTINCT upr."USER_ID", upr."PROJECT_ID", rp."PERMISSION_ID", p."NAME"
-                FROM "PROJECT_ROLE_BINDING" upr
+                FROM "USER_PROJECT_ROLES" upr
                INNER JOIN "ROLES_PERMISSIONS" rp
                   ON rp."ROLE_ID" = upr."ROLE_ID"
                INNER JOIN "PERMISSION" p
@@ -2464,14 +2464,14 @@
                   INTO project_ids
                   FROM (
                     SELECT upr."PROJECT_ID"
-                      FROM "PROJECT_ROLE_BINDING" upr
+                      FROM "USER_PROJECT_ROLES" upr
                      INNER JOIN old_table
                         ON old_table."ROLE_ID" = upr."ROLE_ID"
                   ) sub;
               ELSE
                 SELECT ARRAY_AGG(DISTINCT "PROJECT_ID")
                   INTO project_ids
-                  FROM "PROJECT_ROLE_BINDING"
+                  FROM "USER_PROJECT_ROLES"
                  WHERE "ROLE_ID" = ANY(role_ids);
               END IF;
 
@@ -2497,14 +2497,14 @@
                   INTO project_ids
                   FROM (
                     SELECT upr."PROJECT_ID"
-                      FROM "PROJECT_ROLE_BINDING" upr
+                      FROM "USER_PROJECT_ROLES" upr
                      INNER JOIN new_table
                         ON new_table."ROLE_ID" = upr."ROLE_ID"
                   ) sub;
               ELSE
                 SELECT ARRAY_AGG(DISTINCT "PROJECT_ID")
                   INTO project_ids
-                  FROM "PROJECT_ROLE_BINDING"
+                  FROM "USER_PROJECT_ROLES"
                  WHERE "ROLE_ID" = ANY(role_ids);
               END IF;
 
@@ -2534,7 +2534,7 @@
                   INTO project_ids
                   FROM (
                     SELECT upr."PROJECT_ID"
-                      FROM "PROJECT_ROLE_BINDING" upr
+                      FROM "USER_PROJECT_ROLES" upr
                      INNER JOIN new_table
                         ON new_table."ROLE_ID" = upr."ROLE_ID"
                       FULL OUTER JOIN old_table
@@ -2543,7 +2543,7 @@
               ELSE
                 SELECT ARRAY_AGG(DISTINCT "PROJECT_ID")
                   INTO project_ids
-                  FROM "PROJECT_ROLE_BINDING"
+                  FROM "USER_PROJECT_ROLES"
                  WHERE "ROLE_ID" = ANY(role_ids);
               END IF;
 
@@ -2554,23 +2554,23 @@
         </sql>
 
         <sql splitStatements="true">
-            -- INSERT trigger for PROJECT_ROLE_BINDING
+            -- INSERT trigger for USER_PROJECT_ROLES
             CREATE TRIGGER trigger_effective_permissions_mx_on_users_roles_insert
-            AFTER INSERT ON "PROJECT_ROLE_BINDING"
+            AFTER INSERT ON "USER_PROJECT_ROLES"
             REFERENCING NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION role_effective_permissions_mx_on_insert();
 
-            -- DELETE trigger for PROJECT_ROLE_BINDING
+            -- DELETE trigger for USER_PROJECT_ROLES
             CREATE TRIGGER trigger_effective_permissions_mx_on_users_roles_delete
-            AFTER DELETE ON "PROJECT_ROLE_BINDING"
+            AFTER DELETE ON "USER_PROJECT_ROLES"
             REFERENCING OLD TABLE AS old_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION role_effective_permissions_mx_on_delete();
 
-            -- UPDATE trigger for PROJECT_ROLE_BINDING
+            -- UPDATE trigger for USER_PROJECT_ROLES
             CREATE TRIGGER trigger_effective_permissions_mx_on_users_roles_update
-            AFTER UPDATE ON "PROJECT_ROLE_BINDING"
+            AFTER UPDATE ON "USER_PROJECT_ROLES"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
             EXECUTE FUNCTION role_effective_permissions_mx_on_update();

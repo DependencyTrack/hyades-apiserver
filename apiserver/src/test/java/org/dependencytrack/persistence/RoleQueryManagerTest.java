@@ -19,10 +19,8 @@
 package org.dependencytrack.persistence;
 
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectRoleBinding;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.persistence.jdbi.JdbiFactory;
-import org.dependencytrack.persistence.jdbi.RoleDao;
+import org.dependencytrack.model.UserProjectRole;
 
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
@@ -135,13 +133,9 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         expectedRole.setName("maintainer");
         qm.persist(expectedRole);
 
-        JdbiFactory.withJdbiHandle(
-                handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        testUser.getId(),
-                        testProject.getId(),
-                        expectedRole.getId()));
+        qm.addRoleToUser(testUser, expectedRole, testProject);
 
-        List<ProjectRoleBinding> actualRoles = qm.getUserRoles(testUser);
+        List<UserProjectRole> actualRoles = qm.getUserRoles(testUser);
 
         Assert.assertEquals(actualRoles.size(), 1);
         Assert.assertEquals(expectedRole.toString(), actualRoles.get(0).getRole().toString());
@@ -180,16 +174,9 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         unassignedProject2.setName("test-project-3");
         qm.persist(unassignedProject2);
 
-        JdbiFactory.withJdbiHandle(
-                handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        testUser.getId(),
-                        assignedProject.getId(),
-                        maintainerRole.getId()));
+        qm.addRoleToUser(testUser, maintainerRole, assignedProject);
 
-        List<Project> expectedProjects = Arrays.asList(
-                unassignedProject1,
-                unassignedProject2);
-
+        List<Project> expectedProjects = Arrays.asList(unassignedProject1, unassignedProject2);
         List<Project> actualProjects = qm.getUnassignedProjects(testUserName);
 
         // Sort both lists by project name before asserting equivalence
@@ -320,12 +307,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
         maintainerRole.setName("maintainer");
         qm.persist(maintainerRole);
 
-        JdbiFactory.withJdbiHandle(
-                handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        testUser.getId(),
-                        testProject.getId(),
-                        maintainerRole.getId()));
-
+        qm.addRoleToUser(testUser, maintainerRole, testProject);
         Assert.assertTrue(qm.removeRoleFromUser(testUser, maintainerRole, testProject));
     }
 

@@ -31,8 +31,6 @@ import org.dependencytrack.model.Role;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
-import org.dependencytrack.persistence.jdbi.JdbiFactory;
-import org.dependencytrack.persistence.jdbi.RoleDao;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
@@ -172,11 +170,7 @@ public class RoleResourceTest extends ResourceTest {
         expectedRole.setName("maintainer");
         qm.persist(expectedRole);
 
-        JdbiFactory.withJdbiHandle(
-                handle -> handle.attach(RoleDao.class).addRoleToUser(
-                        testUser.getId(),
-                        testProject.getId(),
-                        expectedRole.getId()));
+        qm.addRoleToUser(testUser, expectedRole, testProject);
 
         Response response = jersey.target(V1_ROLE + "/test-user/roles").request()
                 .header(X_API_KEY, apiKey)

@@ -31,12 +31,12 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import javax.jdo.annotations.Column;
+import javax.jdo.annotations.Element;
 import javax.jdo.annotations.Extension;
-import javax.jdo.annotations.FetchGroup;
 import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
-import javax.jdo.annotations.Unique;
+import javax.jdo.annotations.PrimaryKey;
 
 /**
  * Base class for user-project-role mapping.
@@ -44,15 +44,14 @@ import javax.jdo.annotations.Unique;
  * @author Jonathan Howard
  * @since 5.6.0
  */
-@PersistenceCapable(table = "PROJECT_ROLE_BINDING")
+@PersistenceCapable(table = "USER_PROJECT_ROLES")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Unique(name = "PROJECT_ROLE_BINDING_COMPOSITE_IDX", members = { "users", "project", "role" })
-@FetchGroup(name = "ALL", members = {
-        @Persistent(name = "role"),
-        @Persistent(name = "project"),
-        @Persistent(name = "users")
+@PrimaryKey(name = "USER_PROJECT_ROLES_PK", columns = {
+        @Column(name = "USER_ID"),
+        @Column(name = "PROJECT_ID"),
+        @Column(name = "ROLE_ID")
 })
-public class ProjectRoleBinding implements Serializable {
+public class UserProjectRole implements Serializable {
 
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "ROLE_ID", allowsNull = "false")
@@ -63,7 +62,7 @@ public class ProjectRoleBinding implements Serializable {
     private Project project;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "USER_ID", allowsNull = "false")
+    @Element(column = "USER_ID")
     @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
     private List<User> users;
 

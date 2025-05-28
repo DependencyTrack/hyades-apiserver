@@ -67,13 +67,13 @@ import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectProperty;
-import org.dependencytrack.model.ProjectRoleBinding;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.model.UserProjectRole;
 import org.dependencytrack.model.Vex;
 import org.dependencytrack.model.ViolationAnalysis;
 import org.dependencytrack.model.ViolationAnalysisComment;
@@ -488,19 +488,19 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Get the IDs of the {@link ProjectRoleBinding}s a given {@link Principal} is a member of.
+     * Get the IDs of the {@link UserProjectRole}s a given {@link Principal} is a member of.
      *
-     * @return A {@link Set} of {@link ProjectRoleBinding} IDs
+     * @return A {@link Set} of {@link UserProjectRole} IDs
      */
     protected Set<Long> getRoleIds(final Principal principal, final Project project) {
-        final Query<ProjectRoleBinding> query = pm.newQuery(ProjectRoleBinding.class)
+        final Query<UserProjectRole> query = pm.newQuery(UserProjectRole.class)
                 .filter("project.id == :projectId && users.contains(:principal)")
                 .setNamedParameters(Map.ofEntries(
                     Map.entry("principal", principal),
                     Map.entry("projectId", project.getId())));
 
         return Set.of(executeAndCloseList(query).stream()
-                .map(ProjectRoleBinding::getRole)
+                .map(UserProjectRole::getRole)
                 .map(Role::getId)
                 .toArray(Long[]::new));
     }
@@ -870,6 +870,10 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().createRole(name, permissions);
     }
 
+    public boolean addPermissionToRole(final Role role, final Permission permission) {
+        return getRoleQueryManager().addPermissionToRole(role, permission);
+    }
+
     public List<Role> getRoles() {
         return getRoleQueryManager().getRoles();
     }
@@ -1137,20 +1141,20 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getUnassignedProjects(username);
     }
 
-    public List<Project> getUnassignedProjects(final User user) {
-        return getRoleQueryManager().getUnassignedProjects(user);
-    }
-
     public List<Permission> getUnassignedRolePermissions(final Role role) {
         return getRoleQueryManager().getUnassignedRolePermissions(role);
     }
 
-    public List<ProjectRoleBinding> getUserRoles(final User user) {
+    public List<UserProjectRole> getUserRoles(final User user) {
         return getRoleQueryManager().getUserRoles(user);
     }
 
     public boolean removeRoleFromUser(final User user, final Role role, final Project project) {
         return getRoleQueryManager().removeRoleFromUser(user, role, project);
+    }
+
+    public boolean userProjectRoleExists(final User user, final Role role, final Project project) {
+        return getRoleQueryManager().userProjectRoleExists(user, role, project);
     }
 
     public NotificationRule createNotificationRule(String name, NotificationScope scope, NotificationLevel level, NotificationPublisher publisher) {

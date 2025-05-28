@@ -88,7 +88,6 @@ public class Role implements Serializable {
     private String name;
 
     @Persistent(table = "ROLES_PERMISSIONS", defaultFetchGroup = "true")
-    @Unique(name = "ROLES_PERMISSIONS_IDX")
     @Join(column = "ROLE_ID")
     @Element(column = "PERMISSION_ID")
     private Set<Permission> permissions = new LinkedHashSet<>();

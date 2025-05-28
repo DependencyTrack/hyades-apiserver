@@ -78,8 +78,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import javax.jdo.Query;
-import org.dependencytrack.persistence.jdbi.JdbiFactory;
-import org.dependencytrack.persistence.jdbi.RoleDao;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -878,7 +876,7 @@ public class UserResource extends AlpineResource {
             )
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
-    public Response assignProjectRoleBindingToUser(
+    public Response assignProjectRoleToUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid RoleProjectRequest request) {
         try (QueryManager qm = new QueryManager()) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
@@ -900,9 +898,8 @@ public class UserResource extends AlpineResource {
                 return problem.toResponse();
             }
 
-            boolean exists = JdbiFactory.withJdbiHandle(getAlpineRequest(), handle -> handle.attach(RoleDao.class)
-                    .userProjectRoleBindingExists(user.getId(), project.getId(), role.getId()));
-            if (exists) return Response.notModified().build();
+            if (qm.userProjectRoleExists(user, role, project))
+                return Response.notModified().build();
 
             qm.addRoleToUser(user, role, project);
 
@@ -937,7 +934,7 @@ public class UserResource extends AlpineResource {
             )
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
-    public Response removeProjectRoleBindingFromUser(
+    public Response removeProjectRoleFromUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid RoleProjectRequest request) {
         try (QueryManager qm = new QueryManager()) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
@@ -987,9 +984,8 @@ public class UserResource extends AlpineResource {
             @Parameter(description = "The UUID(s) of the team(s) to associate username with", required = true) @Valid TeamsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
             User user = qm.getUser(username);
-            if (user == null) {
+            if (user == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
 
             // Compare given team uuids against current user teams
             final Set<String> currentUserTeams = user.getTeams() == null ? Collections.emptySet()
@@ -998,34 +994,41 @@ public class UserResource extends AlpineResource {
                             .map(UUID::toString)
                             .collect(Collectors.toSet());
 
-            if (currentUserTeams.equals(request.teams())) {
+            if (currentUserTeams.equals(request.teams()))
                 return Response.notModified().entity("The user is already a member of the selected team(s)").build();
+
+            final Query<Team> query = qm.getPersistenceManager().newQuery(Team.class)
+                    .filter(":uuids.contains(uuid)")
+                    .setNamedParameters(Map.of("uuids", request.teams()));
+
+            final List<Team> requestedTeams;
+
+            try {
+                requestedTeams = query.executeList();
+            } finally {
+                query.closeAll();
             }
 
-            List<Team> requestedTeams = request.teams()
-                    .stream()
-                    .map(uuid -> qm.getObjectByUuid(Team.class, uuid))
+            // Check that all requested teams exist
+             List<String> notFound = requestedTeams.stream()
+                    .map(Team::getName)
+                    .filter(name -> !request.teams().contains(name))
                     .toList();
 
-            // check that all requested teams exist
-            List<String> notFound = new ArrayList<>();
-            for (int i = 0; i < requestedTeams.size(); i++) {
-                if (requestedTeams.get(i) == null)
-                    notFound.add(request.teams().stream().toList().get(i));
-            }
-
             if (notFound.size() > 0) {
-                // String msg = String.format("One or more teams could not be found:\n%s", );
                 Map<String, Object> response = new HashMap<>();
                 response.put("error", "One or more teams could not be found");
                 response.put("teams", notFound);
+
                 return Response.status(Response.Status.BAD_REQUEST).entity(response).build();
             }
 
             user.setTeams(requestedTeams);
             qm.persist(user);
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                    "Added team membership for: " + user.getUsername() + " / team: " + requestedTeams.toString());
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added team membership for: %s / team: %s"
+                    .formatted(user.getUsername(), requestedTeams.toString()));
+
             return Response.ok(user).build();
         }
     }
