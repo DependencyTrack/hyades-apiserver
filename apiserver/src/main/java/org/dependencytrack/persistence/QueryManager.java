@@ -49,14 +49,12 @@ import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
-import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
-import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.LicenseGroup;
@@ -92,9 +90,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
-import org.dependencytrack.proto.vulnanalysis.v1.ScanResult;
 import org.dependencytrack.proto.vulnanalysis.v1.ScanStatus;
-import org.dependencytrack.proto.vulnanalysis.v1.ScannerResult;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
@@ -102,14 +98,9 @@ import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import javax.jdo.Transaction;
-import javax.jdo.datastore.JDOConnection;
 import javax.jdo.metadata.MemberMetadata;
 import javax.jdo.metadata.TypeMetadata;
 import java.security.Principal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -124,7 +115,6 @@ import java.util.concurrent.Callable;
 import java.util.function.Predicate;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED;
-import static org.dependencytrack.proto.vulnanalysis.v1.ScanStatus.SCAN_STATUS_FAILED;
 
 /**
  * This QueryManager provides a concrete extension of {@link AlpineQueryManager} by
@@ -1562,112 +1552,6 @@ public class QueryManager extends AlpineQueryManager {
         }
     }
 
-    /**
-     * Record the successful processing of a {@link ScanResult} event for a given {@link VulnerabilityScan}.
-     *
-     * @param scanToken  The token that uniquely identifies the scan for clients
-     * @param scanResult The {@link ScanResult} to record
-     * @return The {@link VulnerabilityScan} when its status transitioned to {@link VulnerabilityScan.Status#COMPLETED}
-     * as a result of recording the given {@link ScanResult}, otherwise {@code null}
-     */
-    public VulnerabilityScan recordVulnerabilityScanResult(final String scanToken, final ScanResult scanResult) {
-        final int totalScannerResults = scanResult.getScannerResultsCount();
-        final int failedScannerResults = Math.toIntExact(scanResult.getScannerResultsList().stream()
-                .map(ScannerResult::getStatus)
-                .filter(SCAN_STATUS_FAILED::equals)
-                .count());
-
-        // Because this method will be called VERY frequently (once for each processed ScanResult),
-        // use raw SQL instead of any ORM abstractions. All we need to do is to increment some counters.
-        // Using a single SQL statement also removes the need for (optimistic) locking.
-        final JDOConnection jdoConnection = pm.getDataStoreConnection();
-        final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
-        try (final PreparedStatement ps = nativeConnection.prepareStatement("""
-                WITH "RES" AS (
-                  UPDATE "VULNERABILITYSCAN"
-                  SET
-                    "RECEIVED_RESULTS" = "RECEIVED_RESULTS" + 1,
-                    "SCAN_TOTAL" = "SCAN_TOTAL" + ?,
-                    "SCAN_FAILED" = "SCAN_FAILED" + ?,
-                    "STATUS" = (
-                      CASE WHEN "EXPECTED_RESULTS" = ("RECEIVED_RESULTS" + 1)
-                      THEN 'COMPLETED'
-                      ELSE 'IN_PROGRESS'
-                      END
-                    ),
-                    "UPDATED_AT" = NOW()
-                  WHERE
-                    "TOKEN" = ?
-                  RETURNING
-                    "SCAN_FAILED",
-                    "SCAN_TOTAL",
-                    "STATUS",
-                    "TARGET_TYPE",
-                    "TARGET_IDENTIFIER"
-                )
-                SELECT *
-                FROM "RES"
-                WHERE
-                  -- No point in fetching any data from DB if the
-                  -- record is not in the desired final state yet.
-                  "STATUS" = 'COMPLETED'
-                """)) {
-            ps.setInt(1, totalScannerResults);
-            ps.setInt(2, failedScannerResults);
-            ps.setString(3, scanToken);
-
-            final ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                final var vs = new VulnerabilityScan();
-                vs.setToken(UUID.fromString(scanToken));
-                vs.setTargetType(VulnerabilityScan.TargetType.valueOf(rs.getString("TARGET_TYPE")));
-                vs.setTargetIdentifier(UUID.fromString(rs.getString("TARGET_IDENTIFIER")));
-                vs.setScanFailed(rs.getInt("SCAN_FAILED"));
-                vs.setScanTotal(rs.getInt("SCAN_TOTAL"));
-                vs.setStatus(VulnerabilityScan.Status.valueOf(rs.getString("STATUS")));
-                return vs;
-            } else {
-                return null;
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("""
-                    Failed to record successful processing of scan result (token=%s, component=%s)\
-                    """.formatted(scanToken, scanResult.getKey().getComponentUuid()), e);
-        } finally {
-            jdoConnection.close();
-        }
-    }
-
-    /**
-     * Updates the status of given {@link VulnerabilityScan}.
-     *
-     * @param scanToken The token that uniquely identifies the scan for clients
-     * @param status
-     * @return The updated {@link VulnerabilityScan}, or {@code null} when no {@link VulnerabilityScan} was found
-     */
-    public VulnerabilityScan updateVulnerabilityScanStatus(final String scanToken, final VulnerabilityScan.Status status) {
-        final Transaction trx = pm.currentTransaction();
-        trx.setOptimistic(true);
-        try {
-            trx.begin();
-            final Query<VulnerabilityScan> scanQuery = pm.newQuery(VulnerabilityScan.class);
-            scanQuery.setFilter("token == :token");
-            scanQuery.setParameters(scanToken);
-            final VulnerabilityScan scan = scanQuery.executeUnique();
-            if (scan == null) {
-                return null;
-            }
-            scan.setStatus(status);
-            scan.setUpdatedAt(new Date());
-            trx.commit();
-            return scan;
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
-    }
-
     public VulnerableSoftware getVulnerableSoftwareByPurlAndVersion(String purlType, String purlNamespace, String purlName, String version) {
         return getVulnerableSoftwareQueryManager().getVulnerableSoftwareByPurlAndVersion(purlType, purlNamespace, purlName, version);
     }
@@ -1765,50 +1649,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public IntegrityAnalysis getIntegrityAnalysisByComponentUuid(UUID uuid) {
         return getIntegrityAnalysisQueryManager().getIntegrityAnalysisByComponentUuid(uuid);
-    }
-
-    public ComponentMetaInformation getMetaInformation(UUID uuid) {
-
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        String queryString = """
-                SELECT "C"."ID", "C"."PURL", "IMC"."LAST_FETCH",  "IMC"."PUBLISHED_AT", "IA"."INTEGRITY_CHECK_STATUS", "IMC"."REPOSITORY_URL" FROM "COMPONENT" "C"
-                JOIN "INTEGRITY_META_COMPONENT" "IMC" ON "C"."PURL" ="IMC"."PURL" LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "IA"."COMPONENT_ID" ="C"."ID"  WHERE "C"."UUID" = ?
-                """;
-        try {
-            connection = (Connection) pm.getDataStoreConnection();
-
-            preparedStatement = connection.prepareStatement(queryString);
-            preparedStatement.setObject(1, uuid);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                Date publishedDate = null;
-                Date lastFetch = null;
-                IntegrityMatchStatus integrityMatchStatus = null;
-                String integrityRepoUrl = null;
-                if (resultSet.getTimestamp("PUBLISHED_AT") != null) {
-                    publishedDate = Date.from(resultSet.getTimestamp("PUBLISHED_AT").toInstant());
-                }
-                if (resultSet.getTimestamp("LAST_FETCH") != null) {
-                    lastFetch = Date.from(resultSet.getTimestamp("LAST_FETCH").toInstant());
-                }
-                if (resultSet.getString("INTEGRITY_CHECK_STATUS") != null) {
-                    integrityMatchStatus = IntegrityMatchStatus.valueOf(resultSet.getString("INTEGRITY_CHECK_STATUS"));
-                }
-                if (resultSet.getString("REPOSITORY_URL") != null) {
-                    integrityRepoUrl = String.valueOf(resultSet.getString("REPOSITORY_URL"));
-                }
-                return new ComponentMetaInformation(publishedDate, integrityMatchStatus, lastFetch, integrityRepoUrl);
-
-            }
-        } catch (Exception ex) {
-            LOGGER.error("error occurred while fetch component published date and integrity information", ex);
-            throw new RuntimeException(ex);
-        } finally {
-            DbUtil.close(preparedStatement);
-            DbUtil.close(connection);
-        }
-        return null;
     }
 
     public List<Component> getComponentsByPurl(String purl) {
