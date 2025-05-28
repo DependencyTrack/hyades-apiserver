@@ -331,7 +331,11 @@ public interface ProjectDao {
                AND (LOWER("PROJECT"."NAME") LIKE ('%' || LOWER(${apiFilterParameter}) || '%')
                     OR EXISTS (SELECT 1 FROM "TAG" WHERE "TAG"."NAME" = ${apiFilterParameter}))
             </#if>
-            ORDER BY "name" ASC, "version" DESC, "id" ASC
+            <#if apiOrderByClause??>
+                ${apiOrderByClause}
+            <#else>
+                ORDER BY "name" ASC, "version" DESC, "id" ASC
+            </#if>
             ${apiOffsetLimitClause!}
             """)
     @DefineNamedBindings

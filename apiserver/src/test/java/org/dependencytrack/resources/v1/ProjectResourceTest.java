@@ -335,6 +335,7 @@ public class ProjectResourceTest extends ResourceTest {
                       "tags" : [ {
                         "name" : "foo"
                       } ],
+                      "externalReferences":[],
                       "isLatest" : false,
                       "active" : true
                   }
