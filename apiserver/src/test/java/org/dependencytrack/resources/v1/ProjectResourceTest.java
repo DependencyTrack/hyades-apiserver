@@ -392,6 +392,24 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getProjectsByClassifierRequestTest() {
+        qm.createProject("Acme Example A", null, "1.0", null, null, null, null, false);
+        var p2 = qm.createProject("Acme Example B", null, "1.0", null, null, null, null, false);
+        p2.setClassifier(Classifier.LIBRARY);
+        Response response = jersey.target(V1_PROJECT + "/classifier/" + Classifier.LIBRARY.name())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray json = parseJsonArray(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals(1, json.size());
+        Assert.assertEquals("Acme Example B", json.getJsonObject(0).getString("name"));
+        Assert.assertEquals("LIBRARY", json.getJsonObject(0).getString("classifier"));
+    }
+
+    @Test
     public void getProjectsWithMetricsTest() {
         var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         var projectMetrics = new ProjectMetrics();

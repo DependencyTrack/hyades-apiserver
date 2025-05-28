@@ -56,14 +56,12 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
@@ -85,7 +83,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static alpine.event.framework.Event.isEventBeingProcessed;
 import static java.util.Objects.requireNonNullElseGet;
@@ -136,34 +133,17 @@ public class ProjectResource extends AbstractApiResource {
                                 @Parameter(description = "The UUID of the team which projects shall be excluded", schema = @Schema(format = "uuid", type = "string"))
                                 @QueryParam("notAssignedToTeamWithUuid") @ValidUuid String notAssignedToTeamWithUuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            Team notAssignedToTeam = null;
+            Team notAssignedToTeam;
             if (StringUtils.isNotEmpty(notAssignedToTeamWithUuid)) {
                 notAssignedToTeam = qm.getObjectByUuid(Team.class, notAssignedToTeamWithUuid);
                 if (notAssignedToTeam == null) {
                     return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team could not be found.").build();
                 }
             }
-            final List<ProjectDao.ProjectRow> projectRows = withJdbiHandle(getAlpineRequest(), handle ->
-                    (name != null) ? handle.attach(ProjectDao.class).getProjects(name, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot)
-                    : handle.attach(ProjectDao.class).getProjects(null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot));
-            final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
-            final List<Project> projects = projectRows.stream()
-                    .map(ProjectDao.ProjectRow::project)
-                    .toList();
-            if (name == null) {
-                // include metrics if name filter is null
-                final Map<Long, Project> projectById = projects.stream()
-                        .collect(Collectors.toMap(Project::getId, Function.identity()));
-                final List<ProjectMetrics> metricsList = withJdbiHandle(
-                        handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(projectById.keySet()));
-                for (final ProjectMetrics metrics : metricsList) {
-                    final Project project = projectById.get(metrics.getProjectId());
-                    if (project != null) {
-                        project.setMetrics(metrics);
-                    }
-                }
-            }
-            return Response.ok(projects).header(TOTAL_COUNT_HEADER, totalCount).build();
+            final PaginatedResult projectPages = withJdbiHandle(getAlpineRequest(), handle ->
+                    (name != null) ? handle.attach(ProjectDao.class).getProjects(name, null, null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot, false)
+                    : handle.attach(ProjectDao.class).getProjects(null, null, null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot, true));
+            return Response.ok(projectPages.getObjects()).header(TOTAL_COUNT_HEADER, projectPages.getTotal()).build();
         }
     }
 
@@ -384,11 +364,9 @@ public class ProjectResource extends AbstractApiResource {
             @QueryParam("excludeInactive") boolean excludeInactive,
             @Parameter(description = "Optionally excludes children projects from being returned")
             @QueryParam("onlyRoot") boolean onlyRoot) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final Tag tag = qm.getTagByName(tagString);
-            final PaginatedResult result = qm.getProjects(tag, true, excludeInactive, onlyRoot);
-            return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-        }
+        final PaginatedResult projectPages = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
+                .getProjects(null, null, tagString, null, null, excludeInactive, onlyRoot, true));
+        return Response.ok(projectPages.getObjects()).header(TOTAL_COUNT_HEADER, projectPages.getTotal()).build();
     }
 
     @GET
@@ -416,10 +394,11 @@ public class ProjectResource extends AbstractApiResource {
             @QueryParam("excludeInactive") boolean excludeInactive,
             @Parameter(description = "Optionally excludes children projects from being returned", required = false)
             @QueryParam("onlyRoot") boolean onlyRoot) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
+        try {
             final Classifier classifier = Classifier.valueOf(classifierString);
-            final PaginatedResult result = qm.getProjects(classifier, true, excludeInactive, onlyRoot);
-            return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
+            final PaginatedResult projectPages = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
+                    .getProjects(null, classifier.name(), null, null, null, excludeInactive, onlyRoot, true));
+            return Response.ok(projectPages.getObjects()).header(TOTAL_COUNT_HEADER, projectPages.getTotal()).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The classifier type specified is not valid.").build();
         }

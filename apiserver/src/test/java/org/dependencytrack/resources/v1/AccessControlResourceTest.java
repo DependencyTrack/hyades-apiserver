@@ -22,6 +22,8 @@ import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -29,9 +31,6 @@ import org.dependencytrack.model.Project;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
-
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.Response;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -219,4 +218,28 @@ public class AccessControlResourceTest extends ResourceTest {
                 """);
     }
 
+    @Test
+    public void retrieveProjectsByPassTest() {
+        enablePortfolioAccessControl();
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.addAccessTeam(super.team);
+        qm.persist(project);
+
+        final Response response = jersey.target(V1_ACL + "/team/" + super.team.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 404,
+                  "title": "Resource does not exist",
+                  "detail": "Project could not be found"
+                }
+                """);
+    }
 }
