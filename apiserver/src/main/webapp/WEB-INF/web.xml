@@ -116,7 +116,7 @@
         <servlet-class>alpine.server.AlpineServlet</servlet-class>
         <init-param>
             <param-name>jersey.config.server.provider.packages</param-name>
-            <param-value>alpine.server.filters,alpine.server.resources,org.dependencytrack.resources,org.dependencytrack.filters</param-value>
+            <param-value>alpine.server.filters,alpine.server.resources,org.dependencytrack.resources,org.dependencytrack.filters,org.dependencytrack.context</param-value>
         </init-param>
         <init-param>
             <param-name>jersey.config.server.provider.classnames</param-name>
