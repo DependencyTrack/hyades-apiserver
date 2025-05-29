@@ -29,6 +29,7 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -219,27 +220,32 @@ public class AccessControlResourceTest extends ResourceTest {
     }
 
     @Test
-    public void retrieveProjectsByPassTest() {
-        enablePortfolioAccessControl();
+    public void retrieveProjectsByTeamTest() {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        var localTeam = new Team();
+        localTeam.setName("test-team");
+        qm.persist(localTeam);
 
         final var project = new Project();
         project.setName("acme-app");
         project.addAccessTeam(super.team);
         qm.persist(project);
 
-        final Response response = jersey.target(V1_ACL + "/team/" + super.team.getUuid())
+        // No projects assigned to local team
+        Response response = jersey.target(V1_ACL + "/team/" + localTeam.getUuid())
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        Assert.assertEquals(String.valueOf(0), response.getHeaderString(TOTAL_COUNT_HEADER));
 
-        assertThat(response.getStatus()).isEqualTo(404);
-        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
-                {
-                  "status": 404,
-                  "title": "Resource does not exist",
-                  "detail": "Project could not be found"
-                }
-                """);
+        // One project assigned to super team
+        response = jersey.target(V1_ACL + "/team/" + super.team.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
     }
 }

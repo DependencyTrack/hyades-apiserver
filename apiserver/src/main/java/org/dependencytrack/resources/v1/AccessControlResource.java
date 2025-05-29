@@ -99,7 +99,6 @@ public class AccessControlResource extends AlpineResource {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Team team = qm.getObjectByUuid(Team.class, uuid);
             if (team != null) {
-                // TODO handle byPass = true
                 final PaginatedResult projectPages = withJdbiHandle(getAlpineRequest(), handle ->
                         handle.attach(ProjectDao.class).getProjects(null, null, null, team.getName(), null, excludeInactive, onlyRoot, false));
                 return Response.ok(projectPages.getObjects()).header(TOTAL_COUNT_HEADER, projectPages.getTotal()).build();
