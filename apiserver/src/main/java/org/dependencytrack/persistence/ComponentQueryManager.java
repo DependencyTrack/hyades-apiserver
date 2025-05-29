@@ -324,7 +324,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
         final Query<Component> query = pm.newQuery(Component.class);
         final Map<String, Object> params = Map.of("hash", hash);
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         return execute(query, params);
     }
 
@@ -424,7 +424,7 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         if (orderBy == null) {
             query.setOrdering("id asc");
         }
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         return execute(query, params);
     }
 

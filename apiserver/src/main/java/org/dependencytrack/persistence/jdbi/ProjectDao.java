@@ -18,11 +18,21 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import alpine.persistence.PaginatedResult;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.annotation.Nullable;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.persistence.jdbi.mapping.ExternalReferenceMapper;
+import org.dependencytrack.persistence.jdbi.mapping.OrganizationalContactMapper;
+import org.dependencytrack.persistence.jdbi.mapping.OrganizationalEntityMapper;
+import org.dependencytrack.persistence.jdbi.mapping.ProjectRowMapper;
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
 import org.jdbi.v3.json.Json;
+import org.jdbi.v3.sqlobject.config.RegisterColumnMapper;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
+import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
+import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
@@ -31,7 +41,12 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * @since 5.5.0
@@ -220,6 +235,154 @@ public interface ProjectDao {
             @JsonAlias("unassigned_severity") int unassigned,
             int vulnerabilities
     ) {
+    }
+
+    record ProjectRow(Project project, long totalCount) {
+    }
+
+    @SqlQuery(/* language=InjectedFreeMarker */ """
+            <#-- @ftlvariable name="nameFilter" type="String" -->
+            <#-- @ftlvariable name="classifierFilter" type="Boolean" -->
+            <#-- @ftlvariable name="teamFilter" type="String" -->
+            <#-- @ftlvariable name="tagFilter" type="String" -->
+            <#-- @ftlvariable name="notAssignedToTeamWithUuid" type="String" -->
+            <#-- @ftlvariable name="onlyRoot" type="Boolean" -->
+            <#-- @ftlvariable name="apiFilterParameter" type="String" -->
+            <#-- @ftlvariable name="apiOrderByClause" type="String" -->
+            <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
+            <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
+            <#-- @ftlvariable name="apiParentProjectAclCondition" type="String" -->
+            SELECT "PROJECT"."ID" AS "id"
+                 , "PROJECT"."CLASSIFIER"
+                 , "PROJECT"."CPE"
+                 , "PROJECT"."DESCRIPTION"
+                 , "PROJECT"."DIRECT_DEPENDENCIES" AS "directDependencies"
+                 , "PROJECT"."EXTERNAL_REFERENCES" AS "externalReferences"
+                 , "PROJECT"."GROUP"
+                 , "PROJECT"."LAST_BOM_IMPORTED" AS "lastBomImport"
+                 , "PROJECT"."LAST_BOM_IMPORTED_FORMAT" AS "lastBomImportFormat"
+                 , "PROJECT"."LAST_RISKSCORE" AS "lastInheritedRiskScore"
+                 , "PROJECT"."NAME" AS "name"
+                 , "PROJECT"."PUBLISHER"
+                 , "PROJECT"."PURL" AS "projectPurl"
+                 , "PROJECT"."SWIDTAGID"
+                 , "PROJECT"."UUID"
+                 , "PROJECT"."VERSION" AS "version"
+                 , "PROJECT"."SUPPLIER"
+                 , "PROJECT"."MANUFACTURER"
+                 , "PROJECT"."AUTHORS"
+                 , "PROJECT"."IS_LATEST" AS "isLatest"
+                 , "PROJECT"."INACTIVE_SINCE" AS "inactiveSince"
+                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
+                        FROM "TAG"
+                        INNER JOIN "PROJECTS_TAGS"
+                            ON "PROJECTS_TAGS"."PROJECT_ID" = "PROJECT"."ID"
+                        WHERE "TAG"."ID" = "PROJECTS_TAGS"."TAG_ID"
+                    ) AS "tagsJson"
+                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
+                        FROM "TEAM"
+                        INNER JOIN "PROJECT_ACCESS_TEAMS"
+                            ON "PROJECT_ACCESS_TEAMS"."TEAM_ID" = "TEAM"."ID"
+                        WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
+                    ) AS "teamsJson"
+                 , COUNT(*) OVER() AS "totalCount"
+              FROM "PROJECT"
+             WHERE ${apiProjectAclCondition}
+            <#if nameFilter>
+               AND "PROJECT"."NAME" = :nameFilter
+            </#if>
+            <#if classifierFilter>
+               AND "PROJECT"."CLASSIFIER" = :classifierFilter
+            </#if>
+            <#if tagFilter>
+               AND EXISTS(
+                 SELECT 1
+                   FROM "PROJECTS_TAGS"
+                  INNER JOIN "TAG"
+                     ON "TAG"."ID" = "PROJECTS_TAGS"."TAG_ID"
+                  WHERE "PROJECTS_TAGS"."PROJECT_ID" = "PROJECT"."ID"
+                    AND "TAG"."NAME" = :tagFilter)
+            </#if>
+            <#if teamFilter>
+               AND EXISTS(
+                 SELECT 1
+                   FROM "PROJECT_ACCESS_TEAMS"
+                  INNER JOIN "TEAM"
+                     ON "TEAM"."ID" = "PROJECT_ACCESS_TEAMS"."TEAM_ID"
+                  WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
+                    AND "TEAM"."NAME" = :teamFilter)
+            </#if>
+            <#if notAssignedToTeamWithUuid>
+               AND NOT EXISTS(
+                 SELECT 1
+                   FROM "PROJECT_ACCESS_TEAMS"
+                  INNER JOIN "TEAM"
+                     ON "TEAM"."ID" = "PROJECT_ACCESS_TEAMS"."TEAM_ID"
+                  WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
+                    AND "TEAM"."UUID" = :notAssignedToTeamWithUuid)
+            </#if>
+            <#if excludeInactive>
+                AND "PROJECT"."INACTIVE_SINCE" IS NULL
+            </#if>
+            <#if onlyRoot>
+               AND ("PROJECT"."PARENT_PROJECT_ID" IS NULL)
+            </#if>
+            <#if apiFilterParameter??>
+               AND (LOWER("PROJECT"."NAME") LIKE ('%' || LOWER(${apiFilterParameter}) || '%')
+                    OR EXISTS (SELECT 1 FROM "TAG" WHERE "TAG"."NAME" = ${apiFilterParameter}))
+            </#if>
+            <#if apiOrderByClause??>
+                ${apiOrderByClause}
+            <#else>
+                ORDER BY "name" ASC, "version" DESC, "id" ASC
+            </#if>
+            ${apiOffsetLimitClause!}
+            """)
+    @DefineNamedBindings
+    @AllowUnusedBindings
+    @DefineApiProjectAclCondition(
+            name = "apiParentProjectAclCondition",
+            projectIdColumn = "\"PARENT_PROJECT\".\"ID\""
+    )
+    @AllowApiOrdering(by = {
+            @AllowApiOrdering.Column(name = "id"),
+            @AllowApiOrdering.Column(name = "name"),
+            @AllowApiOrdering.Column(name = "version")
+    })
+    @RegisterColumnMapper(ExternalReferenceMapper.class)
+    @RegisterColumnMapper(OrganizationalEntityMapper.class)
+    @RegisterColumnMapper(OrganizationalContactMapper.class)
+    @RegisterRowMapper(ProjectRowMapper.class)
+    List<ProjectRow> getProjects(
+            @Bind String nameFilter,
+            @Bind String classifierFilter,
+            @Bind String tagFilter,
+            @Bind String teamFilter,
+            @Bind String notAssignedToTeamWithUuid,
+            @Define boolean excludeInactive,
+            @Define boolean onlyRoot
+    );
+
+    default PaginatedResult getProjects(String nameFilter, String classifierFilter, String tagFilter, String teamFilter, String notAssignedToTeamWithUuid,
+                                         boolean excludeInactive, boolean onlyRoot, boolean includeMetrics) {
+        final List<ProjectDao.ProjectRow> projectRows = getProjects(nameFilter, classifierFilter, tagFilter, teamFilter, notAssignedToTeamWithUuid, excludeInactive, onlyRoot);
+        final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
+        final List<Project> projects = projectRows.stream()
+                .map(ProjectDao.ProjectRow::project)
+                .toList();
+        if (includeMetrics) {
+            final Map<Long, Project> projectById = projects.stream()
+                    .collect(Collectors.toMap(Project::getId, Function.identity()));
+            final List<ProjectMetrics> metricsList = withJdbiHandle(
+                    handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(projectById.keySet()));
+            for (final ProjectMetrics metrics : metricsList) {
+                final Project project = projectById.get(metrics.getProjectId());
+                if (project != null) {
+                    project.setMetrics(metrics);
+                }
+            }
+        }
+        return (new PaginatedResult()).objects(projects).total(totalCount);
     }
 
     @SqlUpdate("""
