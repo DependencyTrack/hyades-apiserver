@@ -525,8 +525,8 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().hasAccess(principal, project);
     }
 
-    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
-        getProjectQueryManager().preprocessACLs(query, inputFilter, params, bypass);
+    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params) {
+        getProjectQueryManager().preprocessACLs(query, inputFilter, params);
     }
 
     public PaginatedResult getChildrenProjects(final UUID uuid, final boolean includeMetrics, final boolean excludeInactive) {

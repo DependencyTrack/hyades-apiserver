@@ -167,7 +167,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         query.setFilter(queryFilter);
         query.setRange(0, 1);
         final Project project = singleResult(query.executeWithMap(params));
@@ -198,7 +198,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         query.setFilter(queryFilter);
         query.setRange(0, 1);
 
@@ -774,10 +774,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         return executeAndCloseResultUnique(query, Boolean.class);
     }
 
-    @Override
-    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
-        if (bypass
-            || principal == null
+    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params) {
+        if (principal == null
             || !isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)
             || hasAccessManagementPermission(principal)) {
             query.setFilter(inputFilter);
@@ -897,7 +895,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
         result = execute(query, params);
         if (!result.getObjects().isEmpty() && includeMetrics) {
@@ -922,7 +920,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
         result = execute(query, params);
 
@@ -954,7 +952,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         result = execute(query, params);
 
         if (!result.getObjects().isEmpty() && includeMetrics) {
@@ -990,7 +988,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         result = execute(query, params);
 
         result.setObjects(result.getList(Project.class).stream().filter(p -> !isChildOf(p, project.getUuid()) && !p.getUuid().equals(project.getUuid())).toList());
@@ -1026,7 +1024,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         result = execute(query, params);
 
         result.setObjects(result.getList(Project.class).stream().filter(p -> !isChildOf(p, project.getUuid()) && !p.getUuid().equals(project.getUuid())).toList());

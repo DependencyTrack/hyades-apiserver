@@ -124,11 +124,11 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getProjects(@Parameter(description = "The optional name of the project to query on", required = false)
+    public Response getProjects(@Parameter(description = "The optional name of the project to query on")
                                 @QueryParam("name") String name,
-                                @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
+                                @Parameter(description = "Optionally excludes inactive projects from being returned")
                                 @QueryParam("excludeInactive") boolean excludeInactive,
-                                @Parameter(description = "Optionally excludes children projects from being returned", required = false)
+                                @Parameter(description = "Optionally excludes children projects from being returned")
                                 @QueryParam("onlyRoot") boolean onlyRoot,
                                 @Parameter(description = "The UUID of the team which projects shall be excluded", schema = @Schema(format = "uuid", type = "string"))
                                 @QueryParam("notAssignedToTeamWithUuid") @ValidUuid String notAssignedToTeamWithUuid) {
