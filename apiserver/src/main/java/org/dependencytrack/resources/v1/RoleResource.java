@@ -55,7 +55,6 @@ import org.dependencytrack.resources.v1.vo.CreateRoleRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
 import alpine.model.Permission;
-import alpine.model.User;
 
 import java.util.List;
 import java.util.Map;
@@ -254,13 +253,7 @@ public class RoleResource extends AlpineResource {
     public Response getUserRoles(
             @Parameter(description = "A valid username", required = true) @PathParam("username") String username) {
         try (QueryManager qm = new QueryManager()) {
-            User user = qm.getUser(username);
-            if (user == null) {
-                LOGGER.warn("User not found: " + username);
-                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
-
-            List<UserProjectRole> roles = qm.getUserRoles(user);
+            List<UserProjectRole> roles = qm.getUserRoles(username);
             if (roles == null || roles.isEmpty()) {
                 LOGGER.info("No roles found for user: " + username);
                 return Response.ok(List.of()).build();

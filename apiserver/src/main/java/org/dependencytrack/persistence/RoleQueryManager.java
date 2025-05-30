@@ -18,17 +18,12 @@
  */
 package org.dependencytrack.persistence;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import javax.jdo.datastore.JDOConnection;
 
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
@@ -67,15 +62,11 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean addPermissionToRole(final Role role, final Permission permission) {
-        Query<?> query = pm.newQuery(Query.SQL, /* language=sql */ """
-                SELECT EXISTS(
-                  SELECT 1
-                    FROM "ROLES_PERMISSIONS"
-                   WHERE "ROLE_ID" = ?
-                     AND "PERMISSION_ID" = ?
-                )
-                """)
-                .setParameters(role.getId(), permission.getId());
+        final Query<Permission> query = pm.newQuery(Permission.class)
+                .variables("org.dependencytrack.model.Role role")
+                .filter("role.id == :roleId && role.permissions.contains(this) && this.id == :permissionId")
+                .setParameters(role.getId(), permission.getId())
+                .result("count(this) > 0");
 
         if (executeAndCloseResultUnique(query, Boolean.class))
             return false;
@@ -116,49 +107,39 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     }
 
     @Override
-    public List<UserProjectRole> getUserRoles(final User user) {
-        final Query<?> query = pm.newQuery(Query.SQL, /* language=sql */ """
-                SELECT upr."USER_ID", upr."PROJECT_ID", upr."ROLE_ID"
-                  FROM "USER_PROJECT_ROLES" upr
-                 INNER JOIN "USER" u
-                    ON u."ID" = upr."USER_ID"
-                 WHERE u."USERNAME" = ?
-                """)
-                .setParameters(user.getUsername());
+    public List<UserProjectRole> getUserRoles(final String username) {
+        final Query<UserProjectRole> query = pm.newQuery(UserProjectRole.class)
+                .filter("user.username == :username")
+                .setParameters(username);
 
-        return executeAndCloseResultList(query, UserProjectRole.class);
+        return executeAndCloseList(query);
     }
 
     public List<Project> getUnassignedProjects(final String username) {
         final Query<?> query = pm.newQuery(Query.SQL, /* language=sql */ """
                 SELECT p."ID", p."NAME", p."VERSION", p."UUID"
                   FROM "PROJECT" p
-                  LEFT JOIN "USER_PROJECT_ROLES" upr
-                    ON upr."PROJECT_ID" = p."ID"
-                  LEFT JOIN "USER" u
-                    ON u."ID" = upr."USER_ID"
-                 WHERE u."USERNAME" != ?
-                    OR u."USERNAME" IS NULL
-                   """)
-                   .setParameters(username);
+                 WHERE NOT EXISTS (
+                   SELECT 1
+                     FROM "USER_PROJECT_ROLES" upr
+                    INNER JOIN "USER" u
+                       ON u."ID" = upr."USER_ID"
+                    WHERE upr."PROJECT_ID" = p."ID"
+                      AND u."USERNAME" = ?
+                 )
+                """)
+                .setParameters(username);
 
         return executeAndCloseResultList(query, Project.class);
     }
 
     public List<Permission> getUnassignedRolePermissions(final Role role) {
-        final List<Permission> permissions = new ArrayList<>();
-
-        final var permissionNames = role.getPermissions().stream()
-                .map(Permission::getName)
-                .toList();
-
         final Query<Permission> query = pm.newQuery(Permission.class)
-                .filter("!:permissionNames.contains(name)")
-                .setParameters(permissionNames);
+                .filter("role.id == :roleId && !role.permissions.contains(this)")
+                .variables("org.dependencytrack.model.Role role")
+                .setParameters(role.getId());
 
-        permissions.addAll(executeAndCloseList(query));
-
-        return permissions;
+        return executeAndCloseList(query);
     }
 
     @Override
@@ -174,56 +155,26 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean addRoleToUser(final User user, final Role role, final Project project) {
-        Query<?> query = pm.newQuery(Query.SQL, /* language=sql */ """
-                SELECT EXISTS(
-                  SELECT 1
-                    FROM "USER_PROJECT_ROLES"
-                   WHERE "USER_ID" = ?
-                     AND "PROJECT_ID" = ?
-                     AND "ROLE_ID" = ?
-                )
-                """)
-                .setParameters(user.getId(), project.getId(), role.getId());
+        Query<UserProjectRole> query = pm.newQuery(UserProjectRole.class)
+                .filter("user.id == :userId && project.id == :projectId && role.id == :roleId")
+                .setParameters(user.getId(), project.getId(), role.getId())
+                .result("count(this) > 0");
 
         if (executeAndCloseResultUnique(query, Boolean.class))
             return false;
 
-        final JDOConnection jdoConnection = pm.getDataStoreConnection();
-        final var nativeConnection = (Connection) jdoConnection.getNativeConnection();
-
-        try (final PreparedStatement ps = nativeConnection.prepareStatement(
-                /* language=sql */ """
-                INSERT INTO "USER_PROJECT_ROLES"
-                    ("USER_ID", "PROJECT_ID", "ROLE_ID")
-                VALUES
-                    (?, ?, ?)
-                """)) {
-            ps.setLong(1, user.getId());
-            ps.setLong(2, project.getId());
-            ps.setLong(3, role.getId());
-            ps.execute();
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to add role: user='%s' / project='%s' / role='%s'".formatted(
-                user.getUsername(), project.toString(), role.getName()), e);
-        } finally {
-            jdoConnection.close();
-        }
+        persist(new UserProjectRole(user, project, role));
 
         return true;
     }
 
     @Override
     public boolean removeRoleFromUser(final User user, final Role role, final Project project) {
-        final Query<?> query = pm.newQuery(Query.SQL, /* language=sql */ """
-                SELECT *
-                  FROM "USER_PROJECT_ROLES"
-                 WHERE "USER_ID" = ?
-                   AND "PROJECT_ID" = ?
-                   AND "ROLE_ID" = ?
-                """)
+        final Query<UserProjectRole> query = pm.newQuery(UserProjectRole.class)
+                .filter("user.id == :userId && project.id == :projectId && role.id == :roleId")
                 .setParameters(user.getId(), project.getId(), role.getId());
 
-        final UserProjectRole projectRole = executeAndCloseResultUnique(query, UserProjectRole.class);
+        final UserProjectRole projectRole = executeAndCloseUnique(query);
 
         if (projectRole == null)
             return false;
@@ -235,16 +186,10 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean userProjectRoleExists(final User user, final Role role, final Project project) {
-        Query<?> query = pm.newQuery(Query.SQL, /* language=sql */ """
-                SELECT EXISTS(
-                  SELECT 1
-                    FROM "USER_PROJECT_ROLES"
-                   WHERE "USER_ID" = ?
-                     AND "PROJECT_ID" = ?
-                     AND "ROLE_ID" = ?
-                )
-                """)
-                .setParameters(user.getId(), project.getId(), role.getId());
+        final Query<UserProjectRole> query = pm.newQuery(UserProjectRole.class)
+                .filter("user.id == :userId && project.id == :projectId && role.id == :roleId")
+                .setParameters(user.getId(), project.getId(), role.getId())
+                .result("count(this) > 0");
 
         return executeAndCloseResultUnique(query, Boolean.class);
     }

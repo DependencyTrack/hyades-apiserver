@@ -487,12 +487,10 @@ public class QueryManager extends AlpineQueryManager {
                 .filter("project.id == :projectId && users.contains(:principal)")
                 .setNamedParameters(Map.ofEntries(
                     Map.entry("principal", principal),
-                    Map.entry("projectId", project.getId())));
+                    Map.entry("projectId", project.getId())))
+                .result("role.id");
 
-        return Set.of(executeAndCloseList(query).stream()
-                .map(UserProjectRole::getRole)
-                .map(Role::getId)
-                .toArray(Long[]::new));
+        return Set.copyOf(executeAndCloseResultList(query, Long.class));
     }
 
     /**
@@ -1135,8 +1133,8 @@ public class QueryManager extends AlpineQueryManager {
         return getRoleQueryManager().getUnassignedRolePermissions(role);
     }
 
-    public List<UserProjectRole> getUserRoles(final User user) {
-        return getRoleQueryManager().getUserRoles(user);
+    public List<UserProjectRole> getUserRoles(final String username) {
+        return getRoleQueryManager().getUserRoles(username);
     }
 
     public boolean removeRoleFromUser(final User user, final Role role, final Project project) {

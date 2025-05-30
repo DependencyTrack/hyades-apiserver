@@ -18,22 +18,16 @@
  */
 package org.dependencytrack.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import alpine.model.User;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Stream;
 
 import javax.jdo.annotations.Column;
-import javax.jdo.annotations.Element;
-import javax.jdo.annotations.Extension;
-import javax.jdo.annotations.Order;
+import javax.jdo.annotations.IdGeneratorStrategy;
+import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
@@ -46,60 +40,70 @@ import javax.jdo.annotations.PrimaryKey;
  */
 @PersistenceCapable(table = "USER_PROJECT_ROLES")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@PrimaryKey(name = "USER_PROJECT_ROLES_PK", columns = {
-        @Column(name = "USER_ID"),
-        @Column(name = "PROJECT_ID"),
-        @Column(name = "ROLE_ID")
-})
+@Index(name = "USER_PROJECT_ROLES_IDX", unique = "true", members = { "user", "project", "role" })
 public class UserProjectRole implements Serializable {
 
-    @Persistent(defaultFetchGroup = "true")
-    @Column(name = "ROLE_ID", allowsNull = "false")
-    private Role role;
+    public UserProjectRole() {}
+
+    public UserProjectRole(final User user, final Project project, final Role role) {
+        this.user = user;
+        this.project = project;
+        this.role = role;
+    }
+
+    @PrimaryKey
+    @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
+    @JsonIgnore
+    private long id;
 
     @Persistent(defaultFetchGroup = "true")
-    @Column(name = "PROJECT_ID", allowsNull = "false")
+    @Column(name = "USER_ID")
+    private User user;
+
+    @Persistent(defaultFetchGroup = "true")
+    @Column(name = "PROJECT_ID")
     private Project project;
 
     @Persistent(defaultFetchGroup = "true")
-    @Element(column = "USER_ID")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "username ASC"))
-    private List<User> users;
+    @Column(name = "ROLE_ID")
+    private Role role;
 
-    public List<User> getUsers() {
-        return users;
+    public long getId() {
+        return id;
     }
 
-    public void setUsers(List<User> users) {
-        this.users = users;
+    public void setId(final long id) {
+        this.id = id;
     }
 
-    public Role getRole() {
-        return role;
+    public User getUser() {
+        return user;
     }
 
-    public void setRole(Role role) {
-        this.role = role;
+    public void setUser(final User user) {
+        this.user = user;
     }
 
     public Project getProject() {
         return project;
     }
 
-    public void setProject(Project project) {
+    public void setProject(final Project project) {
         this.project = project;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(final Role role) {
+        this.role = role;
     }
 
     @Override
     public String toString() {
-        // var userStrings = users.stream()
-        //         .map(user -> user.getUsername())
-        //         .toList();
-
-        return "%s{role='%s', project='%s'}".formatted(
-                getClass().getSimpleName(),
-                role,
-                project);
-                //userStrings);
+        return "%s{user=%s, project=%s, role=%s}".formatted(
+                getClass().getSimpleName(), user.getUsername(), project, role);
     }
+
 }

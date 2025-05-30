@@ -18,7 +18,9 @@
  */
 package org.dependencytrack.resources.v1;
 
+import java.text.DateFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +31,7 @@ import org.dependencytrack.model.Role;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.Before;
@@ -139,29 +142,40 @@ public class RoleResourceTest extends ResourceTest {
         Role role = qm.createRole("My Role", rolePermissions);
         Response response = jersey.target(V1_ROLE + "/" + role.getUuid()).request()
                 .header(X_API_KEY, apiKey)
-                .method("DELETE");
+                .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true) // HACK
+                .method("DELETE", Entity.entity(role, MediaType.APPLICATION_JSON)); // HACK
         // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
         Assert.assertEquals(204, response.getStatus(), 0);
     }
 
     @Test
     public void getUserRolesTest() throws ParseException {
-        final Project testProject = qm.createProject("Test Project", "Test Description", "1.0.0", null, null, null,
-                null, false, false);
-        ManagedUser user = qm.createManagedUser("roleuser3", TEST_USER_PASSWORD_HASH);
+        final var testProject = new Project();
+        testProject.setId(1);
+        testProject.setName("test-project");
+        testProject.setVersion("1.0.0");
+        qm.persist(testProject);
 
-        final Role expectedRole = new Role();
+        final var testUser = new ManagedUser();
+        testUser.setFullname("test user created for testing");
+        testUser.setId(1);
+        testUser.setUsername("test-user");
+        DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
+        testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
+        testUser.setPassword(TEST_USER_PASSWORD_HASH);
+        qm.persist(testUser);
+
+        final var expectedRole = new Role();
+        expectedRole.setId(1);
         expectedRole.setName("maintainer");
         qm.persist(expectedRole);
 
-        qm.addRoleToUser(user, expectedRole, testProject);
+        qm.addRoleToUser(testUser, expectedRole, testProject);
 
-        Response response = jersey.target(V1_ROLE + "/roleuser3/role").request()
+        Response response = jersey.target(V1_ROLE + "/test-user/role").request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-
         Assert.assertEquals(200, response.getStatus(), 0);
-
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
         Assert.assertEquals(1, json.size());
