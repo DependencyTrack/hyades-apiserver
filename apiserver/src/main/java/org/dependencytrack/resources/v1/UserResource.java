@@ -61,7 +61,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.dependencytrack.resources.v1.vo.RoleProjectRequest;
+import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
@@ -877,7 +877,7 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response assignProjectRoleToUser(
-            @Parameter(description = "User, Role and Project information", required = true) @Valid RoleProjectRequest request) {
+            @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
             final User user = qm.getUser(request.username());
@@ -935,7 +935,7 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response removeProjectRoleFromUser(
-            @Parameter(description = "User, Role and Project information", required = true) @Valid RoleProjectRequest request) {
+            @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
             final User user = qm.getUser(request.username());

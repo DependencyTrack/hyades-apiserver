@@ -74,14 +74,6 @@ public class UserProjectRole implements Serializable {
         this.users = users;
     }
 
-    public void addUsers(User... users) {
-        this.users = Objects.requireNonNullElse(this.users, new ArrayList<User>());
-        this.users = Stream.concat(this.users.stream(), Arrays.stream(users))
-                .distinct()
-                .sorted(Comparator.comparing(User::getUsername))
-                .toList();
-    }
-
     public Role getRole() {
         return role;
     }
@@ -98,4 +90,16 @@ public class UserProjectRole implements Serializable {
         this.project = project;
     }
 
+    @Override
+    public String toString() {
+        // var userStrings = users.stream()
+        //         .map(user -> user.getUsername())
+        //         .toList();
+
+        return "%s{role='%s', project='%s'}".formatted(
+                getClass().getSimpleName(),
+                role,
+                project);
+                //userStrings);
+    }
 }

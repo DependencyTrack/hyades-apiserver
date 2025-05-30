@@ -302,7 +302,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         ManagedUser admin = qm.createManagedUser("admin", "Administrator", "admin@localhost",
                 new String(PasswordService.createHash("admin".toCharArray())), true, true, false);
 
-        for (var name : new String[] { "Administrators", "Portfolio Managers", "Automation", "Badge Viewers" }) {
+        for (var name : DEFAULT_TEAM_PERMISSIONS.keySet()) {
             LOGGER.debug("Creating team: " + name);
             var team = qm.createTeam(name);
 
@@ -345,7 +345,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
         LOGGER.info("Adding default roles to datastore");
 
-        for (var name : new String[] { "Project Admin", "Project Auditor", "Project Editor", "Project Viewer" }) {
+        for (var name : DEFAULT_ROLE_PERMISSIONS.keySet()) {
             LOGGER.debug("Creating role: " + name);
             qm.createRole(name, getPermissionsByName(DEFAULT_ROLE_PERMISSIONS.get(name)));
         }
