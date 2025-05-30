@@ -43,14 +43,6 @@ import javax.jdo.annotations.PrimaryKey;
 @Index(name = "USER_PROJECT_ROLES_IDX", unique = "true", members = { "user", "project", "role" })
 public class UserProjectRole implements Serializable {
 
-    public UserProjectRole() {}
-
-    public UserProjectRole(final User user, final Project project, final Role role) {
-        this.user = user;
-        this.project = project;
-        this.role = role;
-    }
-
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.NATIVE)
     @JsonIgnore
@@ -67,6 +59,14 @@ public class UserProjectRole implements Serializable {
     @Persistent(defaultFetchGroup = "true")
     @Column(name = "ROLE_ID")
     private Role role;
+
+    public UserProjectRole() {}
+
+    public UserProjectRole(final User user, final Project project, final Role role) {
+        this.user = user;
+        this.project = project;
+        this.role = role;
+    }
 
     public long getId() {
         return id;
