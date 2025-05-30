@@ -33,7 +33,7 @@ import org.dependencytrack.model.IdentifiableObject;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.resources.v1.vo.RoleProjectRequest;
+import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
@@ -764,7 +764,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
 
         Role role = qm.createRole("Test Role", Collections.emptyList());
 
-        RoleProjectRequest request = new RoleProjectRequest(
+        ModifyUserProjectRoleRequest request = new ModifyUserProjectRoleRequest(
                 user.getUsername(),
                 role.getUuid().toString(),
                 project.getUuid().toString());
@@ -793,7 +793,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         qm.addRoleToUser(user, role, project);
 
 
-        RoleProjectRequest request = new RoleProjectRequest(
+        ModifyUserProjectRoleRequest request = new ModifyUserProjectRoleRequest(
                 user.getUsername(),
                 role.getUuid().toString(),
                 project.getUuid().toString()
@@ -816,7 +816,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
         Role role = qm.createRole("Test Role 3", Collections.emptyList());
         qm.addRoleToUser(user, role, project);
 
-        RoleProjectRequest request = new RoleProjectRequest(
+        ModifyUserProjectRoleRequest request = new ModifyUserProjectRoleRequest(
                 user.getUsername(),
                 role.getUuid().toString(),
                 project.getUuid().toString()
@@ -839,7 +839,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
                 null,null,null,false);
         Role role = qm.createRole("Test Role 4", Collections.emptyList());
 
-        RoleProjectRequest request = new RoleProjectRequest(
+        ModifyUserProjectRoleRequest request = new ModifyUserProjectRoleRequest(
                 user.getUsername(),
                 role.getUuid().toString(),
                 project.getUuid().toString()

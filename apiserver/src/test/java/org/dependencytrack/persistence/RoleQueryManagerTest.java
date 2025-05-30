@@ -26,9 +26,7 @@ import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.auth.PasswordService;
 
-import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -43,21 +41,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class RoleQueryManagerTest extends PersistenceCapableTest {
 
-    private static final String TEST_ROLE_PASSWORD_HASH = new String(PasswordService.createHash("testuser".toCharArray()));
+    private static final String TEST_ROLE_PASSWORD_HASH = new String(
+            PasswordService.createHash("testuser".toCharArray()));
 
     @Test
     public void testCreateRole() {
-        final var readPermission = new Permission();
-        readPermission.setId(1);
-        readPermission.setName("read");
-        readPermission.setDescription("permission to read");
-        qm.persist(readPermission);
-
-        final var writePermission = new Permission();
-        writePermission.setId(2);
-        writePermission.setName("write");
-        writePermission.setDescription("permission to write");
-        qm.persist(writePermission);
+        final Permission readPermission = qm.createPermission("read", "permission to read");
+        final Permission writePermission = qm.createPermission("write", "permission to write");
 
         List<Permission> expectedPermissionsList = Arrays.asList(
                 readPermission,
@@ -69,40 +59,24 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetRoles() {
-        final var maintainerRole = new Role();
-        maintainerRole.setId(1);
-        maintainerRole.setName("maintainer");
-        qm.persist(maintainerRole);
-
-        final var ownerRole = new Role();
-        ownerRole.setId(2);
-        ownerRole.setName("owner");
-        qm.persist(ownerRole);
+        final Role maintainerRole = qm.createRole("maintainer", new ArrayList<Permission>());
+        final Role ownerRole = qm.createRole("owner", new ArrayList<Permission>());
 
         List<Role> expectedRoles = Arrays.asList(
                 maintainerRole,
                 ownerRole);
 
         List<Role> actualRoles = qm.getRoles();
-        List<Role> actualRolesMutable = new ArrayList<Role>();
-        for (Role r : actualRoles) {
-            actualRolesMutable.add(r);
-        }
 
-        Assert.assertEquals(expectedRoles, actualRolesMutable);
+        Assert.assertNotNull(actualRoles);
+        Assert.assertFalse(actualRoles.isEmpty());
+        Assert.assertEquals(expectedRoles, actualRoles);
     }
 
     @Test
     public void testGetRole() {
-        final var wrongRole = new Role();
-        wrongRole.setId(1);
-        wrongRole.setName("maintainer");
-        qm.persist(wrongRole);
-
-        final var expectedRole = new Role();
-        expectedRole.setId(2);
-        expectedRole.setName("owner");
-        qm.persist(expectedRole);
+        final Role wrongRole = qm.createRole("maintainer", new ArrayList<Permission>());
+        final Role expectedRole = qm.createRole("owner", new ArrayList<Permission>());
 
         String expectedRoleUuid = expectedRole.getUuid().toString();
 
@@ -113,25 +87,10 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetUserRoles() throws ParseException {
-        final var testProject = new Project();
-        testProject.setId(1);
-        testProject.setName("test-project");
-        testProject.setVersion("1.0.0");
-        qm.persist(testProject);
-
-        final var testUser = new ManagedUser();
-        testUser.setFullname("test user created for testing");
-        testUser.setId(1);
-        testUser.setUsername("test-user");
-        DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
-        testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
-        qm.persist(testUser);
-
-        final var expectedRole = new Role();
-        expectedRole.setId(1);
-        expectedRole.setName("maintainer");
-        qm.persist(expectedRole);
+        final Project testProject = qm.createProject("test-project", "Test Description", "1.0.0", null, null, null,
+                null, false, false);
+        final ManagedUser testUser = qm.createManagedUser("test-user", TEST_ROLE_PASSWORD_HASH);
+        final Role expectedRole = qm.createRole("maintainer", new ArrayList<Permission>());
 
         qm.addRoleToUser(testUser, expectedRole, testProject);
 
@@ -143,41 +102,25 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetUnassignedProjects() throws ParseException {
-        String testUserName = "test-user";
+        final ManagedUser testUser = qm.createManagedUser("test-user", TEST_ROLE_PASSWORD_HASH);
+        final Role maintainerRole = qm.createRole("maintainer", new ArrayList<Permission>());
 
-        final var testUser = new ManagedUser();
-        testUser.setFullname("test user created for testing");
-        testUser.setId(1);
-        testUser.setUsername(testUserName);
-        DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
-        testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
-        qm.persist(testUser);
+        final Project unassignedProject1 = qm.createProject("test-project-1", "Test Description 1", "1.0.0", null, null,
+                null,
+                null, false, false);
 
-        final var maintainerRole = new Role();
-        maintainerRole.setId(1);
-        maintainerRole.setName("maintainer");
-        qm.persist(maintainerRole);
+        final Project unassignedProject2 = qm.createProject("test-project-2", "Test Description 3", "1.0.0", null, null,
+                null,
+                null, false, false);
 
-        final var unassignedProject1 = new Project();
-        unassignedProject1.setId(1);
-        unassignedProject1.setName("test-project-1");
-        qm.persist(unassignedProject1);
-
-        final var assignedProject = new Project();
-        assignedProject.setId(2);
-        assignedProject.setName("test-project-2");
-        qm.persist(assignedProject);
-
-        final var unassignedProject2 = new Project();
-        unassignedProject2.setId(3);
-        unassignedProject2.setName("test-project-3");
-        qm.persist(unassignedProject2);
+        final Project assignedProject = qm.createProject("test-project-3", "Test Description 2", "1.0.0", null, null,
+                null,
+                null, false, false);
 
         qm.addRoleToUser(testUser, maintainerRole, assignedProject);
 
         List<Project> expectedProjects = Arrays.asList(unassignedProject1, unassignedProject2);
-        List<Project> actualProjects = qm.getUnassignedProjects(testUserName);
+        List<Project> actualProjects = qm.getUnassignedProjects(testUser.getUsername());
 
         // Sort both lists by project name before asserting equivalence
         expectedProjects.sort((p1, p2) -> p1.getName().compareTo(p2.getName()));
@@ -191,23 +134,9 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetUnassignedRolePermissions() throws ParseException {
-        final var readPermission = new Permission();
-        readPermission.setId(1);
-        readPermission.setName("read");
-        readPermission.setDescription("permission to read");
-        qm.persist(readPermission);
-
-        final var writePermission = new Permission();
-        writePermission.setId(2);
-        writePermission.setName("write");
-        writePermission.setDescription("permission to write");
-        qm.persist(writePermission);
-
-        final var partyPermission = new Permission();
-        partyPermission.setId(3);
-        partyPermission.setName("party");
-        partyPermission.setDescription("permission to party");
-        qm.persist(partyPermission);
+        final Permission readPermission = qm.createPermission("read", "permission to read");
+        final Permission writePermission = qm.createPermission("write", "permission to write");
+        final Permission partyPermission = qm.createPermission("party", "permission to party");
 
         List<Permission> expectedPermissionsList = Arrays.asList(
                 readPermission,
@@ -218,19 +147,9 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
                 writePermission,
                 partyPermission));
 
-        final var assistantRegionalManagerRole = new Role();
-        assistantRegionalManagerRole.setId(1);
-        assistantRegionalManagerRole.setName("maintainer");
-        assistantRegionalManagerRole.setPermissions(allPermissions);
-        qm.persist(assistantRegionalManagerRole);
+        final Role assistantRegionalManagerRole = qm.createRole("maintainer", allPermissions.stream().toList());
 
-        final var testUser = new ManagedUser();
-        testUser.setFullname("test user created for testing");
-        testUser.setId(1);
-        testUser.setUsername("test-user");
-        DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
-        testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
+        final ManagedUser testUser = qm.createManagedUser("test-user", TEST_ROLE_PASSWORD_HASH);
         testUser.setPermissions(expectedPermissionsList);
         qm.persist(testUser);
 
@@ -243,10 +162,7 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
     @Test
     public void testUpdateRole() {
 
-        final var maintainerRole = new Role();
-        maintainerRole.setId(1);
-        maintainerRole.setName("maintainer");
-        qm.persist(maintainerRole);
+        final Role maintainerRole = qm.createRole("maintainer", new ArrayList<Permission>());
 
         Role actualRole = qm.updateRole(maintainerRole);
 
@@ -255,25 +171,10 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testAddRoleToUser() throws ParseException {
-        final var testProject = new Project();
-        testProject.setId(1);
-        testProject.setName("test-project");
-        testProject.setVersion("1.0.0");
-        qm.persist(testProject);
-
-        final var testUser = new ManagedUser();
-        testUser.setFullname("test user created for testing");
-        testUser.setId(1);
-        testUser.setUsername("test-user");
-        DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
-        testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
-        qm.persist(testUser);
-
-        final var maintainerRole = new Role();
-        maintainerRole.setId(1);
-        maintainerRole.setName("maintainer");
-        qm.persist(maintainerRole);
+        final Project testProject = qm.createProject("test-project", "Test Description", "1.0.0", null, null, null,
+                null, false, false);
+        final ManagedUser testUser = qm.createManagedUser("test-user", TEST_ROLE_PASSWORD_HASH);
+        final Role maintainerRole = qm.createRole("maintainer", new ArrayList<Permission>());
 
         qm.addRoleToUser(testUser, maintainerRole, testProject);
 
@@ -287,25 +188,10 @@ public class RoleQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testRemoveRoleFromUser() throws ParseException {
-        final var testProject = new Project();
-        testProject.setId(1);
-        testProject.setName("test-project");
-        testProject.setVersion("1.0.0");
-        qm.persist(testProject);
-
-        final var testUser = new ManagedUser();
-        testUser.setFullname("test user created for testing");
-        testUser.setId(1);
-        testUser.setUsername("test-user");
-        DateFormat dateFormatter = new SimpleDateFormat("yyyyMMdd");
-        testUser.setLastPasswordChange(dateFormatter.parse("20250324"));
-        testUser.setPassword(TEST_ROLE_PASSWORD_HASH);
-        qm.persist(testUser);
-
-        final var maintainerRole = new Role();
-        maintainerRole.setId(1);
-        maintainerRole.setName("maintainer");
-        qm.persist(maintainerRole);
+        final Project testProject = qm.createProject("test-project", "Test Description", "1.0.0", null, null, null,
+                null, false, false);
+        final ManagedUser testUser = qm.createManagedUser("test-user", TEST_ROLE_PASSWORD_HASH);
+        final Role maintainerRole = qm.createRole("maintainer", new ArrayList<Permission>());
 
         qm.addRoleToUser(testUser, maintainerRole, testProject);
         Assert.assertTrue(qm.removeRoleFromUser(testUser, maintainerRole, testProject));

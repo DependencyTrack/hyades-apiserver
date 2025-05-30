@@ -30,7 +30,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
-public record RoleProjectRequest(
+public record ModifyUserProjectRoleRequest(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         @JsonDeserialize(using = TrimmedStringDeserializer.class)
         @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS_PLUS, message = "The username may only contain printable characters")
