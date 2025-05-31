@@ -54,12 +54,7 @@ import org.dependencytrack.resources.v1.vo.CreateRoleRequest;
 
 import org.owasp.security.logging.SecurityMarkers;
 
-import alpine.model.Permission;
-
 import java.util.List;
-import java.util.Map;
-
-import javax.jdo.Query;
 
 /**
  * JAX-RS resources for processing roles.
@@ -138,37 +133,22 @@ public class RoleResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "The created role", content = @Content(schema = @Schema(implementation = Role.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "409", description = "The Role already exists"),
+            @ApiResponse(responseCode = "409", description = "The role already exists"),
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE })
     public Response createRole(@Valid CreateRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            boolean roleExists = qm.getRoleByName(request.name()) != null;
-
-            if (roleExists) {
+            if (qm.getRoleByName(request.name()) != null)
                 return Response.status(Response.Status.CONFLICT)
                         .entity(String.format("Role '%s' already exists", request.name()))
                         .build();
-            }
 
-            List<String> permissionNames = request.permissions()
-                    .stream()
-                    .map(Permissions::name)
-                    .toList();
+            final Role role = qm.createRole(request.name(),
+                    qm.getPermissionsByName(request.permissions()
+                            .stream()
+                            .map(Permissions::name)
+                            .toList()));
 
-            final Query<Permission> query = qm.getPersistenceManager().newQuery(Permission.class)
-                    .filter(":permissions.contains(name)")
-                    .setNamedParameters(Map.of("permissions", permissionNames))
-                    .orderBy("name asc");
-
-            final List<Permission> requestedPermissions;
-            try {
-                requestedPermissions = List.copyOf(query.executeList());
-            } finally {
-                query.closeAll();
-            }
-
-            final Role role = qm.createRole(request.name(), requestedPermissions);
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role created: " + role.getName());
 
             return Response.status(Response.Status.CREATED).entity(role).build();
@@ -182,10 +162,7 @@ public class RoleResource extends AlpineResource {
             summary = "Updates a role's fields",
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
     @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "The updated role",
-                    content = @Content(schema = @Schema(implementation = Role.class))),
+            @ApiResponse(responseCode = "200", description = "The updated role", content = @Content(schema = @Schema(implementation = Role.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The role could not be found")
     })
