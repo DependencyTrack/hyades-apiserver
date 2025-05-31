@@ -24,10 +24,10 @@ import java.util.List;
 import java.util.UUID;
 
 import org.dependencytrack.JerseyTestRule;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Role;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
@@ -120,9 +120,33 @@ public class RoleResourceTest extends ResourceTest {
     }
 
     @Test
+    public void testCreateRoleAlreadyExists() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+
+        Response response = jersey.target(V1_ROLE).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "ABC",
+                          "permissions": []
+                        }
+                        """));
+        Assert.assertEquals(201, response.getStatus());
+
+        Response secondResponse = jersey.target(V1_ROLE).request()
+        .header(X_API_KEY, apiKey)
+        .put(Entity.json(/* language=JSON */ """
+                {
+                  "name": "ABC",
+                  "permissions": []
+                }
+                """));
+        Assert.assertEquals(409, secondResponse.getStatus());
+    }
+
+    @Test
     public void updateRoleTest() {
-        List<Permission> rolePermissions = new ArrayList<Permission>();
-        Role role = qm.createRole("My Role", rolePermissions);
+        Role role = qm.createRole("My Role", new ArrayList<Permission>());
         role.setName("My New Role Name");
         Response response = jersey.target(V1_ROLE).request()
                 .header(X_API_KEY, apiKey)
@@ -134,9 +158,18 @@ public class RoleResourceTest extends ResourceTest {
     }
 
     @Test
+    public void testUpdateRoleNotFound() {
+        Role role = new Role();
+        role.setName("My New Role Name");
+        Response response = jersey.target(V1_ROLE).request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.entity(role, MediaType.APPLICATION_JSON));
+        Assert.assertEquals(404, response.getStatus(), 0);
+    }
+
+    @Test
     public void deleteRoleTest() {
-        List<Permission> rolePermissions = new ArrayList<Permission>();
-        Role role = qm.createRole("My Role", rolePermissions);
+        Role role = qm.createRole("My Role", new ArrayList<Permission>());
         Response response = jersey.target(V1_ROLE + "/" + role.getUuid()).request()
                 .header(X_API_KEY, apiKey)
                 .method("DELETE");
@@ -145,14 +178,22 @@ public class RoleResourceTest extends ResourceTest {
     }
 
     @Test
+    public void testDeleteRoleNotFound() {
+        UUID uuid = UUID.randomUUID();
+        Response response = jersey.target(V1_ROLE + "/" + uuid).request()
+                .header(X_API_KEY, apiKey)
+                .method("DELETE");
+        // Hack: Workaround to https://github.com/eclipse-ee4j/jersey/issues/3798
+        Assert.assertEquals(404, response.getStatus(), 0);
+    }
+
+    @Test
     public void getUserRolesTest() throws ParseException {
         final Project testProject = qm.createProject("Test Project", "Test Description", "1.0.0", null, null, null,
                 null, false, false);
         ManagedUser user = qm.createManagedUser("roleuser3", TEST_USER_PASSWORD_HASH);
 
-        final Role expectedRole = new Role();
-        expectedRole.setName("maintainer");
-        qm.persist(expectedRole);
+        final Role expectedRole = qm.createRole("maintainer", new ArrayList<Permission>());
 
         qm.addRoleToUser(user, expectedRole, testProject);
 
@@ -166,6 +207,21 @@ public class RoleResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals(1, json.size());
         Assert.assertEquals("maintainer", json.getJsonObject(0).getJsonObject("role").getString("name"));
+    }
+
+    @Test
+    public void testGetUserRolesNoRolesFound() {
+        ManagedUser user = qm.createManagedUser("roleuser3", TEST_USER_PASSWORD_HASH);
+
+        Response response = jersey.target(V1_ROLE + "/" + user.getUsername() + "/role").request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+
+        Assert.assertEquals(200, response.getStatus(), 0);
+
+        JsonArray json = parseJsonArray(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals(0, json.size());
     }
 
 }

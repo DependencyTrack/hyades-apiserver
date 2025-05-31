@@ -139,7 +139,8 @@ public class Role implements Serializable {
     @Override
     public String toString() {
         var permissionStrings = permissions.stream()
-                .map(permission -> permission.getName())
+                .sorted((p1, p2) -> p1.getName().compareToIgnoreCase(p2.getName()))
+                .map(Permission::getName)
                 .toList();
 
         return "%s{uuid='%s', name='%s', permissions=%s}".formatted(

@@ -103,7 +103,7 @@ public class UserProjectRole implements Serializable {
     @Override
     public String toString() {
         return "%s{user=%s, project=%s, role=%s}".formatted(
-                getClass().getSimpleName(), user.getUsername(), project, role);
+                getClass().getSimpleName(), user.getUsername(), project.getName(), role.getName());
     }
 
 }
