@@ -94,8 +94,8 @@
         <lib.jooq.version>3.20.4</lib.jooq.version>
         <lib.junit-jupiter.version>5.12.2</lib.junit-jupiter.version>
         <lib.liquibase.version>4.32.0</lib.liquibase.version>
-        <lib.postgresql.version>42.7.5</lib.postgresql.version>
-        <lib.protobuf-java.version>4.31.0</lib.protobuf-java.version>
+        <lib.postgresql.version>42.7.6</lib.postgresql.version>
+        <lib.protobuf-java.version>4.31.1</lib.protobuf-java.version>
         <lib.testcontainers.version>1.21.0</lib.testcontainers.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
 
