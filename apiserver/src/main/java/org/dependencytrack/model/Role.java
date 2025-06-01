@@ -32,11 +32,12 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.io.Serializable;
-
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
@@ -139,8 +140,8 @@ public class Role implements Serializable {
     @Override
     public String toString() {
         var permissionStrings = permissions.stream()
-                .sorted((p1, p2) -> p1.getName().compareToIgnoreCase(p2.getName()))
                 .map(Permission::getName)
+                .sorted(Comparator.comparing(Function.identity(), String.CASE_INSENSITIVE_ORDER))
                 .toList();
 
         return "%s{uuid='%s', name='%s', permissions=%s}".formatted(

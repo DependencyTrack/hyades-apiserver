@@ -106,7 +106,7 @@ public class UserProjectRoleTest extends PersistenceCapableTest {
 
         UserProjectRole userProjectRole = new UserProjectRole(user, project, role);
 
-        String expected = "UserProjectRole{user=test-user, project=test-project, role=test-role}";
+        String expected = "UserProjectRole{user='test-user', project='test-project', role='test-role'}";
         Assert.assertEquals(expected, userProjectRole.toString());
     }
 }
