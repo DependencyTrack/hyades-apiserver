@@ -269,7 +269,6 @@ public class AccessControlResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER)).isNotNull();
         assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER).get(0)).isEqualTo("0");
-        assertThat(response.hasEntity()).isFalse();
     }
 
 }

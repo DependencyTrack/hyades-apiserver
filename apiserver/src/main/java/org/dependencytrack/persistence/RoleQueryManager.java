@@ -155,16 +155,28 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean addRoleToUser(final User user, final Role role, final Project project) {
-        Query<UserProjectRole> query = pm.newQuery(UserProjectRole.class)
-                .filter("user.id == :userId && project.id == :projectId && role.id == :roleId")
-                .setParameters(user.getId(), project.getId(), role.getId())
-                .result("count(this) > 0");
+        final Query<UserProjectRole> query = pm.newQuery(UserProjectRole.class)
+                .filter("user.id == :userId && project.id == :projectId")
+                .setParameters(user.getId(), project.getId());
 
-        if (executeAndCloseResultUnique(query, Boolean.class))
-            return false;
+        final UserProjectRole existingRole = executeAndCloseUnique(query);
+
+        if (existingRole != null) {
+            return handleExistingRole(user, role, project, existingRole);
+        }
 
         persist(new UserProjectRole(user, project, role));
+        return true;
+    }
 
+    private boolean handleExistingRole(final User user, final Role role, final Project project, final UserProjectRole existingRole) {
+        if (existingRole.getRole().getId() == role.getId()) {
+            LOGGER.debug("User '%s' already has role '%s' on project '%s', no action taken.".formatted(
+                    user.getUsername(), role.getName(), project.getName()));
+            return false;
+        }
+        existingRole.setRole(role);
+        persist(existingRole);
         return true;
     }
 

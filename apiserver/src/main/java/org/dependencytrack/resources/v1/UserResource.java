@@ -885,10 +885,8 @@ public class UserResource extends AlpineResource {
                         "One or more variables could not be found",
                         problems).toResponse();
 
-            if (qm.userProjectRoleExists(user, role, project))
+            if (!qm.addRoleToUser(user, role, project))
                 return Response.notModified().build();
-
-            qm.addRoleToUser(user, role, project);
 
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
                     "Granted project role: user='%s', role='%s', project='%s'"
