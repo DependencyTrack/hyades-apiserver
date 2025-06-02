@@ -20,12 +20,12 @@ package org.dependencytrack.dev;
 
 import alpine.Config;
 import alpine.common.logging.Logger;
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.dependencytrack.event.kafka.KafkaTopics;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -48,6 +48,9 @@ import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_ENABLED;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_FRONTEND;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_KAFKA;
 import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_IMAGE_POSTGRES;
+import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_PORT_FRONTEND;
+import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_PORT_KAFKA;
+import static org.dependencytrack.common.ConfigKey.DEV_SERVICES_PORT_POSTGRES;
 import static org.dependencytrack.common.ConfigKey.KAFKA_BOOTSTRAP_SERVERS;
 
 /**
@@ -79,9 +82,9 @@ public class DevServicesInitializer implements ServletContextListener {
         final String postgresUsername;
         final String postgresPassword;
         final String kafkaBootstrapServers;
-        final Integer postgresPort;
-        final Integer kafkaPort;
-        final Integer frontendPort;
+        final Integer postgresPort = Integer.parseInt(getProperty(DEV_SERVICES_PORT_POSTGRES));
+        final Integer kafkaPort = Integer.parseInt(getProperty(DEV_SERVICES_PORT_KAFKA));
+        final Integer frontendPort = Integer.parseInt(getProperty(DEV_SERVICES_PORT_FRONTEND));
         try {
             final Class<?> startablesClass = Class.forName("org.testcontainers.lifecycle.Startables");
             final Method deepStartMethod = startablesClass.getDeclaredMethod("deepStart", Collection.class);
@@ -90,10 +93,19 @@ public class DevServicesInitializer implements ServletContextListener {
             final Class<?> pullPolicyClass = Class.forName("org.testcontainers.images.PullPolicy");
             final Object alwaysPullPolicy = pullPolicyClass.getDeclaredMethod("alwaysPull").invoke(null);
 
+            final Class<?> genericContainerClass = Class.forName("org.testcontainers.containers.GenericContainer");
+
+            final Method addFixedExposedPortMethod = genericContainerClass.getDeclaredMethod("addFixedExposedPort", int.class, int.class);
+            addFixedExposedPortMethod.setAccessible(true);
+
             final Class<?> postgresContainerClass = Class.forName("org.testcontainers.containers.PostgreSQLContainer");
             final Constructor<?> postgresContainerConstructor = postgresContainerClass.getDeclaredConstructor(String.class);
             postgresContainer = (AutoCloseable) postgresContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_POSTGRES));
+            postgresContainerClass.getMethod("withUsername", String.class).invoke(postgresContainer, "dtrack");
+            postgresContainerClass.getMethod("withPassword", String.class).invoke(postgresContainer, "dtrack");
+            postgresContainerClass.getMethod("withDatabaseName", String.class).invoke(postgresContainer, "dtrack");
             postgresContainerClass.getMethod("withUrlParam", String.class, String.class).invoke(postgresContainer, "reWriteBatchedInserts", "true");
+            addFixedExposedPortMethod.invoke(postgresContainer, /* hostPort */ postgresPort, /* containerPort */  5432);
 
             // TODO: Detect when Apache Kafka is requested vs. when Kafka is requested,
             //   and pick the corresponding Testcontainers class accordingly.
@@ -104,14 +116,15 @@ public class DevServicesInitializer implements ServletContextListener {
             //   * https://github.com/testcontainers/testcontainers-java/issues/9506#issuecomment-2463504967
             //   * https://issues.apache.org/jira/browse/KAFKA-18281
             kafkaContainerClass.getMethod("withEnv", String.class, String.class).invoke(kafkaContainer, "KAFKA_LISTENERS", "PLAINTEXT://:9092,BROKER://:9093,CONTROLLER://:9094");
+            addFixedExposedPortMethod.invoke(kafkaContainer, /* hostPort */ kafkaPort, /* containerPort */  9092);
 
-            final Class<?> frontendContainerClass = Class.forName("org.testcontainers.containers.GenericContainer");
-            final Constructor<?> frontendContainerConstructor = frontendContainerClass.getDeclaredConstructor(String.class);
-            frontendContainer = (AutoCloseable) frontendContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_FRONTEND));
-            frontendContainerClass.getMethod("withEnv", String.class, String.class).invoke(frontendContainer, "API_BASE_URL", "http://localhost:8080");
-            frontendContainerClass.getMethod("withExposedPorts", Integer[].class).invoke(frontendContainer, (Object) new Integer[]{8080});
+            final Constructor<?> genericContainerConstructor = genericContainerClass.getDeclaredConstructor(String.class);
+            frontendContainer = (AutoCloseable) genericContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_FRONTEND));
+            genericContainerClass.getMethod("withEnv", String.class, String.class).invoke(frontendContainer, "API_BASE_URL", "http://localhost:8080");
+            genericContainerClass.getMethod("withExposedPorts", Integer[].class).invoke(frontendContainer, (Object) new Integer[]{8080});
+            addFixedExposedPortMethod.invoke(frontendContainer, /* hostPort */ frontendPort, /* containerPort */ 8080);
             if (Config.getInstance().getProperty(DEV_SERVICES_IMAGE_FRONTEND).endsWith(":snapshot")) {
-                frontendContainerClass.getMethod("withImagePullPolicy", imagePullPolicyClass).invoke(frontendContainer, alwaysPullPolicy);
+                genericContainerClass.getMethod("withImagePullPolicy", imagePullPolicyClass).invoke(frontendContainer, alwaysPullPolicy);
             }
 
             LOGGER.info("Starting PostgreSQL, Kafka, and frontend containers");
@@ -122,11 +135,6 @@ public class DevServicesInitializer implements ServletContextListener {
             postgresUsername = (String) postgresContainerClass.getDeclaredMethod("getUsername").invoke(postgresContainer);
             postgresPassword = (String) postgresContainerClass.getDeclaredMethod("getPassword").invoke(postgresContainer);
             kafkaBootstrapServers = (String) kafkaContainerClass.getDeclaredMethod("getBootstrapServers").invoke(kafkaContainer);
-
-            final Class<?> containerStateClass = Class.forName("org.testcontainers.containers.ContainerState");
-            postgresPort = (Integer) containerStateClass.getDeclaredMethod("getMappedPort", int.class).invoke(postgresContainer, 5432);
-            kafkaPort = (Integer) containerStateClass.getDeclaredMethod("getMappedPort", int.class).invoke(kafkaContainer, 9092);
-            frontendPort = (Integer) containerStateClass.getDeclaredMethod("getMappedPort", int.class).invoke(frontendContainer, 8080);
         } catch (Exception e) {
             throw new RuntimeException("Failed to launch containers", e);
         }
