@@ -141,7 +141,7 @@ public class AccessControlResource extends AlpineResource {
             List<Project> projects = qm.getUnassignedProjects(username);
 
             if (projects == null || projects.isEmpty())
-                return Response.noContent().build();
+                return Response.ok("[]").header(TOTAL_COUNT_HEADER, 0).build();
 
             return Response.ok(projects).header(TOTAL_COUNT_HEADER, projects.size()).build();
         }

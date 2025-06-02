@@ -249,6 +249,8 @@ public class AccessControlResourceTest extends ResourceTest {
                 .get();
 
         assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER)).isNotNull();
+        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER).get(0)).isEqualTo("2");
         assertThatJson(getPlainTextBody(response)).isArray().extracting("name").containsExactly("Project 1",
                 "Project 2");
     }
@@ -264,7 +266,9 @@ public class AccessControlResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get();
 
-        assertThat(response.getStatus()).isEqualTo(204);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER)).isNotNull();
+        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER).get(0)).isEqualTo("0");
         assertThat(response.hasEntity()).isFalse();
     }
 

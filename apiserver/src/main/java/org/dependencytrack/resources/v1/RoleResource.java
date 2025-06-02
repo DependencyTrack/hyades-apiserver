@@ -232,7 +232,7 @@ public class RoleResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             List<UserProjectRole> roles = qm.getUserRoles(username);
             if (roles == null || roles.isEmpty()) {
-                LOGGER.info("No roles found for user: " + username);
+                LOGGER.debug("No roles found for user: " + username);
                 return Response.ok(List.of()).build();
             }
 
