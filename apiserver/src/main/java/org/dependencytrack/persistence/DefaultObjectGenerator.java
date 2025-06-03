@@ -24,8 +24,10 @@ import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.auth.PasswordService;
+
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -41,8 +43,8 @@ import java.io.IOException;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.Collections;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -300,7 +302,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         ManagedUser admin = qm.createManagedUser("admin", "Administrator", "admin@localhost",
                 new String(PasswordService.createHash("admin".toCharArray())), true, true, false);
 
-        for (var name : new String[] { "Administrators", "Portfolio Managers", "Automation", "Badge Viewers" }) {
+        for (var name : DEFAULT_TEAM_PERMISSIONS.keySet()) {
             LOGGER.debug("Creating team: " + name);
             var team = qm.createTeam(name);
 
@@ -343,7 +345,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
         LOGGER.info("Adding default roles to datastore");
 
-        for (var name : new String[] { "Project Admin", "Project Auditor", "Project Editor", "Project Viewer" }) {
+        for (var name : DEFAULT_ROLE_PERMISSIONS.keySet()) {
             LOGGER.debug("Creating role: " + name);
             qm.createRole(name, getPermissionsByName(DEFAULT_ROLE_PERMISSIONS.get(name)));
         }

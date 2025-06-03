@@ -32,19 +32,18 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.io.Serializable;
-
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 
 import javax.jdo.annotations.Column;
 import javax.jdo.annotations.Element;
-import javax.jdo.annotations.Extension;
 import javax.jdo.annotations.FetchGroup;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Join;
-import javax.jdo.annotations.Order;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
@@ -90,10 +89,8 @@ public class Role implements Serializable {
     private String name;
 
     @Persistent(table = "ROLES_PERMISSIONS", defaultFetchGroup = "true")
-    @Unique(name = "ROLES_PERMISSIONS_IDX")
     @Join(column = "ROLE_ID")
     @Element(column = "PERMISSION_ID")
-    @Order(extensions = @Extension(vendorName = "datanucleus", key = "list-ordering", value = "name ASC"))
     private Set<Permission> permissions = new LinkedHashSet<>();
 
     @Persistent(customValueStrategy = "uuid")
@@ -102,8 +99,7 @@ public class Role implements Serializable {
     @NotNull
     private UUID uuid;
 
-    public Role() {
-    }
+    public Role() {}
 
     public Role(String name, Set<Permission> permissions) {
         this.name = name;
@@ -150,12 +146,16 @@ public class Role implements Serializable {
 
     @Override
     public String toString() {
-        return "%s{id=%d, uuid='%s', name='%s', permissions=%s}".formatted(
+        var permissionStrings = permissions.stream()
+                .map(Permission::getName)
+                .sorted(Comparator.comparing(Function.identity(), String.CASE_INSENSITIVE_ORDER))
+                .toList();
+
+        return "%s{uuid='%s', name='%s', permissions=%s}".formatted(
                 getClass().getSimpleName(),
-                id,
                 uuid,
                 name,
-                permissions.stream().map(Permission::getName).toList());
+                permissionStrings);
     }
 
 }

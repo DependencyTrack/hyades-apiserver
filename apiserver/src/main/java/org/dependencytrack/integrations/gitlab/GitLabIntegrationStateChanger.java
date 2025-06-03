@@ -19,7 +19,6 @@
 package org.dependencytrack.integrations.gitlab;
 
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,8 +29,6 @@ import java.util.Objects;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.RoleDao;
-import org.jdbi.v3.core.Handle;
 
 import alpine.common.logging.Logger;
 import alpine.model.Permission;
@@ -65,9 +62,9 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
             }
 
             LOGGER.info("Disabling GitLab integration");
-            removeGitlabRoles();
+            removeGitLabRoles();
         } catch (RuntimeException ex) {
-            LOGGER.error("An error occurred while changing Gitlab Integration State", ex);
+            LOGGER.error("An error occurred while changing GitLab Integration State", ex);
             handleException(LOGGER, ex);
         }
     }
@@ -92,8 +89,8 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
         }
     }
 
-    private void removeGitlabRoles() {
-        try (Handle jdbiHandle = openJdbiHandle()) {
+    private void removeGitLabRoles() {
+        try (final QueryManager qm = new QueryManager()) {
             for (GitLabRole role : GitLabRole.values()) {
                 Role targetRole = qm.getRoleByName(role.getDescription());
                 if (targetRole == null) {
@@ -101,7 +98,7 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
                     continue;
                 }
 
-                jdbiHandle.attach(RoleDao.class).deleteRole(targetRole.getId());
+                qm.delete(targetRole);
                 LOGGER.info("Removed GitLab role: " + role.getDescription());
             }
 
