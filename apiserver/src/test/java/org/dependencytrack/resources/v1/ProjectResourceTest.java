@@ -374,7 +374,7 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getProjectsByNameRequestTest() {
+    public void getSingleProjectByNameTest() {
         for (int i = 0; i < 10; i++) {
             qm.createProject("Acme Example " + i, null, String.valueOf(i), null, null, null, null, false);
         }
@@ -390,6 +390,25 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals(1, json.size());
         Assert.assertEquals("Acme Example 7", json.getJsonObject(0).getString("name"));
         Assert.assertEquals("7", json.getJsonObject(0).getString("version"));
+    }
+
+    @Test
+    public void getProjectsByNameRequestTest() {
+        for (int i = 0; i < 1000; i++) {
+            qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
+        }
+        Response response = jersey.target(V1_PROJECT)
+                .queryParam("name", "Acme Example")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertEquals(String.valueOf(1000), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray json = parseJsonArray(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals(100, json.size());
+        Assert.assertEquals("Acme Example", json.getJsonObject(0).getString("name"));
+        Assert.assertEquals("999", json.getJsonObject(0).getString("version"));
     }
 
     @Test
