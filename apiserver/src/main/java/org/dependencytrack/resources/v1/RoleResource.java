@@ -46,25 +46,15 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.model.ProjectRole;
+import org.dependencytrack.model.UserProjectRole;
+import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.RoleDao;
 import org.dependencytrack.resources.v1.vo.CreateRoleRequest;
 
-import org.jdbi.v3.core.Handle;
 import org.owasp.security.logging.SecurityMarkers;
 
-import alpine.model.Permission;
-import alpine.model.User;
-
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
-
 import java.util.List;
-import java.util.Map;
-
-import javax.jdo.Query;
 
 /**
  * JAX-RS resources for processing roles.
@@ -143,37 +133,22 @@ public class RoleResource extends AlpineResource {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "The created role", content = @Content(schema = @Schema(implementation = Role.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "409", description = "The Role already exists"),
+            @ApiResponse(responseCode = "409", description = "The role already exists"),
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE })
     public Response createRole(@Valid CreateRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            boolean roleExists = qm.getRoleByName(request.name()) != null;
-
-            if (roleExists) {
+            if (qm.getRoleByName(request.name()) != null)
                 return Response.status(Response.Status.CONFLICT)
                         .entity(String.format("Role '%s' already exists", request.name()))
                         .build();
-            }
 
-            List<String> permissionNames = request.permissions()
-                    .stream()
-                    .map(Permissions::name)
-                    .toList();
+            final Role role = qm.createRole(request.name(),
+                    qm.getPermissionsByName(request.permissions()
+                            .stream()
+                            .map(Permissions::name)
+                            .toList()));
 
-            final Query<Permission> query = qm.getPersistenceManager().newQuery(Permission.class)
-                    .filter(":permissions.contains(name)")
-                    .setNamedParameters(Map.of("permissions", permissionNames))
-                    .orderBy("name asc");
-
-            final List<Permission> requestedPermissions;
-            try {
-                requestedPermissions = List.copyOf(query.executeList());
-            } finally {
-                query.closeAll();
-            }
-
-            final Role role = qm.createRole(request.name(), requestedPermissions);
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role created: " + role.getName());
 
             return Response.status(Response.Status.CREATED).entity(role).build();
@@ -187,10 +162,7 @@ public class RoleResource extends AlpineResource {
             summary = "Updates a role's fields",
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>")
     @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "The updated role",
-                    content = @Content(schema = @Schema(implementation = Role.class))),
+            @ApiResponse(responseCode = "200", description = "The updated role", content = @Content(schema = @Schema(implementation = Role.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The role could not be found")
     })
@@ -210,6 +182,7 @@ public class RoleResource extends AlpineResource {
     }
 
     @DELETE
+    @Path("/{uuid}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
@@ -221,15 +194,17 @@ public class RoleResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The role could not be found")
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE })
-    public Response deleteRole(Role jsonRole) {
+    public Response deleteRole(
+            @Parameter(
+                description = "The UUID of the role to retrieve",
+                schema = @Schema(type = "string", format = "uuid"),
+                required = true) @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Role role = qm.getObjectByUuid(Role.class, jsonRole.getUuid(), Role.FetchGroup.ALL.name());
+            final Role role = qm.getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
             if (role == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
 
-            try (final Handle jdbiHandle = openJdbiHandle()) {
-                jdbiHandle.attach(RoleDao.class).deleteRole(role.getId());
-            }
+            qm.delete(role);
 
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role deleted: " + role.getName());
 
@@ -238,7 +213,7 @@ public class RoleResource extends AlpineResource {
     }
 
     @GET
-    @Path("/{username}/roles")
+    @Path("/{username}/role")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of roles assigned to the specified user",
@@ -247,7 +222,7 @@ public class RoleResource extends AlpineResource {
             @ApiResponse(
                     responseCode = "200",
                     description = "A list of roles assigned to the user",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProjectRole.class)))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = UserProjectRole.class)))),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The user could not be found")
     })
@@ -255,15 +230,9 @@ public class RoleResource extends AlpineResource {
     public Response getUserRoles(
             @Parameter(description = "A valid username", required = true) @PathParam("username") String username) {
         try (QueryManager qm = new QueryManager()) {
-            User user = qm.getUser(username);
-            if (user == null) {
-                LOGGER.warn("User not found: " + username);
-                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
-
-            List<ProjectRole> roles = qm.getUserRoles(user);
+            List<UserProjectRole> roles = qm.getUserRoles(username);
             if (roles == null || roles.isEmpty()) {
-                LOGGER.info("No roles found for user: " + username);
+                LOGGER.debug("No roles found for user: " + username);
                 return Response.ok(List.of()).build();
             }
 

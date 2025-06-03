@@ -103,14 +103,14 @@
         <lib.logstash-logback-encoder.version>8.1</lib.logstash-logback-encoder.version>
         <lib.micrometer.version>1.15.0</lib.micrometer.version>
         <lib.microprofile-health-api.version>4.0.1</lib.microprofile-health-api.version>
-        <lib.nimbus-oauth2-oidc-sdk.version>11.24</lib.nimbus-oauth2-oidc-sdk.version>
+        <lib.nimbus-oauth2-oidc-sdk.version>11.25</lib.nimbus-oauth2-oidc-sdk.version>
         <lib.owasp.encoder.version>1.3.1</lib.owasp.encoder.version>
         <lib.owasp.security-logging.version>1.1.7</lib.owasp.security-logging.version>
         <lib.parsson.version>1.1.7</lib.parsson.version>
         <lib.swagger.version>2.2.32</lib.swagger.version>
         <!-- Unit test libraries -->
         <lib.junit-pioneer.version>2.3.0</lib.junit-pioneer.version>
-        <lib.mockito.version>5.17.0</lib.mockito.version>
+        <lib.mockito.version>5.18.0</lib.mockito.version>
         <lib.wiremock.version>2.35.2</lib.wiremock.version>
     </properties>
 

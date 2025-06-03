@@ -45,6 +45,7 @@ import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
+import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ProjectVersion;
 import org.dependencytrack.model.ServiceComponent;
@@ -72,6 +73,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNullElse;
 import static org.datanucleus.store.rdbms.RDBMSPropertyNames.PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH;
@@ -155,13 +158,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             var ignored = project.getTags();
         }
 
-        if (includeMetrics) {
-            // Populate each Project object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Project project : result.getList(Project.class)) {
-                project.setMetrics(withJdbiHandle(handle ->
-                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
-            }
+        if (!result.getObjects().isEmpty() && includeMetrics) {
+            populateMetrics(result.getList(Project.class));
         }
         return result;
     }
@@ -425,13 +423,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             var ignored = project.getTags();
         }
 
-        if (includeMetrics) {
-            // Populate each Project object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Project project : result.getList(Project.class)) {
-                project.setMetrics(withJdbiHandle(handle ->
-                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
-            }
+        if (!result.getObjects().isEmpty() && includeMetrics) {
+            populateMetrics(result.getList(Project.class));
         }
 
         return result;
@@ -476,13 +469,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             var ignored = project.getTags();
         }
 
-        if (includeMetrics) {
-            // Populate each Project object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Project project : result.getList(Project.class)) {
-                project.setMetrics(withJdbiHandle(handle ->
-                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
-            }
+        if (!result.getObjects().isEmpty() && includeMetrics) {
+            populateMetrics(result.getList(Project.class));
         }
 
         return result;
@@ -1167,13 +1155,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         preprocessACLs(query, queryFilter, params, false);
         query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
         result = execute(query, params);
-        if (includeMetrics) {
-            // Populate each Project object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Project project : result.getList(Project.class)) {
-                project.setMetrics(withJdbiHandle(handle ->
-                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
-            }
+        if (!result.getObjects().isEmpty() && includeMetrics) {
+            populateMetrics(result.getList(Project.class));
         }
         return result;
     }
@@ -1197,14 +1180,11 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         preprocessACLs(query, queryFilter, params, false);
         query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
         result = execute(query, params);
-        if (includeMetrics) {
-            // Populate each Project object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Project project : result.getList(Project.class)) {
-                project.setMetrics(withJdbiHandle(handle ->
-                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
-            }
+
+        if (!result.getObjects().isEmpty() && includeMetrics) {
+            populateMetrics(result.getList(Project.class));
         }
+
         return result;
     }
 
@@ -1231,14 +1211,11 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
         preprocessACLs(query, queryFilter, params, false);
         result = execute(query, params);
-        if (includeMetrics) {
-            // Populate each Project object in the paginated result with transitive related
-            // data to minimize the number of round trips a client needs to make, process, and render.
-            for (Project project : result.getList(Project.class)) {
-                project.setMetrics(withJdbiHandle(handle ->
-                        handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
-            }
+
+        if (!result.getObjects().isEmpty() && includeMetrics) {
+            populateMetrics(result.getList(Project.class));
         }
+
         return result;
     }
 
@@ -1392,4 +1369,18 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         query.setOrdering("id asc"); // Ensure consistent ordering
         return query.executeResultList(ProjectVersion.class);
     }
+
+    private void populateMetrics(final Collection<Project> projects) {
+        final Map<Long, Project> projectById = projects.stream()
+                .collect(Collectors.toMap(Project::getId, Function.identity()));
+        final List<ProjectMetrics> metricsList = withJdbiHandle(
+                handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(projectById.keySet()));
+        for (final ProjectMetrics metrics : metricsList) {
+            final Project project = projectById.get(metrics.getProjectId());
+            if (project != null) {
+                project.setMetrics(metrics);
+            }
+        }
+    }
+
 }

@@ -21,8 +21,9 @@ package org.dependencytrack.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
+import org.jdbi.v3.core.mapper.reflect.ColumnName;
 
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -225,6 +226,7 @@ public class ProjectMetrics implements Serializable {
         this.findingsUnaudited = findingsUnaudited;
     }
 
+    @ColumnName("RISKSCORE")
     public double getInheritedRiskScore() {
         return inheritedRiskScore;
     }

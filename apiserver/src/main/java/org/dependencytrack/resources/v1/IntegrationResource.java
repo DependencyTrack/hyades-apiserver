@@ -109,13 +109,13 @@ public class IntegrationResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Set state of gitlab integration", description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Gitlab state set successfully"),
+            @ApiResponse(responseCode = "200", description = "GitLab state set successfully"),
             @ApiResponse(responseCode = "304", description = "The GitLab integration is already in the desired state"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired({ Permissions.Constants.SYSTEM_CONFIGURATION,
             Permissions.Constants.SYSTEM_CONFIGURATION_CREATE }) // Require admin privileges due to system impact
-    public Response handleGitlabStateChange(
+    public Response handleGitLabStateChange(
             @Parameter(description = "A valid boolean", required = true) @PathParam("state") String state) {
         try (QueryManager qm = new QueryManager()) {
             final ConfigProperty property = qm.getConfigProperty(GITLAB_ENABLED.getGroupName(),
