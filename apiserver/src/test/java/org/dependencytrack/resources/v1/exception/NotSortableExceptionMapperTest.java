@@ -104,11 +104,11 @@ public class NotSortableExceptionMapperTest extends ResourceTest {
         @AuthenticationNotRequired
         public Response get() {
             try (final var qm = new QueryManager(getAlpineRequest())) {
-                final PaginatedResult licenseGroups = qm.getVulnerabilities();
+                final PaginatedResult vulnerabilities = qm.getVulnerabilities();
                 return Response
                         .status(Response.Status.OK)
-                        .header("X-Total-Count", licenseGroups.getTotal())
-                        .entity(licenseGroups.getObjects())
+                        .header("X-Total-Count", vulnerabilities.getTotal())
+                        .entity(vulnerabilities.getObjects())
                         .build();
             }
         }
