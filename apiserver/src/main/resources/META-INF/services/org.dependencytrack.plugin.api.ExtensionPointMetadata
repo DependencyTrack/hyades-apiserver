@@ -1,1 +1,1 @@
-org.dependencytrack.storage.FileStorage$ExtensionPointMetadata
+org.dependencytrack.filestorage.FileStorage$ExtensionPointMetadata
