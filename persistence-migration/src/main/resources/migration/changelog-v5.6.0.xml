@@ -2426,7 +2426,6 @@
         <createIndex unique="true" tableName="USER_PROJECT_ROLES" indexName="USER_PROJECT_ROLES_IDX">
             <column name="USER_ID" />
             <column name="PROJECT_ID" />
-            <column name="ROLE_ID" />
         </createIndex>
 
         <sql splitStatements="false">
@@ -2442,7 +2441,7 @@
               -- Rebuild effective permissions for users
               INSERT INTO "USER_PROJECT_EFFECTIVE_PERMISSIONS"
                 ("USER_ID", "PROJECT_ID", "PERMISSION_ID", "PERMISSION_NAME")
-              SELECT DISTINCT ut."USER_ID", pat."PROJECT_ID", tp."PERMISSION_ID", p."NAME"
+              SELECT ut."USER_ID", pat."PROJECT_ID", tp."PERMISSION_ID", p."NAME"
                 FROM "PROJECT_ACCESS_TEAMS" pat
                INNER JOIN "TEAMS_PERMISSIONS" tp
                   ON tp."TEAM_ID" = pat."TEAM_ID"
@@ -2451,8 +2450,8 @@
                INNER JOIN "USERS_TEAMS" ut
                   ON ut."TEAM_ID" = pat."TEAM_ID"
                WHERE pat."PROJECT_ID" = ANY(project_ids)
-               UNION ALL
-               SELECT DISTINCT upr."USER_ID", upr."PROJECT_ID", rp."PERMISSION_ID", p."NAME"
+               UNION
+              SELECT upr."USER_ID", upr."PROJECT_ID", rp."PERMISSION_ID", p."NAME"
                 FROM "USER_PROJECT_ROLES" upr
                INNER JOIN "ROLES_PERMISSIONS" rp
                   ON rp."ROLE_ID" = upr."ROLE_ID"
@@ -2609,7 +2608,7 @@
             AFTER UPDATE ON "ROLES_PERMISSIONS"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
-            EXECUTE FUNCTION effective_permissions_mx_on_update();
+            EXECUTE FUNCTION role_effective_permissions_mx_on_update();
         </sql>
     </changeSet>
 </databaseChangeLog>
