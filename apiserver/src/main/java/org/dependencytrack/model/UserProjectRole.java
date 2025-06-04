@@ -40,7 +40,7 @@ import javax.jdo.annotations.PrimaryKey;
  */
 @PersistenceCapable(table = "USER_PROJECT_ROLES")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Index(name = "USER_PROJECT_ROLES_IDX", unique = "true", members = { "user", "project", "role" })
+@Index(name = "USER_PROJECT_ROLES_IDX", unique = "true", members = { "user", "project" })
 public class UserProjectRole implements Serializable {
 
     @PrimaryKey
