@@ -2608,7 +2608,7 @@
             AFTER UPDATE ON "ROLES_PERMISSIONS"
             REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
             FOR EACH STATEMENT
-            EXECUTE FUNCTION effective_permissions_mx_on_update();
+            EXECUTE FUNCTION role_effective_permissions_mx_on_update();
         </sql>
     </changeSet>
 </databaseChangeLog>
