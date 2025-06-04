@@ -18,16 +18,21 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import alpine.model.Team;
 import alpine.persistence.PaginatedResult;
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.annotation.Nullable;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.jdbi.mapping.ExternalReferenceMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalContactMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalEntityMapper;
-import org.dependencytrack.persistence.jdbi.mapping.ProjectRowMapper;
+import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
+import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.json.Json;
 import org.jdbi.v3.sqlobject.config.RegisterColumnMapper;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
@@ -39,14 +44,19 @@ import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.deserializeJson;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
 /**
  * @since 5.5.0
@@ -237,7 +247,7 @@ public interface ProjectDao {
     ) {
     }
 
-    record ProjectRow(Project project, long totalCount) {
+    record ProjectListRow(Project project, long totalCount) {
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
@@ -334,7 +344,7 @@ public interface ProjectDao {
             <#if apiOrderByClause??>
                 ${apiOrderByClause}
             <#else>
-                ORDER BY "name" ASC, "version" DESC, "id" ASC
+                ORDER BY "name" ASC, "version" DESC
             </#if>
             ${apiOffsetLimitClause!}
             """)
@@ -352,8 +362,8 @@ public interface ProjectDao {
     @RegisterColumnMapper(ExternalReferenceMapper.class)
     @RegisterColumnMapper(OrganizationalEntityMapper.class)
     @RegisterColumnMapper(OrganizationalContactMapper.class)
-    @RegisterRowMapper(ProjectRowMapper.class)
-    List<ProjectRow> getProjects(
+    @RegisterRowMapper(ProjectListRowMapper.class)
+    List<ProjectListRow> getProjects(
             @Bind String nameFilter,
             @Bind String classifierFilter,
             @Bind String tagFilter,
@@ -365,10 +375,10 @@ public interface ProjectDao {
 
     default PaginatedResult getProjects(String nameFilter, String classifierFilter, String tagFilter, String teamFilter, String notAssignedToTeamWithUuid,
                                          boolean excludeInactive, boolean onlyRoot, boolean includeMetrics) {
-        final List<ProjectDao.ProjectRow> projectRows = getProjects(nameFilter, classifierFilter, tagFilter, teamFilter, notAssignedToTeamWithUuid, excludeInactive, onlyRoot);
-        final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
-        final List<Project> projects = projectRows.stream()
-                .map(ProjectDao.ProjectRow::project)
+        final List<ProjectListRow> projectListRows = getProjects(nameFilter, classifierFilter, tagFilter, teamFilter, notAssignedToTeamWithUuid, excludeInactive, onlyRoot);
+        final long totalCount = projectListRows.isEmpty() ? 0 : projectListRows.getFirst().totalCount();
+        final List<Project> projects = projectListRows.stream()
+                .map(ProjectListRow::project)
                 .toList();
         if (includeMetrics) {
             final Map<Long, Project> projectById = projects.stream()
@@ -454,4 +464,24 @@ public interface ProjectDao {
              WHERE "UUID" = :projectUuid
             """)
     Boolean isAccessible(@Bind UUID projectUuid);
+
+    class ProjectListRowMapper implements RowMapper<ProjectListRow> {
+
+        private static final TypeReference<Set<Tag>> TAGS_TYPE_REF = new TypeReference<>() {};
+        private static final TypeReference<Set<Team>> TEAMS_TYPE_REF = new TypeReference<>() {};
+
+        private final RowMapper<Project> projectMapper = BeanMapper.of(Project.class);
+
+        @Override
+        public ProjectListRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+            final Project project = projectMapper.map(rs, ctx);
+            maybeSet(rs, "projectPurl", ResultSet::getString, project::setPurl);
+            maybeSet(rs, "teamsJson", (ignored, columnName) ->
+                    deserializeJson(rs, columnName, TEAMS_TYPE_REF), project::setAccessTeams);
+            maybeSet(rs, "tagsJson", (ignored, columnName) ->
+                    deserializeJson(rs, columnName, TAGS_TYPE_REF), project::setTags);
+            final ProjectListRow projectListRow = new ProjectListRow(project, rs.getInt("totalCount"));
+            return projectListRow;
+        }
+    }
 }
