@@ -52,6 +52,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.IdentifiableObject;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
@@ -59,6 +61,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.notification.v1.UserSubject;
 import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
@@ -846,4 +849,97 @@ public class UserResource extends AlpineResource {
         Optional.ofNullable(email).ifPresent(userBuilder::setEmail);
         return userBuilder.build();
     }
+
+    @SuppressWarnings("null")
+    @PUT
+    @Path("/role")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Assigns or updates a user's role for a project.",
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User with the specified role assigned or updated", content = @Content(schema = @Schema(implementation = User.class))),
+            @ApiResponse(responseCode = "304", description = "The user already has this role for the project."),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The user, role, or project could not be found", content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class)))
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    public Response assignProjectRoleToUser(
+            @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
+        try (QueryManager qm = new QueryManager()) {
+            final Role role = qm.getObjectByUuid(Role.class, request.role());
+            final User user = qm.getUser(request.username());
+            final Project project = qm.getProject(request.project());
+
+            List<String> problems = new ArrayList<>();
+            if (role == null) problems.add("role");
+            if (user == null) problems.add("user");
+            if (project == null) problems.add("project");
+
+            if (!problems.isEmpty())
+                return new AccessManagementProblemDetails(
+                        Response.Status.NOT_FOUND.getStatusCode(),
+                        "Invalid role, user or project",
+                        "One or more variables could not be found",
+                        problems).toResponse();
+
+            if (!qm.addRoleToUser(user, role, project))
+                return Response.notModified().build();
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Granted project role: user='%s', role='%s', project='%s'"
+                            .formatted(user.getUsername(), role.getName(), project.getName()));
+
+            return Response.ok(user).build();
+        }
+    }
+
+    @SuppressWarnings("null")
+    @DELETE
+    @Path("/role")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Removes a specific role for a user from a project.",
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_UPDATE</strong></p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "The specified role was successfully removed from the user"),
+            @ApiResponse(responseCode = "304", description = "The user is not a member of the specified role for the project"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404",description = "The user, role, or project could not be found",content = @Content(schema = @Schema(implementation = AccessManagementProblemDetails.class)))
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
+    public Response removeProjectRoleFromUser(
+            @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
+        try (QueryManager qm = new QueryManager()) {
+            final Role role = qm.getObjectByUuid(Role.class, request.role());
+            final User user = qm.getUser(request.username());
+            final Project project = qm.getProject(request.project());
+
+            final List<String> problems = new ArrayList<>();
+            if (role == null) problems.add("role");
+            if (user == null) problems.add("user");
+            if (project == null) problems.add("project");
+
+            if (!problems.isEmpty())
+                return new AccessManagementProblemDetails(
+                        Response.Status.NOT_FOUND.getStatusCode(),
+                        "Invalid role, user or project",
+                        "One or more variables could not be found",
+                        problems).toResponse();
+
+            boolean removed = qm.removeRoleFromUser(user, role, project);
+            if (!removed) return Response.notModified().build();
+
+            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                    "Revoked project role: user='%s', role='%s', project='%s'"
+                            .formatted(user.getUsername(), role.getName(), project.getName()));
+
+            return Response.noContent().build();
+        }
+    }
+
 }

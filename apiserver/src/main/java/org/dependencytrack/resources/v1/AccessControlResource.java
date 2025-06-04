@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
 import alpine.model.Team;
+import alpine.model.User;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
@@ -53,6 +54,8 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
+import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
@@ -104,6 +107,43 @@ public class AccessControlResource extends AlpineResource {
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team could not be found.").build();
             }
+        }
+    }
+
+    @GET
+    @Path("/user/{username}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns the projects accessible by the specified user",
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>")
+    @PaginatedApi
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Projects accessible by the specified user",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of projects",
+                            schema = @Schema(format = "integer")),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Project.class)))),
+            @ApiResponse(responseCode = "204", description = "No unassigned projects for specified user."),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
+    public Response retrieveUserProjects(
+            @Parameter(description = "The username to retrieve projects for", required = true) @PathParam("username") String username) {
+
+        try (QueryManager qm = new QueryManager()) {
+            User user = qm.getUser(username);
+
+            if (user == null)
+                return Response.status(Response.Status.NOT_FOUND).build();
+
+            List<Project> projects = qm.getUnassignedProjects(username);
+
+            if (projects == null || projects.isEmpty())
+                return Response.ok("[]").header(TOTAL_COUNT_HEADER, 0).build();
+
+            return Response.ok(projects).header(TOTAL_COUNT_HEADER, projects.size()).build();
         }
     }
 
