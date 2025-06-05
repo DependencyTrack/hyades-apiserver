@@ -95,6 +95,7 @@ public enum ConfigPropertyConstants {
     GITLAB_TOPICS("integrations", "gitlab.topics", "[]", PropertyType.STRING, "JSON array of topics to include when syncing GitLab projects", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_URL("integrations", "gitlab.url", "https://gitlab.com", PropertyType.URL, "Base URL to GitLab instance", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_API_KEY("integrations", "gitlab.api.key", null, PropertyType.ENCRYPTEDSTRING, "API Key for GitLab Users team", ConfigPropertyAccessMode.READ_WRITE),
+    GITLAB_JWKS_PATH("integrations", "gitlab.jwks.path", "/oauth/discovery/keys", PropertyType.STRING, "The URI path to the GitLab instance's JWKS endpoint", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_ENABLED("integrations", "defectdojo.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable DefectDojo integration", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_REIMPORT_ENABLED("integrations", "defectdojo.reimport.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable DefectDojo reimport-scan API endpoint", ConfigPropertyAccessMode.READ_WRITE),
     DEFECTDOJO_SYNC_CADENCE("integrations", "defectdojo.sync.cadence", "60", PropertyType.INTEGER, "The cadence (in minutes) to upload to DefectDojo", ConfigPropertyAccessMode.READ_WRITE),
