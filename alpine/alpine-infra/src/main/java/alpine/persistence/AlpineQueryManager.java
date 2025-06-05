@@ -562,7 +562,7 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Creates a new Team with the specified name.
+     * Creates a new {@link Team} with the specified name.
      * @param name The name of the team
      * @return a Team
      * @since 3.2.0
@@ -571,7 +571,22 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         return callInTransaction(() -> {
             final var team = new Team();
             team.setName(name);
-            //todo assign permissions
+            pm.makePersistent(team);
+            return team;
+        });
+    }
+
+    /**
+     * Creates a new {@link Team} with the specified name and initial {@link Permission}s.
+     * @param name The name of the team
+     * @return a Team
+     * @since 5.6.0
+     */
+    public Team createTeam(final String name, final List<Permission> permissions) {
+        return callInTransaction(() -> {
+            final var team = new Team();
+            team.setName(name);
+            team.setPermissions(permissions);
             pm.makePersistent(team);
             return team;
         });

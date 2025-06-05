@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -44,8 +45,6 @@ import alpine.common.logging.Logger;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
-
-import static org.apache.commons.io.IOUtils.resourceToString;
 
 public class GitLabClient {
 
@@ -147,7 +146,7 @@ public class GitLabClient {
             variables.put("archived", "INCLUDE");
         }
 
-        queryObject.put("query", resourceToString("/graphql/gitlab-projects.graphql", StandardCharsets.UTF_8));
+        queryObject.put("query", IOUtils.resourceToString("/graphql/gitlab-projects.graphql", StandardCharsets.UTF_8));
 
         URIBuilder builder = new URIBuilder(baseURL.toString()).setPath(GRAPHQL_ENDPOINT);
 

@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.integrations.gitlab;
 
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_API_KEY;
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
 
 import java.util.Collections;
@@ -26,17 +27,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.jdo.Query;
+
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.persistence.QueryManager;
 
 import alpine.common.logging.Logger;
+import alpine.model.ApiKey;
+import alpine.model.ConfigProperty;
 import alpine.model.Permission;
+import alpine.model.Team;
+import alpine.security.crypto.DataEncryption;
 
 public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
 
     private static final Logger LOGGER = Logger.getLogger(GitLabIntegrationStateChanger.class);
     private static final String INTEGRATIONS_GROUP = GITLAB_ENABLED.getGroupName();
+    private static final String DEFAULT_TEAM = "GitLab Users";
     private final Map<String, Permission> PERMISSIONS_MAP = new HashMap<>();
 
     public GitLabIntegrationStateChanger() {
@@ -57,24 +66,51 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
             if (isEnabled) {
                 LOGGER.info("Enabling GitLab integration");
                 createGitLabRoles();
+                createGitLabDefaultTeam();
 
                 return;
             }
 
             LOGGER.info("Disabling GitLab integration");
             removeGitLabRoles();
+            removeGitLabDefaultTeam();
         } catch (RuntimeException ex) {
             LOGGER.error("An error occurred while changing GitLab Integration State", ex);
             handleException(LOGGER, ex);
         }
     }
 
-    private void createGitLabRoles() {
-        if (PERMISSIONS_MAP.isEmpty()) {
-            populatePermissionsMap(qm);
-        }
+    private void createGitLabDefaultTeam() {
+        try {
+            if (qm.getTeam(DEFAULT_TEAM) != null) {
+                LOGGER.info("GitLab Users team already exists");
+                return;
+            }
 
-        for (GitLabRole role : GitLabRole.values()) {
+            final Team team = qm.createTeam(DEFAULT_TEAM, List.of(
+                    qm.getPermission(Permissions.Constants.BOM_UPLOAD),
+                    qm.getPermission(Permissions.Constants.VIEW_PORTFOLIO)));
+
+            LOGGER.info("Created GitLab default user team");
+
+            final ApiKey apiKey = qm.createApiKey(team);
+            final ConfigProperty property = qm.getConfigProperty(
+                    GITLAB_API_KEY.getGroupName(),
+                    GITLAB_API_KEY.getPropertyName());
+
+            property.setPropertyValue(DataEncryption.encryptAsString(apiKey.getKey()));
+            qm.persist(property);
+        } catch (Exception ex) {
+            LOGGER.error("An error occurred while creating GitLab default user team", ex);
+            throw new RuntimeException("Failed to create default team for GitLab users", ex);
+        }
+    }
+
+    private void createGitLabRoles() {
+        if (PERMISSIONS_MAP.isEmpty())
+            populatePermissionsMap(qm);
+
+        for (GitLabRole role : GitLabRole.values())
             try {
                 if (qm.getRoleByName(role.getDescription()) == null) {
                     qm.createRole(role.getDescription(), qm.getPermissionsByName(role.getPermissions()));
@@ -86,7 +122,45 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
                 LOGGER.error("An error occurred while creating GitLab roles", ex);
                 throw new RuntimeException("Failed to create GitLab roles", ex);
             }
+    }
+
+    private void removeGitLabDefaultTeam() {
+        try (final QueryManager qm = new QueryManager()) {
+            final Team team = qm.getTeam(DEFAULT_TEAM);
+
+            if (team == null) {
+                LOGGER.info("GitLab default team does not exist");
+                return;
+            }
+
+            qm.delete(team);
+            LOGGER.info("Removed default GitLab team");
+
+            final ConfigProperty property = qm.getConfigProperty(
+                    GITLAB_API_KEY.getGroupName(),
+                    GITLAB_API_KEY.getPropertyName());
+
+            final Query<ApiKey> query = qm.getPersistenceManager().newQuery(ApiKey.class)
+                    .filter("key == :key")
+                    .setParameters(DataEncryption.decryptAsString(property.getPropertyValue()));
+
+            final ApiKey apiKey;
+            try{
+                apiKey = query.executeUnique();
+            } finally {
+                query.closeAll();
+            }
+
+            if (apiKey != null)
+                qm.delete(apiKey);
+
+            property.setPropertyValue(null);
+            qm.persist(property);
+        } catch (Exception ex) {
+            LOGGER.error("An error occurred while removing GitLab roles", ex);
+            throw new RuntimeException("Failed to remove GitLab roles", ex);
         }
+
     }
 
     private void removeGitLabRoles() {
