@@ -31,7 +31,6 @@ public class ApiRequestConfig implements JdbiConfig<ApiRequestConfig> {
     private Set<OrderingColumn> orderingAllowedColumns;
     private String orderingAlwaysBy = "";
     private String projectIdColumn = "\"PROJECT\".\"ID\"";
-    private String userIdColumn = "\"USER\".\"ID\"";
 
     @SuppressWarnings("unused")
     public ApiRequestConfig() {
@@ -75,10 +74,6 @@ public class ApiRequestConfig implements JdbiConfig<ApiRequestConfig> {
 
     String projectAclProjectIdColumn() {
         return projectIdColumn;
-    }
-    
-    String userIdColumn() {
-        return userIdColumn;
     }
 
     public record OrderingColumn(String name, String queryName) {

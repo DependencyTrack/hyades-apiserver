@@ -68,9 +68,9 @@ import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 class ApiRequestStatementCustomizer implements StatementCustomizer {
 
     static final String PARAMETER_PROJECT_ACL_TEAM_IDS = "projectAclTeamIds";
-    static final String PARAMETER_USER_ID = "userId";
+    static final String PARAMETER_USER_ID = "projectAclUserId";
     static final String TEMPLATE_PROJECT_ACL_CONDITION = "HAS_PROJECT_ACCESS(%s, :projectAclTeamIds)";
-    static final String TEMPLATE_USER_PROJECT_ACL_CONDITION = "HAS_USER_PROJECT_ACCESS(%s, :userId)";
+    static final String TEMPLATE_USER_PROJECT_ACL_CONDITION = "HAS_USER_PROJECT_ACCESS(%s, :projectAclUserId)";
 
     private final AlpineRequest apiRequest;
 
@@ -192,7 +192,7 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
         switch (principal) {
             case User user -> {
                 ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION,
-                        TEMPLATE_USER_PROJECT_ACL_CONDITION.formatted(config.userIdColumn()));
+                        TEMPLATE_USER_PROJECT_ACL_CONDITION.formatted(config.projectAclProjectIdColumn()));
                 ctx.getBinding().addNamed(PARAMETER_USER_ID, user.getId(), QualifiedType.of(Long.class));
             }
             case ApiKey apiKey when !principalTeamIds.isEmpty() -> {
