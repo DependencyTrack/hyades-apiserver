@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
+import alpine.model.ApiKey;
+import alpine.model.User;
 import alpine.persistence.OrderDirection;
 import alpine.resources.AlpineRequest;
 import org.dependencytrack.auth.Permissions;
@@ -28,6 +30,8 @@ import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.core.statement.StatementCustomizer;
 
 import javax.jdo.Query;
+
+import java.security.Principal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Map;
@@ -64,7 +68,9 @@ import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 class ApiRequestStatementCustomizer implements StatementCustomizer {
 
     static final String PARAMETER_PROJECT_ACL_TEAM_IDS = "projectAclTeamIds";
+    static final String PARAMETER_USER_ID = "userId";
     static final String TEMPLATE_PROJECT_ACL_CONDITION = "HAS_PROJECT_ACCESS(%s, :projectAclTeamIds)";
+    static final String TEMPLATE_USER_PROJECT_ACL_CONDITION = "HAS_USER_PROJECT_ACCESS(%s, :userId)";
 
     private final AlpineRequest apiRequest;
 
@@ -172,27 +178,33 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
 
     private void defineProjectAclCondition(final StatementContext ctx) throws SQLException {
         if (apiRequest == null
-            || apiRequest.getPrincipal() == null
-            || !isAclEnabled(ctx)
-            || apiRequest.getEffectivePermissions().contains(Permissions.ACCESS_MANAGEMENT.name())) {
+                || apiRequest.getPrincipal() == null
+                || !isAclEnabled(ctx)
+                || apiRequest.getEffectivePermissions().contains(Permissions.ACCESS_MANAGEMENT.name())) {
             ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION, "TRUE");
             return;
         }
 
-        final Set<Long> principalTeamIds = getPrincipalTeamIds(apiRequest.getPrincipal());
-        if (principalTeamIds.isEmpty()) {
-            ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION, "FALSE");
-            return;
-        }
-
+        final Principal principal = apiRequest.getPrincipal();
+        final Set<Long> principalTeamIds = getPrincipalTeamIds(principal);
         final ApiRequestConfig config = ctx.getConfig(ApiRequestConfig.class);
 
-        ctx.define(
-                ATTRIBUTE_API_PROJECT_ACL_CONDITION,
-                TEMPLATE_PROJECT_ACL_CONDITION.formatted(config.projectAclProjectIdColumn())
-        );
-        ctx.getBinding().addNamed(PARAMETER_PROJECT_ACL_TEAM_IDS, principalTeamIds,
-                QualifiedType.of(parameterizeClass(Set.class, Long.class)));
+        switch (principal) {
+            case User user -> {
+                ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION,
+                        TEMPLATE_USER_PROJECT_ACL_CONDITION.formatted(config.userIdColumn()));
+                ctx.getBinding().addNamed(PARAMETER_USER_ID, user.getId(), QualifiedType.of(Long.class));
+            }
+            case ApiKey apiKey when !principalTeamIds.isEmpty() -> {
+                ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION,
+                        TEMPLATE_PROJECT_ACL_CONDITION.formatted(config.projectAclProjectIdColumn()));
+                ctx.getBinding().addNamed(PARAMETER_PROJECT_ACL_TEAM_IDS, principalTeamIds,
+                        QualifiedType.of(parameterizeClass(Set.class, Long.class)));
+            }
+            default -> {
+                ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION, "FALSE");
+            }
+        }
     }
 
     private boolean isAclEnabled(final StatementContext ctx) throws SQLException {

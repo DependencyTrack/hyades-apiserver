@@ -746,20 +746,15 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     private Set<String> getEffectivePermissions(final ApiKey apiKey) {
-        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
-                SELECT "PERMISSION"."NAME"
-                  FROM "APIKEY"
-                 INNER JOIN "APIKEYS_TEAMS"
-                    ON "APIKEYS_TEAMS"."APIKEY_ID" = "APIKEY"."ID"
-                 INNER JOIN "TEAM"
-                    ON "TEAM"."ID" = "APIKEYS_TEAMS"."TEAM_ID"
-                 INNER JOIN "TEAMS_PERMISSIONS"
-                    ON "TEAMS_PERMISSIONS"."TEAM_ID" = "TEAM"."ID"
-                 INNER JOIN "PERMISSION"
-                    ON "PERMISSION"."ID" = "TEAMS_PERMISSIONS"."PERMISSION_ID"
-                 WHERE "APIKEY"."ID" = :apiKeyId
-                """);
-        query.setNamedParameters(Map.of("apiKeyId", apiKey.getId()));
+        Query<Permission> query = pm.newQuery(Permission.class)
+                .variables("alpine.model.Team team; alpine.model.ApiKey apiKey")
+                .filter("%s && %s && %s".formatted(
+                        "apiKey.teams.contains(team)",
+                        "team.permissions.contains(this)",
+                        "apiKey.id == :apiKeyId"))
+                .setParameters(apiKey.getId())
+                .result("name");
+
         return Set.copyOf(executeAndCloseResultList(query, String.class));
     }
 
@@ -771,29 +766,15 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * @return Set of permission names
      */
     private Set<String> getEffectivePermissions(final User user) {
-        final Query<?> query = pm.newQuery(Query.SQL, /* language=SQL */ """
-                SELECT p."NAME"
-                  FROM "USER" u
-                 INNER JOIN "USERS_TEAMS" ut
-                    ON ut."USER_ID" = u."ID"
-                 INNER JOIN "TEAM" t
-                    ON t."ID" = ut."TEAM_ID"
-                 INNER JOIN "TEAMS_PERMISSIONS" tp
-                    ON tp."TEAM_ID" = t."ID"
-                 INNER JOIN "PERMISSION" p
-                    ON p."ID" = tp."PERMISSION_ID"
-                 WHERE u."ID" = :userId
-                 UNION ALL
-                SELECT p."NAME"
-                  FROM "USER" u
-                 INNER JOIN "USERS_PERMISSIONS" up
-                    ON up."USER_ID" = u."ID"
-                 INNER JOIN "PERMISSION" p
-                    ON p."ID" = up."PERMISSION_ID"
-                 WHERE u."ID" = :userId
-                """);
-
-        query.setNamedParameters(Map.of("userId", user.getId()));
+        Query<Permission> query = pm.newQuery(Permission.class)
+                .variables("alpine.model.User user; alpine.model.Team team")
+                .filter("%s && (%s || (%s && %s))".formatted(
+                        "user.id == :userId",
+                        "user.permissions.contains(this)",
+                        "user.teams.contains(team)",
+                        "team.permissions.contains(this)"))
+                .setParameters(user.getId())
+                .result("name");
 
         return Set.copyOf(executeAndCloseResultList(query, String.class));
     }

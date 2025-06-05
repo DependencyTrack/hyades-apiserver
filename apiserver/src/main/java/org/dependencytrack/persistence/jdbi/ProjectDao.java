@@ -47,6 +47,7 @@ public interface ProjectDao {
             <#-- @ftlvariable name="activeFilter" type="Boolean" -->
             <#-- @ftlvariable name="onlyRootFilter" type="Boolean" -->
             <#-- @ftlvariable name="parentUuidFilter" type="Boolean" -->
+            <#-- @ftlvariable name="userId" type="Long" -->
             <#-- @ftlvariable name="includeMetrics" type="Boolean" -->
             <#-- @ftlvariable name="apiFilterParameter" type="String" -->
             <#-- @ftlvariable name="apiOrderByClause" type="String" -->
@@ -106,6 +107,9 @@ public interface ProjectDao {
               ) AS "metrics" ON TRUE
             </#if>
              WHERE ${apiProjectAclCondition}
+            <#if userId>
+               AND has_user_project_access("PROJECT"."ID", :userId)
+            </#if>
             <#if nameFilter>
                AND "PROJECT"."NAME" = :nameFilter
             </#if>
@@ -182,6 +186,7 @@ public interface ProjectDao {
             @Bind Boolean activeFilter,
             @Bind Boolean onlyRootFilter,
             @Bind UUID parentUuidFilter,
+            @Bind Long userId,
             @Define boolean includeMetrics
     );
 

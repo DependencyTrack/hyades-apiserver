@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.persistence.PaginatedResult;
+import alpine.server.auth.DisableAuthorization;
 import alpine.server.auth.PermissionRequired;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
@@ -127,7 +128,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @DisableAuthorization
     public Response getAllComponents(
             @Parameter(description = "The UUID of the project to retrieve components for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -167,7 +168,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @DisableAuthorization
     public Response getComponentByUuid(
             @Parameter(description = "The UUID of the component to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -218,7 +219,7 @@ public class ComponentResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The integrity meta information for the specified component cannot be found"),
             @ApiResponse(responseCode = "400", description = "The package url being queried for is invalid")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @DisableAuthorization
     public Response getIntegrityMetaComponent(
             @Parameter(description = "The package url of the component", required = true)
             @QueryParam("purl") String purl) {
@@ -264,7 +265,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The integrity analysis information for the specified component cannot be found"),
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @DisableAuthorization
     public Response getIntegrityStatus(
             @Parameter(description = "UUID of the component for which integrity status information is needed", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -306,7 +307,7 @@ public class ComponentResource extends AbstractApiResource {
                     description = "Access to the requested project is forbidden",
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON))
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @DisableAuthorization
     public Response getComponentByIdentity(@Parameter(description = "The group of the component")
                                            @QueryParam("group") String group,
                                            @Parameter(description = "The name of the component")
@@ -368,7 +369,7 @@ public class ComponentResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @DisableAuthorization
     public Response getComponentByHash(
             @Parameter(description = "The MD5, SHA-1, SHA-256, SHA-384, SHA-512, SHA3-256, SHA3-384, SHA3-512, BLAKE2b-256, BLAKE2b-384, BLAKE2b-512, or BLAKE3 hash of the component to retrieve", required = true)
             @PathParam("hash") String hash) {
@@ -709,7 +710,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "- The UUID of the project could not be found\n- The UUID of the component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @DisableAuthorization
     public Response getDependencyGraphForComponent(
             @Parameter(description = "The UUID of the project to get the expanded dependency graph for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid,
@@ -759,7 +760,7 @@ public class ComponentResource extends AbstractApiResource {
                     description = "Component could not be found",
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @DisableAuthorization
     public Response getOccurrences(@PathParam("uuid") final UUID uuid) {
         final List<ComponentOccurrence> occurrences = withJdbiHandle(getAlpineRequest(), handle -> {
             requireComponentAccess(handle, uuid);
