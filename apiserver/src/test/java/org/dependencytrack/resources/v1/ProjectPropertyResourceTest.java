@@ -20,7 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Project;
@@ -48,7 +48,7 @@ public class ProjectPropertyResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(ProjectPropertyResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     @Test
     public void getPropertiesTest() {
