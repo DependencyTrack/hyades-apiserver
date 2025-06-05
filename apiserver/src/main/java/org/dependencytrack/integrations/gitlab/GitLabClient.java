@@ -135,15 +135,11 @@ public class GitLabClient {
 
         // Set the default values for the GraphQL query
         variables.put("includeTopics", false);
-        variables.put("archived", "EXCLUDE");
+        variables.put("archived", includeArchived ? "INCLUDE" : "EXCLUDE");
 
         if (topics != null && !topics.isEmpty()) {
             variables.put("includeTopics", true);
             variables.put("topics", topics);
-        }
-
-        if (includeArchived) {
-            variables.put("archived", "INCLUDE");
         }
 
         queryObject.put("query", IOUtils.resourceToString("/graphql/gitlab-projects.graphql", StandardCharsets.UTF_8));
@@ -204,4 +200,7 @@ public class GitLabClient {
         return list;
     }
 
+    public Config getConfig() {
+        return config;
+    }
 }

@@ -32,8 +32,6 @@ import org.dependencytrack.persistence.QueryManager;
 
 public class GitLabAuthenticationCustomizer extends DefaultOidcAuthenticationCustomizer {
 
-    public GitLabAuthenticationCustomizer() {}
-
     @Override
     public boolean isProfileComplete(OidcProfile profile, boolean teamSyncEnabled) {
         return super.isProfileComplete(profile, true);

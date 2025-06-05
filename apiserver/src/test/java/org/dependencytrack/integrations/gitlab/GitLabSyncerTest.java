@@ -21,12 +21,11 @@ package org.dependencytrack.integrations.gitlab;
 import org.junit.Assert;
 import alpine.model.IConfigProperty;
 import alpine.model.OidcUser;
-import alpine.model.Permission;
-import alpine.model.Team;
 import java.net.URISyntaxException;
 import java.io.IOException;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.UserProjectRole;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
@@ -106,6 +105,13 @@ public class GitLabSyncerTest extends PersistenceCapableTest {
      */
     @Test
     public void testSynchronizeSuccess() {
+        qm.createRole("GitLab Project Guest", new ArrayList<>());
+        qm.createRole("GitLab Project Maintainer", new ArrayList<>());
+        qm.createRole("GitLab Project Reporter", new ArrayList<>());
+        qm.createRole("GitLab Project Developer", new ArrayList<>());
+        qm.createRole("GitLab Project Planner", new ArrayList<>());
+        qm.createRole("GitLab Project Owner", new ArrayList<>());
+
         qm.createConfigProperty(
                 GITLAB_ENABLED.getGroupName(),
                 GITLAB_ENABLED.getPropertyName(),
@@ -133,21 +139,11 @@ public class GitLabSyncerTest extends PersistenceCapableTest {
         Project testProject2 = qm.getProject("that/test/project2", null);
         Assert.assertFalse(testProject2.isActive());
 
-        List<Team> testTeams = new ArrayList<Team>();
-        Team team1 = qm.getTeam("this/test/project1_MAINTAINER");
-        testTeams.add(team1);
-        List<Permission> t1perm = team1.getPermissions();
-        Assert.assertEquals(t1perm.size(), mockClient.getRolePermissions(GitLabRole.MAINTAINER).size());
-
-        Team team2 = qm.getTeam("that/test/project2_REPORTER");
-        testTeams.add(team2);
-        List<Permission> t2perm = team2.getPermissions();
-        Assert.assertEquals(t2perm.size(), mockClient.getRolePermissions(GitLabRole.REPORTER).size());
-
-        for (Team team : testTeams) {
-            List<OidcUser> testTeamUsers = team.getOidcUsers();
-            Assert.assertEquals(testTeamUsers.size(), 1);
-            Assert.assertEquals(testTeamUsers.get(0).getUsername(), "test_user");
-        }
+        List<UserProjectRole> testRoles = qm.getUserRoles("test_user");
+        Assert.assertEquals(2, testRoles.size());
+        Assert.assertEquals("this/test/project1", testRoles.get(0).getProject().getName());
+        Assert.assertEquals("GitLab Project Maintainer", testRoles.get(0).getRole().getName());
+        Assert.assertEquals("that/test/project2", testRoles.get(1).getProject().getName());
+        Assert.assertEquals("GitLab Project Reporter", testRoles.get(1).getRole().getName());
     }
 }

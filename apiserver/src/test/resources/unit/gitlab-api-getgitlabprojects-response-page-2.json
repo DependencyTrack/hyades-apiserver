@@ -1,14 +1,14 @@
 {
   "data": {
-    "projects": {
+    "withoutTopics": {
       "nodes": [
         {
           "name": "test-project-4",
           "fullPath": "test-group/test-subgroup-2/test-project-4",
           "maxAccessLevel": {
             "stringValue": "DEVELOPER"
-          }
-        },
+            }
+        }
       ],
       "pageInfo": {
         "endCursor": "zzzzzzzzzzzzzzzzzzzz",

@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import javax.jdo.Query;
-
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.model.Role;
@@ -47,9 +45,6 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
     private static final String INTEGRATIONS_GROUP = GITLAB_ENABLED.getGroupName();
     private static final String DEFAULT_TEAM = "GitLab Users";
     private final Map<String, Permission> PERMISSIONS_MAP = new HashMap<>();
-
-    public GitLabIntegrationStateChanger() {
-    }
 
     @Override
     public String name() {
@@ -120,7 +115,6 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
                 }
             } catch (Exception ex) {
                 LOGGER.error("An error occurred while creating GitLab roles", ex);
-                throw new RuntimeException("Failed to create GitLab roles", ex);
             }
     }
 
@@ -133,6 +127,12 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
                 return;
             }
 
+            for (ApiKey key : team.getApiKeys())
+                if (key != null) {
+                    qm.delete(key);
+                    LOGGER.info("Removed API key for GitLab team");
+                }
+
             qm.delete(team);
             LOGGER.info("Removed default GitLab team");
 
@@ -140,25 +140,11 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
                     GITLAB_API_KEY.getGroupName(),
                     GITLAB_API_KEY.getPropertyName());
 
-            final Query<ApiKey> query = qm.getPersistenceManager().newQuery(ApiKey.class)
-                    .filter("key == :key")
-                    .setParameters(DataEncryption.decryptAsString(property.getPropertyValue()));
-
-            final ApiKey apiKey;
-            try{
-                apiKey = query.executeUnique();
-            } finally {
-                query.closeAll();
-            }
-
-            if (apiKey != null)
-                qm.delete(apiKey);
-
             property.setPropertyValue(null);
             qm.persist(property);
         } catch (Exception ex) {
-            LOGGER.error("An error occurred while removing GitLab roles", ex);
-            throw new RuntimeException("Failed to remove GitLab roles", ex);
+            LOGGER.error("An error occurred while removing GitLab team", ex);
+            throw new RuntimeException("Failed to remove GitLab team", ex);
         }
 
     }

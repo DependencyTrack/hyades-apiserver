@@ -1,0 +1,19 @@
+{
+  "data": {
+    "withTopics": {
+      "nodes": [
+        {
+          "fullPath": "project/with/topic",
+          "maxAccessLevel": {
+            "stringValue": "MAINTAINER"
+          }
+        }
+      ],
+      "pageInfo": {
+        "endCursor": "eyJpZCI6IjgyMTY0In0",
+        "hasNextPage": false
+      }
+    }
+  },
+  "correlationId": "01JX0Y94A7FMG49C7BWT9GERP7"
+}

@@ -22,6 +22,7 @@ import alpine.model.IConfigProperty;
 import alpine.model.Permission;
 
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Role;
 
 import org.junit.Assert;
@@ -32,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_API_KEY;
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -60,6 +62,9 @@ public class GitLabIntegrationStateChangerTest extends PersistenceCapableTest {
      */
     @Test
     public void testEnable() {
+        qm.createPermission(Permissions.Constants.BOM_UPLOAD, "upload BOMs");
+        qm.createPermission(Permissions.Constants.VIEW_PORTFOLIO, "view portfolio");
+
         stateChanger.setQueryManager(qm);
         qm.createConfigProperty(
                 GITLAB_ENABLED.getGroupName(),
@@ -67,12 +72,22 @@ public class GitLabIntegrationStateChangerTest extends PersistenceCapableTest {
                 "true",
                 IConfigProperty.PropertyType.BOOLEAN,
                 null);
+
+        qm.createConfigProperty(
+                GITLAB_API_KEY.getGroupName(),
+                GITLAB_API_KEY.getPropertyName(),
+                null,
+                GITLAB_API_KEY.getPropertyType(),
+                null);
+
         stateChanger.setState(true);
         roles = qm.getRoles();
         Assert.assertEquals(roles.size(), GitLabRole.values().length);
         for (GitLabRole role : GitLabRole.values()) {
             Assert.assertNotNull(qm.getRoleByName(role.getDescription()));
         }
+        Assert.assertEquals(qm.getTeams().size(), 1);
+        Assert.assertEquals(qm.getTeams().get(0).getName(), "GitLab Users");
     }
 
     /**
@@ -80,6 +95,9 @@ public class GitLabIntegrationStateChangerTest extends PersistenceCapableTest {
      */
     @Test
     public void testDisable() {
+        qm.createPermission(Permissions.Constants.BOM_UPLOAD, "upload BOMs");
+        qm.createPermission(Permissions.Constants.VIEW_PORTFOLIO, "view portfolio");
+
         stateChanger.setQueryManager(qm);
         qm.createConfigProperty(
                 GITLAB_ENABLED.getGroupName(),
@@ -87,20 +105,29 @@ public class GitLabIntegrationStateChangerTest extends PersistenceCapableTest {
                 "false",
                 IConfigProperty.PropertyType.BOOLEAN,
                 null);
+        qm.createConfigProperty(
+                GITLAB_API_KEY.getGroupName(),
+                GITLAB_API_KEY.getPropertyName(),
+                "test_api_key",
+                GITLAB_API_KEY.getPropertyType(),
+                null);
 
-        // Create roles to be removed
+        // Create roles and team to be removed
         stateChanger.setState(true);
         roles = qm.getRoles();
         Assert.assertEquals(roles.size(), GitLabRole.values().length);
         for (GitLabRole role : GitLabRole.values()) {
             Assert.assertNotNull(qm.getRoleByName(role.getDescription()));
         }
+        Assert.assertEquals(qm.getTeams().size(), 1);
+        Assert.assertEquals(qm.getTeams().get(0).getName(), "GitLab Users");
 
         // Disable the integration
-        // and verify that the roles are removed
+        // and verify that the roles and team are removed
         stateChanger.setState(false);
         roles = qm.getRoles();
         Assert.assertEquals(roles.size(), 0);
+        Assert.assertEquals(qm.getTeams().size(), 0);
     }
 
     @Test
@@ -124,4 +151,28 @@ public class GitLabIntegrationStateChangerTest extends PersistenceCapableTest {
         Assert.assertTrue(permissionsMap.containsValue(permission));
     }
 
+    @Test
+    public void testGetPermissionsMap() {
+        stateChanger.setQueryManager(qm);
+
+        // Test method call
+        Map<String, Permission> permissionsMap = stateChanger.getPermissionsMap();
+
+        // Verify expected state
+        Assert.assertEquals(0, permissionsMap.size());
+    }
+
+    @Test
+    public void testGetPermissionsMapPopulated() {
+        qm.createPermission("testPermission", "Test Permission");
+
+        stateChanger.setQueryManager(qm);
+
+        // Test method call
+        stateChanger.getPermissionsMap();
+
+        // Verify expected state
+        Assert.assertEquals(1, stateChanger.getPermissionsMap().size());
+        Assert.assertTrue(stateChanger.getPermissionsMap().containsKey("testPermission"));
+    }
 }

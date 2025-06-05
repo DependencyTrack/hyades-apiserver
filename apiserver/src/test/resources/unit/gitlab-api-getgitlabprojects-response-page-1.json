@@ -1,6 +1,6 @@
 {
   "data": {
-    "projects": {
+    "withoutTopics": {
       "nodes": [
         {
           "name": "test-project-1",
@@ -25,7 +25,7 @@
         }
       ],
       "pageInfo": {
-        "endCursor": "eyJpZCI6IjE1ODU5NyJ9",
+        "endCursor": "eyJpZCI6Ijk3ODU2In0",
         "hasNextPage": true
       }
     }
