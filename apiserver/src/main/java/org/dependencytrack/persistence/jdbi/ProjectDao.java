@@ -354,7 +354,7 @@ public interface ProjectDao {
             name = "apiParentProjectAclCondition",
             projectIdColumn = "\"PARENT_PROJECT\".\"ID\""
     )
-    @AllowApiOrdering(by = {
+    @AllowApiOrdering(alwaysBy = "id", by = {
             @AllowApiOrdering.Column(name = "id"),
             @AllowApiOrdering.Column(name = "name"),
             @AllowApiOrdering.Column(name = "version")
