@@ -20,10 +20,10 @@ package org.dependencytrack.plugin;
 
 import alpine.model.IConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.filestorage.FileStoragePlugin;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
-import org.dependencytrack.storage.FileStoragePlugin;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;

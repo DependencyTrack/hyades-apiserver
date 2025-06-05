@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
 import io.minio.GetObjectArgs;
 import io.minio.GetObjectResponse;
@@ -24,7 +24,7 @@ import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.dependencytrack.plugin.MockConfigRegistry;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,11 +38,11 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.storage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
-import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_ACCESS_KEY;
-import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_BUCKET;
-import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_ENDPOINT;
-import static org.dependencytrack.storage.S3FileStorageFactory.CONFIG_SECRET_KEY;
+import static org.dependencytrack.filestorage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
+import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_ACCESS_KEY;
+import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_BUCKET;
+import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_ENDPOINT;
+import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_SECRET_KEY;
 
 public class S3FileStorageTest {
 

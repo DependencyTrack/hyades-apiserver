@@ -19,7 +19,7 @@
 package org.dependencytrack.event;
 
 import org.dependencytrack.model.Project;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.junit.Assert;
 import org.junit.Test;
 
