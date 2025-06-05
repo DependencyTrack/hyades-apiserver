@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.persistence.migration;
 
+import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -28,7 +29,7 @@ import org.testcontainers.utility.DockerImageName;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 @Testcontainers
-class MigrationExecutorTest {
+class MigrationTest {
 
     @Container
     private final PostgreSQLContainer<?> postgresContainer =
@@ -42,7 +43,7 @@ class MigrationExecutorTest {
         dataSource.setPassword(postgresContainer.getPassword());
 
         assertThatNoException()
-                .isThrownBy(new MigrationExecutor(dataSource)::executeMigration);
+                .isThrownBy(new MigrationExecutor(dataSource, "migration/changelog-main.xml")::executeMigration);
     }
 
 }

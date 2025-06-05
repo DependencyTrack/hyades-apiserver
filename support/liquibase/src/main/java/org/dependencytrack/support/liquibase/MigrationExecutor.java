@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.persistence.migration;
+package org.dependencytrack.support.liquibase;
 
 import liquibase.Liquibase;
 import liquibase.Scope;
@@ -35,18 +35,29 @@ import liquibase.ui.LoggerUIService;
 import javax.sql.DataSource;
 import java.util.HashMap;
 
+/**
+ * @since 5.6.0
+ */
 public class MigrationExecutor {
 
     private final DataSource dataSource;
     private final String changelogResourcePath;
+    private String changeLogTableName;
+    private String changeLogLockTableName;
 
     public MigrationExecutor(final DataSource dataSource, final String changelogResourcePath) {
         this.dataSource = dataSource;
         this.changelogResourcePath = changelogResourcePath;
     }
 
-    public MigrationExecutor(final DataSource dataSource) {
-        this(dataSource, "migration/changelog-main.xml");
+    public MigrationExecutor withChangeLogTableName(final String changeLogTableName) {
+        this.changeLogTableName = changeLogTableName;
+        return this;
+    }
+
+    public MigrationExecutor withChangeLogLockTableName(final String changeLogLockTableName) {
+        this.changeLogLockTableName = changeLogLockTableName;
+        return this;
     }
 
     public void executeMigration() throws Exception {
@@ -57,6 +68,12 @@ public class MigrationExecutor {
 
         Scope.child(scopeAttributes, () -> {
             final Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(dataSource.getConnection()));
+            if (changeLogTableName != null) {
+                database.setDatabaseChangeLogTableName(changeLogTableName);
+            }
+            if (changeLogLockTableName != null) {
+                database.setDatabaseChangeLogLockTableName(changeLogLockTableName);
+            }
             final var liquibase = new Liquibase(changelogResourcePath, new ClassLoaderResourceAccessor(), database);
 
             final var updateCommand = new CommandScope(UpdateCommandStep.COMMAND_NAME);

@@ -24,7 +24,7 @@ import alpine.server.util.DbUtil;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.persistence.migration.MigrationExecutor;
+import org.dependencytrack.support.liquibase.MigrationExecutor;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -33,7 +33,7 @@ import java.util.Optional;
 
 public class MigrationInitializer implements ServletContextListener {
 
-    private static final Logger LOGGER = Logger.getLogger(MigrationExecutor.class);
+    private static final Logger LOGGER = Logger.getLogger(MigrationInitializer.class);
 
     private final Config config;
 
@@ -71,7 +71,7 @@ public class MigrationInitializer implements ServletContextListener {
                 DbUtil.initPlatformName(connection);
             }
 
-            new MigrationExecutor(dataSource).executeMigration();
+            new MigrationExecutor(dataSource, "migration/changelog-main.xml").executeMigration();
         } catch (Exception e) {
             if (config.getPropertyAsBoolean(ConfigKey.DATABASE_RUN_MIGRATIONS_ONLY)
                 || config.getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {

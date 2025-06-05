@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.persistence.migration;
+package org.dependencytrack.support.liquibase;
 
 import liquibase.logging.core.AbstractLogService;
 import liquibase.logging.core.AbstractLogger;

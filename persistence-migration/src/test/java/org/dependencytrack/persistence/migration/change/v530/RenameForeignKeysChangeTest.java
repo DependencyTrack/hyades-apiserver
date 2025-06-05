@@ -19,7 +19,7 @@
 package org.dependencytrack.persistence.migration.change.v530;
 
 import liquibase.database.jvm.JdbcConnection;
-import org.dependencytrack.persistence.migration.MigrationExecutor;
+import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
