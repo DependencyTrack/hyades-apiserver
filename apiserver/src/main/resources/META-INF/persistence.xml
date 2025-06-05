@@ -40,9 +40,10 @@
     <class>org.dependencytrack.model.Component</class>
     <class>org.dependencytrack.model.ComponentOccurrence</class>
     <class>org.dependencytrack.model.ComponentProperty</class>
-    <class>org.dependencytrack.model.IntegrityMetaComponent</class>
     <class>org.dependencytrack.model.Epss</class>
     <class>org.dependencytrack.model.FindingAttribution</class>
+    <class>org.dependencytrack.model.IntegrityAnalysis</class>
+    <class>org.dependencytrack.model.IntegrityMetaComponent</class>
     <class>org.dependencytrack.model.License</class>
     <class>org.dependencytrack.model.LicenseGroup</class>
     <class>org.dependencytrack.model.NotificationPublisher</class>
@@ -55,8 +56,10 @@
     <class>org.dependencytrack.model.ProjectProperty</class>
     <class>org.dependencytrack.model.Repository</class>
     <class>org.dependencytrack.model.RepositoryMetaComponent</class>
+    <class>org.dependencytrack.model.Role</class>
     <class>org.dependencytrack.model.ServiceComponent</class>
     <class>org.dependencytrack.model.Tag</class>
+    <class>org.dependencytrack.model.UserProjectRole</class>
     <class>org.dependencytrack.model.Vex</class>
     <class>org.dependencytrack.model.ViolationAnalysis</class>
     <class>org.dependencytrack.model.ViolationAnalysisComment</class>
@@ -64,11 +67,10 @@
     <class>org.dependencytrack.model.Vulnerability</class>
     <class>org.dependencytrack.model.VulnerabilityAlias</class>
     <class>org.dependencytrack.model.VulnerabilityMetrics</class>
+    <class>org.dependencytrack.model.VulnerabilityPolicyBundle</class>
     <class>org.dependencytrack.model.VulnerabilityScan</class>
     <class>org.dependencytrack.model.VulnerableSoftware</class>
     <class>org.dependencytrack.model.WorkflowState</class>
-    <class>org.dependencytrack.model.IntegrityAnalysis</class>
-    <class>org.dependencytrack.model.VulnerabilityPolicyBundle</class>
     <exclude-unlisted-classes>true</exclude-unlisted-classes>
     <shared-cache-mode>NONE</shared-cache-mode>
   </persistence-unit>

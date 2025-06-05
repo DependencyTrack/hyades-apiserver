@@ -19,6 +19,7 @@
 package org.dependencytrack;
 
 import alpine.Config;
+import alpine.server.auth.PasswordService;
 import alpine.server.persistence.PersistenceManagerFactory;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.datanucleus.PropertyNames;
@@ -42,6 +43,9 @@ public abstract class PersistenceCapableTest {
     protected static PostgresTestContainer postgresContainer;
     protected MockProducer<byte[], byte[]> kafkaMockProducer;
     protected QueryManager qm;
+
+    protected static final String TEST_PASSWORD_HASH = new String(
+        PasswordService.createHash("testuser".toCharArray()));
 
     @BeforeClass
     public static void init() {

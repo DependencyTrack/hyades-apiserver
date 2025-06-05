@@ -18,7 +18,9 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.model.ManagedUser;
 import alpine.model.Team;
+import alpine.server.auth.PasswordService;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFilter;
 import alpine.server.filters.AuthorizationFilter;
@@ -37,6 +39,9 @@ import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class AccessControlResourceTest extends ResourceTest {
+
+    protected static final String TEST_PASSWORD_HASH = new String(
+            PasswordService.createHash("testuser".toCharArray()));
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
@@ -162,7 +167,8 @@ public class AccessControlResourceTest extends ResourceTest {
         project.addAccessTeam(otherTeam);
         qm.persist(project);
 
-        final Response response = jersey.target(V1_ACL + "/mapping/team/" + otherTeam.getUuid() + "/project/" + project.getUuid())
+        final Response response = jersey
+                .target(V1_ACL + "/mapping/team/" + otherTeam.getUuid() + "/project/" + project.getUuid())
                 .request()
                 .header(X_API_KEY, apiKey)
                 .delete();
@@ -170,7 +176,8 @@ public class AccessControlResourceTest extends ResourceTest {
 
         qm.getPersistenceManager().evictAll();
 
-        assertThat(project.getAccessTeams()).satisfiesExactly(team -> assertThat(team.getId()).isEqualTo(super.team.getId()));
+        assertThat(project.getAccessTeams())
+                .satisfiesExactly(team -> assertThat(team.getId()).isEqualTo(super.team.getId()));
     }
 
     @Test
@@ -182,7 +189,8 @@ public class AccessControlResourceTest extends ResourceTest {
         project.addAccessTeam(super.team);
         qm.persist(project);
 
-        final Response response = jersey.target(V1_ACL + "/mapping/team/c4e2c34b-38c5-4b47-991f-b207ff71bfeb/project/" + project.getUuid())
+        final Response response = jersey
+                .target(V1_ACL + "/mapping/team/c4e2c34b-38c5-4b47-991f-b207ff71bfeb/project/" + project.getUuid())
                 .request()
                 .header(X_API_KEY, apiKey)
                 .delete();
@@ -205,7 +213,9 @@ public class AccessControlResourceTest extends ResourceTest {
         project.addAccessTeam(super.team);
         qm.persist(project);
 
-        final Response response = jersey.target(V1_ACL + "/mapping/team/" + super.team.getUuid() + "/project/c4e2c34b-38c5-4b47-991f-b207ff71bfeb")
+        final Response response = jersey
+                .target(V1_ACL + "/mapping/team/" + super.team.getUuid()
+                        + "/project/c4e2c34b-38c5-4b47-991f-b207ff71bfeb")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .delete();
@@ -247,5 +257,47 @@ public class AccessControlResourceTest extends ResourceTest {
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
         Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+    }
+
+    @Test
+    public void retrieveUserProjectsTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
+
+        final var project1 = new Project();
+        project1.setName("Project 1");
+        qm.persist(project1);
+
+        final var project2 = new Project();
+        project2.setName("Project 2");
+        qm.persist(project2);
+
+        final ManagedUser user = qm.createManagedUser("user", TEST_PASSWORD_HASH);
+
+        final Response response = jersey.target(V1_ACL + "/user/" + user.getUsername())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER)).isNotNull();
+        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER).get(0)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isArray().extracting("name").containsExactly("Project 1",
+                "Project 2");
+    }
+
+    @Test
+    public void retrieveUserProjectsNoContentTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
+
+        final ManagedUser user = qm.createManagedUser("user", TEST_PASSWORD_HASH);
+
+        final Response response = jersey.target(V1_ACL + "/user/" + user.getUsername())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER)).isNotNull();
+        assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER).get(0)).isEqualTo("0");
     }
 }

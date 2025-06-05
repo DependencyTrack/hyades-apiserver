@@ -44,14 +44,14 @@
         <lib.pebble.version>3.2.4</lib.pebble.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
         <lib.swagger.version>2.2.32</lib.swagger.version>
-        <lib.swagger-parser.version>2.1.28</lib.swagger-parser.version>
+        <lib.swagger-parser.version>2.1.29</lib.swagger-parser.version>
         <lib.system-rules.version>1.19.0</lib.system-rules.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
-        <lib.woodstox.version>7.1.0</lib.woodstox.version>
+        <lib.woodstox.version>7.1.1</lib.woodstox.version>
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.17</lib.log4j-over-slf4j.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>6.6.1</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>6.8.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
 
         <!-- CycloneDX CLI -->
@@ -621,7 +621,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.5.1</version>
                 <executions>
                     <execution>
                         <id>merge-services-bom</id>
@@ -736,7 +736,7 @@
             <plugin>
                 <groupId>org.eclipse.jetty.ee10</groupId>
                 <artifactId>jetty-ee10-maven-plugin</artifactId>
-                <version>12.0.21</version>
+                <version>12.0.22</version>
                 <configuration>
                     <webApp>
                         <!-- Disable classpath scanning. -->

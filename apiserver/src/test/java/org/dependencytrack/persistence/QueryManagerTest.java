@@ -21,7 +21,6 @@ package org.dependencytrack.persistence;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
-import alpine.server.auth.PasswordService;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
@@ -100,7 +99,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
     public void testGetEffectivePermissions() {
         var ldapUser = qm.createLdapUser("ldapuser");
         var mgdUser = qm.createManagedUser("mgduser", "mgduser", "mgduser@localhost",
-                new String(PasswordService.createHash("mgduser".toCharArray())), true, false, false);
+                TEST_PASSWORD_HASH, true, false, false);
         var oidcUser = qm.createOidcUser("oidcuser");
 
         BiFunction<String, List<Permissions>, Team> teamCreator = (name, permissions) -> {

@@ -69,6 +69,9 @@
                             <goal>report-aggregate</goal>
                         </goals>
                         <configuration>
+                            <excludes>
+                                <exclude>org/dependencytrack/dev/**/*</exclude>
+                            </excludes>
                             <formats>
                                 <format>HTML</format>
                                 <format>XML</format>
