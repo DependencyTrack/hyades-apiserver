@@ -37,6 +37,7 @@ import alpine.server.auth.OidcAuthenticationService;
 import alpine.server.auth.PasswordService;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -183,6 +184,7 @@ public class UserResource extends AlpineResource {
             final KeyManager km = KeyManager.getInstance();
             final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
             final String token = jwt.createToken(principal, permissions);
+
             return Response.ok(token).build();
         } catch (AlpineAuthenticationException e) {
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized OpenID Connect login attempt");
@@ -209,7 +211,7 @@ public class UserResource extends AlpineResource {
     })
     @AuthenticationNotRequired
     public Response forceChangePassword(@FormParam("username") String username, @FormParam("password") String password,
-            @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
+                                        @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
         final Authenticator auth = new Authenticator(username, password);
         Principal principal;
         try (QueryManager qm = new QueryManager()) {
@@ -222,8 +224,8 @@ public class UserResource extends AlpineResource {
                     throw new AlpineAuthenticationException(e.getCauseType());
                 }
             }
-            if (principal instanceof ManagedUser) {
-                final ManagedUser user = qm.getManagedUser(((ManagedUser) principal).getUsername());
+            if (principal instanceof ManagedUser managedUser) {
+                final ManagedUser user = qm.getManagedUser(managedUser.getUsername());
                 if (StringUtils.isNotBlank(newPassword) && StringUtils.isNotBlank(confirmPassword) && newPassword.equals(confirmPassword)) {
                     if (PasswordService.matches(newPassword.toCharArray(), user)) {
                         super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Existing password is the same as new password. Password not changed. / username: " + username);

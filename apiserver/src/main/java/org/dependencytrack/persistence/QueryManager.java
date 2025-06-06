@@ -478,6 +478,22 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
+     * Get the IDs of the {@link UserProjectRole}s a given {@link Principal} is a member of.
+     *
+     * @return A {@link Set} of {@link UserProjectRole} IDs
+     */
+    protected Set<Long> getRoleIds(final Principal principal, final Project project) {
+        final Query<UserProjectRole> query = pm.newQuery(UserProjectRole.class)
+                .filter("project.id == :projectId && users.contains(:principal)")
+                .setNamedParameters(Map.ofEntries(
+                    Map.entry("principal", principal),
+                    Map.entry("projectId", project.getId())))
+                .result("this.id");
+
+        return Set.copyOf(executeAndCloseResultList(query, Long.class));
+    }
+
+    /**
      * Get the IDs of the {@link Team}s a given {@link Principal} is a member of.
      *
      * @return A {@link Set} of {@link Team} IDs
