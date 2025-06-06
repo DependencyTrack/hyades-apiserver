@@ -20,7 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.model.MappedLdapGroup;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.resources.v1.vo.MappedLdapGroupRequest;
@@ -42,7 +42,7 @@ public class LdapResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(LdapResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     @Test
     public void retrieveLdapGroupsNotEnabledTest() {

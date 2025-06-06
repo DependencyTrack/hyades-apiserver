@@ -420,10 +420,14 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
         useJdbiHandle(request, handle -> handle
                 .addCustomizer(inspectStatement(ctx -> {
                     assertThat(ctx.getRenderedSql()).isEqualToIgnoringWhitespace("""
-                            SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE FALSE
+                            SELECT
+                              1 AS "valueA",
+                              2 AS "valueB"
+                              FROM "PROJECT" 
+                             WHERE HAS_USER_PROJECT_ACCESS("PROJECT"."ID", :projectAclUserId)
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("{}");
+                    assertThat(ctx.getBinding()).hasToString("{named:{projectAclUserId:1}}");
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)

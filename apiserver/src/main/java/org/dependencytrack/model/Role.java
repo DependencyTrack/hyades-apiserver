@@ -99,6 +99,13 @@ public class Role implements Serializable {
     @NotNull
     private UUID uuid;
 
+    public Role() {}
+
+    public Role(String name, Set<Permission> permissions) {
+        this.name = name;
+        this.permissions = permissions;
+    }
+
     public long getId() {
         return id;
     }

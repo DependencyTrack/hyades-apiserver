@@ -1009,31 +1009,30 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public boolean hasAccess(final Principal principal, final Project project) {
-        if (principal == null) {
-            // This is a system request being made (e.g. MetricsUpdateTask, etc) where there isn't a principal
+        if (!isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)
+                || principal == null // System request (e.g. MetricsUpdateTask, etc) where there isn't a principal
+                || request.getEffectivePermissions().contains(Permissions.Constants.ACCESS_MANAGEMENT))
             return true;
-        }
-
-        if (!isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)) {
-            return true;
-        }
-
-        // TODO: After upgrading to Alpine >= 3.2.0, this should become:
-        //   request.getEffectivePermission().contains(Permissions.ACCESS_MANAGEMENT.name())
-        // https://github.com/stevespringett/Alpine/pull/764
-        if (super.hasAccessManagementPermission(principal)) {
-            return true;
-        }
 
         final Set<Long> teamIds = getTeamIds(principal);
-        if (teamIds.isEmpty()) {
+        if (teamIds.isEmpty())
             return false;
+
+        final Query<?> query;
+        switch (principal) {
+            case User user -> {
+                query = pm.newQuery(Query.SQL, "SELECT has_user_project_access(:projectId, :userId)")
+                        .setParameters(project.getId(), user.getId());
+            }
+            case ApiKey apiKey when !teamIds.isEmpty() -> {
+                query = pm.newQuery(Query.SQL, "SELECT has_project_access(:projectId, :teamIds)")
+                        .setParameters(project.getId(), teamIds.toArray(Long[]::new));
+            }
+            default -> {
+                return false;
+            }
         }
 
-        final Query<?> query = pm.newQuery(Query.SQL, "SELECT HAS_PROJECT_ACCESS(:projectId, :teamIds)");
-        query.setNamedParameters(Map.ofEntries(
-                Map.entry("projectId", project.getId()),
-                Map.entry("teamIds", teamIds.toArray(new Long[0]))));
         return executeAndCloseResultUnique(query, Boolean.class);
     }
 

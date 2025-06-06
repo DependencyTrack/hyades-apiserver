@@ -21,7 +21,8 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -118,7 +119,9 @@ public class BomResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(BomResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class)
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
+                    .register(org.dependencytrack.filters.AuthorizationFeature.class)
                     .register(MultiPartFeature.class));
 
     @Rule
