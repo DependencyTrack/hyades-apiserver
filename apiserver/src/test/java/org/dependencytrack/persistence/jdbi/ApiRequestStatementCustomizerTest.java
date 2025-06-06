@@ -343,7 +343,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                 /* principal */ null,
                 /* pagination */ null,
                 /* filter */ null,
-                /* orderBy */ null,
+                /* orderBy */ "valueB",
                 /* orderDirection */ null
         );
 

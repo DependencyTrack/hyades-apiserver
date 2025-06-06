@@ -59,7 +59,7 @@ public class NotSortableExceptionMapperTest extends ResourceTest {
                         {
                           "status": 400,
                           "title": "Field not sortable",
-                          "detail": "Can not sort by Project#foo: The field does not exist"
+                          "detail": "Can not sort by Vulnerability#foo: The field does not exist"
                         }
                         """);
     }
@@ -67,7 +67,7 @@ public class NotSortableExceptionMapperTest extends ResourceTest {
     @Test
     public void testTransientField() {
         final Response response = jersey.target("/")
-                .queryParam("sortName", "bomRef")
+                .queryParam("sortName", "epss")
                 .queryParam("sortOrder", "asc")
                 .request()
                 .get();
@@ -78,7 +78,7 @@ public class NotSortableExceptionMapperTest extends ResourceTest {
                         {
                           "status": 400,
                           "title": "Field not sortable",
-                          "detail": "Can not sort by Project#bomRef: The field is computed and can not be queried or sorted by"
+                          "detail": "Can not sort by Vulnerability#epss: The field is computed and can not be queried or sorted by"
                         }
                         """);
     }
@@ -86,7 +86,7 @@ public class NotSortableExceptionMapperTest extends ResourceTest {
     @Test
     public void testPersistentField() {
         final Response response = jersey.target("/")
-                .queryParam("sortName", "name")
+                .queryParam("sortName", "vulnId")
                 .queryParam("sortOrder", "asc")
                 .request()
                 .get();
@@ -104,15 +104,14 @@ public class NotSortableExceptionMapperTest extends ResourceTest {
         @AuthenticationNotRequired
         public Response get() {
             try (final var qm = new QueryManager(getAlpineRequest())) {
-                final PaginatedResult projects = qm.getProjects();
+                final PaginatedResult vulnerabilities = qm.getVulnerabilities();
                 return Response
                         .status(Response.Status.OK)
-                        .header("X-Total-Count", projects.getTotal())
-                        .entity(projects.getObjects())
+                        .header("X-Total-Count", vulnerabilities.getTotal())
+                        .entity(vulnerabilities.getObjects())
                         .build();
             }
         }
 
     }
-
 }
