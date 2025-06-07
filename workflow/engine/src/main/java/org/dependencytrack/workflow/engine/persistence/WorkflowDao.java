@@ -643,6 +643,18 @@ public final class WorkflowDao {
                 .execute();
     }
 
+    public int truncateActiveRunJournals(final Collection<UUID> runIds) {
+        final Update update = jdbiHandle.createUpdate("""
+                delete from workflow_run_journal
+                 where workflow_run_completed_at is null
+                   and workflow_run_id = any(:runIds)
+                """);
+
+        return update
+                .bindArray("runIds", UUID.class, runIds)
+                .execute();
+    }
+
     public int archiveRunJournals(final Collection<ArchiveWorkflowRunJournalCommand> archiveCommands) {
         final Update update = jdbiHandle.createUpdate("""
                 update workflow_run_journal

@@ -21,6 +21,7 @@ package org.dependencytrack.workflow.engine;
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CompleteRunCommand;
+import org.dependencytrack.workflow.engine.WorkflowCommand.ContinueRunAsNewCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResultCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleSubWorkflowCommand;
@@ -82,6 +83,7 @@ final class WorkflowRunState {
     private Instant updatedAt;
     private Instant startedAt;
     private Instant completedAt;
+    private boolean continuedAsNew;
 
     WorkflowRunState(
             final UUID id,
@@ -188,6 +190,10 @@ final class WorkflowRunState {
         return Optional.ofNullable(completedAt);
     }
 
+    boolean continuedAsNew() {
+        return continuedAsNew;
+    }
+
     void onEvent(final WorkflowEvent event) {
         onEvent(event, true);
     }
@@ -271,17 +277,18 @@ final class WorkflowRunState {
 
     private void executeCommand(final WorkflowCommand command) {
         switch (command) {
-            case CompleteRunCommand completeCommand -> executeCompleteRunCommand(completeCommand);
-            case RecordSideEffectResultCommand sideEffectCommand ->
-                    executeRecordSideEffectResultCommand(sideEffectCommand);
-            case ScheduleActivityCommand activityCommand -> executeScheduleActivityTaskCommand(activityCommand);
-            case ScheduleSubWorkflowCommand subWorkflowCommand -> executeScheduleSubWorkflowCommand(subWorkflowCommand);
-            case ScheduleTimerCommand timerCommand -> executeScheduleTimerCommand(timerCommand);
+            case CompleteRunCommand it -> executeCompleteRunCommand(it);
+            case ContinueRunAsNewCommand it -> executeContinueAsNewCommand(it);
+            case RecordSideEffectResultCommand it -> executeRecordSideEffectResultCommand(it);
+            case ScheduleActivityCommand it -> executeScheduleActivityTaskCommand(it);
+            case ScheduleSubWorkflowCommand it -> executeScheduleSubWorkflowCommand(it);
+            case ScheduleTimerCommand it -> executeScheduleTimerCommand(it);
             default -> throw new IllegalStateException("Unexpected command: " + command);
         }
     }
 
     private void executeCompleteRunCommand(final CompleteRunCommand command) {
+        // If this is a sub-workflow run, ensure the parent run is informed about the outcome.
         if (scheduledEvent.getRunScheduled().hasParentRun()) {
             final ParentWorkflowRun parentRun = scheduledEvent.getRunScheduled().getParentRun();
             final var parentRunId = UUID.fromString(parentRun.getRunId());
@@ -312,6 +319,7 @@ final class WorkflowRunState {
             pendingMessages.add(new WorkflowRunMessage(parentRunId, subWorkflowEventBuilder.build()));
         }
 
+        // Record completion of the run in the journal.
         final var subjectBuilder = RunCompleted.newBuilder()
                 .setStatus(command.status().toProto());
         if (command.customStatus() != null) {
@@ -323,12 +331,46 @@ final class WorkflowRunState {
         if (command.failure() != null) {
             subjectBuilder.setFailure(command.failure());
         }
-
         onEvent(WorkflowEvent.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setRunCompleted(subjectBuilder.build())
                 .build(), /* isNew */ true);
+    }
+
+    private void executeContinueAsNewCommand(ContinueRunAsNewCommand command) {
+        final var newRunScheduledBuilder = RunScheduled.newBuilder()
+                .setWorkflowName(this.workflowName)
+                .setWorkflowVersion(this.workflowVersion);
+        if (command.argument() != null) {
+            newRunScheduledBuilder.setArgument(command.argument());
+        }
+        if (this.concurrencyGroupId != null) {
+            newRunScheduledBuilder.setConcurrencyGroupId(this.concurrencyGroupId);
+        }
+        if (this.priority != null) {
+            newRunScheduledBuilder.setPriority(this.priority);
+        }
+        if (this.labels != null && !this.labels.isEmpty()) {
+            newRunScheduledBuilder.putAllLabels(this.labels);
+        }
+        if (this.scheduledEvent.getRunScheduled().hasParentRun()) {
+            newRunScheduledBuilder.setParentRun(this.scheduledEvent.getRunScheduled().getParentRun());
+        }
+
+        this.continuedAsNew = true;
+        this.journal.clear();
+        this.inbox.clear();
+        this.pendingActivityTaskScheduledEvents.clear();
+        this.pendingTimerElapsedEvents.clear();
+        this.pendingMessages.clear();
+        this.pendingMessages.add(new WorkflowRunMessage(
+                this.id,
+                WorkflowEvent.newBuilder()
+                        .setId(-1)
+                        .setTimestamp(Timestamps.now())
+                        .setRunScheduled(newRunScheduledBuilder)
+                        .build()));
     }
 
     private void executeRecordSideEffectResultCommand(final RecordSideEffectResultCommand command) {

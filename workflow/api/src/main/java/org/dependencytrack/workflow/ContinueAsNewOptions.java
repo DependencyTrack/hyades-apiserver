@@ -16,24 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine;
+package org.dependencytrack.workflow;
 
-public sealed class WorkflowEngineException extends RuntimeException permits
-        NonDeterministicWorkflowException,
-        WorkflowRunBlockedException,
-        WorkflowRunCancelledException,
-        WorkflowRunContinuedAsNewException {
+public record ContinueAsNewOptions<A>(A argument) {
 
-    WorkflowEngineException(final String message) {
-        super(message);
+    public ContinueAsNewOptions() {
+        this(null);
     }
 
-    WorkflowEngineException(
-            final String message,
-            final Throwable cause,
-            final boolean enableSuppression,
-            final boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
+    public ContinueAsNewOptions<A> withArgument(final A argument) {
+        return new ContinueAsNewOptions<>(argument);
     }
 
 }

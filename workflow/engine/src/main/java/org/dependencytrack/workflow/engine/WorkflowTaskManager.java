@@ -125,7 +125,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
         workflowRunState.onEvent(WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
-                .setExecutionStarted(ExecutionStarted.newBuilder().build())
+                .setExecutionStarted(ExecutionStarted.getDefaultInstance())
                 .build());
 
         int eventsAdded = 0;
@@ -141,7 +141,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
                 workflowRunState.onEvent(WorkflowEvent.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
-                        .setRunStarted(RunStarted.newBuilder().build())
+                        .setRunStarted(RunStarted.getDefaultInstance())
                         .build());
                 eventsAdded++;
             }
@@ -171,7 +171,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
         workflowRunState.onEvent(WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
-                .setExecutionCompleted(ExecutionCompleted.newBuilder().build())
+                .setExecutionCompleted(ExecutionCompleted.getDefaultInstance())
                 .build());
 
         try {

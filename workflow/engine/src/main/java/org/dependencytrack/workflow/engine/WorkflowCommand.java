@@ -27,6 +27,7 @@ import java.util.Map;
 sealed interface WorkflowCommand permits
         WorkflowCommand.CancelRunCommand,
         WorkflowCommand.CompleteRunCommand,
+        WorkflowCommand.ContinueRunAsNewCommand,
         WorkflowCommand.RecordSideEffectResultCommand,
         WorkflowCommand.ScheduleActivityCommand,
         WorkflowCommand.ScheduleSubWorkflowCommand,
@@ -43,6 +44,11 @@ sealed interface WorkflowCommand permits
             String customStatus,
             WorkflowPayload result,
             WorkflowFailure failure) implements WorkflowCommand {
+    }
+
+    record ContinueRunAsNewCommand(
+            int eventId,
+            WorkflowPayload argument) implements WorkflowCommand {
     }
 
     record RecordSideEffectResultCommand(
