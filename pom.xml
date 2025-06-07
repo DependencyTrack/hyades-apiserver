@@ -28,6 +28,7 @@
 
     <modules>
         <module>support/liquibase</module>
+        <module>api</module>
         <module>alpine</module>
         <module>proto</module>
         <module>persistence-migration</module>
@@ -135,6 +136,11 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.dependencytrack</groupId>
                 <artifactId>apiserver</artifactId>
@@ -340,6 +346,7 @@
                 <checkstyle.skip>true</checkstyle.skip>
                 <jacoco.skip>true</jacoco.skip>
                 <maven.test.skip>true</maven.test.skip>
+                <spectral.skip>true</spectral.skip>
             </properties>
         </profile>
 
