@@ -18,22 +18,19 @@
  */
 package org.dependencytrack.workflow.engine;
 
-public sealed class WorkflowEngineException extends RuntimeException permits
-        NonDeterministicWorkflowException,
-        WorkflowRunBlockedException,
-        WorkflowRunCancelledException,
-        WorkflowRunContinuedAsNewException {
+import org.dependencytrack.workflow.proto.v1.WorkflowPayload;
 
-    WorkflowEngineException(final String message) {
-        super(message);
+final class WorkflowRunContinuedAsNewException extends WorkflowEngineException {
+
+    private final WorkflowPayload argument;
+
+    WorkflowRunContinuedAsNewException(final WorkflowPayload argument) {
+        super(null, null, false, false);
+        this.argument = argument;
     }
 
-    WorkflowEngineException(
-            final String message,
-            final Throwable cause,
-            final boolean enableSuppression,
-            final boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
+    WorkflowPayload getArgument() {
+        return argument;
     }
 
 }

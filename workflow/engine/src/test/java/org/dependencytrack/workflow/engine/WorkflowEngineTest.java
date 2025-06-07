@@ -20,6 +20,7 @@ package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.workflow.ActivityGroup;
 import org.dependencytrack.workflow.Awaitable;
+import org.dependencytrack.workflow.ContinueAsNewOptions;
 import org.dependencytrack.workflow.WorkflowGroup;
 import org.dependencytrack.workflow.engine.payload.StringPayloadConverter;
 import org.dependencytrack.workflow.engine.persistence.model.ListWorkflowRunsRequest;
@@ -963,6 +964,43 @@ class WorkflowEngineTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SUB_WORKFLOW_RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
+    }
+
+    @Test
+    void shouldContinueAsNew() {
+        engine.register("foo", 1, stringConverter, stringConverter, Duration.ofSeconds(5), ctx -> {
+            final int iteration = ctx.argument().map(Integer::parseInt).orElseThrow();
+            ctx.sideEffect("abc-" + iteration, null, stringConverter, ignored -> "def-" + iteration).await();
+            if (iteration < 3) {
+                ctx.continueAsNew(
+                        new ContinueAsNewOptions<String>()
+                                .withArgument(String.valueOf(iteration + 1)));
+            }
+            return Optional.of(String.valueOf(iteration));
+        });
+
+        engine.mount(new WorkflowGroup("test-group").withWorkflow("foo"));
+
+        final UUID runId = engine.scheduleWorkflowRun(
+                new ScheduleWorkflowRunOptions("foo", 1)
+                        .withArgument("0", stringConverter));
+
+        awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+
+        assertThat(engine.getRunJournal(runId)).satisfiesExactly(
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED), // TODO: Get rid of this.
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
+                entry -> {
+                    assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED);
+                    assertThat(stringConverter.convertFromPayload(entry.getRunScheduled().getArgument())).isEqualTo("3");
+                },
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SIDE_EFFECT_EXECUTED),
+                entry -> {
+                    assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
+                    assertThat(stringConverter.convertFromPayload(entry.getRunCompleted().getResult())).isEqualTo("3");
+                },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
 

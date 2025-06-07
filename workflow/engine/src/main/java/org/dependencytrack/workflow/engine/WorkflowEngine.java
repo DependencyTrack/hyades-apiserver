@@ -574,7 +574,7 @@ public class WorkflowEngine implements Closeable {
         final var suspensionEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
-                .setRunSuspended(RunSuspended.newBuilder().build())
+                .setRunSuspended(RunSuspended.getDefaultInstance())
                 .build();
 
         jdbi.useTransaction(handle -> {
@@ -605,7 +605,7 @@ public class WorkflowEngine implements Closeable {
         final var resumeEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
-                .setRunResumed(RunResumed.newBuilder().build())
+                .setRunResumed(RunResumed.getDefaultInstance())
                 .build();
 
         jdbi.useTransaction(handle -> {
@@ -789,7 +789,6 @@ public class WorkflowEngine implements Closeable {
                 })
                 .toList();
 
-
         final int unlockedEvents = dao.unlockRunInboxEvents(this.config.instanceId(), unlockCommands);
         assert unlockedEvents > 1;
 
@@ -844,6 +843,7 @@ public class WorkflowEngine implements Closeable {
         final var newJournalEntries = new ArrayList<NewWorkflowRunJournalRow>(commands.size() * 2);
         final var newInboxEvents = new ArrayList<NewWorkflowRunInboxRow>(commands.size() * 2);
         final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
+        final var continuedAsNewRunIds = new ArrayList<UUID>();
         final var newActivityTasks = new ArrayList<NewActivityTaskRow>();
         final var nextRunIdByNewConcurrencyGroupId = new HashMap<String, UUID>();
         final var concurrencyGroupsToUpdate = new HashSet<String>();
@@ -867,7 +867,13 @@ public class WorkflowEngine implements Closeable {
             for (final WorkflowRunMessage message : run.pendingWorkflowMessages()) {
                 // If the outbound message is a RunScheduled event, the recipient
                 // workflow run will need to be created first.
-                if (message.event().hasRunScheduled()) {
+                boolean shouldCreateWorkflowRun = message.event().hasRunScheduled();
+
+                // If this is the run re-scheduling itself as part of he "continue as new"
+                // mechanism, no new run needs to be created.
+                shouldCreateWorkflowRun &= !(run.continuedAsNew() && message.recipientRunId().equals(run.id()));
+
+                if (shouldCreateWorkflowRun) {
                     newWorkflowRuns.add(new NewWorkflowRunRow(
                             message.recipientRunId(),
                             /* parentId */ run.id(),
@@ -936,9 +942,17 @@ public class WorkflowEngine implements Closeable {
                                 : null));
             }
 
+            if (run.continuedAsNew()) {
+                continuedAsNewRunIds.add(run.id());
+            }
+
             if (run.status().isTerminal() && run.concurrencyGroupId().isPresent()) {
                 concurrencyGroupsToUpdate.add(run.concurrencyGroupId().get());
             }
+        }
+
+        if (!continuedAsNewRunIds.isEmpty()) {
+            workflowDao.truncateActiveRunJournals(continuedAsNewRunIds);
         }
 
         if (!newJournalEntries.isEmpty()) {
@@ -1153,11 +1167,11 @@ public class WorkflowEngine implements Closeable {
 
             for (final TaskCommand command : commands) {
                 switch (command) {
-                    case AbandonActivityTaskCommand a -> abandonActivityTaskCommands.add(a);
-                    case CompleteActivityTaskCommand c -> completeActivityTaskCommands.add(c);
-                    case FailActivityTaskCommand f -> failActivityTaskCommands.add(f);
-                    case AbandonWorkflowTaskCommand a -> abandonWorkflowTaskCommands.add(a);
-                    case CompleteWorkflowTaskCommand c -> completeWorkflowTaskCommands.add(c);
+                    case AbandonActivityTaskCommand it -> abandonActivityTaskCommands.add(it);
+                    case CompleteActivityTaskCommand it -> completeActivityTaskCommands.add(it);
+                    case FailActivityTaskCommand it -> failActivityTaskCommands.add(it);
+                    case AbandonWorkflowTaskCommand it -> abandonWorkflowTaskCommands.add(it);
+                    case CompleteWorkflowTaskCommand it -> completeWorkflowTaskCommands.add(it);
                 }
             }
 

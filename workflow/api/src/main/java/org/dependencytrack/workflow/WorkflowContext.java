@@ -128,4 +128,13 @@ public interface WorkflowContext<A> {
             PayloadConverter<ER> resultConverter,
             Duration timeout);
 
+    /**
+     * Restart this workflow with a truncated journal.
+     * <p>
+     * May be used to prevent the journal from growing too large.
+     *
+     * @param options Options for the restarted workflow.
+     */
+    void continueAsNew(ContinueAsNewOptions<A> options);
+
 }

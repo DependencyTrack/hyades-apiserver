@@ -24,6 +24,7 @@ import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.workflow.ActivityClient;
 import org.dependencytrack.workflow.ActivityExecutor;
 import org.dependencytrack.workflow.Awaitable;
+import org.dependencytrack.workflow.ContinueAsNewOptions;
 import org.dependencytrack.workflow.RetryPolicy;
 import org.dependencytrack.workflow.WorkflowClient;
 import org.dependencytrack.workflow.WorkflowContext;
@@ -31,6 +32,7 @@ import org.dependencytrack.workflow.WorkflowExecutor;
 import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.ActivityMetadata;
 import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CompleteRunCommand;
+import org.dependencytrack.workflow.engine.WorkflowCommand.ContinueRunAsNewCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResultCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleSubWorkflowCommand;
@@ -409,6 +411,14 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return awaitable;
     }
 
+    @Override
+    public void continueAsNew(final ContinueAsNewOptions<A> options) {
+        assertNotInSideEffect("continueAsNew is not allowed from within a side effect");
+        requireNonNull(options, "options must not be null");
+        throw new WorkflowRunContinuedAsNewException(
+                argumentConverter.convertToPayload(options.argument()));
+    }
+
     WorkflowRunExecutionResult execute() {
         try {
             WorkflowEvent currentEvent;
@@ -423,6 +433,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             }
         } catch (WorkflowRunCancelledException e) {
             cancel(e.getMessage());
+        } catch (WorkflowRunContinuedAsNewException e) {
+            continueAsNew(e.getArgument());
         } catch (Exception e) {
             fail(e);
         }
@@ -766,7 +778,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         }
 
         final int eventId = currentEventId++;
-        pendingCommandByEventId.put(eventId,
+        pendingCommandByEventId.put(
+                eventId,
                 new CompleteRunCommand(
                         eventId,
                         WorkflowRunStatus.CANCELLED,
@@ -783,7 +796,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         }
 
         final int eventId = currentEventId++;
-        pendingCommandByEventId.put(eventId,
+        pendingCommandByEventId.put(
+                eventId,
                 new CompleteRunCommand(
                         eventId,
                         WorkflowRunStatus.COMPLETED,
@@ -792,13 +806,25 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                         /* failure */ null));
     }
 
+    private void continueAsNew(final WorkflowPayload argument) {
+        if (logger().isDebugEnabled()) {
+            logger().debug("Workflow run {}/{} continued as new with argument {}", workflowName, runId, argument);
+        }
+
+        final int eventId = currentEventId++;
+        pendingCommandByEventId.put(
+                eventId,
+                new ContinueRunAsNewCommand(eventId, argument));
+    }
+
     private void fail(final Throwable exception) {
         if (logger().isDebugEnabled()) {
             logger().debug("Workflow run {}/{} failed", workflowName, runId, exception);
         }
 
         final int eventId = currentEventId++;
-        pendingCommandByEventId.put(eventId,
+        pendingCommandByEventId.put(
+                eventId,
                 new CompleteRunCommand(
                         eventId,
                         WorkflowRunStatus.FAILED,
