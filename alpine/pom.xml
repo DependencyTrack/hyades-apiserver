@@ -71,7 +71,6 @@
         <!-- Maven Plugin Versions -->
         <maven.dependency.plugin.version>3.8.1</maven.dependency.plugin.version>
         <maven.shade.plugin.version>3.6.0</maven.shade.plugin.version>
-        <maven.datanucleus.plugin.version>6.0.0-release</maven.datanucleus.plugin.version>
         <maven.uuidgenerator.plugin.version>1.0.1</maven.uuidgenerator.plugin.version>
 
         <!-- Dependency Versions -->
@@ -81,9 +80,6 @@
         <lib.commons.collections4.version>4.5.0</lib.commons.collections4.version>
         <lib.commons.io.version>2.19.0</lib.commons.io.version>
         <lib.commons.lang3.version>3.17.0</lib.commons.lang3.version>
-        <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
-        <lib.datanucleus.version>6.0.11</lib.datanucleus.version>
-        <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
         <lib.h2.version>2.3.232</lib.h2.version>
         <lib.hikaricp.version>6.3.0</lib.hikaricp.version>
         <lib.javassist.version>3.30.2-GA</lib.javassist.version>
@@ -197,33 +193,6 @@
                 <version>${lib.swagger.version}</version>
             </dependency>
             <!-- Persistence -->
-            <dependency>
-                <groupId>org.datanucleus</groupId>
-                <artifactId>javax.jdo</artifactId>
-                <version>${lib.jdo.api.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.datanucleus</groupId>
-                <artifactId>datanucleus-api-jdo</artifactId>
-                <version>${lib.datanucleus-api-jdo.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.datanucleus</groupId>
-                <artifactId>datanucleus-core</artifactId>
-                <version>${lib.datanucleus.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.datanucleus</groupId>
-                <artifactId>datanucleus-rdbms</artifactId>
-                <version>${lib.datanucleus-rdbms.version}</version>
-            </dependency>
-            <!--
-            <dependency>
-                <groupId>org.datanucleus</groupId>
-                <artifactId>datanucleus-jdo-query</artifactId>
-                <version>${lib.datanucleus-jdo-query.version}</version>
-            </dependency>
-            -->
             <dependency>
                 <groupId>com.zaxxer</groupId>
                 <artifactId>HikariCP</artifactId>
@@ -413,16 +382,6 @@
     </prerequisites>
 
     <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.datanucleus</groupId>
-                    <artifactId>datanucleus-maven-plugin</artifactId>
-                    <version>${maven.datanucleus.plugin.version}</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
