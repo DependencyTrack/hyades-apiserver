@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.failure.WorkflowFailureException;
-import org.dependencytrack.workflow.payload.PayloadConverter;
+import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
+import org.dependencytrack.workflow.api.payload.PayloadConverter;
 
 import java.util.Optional;
 import java.util.function.Function;

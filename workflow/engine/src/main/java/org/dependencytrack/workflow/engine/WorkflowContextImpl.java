@@ -21,14 +21,36 @@ package org.dependencytrack.workflow.engine;
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.Timestamp;
 import io.github.resilience4j.core.IntervalFunction;
-import org.dependencytrack.workflow.ActivityClient;
-import org.dependencytrack.workflow.ActivityExecutor;
-import org.dependencytrack.workflow.Awaitable;
-import org.dependencytrack.workflow.ContinueAsNewOptions;
-import org.dependencytrack.workflow.RetryPolicy;
-import org.dependencytrack.workflow.WorkflowClient;
-import org.dependencytrack.workflow.WorkflowContext;
-import org.dependencytrack.workflow.WorkflowExecutor;
+import org.dependencytrack.workflow.api.ActivityClient;
+import org.dependencytrack.workflow.api.ActivityExecutor;
+import org.dependencytrack.workflow.api.Awaitable;
+import org.dependencytrack.workflow.api.ContinueAsNewOptions;
+import org.dependencytrack.workflow.api.RetryPolicy;
+import org.dependencytrack.workflow.api.WorkflowClient;
+import org.dependencytrack.workflow.api.WorkflowContext;
+import org.dependencytrack.workflow.api.WorkflowExecutor;
+import org.dependencytrack.workflow.api.failure.ActivityFailureException;
+import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
+import org.dependencytrack.workflow.api.failure.CancellationFailureException;
+import org.dependencytrack.workflow.api.failure.SideEffectFailureException;
+import org.dependencytrack.workflow.api.failure.SubWorkflowFailureException;
+import org.dependencytrack.workflow.api.payload.PayloadConverter;
+import org.dependencytrack.workflow.api.payload.VoidPayloadConverter;
+import org.dependencytrack.workflow.api.proto.v1.ActivityTaskCompleted;
+import org.dependencytrack.workflow.api.proto.v1.ActivityTaskFailed;
+import org.dependencytrack.workflow.api.proto.v1.ActivityTaskScheduled;
+import org.dependencytrack.workflow.api.proto.v1.RunCancelled;
+import org.dependencytrack.workflow.api.proto.v1.RunResumed;
+import org.dependencytrack.workflow.api.proto.v1.RunScheduled;
+import org.dependencytrack.workflow.api.proto.v1.RunStarted;
+import org.dependencytrack.workflow.api.proto.v1.RunSuspended;
+import org.dependencytrack.workflow.api.proto.v1.SideEffectExecuted;
+import org.dependencytrack.workflow.api.proto.v1.SubWorkflowRunCompleted;
+import org.dependencytrack.workflow.api.proto.v1.SubWorkflowRunFailed;
+import org.dependencytrack.workflow.api.proto.v1.SubWorkflowRunScheduled;
+import org.dependencytrack.workflow.api.proto.v1.TimerElapsed;
+import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
+import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.ActivityMetadata;
 import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CompleteRunCommand;
@@ -37,28 +59,6 @@ import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResul
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleSubWorkflowCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleTimerCommand;
-import org.dependencytrack.workflow.failure.ActivityFailureException;
-import org.dependencytrack.workflow.failure.ApplicationFailureException;
-import org.dependencytrack.workflow.failure.CancellationFailureException;
-import org.dependencytrack.workflow.failure.SideEffectFailureException;
-import org.dependencytrack.workflow.failure.SubWorkflowFailureException;
-import org.dependencytrack.workflow.payload.PayloadConverter;
-import org.dependencytrack.workflow.payload.VoidPayloadConverter;
-import org.dependencytrack.workflow.proto.v1.ActivityTaskCompleted;
-import org.dependencytrack.workflow.proto.v1.ActivityTaskFailed;
-import org.dependencytrack.workflow.proto.v1.ActivityTaskScheduled;
-import org.dependencytrack.workflow.proto.v1.RunCancelled;
-import org.dependencytrack.workflow.proto.v1.RunResumed;
-import org.dependencytrack.workflow.proto.v1.RunScheduled;
-import org.dependencytrack.workflow.proto.v1.RunStarted;
-import org.dependencytrack.workflow.proto.v1.RunSuspended;
-import org.dependencytrack.workflow.proto.v1.SideEffectExecuted;
-import org.dependencytrack.workflow.proto.v1.SubWorkflowRunCompleted;
-import org.dependencytrack.workflow.proto.v1.SubWorkflowRunFailed;
-import org.dependencytrack.workflow.proto.v1.SubWorkflowRunScheduled;
-import org.dependencytrack.workflow.proto.v1.TimerElapsed;
-import org.dependencytrack.workflow.proto.v1.WorkflowEvent;
-import org.dependencytrack.workflow.proto.v1.WorkflowPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -619,7 +619,6 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final var exception = new ActivityFailureException(
                 scheduledEvent.getActivityTaskScheduled().getName(),
-                /* TODO: activityVersion */ -1,
                 FailureConverter.toException(subject.getFailure()));
 
         awaitable.completeExceptionally(exception);

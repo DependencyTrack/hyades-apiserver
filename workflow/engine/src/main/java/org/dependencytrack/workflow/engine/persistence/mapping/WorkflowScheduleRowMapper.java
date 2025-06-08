@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
+import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowScheduleRow;
-import org.dependencytrack.workflow.proto.v1.WorkflowPayload;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;

@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.ActivityContext;
-import org.dependencytrack.workflow.ActivityExecutor;
+import org.dependencytrack.workflow.api.ActivityContext;
+import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
 import org.slf4j.LoggerFactory;
 

@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.payload.PayloadConverter;
-import org.dependencytrack.workflow.proto.v1.WorkflowPayload;
+import org.dependencytrack.workflow.api.payload.PayloadConverter;
+import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 
 import java.util.Map;
 

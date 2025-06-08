@@ -19,30 +19,30 @@
 package org.dependencytrack.workflow.engine;
 
 import com.google.protobuf.DebugFormat;
-import org.dependencytrack.workflow.failure.ActivityFailureException;
-import org.dependencytrack.workflow.failure.ApplicationFailureException;
-import org.dependencytrack.workflow.failure.CancellationFailureException;
-import org.dependencytrack.workflow.failure.SideEffectFailureException;
-import org.dependencytrack.workflow.failure.SubWorkflowFailureException;
-import org.dependencytrack.workflow.failure.WorkflowFailureException;
-import org.dependencytrack.workflow.proto.v1.ActivityFailureDetails;
-import org.dependencytrack.workflow.proto.v1.ApplicationFailureDetails;
-import org.dependencytrack.workflow.proto.v1.CancellationFailureDetails;
-import org.dependencytrack.workflow.proto.v1.SideEffectFailureDetails;
-import org.dependencytrack.workflow.proto.v1.SubWorkflowFailureDetails;
-import org.dependencytrack.workflow.proto.v1.WorkflowFailure;
+import org.dependencytrack.workflow.api.failure.ActivityFailureException;
+import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
+import org.dependencytrack.workflow.api.failure.CancellationFailureException;
+import org.dependencytrack.workflow.api.failure.SideEffectFailureException;
+import org.dependencytrack.workflow.api.failure.SubWorkflowFailureException;
+import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
+import org.dependencytrack.workflow.api.proto.v1.ActivityFailureDetails;
+import org.dependencytrack.workflow.api.proto.v1.ApplicationFailureDetails;
+import org.dependencytrack.workflow.api.proto.v1.CancellationFailureDetails;
+import org.dependencytrack.workflow.api.proto.v1.SideEffectFailureDetails;
+import org.dependencytrack.workflow.api.proto.v1.SubWorkflowFailureDetails;
+import org.dependencytrack.workflow.api.proto.v1.WorkflowFailure;
 
 import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public final class FailureConverter {
+final class FailureConverter {
 
     private FailureConverter() {
     }
 
-    public static WorkflowFailureException toException(final WorkflowFailure failure) {
+    static WorkflowFailureException toException(final WorkflowFailure failure) {
         final WorkflowFailureException cause = failure.hasCause()
                 ? toException(failure.getCause())
                 : null;
@@ -50,7 +50,7 @@ public final class FailureConverter {
         final WorkflowFailureException exception = switch (failure.getFailureDetailsCase()) {
             case ACTIVITY_FAILURE_DETAILS -> {
                 final ActivityFailureDetails details = failure.getActivityFailureDetails();
-                yield new ActivityFailureException(details.getActivityName(), details.getActivityVersion(), cause);
+                yield new ActivityFailureException(details.getActivityName(), cause);
             }
             case APPLICATION_FAILURE_DETAILS -> {
                 final ApplicationFailureDetails details = failure.getApplicationFailureDetails();
@@ -85,7 +85,7 @@ public final class FailureConverter {
         return exception;
     }
 
-    public static WorkflowFailure toFailure(final Throwable throwable) {
+    static WorkflowFailure toFailure(final Throwable throwable) {
         final WorkflowFailure.Builder failureBuilder = WorkflowFailure.newBuilder();
 
         switch (throwable) {
@@ -94,7 +94,6 @@ public final class FailureConverter {
                     .setActivityFailureDetails(
                             ActivityFailureDetails.newBuilder()
                                     .setActivityName(activityException.getActivityName())
-                                    .setActivityVersion(activityException.getActivityVersion())
                                     .build());
             case final ApplicationFailureException applicationException -> failureBuilder
                     .setMessage(applicationException.getOriginalMessage())

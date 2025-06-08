@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.Awaitable;
-import org.dependencytrack.workflow.failure.CancellationFailureException;
-import org.dependencytrack.workflow.failure.WorkflowFailureException;
-import org.dependencytrack.workflow.payload.PayloadConverter;
-import org.dependencytrack.workflow.proto.v1.WorkflowPayload;
+import org.dependencytrack.workflow.api.Awaitable;
+import org.dependencytrack.workflow.api.failure.CancellationFailureException;
+import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
+import org.dependencytrack.workflow.api.payload.PayloadConverter;
+import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 
 import java.util.Optional;
 import java.util.function.Consumer;

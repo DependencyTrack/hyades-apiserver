@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.ActivityCallOptions;
-import org.dependencytrack.workflow.ActivityClient;
-import org.dependencytrack.workflow.Awaitable;
-import org.dependencytrack.workflow.payload.PayloadConverter;
+import org.dependencytrack.workflow.api.ActivityCallOptions;
+import org.dependencytrack.workflow.api.ActivityClient;
+import org.dependencytrack.workflow.api.Awaitable;
+import org.dependencytrack.workflow.api.payload.PayloadConverter;
 
 final class ActivityClientImpl<A, R> implements ActivityClient<A, R> {
 

@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.Awaitable;
-import org.dependencytrack.workflow.WorkflowCallOptions;
-import org.dependencytrack.workflow.WorkflowClient;
-import org.dependencytrack.workflow.payload.PayloadConverter;
+import org.dependencytrack.workflow.api.Awaitable;
+import org.dependencytrack.workflow.api.WorkflowCallOptions;
+import org.dependencytrack.workflow.api.WorkflowClient;
+import org.dependencytrack.workflow.api.payload.PayloadConverter;
 
 import static java.util.Objects.requireNonNull;
 

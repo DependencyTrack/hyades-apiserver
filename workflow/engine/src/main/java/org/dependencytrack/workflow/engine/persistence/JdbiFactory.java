@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
+import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
+import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.persistence.mapping.PolledActivityTaskRowMapper;
 import org.dependencytrack.workflow.engine.persistence.mapping.PolledWorkflowEventRowMapper;
@@ -33,8 +35,6 @@ import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRunRo
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowScheduleRow;
-import org.dependencytrack.workflow.proto.v1.WorkflowEvent;
-import org.dependencytrack.workflow.proto.v1.WorkflowPayload;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.freemarker.FreemarkerEngine;

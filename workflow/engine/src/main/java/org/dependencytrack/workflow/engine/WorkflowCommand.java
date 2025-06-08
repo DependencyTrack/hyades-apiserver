@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.proto.v1.WorkflowFailure;
-import org.dependencytrack.workflow.proto.v1.WorkflowPayload;
+import org.dependencytrack.workflow.api.proto.v1.WorkflowFailure;
+import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 
 import java.time.Instant;
 import java.util.Map;

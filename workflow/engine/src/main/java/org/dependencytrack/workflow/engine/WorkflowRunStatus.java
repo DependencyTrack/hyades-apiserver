@@ -20,12 +20,12 @@ package org.dependencytrack.workflow.engine;
 
 import java.util.Set;
 
-import static org.dependencytrack.workflow.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
-import static org.dependencytrack.workflow.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
-import static org.dependencytrack.workflow.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
-import static org.dependencytrack.workflow.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_PENDING;
-import static org.dependencytrack.workflow.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_RUNNING;
-import static org.dependencytrack.workflow.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_SUSPENDED;
+import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
+import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
+import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
+import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_PENDING;
+import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_RUNNING;
+import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_SUSPENDED;
 
 public enum WorkflowRunStatus {
 
@@ -51,7 +51,7 @@ public enum WorkflowRunStatus {
     }
 
     static WorkflowRunStatus fromProto(
-            final org.dependencytrack.workflow.proto.v1.WorkflowRunStatus protoStatus) {
+            final org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus protoStatus) {
         return switch (protoStatus) {
             case WORKFLOW_RUN_STATUS_PENDING -> PENDING;
             case WORKFLOW_RUN_STATUS_RUNNING -> RUNNING;
@@ -63,7 +63,7 @@ public enum WorkflowRunStatus {
         };
     }
 
-    org.dependencytrack.workflow.proto.v1.WorkflowRunStatus toProto() {
+    org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus toProto() {
         return switch (this) {
             case PENDING -> WORKFLOW_RUN_STATUS_PENDING;
             case RUNNING -> WORKFLOW_RUN_STATUS_RUNNING;

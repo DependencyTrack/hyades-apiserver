@@ -24,15 +24,15 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import org.dependencytrack.workflow.ActivityCallOptions;
-import org.dependencytrack.workflow.ActivityContext;
-import org.dependencytrack.workflow.ActivityExecutor;
-import org.dependencytrack.workflow.ActivityGroup;
-import org.dependencytrack.workflow.WorkflowContext;
-import org.dependencytrack.workflow.WorkflowExecutor;
-import org.dependencytrack.workflow.WorkflowGroup;
-import org.dependencytrack.workflow.annotation.Activity;
-import org.dependencytrack.workflow.annotation.Workflow;
+import org.dependencytrack.workflow.api.ActivityCallOptions;
+import org.dependencytrack.workflow.api.ActivityContext;
+import org.dependencytrack.workflow.api.ActivityExecutor;
+import org.dependencytrack.workflow.api.ActivityGroup;
+import org.dependencytrack.workflow.api.WorkflowContext;
+import org.dependencytrack.workflow.api.WorkflowExecutor;
+import org.dependencytrack.workflow.api.WorkflowGroup;
+import org.dependencytrack.workflow.api.annotation.Activity;
+import org.dependencytrack.workflow.api.annotation.Workflow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,7 +63,7 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
+import static org.dependencytrack.workflow.api.payload.PayloadConverters.voidConverter;
 
 @Disabled
 @Testcontainers

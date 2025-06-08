@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.ActivityExecutor;
-import org.dependencytrack.workflow.WorkflowExecutor;
-import org.dependencytrack.workflow.annotation.Activity;
-import org.dependencytrack.workflow.annotation.Workflow;
-import org.dependencytrack.workflow.payload.PayloadConverter;
+import org.dependencytrack.workflow.api.ActivityExecutor;
+import org.dependencytrack.workflow.api.WorkflowExecutor;
+import org.dependencytrack.workflow.api.annotation.Activity;
+import org.dependencytrack.workflow.api.annotation.Workflow;
+import org.dependencytrack.workflow.api.payload.PayloadConverter;
 
 import java.time.Duration;
 import java.util.HashMap;

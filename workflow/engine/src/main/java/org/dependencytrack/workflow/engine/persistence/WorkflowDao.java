@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
+import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.persistence.model.ArchiveWorkflowRunJournalCommand;
 import org.dependencytrack.workflow.engine.persistence.model.DeleteInboxEventsCommand;
@@ -34,7 +35,6 @@ import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrency
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRowUpdate;
-import org.dependencytrack.workflow.proto.v1.WorkflowEvent;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;

@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
+import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.engine.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.engine.persistence.model.PollActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTaskRow;
-import org.dependencytrack.workflow.proto.v1.WorkflowPayload;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Update;
 

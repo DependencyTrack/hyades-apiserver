@@ -18,21 +18,21 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.ActivityGroup;
-import org.dependencytrack.workflow.Awaitable;
-import org.dependencytrack.workflow.ContinueAsNewOptions;
-import org.dependencytrack.workflow.WorkflowGroup;
+import org.dependencytrack.workflow.api.ActivityGroup;
+import org.dependencytrack.workflow.api.Awaitable;
+import org.dependencytrack.workflow.api.ContinueAsNewOptions;
+import org.dependencytrack.workflow.api.WorkflowGroup;
+import org.dependencytrack.workflow.api.failure.ActivityFailureException;
+import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
+import org.dependencytrack.workflow.api.failure.SubWorkflowFailureException;
+import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
+import org.dependencytrack.workflow.api.payload.PayloadConverter;
+import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.payload.StringPayloadConverter;
 import org.dependencytrack.workflow.engine.persistence.model.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowScheduleRow;
 import org.dependencytrack.workflow.engine.persistence.pagination.Page;
-import org.dependencytrack.workflow.failure.ActivityFailureException;
-import org.dependencytrack.workflow.failure.ApplicationFailureException;
-import org.dependencytrack.workflow.failure.SubWorkflowFailureException;
-import org.dependencytrack.workflow.failure.WorkflowFailureException;
-import org.dependencytrack.workflow.payload.PayloadConverter;
-import org.dependencytrack.workflow.proto.v1.WorkflowEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,11 +54,11 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
-import static org.dependencytrack.workflow.RetryPolicy.defaultRetryPolicy;
-import static org.dependencytrack.workflow.payload.PayloadConverters.voidConverter;
-import static org.dependencytrack.workflow.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
-import static org.dependencytrack.workflow.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
-import static org.dependencytrack.workflow.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
+import static org.dependencytrack.workflow.api.RetryPolicy.defaultRetryPolicy;
+import static org.dependencytrack.workflow.api.payload.PayloadConverters.voidConverter;
+import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
+import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
+import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 
 @Testcontainers
 class WorkflowEngineTest {
@@ -901,13 +901,12 @@ class WorkflowEngineTest {
 
                 assertThat(firstCause.getCause()).satisfies(secondCause -> {
                     assertThat(secondCause).isInstanceOf(ActivityFailureException.class);
-                    assertThat(secondCause.getMessage()).isEqualTo("Activity qux v-1 failed");
+                    assertThat(secondCause.getMessage()).isEqualTo("Activity qux failed");
                     assertThat(secondCause.getStackTrace()).isNotEmpty();
 
                     {
                         final var failure = (ActivityFailureException) secondCause;
                         assertThat(failure.getActivityName()).isEqualTo("qux");
-                        assertThat(failure.getActivityVersion()).isEqualTo(-1);
                     }
 
                     assertThat(secondCause.getCause()).satisfies(thirdCause -> {
