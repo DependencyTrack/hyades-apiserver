@@ -236,33 +236,23 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
     }
 
     public void createReanalyzeSteps(UUID token) {
-        final Transaction trx = pm.currentTransaction();
-        try {
-            trx.begin();
-            Date now = new Date();
+        Date now = new Date();
 
-            WorkflowState vulnAnalysisState = new WorkflowState();
-            vulnAnalysisState.setParent(null);
-            vulnAnalysisState.setToken(token);
-            vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
-            vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
-            vulnAnalysisState.setUpdatedAt(now);
-            WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
+        WorkflowState vulnAnalysisState = new WorkflowState();
+        vulnAnalysisState.setParent(null);
+        vulnAnalysisState.setToken(token);
+        vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
+        vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
+        vulnAnalysisState.setUpdatedAt(now);
+        WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
 
-            WorkflowState policyEvaluationState = new WorkflowState();
-            policyEvaluationState.setParent(vulnAnalysisParent);
-            policyEvaluationState.setToken(token);
-            policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
-            policyEvaluationState.setStatus(WorkflowStatus.PENDING);
-            policyEvaluationState.setUpdatedAt(now);
-            pm.makePersistent(policyEvaluationState);
-
-            trx.commit();
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
+        WorkflowState policyEvaluationState = new WorkflowState();
+        policyEvaluationState.setParent(vulnAnalysisParent);
+        policyEvaluationState.setToken(token);
+        policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
+        policyEvaluationState.setStatus(WorkflowStatus.PENDING);
+        policyEvaluationState.setUpdatedAt(now);
+        pm.makePersistent(policyEvaluationState);
     }
 
     public void createWorkflowSteps(UUID token) {

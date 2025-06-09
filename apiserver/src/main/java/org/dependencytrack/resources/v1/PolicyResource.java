@@ -30,15 +30,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Policy;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.openapi.PaginatedApi;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -50,6 +41,15 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Policy;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+
 import java.util.List;
 
 /**
@@ -144,23 +144,25 @@ public class PolicyResource extends AbstractApiResource {
         );
 
         try (QueryManager qm = new QueryManager()) {
-            Policy policy = qm.getPolicy(StringUtils.trimToNull(jsonPolicy.getName()));
-            if (policy == null) {
-                Policy.Operator operator = jsonPolicy.getOperator();
-                if (operator == null) {
-                    operator = Policy.Operator.ANY;
+            return qm.callInTransaction(() -> {
+                Policy policy = qm.getPolicy(StringUtils.trimToNull(jsonPolicy.getName()));
+                if (policy == null) {
+                    Policy.Operator operator = jsonPolicy.getOperator();
+                    if (operator == null) {
+                        operator = Policy.Operator.ANY;
+                    }
+                    Policy.ViolationState violationState = jsonPolicy.getViolationState();
+                    if (violationState == null) {
+                        violationState = Policy.ViolationState.INFO;
+                    }
+                    policy = qm.createPolicy(
+                            StringUtils.trimToNull(jsonPolicy.getName()),
+                            operator, violationState, jsonPolicy.isOnlyLatestProjectVersion());
+                    return Response.status(Response.Status.CREATED).entity(policy).build();
+                } else {
+                    return Response.status(Response.Status.CONFLICT).entity("A policy with the specified name already exists.").build();
                 }
-                Policy.ViolationState violationState = jsonPolicy.getViolationState();
-                if (violationState == null) {
-                    violationState = Policy.ViolationState.INFO;
-                }
-                policy = qm.createPolicy(
-                        StringUtils.trimToNull(jsonPolicy.getName()),
-                        operator, violationState, jsonPolicy.isOnlyLatestProjectVersion());
-                return Response.status(Response.Status.CREATED).entity(policy).build();
-            } else {
-                return Response.status(Response.Status.CONFLICT).entity("A policy with the specified name already exists.").build();
-            }
+            });
         }
     }
 
@@ -187,18 +189,20 @@ public class PolicyResource extends AbstractApiResource {
                 validator.validateProperty(jsonPolicy, "name")
         );
         try (QueryManager qm = new QueryManager()) {
-            Policy policy = qm.getObjectByUuid(Policy.class, jsonPolicy.getUuid());
-            if (policy != null) {
-                policy.setName(StringUtils.trimToNull(jsonPolicy.getName()));
-                policy.setOperator(jsonPolicy.getOperator());
-                policy.setViolationState(jsonPolicy.getViolationState());
-                policy.setIncludeChildren(jsonPolicy.isIncludeChildren());
-                policy.setOnlyLatestProjectVersion(jsonPolicy.isOnlyLatestProjectVersion());
-                policy = qm.persist(policy);
-                return Response.ok(policy).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The policy could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                Policy policy = qm.getObjectByUuid(Policy.class, jsonPolicy.getUuid());
+                if (policy != null) {
+                    policy.setName(StringUtils.trimToNull(jsonPolicy.getName()));
+                    policy.setOperator(jsonPolicy.getOperator());
+                    policy.setViolationState(jsonPolicy.getViolationState());
+                    policy.setIncludeChildren(jsonPolicy.isIncludeChildren());
+                    policy.setOnlyLatestProjectVersion(jsonPolicy.isOnlyLatestProjectVersion());
+                    policy = qm.persist(policy);
+                    return Response.ok(policy).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The policy could not be found.").build();
+                }
+            });
         }
     }
 
@@ -220,13 +224,15 @@ public class PolicyResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the policy to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Policy policy = qm.getObjectByUuid(Policy.class, uuid);
-            if (policy != null) {
-                qm.deletePolicy(policy);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final Policy policy = qm.getObjectByUuid(Policy.class, uuid);
+                if (policy != null) {
+                    qm.deletePolicy(policy);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy could not be found.").build();
+                }
+            });
         }
     }
 
@@ -259,22 +265,24 @@ public class PolicyResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the project to add to the rule", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Policy policy = qm.getObjectByUuid(Policy.class, policyUuid);
-            if (policy == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The policy could not be found.").build();
-            }
-            final Project project = qm.getObjectByUuid(Project.class, projectUuid);
-            if (project == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
-            requireAccess(qm, project);
-            final List<Project> projects = policy.getProjects();
-            if (projects != null && !projects.contains(project)) {
-                policy.getProjects().add(project);
-                qm.persist(policy);
-                return Response.ok(policy).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
+            return qm.callInTransaction(() -> {
+                final Policy policy = qm.getObjectByUuid(Policy.class, policyUuid);
+                if (policy == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The policy could not be found.").build();
+                }
+                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+                if (project == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+                }
+                requireAccess(qm, project);
+                final List<Project> projects = policy.getProjects();
+                if (projects != null && !projects.contains(project)) {
+                    policy.getProjects().add(project);
+                    qm.persist(policy);
+                    return Response.ok(policy).build();
+                }
+                return Response.status(Response.Status.NOT_MODIFIED).build();
+            });
         }
     }
 
@@ -307,22 +315,24 @@ public class PolicyResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the project to remove from the policy", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Policy policy = qm.getObjectByUuid(Policy.class, policyUuid);
-            if (policy == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The policy could not be found.").build();
-            }
-            final Project project = qm.getObjectByUuid(Project.class, projectUuid);
-            if (project == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
-            requireAccess(qm, project);
-            final List<Project> projects = policy.getProjects();
-            if (projects != null && projects.contains(project)) {
-                policy.getProjects().remove(project);
-                qm.persist(policy);
-                return Response.ok(policy).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
+            return qm.callInTransaction(() -> {
+                final Policy policy = qm.getObjectByUuid(Policy.class, policyUuid);
+                if (policy == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The policy could not be found.").build();
+                }
+                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+                if (project == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+                }
+                requireAccess(qm, project);
+                final List<Project> projects = policy.getProjects();
+                if (projects != null && projects.contains(project)) {
+                    policy.getProjects().remove(project);
+                    qm.persist(policy);
+                    return Response.ok(policy).build();
+                }
+                return Response.status(Response.Status.NOT_MODIFIED).build();
+            });
         }
     }
 }

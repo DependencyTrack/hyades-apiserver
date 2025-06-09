@@ -62,6 +62,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.datanucleus.PropertyNames.PROPERTY_RETAIN_VALUES;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 
 /**
@@ -216,18 +217,20 @@ public class TeamResource extends AlpineResource {
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteTeam(Team jsonTeam) {
         try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.getObjectByUuid(Team.class, jsonTeam.getUuid(), Team.FetchGroup.ALL.name());
-            if (team != null) {
-                String teamName = team.getName();
-                try (final Handle jdbiHandle = openJdbiHandle()) {
-                    final var teamDao = jdbiHandle.attach(TeamDao.class);
-                    teamDao.deleteTeam(team.getId());
+            return qm.callInTransaction(() -> {
+                final Team team = qm.getObjectByUuid(Team.class, jsonTeam.getUuid(), Team.FetchGroup.ALL.name());
+                if (team != null) {
+                    String teamName = team.getName();
+                    try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
+                        final var teamDao = jdbiHandle.attach(TeamDao.class);
+                        teamDao.deleteTeam(team.getId());
+                    }
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Team deleted: " + teamName);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
                 }
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Team deleted: " + teamName);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
-            }
+            });
         }
     }
 
@@ -394,21 +397,23 @@ public class TeamResource extends AlpineResource {
             @Parameter(description = "The public ID for the API key or for Legacy the full Key to delete", required = true)
             @PathParam("publicIdOrKey") String publicIdOrKey) {
         try (QueryManager qm = new QueryManager()) {
-            ApiKey apiKey = qm.getApiKeyByPublicId(publicIdOrKey);
-            if (apiKey == null) {
-                try {
-                    final ApiKey deocdedApiKey = ApiKeyDecoder.decode(publicIdOrKey);
-                    apiKey = qm.getApiKeyByPublicId(deocdedApiKey.getPublicId());
-                } catch (InvalidApiKeyFormatException e) {
-                    LOGGER.debug("Failed to decode value as API key", e);
+            return qm.callInTransaction(() -> {
+                ApiKey apiKey = qm.getApiKeyByPublicId(publicIdOrKey);
+                if (apiKey == null) {
+                    try {
+                        final ApiKey deocdedApiKey = ApiKeyDecoder.decode(publicIdOrKey);
+                        apiKey = qm.getApiKeyByPublicId(deocdedApiKey.getPublicId());
+                    } catch (InvalidApiKeyFormatException e) {
+                        LOGGER.debug("Failed to decode value as API key", e);
+                    }
                 }
-            }
-            if (apiKey != null) {
-                qm.delete(apiKey);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The API key could not be found.").build();
-            }
+                if (apiKey != null) {
+                    qm.delete(apiKey);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The API key could not be found.").build();
+                }
+            });
         }
     }
 

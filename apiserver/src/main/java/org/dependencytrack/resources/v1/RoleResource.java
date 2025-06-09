@@ -138,20 +138,22 @@ public class RoleResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE })
     public Response createRole(@Valid CreateRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            if (qm.getRoleByName(request.name()) != null)
-                return Response.status(Response.Status.CONFLICT)
-                        .entity(String.format("Role '%s' already exists", request.name()))
-                        .build();
+            return qm.callInTransaction(() -> {
+                if (qm.getRoleByName(request.name()) != null)
+                    return Response.status(Response.Status.CONFLICT)
+                            .entity(String.format("Role '%s' already exists", request.name()))
+                            .build();
 
-            final Role role = qm.createRole(request.name(),
-                    qm.getPermissionsByName(request.permissions()
-                            .stream()
-                            .map(Permissions::name)
-                            .toList()));
+                final Role role = qm.createRole(request.name(),
+                        qm.getPermissionsByName(request.permissions()
+                                .stream()
+                                .map(Permissions::name)
+                                .toList()));
 
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role created: " + role.getName());
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role created: " + role.getName());
 
-            return Response.status(Response.Status.CREATED).entity(role).build();
+                return Response.status(Response.Status.CREATED).entity(role).build();
+            });
         }
     }
 
@@ -171,13 +173,15 @@ public class RoleResource extends AlpineResource {
         failOnValidationError(super.getValidator().validateProperty(jsonRole, "name"));
 
         try (QueryManager qm = new QueryManager()) {
-            Role role = qm.updateRole(jsonRole);
-            if (role == null)
-                return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
+            return qm.callInTransaction(() -> {
+                Role role = qm.updateRole(jsonRole);
+                if (role == null)
+                    return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
 
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role updated: " + role.getName());
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role updated: " + role.getName());
 
-            return Response.ok(role).build();
+                return Response.ok(role).build();
+            });
         }
     }
 
@@ -200,15 +204,18 @@ public class RoleResource extends AlpineResource {
                 schema = @Schema(type = "string", format = "uuid"),
                 required = true) @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Role role = qm.getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
-            if (role == null)
-                return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
+            return qm.callInTransaction(() -> {
+                final Role role = qm.getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
+                final var roleToDelete = role.getName();
+                if (role == null)
+                    return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
 
-            qm.delete(role);
+                qm.delete(role);
 
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role deleted: " + role.getName());
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role deleted: " + roleToDelete);
 
-            return Response.noContent().build();
+                return Response.noContent().build();
+            });
         }
     }
 

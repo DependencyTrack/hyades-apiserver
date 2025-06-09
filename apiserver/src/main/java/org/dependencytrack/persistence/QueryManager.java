@@ -90,7 +90,6 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
-import org.dependencytrack.proto.vulnanalysis.v1.ScanStatus;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
@@ -1473,44 +1472,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public List<RepositoryMetaComponent> getRepositoryMetaComponents(final List<RepositoryQueryManager.RepositoryMetaComponentSearch> list) {
         return getRepositoryQueryManager().getRepositoryMetaComponents(list);
-    }
-
-    /**
-     * Create a new {@link VulnerabilityScan} record.
-     * <p>
-     * This method expects that access to the {@link VulnerabilityScan} table is serialized
-     * through Kafka events, keyed by the scan's token. This assumption allows for optimistic
-     * locking to be used.
-     *
-     * @param scanToken       The token that uniquely identifies the scan for clients
-     * @param expectedResults Number of expected {@link ScanStatus #SCAN_STATUS_COMPLETE} events for this scan
-     * @return The created {@link VulnerabilityScan}
-     */
-    public VulnerabilityScan createVulnerabilityScan(final VulnerabilityScan.TargetType targetType,
-                                                     final UUID targetIdentifier, final UUID scanToken,
-                                                     final int expectedResults) {
-        final Transaction trx = pm.currentTransaction();
-        trx.setOptimistic(true);
-        try {
-            trx.begin();
-            final var scan = new VulnerabilityScan();
-            scan.setToken(scanToken);
-            scan.setTargetType(targetType);
-            scan.setTargetIdentifier(targetIdentifier);
-            scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
-            scan.setFailureThreshold(0.05);
-            final var startDate = new Date();
-            scan.setStartedAt(startDate);
-            scan.setUpdatedAt(startDate);
-            scan.setExpectedResults(expectedResults);
-            pm.makePersistent(scan);
-            trx.commit();
-            return scan;
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
     }
 
     /**
