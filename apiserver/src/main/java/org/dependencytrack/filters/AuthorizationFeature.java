@@ -18,8 +18,9 @@
  */
 package org.dependencytrack.filters;
 
+import org.dependencytrack.resources.v1.filters.ProjectAccessRequired;
+
 import alpine.Config;
-import alpine.server.auth.DisableAuthorization;
 import alpine.server.auth.PermissionRequired;
 
 import jakarta.ws.rs.container.DynamicFeature;
@@ -45,7 +46,7 @@ public class AuthorizationFeature implements DynamicFeature {
     @Override
     public void configure(ResourceInfo resourceInfo, FeatureContext context) {
         if (ENFORCE_AUTHENTICATION && ENFORCE_AUTHORIZATION && resourceInfo.getResourceMethod()
-                .isAnnotationPresent(DisableAuthorization.class))
+                .isAnnotationPresent(ProjectAccessRequired.class))
             context.register(AuthorizationFilter.class);
     }
 

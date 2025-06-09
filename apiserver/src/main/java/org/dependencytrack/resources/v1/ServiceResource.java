@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.persistence.PaginatedResult;
-import alpine.server.auth.DisableAuthorization;
 import alpine.server.auth.PermissionRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -39,6 +38,7 @@ import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ServiceComponentDao;
+import org.dependencytrack.resources.v1.filters.ProjectAccessRequired;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.jdbi.v3.core.Handle;
@@ -94,7 +94,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @DisableAuthorization
+    @ProjectAccessRequired
     public Response getAllServices(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                    @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
@@ -129,7 +129,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The service could not be found")
     })
-    @DisableAuthorization
+    @ProjectAccessRequired
     public Response getServiceByUuid(
             @Parameter(description = "The UUID of the service to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

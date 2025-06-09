@@ -19,9 +19,9 @@
 package org.dependencytrack.filters;
 
 import alpine.common.logging.Logger;
-import alpine.server.auth.DisableAuthorization;
 
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.filters.ProjectAccessRequired;
 import org.glassfish.jersey.server.ContainerRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
@@ -55,7 +55,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     @Override
     public void filter(ContainerRequestContext requestContext) {
         if (!(requestContext instanceof ContainerRequest)
-                || resourceInfo.getResourceMethod().getDeclaredAnnotation(DisableAuthorization.class) == null)
+                || !resourceInfo.getResourceMethod().isAnnotationPresent(ProjectAccessRequired.class))
             return;
 
         final Principal principal = (Principal) requestContext.getProperty("Principal");

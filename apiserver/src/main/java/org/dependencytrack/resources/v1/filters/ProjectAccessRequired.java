@@ -1,5 +1,5 @@
 /*
- * This file is part of Alpine.
+ * This file is part of Dependency-Track.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,12 @@
  * limitations under the License.
  *
  * SPDX-License-Identifier: Apache-2.0
- * Copyright (c) Steve Springett. All Rights Reserved.
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package alpine.server.auth;
+package org.dependencytrack.resources.v1.filters;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -32,9 +31,8 @@ import java.lang.annotation.Target;
  * @author Jonathan Howard
  * @since 5.6.0
  */
-@Inherited
 @Retention(value = RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 @Documented
-public @interface DisableAuthorization {
+public @interface ProjectAccessRequired {
 }
