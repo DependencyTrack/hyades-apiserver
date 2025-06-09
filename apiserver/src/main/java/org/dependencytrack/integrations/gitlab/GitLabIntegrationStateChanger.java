@@ -18,9 +18,6 @@
  */
 package org.dependencytrack.integrations.gitlab;
 
-import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_API_KEY;
-import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +26,7 @@ import java.util.Objects;
 
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
+import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.persistence.QueryManager;
 
@@ -42,7 +40,6 @@ import alpine.security.crypto.DataEncryption;
 public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
 
     private static final Logger LOGGER = Logger.getLogger(GitLabIntegrationStateChanger.class);
-    private static final String INTEGRATIONS_GROUP = GITLAB_ENABLED.getGroupName();
     private static final String DEFAULT_TEAM = "GitLab Users";
     private final Map<String, Permission> PERMISSIONS_MAP = new HashMap<>();
 
@@ -60,6 +57,7 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
         try {
             if (isEnabled) {
                 LOGGER.info("Enabling GitLab integration");
+                setConfigProperty(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED, "true");
                 createGitLabRoles();
                 createGitLabDefaultTeam();
 
@@ -89,12 +87,8 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
             LOGGER.info("Created GitLab default user team");
 
             final ApiKey apiKey = qm.createApiKey(team);
-            final ConfigProperty property = qm.getConfigProperty(
-                    GITLAB_API_KEY.getGroupName(),
-                    GITLAB_API_KEY.getPropertyName());
 
-            property.setPropertyValue(DataEncryption.encryptAsString(apiKey.getKey()));
-            qm.persist(property);
+            setConfigProperty(ConfigPropertyConstants.GITLAB_API_KEY, DataEncryption.encryptAsString(apiKey.getKey()));
         } catch (Exception ex) {
             LOGGER.error("An error occurred while creating GitLab default user team", ex);
             throw new RuntimeException("Failed to create default team for GitLab users", ex);
@@ -136,12 +130,7 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
             qm.delete(team);
             LOGGER.info("Removed default GitLab team");
 
-            final ConfigProperty property = qm.getConfigProperty(
-                    GITLAB_API_KEY.getGroupName(),
-                    GITLAB_API_KEY.getPropertyName());
-
-            property.setPropertyValue(null);
-            qm.persist(property);
+            setConfigProperty(ConfigPropertyConstants.GITLAB_API_KEY, null);
         } catch (Exception ex) {
             LOGGER.error("An error occurred while removing GitLab team", ex);
             throw new RuntimeException("Failed to remove GitLab team", ex);
@@ -177,6 +166,13 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
         for (Permission permission : allPermissions) {
             PERMISSIONS_MAP.put(permission.getName(), permission);
         }
+    }
+
+    private void setConfigProperty(ConfigPropertyConstants cpc, String value) {
+        final ConfigProperty property = qm.getConfigProperty(cpc.getGroupName(), cpc.getPropertyName());
+        property.setPropertyValue(value);
+
+        qm.persist(property);
     }
 
     public Map<String, Permission> getPermissionsMap() {
