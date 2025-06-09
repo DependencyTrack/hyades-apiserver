@@ -99,13 +99,6 @@
                                 <jooq>
                                     <generator>
                                         <database>
-                                            <schemaVersionProvider>
-                                                select id
-                                                from databasechangelog
-                                                where id !~ '(function_|procedure_)'
-                                                order by dateexecuted desc
-                                                limit 1
-                                            </schemaVersionProvider>
                                             <includes>.*</includes>
                                             <excludes>
                                                 databasechangelog
