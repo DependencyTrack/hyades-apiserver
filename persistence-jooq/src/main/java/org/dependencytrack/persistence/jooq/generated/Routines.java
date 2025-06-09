@@ -13,7 +13,6 @@ import org.dependencytrack.persistence.jooq.generated.routines.CalcRiskScore;
 import org.dependencytrack.persistence.jooq.generated.routines.HasProjectAccess;
 import org.dependencytrack.persistence.jooq.generated.routines.JsonbVulnAliases;
 import org.dependencytrack.persistence.jooq.generated.routines.RecalcUserProjectEffectivePermissions;
-import org.dependencytrack.persistence.jooq.generated.routines.RecalcUserProjectRoleEffectivePermissions;
 import org.dependencytrack.persistence.jooq.generated.routines.UpdateComponentMetrics;
 import org.dependencytrack.persistence.jooq.generated.routines.UpdatePortfolioMetrics;
 import org.dependencytrack.persistence.jooq.generated.routines.UpdateProjectMetrics;
@@ -195,19 +194,6 @@ public class Routines {
         , Long[] projectIds
     ) {
         RecalcUserProjectEffectivePermissions p = new RecalcUserProjectEffectivePermissions();
-        p.setProjectIds(projectIds);
-
-        p.execute(configuration);
-    }
-
-    /**
-     * Call <code>recalc_user_project_role_effective_permissions</code>
-     */
-    public static void recalcUserProjectRoleEffectivePermissions(
-          Configuration configuration
-        , Long[] projectIds
-    ) {
-        RecalcUserProjectRoleEffectivePermissions p = new RecalcUserProjectRoleEffectivePermissions();
         p.setProjectIds(projectIds);
 
         p.execute(configuration);

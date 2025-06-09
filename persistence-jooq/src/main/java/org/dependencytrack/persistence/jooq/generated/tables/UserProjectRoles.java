@@ -11,6 +11,7 @@ import java.util.List;
 import javax.annotation.processing.Generated;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
+import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Role.RolePath;
@@ -19,6 +20,8 @@ import org.dependencytrack.persistence.jooq.generated.tables.records.UserProject
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Identity;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -52,7 +55,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class UserProjectRoles extends TableImpl<UserProjectRolesRecord> {
 
-    private static final long serialVersionUID = 1709797821;
+    private static final long serialVersionUID = 155094621;
 
     /**
      * The reference instance of <code>USER_PROJECT_ROLES</code>
@@ -66,6 +69,11 @@ public class UserProjectRoles extends TableImpl<UserProjectRolesRecord> {
     public Class<UserProjectRolesRecord> getRecordType() {
         return UserProjectRolesRecord.class;
     }
+
+    /**
+     * The column <code>USER_PROJECT_ROLES.ID</code>.
+     */
+    public final TableField<UserProjectRolesRecord, Long> id = createField(DSL.name("ID"), SQLDataType.BIGINT.nullable(false).identity(true), this, "");
 
     /**
      * The column <code>USER_PROJECT_ROLES.USER_ID</code>.
@@ -128,7 +136,7 @@ public class UserProjectRoles extends TableImpl<UserProjectRolesRecord> {
     )
     public static class UserProjectRolesPath extends UserProjectRoles implements Path<UserProjectRolesRecord> {
 
-        private static final long serialVersionUID = 1709797821;
+        private static final long serialVersionUID = 155094621;
         public <O extends Record> UserProjectRolesPath(Table<O> path, ForeignKey<O, UserProjectRolesRecord> childPath, InverseForeignKey<O, UserProjectRolesRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -155,6 +163,16 @@ public class UserProjectRoles extends TableImpl<UserProjectRolesRecord> {
     @Override
     public Schema getSchema() {
         return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.USER_PROJECT_ROLES_IDX);
+    }
+
+    @Override
+    public Identity<UserProjectRolesRecord, Long> getIdentity() {
+        return (Identity<UserProjectRolesRecord, Long>) super.getIdentity();
     }
 
     @Override

@@ -38,6 +38,7 @@ import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponent;
 import org.dependencytrack.persistence.jooq.generated.tables.ServiceComponentsVulnerabilities;
 import org.dependencytrack.persistence.jooq.generated.tables.Tag;
 import org.dependencytrack.persistence.jooq.generated.tables.User;
+import org.dependencytrack.persistence.jooq.generated.tables.UserProjectRoles;
 import org.dependencytrack.persistence.jooq.generated.tables.Vex;
 import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysis;
 import org.dependencytrack.persistence.jooq.generated.tables.ViolationAnalysisComment;
@@ -153,6 +154,7 @@ public class Indexes {
     public static final Index SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_ID_IDX = Internal.createIndex(DSL.name("SERVICECOMPONENTS_VULNERABILITIES_SERVICECOMPONENT_ID_IDX"), ServiceComponentsVulnerabilities.SERVICECOMPONENTS_VULNERABILITIES, new OrderField[] { ServiceComponentsVulnerabilities.SERVICECOMPONENTS_VULNERABILITIES.serviceComponentId }, false);
     public static final Index SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX = Internal.createIndex(DSL.name("SERVICECOMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX"), ServiceComponentsVulnerabilities.SERVICECOMPONENTS_VULNERABILITIES, new OrderField[] { ServiceComponentsVulnerabilities.SERVICECOMPONENTS_VULNERABILITIES.vulnerabilityId }, false);
     public static final Index TAG_NAME_IDX = Internal.createIndex(DSL.name("TAG_NAME_IDX"), Tag.TAG, new OrderField[] { Tag.TAG.name }, true);
+    public static final Index USER_PROJECT_ROLES_IDX = Internal.createIndex(DSL.name("USER_PROJECT_ROLES_IDX"), UserProjectRoles.USER_PROJECT_ROLES, new OrderField[] { UserProjectRoles.USER_PROJECT_ROLES.userId, UserProjectRoles.USER_PROJECT_ROLES.projectId, UserProjectRoles.USER_PROJECT_ROLES.roleId }, true);
     public static final Index USER_USERNAME_IDX = Internal.createIndex(DSL.name("USER_USERNAME_IDX"), User.USER, new OrderField[] { User.USER.username }, true);
     public static final Index VEX_PROJECT_ID_IDX = Internal.createIndex(DSL.name("VEX_PROJECT_ID_IDX"), Vex.VEX, new OrderField[] { Vex.VEX.projectId }, false);
     public static final Index VIOLATIONANALYSIS_COMPONENT_ID_IDX = Internal.createIndex(DSL.name("VIOLATIONANALYSIS_COMPONENT_ID_IDX"), ViolationAnalysis.VIOLATIONANALYSIS, new OrderField[] { ViolationAnalysis.VIOLATIONANALYSIS.componentId }, false);
