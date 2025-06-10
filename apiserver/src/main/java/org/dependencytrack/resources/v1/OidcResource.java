@@ -197,8 +197,8 @@ public class OidcResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
                 final OidcGroup group = qm.getObjectByUuid(OidcGroup.class, uuid);
-                final var groupNameToDelete = group.getName();
                 if (group != null) {
+                    final var groupNameToDelete = group.getName();
                     qm.delete(qm.getMappedOidcGroups(group));
                     qm.delete(group);
                     super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Group deleted: " + groupNameToDelete);
