@@ -21,7 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -44,14 +43,12 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.model.UserProjectRole;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CreateRoleRequest;
-
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.util.List;
@@ -206,14 +203,12 @@ public class RoleResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
                 final Role role = qm.getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
-                final var roleToDelete = role.getName();
-                if (role == null)
+                if (role == null) {
                     return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
-
+                }
+                final var roleToDelete = role.getName();
                 qm.delete(role);
-
                 super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role deleted: " + roleToDelete);
-
                 return Response.noContent().build();
             });
         }
