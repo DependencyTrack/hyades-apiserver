@@ -71,8 +71,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
             new ResourceConfig(ViolationAnalysisResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
-                    .register(AuthorizationFeature.class)
-                    .register(org.dependencytrack.filters.AuthorizationFeature.class));
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void retrieveAnalysisTest() {

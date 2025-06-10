@@ -57,8 +57,7 @@ public class TagResourceTest extends ResourceTest {
             new ResourceConfig(TagResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
-                    .register(AuthorizationFeature.class)
-                    .register(org.dependencytrack.filters.AuthorizationFeature.class));
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void getTagsTest() {

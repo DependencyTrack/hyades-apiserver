@@ -52,8 +52,7 @@ public class MetricsResourceTest extends ResourceTest {
             new ResourceConfig(MetricsResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
-                    .register(AuthorizationFeature.class)
-                    .register(org.dependencytrack.filters.AuthorizationFeature.class));
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void getProjectCurrentMetricsAclTest() {

@@ -121,7 +121,6 @@ public class BomResourceTest extends ResourceTest {
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
                     .register(AuthorizationFeature.class)
-                    .register(org.dependencytrack.filters.AuthorizationFeature.class)
                     .register(MultiPartFeature.class));
 
     @Rule
