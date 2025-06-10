@@ -351,7 +351,7 @@ final class PolicyQueryManager extends QueryManager implements IQueryManager {
             query.setOrdering("timestamp desc, project.name, project.version, component.name, component.version");
         }
         final String queryFilter = String.join(" && ", filterCriteria);
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         result = execute(query, params);
         for (final PolicyViolation violation: result.getList(PolicyViolation.class)) {
             violation.getPolicyCondition().getPolicy(); // force policy to be included since it's not the default
