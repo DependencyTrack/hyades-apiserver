@@ -130,34 +130,34 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
                         .append(" ")
                         .append(ordering.direction() == OrderDirection.ASCENDING ? "ASC" : "DESC");
             }
-        }
 
-        if (!config.orderingAlwaysBy().isBlank() && (ordering.by() == null || !ordering.by().equals(config.orderingAlwaysBy()))) {
-            final String[] alwaysByParts = config.orderingAlwaysBy().split("\\s");
-            if (alwaysByParts.length > 2) {
-                throw new IllegalArgumentException("alwaysBy must consist of no more than two parts");
-            }
+            if (!config.orderingAlwaysBy().isBlank() && (ordering.by() == null || !ordering.by().equals(config.orderingAlwaysBy()))) {
+                final String[] alwaysByParts = config.orderingAlwaysBy().split("\\s");
+                if (alwaysByParts.length > 2) {
+                    throw new IllegalArgumentException("alwaysBy must consist of no more than two parts");
+                }
 
-            final OrderingColumn orderingColumnAlwaysBy = config.orderingAllowedColumn(alwaysByParts[0])
-                    .orElseThrow(() -> new IllegalArgumentException("Ordering by column %s is not allowed; Allowed columns are: %s"
-                            .formatted(alwaysByParts[0], config.orderingAllowedColumns().stream().map(OrderingColumn::name).toList())));
+                final OrderingColumn orderingColumnAlwaysBy = config.orderingAllowedColumn(alwaysByParts[0])
+                        .orElseThrow(() -> new IllegalArgumentException("Ordering by column %s is not allowed; Allowed columns are: %s"
+                                .formatted(alwaysByParts[0], config.orderingAllowedColumns().stream().map(OrderingColumn::name).toList())));
 
-            if (orderingColumnAlwaysBy.queryName() == null) {
-                orderingBuilder
-                        .append(orderingBuilder.isEmpty() ? "ORDER BY \"" : ", \"")
-                        .append(orderingColumnAlwaysBy.name())
-                        .append("\"");
-            } else {
-                orderingBuilder
-                        .append(orderingBuilder.isEmpty() ? "ORDER BY " : ", ")
-                        .append(orderingColumnAlwaysBy.queryName());
-            }
+                if (orderingColumnAlwaysBy.queryName() == null) {
+                    orderingBuilder
+                            .append(orderingBuilder.isEmpty() ? "ORDER BY \"" : ", \"")
+                            .append(orderingColumnAlwaysBy.name())
+                            .append("\"");
+                } else {
+                    orderingBuilder
+                            .append(orderingBuilder.isEmpty() ? "ORDER BY " : ", ")
+                            .append(orderingColumnAlwaysBy.queryName());
+                }
 
-            if (alwaysByParts.length == 2
-                && ("asc".equalsIgnoreCase(alwaysByParts[1]) || "desc".equalsIgnoreCase(alwaysByParts[1]))) {
-                orderingBuilder
-                        .append(" ")
-                        .append(alwaysByParts[1]);
+                if (alwaysByParts.length == 2
+                        && ("asc".equalsIgnoreCase(alwaysByParts[1]) || "desc".equalsIgnoreCase(alwaysByParts[1]))) {
+                    orderingBuilder
+                            .append(" ")
+                            .append(alwaysByParts[1]);
+                }
             }
         }
 

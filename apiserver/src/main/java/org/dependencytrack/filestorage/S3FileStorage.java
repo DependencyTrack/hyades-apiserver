@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
 import com.github.luben.zstd.Zstd;
 import io.minio.GetObjectArgs;
@@ -27,7 +27,7 @@ import io.minio.RemoveObjectArgs;
 import io.minio.errors.ErrorResponseException;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.client.utils.URIBuilder;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +40,7 @@ import java.util.Arrays;
 import java.util.HexFormat;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.storage.FileStorage.requireValidFileName;
+import static org.dependencytrack.filestorage.FileStorage.requireValidFileName;
 
 /**
  * @since 5.6.0

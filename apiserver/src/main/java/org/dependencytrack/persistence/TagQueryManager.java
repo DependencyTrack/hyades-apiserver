@@ -379,7 +379,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
 
             final Query<Project> projectsQuery = pm.newQuery(Project.class);
             final var params = new HashMap<String, Object>(Map.of("uuids", projectUuids));
-            preprocessACLs(projectsQuery, ":uuids.contains(uuid)", params, /* bypass */ false);
+            preprocessACLs(projectsQuery, ":uuids.contains(uuid)", params);
             projectsQuery.setNamedParameters(params);
             final List<Project> projects = executeAndCloseList(projectsQuery);
 
@@ -402,7 +402,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
 
             final Query<Project> projectsQuery = pm.newQuery(Project.class);
             final var params = new HashMap<String, Object>(Map.of("uuids", projectUuids));
-            preprocessACLs(projectsQuery, ":uuids.contains(uuid)", params, /* bypass */ false);
+            preprocessACLs(projectsQuery, ":uuids.contains(uuid)", params);
             projectsQuery.setNamedParameters(params);
             final List<Project> projects = executeAndCloseList(projectsQuery);
 

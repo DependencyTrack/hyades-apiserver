@@ -16,11 +16,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.storage;
+package org.dependencytrack.filestorage;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.dependencytrack.plugin.MockConfigRegistry;
-import org.dependencytrack.proto.storage.v1alpha1.FileMetadata;
+import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,8 +33,8 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.storage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
-import static org.dependencytrack.storage.LocalFileStorageFactory.CONFIG_DIRECTORY;
+import static org.dependencytrack.filestorage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
+import static org.dependencytrack.filestorage.LocalFileStorageFactory.CONFIG_DIRECTORY;
 
 public class LocalFileStorageTest {
 
