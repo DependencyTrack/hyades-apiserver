@@ -77,7 +77,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNullElse;
-import static org.datanucleus.store.rdbms.RDBMSPropertyNames.PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistent;
 import static org.dependencytrack.util.PersistenceUtil.assertPersistentAll;
@@ -107,85 +106,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
 
     /**
      * Returns a list of all projects.
-     *
-     * @return a List of Projects
-     */
-    @Override
-    public PaginatedResult getProjects(final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot, final Team notAssignedToTeam) {
-        final PaginatedResult result;
-        final Query<Project> query = pm.newQuery(Project.class);
-        if (orderBy == null) {
-            query.setOrdering("name asc, version desc, id asc");
-        }
-
-        var filterBuilder = new ProjectQueryFilterBuilder()
-                .excludeInactive(excludeInactive);
-
-        if (onlyRoot) {
-            filterBuilder.excludeChildProjects();
-            query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
-        }
-
-        if(notAssignedToTeam != null) {
-            filterBuilder.notWithTeam(notAssignedToTeam);
-        }
-
-        if (filter != null) {
-            final String filterString = ".*" + filter.toLowerCase() + ".*";
-            final Tag tag = getTagByName(filter.trim());
-
-            if (tag != null) {
-                filterBuilder = filterBuilder.withFuzzyNameOrExactTag(filterString, tag);
-
-            } else {
-                filterBuilder = filterBuilder.withFuzzyName(filterString);
-            }
-        }
-
-        final String queryFilter = filterBuilder.buildFilter();
-        final Map<String, Object> params = filterBuilder.getParams();
-
-        // Disable bulk-fetch due to performance concerns.
-        // https://github.com/DependencyTrack/hyades/issues/1754
-        query.addExtension(PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH, "none");
-
-        preprocessACLs(query, queryFilter, params, false);
-        result = execute(query, params);
-
-        // Compensate for disabled bulk-fetch. Rest assured this hurt to commit.
-        // https://github.com/DependencyTrack/hyades/issues/1754
-        for (final Project project : result.getList(Project.class)) {
-            var ignored = project.getTags();
-        }
-
-        if (!result.getObjects().isEmpty() && includeMetrics) {
-            populateMetrics(result.getList(Project.class));
-        }
-        return result;
-    }
-
-    /**
-     * Returns a list of all projects.
-     *
-     * @return a List of Projects
-     */
-    @Override
-    public PaginatedResult getProjects(final boolean includeMetrics) {
-        return getProjects(includeMetrics, false, false, null);
-    }
-
-    /**
-     * Returns a list of all projects.
-     *
-     * @return a List of Projects
-     */
-    @Override
-    public PaginatedResult getProjects() {
-        return getProjects(false);
-    }
-
-    /**
-     * Returns a list of all projects.
      * This method if designed NOT to provide paginated results.
      *
      * @return a List of Projects
@@ -209,51 +129,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         }
         query.setOrdering("id asc");
         return query.executeList();
-    }
-
-    /**
-     * Returns a list of projects by their name.
-     *
-     * @param name the name of the Projects (required)
-     * @return a List of Project objects
-     */
-    @Override
-    public PaginatedResult getProjects(final String name, final boolean excludeInactive, final boolean onlyRoot, final Team notAssignedToTeam) {
-        final Query<Project> query = pm.newQuery(Project.class);
-        if (orderBy == null) {
-            query.setOrdering("version desc, id asc");
-        }
-
-        final var filterBuilder = new ProjectQueryFilterBuilder()
-                .excludeInactive(excludeInactive)
-                .withName(name);
-
-        if (onlyRoot) {
-            filterBuilder.excludeChildProjects();
-            query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
-        }
-
-        if(notAssignedToTeam != null) {
-            filterBuilder.notWithTeam(notAssignedToTeam);
-        }
-
-        final String queryFilter = filterBuilder.buildFilter();
-        final Map<String, Object> params = filterBuilder.getParams();
-
-        // Disable bulk-fetch due to performance concerns.
-        // https://github.com/DependencyTrack/hyades/issues/1754
-        query.addExtension(PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH, "none");
-
-        preprocessACLs(query, queryFilter, params, false);
-        final PaginatedResult result = execute(query, params);
-
-        // Compensate for disabled bulk-fetch. Rest assured this hurt to commit.
-        // https://github.com/DependencyTrack/hyades/issues/1754
-        for (final Project project : result.getList(Project.class)) {
-            var ignored = project.getTags();
-        }
-
-        return result;
     }
 
     /**
@@ -292,7 +167,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         query.setFilter(queryFilter);
         query.setRange(0, 1);
         final Project project = singleResult(query.executeWithMap(params));
@@ -323,7 +198,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         query.setFilter(queryFilter);
         query.setRange(0, 1);
 
@@ -336,144 +211,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             project.setVersions(getProjectVersions(project));
         }
         return project;
-    }
-
-    /**
-     * Returns a list of projects that are accessible by the specified team.
-     *
-     * @param team the team the has access to Projects
-     * @return a List of Project objects
-     */
-    @Override
-    public PaginatedResult getProjects(final Team team, final boolean excludeInactive, final boolean bypass, final boolean onlyRoot) {
-        final Query<Project> query = pm.newQuery(Project.class);
-        if (orderBy == null) {
-            query.setOrdering("name asc, version desc, id asc");
-        }
-
-        final var filterBuilder = new ProjectQueryFilterBuilder()
-                .excludeInactive(excludeInactive)
-                .withTeam(team);
-
-        if (onlyRoot) {
-            filterBuilder.excludeChildProjects();
-            query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
-        }
-
-        final String queryFilter = filterBuilder.buildFilter();
-        final Map<String, Object> params = filterBuilder.getParams();
-
-        // Disable bulk-fetch due to performance concerns.
-        // https://github.com/DependencyTrack/hyades/issues/1754
-        query.addExtension(PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH, "none");
-
-        preprocessACLs(query, queryFilter, params, bypass);
-        final PaginatedResult result = execute(query, params);
-
-        // Compensate for disabled bulk-fetch. Rest assured this hurt to commit.
-        // https://github.com/DependencyTrack/hyades/issues/1754
-        for (final Project project : result.getList(Project.class)) {
-            var ignored = project.getTags();
-        }
-
-        return result;
-    }
-
-    /**
-     * Returns a paginated result of projects by tag.
-     *
-     * @param tag the tag associated with the Project
-     * @return a List of Projects that contain the tag
-     */
-    @Override
-    public PaginatedResult getProjects(final Tag tag, final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot) {
-        final PaginatedResult result;
-        final Query<Project> query = pm.newQuery(Project.class);
-        if (orderBy == null) {
-            query.setOrdering("name asc, id asc");
-        }
-
-        var filterBuilder = new ProjectQueryFilterBuilder()
-                .excludeInactive(excludeInactive)
-                .withTag(tag);
-
-        if (onlyRoot) {
-            filterBuilder.excludeChildProjects();
-            query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
-        }
-
-        if (filter != null) {
-            final String filterString = ".*" + filter.toLowerCase() + ".*";
-            filterBuilder = filterBuilder.withFuzzyName(filterString);
-        }
-
-        final String queryFilter = filterBuilder.buildFilter();
-        final Map<String, Object> params = filterBuilder.getParams();
-
-        // Disable bulk-fetch due to performance concerns.
-        // https://github.com/DependencyTrack/hyades/issues/1754
-        query.addExtension(PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH, "none");
-
-        preprocessACLs(query, queryFilter, params, false);
-        result = execute(query, params);
-
-        // Compensate for disabled bulk-fetch. Rest assured this hurt to commit.
-        // https://github.com/DependencyTrack/hyades/issues/1754
-        for (final Project project : result.getList(Project.class)) {
-            var ignored = project.getTags();
-        }
-
-        if (!result.getObjects().isEmpty() && includeMetrics) {
-            populateMetrics(result.getList(Project.class));
-        }
-
-        return result;
-    }
-
-    /**
-     * Returns a paginated result of projects by classifier.
-     *
-     * @param classifier the classifier of the Project
-     * @return a List of Projects of the specified classifier
-     */
-    @Override
-    public PaginatedResult getProjects(final Classifier classifier, final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot) {
-        final PaginatedResult result;
-        final Query<Project> query = pm.newQuery(Project.class);
-        if (orderBy == null) {
-            query.setOrdering("name asc, id asc");
-        }
-
-        final var filterBuilder = new ProjectQueryFilterBuilder()
-                .excludeInactive(excludeInactive)
-                .withClassifier(classifier);
-
-        if (onlyRoot) {
-            filterBuilder.excludeChildProjects();
-            query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
-        }
-
-        final String queryFilter = filterBuilder.buildFilter();
-        final Map<String, Object> params = filterBuilder.getParams();
-
-        // Disable bulk-fetch due to performance concerns.
-        // https://github.com/DependencyTrack/hyades/issues/1754
-        query.addExtension(PROPERTY_RDBMS_QUERY_MULTIVALUED_FETCH, "none");
-
-        preprocessACLs(query, queryFilter, params, false);
-        result = execute(query, params);
-
-        // Compensate for disabled bulk-fetch. Rest assured this hurt to commit.
-        // https://github.com/DependencyTrack/hyades/issues/1754
-        for (final Project project : result.getList(Project.class)) {
-            var ignored = project.getTags();
-        }
-
-        if (!result.getObjects().isEmpty() && includeMetrics) {
-            populateMetrics(result.getList(Project.class));
-        }
-
-        return result;
     }
 
     @Override
@@ -1037,10 +774,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         return executeAndCloseResultUnique(query, Boolean.class);
     }
 
-    @Override
-    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
-        if (bypass
-            || principal == null
+    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params) {
+        if (principal == null
             || !isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)
             || hasAccessManagementPermission(principal)) {
             query.setFilter(inputFilter);
@@ -1160,7 +895,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
         result = execute(query, params);
         if (!result.getObjects().isEmpty() && includeMetrics) {
@@ -1185,7 +920,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
         result = execute(query, params);
 
@@ -1217,7 +952,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         result = execute(query, params);
 
         if (!result.getObjects().isEmpty() && includeMetrics) {
@@ -1253,7 +988,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         result = execute(query, params);
 
         result.setObjects(result.getList(Project.class).stream().filter(p -> !isChildOf(p, project.getUuid()) && !p.getUuid().equals(project.getUuid())).toList());
@@ -1289,7 +1024,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final String queryFilter = filterBuilder.buildFilter();
         final Map<String, Object> params = filterBuilder.getParams();
 
-        preprocessACLs(query, queryFilter, params, false);
+        preprocessACLs(query, queryFilter, params);
         result = execute(query, params);
 
         result.setObjects(result.getList(Project.class).stream().filter(p -> !isChildOf(p, project.getUuid()) && !p.getUuid().equals(project.getUuid())).toList());

@@ -49,12 +49,15 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.AclMappingRequest;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing LDAP group mapping requests.
@@ -91,15 +94,16 @@ public class AccessControlResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
     public Response retrieveProjects(@Parameter(description = "The UUID of the team to retrieve mappings for", schema = @Schema(type = "string", format = "uuid"), required = true)
                                      @PathParam("uuid") @ValidUuid String uuid,
-                                     @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
+                                     @Parameter(description = "Optionally excludes inactive projects from being returned")
                                      @QueryParam("excludeInactive") boolean excludeInactive,
-                                     @Parameter(description = "Optionally excludes children projects from being returned", required = false)
+                                     @Parameter(description = "Optionally excludes children projects from being returned")
                                      @QueryParam("onlyRoot") boolean onlyRoot) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Team team = qm.getObjectByUuid(Team.class, uuid);
             if (team != null) {
-                final PaginatedResult result = qm.getProjects(team, excludeInactive, true, onlyRoot);
-                return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
+                final PaginatedResult projectPages = withJdbiHandle(getAlpineRequest(), handle ->
+                        handle.attach(ProjectDao.class).getProjects(null, null, null, team.getName(), null, excludeInactive, onlyRoot, false));
+                return Response.ok(projectPages.getObjects()).header(TOTAL_COUNT_HEADER, projectPages.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team could not be found.").build();
             }

@@ -36,6 +36,21 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.ServerErrorException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
@@ -56,21 +71,6 @@ import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.dependencytrack.resources.v1.vo.ConciseProject;
 import org.jdbi.v3.core.Handle;
 
-import jakarta.validation.Validator;
-import jakarta.ws.rs.ClientErrorException;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.PATCH;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.ServerErrorException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import javax.jdo.FetchGroup;
 import java.security.Principal;
 import java.util.Collection;
@@ -124,25 +124,26 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
-    public Response getProjects(@Parameter(description = "The optional name of the project to query on", required = false)
+    public Response getProjects(@Parameter(description = "The optional name of the project to query on")
                                 @QueryParam("name") String name,
-                                @Parameter(description = "Optionally excludes inactive projects from being returned", required = false)
+                                @Parameter(description = "Optionally excludes inactive projects from being returned")
                                 @QueryParam("excludeInactive") boolean excludeInactive,
-                                @Parameter(description = "Optionally excludes children projects from being returned", required = false)
+                                @Parameter(description = "Optionally excludes children projects from being returned")
                                 @QueryParam("onlyRoot") boolean onlyRoot,
                                 @Parameter(description = "The UUID of the team which projects shall be excluded", schema = @Schema(format = "uuid", type = "string"))
                                 @QueryParam("notAssignedToTeamWithUuid") @ValidUuid String notAssignedToTeamWithUuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            Team notAssignedToTeam = null;
+            Team notAssignedToTeam;
             if (StringUtils.isNotEmpty(notAssignedToTeamWithUuid)) {
                 notAssignedToTeam = qm.getObjectByUuid(Team.class, notAssignedToTeamWithUuid);
                 if (notAssignedToTeam == null) {
                     return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team could not be found.").build();
                 }
             }
-
-            final PaginatedResult result = (name != null) ? qm.getProjects(name, excludeInactive, onlyRoot, notAssignedToTeam) : qm.getProjects(true, excludeInactive, onlyRoot, notAssignedToTeam);
-            return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
+            final PaginatedResult projectPages = withJdbiHandle(getAlpineRequest(), handle ->
+                    (name != null) ? handle.attach(ProjectDao.class).getProjects(name, null, null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot, false)
+                    : handle.attach(ProjectDao.class).getProjects(null, null, null, null, notAssignedToTeamWithUuid, excludeInactive, onlyRoot, true));
+            return Response.ok(projectPages.getObjects()).header(TOTAL_COUNT_HEADER, projectPages.getTotal()).build();
         }
     }
 
@@ -363,11 +364,9 @@ public class ProjectResource extends AbstractApiResource {
             @QueryParam("excludeInactive") boolean excludeInactive,
             @Parameter(description = "Optionally excludes children projects from being returned")
             @QueryParam("onlyRoot") boolean onlyRoot) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final Tag tag = qm.getTagByName(tagString);
-            final PaginatedResult result = qm.getProjects(tag, true, excludeInactive, onlyRoot);
-            return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
-        }
+        final PaginatedResult projectPages = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
+                .getProjects(null, null, tagString, null, null, excludeInactive, onlyRoot, true));
+        return Response.ok(projectPages.getObjects()).header(TOTAL_COUNT_HEADER, projectPages.getTotal()).build();
     }
 
     @GET
@@ -395,10 +394,11 @@ public class ProjectResource extends AbstractApiResource {
             @QueryParam("excludeInactive") boolean excludeInactive,
             @Parameter(description = "Optionally excludes children projects from being returned", required = false)
             @QueryParam("onlyRoot") boolean onlyRoot) {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
+        try {
             final Classifier classifier = Classifier.valueOf(classifierString);
-            final PaginatedResult result = qm.getProjects(classifier, true, excludeInactive, onlyRoot);
-            return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
+            final PaginatedResult projectPages = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
+                    .getProjects(null, classifier.name(), null, null, null, excludeInactive, onlyRoot, true));
+            return Response.ok(projectPages.getObjects()).header(TOTAL_COUNT_HEADER, projectPages.getTotal()).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The classifier type specified is not valid.").build();
         }
