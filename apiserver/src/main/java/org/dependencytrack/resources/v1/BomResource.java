@@ -298,8 +298,10 @@ public class BomResource extends AbstractApiResource {
                     validator.validateProperty(request, "bom")
             );
             try (QueryManager qm = new QueryManager()) {
-                final Project project = qm.getObjectByUuid(Project.class, request.getProject());
-                return process(qm, project, request.getBom());
+                return qm.callInTransaction(() -> {
+                    final Project project = qm.getObjectByUuid(Project.class, request.getProject());
+                    return process(qm, project, request.getBom());
+                });
             }
         } else { // additional behavior added in v3.1.0
             failOnValidationError(
@@ -414,8 +416,10 @@ public class BomResource extends AbstractApiResource {
     ) {
         if (projectUuid != null) { // behavior in v3.0.0
             try (QueryManager qm = new QueryManager()) {
-                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
-                return process(qm, project, artifactParts);
+                return qm.callInTransaction(() -> {
+                    final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+                    return process(qm, project, artifactParts);
+                });
             }
         } else { // additional behavior added in v3.1.0
             try (QueryManager qm = new QueryManager()) {

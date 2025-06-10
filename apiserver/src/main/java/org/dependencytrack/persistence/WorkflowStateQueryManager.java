@@ -27,7 +27,6 @@ import org.dependencytrack.model.WorkflowStep;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import javax.jdo.Transaction;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -236,29 +235,29 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
     }
 
     public void createReanalyzeSteps(UUID token) {
-        Date now = new Date();
+        runInTransaction(() -> {
+            Date now = new Date();
 
-        WorkflowState vulnAnalysisState = new WorkflowState();
-        vulnAnalysisState.setParent(null);
-        vulnAnalysisState.setToken(token);
-        vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
-        vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
-        vulnAnalysisState.setUpdatedAt(now);
-        WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
+            WorkflowState vulnAnalysisState = new WorkflowState();
+            vulnAnalysisState.setParent(null);
+            vulnAnalysisState.setToken(token);
+            vulnAnalysisState.setStep(WorkflowStep.VULN_ANALYSIS);
+            vulnAnalysisState.setStatus(WorkflowStatus.PENDING);
+            vulnAnalysisState.setUpdatedAt(now);
+            WorkflowState vulnAnalysisParent = pm.makePersistent(vulnAnalysisState);
 
-        WorkflowState policyEvaluationState = new WorkflowState();
-        policyEvaluationState.setParent(vulnAnalysisParent);
-        policyEvaluationState.setToken(token);
-        policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
-        policyEvaluationState.setStatus(WorkflowStatus.PENDING);
-        policyEvaluationState.setUpdatedAt(now);
-        pm.makePersistent(policyEvaluationState);
+            WorkflowState policyEvaluationState = new WorkflowState();
+            policyEvaluationState.setParent(vulnAnalysisParent);
+            policyEvaluationState.setToken(token);
+            policyEvaluationState.setStep(WorkflowStep.POLICY_EVALUATION);
+            policyEvaluationState.setStatus(WorkflowStatus.PENDING);
+            policyEvaluationState.setUpdatedAt(now);
+            pm.makePersistent(policyEvaluationState);
+        });
     }
 
     public void createWorkflowSteps(UUID token) {
-        final Transaction trx = pm.currentTransaction();
-        try {
-            trx.begin();
+        runInTransaction(() -> {
             final Date now = new Date();
             WorkflowState consumptionState = new WorkflowState();
             consumptionState.setToken(token);
@@ -298,12 +297,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             metricsUpdateState.setStatus(WorkflowStatus.PENDING);
             metricsUpdateState.setUpdatedAt(now);
             pm.makePersistent(metricsUpdateState);
-            trx.commit();
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
+        });
     }
-
 }
