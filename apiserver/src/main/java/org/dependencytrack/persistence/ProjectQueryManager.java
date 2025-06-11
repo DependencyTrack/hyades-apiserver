@@ -748,21 +748,19 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     public boolean hasAccess(final Principal principal, final Project project) {
         if (!isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)
                 || principal == null // System request (e.g. MetricsUpdateTask, etc) where there isn't a principal
-                || request.getEffectivePermissions().contains(Permissions.Constants.ACCESS_MANAGEMENT))
+                || super.hasAccessManagementPermission(principal))
             return true;
 
         final Set<Long> teamIds = getTeamIds(principal);
-        if (teamIds.isEmpty())
-            return false;
 
         final Query<?> query;
         switch (principal) {
             case User user -> {
-                query = pm.newQuery(Query.SQL, "SELECT has_user_project_access(:projectId, :userId)")
+                query = pm.newQuery(Query.SQL, "SELECT has_user_project_access(?, ?)")
                         .setParameters(project.getId(), user.getId());
             }
             case ApiKey apiKey when !teamIds.isEmpty() -> {
-                query = pm.newQuery(Query.SQL, "SELECT has_project_access(:projectId, :teamIds)")
+                query = pm.newQuery(Query.SQL, "SELECT has_project_access(?, ?)")
                         .setParameters(project.getId(), teamIds.toArray(Long[]::new));
             }
             default -> {
