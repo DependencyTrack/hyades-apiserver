@@ -427,7 +427,8 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                              WHERE HAS_USER_PROJECT_ACCESS("PROJECT"."ID", :projectAclUserId)
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("{named:{projectAclUserId:1}}");
+                    assertThat(ctx.getBinding())
+                            .hasToString("{named:{projectAclUserId:%d}}".formatted(managedUser.getId()));
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
