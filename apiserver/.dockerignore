@@ -2,8 +2,9 @@
 .idea/
 docs/
 scripts/
-# The source directory is required by Dockerfile.demo
-# src/
+src/
+!src/main/docker/create-jre.sh
+!src/main/docker/logback-json.xml
 target/
 !target/*.jar
 /*.md
