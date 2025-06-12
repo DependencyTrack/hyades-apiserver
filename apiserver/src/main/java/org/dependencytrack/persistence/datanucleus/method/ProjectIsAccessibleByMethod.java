@@ -74,9 +74,10 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
                 return getApiKeyExpression(stmt, objectExpr, arrayLiteralArg);
             }
             default -> {
-                throw new IllegalArgumentException(
-                    "Expected argument to be of type %s, but got %s".formatted(
-                            Long[].class.getName(), args.getFirst().getClass().getName()));
+                throw new IllegalArgumentException("Expected argument to be of type %s or %s, but got %s"
+                        .formatted(ArrayLiteral.class.getName(),
+                                IntegerLiteral.class.getName(),
+                                args.getFirst().getClass().getName()));
             }
         }
     }
