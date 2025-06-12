@@ -136,6 +136,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c = new Component();
         c.setProject(project);
@@ -153,6 +155,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxInvalidTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Response response = jersey.target(V1_BOM + "/cyclonedx/project/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -195,6 +199,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxInventoryTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
@@ -428,6 +434,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxLicenseTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c = new Component();
         c.setProject(project);
@@ -503,6 +511,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxInventoryWithVulnerabilitiesTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
@@ -699,6 +709,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxVdrTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
@@ -888,6 +900,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportComponentAsCycloneDx() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         Component c = new Component();
         c.setProject(project);
@@ -905,6 +919,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportComponentAsCycloneDxInvalid() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Response response = jersey.target(V1_BOM + "/cyclonedx/component/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -1118,6 +1134,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomUnauthorizedTest() throws Exception {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, false, bomString);
