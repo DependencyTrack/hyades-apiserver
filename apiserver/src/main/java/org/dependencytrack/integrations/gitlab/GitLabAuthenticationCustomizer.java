@@ -39,11 +39,12 @@ public class GitLabAuthenticationCustomizer extends DefaultOidcAuthenticationCus
 
     @Override
     public OidcUser onAuthenticationSuccess(OidcUser user, OidcProfile profile, String idToken, String accessToken) {
-        try (QueryManager qm = new QueryManager()) {
-            List<String> groups = Objects.requireNonNullElse(profile.getGroups(), Collections.emptyList());
+        try (final QueryManager qm = new QueryManager()) {
+            final List<String> groups = Objects.requireNonNullElse(profile.getGroups(), Collections.emptyList());
 
             groups.stream()
                     .filter(Objects::nonNull)
+                    .filter(group -> qm.getOidcGroup(group) == null)
                     .forEach(qm::createOidcGroup);
         }
 
