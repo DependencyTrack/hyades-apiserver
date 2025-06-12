@@ -145,13 +145,15 @@ public class LicenseGroupResource extends AlpineResource {
         );
 
         try (QueryManager qm = new QueryManager()) {
-            LicenseGroup licenseGroup = qm.getLicenseGroup(StringUtils.trimToNull(jsonLicenseGroup.getName()));
-            if (licenseGroup == null) {
-                licenseGroup = qm.createLicenseGroup(StringUtils.trimToNull(jsonLicenseGroup.getName()));
-                return Response.status(Response.Status.CREATED).entity(licenseGroup).build();
-            } else {
-                return Response.status(Response.Status.CONFLICT).entity("A license group with the specified name already exists.").build();
-            }
+            return qm.callInTransaction(() -> {
+                LicenseGroup licenseGroup = qm.getLicenseGroup(StringUtils.trimToNull(jsonLicenseGroup.getName()));
+                if (licenseGroup == null) {
+                    licenseGroup = qm.createLicenseGroup(StringUtils.trimToNull(jsonLicenseGroup.getName()));
+                    return Response.status(Response.Status.CREATED).entity(licenseGroup).build();
+                } else {
+                    return Response.status(Response.Status.CONFLICT).entity("A license group with the specified name already exists.").build();
+                }
+            });
         }
     }
 
@@ -178,14 +180,16 @@ public class LicenseGroupResource extends AlpineResource {
                 validator.validateProperty(jsonLicenseGroup, "name")
         );
         try (QueryManager qm = new QueryManager()) {
-            LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, jsonLicenseGroup.getUuid());
-            if (licenseGroup != null) {
-                licenseGroup.setName(jsonLicenseGroup.getName());
-                licenseGroup = qm.persist(licenseGroup);
-                return Response.ok(licenseGroup).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The license group could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, jsonLicenseGroup.getUuid());
+                if (licenseGroup != null) {
+                    licenseGroup.setName(jsonLicenseGroup.getName());
+                    licenseGroup = qm.persist(licenseGroup);
+                    return Response.ok(licenseGroup).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The license group could not be found.").build();
+                }
+            });
         }
     }
 
@@ -207,13 +211,15 @@ public class LicenseGroupResource extends AlpineResource {
             @Parameter(description = "The UUID of the license group to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, uuid);
-            if (licenseGroup != null) {
-                qm.delete(licenseGroup);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the license group could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, uuid);
+                if (licenseGroup != null) {
+                    qm.delete(licenseGroup);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the license group could not be found.").build();
+                }
+            });
         }
     }
 
@@ -242,22 +248,24 @@ public class LicenseGroupResource extends AlpineResource {
             @Parameter(description = "A valid license", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("licenseUuid") @ValidUuid String licenseUuid) {
         try (QueryManager qm = new QueryManager()) {
-            LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, uuid);
-            if (licenseGroup == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The license group could not be found.").build();
-            }
-            final License license = qm.getObjectByUuid(License.class, licenseUuid);
-            if (license == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The license could not be found.").build();
-            }
-            final List<License> licenses = licenseGroup.getLicenses();
-            if (licenses != null && !licenses.contains(license)) {
-                licenses.add(license);
-                licenseGroup.setLicenses(licenses);
-                qm.persist(licenseGroup);
-                return Response.ok(licenseGroup).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
+            return qm.callInTransaction(() -> {
+                LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, uuid);
+                if (licenseGroup == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The license group could not be found.").build();
+                }
+                final License license = qm.getObjectByUuid(License.class, licenseUuid);
+                if (license == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The license could not be found.").build();
+                }
+                final List<License> licenses = licenseGroup.getLicenses();
+                if (licenses != null && !licenses.contains(license)) {
+                    licenses.add(license);
+                    licenseGroup.setLicenses(licenses);
+                    qm.persist(licenseGroup);
+                    return Response.ok(licenseGroup).build();
+                }
+                return Response.status(Response.Status.NOT_MODIFIED).build();
+            });
         }
     }
 
@@ -286,22 +294,24 @@ public class LicenseGroupResource extends AlpineResource {
             @Parameter(description = "A valid license", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("licenseUuid") @ValidUuid String licenseUuid) {
         try (QueryManager qm = new QueryManager()) {
-            LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, uuid);
-            if (licenseGroup == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The license group could not be found.").build();
-            }
-            final License license = qm.getObjectByUuid(License.class, licenseUuid);
-            if (license == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The license could not be found.").build();
-            }
-            final List<License> licenses = licenseGroup.getLicenses();
-            if (licenses != null && licenses.contains(license)) {
-                licenses.remove(license);
-                licenseGroup.setLicenses(licenses);
-                licenseGroup = qm.persist(licenseGroup);
-                return Response.ok(licenseGroup).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
+            return qm.callInTransaction(() -> {
+                LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, uuid);
+                if (licenseGroup == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The license group could not be found.").build();
+                }
+                final License license = qm.getObjectByUuid(License.class, licenseUuid);
+                if (license == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The license could not be found.").build();
+                }
+                final List<License> licenses = licenseGroup.getLicenses();
+                if (licenses != null && licenses.contains(license)) {
+                    licenses.remove(license);
+                    licenseGroup.setLicenses(licenses);
+                    licenseGroup = qm.persist(licenseGroup);
+                    return Response.ok(licenseGroup).build();
+                }
+                return Response.status(Response.Status.NOT_MODIFIED).build();
+            });
         }
     }
 }

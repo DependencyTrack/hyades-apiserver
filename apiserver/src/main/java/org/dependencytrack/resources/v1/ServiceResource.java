@@ -31,17 +31,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ServiceComponent;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.ServiceComponentDao;
-import org.dependencytrack.resources.v1.openapi.PaginatedApi;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.jdbi.v3.core.Handle;
-
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -53,8 +42,18 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ServiceComponent;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ServiceComponentDao;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.jdbi.v3.core.Handle;
 
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 
 /**
  * JAX-RS resources for processing services.
@@ -177,29 +176,27 @@ class ServiceResource extends AbstractApiResource {
         );
 
         try (QueryManager qm = new QueryManager()) {
-            ServiceComponent parent = null;
-            if (jsonService.getParent() != null && jsonService.getParent().getUuid() != null) {
-                parent = qm.getObjectByUuid(ServiceComponent.class, jsonService.getParent().getUuid());
-            }
-            final Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
-            requireAccess(qm, project);
-            ServiceComponent service = new ServiceComponent();
-            service.setProject(project);
-            service.setProvider(jsonService.getProvider());
-            service.setGroup(StringUtils.trimToNull(jsonService.getGroup()));
-            service.setName(StringUtils.trimToNull(jsonService.getName()));
-            service.setVersion(StringUtils.trimToNull(jsonService.getVersion()));
-            service.setDescription(StringUtils.trimToNull(jsonService.getDescription()));
-            service.setEndpoints(jsonService.getEndpoints().clone());
-            service.setAuthenticated(jsonService.getAuthenticated());
-            service.setCrossesTrustBoundary(jsonService.getCrossesTrustBoundary());
-            service.setData(jsonService.getData());
-            service.setExternalReferences(jsonService.getExternalReferences());
-            service = qm.createServiceComponent(service, true);
-            return Response.status(Response.Status.CREATED).entity(service).build();
+            return qm.callInTransaction(() -> {
+                final Project project = qm.getObjectByUuid(Project.class, uuid);
+                if (project == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+                }
+                requireAccess(qm, project);
+                ServiceComponent service = new ServiceComponent();
+                service.setProject(project);
+                service.setProvider(jsonService.getProvider());
+                service.setGroup(StringUtils.trimToNull(jsonService.getGroup()));
+                service.setName(StringUtils.trimToNull(jsonService.getName()));
+                service.setVersion(StringUtils.trimToNull(jsonService.getVersion()));
+                service.setDescription(StringUtils.trimToNull(jsonService.getDescription()));
+                service.setEndpoints(jsonService.getEndpoints().clone());
+                service.setAuthenticated(jsonService.getAuthenticated());
+                service.setCrossesTrustBoundary(jsonService.getCrossesTrustBoundary());
+                service.setData(jsonService.getData());
+                service.setExternalReferences(jsonService.getExternalReferences());
+                service = qm.createServiceComponent(service, true);
+                return Response.status(Response.Status.CREATED).entity(service).build();
+            });
         }
     }
 
@@ -233,28 +230,30 @@ class ServiceResource extends AbstractApiResource {
                 validator.validateProperty(jsonService, "description")
         );
         try (QueryManager qm = new QueryManager()) {
-            ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, jsonService.getUuid());
-            if (service != null) {
-                requireAccess(qm, service.getProject());
-                // Name cannot be empty or null - prevent it
-                final String name = StringUtils.trimToNull(jsonService.getName());
-                if (name != null) {
-                    service.setName(name);
+            return qm.callInTransaction(() -> {
+                ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, jsonService.getUuid());
+                if (service != null) {
+                    requireAccess(qm, service.getProject());
+                    // Name cannot be empty or null - prevent it
+                    final String name = StringUtils.trimToNull(jsonService.getName());
+                    if (name != null) {
+                        service.setName(name);
+                    }
+                    service.setProvider(jsonService.getProvider());
+                    service.setGroup(StringUtils.trimToNull(jsonService.getGroup()));
+                    service.setVersion(StringUtils.trimToNull(jsonService.getVersion()));
+                    service.setDescription(StringUtils.trimToNull(jsonService.getDescription()));
+                    service.setEndpoints(jsonService.getEndpoints().clone());
+                    service.setAuthenticated(jsonService.getAuthenticated());
+                    service.setCrossesTrustBoundary(jsonService.getCrossesTrustBoundary());
+                    service.setData(jsonService.getData());
+                    service.setExternalReferences(jsonService.getExternalReferences());
+                    service = qm.updateServiceComponent(service, true);
+                    return Response.ok(service).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the service could not be found.").build();
                 }
-                service.setProvider(jsonService.getProvider());
-                service.setGroup(StringUtils.trimToNull(jsonService.getGroup()));
-                service.setVersion(StringUtils.trimToNull(jsonService.getVersion()));
-                service.setDescription(StringUtils.trimToNull(jsonService.getDescription()));
-                service.setEndpoints(jsonService.getEndpoints().clone());
-                service.setAuthenticated(jsonService.getAuthenticated());
-                service.setCrossesTrustBoundary(jsonService.getCrossesTrustBoundary());
-                service.setData(jsonService.getData());
-                service.setExternalReferences(jsonService.getExternalReferences());
-                service = qm.updateServiceComponent(service, true);
-                return Response.ok(service).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the service could not be found.").build();
-            }
+            });
         }
     }
 
@@ -280,17 +279,19 @@ class ServiceResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the service to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, uuid, ServiceComponent.FetchGroup.ALL.name());
-            if (service != null) {
-                requireAccess(qm, service.getProject());
-                try (final Handle jdbiHandle = openJdbiHandle()) {
-                    final var serviceComponentDao = jdbiHandle.attach(ServiceComponentDao.class);
-                    serviceComponentDao.deleteServiceComponent(service.getUuid());
+            return qm.callInTransaction(() -> {
+                final ServiceComponent service = qm.getObjectByUuid(ServiceComponent.class, uuid, ServiceComponent.FetchGroup.ALL.name());
+                if (service != null) {
+                    requireAccess(qm, service.getProject());
+                    try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
+                        final var serviceComponentDao = jdbiHandle.attach(ServiceComponentDao.class);
+                        serviceComponentDao.deleteServiceComponent(service.getUuid());
+                    }
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the service could not be found.").build();
                 }
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the service could not be found.").build();
-            }
+            });
         }
     }
 }
