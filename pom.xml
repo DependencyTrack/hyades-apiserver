@@ -98,7 +98,7 @@
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
-        <lib.jooq.version>3.20.4</lib.jooq.version>
+        <lib.jooq.version>3.20.5</lib.jooq.version>
         <lib.junit-jupiter.version>5.13.1</lib.junit-jupiter.version>
         <lib.liquibase.version>4.32.0</lib.liquibase.version>
         <lib.postgresql.version>42.7.7</lib.postgresql.version>
