@@ -20,10 +20,10 @@ package alpine.server.filters;
 
 import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
+import alpine.model.ConfigProperty;
 import alpine.model.User;
 import alpine.persistence.AlpineQueryManager;
 import alpine.server.auth.PermissionRequired;
-import org.glassfish.jersey.server.ContainerRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
 import jakarta.annotation.Priority;
@@ -51,50 +51,55 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     private static final Logger LOGGER = Logger.getLogger(AuthorizationFilter.class);
 
     public static final String EFFECTIVE_PERMISSIONS_PROPERTY = "effectivePermissions";
+    public static final String ACL_ENABLED_GROUP_NAME = "access-management";
+    public static final String ACL_ENABLED_PROPERTY_NAME = "acl.enabled";
 
     @Context
     private ResourceInfo resourceInfo;
 
     @Override
     public void filter(ContainerRequestContext requestContext) {
-        if (requestContext instanceof ContainerRequest) {
+        final Principal principal = (Principal) requestContext.getProperty("Principal");
+        if (principal == null) {
+            LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "A request was made without the assertion of a valid user principal");
+            requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
+            return;
+        }
 
-            final Principal principal = (Principal) requestContext.getProperty("Principal");
-            if (principal == null) {
-                LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "A request was made without the assertion of a valid user principal");
-                requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
-                return;
+        final Set<String> effectivePermissions;
+        final boolean isAclEnabled;
+
+        try (final var qm = new AlpineQueryManager()) {
+            effectivePermissions = qm.getEffectivePermissions(principal);
+            final ConfigProperty property = qm.getConfigProperty(ACL_ENABLED_GROUP_NAME, ACL_ENABLED_PROPERTY_NAME);
+            isAclEnabled = property != null && "true".equals(property.getPropertyValue());
+        }
+
+        if (isAclEnabled && resourceInfo.getResourceMethod().isAnnotationPresent(ResourceAccessRequired.class)) {
+            requestContext.setProperty(EFFECTIVE_PERMISSIONS_PROPERTY, effectivePermissions);
+            return;
+        }
+
+        final PermissionRequired annotation = resourceInfo.getResourceMethod().getDeclaredAnnotation(PermissionRequired.class);
+        final Set<String> permissions = Set.of(annotation.value());
+
+        final boolean hasNoRequiredPermission = Collections.disjoint(permissions, effectivePermissions);
+        if (hasNoRequiredPermission) {
+            final String requestUri = requestContext.getUriInfo().getRequestUri().toString();
+            final String requestPrincipal;
+
+            switch (principal) {
+                case ApiKey apiKey -> requestPrincipal = "API Key " + apiKey.getMaskedKey();
+                case User user -> requestPrincipal = user.getUsername();
+                default -> throw new IllegalStateException("Unexpected principal type: " + principal.getClass().getName());
             }
 
-            final PermissionRequired annotation = resourceInfo.getResourceMethod().getDeclaredAnnotation(PermissionRequired.class);
-            final Set<String> permissions = Set.of(annotation.value());
+            LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by %s to %s"
+                    .formatted(requestPrincipal, requestUri));
 
-            final Set<String> effectivePermissions;
-            try (final var qm = new AlpineQueryManager()) {
-                effectivePermissions = qm.getEffectivePermissions(principal);
-            }
-
-            final boolean hasNoRequiredPermission = Collections.disjoint(permissions, effectivePermissions);
-            if (hasNoRequiredPermission) {
-                final String requestUri = requestContext.getUriInfo().getRequestUri().toString();
-
-                if (principal instanceof final ApiKey apiKey) {
-                    LOGGER.info(
-                            SecurityMarkers.SECURITY_FAILURE,
-                            "Unauthorized access attempt made by API Key %s to %s".formatted(
-                                    apiKey.getMaskedKey(), requestUri));
-                } else if (principal instanceof final User user) {
-                    LOGGER.info(
-                            SecurityMarkers.SECURITY_FAILURE,
-                            "Unauthorized access attempt made by %s to %s".formatted(user.getUsername(), requestUri));
-                } else {
-                    throw new IllegalStateException("Unexpected principal type: " + principal.getClass().getName());
-                }
-
-                requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
-            } else {
-                requestContext.setProperty(EFFECTIVE_PERMISSIONS_PROPERTY, effectivePermissions);
-            }
+            requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
+        } else {
+            requestContext.setProperty(EFFECTIVE_PERMISSIONS_PROPERTY, effectivePermissions);
         }
     }
 

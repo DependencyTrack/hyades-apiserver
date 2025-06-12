@@ -21,8 +21,8 @@ package org.dependencytrack.resources.v1;
 import alpine.model.ManagedUser;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
-import alpine.server.filters.AuthorizationFilter;
+import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
@@ -77,8 +77,8 @@ public class AnalysisResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(AnalysisResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class)
-                    .register(AuthorizationFilter.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void retrieveAnalysisTest() {

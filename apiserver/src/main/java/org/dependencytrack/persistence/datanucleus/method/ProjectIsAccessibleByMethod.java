@@ -24,6 +24,7 @@ import org.datanucleus.store.rdbms.sql.SQLStatement;
 import org.datanucleus.store.rdbms.sql.expression.ArrayLiteral;
 import org.datanucleus.store.rdbms.sql.expression.BooleanExpression;
 import org.datanucleus.store.rdbms.sql.expression.BooleanLiteral;
+import org.datanucleus.store.rdbms.sql.expression.IntegerLiteral;
 import org.datanucleus.store.rdbms.sql.expression.ObjectExpression;
 import org.datanucleus.store.rdbms.sql.expression.SQLExpression;
 import org.datanucleus.store.rdbms.sql.expression.StringExpression;
@@ -44,20 +45,17 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
             final SQLStatement stmt,
             final SQLExpression expr,
             final List<SQLExpression> args) {
-        if (!(expr instanceof final ObjectExpression objectExpr)) {
+        if (!(expr instanceof final ObjectExpression objectExpr))
             // DataNucleus should prevent this from ever happening since
             // the method is explicitly registered for java.lang.Object.
-            throw new IllegalStateException(
-                    "Expected expression to be of type %s, but got: %s".formatted(
-                            ObjectExpression.class.getName(), expr.getClass().getName()));
-        }
+            throw new IllegalStateException("Expected expression to be of type %s, but got: %s".formatted(
+                    ObjectExpression.class.getName(), expr.getClass().getName()));
 
         final String objectTypeName = objectExpr.getJavaTypeMapping().getType();
-        if (!Project.class.getName().equals(objectTypeName)) {
+        if (!Project.class.getName().equals(objectTypeName))
             throw new IllegalStateException(
                     "isAccessibleBy is only allowed for objects of type %s, but was called on %s".formatted(
                             Project.class.getName(), objectTypeName));
-        }
 
         if (args == null) {
             throw new IllegalArgumentException();
@@ -68,16 +66,27 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
         // TODO: When a list, set, etc. is passed as argument, it will be of type CollectionLiteral.
         //  Array literals are easier to verify the type of, hence we're focusing on that for now.
 
-        if (!(args.getFirst() instanceof final ArrayLiteral arrayLiteralArg)) {
-            throw new IllegalArgumentException(
-                    "Expected argument to be of type %s, but got %s".formatted(
-                            ArrayLiteral.class.getName(), args.getFirst().getClass().getName()));
+        switch (args.getFirst()) {
+            case IntegerLiteral userIdArg -> {
+                return getUserExpression(stmt, objectExpr, userIdArg);
+            }
+            case ArrayLiteral arrayLiteralArg -> {
+                return getApiKeyExpression(stmt, objectExpr, arrayLiteralArg);
+            }
+            default -> {
+                throw new IllegalArgumentException("Expected argument to be of type %s or %s, but got %s"
+                        .formatted(ArrayLiteral.class.getName(),
+                                IntegerLiteral.class.getName(),
+                                args.getFirst().getClass().getName()));
+            }
         }
-        if (!(arrayLiteralArg.getValue() instanceof final Long[] teamIds)) {
+    }
+
+    private SQLExpression getApiKeyExpression(final SQLStatement stmt, final ObjectExpression objectExpr, final ArrayLiteral arrayLiteralArg) {
+        if (!(arrayLiteralArg.getValue() instanceof final Long[] teamIds))
             throw new IllegalArgumentException(
                     "Expected array argument to be of type %s, but got %s".formatted(
                             Long[].class.getName(), arrayLiteralArg.getValue().getClass().getName()));
-        }
 
         final JavaTypeMapping booleanTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(Boolean.class);
         final JavaTypeMapping stringTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(String.class);
@@ -103,6 +112,33 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
         //   * has_project_access("A0"."ID", cast('{1,2,3}' as bigint[])) = TRUE
         //   * has_project_access("B0"."PROJECT_ID", cast('{1,2,3}' as bigint[])) = TRUE
         final var booleanTrueLiteral = new BooleanLiteral(stmt, booleanTypeMapping, Boolean.TRUE, null);
+
+        return new BooleanExpression(hasProjectAccessFunctionExpr, Expression.OP_EQ, booleanTrueLiteral);
+    }
+
+    private SQLExpression getUserExpression(final SQLStatement stmt, final ObjectExpression objectExpr, final IntegerLiteral userIdArg) {
+        if (!(userIdArg.getValue() instanceof final Long userId))
+            throw new IllegalArgumentException(
+                    "Expected user ID argument to be of type %s, but got %s".formatted(
+                            Long.class.getName(), userIdArg.getValue().getClass().getName()));
+
+        final JavaTypeMapping booleanTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(Boolean.class);
+        final JavaTypeMapping stringTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(String.class);
+        final JavaTypeMapping integerTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(Long.class);
+
+        final var userIdLiteral = new IntegerLiteral(stmt, integerTypeMapping, userId, "userId");
+
+        // NB: objectExpr will compile to a reference of the object table's ID column, e.g.:
+        //   * "A0"."ID"
+        //   * "B0"."PROJECT_ID"
+        final var hasProjectAccessFunctionExpr = new StringExpression(
+                stmt, stringTypeMapping, "has_user_project_access", List.of(objectExpr, userIdLiteral));
+
+        // Wrap the function call in a boolean expression. Final result(s) will be:
+        //   * has_user_project_access("A0"."ID", 1) = TRUE
+        //   * has_user_project_access("B0"."PROJECT_ID", 1) = TRUE
+        final var booleanTrueLiteral = new BooleanLiteral(stmt, booleanTypeMapping, Boolean.TRUE, null);
+
         return new BooleanExpression(hasProjectAccessFunctionExpr, Expression.OP_EQ, booleanTrueLiteral);
     }
 

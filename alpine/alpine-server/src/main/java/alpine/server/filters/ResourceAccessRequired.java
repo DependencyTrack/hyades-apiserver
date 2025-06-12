@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) Steve Springett. All Rights Reserved.
  */
-package alpine.server.auth;
+package alpine.server.filters;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -25,21 +25,16 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * This annotation is intended to be used in conjunction with JAX-RS resources (methods) to
- * define what permissions are required to access the method.
+ * This annotation is intended to be used in conjunction with JAX-RS resources (methods)
+ * to disable standard authorization checks when attempting to access the method.
+ * <p>
+ * An ACL specific to the requested resource will be used instead.
  *
- * @author Steve Springett
- * @since 1.0.0
+ * @author Jonathan Howard
+ * @since 5.6.0
  */
-@Retention(value = RetentionPolicy.RUNTIME)
+@Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 @Documented
-public @interface PermissionRequired {
-
-    /**
-     * An array of permissions.
-     * @return an array of permissions
-     */
-    String[] value();
-
+public @interface ResourceAccessRequired {
 }

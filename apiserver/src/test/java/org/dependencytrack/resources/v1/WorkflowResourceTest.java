@@ -19,7 +19,7 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
@@ -50,7 +50,7 @@ public class WorkflowResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(WorkflowResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class)
+                    .register(AuthenticationFeature.class)
                     .register(MultiPartFeature.class));
 
     @Test
