@@ -20,7 +20,6 @@ package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.WorkflowRunStatus;
-import org.dependencytrack.workflow.engine.persistence.model.ArchiveWorkflowRunJournalCommand;
 import org.dependencytrack.workflow.engine.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunJournalRequest;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunInboxRow;
@@ -457,7 +456,6 @@ public final class WorkflowDao {
                      inner join unnest(:journalRequestRunIds, :journalRequestOffsets) as request(run_id, "offset")
                         on request.run_id = workflow_run_journal.workflow_run_id
                        and request."offset" < workflow_run_journal.sequence_number
-                       and workflow_run_journal.workflow_run_completed_at is null
                      order by sequence_number
                 ),
                 cte_inbox_poll_candidate as (
@@ -643,37 +641,14 @@ public final class WorkflowDao {
                 .execute();
     }
 
-    public int truncateActiveRunJournals(final Collection<UUID> runIds) {
+    public int truncateRunJournals(final Collection<UUID> runIds) {
         final Update update = jdbiHandle.createUpdate("""
                 delete from workflow_run_journal
-                 where workflow_run_completed_at is null
-                   and workflow_run_id = any(:runIds)
+                 where workflow_run_id = any(:runIds)
                 """);
 
         return update
                 .bindArray("runIds", UUID.class, runIds)
-                .execute();
-    }
-
-    public int archiveRunJournals(final Collection<ArchiveWorkflowRunJournalCommand> archiveCommands) {
-        final Update update = jdbiHandle.createUpdate("""
-                update workflow_run_journal
-                   set workflow_run_completed_at = t.completed_at
-                  from unnest(:runIds, :completedAts) as t(run_id, completed_at)
-                 where workflow_run_id = t.run_id
-                """);
-
-        final var runIds = new ArrayList<UUID>(archiveCommands.size());
-        final var completedAts = new ArrayList<Instant>(archiveCommands.size());
-
-        for (final ArchiveWorkflowRunJournalCommand archiveCommand : archiveCommands) {
-            runIds.add(archiveCommand.runId());
-            completedAts.add(archiveCommand.completedAt());
-        }
-
-        return update
-                .bindArray("runIds", UUID.class, runIds)
-                .bindArray("completedAts", Instant.class, completedAts)
                 .execute();
     }
 

@@ -53,7 +53,6 @@ import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowRunDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowScheduleDao;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
-import org.dependencytrack.workflow.engine.persistence.model.ArchiveWorkflowRunJournalCommand;
 import org.dependencytrack.workflow.engine.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunJournalRequest;
 import org.dependencytrack.workflow.engine.persistence.model.ListWorkflowRunsRequest;
@@ -952,7 +951,7 @@ public class WorkflowEngine implements Closeable {
         }
 
         if (!continuedAsNewRunIds.isEmpty()) {
-            workflowDao.truncateActiveRunJournals(continuedAsNewRunIds);
+            workflowDao.truncateRunJournals(continuedAsNewRunIds);
         }
 
         if (!newJournalEntries.isEmpty()) {
@@ -1017,18 +1016,6 @@ public class WorkflowEngine implements Closeable {
                     LOGGER.debug("Concurrency group {}: {}", entry.getKey(), entry.getValue());
                 }
             }
-        }
-
-        final List<ArchiveWorkflowRunJournalCommand> archiveRunJournalCommands = actionableRuns.stream()
-                .filter(run -> run.status().isTerminal())
-                .map(run -> new ArchiveWorkflowRunJournalCommand(
-                        run.id(), run.completedAt().orElseThrow()))
-                .toList();
-        if (!archiveRunJournalCommands.isEmpty()) {
-            final int entriesArchived = workflowDao.archiveRunJournals(archiveRunJournalCommands);
-            assert entriesArchived >= archiveRunJournalCommands.size()
-                    : "Archived run journal entries: actual=%d, expected=%d+".formatted(
-                    entriesArchived, archiveRunJournalCommands.size());
         }
     }
 

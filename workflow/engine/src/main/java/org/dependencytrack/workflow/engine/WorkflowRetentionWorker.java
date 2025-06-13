@@ -19,14 +19,10 @@
 package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
-import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.core.statement.Query;
+import org.jdbi.v3.core.statement.Update;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Objects;
 
 final class WorkflowRetentionWorker implements Runnable {
 
@@ -52,49 +48,17 @@ final class WorkflowRetentionWorker implements Runnable {
                 return;
             }
 
-            final List<String> partitionNames = getPartitionNames(handle);
-            for (final String partitionName : partitionNames) {
-                LOGGER.info("Dropping partition {}", partitionName);
-                handle.execute("drop table %s".formatted(partitionName));
-            }
+            // TODO: Limit how many records can be deleted at once?
+            final Update update = handle.createUpdate("""
+                    delete from workflow_run
+                     where completed_at < (NOW() - (:retentionDays * cast('1 day' as interval)))
+                    """);
 
-            final List<String> createdPartitionNames = createNextPartitions(handle);
-            for (final String partitionName : createdPartitionNames) {
-                LOGGER.info("Created partition {}", partitionName);
-            }
+            final int runsDeleted = update
+                    .bind("retentionDays", retentionDays)
+                    .execute();
+            LOGGER.info("Deleted {} runs", runsDeleted);
         });
-    }
-
-    private List<String> getPartitionNames(final Handle jdbiHandle) {
-        final Query archivePartitionsQuery = jdbiHandle.createQuery("""
-                select inhrelid::regclass::text as partition_name
-                  from pg_inherits
-                 where inhparent in ('workflow_run_archive'::regclass, 'workflow_run_journal'::regclass)
-                   and substring(inhrelid::regclass::text, '_(\\d{8})$')::date < (current_date - interval '1 day' * :retentionDays)::date
-                 order by partition_name
-                """);
-
-        return archivePartitionsQuery
-                .bind("retentionDays", retentionDays)
-                .mapTo(String.class)
-                .list();
-    }
-
-    private List<String> createNextPartitions(final Handle jdbiHandle) {
-        final Query createPartitionsQuery = jdbiHandle.createQuery("""
-                select create_workflow_run_archive_partition(current_date)
-                 union all
-                select create_workflow_run_journal_archive_partition(current_date)
-                 union all
-                select create_workflow_run_archive_partition((current_date + interval '1 day')::date)
-                 union all
-                select create_workflow_run_journal_archive_partition((current_date + interval '1 day')::date)
-                """);
-
-        return createPartitionsQuery
-                .mapTo(String.class)
-                .filter(Objects::nonNull)
-                .list();
     }
 
 }

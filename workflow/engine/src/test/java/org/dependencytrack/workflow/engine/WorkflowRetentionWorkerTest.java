@@ -26,9 +26,6 @@ import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.sql.Connection;
-import java.sql.Statement;
-
 @Testcontainers
 class WorkflowRetentionWorkerTest {
 
@@ -51,16 +48,7 @@ class WorkflowRetentionWorkerTest {
     }
 
     @Test
-    void test() throws Exception {
-        try (final Connection connection = postgresContainer.createConnection("");
-             final Statement statement = connection.createStatement()) {
-            statement.execute("""
-                    select create_workflow_run_archive_partition("date"::date)
-                         , create_workflow_run_journal_archive_partition("date"::date)
-                      from generate_series((current_date - interval '8 days')::date, current_date, interval '1 day') as t("date")
-                    """);
-        }
-
+    void test() {
         new WorkflowRetentionWorker(jdbi, /* retentionDays */ 5).run();
     }
 

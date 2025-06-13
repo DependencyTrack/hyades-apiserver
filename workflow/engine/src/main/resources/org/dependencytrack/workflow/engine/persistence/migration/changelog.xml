@@ -31,13 +31,9 @@
             , updated_at timestamptz(3)
             , started_at timestamptz(3)
             , completed_at timestamptz(3)
-            ) partition by list(status);
-
-            create table workflow_run_active partition of workflow_run for values in ('PENDING', 'RUNNING', 'SUSPENDED') with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
-            alter table workflow_run_active add constraint workflow_run_active_pk primary key (status, id);
-
-            create table workflow_run_archive partition of workflow_run for values in ('CANCELLED', 'COMPLETED', 'FAILED') partition by range(completed_at);
-            alter table workflow_run_archive add constraint workflow_run_archive_pk primary key (completed_at, status, id);
+            , constraint workflow_run_pk primary key (id)
+            , constraint workflow_run_parent_fk foreign key (parent_id) references workflow_run (id) on delete cascade
+            ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
             <!--
               For workflow runs with concurrency group, maintain a sequence for the next run.
@@ -52,17 +48,16 @@
               id text
             , next_run_id uuid not null
             , constraint workflow_concurrency_group_pk primary key (id)
+            , constraint workflow_concurrency_group_next_run_fk foreign key (next_run_id) references workflow_run (id) on delete cascade
             ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
             create table workflow_run_journal (
               workflow_run_id uuid
-            , workflow_run_completed_at timestamptz(3)
             , sequence_number int
             , event bytea not null
-            ) partition by range (workflow_run_completed_at);
-
-            create table workflow_run_journal_active partition of workflow_run_journal (check (workflow_run_completed_at is null)) default;
-            alter table workflow_run_journal_active add constraint workflow_run_journal_active_pk primary key (workflow_run_id, sequence_number);
+            , constraint workflow_run_journal_pk primary key (workflow_run_id, sequence_number)
+            , constraint workflow_run_journal_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
+            );
 
             create table workflow_run_inbox (
               id bigint generated always as identity
@@ -86,6 +81,7 @@
             , created_at timestamptz(3) not null default now()
             , updated_at timestamptz(3)
             , constraint workflow_activity_task_pk primary key (workflow_run_id, scheduled_event_id)
+            , constraint workflow_activity_task_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
             ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
             create table workflow_schedule (
@@ -111,108 +107,21 @@
               https://www.pgmustard.com/blog/2019/03/04/index-only-scans-in-postgres
             -->
             create index workflow_run_poll_idx
-                on workflow_run_active (priority desc nulls last, id, workflow_name);
+                on workflow_run (priority desc nulls last, id, workflow_name);
 
             create index workflow_run_labels_idx
                 on workflow_run using gin (labels jsonb_path_ops)
              where labels is not null;
+
+            create index workflow_run_completed_at_idx
+                on workflow_run (completed_at)
+             where completed_at is not null;
 
             create index workflow_run_inbox_workflow_run_id_idx
                 on workflow_run_inbox (workflow_run_id);
 
             create index workflow_activity_task_poll_idx
                 on workflow_activity_task (priority desc nulls last, created_at, activity_name);
-        </sql>
-
-        <sql splitStatements="false">
-            create function create_workflow_run_archive_partition(
-              for_date date
-            ) returns text language plpgsql as
-            $$
-            declare
-              table_name text := 'workflow_run_archive';
-              attach_cmd text;
-              from_date_yyyymmdd text;
-              to_date_yyyymmdd text;
-              partition_name text;
-            begin
-              select to_char(for_date, 'YYYYMMDD') into from_date_yyyymmdd;
-              select to_char(for_date + '1 day'::interval, 'YYYYMMDD') into to_date_yyyymmdd;
-              select format('%s_%s', table_name, from_date_yyyymmdd) into partition_name;
-
-              if exists(select 1 from pg_tables where tablename = partition_name) then
-                return null;
-              end if;
-
-              execute format(
-                'create table %I (like %I including all)'
-              , partition_name
-              , table_name
-              );
-
-              execute format(
-                'alter table %I attach partition %I for values from (%L) to (%L)'
-              , table_name
-              , partition_name
-              , from_date_yyyymmdd
-              , to_date_yyyymmdd
-              );
-
-              return partition_name;
-            end;
-            $$;
-        </sql>
-
-        <sql splitStatements="false">
-            create function create_workflow_run_journal_archive_partition(
-              for_date date
-            ) returns text language plpgsql as
-            $$
-            declare
-              table_name text := 'workflow_run_journal';
-              from_date_yyyymmdd text;
-              to_date_yyyymmdd text;
-              partition_name text;
-              partition_pk_name text;
-            begin
-              select to_char(for_date, 'YYYYMMDD') into from_date_yyyymmdd;
-              select to_char(for_date + '1 day'::interval, 'YYYYMMDD') into to_date_yyyymmdd;
-              select format('%s_archive_%s', table_name, from_date_yyyymmdd) into partition_name;
-              select format('%s_pk', partition_name) into partition_pk_name;
-
-              if exists(select 1 from pg_tables where tablename = partition_name) then
-                return null;
-              end if;
-
-              execute format(
-                'create table %I (like %I including all)'
-              , partition_name
-              , table_name
-              );
-
-              execute format(
-                'alter table %I add constraint %I primary key '
-                '(workflow_run_id, sequence_number, workflow_run_completed_at)'
-              , partition_name
-              , partition_pk_name
-              );
-
-              execute format(
-                'alter table %I attach partition %I for values from (%L) to (%L)'
-              , table_name
-              , partition_name
-              , from_date_yyyymmdd
-              , to_date_yyyymmdd
-              );
-
-              return partition_name;
-            end;
-            $$;
-        </sql>
-
-        <sql splitStatements="true">
-            select create_workflow_run_archive_partition(current_date);
-            select create_workflow_run_journal_archive_partition(current_date);
         </sql>
     </changeSet>
 </databaseChangeLog>
