@@ -89,7 +89,7 @@ public class WorkflowEngineConfig {
         private int days;
         private boolean workerEnabled = true;
         private Duration workerInitialDelay = Duration.ofMinutes(1);
-        private Duration workerInterval = Duration.ofHours(1);
+        private Duration workerInterval = Duration.ofMinutes(30);
 
         /**
          * @return Number of days to retain completed workflow runs for.

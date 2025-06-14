@@ -48,16 +48,23 @@ final class WorkflowRetentionWorker implements Runnable {
                 return;
             }
 
-            // TODO: Limit how many records can be deleted at once?
             final Update update = handle.createUpdate("""
+                    with cte_candidates as (
+                      select id
+                        from workflow_run
+                       where completed_at < (NOW() - (:retentionDays * cast('1 day' as interval)))
+                       order by completed_at
+                       limit 100 -- TODO: Make configurable.
+                         for no key update
+                    )
                     delete from workflow_run
-                     where completed_at < (NOW() - (:retentionDays * cast('1 day' as interval)))
+                     where id in (select id from cte_candidates)
                     """);
 
             final int runsDeleted = update
                     .bind("retentionDays", retentionDays)
                     .execute();
-            LOGGER.info("Deleted {} runs", runsDeleted);
+            LOGGER.info("Deleted {} workflow run(s)", runsDeleted);
         });
     }
 
