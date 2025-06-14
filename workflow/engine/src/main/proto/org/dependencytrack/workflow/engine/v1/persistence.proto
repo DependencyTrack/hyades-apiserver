@@ -23,6 +23,10 @@ package org.dependencytrack.workflow.engine.v1;
 option java_multiple_files = true;
 option java_package = "org.dependencytrack.workflow.engine.proto.v1";
 
+message ListWorkflowSchedulesPageToken {
+  string last_name = 1;
+}
+
 message ListWorkflowRunsPageToken {
   string last_id = 1;
 }

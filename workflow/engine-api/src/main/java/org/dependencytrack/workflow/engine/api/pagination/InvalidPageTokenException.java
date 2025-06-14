@@ -16,18 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
+package org.dependencytrack.workflow.engine.api.pagination;
 
-import org.jspecify.annotations.NullMarked;
+public class InvalidPageTokenException extends RuntimeException {
 
-@NullMarked
-module org.dependencytrack.workflow.engine.api {
-    exports org.dependencytrack.workflow.engine.api;
-    exports org.dependencytrack.workflow.engine.api.pagination;
+    public InvalidPageTokenException(final Throwable cause) {
+        super(cause);
+    }
 
-    requires io.github.resilience4j.core;
-    requires java.sql;
-    requires micrometer.core;
-    requires org.dependencytrack.workflow.api;
-
-    requires static org.jspecify;
 }

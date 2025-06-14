@@ -16,16 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.pagination;
+package org.dependencytrack.workflow.engine.api;
 
 import org.jspecify.annotations.Nullable;
 
-import java.util.List;
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
 
-public record Page<T>(List<T> items, @Nullable String nextPageToken) {
-
-    public boolean hasItems() {
-        return !items.isEmpty();
-    }
-
+public record WorkflowRun(
+        UUID id,
+        String workflowName,
+        int workflowVersion,
+        WorkflowRunStatus status,
+        @Nullable String customStatus,
+        @Nullable Integer priority,
+        @Nullable String concurrencyGroupId,
+        @Nullable Map<String, String> labels,
+        Instant createdAt,
+        @Nullable Instant updatedAt,
+        @Nullable Instant startedAt,
+        @Nullable Instant completedAt) {
 }

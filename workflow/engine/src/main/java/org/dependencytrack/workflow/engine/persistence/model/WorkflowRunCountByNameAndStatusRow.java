@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
-import org.dependencytrack.workflow.engine.WorkflowRunStatus;
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 
 public record WorkflowRunCountByNameAndStatusRow(String workflowName, WorkflowRunStatus status, long count) {
 }

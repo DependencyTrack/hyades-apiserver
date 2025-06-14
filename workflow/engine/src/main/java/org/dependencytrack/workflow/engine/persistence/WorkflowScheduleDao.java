@@ -19,8 +19,11 @@
 package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.dependencytrack.workflow.engine.api.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
+import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowScheduleRow;
+import org.dependencytrack.workflow.engine.proto.v1.ListWorkflowSchedulesPageToken;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -33,6 +36,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.workflow.engine.support.PageTokenUtil.decodePageToken;
+import static org.dependencytrack.workflow.engine.support.PageTokenUtil.encodePageToken;
 
 public final class WorkflowScheduleDao {
 
@@ -117,6 +124,51 @@ public final class WorkflowScheduleDao {
                 .executeAndReturnGeneratedKeys("*")
                 .mapTo(WorkflowSchedule.class)
                 .list();
+    }
+
+    public Page<WorkflowSchedule> listSchedules(final ListWorkflowSchedulesRequest request) {
+        requireNonNull(request, "request must not be null");
+
+        final var pageTokenValue = decodePageToken(
+                request.pageToken(), ListWorkflowSchedulesPageToken.parser());
+
+        final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
+                <#-- @ftlvariable name="lastName" type="boolean" -->
+                <#-- @ftlvariable name="workflowNameFilter" type="boolean" -->
+                select *
+                  from workflow_schedule
+                 where true
+                <#if lastName>
+                   and name > :lastName
+                </#if>
+                <#if workflowNameFilter>
+                   and workflow_name = :workflowNameFilter
+                </#if>
+                 order by name
+                 limit :limit
+                """);
+
+        // Query for one additional row to determine if there are more results.
+        final int limit = request.limit() > 0 ? request.limit() : 100;
+        final int limitWithNext = limit + 1;
+
+        final List<WorkflowSchedule> rows = query
+                .bind("workflowNameFilter", request.workflowNameFilter())
+                .bind("limit", limitWithNext)
+                .bind("lastName", pageTokenValue != null ? pageTokenValue.getLastName() : null)
+                .defineNamedBindings()
+                .mapTo(WorkflowSchedule.class)
+                .list();
+
+        final List<WorkflowSchedule> resultItems = rows.size() > 1
+                ? rows.subList(0, Math.min(rows.size(), limit))
+                : rows;
+
+        final ListWorkflowSchedulesPageToken nextPageToken = rows.size() == limitWithNext
+                ? ListWorkflowSchedulesPageToken.newBuilder().setLastName(resultItems.getLast().name()).build()
+                : null;
+
+        return new Page<>(resultItems, encodePageToken(nextPageToken));
     }
 
     public List<WorkflowSchedule> getDueSchedulesForUpdate() {

@@ -16,12 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.pagination;
+package org.dependencytrack.workflow.engine.api.pagination;
 
-public class InvalidPageTokenException extends RuntimeException {
+import org.jspecify.annotations.Nullable;
 
-    InvalidPageTokenException(final Throwable cause) {
-        super(cause);
+import java.util.List;
+
+public record Page<T>(List<T> items, @Nullable String nextPageToken) {
+
+    public boolean hasItems() {
+        return !items.isEmpty();
     }
 
 }

@@ -59,6 +59,7 @@ import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResul
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleSubWorkflowCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleTimerCommand;
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

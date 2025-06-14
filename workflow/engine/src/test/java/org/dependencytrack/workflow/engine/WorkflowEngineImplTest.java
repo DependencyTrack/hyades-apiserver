@@ -29,13 +29,15 @@ import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.api.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.CreateWorkflowScheduleRequest;
+import org.dependencytrack.workflow.engine.api.ListWorkflowRunsRequest;
+import org.dependencytrack.workflow.engine.api.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
+import org.dependencytrack.workflow.engine.api.WorkflowRun;
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
+import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.payload.StringPayloadConverter;
-import org.dependencytrack.workflow.engine.persistence.model.ListWorkflowRunsRequest;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
-import org.dependencytrack.workflow.engine.persistence.pagination.Page;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -114,9 +116,9 @@ class WorkflowEngineImplTest {
                         .withConcurrencyGroupId("someConcurrencyGroupId")
                         .withPriority(6)
                         .withLabels(Map.of("label-a", "123", "label-b", "321"))
-                        .withArgument("someArgument", stringConverter));
+                        .withArgument(stringConverter.convertToPayload("someArgument")));
 
-        final WorkflowRunStateProjection completedRun = awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
+        final WorkflowRun completedRun = awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThat(completedRun.customStatus()).isEqualTo("someCustomStatus");
         assertThat(completedRun.concurrencyGroupId()).isEqualTo("someConcurrencyGroupId");
@@ -182,7 +184,7 @@ class WorkflowEngineImplTest {
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
-        final WorkflowRunStateProjection failedRun = awaitRunStatus(runId, WorkflowRunStatus.FAILED);
+        final WorkflowRun failedRun = awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
         assertThat(failedRun.customStatus()).isNull();
         assertThat(failedRun.concurrencyGroupId()).isNull();
@@ -223,7 +225,7 @@ class WorkflowEngineImplTest {
 
         engine.requestRunCancellation(runId, "Stop it!");
 
-        final WorkflowRunStateProjection cancelledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
+        final WorkflowRun cancelledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
 
         assertThat(cancelledRun.customStatus()).isNull();
         assertThat(cancelledRun.concurrencyGroupId()).isNull();
@@ -573,7 +575,7 @@ class WorkflowEngineImplTest {
         await("Update")
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> {
-                    final WorkflowRunStateProjection run = engine.getRun(runId);
+                    final WorkflowRun run = engine.getRun(runId).orElseThrow();
                     assertThat(run.updatedAt()).isNotNull();
                 });
 
@@ -986,7 +988,7 @@ class WorkflowEngineImplTest {
 
         final UUID runId = engine.createRun(
                 new CreateWorkflowRunRequest("foo", 1)
-                        .withArgument("0", stringConverter));
+                        .withArgument(stringConverter.convertToPayload("0")));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -1035,9 +1037,9 @@ class WorkflowEngineImplTest {
             assertThat(schedule.nextFireAt()).isNotNull();
         });
 
-        final Page<WorkflowRunRow> runsPage = await("Workflow Run to be scheduled")
+        final Page<WorkflowRun> runsPage = await("Workflow Run to be scheduled")
                 .atMost(Duration.ofSeconds(5))
-                .until(() -> engine.listRuns(ListWorkflowRunsRequest.builder().build()), Page::hasItems);
+                .until(() -> engine.listRuns(new ListWorkflowRunsRequest()), Page::hasItems);
 
         assertThat(runsPage.items()).satisfiesExactly(run -> {
             assertThat(run.workflowName()).isEqualTo("foo");
@@ -1066,35 +1068,55 @@ class WorkflowEngineImplTest {
     }
 
     @Test
-    void shouldPaginateListRuns() {
+    void shouldListRuns() {
         for (int i = 0; i < 10; i++) {
             engine.createRun(new CreateWorkflowRunRequest("test", 1));
         }
 
-        Page<WorkflowRunRow> runsPage = engine.listRuns(
-                ListWorkflowRunsRequest.builder()
-                        .limit(5)
-                        .build());
+        Page<WorkflowRun> runsPage = engine.listRuns(
+                new ListWorkflowRunsRequest()
+                        .withLimit(5));
         assertThat(runsPage.items()).hasSize(5);
         assertThat(runsPage.nextPageToken()).isNotNull();
 
         runsPage = engine.listRuns(
-                ListWorkflowRunsRequest.builder()
-                        .pageToken(runsPage.nextPageToken())
-                        .limit(5)
-                        .build());
+                new ListWorkflowRunsRequest()
+                        .withPageToken(runsPage.nextPageToken())
+                        .withLimit(5));
         assertThat(runsPage.items()).hasSize(5);
         assertThat(runsPage.nextPageToken()).isNull();
     }
 
-    private WorkflowRunStateProjection awaitRunStatus(
+    @Test
+    void shouldListSchedules() {
+        for (int i = 0; i < 10; i++) {
+            engine.createSchedule(
+                    new CreateWorkflowScheduleRequest(
+                            "schedule-" + i, "* * * * *", "workflow-foo", 1));
+        }
+
+        Page<WorkflowSchedule> schedulesPage = engine.listSchedules(
+                new ListWorkflowSchedulesRequest()
+                        .withLimit(5));
+        assertThat(schedulesPage.items()).hasSize(5);
+        assertThat(schedulesPage.nextPageToken()).isNotNull();
+
+        schedulesPage = engine.listSchedules(
+                new ListWorkflowSchedulesRequest()
+                        .withPageToken(schedulesPage.nextPageToken())
+                        .withLimit(5));
+        assertThat(schedulesPage.items()).hasSize(5);
+        assertThat(schedulesPage.nextPageToken()).isNull();
+    }
+
+    private WorkflowRun awaitRunStatus(
             final UUID runId,
             final WorkflowRunStatus expectedStatus,
             final Duration timeout) {
         return await("Workflow Run Status to become " + expectedStatus)
                 .atMost(timeout)
                 .failFast(() -> {
-                    final WorkflowRunStatus currentStatus = engine.getRun(runId).status();
+                    final WorkflowRunStatus currentStatus = engine.getRun(runId).orElseThrow().status();
                     if (currentStatus.isTerminal() && !expectedStatus.isTerminal()) {
                         return true;
                     }
@@ -1103,10 +1125,10 @@ class WorkflowEngineImplTest {
                            && expectedStatus.isTerminal()
                            && currentStatus != expectedStatus;
                 })
-                .until(() -> engine.getRun(runId), run -> run.status() == expectedStatus);
+                .until(() -> engine.getRun(runId).orElseThrow(), run -> run.status() == expectedStatus);
     }
 
-    private WorkflowRunStateProjection awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
+    private WorkflowRun awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
         return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(5));
     }
 

@@ -20,6 +20,7 @@ package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowFailure;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;

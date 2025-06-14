@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
-import org.dependencytrack.workflow.engine.WorkflowRunStatus;
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.jdbi.v3.json.Json;
 import org.jspecify.annotations.Nullable;
 

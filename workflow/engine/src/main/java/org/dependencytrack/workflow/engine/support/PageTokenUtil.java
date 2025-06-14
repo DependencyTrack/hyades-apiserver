@@ -16,11 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.pagination;
+package org.dependencytrack.workflow.engine.support;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.Parser;
+import org.dependencytrack.workflow.engine.api.pagination.InvalidPageTokenException;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Base64;

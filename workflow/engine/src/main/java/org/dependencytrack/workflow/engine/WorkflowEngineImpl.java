@@ -48,10 +48,15 @@ import org.dependencytrack.workflow.engine.TaskCommand.FailActivityTaskCommand;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.api.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.CreateWorkflowScheduleRequest;
+import org.dependencytrack.workflow.engine.api.ListWorkflowRunsRequest;
+import org.dependencytrack.workflow.engine.api.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
+import org.dependencytrack.workflow.engine.api.WorkflowRun;
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
+import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.persistence.JdbiFactory;
 import org.dependencytrack.workflow.engine.persistence.WorkflowActivityDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
@@ -60,7 +65,6 @@ import org.dependencytrack.workflow.engine.persistence.WorkflowScheduleDao;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.engine.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunJournalRequest;
-import org.dependencytrack.workflow.engine.persistence.model.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunInboxRow;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunJournalRow;
@@ -75,7 +79,6 @@ import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrency
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRowUpdate;
-import org.dependencytrack.workflow.engine.persistence.pagination.Page;
 import org.dependencytrack.workflow.engine.support.Buffer;
 import org.dependencytrack.workflow.engine.support.DefaultThreadFactory;
 import org.dependencytrack.workflow.engine.support.LoggingUncaughtExceptionHandler;
@@ -96,6 +99,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -549,6 +553,37 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         });
     }
 
+    public Optional<WorkflowRun> getRun(final UUID runId) {
+        return jdbi.withHandle(handle -> {
+            final var dao = new WorkflowDao(handle);
+
+            final WorkflowRunRow runRow = dao.getRun(runId);
+            if (runRow == null) {
+                return Optional.empty();
+            }
+
+            return Optional.of(
+                    new WorkflowRun(
+                            runRow.id(),
+                            runRow.workflowName(),
+                            runRow.workflowVersion(),
+                            runRow.status(),
+                            runRow.customStatus(),
+                            runRow.priority(),
+                            runRow.concurrencyGroupId(),
+                            runRow.labels(),
+                            runRow.createdAt(),
+                            runRow.updatedAt(),
+                            runRow.startedAt(),
+                            runRow.completedAt()));
+        });
+    }
+
+    @Override
+    public Page<WorkflowRun> listRuns(final ListWorkflowRunsRequest request) {
+        return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRuns(request));
+    }
+
     @Override
     public void requestRunCancellation(final UUID runId, final String reason) {
         final var cancellationEvent = WorkflowEvent.newBuilder()
@@ -697,6 +732,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
             return dao.createSchedules(schedulesToCreate);
         });
+    }
+
+    @Override
+    public Page<WorkflowSchedule> listSchedules(final ListWorkflowSchedulesRequest request) {
+        return jdbi.withHandle(handle -> new WorkflowScheduleDao(handle).listSchedules(request));
     }
 
     private void flushExternalEvents(final List<NewExternalEvent> externalEvents) {
@@ -1199,33 +1239,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 completeWorkflowTasksInternal(workflowDao, activityDao, completeWorkflowTaskCommands);
             }
         });
-    }
-
-    @Nullable
-    public WorkflowRunStateProjection getRun(final UUID runId) {
-        return jdbi.withHandle(handle -> {
-            final var dao = new WorkflowDao(handle);
-
-            final WorkflowRunRow runRow = dao.getRun(runId);
-            if (runRow == null) {
-                return null;
-            }
-
-            final List<WorkflowEvent> runJournal = dao.getRunJournal(runId);
-
-            final var runState = new WorkflowRunState(
-                    runRow.id(),
-                    runRow.workflowName(),
-                    runRow.workflowVersion(),
-                    runRow.concurrencyGroupId(),
-                    runJournal);
-
-            return WorkflowRunStateProjection.of(runState);
-        });
-    }
-
-    public Page<WorkflowRunRow> listRuns(final ListWorkflowRunsRequest request) {
-        return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRuns(request));
     }
 
     public List<WorkflowEvent> getRunJournal(final UUID runId) {

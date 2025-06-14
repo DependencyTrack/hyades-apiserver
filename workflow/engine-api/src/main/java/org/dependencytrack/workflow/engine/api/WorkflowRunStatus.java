@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine;
+package org.dependencytrack.workflow.engine.api;
 
 import java.util.Set;
 
@@ -42,15 +42,15 @@ public enum WorkflowRunStatus {
         this.allowedTransitions = Set.of(allowedTransitions);
     }
 
-    boolean canTransitionTo(final WorkflowRunStatus newState) {
+    public boolean canTransitionTo(final WorkflowRunStatus newState) {
         return allowedTransitions.contains(newState.ordinal());
     }
 
-    boolean isTerminal() {
+    public boolean isTerminal() {
         return !equals(PENDING) && !equals(RUNNING) && !equals(SUSPENDED);
     }
 
-    static WorkflowRunStatus fromProto(
+    public static WorkflowRunStatus fromProto(
             final org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus protoStatus) {
         return switch (protoStatus) {
             case WORKFLOW_RUN_STATUS_PENDING -> PENDING;
@@ -63,7 +63,7 @@ public enum WorkflowRunStatus {
         };
     }
 
-    org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus toProto() {
+    public org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus toProto() {
         return switch (this) {
             case PENDING -> WORKFLOW_RUN_STATUS_PENDING;
             case RUNNING -> WORKFLOW_RUN_STATUS_RUNNING;

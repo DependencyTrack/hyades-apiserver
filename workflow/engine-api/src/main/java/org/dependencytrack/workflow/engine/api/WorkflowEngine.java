@@ -22,12 +22,14 @@ import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.jspecify.annotations.Nullable;
 
 import java.io.Closeable;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -53,11 +55,18 @@ public interface WorkflowEngine extends Closeable {
 
     List<UUID> createRuns(Collection<CreateWorkflowRunRequest> requests);
 
-    @Nullable
     default UUID createRun(final CreateWorkflowRunRequest request) {
         final List<UUID> results = createRuns(List.of(request));
-        return !results.isEmpty() ? results.getFirst() : null;
+        if (results.isEmpty()) {
+            throw new IllegalStateException("createRuns returned no results");
+        }
+
+        return results.getFirst();
     }
+
+    Optional<WorkflowRun> getRun(UUID id);
+
+    Page<WorkflowRun> listRuns(ListWorkflowRunsRequest request);
 
     void requestRunCancellation(UUID runId, String reason);
 
@@ -69,6 +78,15 @@ public interface WorkflowEngine extends Closeable {
 
     List<WorkflowSchedule> createSchedules(Collection<CreateWorkflowScheduleRequest> requests);
 
-    // TODO: Methods to query runs.
+    default WorkflowSchedule createSchedule(final CreateWorkflowScheduleRequest request) {
+        final List<WorkflowSchedule> results = createSchedules(List.of(request));
+        if (results.isEmpty()) {
+            throw new IllegalStateException("createSchedules returned no results");
+        }
+
+        return results.getFirst();
+    }
+
+    Page<WorkflowSchedule> listSchedules(ListWorkflowSchedulesRequest request);
 
 }

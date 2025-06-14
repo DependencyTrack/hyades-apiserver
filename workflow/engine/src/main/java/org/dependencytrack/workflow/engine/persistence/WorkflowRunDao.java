@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
-import org.dependencytrack.workflow.engine.WorkflowRunStatus;
-import org.dependencytrack.workflow.engine.persistence.model.ListWorkflowRunsRequest;
+import org.dependencytrack.workflow.engine.api.ListWorkflowRunsRequest;
+import org.dependencytrack.workflow.engine.api.WorkflowRun;
+import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
-import org.dependencytrack.workflow.engine.persistence.pagination.Page;
 import org.dependencytrack.workflow.engine.proto.v1.ListWorkflowRunsPageToken;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
@@ -34,8 +34,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.workflow.engine.persistence.pagination.PageTokenUtil.decodePageToken;
-import static org.dependencytrack.workflow.engine.persistence.pagination.PageTokenUtil.encodePageToken;
+import static org.dependencytrack.workflow.engine.support.PageTokenUtil.decodePageToken;
+import static org.dependencytrack.workflow.engine.support.PageTokenUtil.encodePageToken;
 
 public final class WorkflowRunDao {
 
@@ -45,7 +45,7 @@ public final class WorkflowRunDao {
         this.jdbiHandle = jdbiHandle;
     }
 
-    public Page<WorkflowRunRow> listRuns(final ListWorkflowRunsRequest request) {
+    public Page<WorkflowRun> listRuns(final ListWorkflowRunsRequest request) {
         requireNonNull(request, "request must not be null");
 
         final var pageTokenValue = decodePageToken(
@@ -63,10 +63,10 @@ public final class WorkflowRunDao {
                    and id > :lastId
                 </#if>
                 <#if nameFilter>
-                   and workflow_name = any(:nameFilter)
+                   and workflow_name = :nameFilter
                 </#if>
                 <#if statusFilter>
-                   and status = any(:statusFilter)
+                   and status = :statusFilter
                 </#if>
                 <#if labelFilter>
                    and labels @> cast(:labelFilter as jsonb)
@@ -88,17 +88,30 @@ public final class WorkflowRunDao {
         final int limit = request.limit() > 0 ? request.limit() : 100;
         final int limitWithNext = limit + 1;
 
-        final List<WorkflowRunRow> rows = query
-                .bindArray("nameFilter", String.class, request.nameFilter())
-                .bindArray("statusFilter", WorkflowRunStatus.class, request.statusFilter())
+        final List<WorkflowRun> rows = query
+                .bind("nameFilter", request.nameFilter())
+                .bind("statusFilter", request.statusFilter())
                 .bindByType("labelFilter", labelsJson, String.class)
                 .bind("limit", limitWithNext)
                 .bind("lastId", pageTokenValue != null ? UUID.fromString(pageTokenValue.getLastId()) : null)
                 .defineNamedBindings()
                 .mapTo(WorkflowRunRow.class)
+                .map(row -> new WorkflowRun(
+                        row.id(),
+                        row.workflowName(),
+                        row.workflowVersion(),
+                        row.status(),
+                        row.customStatus(),
+                        row.priority(),
+                        row.concurrencyGroupId(),
+                        row.labels(),
+                        row.createdAt(),
+                        row.updatedAt(),
+                        row.startedAt(),
+                        row.completedAt()))
                 .list();
 
-        final List<WorkflowRunRow> resultItems = rows.size() > 1
+        final List<WorkflowRun> resultItems = rows.size() > 1
                 ? rows.subList(0, Math.min(rows.size(), limit))
                 : rows;
 
