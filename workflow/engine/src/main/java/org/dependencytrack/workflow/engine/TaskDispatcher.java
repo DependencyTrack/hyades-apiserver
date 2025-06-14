@@ -42,7 +42,7 @@ final class TaskDispatcher<T extends Task> implements Runnable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskDispatcher.class);
 
-    private final WorkflowEngine engine;
+    private final WorkflowEngineImpl engine;
     private final ExecutorService taskExecutorService;
     private final TaskManager<T> taskManager;
     private final Semaphore taskSemaphore;
@@ -57,7 +57,7 @@ final class TaskDispatcher<T extends Task> implements Runnable {
     private MeterProvider<Timer> taskProcessLatencyTimerProvider;
 
     TaskDispatcher(
-            final WorkflowEngine engine,
+            final WorkflowEngineImpl engine,
             final ExecutorService taskExecutorService,
             final TaskManager<T> taskManager,
             final int maxConcurrency,

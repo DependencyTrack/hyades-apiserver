@@ -27,12 +27,14 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.workflow.api.ActivityCallOptions;
 import org.dependencytrack.workflow.api.ActivityContext;
 import org.dependencytrack.workflow.api.ActivityExecutor;
-import org.dependencytrack.workflow.api.ActivityGroup;
 import org.dependencytrack.workflow.api.WorkflowContext;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
-import org.dependencytrack.workflow.api.WorkflowGroup;
 import org.dependencytrack.workflow.api.annotation.Activity;
 import org.dependencytrack.workflow.api.annotation.Workflow;
+import org.dependencytrack.workflow.engine.api.ActivityGroup;
+import org.dependencytrack.workflow.engine.api.CreateWorkflowRunRequest;
+import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
+import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,9 +69,9 @@ import static org.dependencytrack.workflow.api.payload.PayloadConverters.voidCon
 
 @Disabled
 @Testcontainers
-public class WorkflowEngineBenchmarkTest {
+public class WorkflowEngineImplBenchmarkTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineBenchmarkTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineImplBenchmarkTest.class);
 
     @Container
     private static final PostgresTestContainer postgresContainer = new PostgresTestContainer()
@@ -131,7 +133,7 @@ public class WorkflowEngineBenchmarkTest {
 
     }
 
-    private WorkflowEngine engine;
+    private WorkflowEngineImpl engine;
     private ScheduledExecutorService statsPrinterExecutor;
 
     @BeforeEach
@@ -159,7 +161,7 @@ public class WorkflowEngineBenchmarkTest {
         engineConfig.activityTaskDispatcher().setPollBackoffIntervalFunction(IntervalFunction.of(Duration.ofMillis(50)));
         engineConfig.setMeterRegistry(meterRegistry);
 
-        engine = new WorkflowEngine(engineConfig);
+        engine = new WorkflowEngineImpl(engineConfig);
         engine.register(new TestWorkflow(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
         engine.register(new TestActivityFoo(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
         engine.register(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
@@ -195,16 +197,16 @@ public class WorkflowEngineBenchmarkTest {
     void test() {
         final int numRuns = 100_000;
 
-        final var scheduleOptions = new ArrayList<ScheduleWorkflowRunOptions>(numRuns);
+        final var scheduleOptions = new ArrayList<CreateWorkflowRunRequest>(numRuns);
         for (int i = 0; i < numRuns; i++) {
             final String concurrencyGroupId = (i % 2 == 0 && i != 0) ? "test-" + (i - 1) : "test-" + i;
             final Map<String, String> labels = (i % 5 == 0) ? Map.of("foo", "test-" + i) : null;
-            scheduleOptions.add(new ScheduleWorkflowRunOptions("test", 1)
+            scheduleOptions.add(new CreateWorkflowRunRequest("test", 1)
                     .withConcurrencyGroupId(concurrencyGroupId)
                     .withLabels(labels));
         }
 
-        engine.scheduleWorkflowRuns(scheduleOptions);
+        engine.createRuns(scheduleOptions);
         LOGGER.info("All workflows started");
 
         await("Workflow completion")
@@ -232,7 +234,7 @@ public class WorkflowEngineBenchmarkTest {
 
         @Override
         public void run() {
-            if (engine == null || engine.status() != WorkflowEngine.Status.RUNNING) {
+            if (engine == null || engine.status() != WorkflowEngineImpl.Status.RUNNING) {
                 LOGGER.info("Engine not ready yet");
                 return;
             }

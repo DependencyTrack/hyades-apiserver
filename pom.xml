@@ -173,11 +173,6 @@
                 <artifactId>proto</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>workflow-engine</artifactId>
-                <version>${project.version}</version>
-            </dependency>
 
             <dependency>
                 <groupId>org.assertj</groupId>

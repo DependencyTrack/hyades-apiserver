@@ -19,12 +19,12 @@
 package org.dependencytrack.workflow.engine;
 
 import com.google.protobuf.util.Timestamps;
-import org.dependencytrack.workflow.api.WorkflowGroup;
 import org.dependencytrack.workflow.api.proto.v1.ExecutionCompleted;
 import org.dependencytrack.workflow.api.proto.v1.ExecutionStarted;
 import org.dependencytrack.workflow.api.proto.v1.RunStarted;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.WorkflowMetadata;
+import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.persistence.model.PollWorkflowTaskCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,13 +37,13 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowTaskManager.class);
 
-    private final WorkflowEngine engine;
+    private final WorkflowEngineImpl engine;
     private final WorkflowGroup workflowGroup;
     private final ExecutorMetadataRegistry executorMetadataRegistry;
     private final List<PollWorkflowTaskCommand> pollCommands;
 
     WorkflowTaskManager(
-            final WorkflowEngine engine,
+            final WorkflowEngineImpl engine,
             final WorkflowGroup workflowGroup,
             final ExecutorMetadataRegistry executorMetadataRegistry) {
         this.engine = engine;

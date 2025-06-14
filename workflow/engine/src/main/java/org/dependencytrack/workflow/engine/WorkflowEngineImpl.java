@@ -27,9 +27,7 @@ import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.dependencytrack.workflow.api.ActivityExecutor;
-import org.dependencytrack.workflow.api.ActivityGroup;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
-import org.dependencytrack.workflow.api.WorkflowGroup;
 import org.dependencytrack.workflow.api.annotation.Activity;
 import org.dependencytrack.workflow.api.annotation.Workflow;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
@@ -47,6 +45,13 @@ import org.dependencytrack.workflow.engine.TaskCommand.AbandonWorkflowTaskComman
 import org.dependencytrack.workflow.engine.TaskCommand.CompleteActivityTaskCommand;
 import org.dependencytrack.workflow.engine.TaskCommand.CompleteWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.TaskCommand.FailActivityTaskCommand;
+import org.dependencytrack.workflow.engine.api.ActivityGroup;
+import org.dependencytrack.workflow.engine.api.CreateWorkflowRunRequest;
+import org.dependencytrack.workflow.engine.api.CreateWorkflowScheduleRequest;
+import org.dependencytrack.workflow.engine.api.WorkflowEngine;
+import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
+import org.dependencytrack.workflow.engine.api.WorkflowGroup;
+import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.persistence.JdbiFactory;
 import org.dependencytrack.workflow.engine.persistence.WorkflowActivityDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
@@ -70,7 +75,6 @@ import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrency
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRowUpdate;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowScheduleRow;
 import org.dependencytrack.workflow.engine.persistence.pagination.Page;
 import org.dependencytrack.workflow.engine.support.Buffer;
 import org.dependencytrack.workflow.engine.support.DefaultThreadFactory;
@@ -79,7 +83,6 @@ import org.jdbi.v3.core.Jdbi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
@@ -115,7 +118,7 @@ import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toTimesta
 //   - Activities scheduled
 //   - Activities completed/failed
 // TODO: Buffer schedule commands for ~5ms.
-public class WorkflowEngine implements Closeable {
+final class WorkflowEngineImpl implements WorkflowEngine {
 
     public enum Status {
 
@@ -148,7 +151,7 @@ public class WorkflowEngine implements Closeable {
     private record CachedWorkflowRunJournal(List<WorkflowEvent> events, int maxSequenceNumber) {
     }
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngine.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineImpl.class);
 
     private final WorkflowEngineConfig config;
     private final Jdbi jdbi;
@@ -163,11 +166,12 @@ public class WorkflowEngine implements Closeable {
     private Buffer<TaskCommand> taskCommandBuffer;
     private Cache<UUID, CachedWorkflowRunJournal> cachedJournalByRunId;
 
-    public WorkflowEngine(final WorkflowEngineConfig config) {
+    WorkflowEngineImpl(final WorkflowEngineConfig config) {
         this.config = requireNonNull(config);
         this.jdbi = JdbiFactory.create(config.dataSource());
     }
 
+    @Override
     public void start() {
         setStatus(Status.STARTING);
         LOGGER.debug("Starting");
@@ -309,6 +313,7 @@ public class WorkflowEngine implements Closeable {
      * @param <A>               Type of the workflow's argument.
      * @param <R>               Type of the workflow's result.
      */
+    @Override
     public <A, R> void register(
             final WorkflowExecutor<A, R> workflowExecutor,
             final PayloadConverter<A> argumentConverter,
@@ -339,6 +344,7 @@ public class WorkflowEngine implements Closeable {
      * @param <A>               Type of the activity's argument.
      * @param <R>               Type of the activity's result.
      */
+    @Override
     public <A, R> void register(
             final ActivityExecutor<A, R> activityExecutor,
             final PayloadConverter<A> argumentConverter,
@@ -362,15 +368,16 @@ public class WorkflowEngine implements Closeable {
      * <p>
      * All workflows in the provided group <strong>must</strong> have been registered with the engine before.
      *
-     * @param workflowGroup The {@link WorkflowGroup} to mount.
+     * @param group The {@link WorkflowGroup} to mount.
      * @throws IllegalStateException When any of the workflows within the group have not been registered,
      *                               or another {@link WorkflowGroup} with the same name is already mounted.
      */
-    public void mount(final WorkflowGroup workflowGroup) {
+    @Override
+    public void mount(final WorkflowGroup group) {
         requireRunningStatus();
-        LOGGER.debug("Mounting {}", workflowGroup);
+        LOGGER.debug("Mounting {}", group);
 
-        for (final String workflowName : workflowGroup.workflowNames()) {
+        for (final String workflowName : group.workflowNames()) {
             try {
                 executorMetadataRegistry.getWorkflowMetadata(workflowName);
             } catch (NoSuchElementException e) {
@@ -378,9 +385,9 @@ public class WorkflowEngine implements Closeable {
             }
         }
 
-        final String executorName = "WorkflowEngine-WorkflowGroup-%s".formatted(workflowGroup.name());
+        final String executorName = "WorkflowEngine-WorkflowGroup-%s".formatted(group.name());
         if (executorServiceByName.containsKey(executorName)) {
-            throw new IllegalStateException("Workflow group %s is already registered".formatted(workflowGroup.name()));
+            throw new IllegalStateException("Workflow group %s is already registered".formatted(group.name()));
         }
 
         final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
@@ -397,8 +404,8 @@ public class WorkflowEngine implements Closeable {
         final var taskDispatcher = new TaskDispatcher<>(
                 this,
                 executorService,
-                new WorkflowTaskManager(this, workflowGroup, executorMetadataRegistry),
-                workflowGroup.maxConcurrency(),
+                new WorkflowTaskManager(this, group, executorMetadataRegistry),
+                group.maxConcurrency(),
                 config.workflowTaskDispatcher().minPollInterval(),
                 config.workflowTaskDispatcher().pollBackoffIntervalFunction(),
                 config.meterRegistry());
@@ -406,11 +413,12 @@ public class WorkflowEngine implements Closeable {
         taskDispatcherExecutor.execute(taskDispatcher);
     }
 
-    public void mount(final ActivityGroup activityGroup) {
+    @Override
+    public void mount(final ActivityGroup group) {
         requireRunningStatus();
-        LOGGER.debug("Mounting {}", activityGroup);
+        LOGGER.debug("Mounting {}", group);
 
-        for (final String activityName : activityGroup.activityNames()) {
+        for (final String activityName : group.activityNames()) {
             try {
                 executorMetadataRegistry.getActivityMetadata(activityName);
             } catch (NoSuchElementException e) {
@@ -418,9 +426,9 @@ public class WorkflowEngine implements Closeable {
             }
         }
 
-        final String executorName = "WorkflowEngine-ActivityGroup-%s".formatted(activityGroup.name());
+        final String executorName = "WorkflowEngine-ActivityGroup-%s".formatted(group.name());
         if (executorServiceByName.containsKey(executorName)) {
-            throw new IllegalStateException("Activity group %s is already mounted".formatted(activityGroup.name()));
+            throw new IllegalStateException("Activity group %s is already mounted".formatted(group.name()));
         }
 
         final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
@@ -437,8 +445,8 @@ public class WorkflowEngine implements Closeable {
         final var taskDispatcher = new TaskDispatcher<>(
                 this,
                 executorService,
-                new ActivityTaskManager(this, activityGroup, executorMetadataRegistry),
-                activityGroup.maxConcurrency(),
+                new ActivityTaskManager(this, group, executorMetadataRegistry),
+                group.maxConcurrency(),
                 config.activityTaskDispatcher().minPollInterval(),
                 config.activityTaskDispatcher().pollBackoffIntervalFunction(),
                 config.meterRegistry());
@@ -446,7 +454,8 @@ public class WorkflowEngine implements Closeable {
         taskDispatcherExecutor.execute(taskDispatcher);
     }
 
-    public List<UUID> scheduleWorkflowRuns(final Collection<ScheduleWorkflowRunOptions> options) {
+    @Override
+    public List<UUID> createRuns(final Collection<CreateWorkflowRunRequest> options) {
         requireRunningStatus();
 
         final var now = Timestamps.now();
@@ -454,7 +463,7 @@ public class WorkflowEngine implements Closeable {
         final var newInboxEventRows = new ArrayList<NewWorkflowRunInboxRow>(options.size());
         final var nextRunIdByConcurrencyGroupId = new HashMap<String, UUID>();
 
-        for (final ScheduleWorkflowRunOptions option : options) {
+        for (final CreateWorkflowRunRequest option : options) {
             final UUID runId = randomUUIDv7();
             newWorkflowRunRows.add(
                     new NewWorkflowRunRow(
@@ -529,16 +538,8 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
-    public UUID scheduleWorkflowRun(final ScheduleWorkflowRunOptions options) {
-        final List<UUID> scheduledRunIds = scheduleWorkflowRuns(List.of(options));
-        if (scheduledRunIds.isEmpty()) {
-            return null;
-        }
-
-        return scheduledRunIds.getFirst();
-    }
-
-    public void cancelWorkflowRun(final UUID runId, final String reason) {
+    @Override
+    public void requestRunCancellation(final UUID runId, final String reason) {
         final var cancellationEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
@@ -569,7 +570,8 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
-    public void suspendWorkflowRun(final UUID runId) {
+    @Override
+    public void requestRunSuspension(final UUID runId) {
         final var suspensionEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
@@ -600,7 +602,8 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
-    public void resumeWorkflowRun(final UUID runId) {
+    @Override
+    public void requestRunResumption(final UUID runId) {
         final var resumeEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
@@ -631,6 +634,7 @@ public class WorkflowEngine implements Closeable {
         });
     }
 
+    @Override
     public CompletableFuture<Void> sendExternalEvent(
             final UUID workflowRunId,
             final String eventId,
@@ -644,14 +648,15 @@ public class WorkflowEngine implements Closeable {
         }
     }
 
-    public List<WorkflowScheduleRow> createSchedules(final Collection<NewWorkflowSchedule> newSchedules) {
+    @Override
+    public List<WorkflowSchedule> createSchedules(final Collection<CreateWorkflowScheduleRequest> requests) {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowScheduleDao(handle);
 
             final var now = Instant.now();
-            final var schedulesToCreate = new ArrayList<NewWorkflowScheduleRow>(newSchedules.size());
+            final var schedulesToCreate = new ArrayList<NewWorkflowScheduleRow>(requests.size());
 
-            for (final NewWorkflowSchedule newSchedule : newSchedules) {
+            for (final CreateWorkflowScheduleRequest newSchedule : requests) {
                 final Schedule cronSchedule;
                 try {
                     cronSchedule = Schedule.create(newSchedule.cron());

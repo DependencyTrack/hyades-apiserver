@@ -16,25 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.model;
+package org.dependencytrack.workflow.engine.api;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 
-import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.util.Map;
 
-public record WorkflowScheduleRow(
+public record WorkflowSchedule(
         String name,
         String cron,
         String workflowName,
         int workflowVersion,
-        @Nullable String concurrencyGroupId,
-        @Nullable Integer priority,
-        @Nullable Map<String, String> labels,
-        @Nullable WorkflowPayload argument,
+        String concurrencyGroupId,
+        Integer priority,
+        Map<String, String> labels,
+        WorkflowPayload argument,
         Instant createdAt,
-        @Nullable Instant updatedAt,
-        @Nullable Instant lastFiredAt,
+        Instant updatedAt,
+        Instant lastFiredAt,
         Instant nextFireAt) {
 }

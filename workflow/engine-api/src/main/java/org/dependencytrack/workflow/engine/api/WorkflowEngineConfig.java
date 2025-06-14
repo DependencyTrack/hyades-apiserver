@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine;
+package org.dependencytrack.workflow.engine.api;
 
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;

@@ -23,20 +23,34 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.dependencytrack</groupId>
-        <artifactId>dependency-track-parent</artifactId>
+        <artifactId>workflow-parent</artifactId>
         <version>5.6.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>workflow-parent</artifactId>
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>api</module>
-        <module>engine-api</module>
-        <module>engine</module>
-    </modules>
+    <artifactId>workflow-engine-api</artifactId>
 
     <properties>
-        <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
+        <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>workflow-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <version>1.15.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-core</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+    </dependencies>
+
 </project>

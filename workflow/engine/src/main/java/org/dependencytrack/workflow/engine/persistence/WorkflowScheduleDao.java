@@ -19,8 +19,8 @@
 package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowScheduleRow;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowScheduleRow;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -42,7 +42,7 @@ public final class WorkflowScheduleDao {
         this.jdbiHandle = jdbiHandle;
     }
 
-    public List<WorkflowScheduleRow> createSchedules(final Collection<NewWorkflowScheduleRow> newSchedules) {
+    public List<WorkflowSchedule> createSchedules(final Collection<NewWorkflowScheduleRow> newSchedules) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into workflow_schedule (
                   name
@@ -115,11 +115,11 @@ public final class WorkflowScheduleDao {
                 .bindArray("arguments", WorkflowPayload.class, arguments)
                 .bindArray("nextFireAts", Instant.class, nextFireAts)
                 .executeAndReturnGeneratedKeys("*")
-                .mapTo(WorkflowScheduleRow.class)
+                .mapTo(WorkflowSchedule.class)
                 .list();
     }
 
-    public List<WorkflowScheduleRow> getDueSchedulesForUpdate() {
+    public List<WorkflowSchedule> getDueSchedulesForUpdate() {
         final Query query = jdbiHandle.createQuery("""
                 select *
                   from workflow_schedule
@@ -130,7 +130,7 @@ public final class WorkflowScheduleDao {
                 """);
 
         return query
-                .mapTo(WorkflowScheduleRow.class)
+                .mapTo(WorkflowSchedule.class)
                 .list();
     }
 

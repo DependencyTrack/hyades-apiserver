@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowScheduleRow;
+import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -32,11 +32,11 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 
-public class WorkflowScheduleRowMapper implements RowMapper<WorkflowScheduleRow> {
+public class WorkflowScheduleRowMapper implements RowMapper<WorkflowSchedule> {
 
     @Override
-    public WorkflowScheduleRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
-        return new WorkflowScheduleRow(
+    public WorkflowSchedule map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        return new WorkflowSchedule(
                 rs.getString("name"),
                 rs.getString("cron"),
                 rs.getString("workflow_name"),

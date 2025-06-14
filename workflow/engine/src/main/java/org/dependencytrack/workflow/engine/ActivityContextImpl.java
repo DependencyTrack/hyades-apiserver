@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
  */
 final class ActivityContextImpl<T> implements ActivityContext<T>, Closeable {
 
-    private final WorkflowEngine engine;
+    private final WorkflowEngineImpl engine;
     private final UUID workflowRunId;
     private final int scheduledEventId;
     private final T argument;
@@ -49,7 +49,7 @@ final class ActivityContextImpl<T> implements ActivityContext<T>, Closeable {
     private volatile Instant lockedUntil;
 
     ActivityContextImpl(
-            final WorkflowEngine engine,
+            final WorkflowEngineImpl engine,
             final UUID workflowRunId,
             final int scheduledEventId,
             final T argument,

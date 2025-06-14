@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.api.ActivityGroup;
 import org.dependencytrack.workflow.api.proto.v1.ActivityTaskCompleted;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.ActivityMetadata;
+import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.persistence.model.PollActivityTaskCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,13 +34,13 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ActivityTaskManager.class);
 
-    private final WorkflowEngine engine;
+    private final WorkflowEngineImpl engine;
     private final ActivityGroup activityGroup;
     private final ExecutorMetadataRegistry executorMetadataRegistry;
     private final List<PollActivityTaskCommand> pollCommands;
 
     ActivityTaskManager(
-            final WorkflowEngine engine,
+            final WorkflowEngineImpl engine,
             final ActivityGroup activityGroup,
             final ExecutorMetadataRegistry executorMetadataRegistry) {
         this.engine = engine;

@@ -48,7 +48,7 @@ import java.util.Optional;
 import java.util.SequencedCollection;
 import java.util.UUID;
 
-import static org.dependencytrack.workflow.engine.WorkflowEngine.randomUUIDv7;
+import static org.dependencytrack.workflow.engine.WorkflowEngineImpl.randomUUIDv7;
 import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toInstant;
 import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toTimestamp;
 

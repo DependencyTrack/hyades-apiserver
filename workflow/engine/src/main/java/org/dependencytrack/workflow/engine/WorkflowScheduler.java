@@ -20,8 +20,9 @@ package org.dependencytrack.workflow.engine;
 
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
+import org.dependencytrack.workflow.engine.api.CreateWorkflowRunRequest;
+import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.persistence.WorkflowScheduleDao;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowScheduleRow;
 import org.jdbi.v3.core.Jdbi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,10 +39,10 @@ final class WorkflowScheduler implements Runnable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowScheduler.class);
 
-    private final WorkflowEngine engine;
+    private final WorkflowEngineImpl engine;
     private final Jdbi jdbi;
 
-    WorkflowScheduler(final WorkflowEngine engine, final Jdbi jdbi) {
+    WorkflowScheduler(final WorkflowEngineImpl engine, final Jdbi jdbi) {
         this.engine = engine;
         this.jdbi = jdbi;
     }
@@ -51,21 +52,21 @@ final class WorkflowScheduler implements Runnable {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowScheduleDao(handle);
 
-            final List<WorkflowScheduleRow> dueSchedules = dao.getDueSchedulesForUpdate();
+            final List<WorkflowSchedule> dueSchedules = dao.getDueSchedulesForUpdate();
             if (dueSchedules.isEmpty()) {
                 LOGGER.debug("No due schedules found");
                 return;
             } else if (LOGGER.isDebugEnabled()) {
-                for (final WorkflowScheduleRow schedule : dueSchedules) {
+                for (final WorkflowSchedule schedule : dueSchedules) {
                     LOGGER.debug("Schedule {} is due as of {}", schedule.name(), schedule.nextFireAt());
                 }
             }
 
             final var now = Instant.now();
-            final var scheduleRunOptions = new ArrayList<ScheduleWorkflowRunOptions>(dueSchedules.size());
+            final var scheduleRunOptions = new ArrayList<CreateWorkflowRunRequest>(dueSchedules.size());
             final var nextFireAtByName = new HashMap<String, Instant>(dueSchedules.size());
 
-            for (final WorkflowScheduleRow schedule : dueSchedules) {
+            for (final WorkflowSchedule schedule : dueSchedules) {
                 try {
                     final Schedule cronSchedule = Schedule.create(schedule.cron());
                     final Instant nextFireAt = cronSchedule.next(Date.from(now)).toInstant();
@@ -83,7 +84,7 @@ final class WorkflowScheduler implements Runnable {
                 }
                 labels.put("schedule", schedule.name());
 
-                scheduleRunOptions.add(new ScheduleWorkflowRunOptions(
+                scheduleRunOptions.add(new CreateWorkflowRunRequest(
                         schedule.workflowName(),
                         schedule.workflowVersion(),
                         schedule.concurrencyGroupId(),
@@ -93,7 +94,7 @@ final class WorkflowScheduler implements Runnable {
             }
 
             // TODO: This should share the same transaction as the current handle.
-            final List<UUID> scheduledRunIds = engine.scheduleWorkflowRuns(scheduleRunOptions);
+            final List<UUID> scheduledRunIds = engine.createRuns(scheduleRunOptions);
             assert scheduledRunIds.size() == dueSchedules.size();
 
             if (LOGGER.isDebugEnabled()) {

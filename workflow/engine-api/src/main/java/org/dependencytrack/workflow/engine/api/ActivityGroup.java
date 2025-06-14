@@ -16,8 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.api;
+package org.dependencytrack.workflow.engine.api;
 
+import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.annotation.Activity;
 
 import java.util.HashSet;
@@ -53,7 +54,8 @@ public record ActivityGroup(String name, Set<String> activityNames, int maxConcu
 
         final Activity activityAnnotation = executorClass.getAnnotation(Activity.class);
         if (activityAnnotation == null) {
-            throw new IllegalArgumentException("No @Activity annotation found for executor " + executorClass.getName());
+            throw new IllegalArgumentException("No @%s annotation found for executor %s".formatted(
+                    Activity.class.getName(), executorClass.getName()));
         }
 
         this.activityNames.add(activityAnnotation.name());

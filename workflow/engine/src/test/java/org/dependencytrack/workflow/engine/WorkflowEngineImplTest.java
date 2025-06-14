@@ -18,20 +18,23 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.api.ActivityGroup;
 import org.dependencytrack.workflow.api.Awaitable;
 import org.dependencytrack.workflow.api.ContinueAsNewOptions;
-import org.dependencytrack.workflow.api.WorkflowGroup;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.SubWorkflowFailureException;
 import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
+import org.dependencytrack.workflow.engine.api.ActivityGroup;
+import org.dependencytrack.workflow.engine.api.CreateWorkflowRunRequest;
+import org.dependencytrack.workflow.engine.api.CreateWorkflowScheduleRequest;
+import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
+import org.dependencytrack.workflow.engine.api.WorkflowGroup;
+import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.payload.StringPayloadConverter;
 import org.dependencytrack.workflow.engine.persistence.model.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowScheduleRow;
 import org.dependencytrack.workflow.engine.persistence.pagination.Page;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,13 +64,13 @@ import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFL
 import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 
 @Testcontainers
-class WorkflowEngineTest {
+class WorkflowEngineImplTest {
 
     @Container
     private static final PostgresTestContainer postgresContainer = new PostgresTestContainer();
 
     private final PayloadConverter<String> stringConverter = new StringPayloadConverter();
-    private WorkflowEngine engine;
+    private WorkflowEngineImpl engine;
 
     @BeforeEach
     void beforeEach() {
@@ -83,7 +86,7 @@ class WorkflowEngineTest {
         config.scheduler().setInitialDelay(Duration.ofMillis(250));
         config.scheduler().setPollInterval(Duration.ofMillis(250));
 
-        engine = new WorkflowEngine(config);
+        engine = new WorkflowEngineImpl(config);
         engine.start();
     }
 
@@ -106,8 +109,8 @@ class WorkflowEngineTest {
         });
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(
-                new ScheduleWorkflowRunOptions("test", 1)
+        final UUID runId = engine.createRun(
+                new CreateWorkflowRunRequest("test", 1)
                         .withConcurrencyGroupId("someConcurrencyGroupId")
                         .withPriority(6)
                         .withLabels(Map.of("label-a", "123", "label-b", "321"))
@@ -177,7 +180,7 @@ class WorkflowEngineTest {
         });
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         final WorkflowRunStateProjection failedRun = awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -214,11 +217,11 @@ class WorkflowEngineTest {
         });
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.RUNNING);
 
-        engine.cancelWorkflowRun(runId, "Stop it!");
+        engine.requestRunCancellation(runId, "Stop it!");
 
         final WorkflowRunStateProjection cancelledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
 
@@ -259,7 +262,7 @@ class WorkflowEngineTest {
         });
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(10));
 
@@ -296,7 +299,7 @@ class WorkflowEngineTest {
         });
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(10));
 
@@ -335,7 +338,7 @@ class WorkflowEngineTest {
                 .withWorkflow("bar")
                 .withMaxConcurrency(2));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("foo", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -367,7 +370,7 @@ class WorkflowEngineTest {
                 .withWorkflow("bar")
                 .withMaxConcurrency(2));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("foo", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -419,13 +422,13 @@ class WorkflowEngineTest {
                 .withWorkflow("grand-child")
                 .withMaxConcurrency(3));
 
-        final UUID parentRunId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("parent", 1));
+        final UUID parentRunId = engine.createRun(new CreateWorkflowRunRequest("parent", 1));
 
         await("Grand Child Workflow Run Start")
                 .atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> assertThat(grandChildRunIdReference.get()).isNotNull());
 
-        engine.cancelWorkflowRun(parentRunId, "someReason");
+        engine.requestRunCancellation(parentRunId, "someReason");
 
         awaitRunStatus(parentRunId, WorkflowRunStatus.CANCELLED);
         awaitRunStatus(childRunIdReference.get(), WorkflowRunStatus.CANCELLED);
@@ -437,12 +440,12 @@ class WorkflowEngineTest {
         engine.register("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThatExceptionOfType(IllegalStateException.class)
-                .isThrownBy(() -> engine.cancelWorkflowRun(runId, "someReason"))
+                .isThrownBy(() -> engine.requestRunCancellation(runId, "someReason"))
                 .withMessageMatching("Workflow run .+ is already in terminal status");
     }
 
@@ -456,13 +459,13 @@ class WorkflowEngineTest {
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
-        engine.suspendWorkflowRun(runId);
+        engine.requestRunSuspension(runId);
 
         awaitRunStatus(runId, WorkflowRunStatus.SUSPENDED);
 
-        engine.resumeWorkflowRun(runId);
+        engine.requestRunResumption(runId);
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
     }
@@ -477,13 +480,13 @@ class WorkflowEngineTest {
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
-        engine.suspendWorkflowRun(runId);
+        engine.requestRunSuspension(runId);
 
         awaitRunStatus(runId, WorkflowRunStatus.SUSPENDED);
 
-        engine.cancelWorkflowRun(runId, "someReason");
+        engine.requestRunCancellation(runId, "someReason");
 
         awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
     }
@@ -493,12 +496,12 @@ class WorkflowEngineTest {
         engine.register("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThatExceptionOfType(IllegalStateException.class)
-                .isThrownBy(() -> engine.suspendWorkflowRun(runId))
+                .isThrownBy(() -> engine.requestRunSuspension(runId))
                 .withMessageMatching("Workflow run .+ is already in terminal status");
     }
 
@@ -512,14 +515,14 @@ class WorkflowEngineTest {
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
-        engine.suspendWorkflowRun(runId);
+        engine.requestRunSuspension(runId);
 
         awaitRunStatus(runId, WorkflowRunStatus.SUSPENDED);
 
         assertThatExceptionOfType(IllegalStateException.class)
-                .isThrownBy(() -> engine.suspendWorkflowRun(runId))
+                .isThrownBy(() -> engine.requestRunSuspension(runId))
                 .withMessageMatching("Workflow run .+ is already suspended");
     }
 
@@ -533,12 +536,12 @@ class WorkflowEngineTest {
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.RUNNING);
 
         assertThatExceptionOfType(IllegalStateException.class)
-                .isThrownBy(() -> engine.resumeWorkflowRun(runId))
+                .isThrownBy(() -> engine.requestRunResumption(runId))
                 .withMessageMatching("Workflow run .+ can not be resumed because it is not suspended");
     }
 
@@ -547,12 +550,12 @@ class WorkflowEngineTest {
         engine.register("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> Optional.empty());
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
         assertThatExceptionOfType(IllegalStateException.class)
-                .isThrownBy(() -> engine.resumeWorkflowRun(runId))
+                .isThrownBy(() -> engine.requestRunResumption(runId))
                 .withMessageMatching("Workflow run .+ is already in terminal status");
     }
 
@@ -565,7 +568,7 @@ class WorkflowEngineTest {
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         await("Update")
                 .atMost(Duration.ofSeconds(5))
@@ -599,7 +602,7 @@ class WorkflowEngineTest {
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -635,7 +638,7 @@ class WorkflowEngineTest {
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -670,7 +673,7 @@ class WorkflowEngineTest {
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -700,7 +703,7 @@ class WorkflowEngineTest {
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.mount(new ActivityGroup("test-group").withActivity("abc"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -737,7 +740,7 @@ class WorkflowEngineTest {
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.mount(new ActivityGroup("test-group").withActivity("abc").withMaxConcurrency(2));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -774,7 +777,7 @@ class WorkflowEngineTest {
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.mount(new ActivityGroup("test-group").withActivity("abc"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -813,7 +816,7 @@ class WorkflowEngineTest {
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.mount(new ActivityGroup("test-group").withActivity("abc"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -870,7 +873,7 @@ class WorkflowEngineTest {
                 .withMaxConcurrency(3));
         engine.mount(new ActivityGroup("test-group").withActivity("qux"));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1)
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("foo", 1)
                 .withLabels(Map.of("oof", "rab")));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED, Duration.ofSeconds(15));
@@ -943,7 +946,7 @@ class WorkflowEngineTest {
                 .withWorkflow("bar")
                 .withMaxConcurrency(2));
 
-        final UUID runId = engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("foo", 1)
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("foo", 1)
                 .withLabels(Map.of("oof", "123", "rab", "321")));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
@@ -981,8 +984,8 @@ class WorkflowEngineTest {
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("foo"));
 
-        final UUID runId = engine.scheduleWorkflowRun(
-                new ScheduleWorkflowRunOptions("foo", 1)
+        final UUID runId = engine.createRun(
+                new CreateWorkflowRunRequest("foo", 1)
                         .withArgument("0", stringConverter));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
@@ -1009,9 +1012,13 @@ class WorkflowEngineTest {
     }
 
     @Test
-    void shouldScheduleWorkflowRuns() {
-        final List<WorkflowScheduleRow> createdSchedules = engine.createSchedules(List.of(
-                new NewWorkflowSchedule("foo-schedule", "* * * * *", "foo", 1, "concurrencyGroupId", 666, Map.of("label", "123"), null, Duration.ZERO)));
+    void shouldCreateRuns() {
+        final List<WorkflowSchedule> createdSchedules = engine.createSchedules(List.of(
+                new CreateWorkflowScheduleRequest("foo-schedule", "* * * * *", "foo", 1)
+                        .withConcurrencyGroupId("concurrencyGroupId")
+                        .withPriority(666)
+                        .withLabels(Map.of("label", "123"))
+                        .withInitialDelay(Duration.ZERO)));
 
         assertThat(createdSchedules).satisfiesExactly(schedule -> {
             assertThat(schedule.name()).isEqualTo("foo-schedule");
@@ -1047,11 +1054,11 @@ class WorkflowEngineTest {
     @Test
     void shouldNotCreateSchedulesWhenAlreadyExist() {
         engine.createSchedules(List.of(
-                new NewWorkflowSchedule("foo-schedule", "* * * * *", "foo", 1, null, null, null, null, null)));
+                new CreateWorkflowScheduleRequest("foo-schedule", "* * * * *", "foo", 1)));
 
-        final List<WorkflowScheduleRow> createdSchedules = engine.createSchedules(List.of(
-                new NewWorkflowSchedule("foo-schedule", "1 1 1 1 1", "oof", 9, null, null, null, null, null),
-                new NewWorkflowSchedule("bar-schedule", "* * * * *", "bar", 1, null, null, null, null, null)));
+        final List<WorkflowSchedule> createdSchedules = engine.createSchedules(List.of(
+                new CreateWorkflowScheduleRequest("foo-schedule", "1 1 1 1 1", "oof", 9),
+                new CreateWorkflowScheduleRequest("bar-schedule", "* * * * *", "bar", 1)));
 
         assertThat(createdSchedules).satisfiesExactly(schedule -> {
             assertThat(schedule.name()).isEqualTo("bar-schedule");
@@ -1061,7 +1068,7 @@ class WorkflowEngineTest {
     @Test
     void shouldPaginateListRuns() {
         for (int i = 0; i < 10; i++) {
-            engine.scheduleWorkflowRun(new ScheduleWorkflowRunOptions("test", 1));
+            engine.createRun(new CreateWorkflowRunRequest("test", 1));
         }
 
         Page<WorkflowRunRow> runsPage = engine.listRuns(

@@ -16,10 +16,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.model;
+module org.dependencytrack.workflow.engine.api {
+    exports org.dependencytrack.workflow.engine.api;
 
-import java.time.Instant;
-import java.util.UUID;
-
-public record ArchiveWorkflowRunJournalCommand(UUID runId, Instant completedAt) {
+    requires io.github.resilience4j.core;
+    requires java.sql;
+    requires micrometer.core;
+    requires org.dependencytrack.workflow.api;
 }

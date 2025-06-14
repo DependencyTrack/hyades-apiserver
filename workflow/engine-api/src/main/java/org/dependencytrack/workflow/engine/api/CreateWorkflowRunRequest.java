@@ -16,14 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine;
+package org.dependencytrack.workflow.engine.api;
 
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 
 import java.util.Map;
 
-public record ScheduleWorkflowRunOptions(
+import static java.util.Objects.requireNonNull;
+
+public record CreateWorkflowRunRequest(
         String workflowName,
         int workflowVersion,
         String concurrencyGroupId,
@@ -31,27 +33,31 @@ public record ScheduleWorkflowRunOptions(
         Map<String, String> labels,
         WorkflowPayload argument) {
 
-    public ScheduleWorkflowRunOptions(final String workflowName, final int workflowVersion) {
+    public CreateWorkflowRunRequest {
+        requireNonNull(workflowName, "workflowName must not be null");
+    }
+
+    public CreateWorkflowRunRequest(final String workflowName, final int workflowVersion) {
         this(workflowName, workflowVersion, null, null, null, null);
     }
 
-    public ScheduleWorkflowRunOptions withConcurrencyGroupId(final String concurrencyGroupId) {
-        return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
+    public CreateWorkflowRunRequest withConcurrencyGroupId(final String concurrencyGroupId) {
+        return new CreateWorkflowRunRequest(this.workflowName, this.workflowVersion,
                 concurrencyGroupId, this.priority, this.labels, this.argument);
     }
 
-    public ScheduleWorkflowRunOptions withPriority(final Integer priority) {
-        return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
+    public CreateWorkflowRunRequest withPriority(final Integer priority) {
+        return new CreateWorkflowRunRequest(this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, priority, this.labels, this.argument);
     }
 
-    public ScheduleWorkflowRunOptions withLabels(final Map<String, String> labels) {
-        return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
+    public CreateWorkflowRunRequest withLabels(final Map<String, String> labels) {
+        return new CreateWorkflowRunRequest(this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, labels, this.argument);
     }
 
-    public <T> ScheduleWorkflowRunOptions withArgument(final T argument, final PayloadConverter<T> converter) {
-        return new ScheduleWorkflowRunOptions(this.workflowName, this.workflowVersion,
+    public <T> CreateWorkflowRunRequest withArgument(final T argument, final PayloadConverter<T> converter) {
+        return new CreateWorkflowRunRequest(this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, this.labels, converter.convertToPayload(argument));
     }
 
