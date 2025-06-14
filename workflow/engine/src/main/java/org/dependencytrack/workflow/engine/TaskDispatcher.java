@@ -25,6 +25,7 @@ import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,24 +47,24 @@ final class TaskDispatcher<T extends Task> implements Runnable {
     private final ExecutorService taskExecutorService;
     private final TaskManager<T> taskManager;
     private final Semaphore taskSemaphore;
-    private final Duration minPollInterval;
-    private final IntervalFunction pollBackoffIntervalFunction;
-    private final MeterRegistry meterRegistry;
-    private Instant lastPolledAt;
-    private Timer taskPollLatencyTimer;
-    private Counter taskPollsCounter;
-    private MeterProvider<DistributionSummary> taskPollDistributionProvider;
-    private MeterProvider<Counter> tasksProcessedCounterProvider;
-    private MeterProvider<Timer> taskProcessLatencyTimerProvider;
+    @Nullable private final Duration minPollInterval;
+    @Nullable private final IntervalFunction pollBackoffIntervalFunction;
+    @Nullable private final MeterRegistry meterRegistry;
+    @Nullable private Instant lastPolledAt;
+    @Nullable private Timer taskPollLatencyTimer;
+    @Nullable private Counter taskPollsCounter;
+    @Nullable private MeterProvider<DistributionSummary> taskPollDistributionProvider;
+    @Nullable private MeterProvider<Counter> tasksProcessedCounterProvider;
+    @Nullable private MeterProvider<Timer> taskProcessLatencyTimerProvider;
 
     TaskDispatcher(
             final WorkflowEngineImpl engine,
             final ExecutorService taskExecutorService,
             final TaskManager<T> taskManager,
             final int maxConcurrency,
-            final Duration minPollInterval,
-            final IntervalFunction pollBackoffIntervalFunction,
-            final MeterRegistry meterRegistry) {
+            @Nullable final Duration minPollInterval,
+            @Nullable final IntervalFunction pollBackoffIntervalFunction,
+            @Nullable final MeterRegistry meterRegistry) {
         this.engine = engine;
         this.taskExecutorService = taskExecutorService;
         this.taskManager = taskManager;

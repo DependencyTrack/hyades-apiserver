@@ -59,6 +59,7 @@ import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResul
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleSubWorkflowCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleTimerCommand;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,8 +92,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private final UUID runId;
     private final String workflowName;
     private final int workflowVersion;
-    private final Integer priority;
-    private final Map<String, String> labels;
+    @Nullable private final Integer priority;
+    @Nullable private final Map<String, String> labels;
     private final ExecutorMetadataRegistry executorMetadataRegistry;
     private final WorkflowExecutor<A, R> workflowExecutor;
     private final PayloadConverter<A> argumentConverter;
@@ -108,19 +109,19 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private final Logger logger;
     private int currentEventIndex;
     private int currentEventId;
-    private Instant currentTime;
-    private A argument;
+    @Nullable private Instant currentTime;
+    @Nullable private A argument;
     private boolean isInSideEffect;
     private boolean isReplaying;
     private boolean isSuspended;
-    private String customStatus;
+    @Nullable private String customStatus;
 
     WorkflowContextImpl(
             final UUID runId,
             final String workflowName,
             final int workflowVersion,
-            final Integer priority,
-            final Map<String, String> labels,
+            @Nullable final Integer priority,
+            @Nullable final Map<String, String> labels,
             final ExecutorMetadataRegistry executorMetadataRegistry,
             final WorkflowExecutor<A, R> workflowExecutor,
             final PayloadConverter<A> argumentConverter,
@@ -162,6 +163,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return workflowVersion;
     }
 
+    @Nullable
     @Override
     public Map<String, String> labels() {
         return labels;
@@ -214,7 +216,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     <AA, AR> Awaitable<AR> callActivity(
             final String name,
-            final AA argument,
+            @Nullable final AA argument,
             final PayloadConverter<AA> argumentConverter,
             final PayloadConverter<AR> resultConverter,
             final RetryPolicy retryPolicy) {
@@ -232,12 +234,12 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     private <AA, AR> AwaitableImpl<AR> callActivityInternal(
             final String name,
-            final AA argument,
+            @Nullable final AA argument,
             final PayloadConverter<AA> argumentConverter,
             final PayloadConverter<AR> resultConverter,
             final RetryPolicy retryPolicy,
             final int attempt,
-            final Duration delay) {
+            @Nullable final Duration delay) {
         final AwaitableImpl<AR> initialAwaitable = callActivityInternalWithNoRetries(
                 name, argument, argumentConverter, resultConverter, delay);
         return new RetryingAwaitableImpl<>(
@@ -270,10 +272,10 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     private <AA, AR> AwaitableImpl<AR> callActivityInternalWithNoRetries(
             final String name,
-            final AA argument,
+            @Nullable final AA argument,
             final PayloadConverter<AA> argumentConverter,
             final PayloadConverter<AR> resultConverter,
-            final Duration delay) {
+            @Nullable final Duration delay) {
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId,
                 new ScheduleActivityCommand(
@@ -292,8 +294,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     <WA, WR> Awaitable<WR> callSubWorkflow(
             final String name,
             final int version,
-            final String concurrencyGroupId,
-            final WA argument,
+            @Nullable final String concurrencyGroupId,
+            @Nullable final WA argument,
             final PayloadConverter<WA> argumentConverter,
             final PayloadConverter<WR> resultConverter) {
         assertNotInSideEffect("Sub workflows can not be called from within a side effect");
@@ -333,7 +335,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     @Override
     public <SA, SR> Awaitable<SR> sideEffect(
             final String name,
-            final SA argument,
+            @Nullable final SA argument,
             final PayloadConverter<SR> resultConverter,
             final Function<SA, SR> sideEffectFunction) {
         assertNotInSideEffect("Nested side effects are not allowed");
@@ -446,6 +448,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return new WorkflowRunExecutionResult(commands, customStatus);
     }
 
+    @Nullable
     WorkflowEvent processNextEvent() {
         final WorkflowEvent event = nextEvent();
         if (event == null) {
@@ -493,6 +496,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         }
     }
 
+    @Nullable
     private WorkflowEvent nextEvent() {
         if (currentEventIndex < journal.size()) {
             isReplaying = true;
@@ -789,7 +793,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         isSuspended = false;
     }
 
-    private void complete(final R result) {
+    private void complete(@Nullable final R result) {
         if (logger().isDebugEnabled()) {
             logger().debug("Workflow run {}/{} completed with result {}", workflowName, runId, result);
         }
@@ -805,7 +809,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                         /* failure */ null));
     }
 
-    private void continueAsNew(final WorkflowPayload argument) {
+    private void continueAsNew(@Nullable final WorkflowPayload argument) {
         if (logger().isDebugEnabled()) {
             logger().debug("Workflow run {}/{} continued as new with argument {}", workflowName, runId, argument);
         }

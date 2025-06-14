@@ -19,12 +19,13 @@
 package org.dependencytrack.workflow.engine.persistence.model;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.UUID;
 
 public record NewWorkflowRunInboxRow(
         UUID workflowRunId,
-        Instant visibleFrom,
+        @Nullable Instant visibleFrom,
         WorkflowEvent event) {
 }

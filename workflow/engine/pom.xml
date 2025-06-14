@@ -80,13 +80,6 @@
         </dependency>
 
         <dependency>
-            <groupId>jakarta.annotation</groupId>
-            <artifactId>jakarta.annotation-api</artifactId>
-            <version>${lib.jakarta-annotation-api.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
             <groupId>com.fasterxml.uuid</groupId>
             <artifactId>java-uuid-generator</artifactId>
             <version>${lib.java-uuid-generator.version}</version>
@@ -117,6 +110,11 @@
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-postgres</artifactId>
             <version>${lib.jdbi.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
         </dependency>
 
         <dependency>

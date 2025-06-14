@@ -23,6 +23,7 @@ import org.dependencytrack.workflow.api.failure.CancellationFailureException;
 import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -35,11 +36,11 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
     private final PayloadConverter<T> resultConverter;
     private boolean completed;
     private boolean cancelled;
-    private String cancelReason;
-    private Consumer<T> completeCallback;
-    private Consumer<WorkflowFailureException> errorCallback;
-    private T result;
-    private WorkflowFailureException exception;
+    @Nullable private String cancelReason;
+    @Nullable private Consumer<T> completeCallback;
+    @Nullable private Consumer<WorkflowFailureException> errorCallback;
+    @Nullable private T result;
+    @Nullable private WorkflowFailureException exception;
 
     AwaitableImpl(
             final WorkflowContextImpl<?, ?> executionContext,
@@ -65,7 +66,7 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
         throw WorkflowRunBlockedException.INSTANCE;
     }
 
-    boolean complete(final WorkflowPayload result) {
+    boolean complete(@Nullable final WorkflowPayload result) {
         if (completed) {
             return false;
         }

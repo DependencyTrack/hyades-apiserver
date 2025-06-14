@@ -21,6 +21,7 @@ package org.dependencytrack.workflow.engine;
 import org.dependencytrack.workflow.api.ActivityContext;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
@@ -42,17 +43,17 @@ final class ActivityContextImpl<T> implements ActivityContext<T>, Closeable {
     private final WorkflowEngineImpl engine;
     private final UUID workflowRunId;
     private final int scheduledEventId;
-    private final T argument;
+    @Nullable private final T argument;
     private final ActivityExecutor<T, ?> activityExecutor;
     private final Duration lockTimeout;
-    private ScheduledExecutorService heartbeatExecutor;
+    @Nullable private ScheduledExecutorService heartbeatExecutor;
     private volatile Instant lockedUntil;
 
     ActivityContextImpl(
             final WorkflowEngineImpl engine,
             final UUID workflowRunId,
             final int scheduledEventId,
-            final T argument,
+            @Nullable final T argument,
             final ActivityExecutor<T, ?> activityExecutor,
             final Duration lockTimeout,
             final Instant lockedUntil,

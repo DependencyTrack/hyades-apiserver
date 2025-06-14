@@ -18,13 +18,15 @@
  */
 package org.dependencytrack.workflow.api;
 
-public record ContinueAsNewOptions<A>(A argument) {
+import org.jspecify.annotations.Nullable;
+
+public record ContinueAsNewOptions<A>(@Nullable A argument) {
 
     public ContinueAsNewOptions() {
         this(null);
     }
 
-    public ContinueAsNewOptions<A> withArgument(final A argument) {
+    public ContinueAsNewOptions<A> withArgument(@Nullable final A argument) {
         return new ContinueAsNewOptions<>(argument);
     }
 

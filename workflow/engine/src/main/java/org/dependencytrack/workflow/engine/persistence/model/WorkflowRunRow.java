@@ -20,8 +20,8 @@ package org.dependencytrack.workflow.engine.persistence.model;
 
 import org.dependencytrack.workflow.engine.WorkflowRunStatus;
 import org.jdbi.v3.json.Json;
+import org.jspecify.annotations.Nullable;
 
-import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;

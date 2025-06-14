@@ -23,6 +23,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,16 +57,16 @@ public final class Buffer<T> implements Closeable {
     private final ScheduledExecutorService flushExecutor;
     private final Duration flushInterval;
     private final ReentrantLock flushLock;
-    private final MeterRegistry meterRegistry;
-    private DistributionSummary batchSizeDistribution;
-    private Timer flushLatencyTimer;
+    @Nullable private final MeterRegistry meterRegistry;
+    @Nullable private DistributionSummary batchSizeDistribution;
+    @Nullable private Timer flushLatencyTimer;
 
     public Buffer(
             final String name,
             final Consumer<List<T>> batchConsumer,
             final Duration flushInterval,
             final int maxBatchSize,
-            final MeterRegistry meterRegistry) {
+            @Nullable final MeterRegistry meterRegistry) {
         this.name = name;
         this.batchConsumer = batchConsumer;
         this.maxBatchSize = maxBatchSize;

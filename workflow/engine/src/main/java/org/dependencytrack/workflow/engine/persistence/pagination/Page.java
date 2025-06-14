@@ -18,12 +18,14 @@
  */
 package org.dependencytrack.workflow.engine.persistence.pagination;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 
-public record Page<T>(List<T> items, String nextPageToken) {
+public record Page<T>(List<T> items, @Nullable String nextPageToken) {
 
     public boolean hasItems() {
-        return items != null && !items.isEmpty();
+        return !items.isEmpty();
     }
 
 }

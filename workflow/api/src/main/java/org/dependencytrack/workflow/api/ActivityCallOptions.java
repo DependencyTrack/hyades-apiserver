@@ -18,9 +18,11 @@
  */
 package org.dependencytrack.workflow.api;
 
+import org.jspecify.annotations.Nullable;
+
 import static java.util.Objects.requireNonNull;
 
-public record ActivityCallOptions<A>(A argument, RetryPolicy retryPolicy) {
+public record ActivityCallOptions<A>(@Nullable A argument, RetryPolicy retryPolicy) {
 
     public ActivityCallOptions {
         requireNonNull(retryPolicy, "retryPolicy must not be null");

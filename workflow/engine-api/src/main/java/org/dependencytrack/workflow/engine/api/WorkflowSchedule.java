@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow.engine.api;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.Map;
@@ -28,12 +29,12 @@ public record WorkflowSchedule(
         String cron,
         String workflowName,
         int workflowVersion,
-        String concurrencyGroupId,
-        Integer priority,
-        Map<String, String> labels,
-        WorkflowPayload argument,
+        @Nullable String concurrencyGroupId,
+        @Nullable Integer priority,
+        @Nullable Map<String, String> labels,
+        @Nullable WorkflowPayload argument,
         Instant createdAt,
-        Instant updatedAt,
-        Instant lastFiredAt,
-        Instant nextFireAt) {
+        @Nullable Instant updatedAt,
+        @Nullable Instant lastFiredAt,
+        @Nullable Instant nextFireAt) {
 }

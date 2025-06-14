@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow.engine.persistence.model;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -27,7 +28,7 @@ public record NewActivityTaskRow(
         UUID workflowRunId,
         int scheduledEventId,
         String activityName,
-        Integer priority,
-        WorkflowPayload argument,
-        Instant visibleFrom) {
+        @Nullable Integer priority,
+        @Nullable WorkflowPayload argument,
+        @Nullable Instant visibleFrom) {
 }

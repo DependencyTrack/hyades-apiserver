@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow.engine.persistence.model;
 
 import org.dependencytrack.workflow.engine.WorkflowRunStatus;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -26,10 +27,10 @@ import java.util.UUID;
 public record WorkflowRunRowUpdate(
         UUID id,
         WorkflowRunStatus status,
-        String customStatus,
-        Instant createdAt,
-        Instant updatedAt,
-        Instant startedAt,
-        Instant completedAt) {
+        @Nullable String customStatus,
+        @Nullable Instant createdAt,
+        @Nullable Instant updatedAt,
+        @Nullable Instant startedAt,
+        @Nullable Instant completedAt) {
 
 }

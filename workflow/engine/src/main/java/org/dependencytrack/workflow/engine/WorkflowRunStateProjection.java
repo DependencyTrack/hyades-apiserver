@@ -20,8 +20,8 @@ package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowFailure;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
-import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -41,7 +41,7 @@ public record WorkflowRunStateProjection(
         @Nullable String customStatus,
         @Nullable Integer priority,
         @Nullable Map<String, String> labels,
-        Instant createdAt,
+        @Nullable Instant createdAt,
         @Nullable Instant updatedAt,
         @Nullable Instant startedAt,
         @Nullable Instant completedAt) {

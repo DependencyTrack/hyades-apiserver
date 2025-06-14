@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.api.failure;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.UUID;
 
 public final class SubWorkflowFailureException extends WorkflowFailureException {
@@ -30,7 +32,7 @@ public final class SubWorkflowFailureException extends WorkflowFailureException 
             final UUID runId,
             final String workflowName,
             final int workflowVersion,
-            final Throwable cause) {
+            @Nullable final Throwable cause) {
         super("Run %s of workflow %s v%d failed".formatted(runId, workflowName, workflowVersion), null, cause);
         this.runId = runId;
         this.workflowName = workflowName;

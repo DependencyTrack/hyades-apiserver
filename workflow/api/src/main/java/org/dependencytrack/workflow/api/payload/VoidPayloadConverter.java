@@ -19,16 +19,19 @@
 package org.dependencytrack.workflow.api.payload;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
 public class VoidPayloadConverter implements PayloadConverter<Void> {
 
+    @Nullable
     @Override
-    public WorkflowPayload convertToPayload(final Void value) {
+    public WorkflowPayload convertToPayload(@Nullable final Void value) {
         return null;
     }
 
+    @Nullable
     @Override
-    public Void convertFromPayload(final WorkflowPayload payload) {
+    public Void convertFromPayload(@Nullable final WorkflowPayload payload) {
         return null;
     }
 

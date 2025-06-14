@@ -16,6 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
+
+import org.jspecify.annotations.NullMarked;
+
+@NullMarked
 module org.dependencytrack.workflow.api {
     exports org.dependencytrack.workflow.api;
     exports org.dependencytrack.workflow.api.annotation;
@@ -25,4 +29,6 @@ module org.dependencytrack.workflow.api {
 
     requires com.google.protobuf;
     requires org.slf4j;
+
+    requires static org.jspecify;
 }

@@ -20,6 +20,7 @@ package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowFailure;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.Map;
@@ -41,39 +42,39 @@ sealed interface WorkflowCommand permits
     record CompleteRunCommand(
             int eventId,
             WorkflowRunStatus status,
-            String customStatus,
-            WorkflowPayload result,
-            WorkflowFailure failure) implements WorkflowCommand {
+            @Nullable String customStatus,
+            @Nullable WorkflowPayload result,
+            @Nullable WorkflowFailure failure) implements WorkflowCommand {
     }
 
     record ContinueRunAsNewCommand(
             int eventId,
-            WorkflowPayload argument) implements WorkflowCommand {
+            @Nullable WorkflowPayload argument) implements WorkflowCommand {
     }
 
     record RecordSideEffectResultCommand(
             String name,
             int eventId,
-            WorkflowPayload result) implements WorkflowCommand {
+            @Nullable WorkflowPayload result) implements WorkflowCommand {
     }
 
     record ScheduleActivityCommand(
             int eventId,
             String name,
             int version,
-            Integer priority,
-            WorkflowPayload argument,
-            Instant scheduleFor) implements WorkflowCommand {
+            @Nullable Integer priority,
+            @Nullable WorkflowPayload argument,
+            @Nullable Instant scheduleFor) implements WorkflowCommand {
     }
 
     record ScheduleSubWorkflowCommand(
             int eventId,
             String workflowName,
             int workflowVersion,
-            String concurrencyGroupId,
-            Integer priority,
-            Map<String, String> labels,
-            WorkflowPayload argument) implements WorkflowCommand {
+            @Nullable String concurrencyGroupId,
+            @Nullable Integer priority,
+            @Nullable Map<String, String> labels,
+            @Nullable WorkflowPayload argument) implements WorkflowCommand {
     }
 
     record ScheduleTimerCommand(

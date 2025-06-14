@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -36,7 +37,7 @@ record ActivityTask(
         UUID workflowRunId,
         int scheduledEventId,
         String activityName,
-        WorkflowPayload argument,
+        @Nullable WorkflowPayload argument,
         Instant lockedUntil) implements Task {
 
     @Override

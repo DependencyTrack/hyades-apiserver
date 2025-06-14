@@ -22,6 +22,7 @@ import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
 import java.io.Closeable;
 import java.time.Duration;
@@ -52,6 +53,7 @@ public interface WorkflowEngine extends Closeable {
 
     List<UUID> createRuns(Collection<CreateWorkflowRunRequest> requests);
 
+    @Nullable
     default UUID createRun(final CreateWorkflowRunRequest request) {
         final List<UUID> results = createRuns(List.of(request));
         return !results.isEmpty() ? results.getFirst() : null;
@@ -63,7 +65,7 @@ public interface WorkflowEngine extends Closeable {
 
     void requestRunResumption(UUID runId);
 
-    CompletableFuture<Void> sendExternalEvent(UUID runId, String eventId, WorkflowPayload payload);
+    CompletableFuture<Void> sendExternalEvent(UUID runId, String eventId, @Nullable WorkflowPayload payload);
 
     List<WorkflowSchedule> createSchedules(Collection<CreateWorkflowScheduleRequest> requests);
 

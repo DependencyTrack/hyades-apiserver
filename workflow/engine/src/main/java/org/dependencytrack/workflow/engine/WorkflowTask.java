@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -43,9 +44,9 @@ record WorkflowTask(
         UUID workflowRunId,
         String workflowName,
         int workflowVersion,
-        String concurrencyGroupId,
-        Integer priority,
-        Map<String, String> labels,
+        @Nullable String concurrencyGroupId,
+        @Nullable Integer priority,
+        @Nullable Map<String, String> labels,
         int attempt,
         List<WorkflowEvent> journal,
         List<WorkflowEvent> inbox) implements Task {

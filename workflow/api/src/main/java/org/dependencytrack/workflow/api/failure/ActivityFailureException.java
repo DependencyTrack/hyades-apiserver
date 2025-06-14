@@ -18,11 +18,13 @@
  */
 package org.dependencytrack.workflow.api.failure;
 
+import org.jspecify.annotations.Nullable;
+
 public final class ActivityFailureException extends WorkflowFailureException {
 
     private final String activityName;
 
-    public ActivityFailureException(final String activityName, final Throwable cause) {
+    public ActivityFailureException(final String activityName, @Nullable final Throwable cause) {
         super("Activity %s failed".formatted(activityName), null, cause);
         this.activityName = activityName;
     }

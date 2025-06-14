@@ -21,12 +21,14 @@ package org.dependencytrack.workflow.engine.persistence.pagination;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.Parser;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Base64;
 
 public final class PageTokenUtil {
 
-    public static <T extends Message> String encodePageToken(final T token) {
+    @Nullable
+    public static <T extends Message> String encodePageToken(@Nullable final T token) {
         if (token == null) {
             return null;
         }
@@ -35,7 +37,8 @@ public final class PageTokenUtil {
         return Base64.getUrlEncoder().encodeToString(tokenBytes);
     }
 
-    public static <T extends Message> T decodePageToken(final String token, final Parser<T> parser) {
+    @Nullable
+    public static <T extends Message> T decodePageToken(@Nullable final String token, final Parser<T> parser) {
         if (token == null || token.isBlank()) {
             return null;
         }

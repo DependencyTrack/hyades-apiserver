@@ -19,6 +19,7 @@
 package org.dependencytrack.workflow.engine.api;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
@@ -30,11 +31,11 @@ public record CreateWorkflowScheduleRequest(
         String cron,
         String workflowName,
         int workflowVersion,
-        String concurrencyGroupId,
-        Integer priority,
-        Map<String, String> labels,
-        WorkflowPayload argument,
-        Duration initialDelay) {
+        @Nullable String concurrencyGroupId,
+        @Nullable Integer priority,
+        @Nullable Map<String, String> labels,
+        @Nullable WorkflowPayload argument,
+        @Nullable Duration initialDelay) {
 
     public CreateWorkflowScheduleRequest {
         requireNonNull(name, "name must not be null");
@@ -46,27 +47,27 @@ public record CreateWorkflowScheduleRequest(
         this(name, cron, workflowName, workflowVersion, null, null, null, null, null);
     }
 
-    public CreateWorkflowScheduleRequest withConcurrencyGroupId(final String concurrencyGroupId) {
+    public CreateWorkflowScheduleRequest withConcurrencyGroupId(@Nullable final String concurrencyGroupId) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 concurrencyGroupId, this.priority, this.labels, this.argument, this.initialDelay);
     }
 
-    public CreateWorkflowScheduleRequest withPriority(final Integer priority) {
+    public CreateWorkflowScheduleRequest withPriority(@Nullable final Integer priority) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, priority, this.labels, this.argument, this.initialDelay);
     }
 
-    public CreateWorkflowScheduleRequest withLabels(final Map<String, String> labels) {
+    public CreateWorkflowScheduleRequest withLabels(@Nullable final Map<String, String> labels) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, labels, this.argument, this.initialDelay);
     }
 
-    public CreateWorkflowScheduleRequest withArgument(final WorkflowPayload argument) {
+    public CreateWorkflowScheduleRequest withArgument(@Nullable final WorkflowPayload argument) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, this.labels, argument, this.initialDelay);
     }
 
-    public CreateWorkflowScheduleRequest withInitialDelay(final Duration initialDelay) {
+    public CreateWorkflowScheduleRequest withInitialDelay(@Nullable final Duration initialDelay) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, this.labels, this.argument, initialDelay);
     }

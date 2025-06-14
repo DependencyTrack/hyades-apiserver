@@ -39,6 +39,7 @@ import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResul
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleActivityCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleSubWorkflowCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleTimerCommand;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -63,33 +64,33 @@ final class WorkflowRunState {
     private final UUID id;
     private final String workflowName;
     private final int workflowVersion;
-    private final String concurrencyGroupId;
+    @Nullable private final String concurrencyGroupId;
     private final List<WorkflowEvent> journal;
     private final List<WorkflowEvent> inbox;
     private final List<WorkflowEvent> pendingActivityTaskScheduledEvents;
     private final List<WorkflowEvent> pendingTimerElapsedEvents;
     private final List<WorkflowRunMessage> pendingMessages;
-    private WorkflowEvent scheduledEvent;
-    private WorkflowEvent startedEvent;
-    private WorkflowEvent completedEvent;
-    private WorkflowPayload argument;
-    private WorkflowPayload result;
-    private WorkflowFailure failure;
+    @Nullable private WorkflowEvent scheduledEvent;
+    @Nullable private WorkflowEvent startedEvent;
+    @Nullable private WorkflowEvent completedEvent;
+    @Nullable private WorkflowPayload argument;
+    @Nullable private WorkflowPayload result;
+    @Nullable private WorkflowFailure failure;
     private WorkflowRunStatus status = WorkflowRunStatus.PENDING;
-    private String customStatus;
-    private Integer priority;
-    private Map<String, String> labels;
-    private Instant createdAt;
-    private Instant updatedAt;
-    private Instant startedAt;
-    private Instant completedAt;
+    @Nullable private String customStatus;
+    @Nullable private Integer priority;
+    @Nullable private Map<String, String> labels;
+    @Nullable private Instant createdAt;
+    @Nullable private Instant updatedAt;
+    @Nullable private Instant startedAt;
+    @Nullable private Instant completedAt;
     private boolean continuedAsNew;
 
     WorkflowRunState(
             final UUID id,
             final String workflowName,
             final int workflowVersion,
-            final String concurrencyGroupId,
+            @Nullable final String concurrencyGroupId,
             final List<WorkflowEvent> journal) {
         this.id = id;
         this.workflowName = workflowName;

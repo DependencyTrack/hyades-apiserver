@@ -18,11 +18,13 @@
  */
 package org.dependencytrack.workflow.api.failure;
 
+import org.jspecify.annotations.Nullable;
+
 public final class SideEffectFailureException extends WorkflowFailureException {
 
     private final String sideEffectName;
 
-    public SideEffectFailureException(final String sideEffectName, final Throwable cause) {
+    public SideEffectFailureException(final String sideEffectName, @Nullable final Throwable cause) {
         super("Side effect %s failed".formatted(sideEffectName), null, cause);
         this.sideEffectName = sideEffectName;
     }

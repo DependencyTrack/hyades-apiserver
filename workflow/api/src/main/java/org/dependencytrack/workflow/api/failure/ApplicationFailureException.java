@@ -18,11 +18,16 @@
  */
 package org.dependencytrack.workflow.api.failure;
 
+import org.jspecify.annotations.Nullable;
+
 public final class ApplicationFailureException extends WorkflowFailureException {
 
     private final boolean isTerminal;
 
-    public ApplicationFailureException(final String message, final Throwable cause, final boolean isTerminal) {
+    public ApplicationFailureException(
+            @Nullable final String message,
+            @Nullable final Throwable cause,
+            final boolean isTerminal) {
         super(message, null, cause);
         this.isTerminal = isTerminal;
     }

@@ -25,6 +25,7 @@ import org.dependencytrack.workflow.engine.persistence.model.PollActivityTaskCom
 import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTaskRow;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Update;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -151,6 +152,7 @@ public final class WorkflowActivityDao {
                 .list();
     }
 
+    @Nullable
     public Instant extendActivityTaskLock(
             final UUID workerInstanceId,
             final ActivityTaskId activityTask,

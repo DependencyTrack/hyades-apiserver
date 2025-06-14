@@ -40,6 +40,7 @@ import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 import org.jdbi.v3.json.JsonConfig;
 import org.jdbi.v3.json.JsonMapper.TypedJsonMapper;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -279,6 +280,7 @@ public final class WorkflowDao {
                 .list();
     }
 
+    @Nullable
     public WorkflowRunRow getRun(final UUID id) {
         final Query query = jdbiHandle.createQuery("""
                 select *
@@ -291,22 +293,6 @@ public final class WorkflowDao {
                 .mapTo(WorkflowRunRow.class)
                 .findOne()
                 .orElse(null);
-    }
-
-    public boolean existsRunWithNonTerminalStatus(final UUID id) {
-        final Query query = jdbiHandle.createQuery("""
-                select exists (
-                    select 1
-                      from workflow_run
-                     where id = :id
-                       and status = any(cast('{PENDING, RUNNING, SUSPENDED}' as workflow_run_status[])))
-                """);
-
-        return query
-                .bind("id", id)
-                .mapTo(Boolean.class)
-                .findOne()
-                .orElse(false);
     }
 
     public Map<UUID, PolledWorkflowRunRow> pollAndLockRuns(

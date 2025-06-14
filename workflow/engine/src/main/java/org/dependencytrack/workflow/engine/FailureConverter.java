@@ -31,6 +31,7 @@ import org.dependencytrack.workflow.api.proto.v1.CancellationFailureDetails;
 import org.dependencytrack.workflow.api.proto.v1.SideEffectFailureDetails;
 import org.dependencytrack.workflow.api.proto.v1.SubWorkflowFailureDetails;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowFailure;
+import org.jspecify.annotations.Nullable;
 
 import java.util.StringJoiner;
 import java.util.UUID;
@@ -142,7 +143,8 @@ final class FailureConverter {
         return failureBuilder.build();
     }
 
-    private static String serializeStackTrace(final StackTraceElement[] stackTrace) {
+    @Nullable
+    private static String serializeStackTrace(@Nullable final StackTraceElement[] stackTrace) {
         if (stackTrace == null || stackTrace.length == 0) {
             return null;
         }
@@ -170,7 +172,8 @@ final class FailureConverter {
     private static final Pattern STACK_TRACE_ELEMENT_PATTERN = Pattern.compile(
             "^(?<className>[\\w.$]+)\\.(?<methodName>[\\w.$]+)(?:\\((?<fileName>[\\w.]+):(?<lineNumber>\\d+)\\))?$");
 
-    private static StackTraceElement[] deserializeStackTrace(final String stackTrace) {
+    @Nullable
+    private static StackTraceElement[] deserializeStackTrace(@Nullable final String stackTrace) {
         if (stackTrace == null || stackTrace.isEmpty()) {
             return null;
         }

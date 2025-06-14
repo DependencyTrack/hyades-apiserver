@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.engine.api;
 
-import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
@@ -28,10 +28,10 @@ import static java.util.Objects.requireNonNull;
 public record CreateWorkflowRunRequest(
         String workflowName,
         int workflowVersion,
-        String concurrencyGroupId,
-        Integer priority,
-        Map<String, String> labels,
-        WorkflowPayload argument) {
+        @Nullable String concurrencyGroupId,
+        @Nullable Integer priority,
+        @Nullable Map<String, String> labels,
+        @Nullable WorkflowPayload argument) {
 
     public CreateWorkflowRunRequest {
         requireNonNull(workflowName, "workflowName must not be null");
@@ -41,24 +41,24 @@ public record CreateWorkflowRunRequest(
         this(workflowName, workflowVersion, null, null, null, null);
     }
 
-    public CreateWorkflowRunRequest withConcurrencyGroupId(final String concurrencyGroupId) {
+    public CreateWorkflowRunRequest withConcurrencyGroupId(@Nullable final String concurrencyGroupId) {
         return new CreateWorkflowRunRequest(this.workflowName, this.workflowVersion,
                 concurrencyGroupId, this.priority, this.labels, this.argument);
     }
 
-    public CreateWorkflowRunRequest withPriority(final Integer priority) {
+    public CreateWorkflowRunRequest withPriority(@Nullable final Integer priority) {
         return new CreateWorkflowRunRequest(this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, priority, this.labels, this.argument);
     }
 
-    public CreateWorkflowRunRequest withLabels(final Map<String, String> labels) {
+    public CreateWorkflowRunRequest withLabels(@Nullable final Map<String, String> labels) {
         return new CreateWorkflowRunRequest(this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, labels, this.argument);
     }
 
-    public <T> CreateWorkflowRunRequest withArgument(final T argument, final PayloadConverter<T> converter) {
+    public CreateWorkflowRunRequest withArgument(@Nullable final WorkflowPayload argument) {
         return new CreateWorkflowRunRequest(this.workflowName, this.workflowVersion,
-                this.concurrencyGroupId, this.priority, this.labels, converter.convertToPayload(argument));
+                this.concurrencyGroupId, this.priority, this.labels, argument);
     }
 
 }

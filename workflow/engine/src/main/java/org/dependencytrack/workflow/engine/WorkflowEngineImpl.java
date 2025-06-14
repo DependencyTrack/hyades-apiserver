@@ -80,6 +80,7 @@ import org.dependencytrack.workflow.engine.support.Buffer;
 import org.dependencytrack.workflow.engine.support.DefaultThreadFactory;
 import org.dependencytrack.workflow.engine.support.LoggingUncaughtExceptionHandler;
 import org.jdbi.v3.core.Jdbi;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,13 +159,13 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private final ReentrantLock statusLock = new ReentrantLock();
     private final ExecutorMetadataRegistry executorMetadataRegistry = new ExecutorMetadataRegistry();
     private Status status = Status.CREATED;
-    private ExecutorService taskDispatcherExecutor;
-    private Map<String, ExecutorService> executorServiceByName;
-    private ScheduledExecutorService schedulerExecutor;
-    private ScheduledExecutorService retentionExecutor;
-    private Buffer<NewExternalEvent> externalEventBuffer;
-    private Buffer<TaskCommand> taskCommandBuffer;
-    private Cache<UUID, CachedWorkflowRunJournal> cachedJournalByRunId;
+    @Nullable private ExecutorService taskDispatcherExecutor;
+    @Nullable private Map<String, ExecutorService> executorServiceByName;
+    @Nullable private ScheduledExecutorService schedulerExecutor;
+    @Nullable private ScheduledExecutorService retentionExecutor;
+    @Nullable private Buffer<NewExternalEvent> externalEventBuffer;
+    @Nullable private Buffer<TaskCommand> taskCommandBuffer;
+    @Nullable private Cache<UUID, CachedWorkflowRunJournal> cachedJournalByRunId;
 
     WorkflowEngineImpl(final WorkflowEngineConfig config) {
         this.config = requireNonNull(config);
@@ -278,24 +279,34 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             schedulerExecutor = null;
         }
 
-        LOGGER.debug("Waiting for task dispatcher to stop");
-        taskDispatcherExecutor.close();
-        taskDispatcherExecutor = null;
+        if (taskDispatcherExecutor != null) {
+            LOGGER.debug("Waiting for task dispatcher to stop");
+            taskDispatcherExecutor.close();
+            taskDispatcherExecutor = null;
+        }
 
-        LOGGER.debug("Waiting for task executors to stop");
-        executorServiceByName.values().forEach(ExecutorService::close);
-        executorServiceByName = null;
+        if (executorServiceByName != null) {
+            LOGGER.debug("Waiting for task executors to stop");
+            executorServiceByName.values().forEach(ExecutorService::close);
+            executorServiceByName = null;
+        }
 
-        LOGGER.debug("Waiting for external event buffer to stop");
-        externalEventBuffer.close();
-        externalEventBuffer = null;
+        if (externalEventBuffer != null) {
+            LOGGER.debug("Waiting for external event buffer to stop");
+            externalEventBuffer.close();
+            externalEventBuffer = null;
+        }
 
-        LOGGER.debug("Waiting for task command buffer to stop");
-        taskCommandBuffer.close();
-        taskCommandBuffer = null;
+        if (taskCommandBuffer != null) {
+            LOGGER.debug("Waiting for task command buffer to stop");
+            taskCommandBuffer.close();
+            taskCommandBuffer = null;
+        }
 
-        cachedJournalByRunId.invalidateAll();
-        cachedJournalByRunId = null;
+        if (cachedJournalByRunId != null) {
+            cachedJournalByRunId.invalidateAll();
+            cachedJournalByRunId = null;
+        }
 
         setStatus(Status.STOPPED);
         LOGGER.debug("Stopped");
@@ -1059,7 +1070,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     CompletableFuture<Void> completeActivityTask(
-            final ActivityTask task, final WorkflowPayload result) throws InterruptedException, TimeoutException {
+            final ActivityTask task, @Nullable final WorkflowPayload result) throws InterruptedException, TimeoutException {
         return taskCommandBuffer.add(new CompleteActivityTaskCommand(task, result, Instant.now()));
     }
 
@@ -1139,11 +1150,16 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     Instant heartbeatActivityTask(final ActivityTaskId taskId, final Duration lockTimeout) {
-        final Instant newLockTimeout = jdbi.inTransaction(
-                handle -> new WorkflowActivityDao(handle).extendActivityTaskLock(
-                        this.config.instanceId(), taskId, lockTimeout));
-        assert newLockTimeout != null;
-        return newLockTimeout;
+        return jdbi.inTransaction(handle -> {
+            final Instant newLockedUntil = new WorkflowActivityDao(handle).extendActivityTaskLock(
+                    this.config.instanceId(), taskId, lockTimeout);
+            if (newLockedUntil == null) {
+                throw new IllegalStateException(
+                        "Lock of activity task %s was not extended; Did we lose the lock already?".formatted(taskId));
+            }
+
+            return newLockedUntil;
+        });
     }
 
     private void executeTaskCommands(final List<TaskCommand> commands) {
@@ -1185,6 +1201,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         });
     }
 
+    @Nullable
     public WorkflowRunStateProjection getRun(final UUID runId) {
         return jdbi.withHandle(handle -> {
             final var dao = new WorkflowDao(handle);
@@ -1209,10 +1226,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
     public Page<WorkflowRunRow> listRuns(final ListWorkflowRunsRequest request) {
         return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRuns(request));
-    }
-
-    public boolean existsRunWithNonTerminalStatus(final UUID runId) {
-        return jdbi.withHandle(handle -> new WorkflowDao(handle).existsRunWithNonTerminalStatus(runId));
     }
 
     public List<WorkflowEvent> getRunJournal(final UUID runId) {

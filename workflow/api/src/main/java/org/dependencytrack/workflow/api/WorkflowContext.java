@@ -21,6 +21,7 @@ package org.dependencytrack.workflow.api;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
 import org.dependencytrack.workflow.api.failure.SideEffectFailureException;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.time.Duration;
@@ -43,6 +44,7 @@ public interface WorkflowContext<A> {
 
     int workflowVersion();
 
+    @Nullable
     Map<String, String> labels();
 
     Optional<A> argument();
@@ -50,6 +52,7 @@ public interface WorkflowContext<A> {
     /**
      * @return The current, deterministic time within the workflow execution.
      */
+    @Nullable
     Instant currentTime();
 
     /**
@@ -88,7 +91,7 @@ public interface WorkflowContext<A> {
      *
      * @param status The status to set. May be {@code null} to reset the custom status.
      */
-    void setStatus(String status);
+    void setStatus(@Nullable String status);
 
     /**
      * Execute a side effect and record its result in the journal.
@@ -106,7 +109,7 @@ public interface WorkflowContext<A> {
      */
     <SA, SR> Awaitable<SR> sideEffect(
             String name,
-            SA argument,
+            @Nullable SA argument,
             PayloadConverter<SR> resultConverter,
             Function<SA, SR> sideEffectFunction);
 

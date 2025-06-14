@@ -18,15 +18,17 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Map;
 import java.util.UUID;
 
 public record NewWorkflowRunRow(
         UUID id,
-        UUID parentId,
+        @Nullable UUID parentId,
         String workflowName,
         int workflowVersion,
-        String concurrencyGroupId,
-        Integer priority,
-        Map<String, String> labels) {
+        @Nullable String concurrencyGroupId,
+        @Nullable Integer priority,
+        @Nullable Map<String, String> labels) {
 }

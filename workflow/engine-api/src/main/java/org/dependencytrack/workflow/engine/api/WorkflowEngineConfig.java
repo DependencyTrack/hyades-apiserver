@@ -20,6 +20,7 @@ package org.dependencytrack.workflow.engine.api;
 
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.jspecify.annotations.Nullable;
 
 import javax.sql.DataSource;
 import java.time.Duration;
@@ -219,6 +220,8 @@ public class WorkflowEngineConfig {
     private final SchedulerConfig schedulerConfig = new SchedulerConfig();
     private final TaskDispatcherConfig workflowTaskDispatcherConfig = new TaskDispatcherConfig();
     private final TaskDispatcherConfig activityTaskDispatcherConfig = new TaskDispatcherConfig();
+
+    @Nullable
     private MeterRegistry meterRegistry;
 
     public WorkflowEngineConfig(final UUID instanceId, final DataSource dataSource) {
@@ -289,6 +292,7 @@ public class WorkflowEngineConfig {
     /**
      * @return {@link MeterRegistry} to bind metrics to.
      */
+    @Nullable
     public MeterRegistry meterRegistry() {
         return meterRegistry;
     }

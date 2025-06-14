@@ -16,6 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
+
+import org.jspecify.annotations.NullMarked;
+
+@NullMarked
 module org.dependencytrack.workflow.engine {
     provides org.dependencytrack.workflow.engine.api.WorkflowEngineFactory
             with org.dependencytrack.workflow.engine.WorkflowEngineFactoryImpl;
@@ -25,7 +29,6 @@ module org.dependencytrack.workflow.engine {
     requires com.google.protobuf.util;
     requires com.google.protobuf;
     requires io.github.resilience4j.core;
-    requires jakarta.annotation;
     requires java.sql;
     requires javacron;
     requires micrometer.core;
@@ -38,4 +41,6 @@ module org.dependencytrack.workflow.engine {
     requires org.jdbi.v3.postgres;
     requires org.postgresql.jdbc;
     requires org.slf4j;
+
+    requires static org.jspecify;
 }

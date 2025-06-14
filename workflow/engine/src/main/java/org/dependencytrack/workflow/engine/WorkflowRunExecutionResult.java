@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.engine;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 
 /**
@@ -26,5 +28,5 @@ import java.util.List;
  * @param commands     Commands to be applied to the {@link WorkflowRunState}.
  * @param customStatus Custom status to be applied to the {@link WorkflowRunState}.
  */
-record WorkflowRunExecutionResult(List<WorkflowCommand> commands, String customStatus) {
+record WorkflowRunExecutionResult(List<WorkflowCommand> commands, @Nullable String customStatus) {
 }

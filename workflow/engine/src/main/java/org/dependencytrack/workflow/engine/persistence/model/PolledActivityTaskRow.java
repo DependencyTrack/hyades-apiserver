@@ -19,8 +19,8 @@
 package org.dependencytrack.workflow.engine.persistence.model;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
-import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.util.UUID;
 

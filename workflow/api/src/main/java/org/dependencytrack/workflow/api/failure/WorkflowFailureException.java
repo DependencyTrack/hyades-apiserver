@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.api.failure;
 
+import org.jspecify.annotations.Nullable;
+
 public sealed class WorkflowFailureException extends RuntimeException permits
         ActivityFailureException,
         ApplicationFailureException,
@@ -25,13 +27,18 @@ public sealed class WorkflowFailureException extends RuntimeException permits
         SideEffectFailureException,
         SubWorkflowFailureException {
 
+    @Nullable
     private final String originalMessage;
 
-    WorkflowFailureException(final String message, final String originalMessage, final Throwable cause) {
+    WorkflowFailureException(
+            @Nullable final String message,
+            @Nullable final String originalMessage,
+            @Nullable final Throwable cause) {
         super(message, cause);
         this.originalMessage = originalMessage != null ? originalMessage : message;
     }
 
+    @Nullable
     public String getOriginalMessage() {
         return originalMessage;
     }

@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.engine;
 
+import org.jspecify.annotations.Nullable;
+
 public sealed class WorkflowEngineException extends RuntimeException permits
         NonDeterministicWorkflowException,
         WorkflowRunBlockedException,
@@ -29,8 +31,8 @@ public sealed class WorkflowEngineException extends RuntimeException permits
     }
 
     WorkflowEngineException(
-            final String message,
-            final Throwable cause,
+            @Nullable final String message,
+            @Nullable final Throwable cause,
             final boolean enableSuppression,
             final boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
