@@ -76,7 +76,8 @@ public final class Buffer<T> implements Closeable {
     private final String name;
     private final Consumer<List<T>> batchConsumer;
     private final int maxBatchSize;
-    private final BlockingQueue<BufferedItem<T>> bufferedItems;
+    private final BlockingQueue<BufferedItem<T>> itemsQueue;
+    private final Duration itemsQueueTimeout;
     private final List<BufferedItem<T>> currentBatch;
     private final ScheduledExecutorService flushExecutor;
     private final Duration flushInterval;
@@ -93,10 +94,21 @@ public final class Buffer<T> implements Closeable {
             final Duration flushInterval,
             final int maxBatchSize,
             @Nullable final MeterRegistry meterRegistry) {
+        this(name, batchConsumer, flushInterval, maxBatchSize, Duration.ofSeconds(5), meterRegistry);
+    }
+
+    Buffer(
+            final String name,
+            final Consumer<List<T>> batchConsumer,
+            final Duration flushInterval,
+            final int maxBatchSize,
+            final Duration itemsQueueTimeout,
+            @Nullable final MeterRegistry meterRegistry) {
         this.name = name;
         this.batchConsumer = batchConsumer;
         this.maxBatchSize = maxBatchSize;
-        this.bufferedItems = new ArrayBlockingQueue<>(maxBatchSize);
+        this.itemsQueue = new ArrayBlockingQueue<>(maxBatchSize);
+        this.itemsQueueTimeout = itemsQueueTimeout;
         this.currentBatch = new ArrayList<>(maxBatchSize);
         this.flushExecutor = Executors.newSingleThreadScheduledExecutor(
                 new DefaultThreadFactory("WorkflowEngine-Buffer-" + name));
@@ -138,8 +150,10 @@ public final class Buffer<T> implements Closeable {
         }
 
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        final boolean added = bufferedItems.offer(
-                new BufferedItem<>(item, future), 5, TimeUnit.SECONDS);
+        final boolean added = itemsQueue.offer(
+                new BufferedItem<>(item, future),
+                itemsQueueTimeout.toMillis(),
+                TimeUnit.MILLISECONDS);
         if (!added) {
             throw new TimeoutException("Timed out while waiting for buffer queue to accept the item");
         }
@@ -152,12 +166,12 @@ public final class Buffer<T> implements Closeable {
     private void maybeFlush() {
         flushLock.lock();
         try {
-            if (bufferedItems.isEmpty()) {
+            if (itemsQueue.isEmpty()) {
                 LOGGER.debug("{}: Buffer is empty; Nothing to flush", name);
                 return;
             }
 
-            bufferedItems.drainTo(currentBatch, maxBatchSize);
+            itemsQueue.drainTo(currentBatch, maxBatchSize);
 
             if (batchSizeDistribution != null) {
                 batchSizeDistribution.record(currentBatch.size());

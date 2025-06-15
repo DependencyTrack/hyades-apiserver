@@ -445,7 +445,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var nextRunIdByConcurrencyGroupId = new HashMap<String, UUID>();
 
         for (final CreateWorkflowRunRequest option : options) {
-            final UUID runId = randomUUIDv7();
+            final UUID runId = timeBasedEpochRandomGenerator().generate();
             newWorkflowRunRows.add(
                     new NewWorkflowRunRow(
                             runId,
@@ -1271,14 +1271,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             throw new IllegalStateException(
                     "Engine must be in state %s, but is %s".formatted(Status.RUNNING, this));
         }
-    }
-
-    static UUID randomUUIDv7() {
-        // UUIDv7 cause BTREE indexes (i.e., primary keys) to bloat less than other UUID versions,
-        // because they're time-sortable.
-        // https://antonz.org/uuidv7/
-        // https://maciejwalkowiak.com/blog/postgres-uuid-primary-key/
-        return timeBasedEpochRandomGenerator().generate();
     }
 
 }
