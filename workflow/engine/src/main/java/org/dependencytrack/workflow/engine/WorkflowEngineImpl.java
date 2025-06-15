@@ -28,8 +28,6 @@ import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
-import org.dependencytrack.workflow.api.annotation.Activity;
-import org.dependencytrack.workflow.api.annotation.Workflow;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.api.proto.v1.ActivityTaskCompleted;
 import org.dependencytrack.workflow.api.proto.v1.ActivityTaskFailed;
@@ -317,18 +315,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         LOGGER.debug("Stopped");
     }
 
-    /**
-     * Register a {@link WorkflowExecutor} with the engine.
-     * <p>
-     * The executor's class <strong>must</strong> be annotated with {@link Workflow}.
-     *
-     * @param workflowExecutor  The {@link WorkflowExecutor} to register.
-     * @param argumentConverter {@link PayloadConverter} for the argument of the workflow.
-     * @param resultConverter   {@link PayloadConverter} for the result of the workflow.
-     * @param lockTimeout       For how long workflow runs should be locked.
-     * @param <A>               Type of the workflow's argument.
-     * @param <R>               Type of the workflow's result.
-     */
     @Override
     public <A, R> void register(
             final WorkflowExecutor<A, R> workflowExecutor,
@@ -348,18 +334,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         executorMetadataRegistry.register(workflowName, workflowVersion, argumentConverter, resultConverter, lockTimeout, workflowExecutor);
     }
 
-    /**
-     * Register an {@link ActivityExecutor} with the engine.
-     * <p>
-     * The executor's class <strong>must</strong> be annotated with {@link Activity}.
-     *
-     * @param activityExecutor  The {@link ActivityExecutor} to register.
-     * @param argumentConverter {@link PayloadConverter} for the argument of the activity.
-     * @param resultConverter   {@link PayloadConverter} for the result of the activity.
-     * @param lockTimeout       For how long activity instances should be locked.
-     * @param <A>               Type of the activity's argument.
-     * @param <R>               Type of the activity's result.
-     */
     @Override
     public <A, R> void register(
             final ActivityExecutor<A, R> activityExecutor,
@@ -379,15 +353,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         executorMetadataRegistry.register(activityName, argumentConverter, resultConverter, lockTimeout, heartbeatEnabled, activityExecutor);
     }
 
-    /**
-     * Mounts a {@link WorkflowGroup} to the engine.
-     * <p>
-     * All workflows in the provided group <strong>must</strong> have been registered with the engine before.
-     *
-     * @param group The {@link WorkflowGroup} to mount.
-     * @throws IllegalStateException When any of the workflows within the group have not been registered,
-     *                               or another {@link WorkflowGroup} with the same name is already mounted.
-     */
     @Override
     public void mount(final WorkflowGroup group) {
         requireRunningStatus();

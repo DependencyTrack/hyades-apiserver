@@ -20,6 +20,8 @@ package org.dependencytrack.workflow.engine.api;
 
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
+import org.dependencytrack.workflow.api.annotation.Activity;
+import org.dependencytrack.workflow.api.annotation.Workflow;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
@@ -44,20 +46,64 @@ public interface WorkflowEngine extends Closeable {
 
     void start();
 
+    /**
+     * Register a workflow.
+     * <p>
+     * The executor's class <strong>must</strong> be annotated with {@link Workflow}.
+     *
+     * @param executor          The {@link WorkflowExecutor} of the workflow.
+     * @param argumentConverter The {@link PayloadConverter} to use for arguments.
+     * @param resultConverter   The {@link PayloadConverter} to use for results.
+     * @param lockTimeout       How long runs of this workflow shall be locked for execution.
+     * @param <A>               Type of the workflow's argument.
+     * @param <R>               Type of the workflow's result.
+     */
     <A, R> void register(
             WorkflowExecutor<A, R> executor,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
             Duration lockTimeout);
 
+    /**
+     * Register an activity.
+     * <p>
+     * The executor's class <strong>must</strong> be annotated with {@link Activity}.
+     *
+     * @param executor          The {@link ActivityExecutor} of the activity.
+     * @param argumentConverter The {@link PayloadConverter} to use for arguments.
+     * @param resultConverter   The {@link PayloadConverter} to use for results.
+     * @param lockTimeout       How instances of this activity shall be locked for execution.
+     * @param <A>               Type of the activity's argument.
+     * @param <R>               Type of the activity's result.
+     */
     <A, R> void register(
             ActivityExecutor<A, R> executor,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
             Duration lockTimeout);
 
+    /**
+     * Mount a {@link WorkflowGroup}.
+     * <p>
+     * All workflows in the provided group <strong>must</strong> have been registered with the engine before.
+     *
+     * @param group The {@link WorkflowGroup} to mount.
+     * @throws IllegalStateException When any of the workflows within the group have not been registered,
+     *                               or another group with the same name is already mounted.
+     * @see #register(WorkflowExecutor, PayloadConverter, PayloadConverter, Duration)
+     */
     void mount(WorkflowGroup group);
 
+    /**
+     * Mount an {@link ActivityGroup}.
+     * <p>
+     * All activities in the provided group <strong>must</strong> have been registered with the engine before.
+     *
+     * @param group The {@link ActivityGroup} to mount.
+     * @throws IllegalStateException When any of the activities within the group have not been registered,
+     *                               or another group with the same name is already mounted.
+     * @see #register(ActivityExecutor, PayloadConverter, PayloadConverter, Duration)
+     */
     void mount(ActivityGroup group);
 
     List<UUID> createRuns(Collection<CreateWorkflowRunRequest> requests);
