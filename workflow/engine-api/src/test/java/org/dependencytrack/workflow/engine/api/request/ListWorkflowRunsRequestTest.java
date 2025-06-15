@@ -21,6 +21,7 @@ package org.dependencytrack.workflow.engine.api.request;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +35,10 @@ class ListWorkflowRunsRequestTest {
                 .withWorkflowVersionFilter(123)
                 .withStatusFilter(WorkflowRunStatus.RUNNING)
                 .withLabelFilter(Map.of("foo", "bar"))
+                .withCreatedAtFrom(Instant.ofEpochSecond(111))
+                .withCreatedAtTo(Instant.ofEpochSecond(222))
+                .withCompletedAtFrom(Instant.ofEpochSecond(333))
+                .withCompletedAtTo(Instant.ofEpochSecond(444))
                 .withPageToken("pageToken")
                 .withLimit(666);
 
@@ -41,6 +46,10 @@ class ListWorkflowRunsRequestTest {
         assertThat(request.workflowVersionFilter()).isEqualTo(123);
         assertThat(request.statusFilter()).isEqualTo(WorkflowRunStatus.RUNNING);
         assertThat(request.labelFilter()).containsEntry("foo", "bar");
+        assertThat(request.createdAtFrom()).isEqualTo(Instant.ofEpochSecond(111));
+        assertThat(request.createdAtTo()).isEqualTo(Instant.ofEpochSecond(222));
+        assertThat(request.completedAtFrom()).isEqualTo(Instant.ofEpochSecond(333));
+        assertThat(request.completedAtTo()).isEqualTo(Instant.ofEpochSecond(444));
         assertThat(request.pageToken()).isEqualTo("pageToken");
         assertThat(request.limit()).isEqualTo(666);
     }

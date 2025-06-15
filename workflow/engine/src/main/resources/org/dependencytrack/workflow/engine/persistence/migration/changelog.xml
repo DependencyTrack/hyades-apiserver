@@ -113,6 +113,9 @@
                 on workflow_run using gin (labels jsonb_path_ops)
              where labels is not null;
 
+            create index workflow_run_created_at_idx
+                on workflow_run (created_at);
+
             create index workflow_run_completed_at_idx
                 on workflow_run (completed_at)
              where completed_at is not null;

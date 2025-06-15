@@ -52,6 +52,10 @@ public final class WorkflowRunDao extends AbstractDao {
                 <#-- @ftlvariable name="workflowVersionFilter" type="boolean" -->
                 <#-- @ftlvariable name="statusFilter" type="boolean" -->
                 <#-- @ftlvariable name="labelFilter" type="boolean" -->
+                <#-- @ftlvariable name="createdAtFrom" type="boolean" -->
+                <#-- @ftlvariable name="createdAtTo" type="boolean" -->
+                <#-- @ftlvariable name="completedAtFrom" type="boolean" -->
+                <#-- @ftlvariable name="completedAtTo" type="boolean" -->
                 select *
                   from workflow_run
                  where true
@@ -69,6 +73,18 @@ public final class WorkflowRunDao extends AbstractDao {
                 </#if>
                 <#if labelFilter>
                    and labels @> cast(:labelFilter as jsonb)
+                </#if>
+                <#if createdAtFrom>
+                   and created_at >= :createdAtFrom
+                </#if>
+                <#if createdAtTo>
+                   and created_at < :createdAtTo
+                </#if>
+                <#if completedAtFrom>
+                   and completed_at >= :completedAtFrom
+                </#if>
+                <#if completedAtTo>
+                   and completed_at < :completedAtTo
                 </#if>
                  order by id
                  limit :limit
@@ -94,6 +110,10 @@ public final class WorkflowRunDao extends AbstractDao {
                 .bind("workflowVersionFilter", request.workflowVersionFilter())
                 .bind("statusFilter", request.statusFilter())
                 .bindByType("labelFilter", labelsJson, String.class)
+                .bind("createdAtFrom", request.createdAtFrom())
+                .bind("createdAtTo", request.createdAtTo())
+                .bind("completedAtFrom", request.completedAtFrom())
+                .bind("completedAtTo", request.completedAtTo())
                 .bind("limit", limitWithNext)
                 .bind("lastId", pageTokenValue != null ? pageTokenValue.lastId() : null)
                 .defineNamedBindings()

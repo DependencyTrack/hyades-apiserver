@@ -21,6 +21,7 @@ package org.dependencytrack.workflow.engine.api.request;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.jspecify.annotations.Nullable;
 
+import java.time.Instant;
 import java.util.Map;
 
 public record ListWorkflowRunsRequest(
@@ -28,41 +29,155 @@ public record ListWorkflowRunsRequest(
         @Nullable Integer workflowVersionFilter,
         @Nullable WorkflowRunStatus statusFilter,
         @Nullable Map<String, String> labelFilter,
+        @Nullable Instant createdAtFrom,
+        @Nullable Instant createdAtTo,
+        @Nullable Instant completedAtFrom,
+        @Nullable Instant completedAtTo,
         @Nullable String pageToken,
         int limit) {
 
     public ListWorkflowRunsRequest() {
-        this(null, null, null, null, null, 10);
+        this(null, null, null, null, null, null, null, null, null, 10);
     }
 
     public ListWorkflowRunsRequest withWorkflowNameFilter(@Nullable final String workflowNameFilter) {
-        return new ListWorkflowRunsRequest(workflowNameFilter, this.workflowVersionFilter, this.statusFilter,
-                this.labelFilter, this.pageToken, this.limit);
+        return new ListWorkflowRunsRequest(
+                workflowNameFilter,
+                this.workflowVersionFilter,
+                this.statusFilter,
+                this.labelFilter,
+                this.createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                this.pageToken,
+                this.limit);
     }
 
     public ListWorkflowRunsRequest withWorkflowVersionFilter(@Nullable final Integer workflowVersionFilter) {
-        return new ListWorkflowRunsRequest(this.workflowNameFilter, workflowVersionFilter, this.statusFilter,
-                this.labelFilter, this.pageToken, this.limit);
+        return new ListWorkflowRunsRequest(
+                this.workflowNameFilter,
+                workflowVersionFilter,
+                this.statusFilter,
+                this.labelFilter,
+                this.createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                this.pageToken,
+                this.limit);
     }
 
     public ListWorkflowRunsRequest withStatusFilter(@Nullable final WorkflowRunStatus statusFilter) {
-        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.workflowVersionFilter, statusFilter,
-                this.labelFilter, this.pageToken, this.limit);
+        return new ListWorkflowRunsRequest(
+                this.workflowNameFilter,
+                this.workflowVersionFilter,
+                statusFilter,
+                this.labelFilter,
+                this.createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                this.pageToken,
+                this.limit);
     }
 
     public ListWorkflowRunsRequest withLabelFilter(@Nullable final Map<String, String> labelFilter) {
-        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.workflowVersionFilter, this.statusFilter,
-                labelFilter, this.pageToken, this.limit);
+        return new ListWorkflowRunsRequest(
+                this.workflowNameFilter,
+                this.workflowVersionFilter,
+                this.statusFilter,
+                labelFilter,
+                this.createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                this.pageToken,
+                this.limit);
+    }
+
+    public ListWorkflowRunsRequest withCreatedAtFrom(@Nullable final Instant createdAtFrom) {
+        return new ListWorkflowRunsRequest(
+                this.workflowNameFilter,
+                this.workflowVersionFilter,
+                this.statusFilter,
+                this.labelFilter,
+                createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                this.pageToken,
+                this.limit);
+    }
+
+    public ListWorkflowRunsRequest withCreatedAtTo(@Nullable final Instant createdAtTo) {
+        return new ListWorkflowRunsRequest(
+                this.workflowNameFilter,
+                this.workflowVersionFilter,
+                this.statusFilter,
+                this.labelFilter,
+                this.createdAtFrom,
+                createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                this.pageToken,
+                this.limit);
+    }
+
+    public ListWorkflowRunsRequest withCompletedAtFrom(@Nullable final Instant completedAtFrom) {
+        return new ListWorkflowRunsRequest(
+                this.workflowNameFilter,
+                this.workflowVersionFilter,
+                this.statusFilter,
+                this.labelFilter,
+                this.createdAtFrom,
+                this.createdAtTo,
+                completedAtFrom,
+                this.completedAtTo,
+                this.pageToken,
+                this.limit);
+    }
+
+    public ListWorkflowRunsRequest withCompletedAtTo(@Nullable final Instant completedAtTo) {
+        return new ListWorkflowRunsRequest(
+                this.workflowNameFilter,
+                this.workflowVersionFilter,
+                this.statusFilter,
+                this.labelFilter,
+                this.createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                completedAtTo,
+                this.pageToken,
+                this.limit);
     }
 
     public ListWorkflowRunsRequest withPageToken(@Nullable final String pageToken) {
-        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.workflowVersionFilter, this.statusFilter,
-                this.labelFilter, pageToken, this.limit);
+        return new ListWorkflowRunsRequest(
+                this.workflowNameFilter,
+                this.workflowVersionFilter,
+                this.statusFilter,
+                this.labelFilter,
+                this.createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                pageToken,
+                this.limit);
     }
 
     public ListWorkflowRunsRequest withLimit(final int limit) {
-        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.workflowVersionFilter, this.statusFilter,
-                this.labelFilter, this.pageToken, limit);
+        return new ListWorkflowRunsRequest(
+                this.workflowNameFilter,
+                this.workflowVersionFilter,
+                this.statusFilter,
+                this.labelFilter,
+                this.createdAtFrom,
+                this.createdAtTo,
+                this.completedAtFrom,
+                this.completedAtTo,
+                this.pageToken,
+                limit);
     }
 
 }
