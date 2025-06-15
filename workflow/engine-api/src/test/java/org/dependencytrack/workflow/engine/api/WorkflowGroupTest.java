@@ -23,8 +23,6 @@ import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.annotation.Workflow;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -56,8 +54,8 @@ class WorkflowGroupTest {
     static class TestWorkflow implements WorkflowExecutor<Void, Void> {
 
         @Override
-        public Optional<Void> execute(final WorkflowContext<Void> ctx) {
-            return Optional.empty();
+        public Void execute(final WorkflowContext<Void> ctx) {
+            return null;
         }
 
     }
@@ -73,8 +71,8 @@ class WorkflowGroupTest {
     static class TestWorkflowWithoutAnnotation implements WorkflowExecutor<Void, Void> {
 
         @Override
-        public Optional<Void> execute(final WorkflowContext<Void> ctx) {
-            return Optional.empty();
+        public Void execute(final WorkflowContext<Void> ctx) {
+            return null;
         }
 
     }

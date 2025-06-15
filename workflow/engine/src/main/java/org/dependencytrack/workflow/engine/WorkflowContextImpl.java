@@ -72,7 +72,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.function.Function;
@@ -170,11 +169,13 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return labels;
     }
 
+    @Nullable
     @Override
-    public Optional<A> argument() {
-        return Optional.ofNullable(argument);
+    public A argument() {
+        return argument;
     }
 
+    @Nullable
     @Override
     public Instant currentTime() {
         return currentTime;
@@ -525,7 +526,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private void onRunStarted(final RunStarted ignored) {
         logger().debug("Started");
 
-        final Optional<R> result;
+        final R result;
         try {
             result = workflowExecutor.execute(this);
         } catch (Exception e) {
@@ -536,7 +537,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             throw new RuntimeException(e);
         }
 
-        complete(result.orElse(null));
+        complete(result);
     }
 
     private void onRunCancelled(final RunCancelled runCancelled) {

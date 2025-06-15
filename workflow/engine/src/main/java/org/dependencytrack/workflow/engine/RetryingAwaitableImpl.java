@@ -20,8 +20,8 @@ package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
+import org.jspecify.annotations.Nullable;
 
-import java.util.Optional;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
@@ -41,8 +41,9 @@ final class RetryingAwaitableImpl<T> extends AwaitableImpl<T> {
         this.retryAwaitableFunction = requireNonNull(retryAwaitableFunction, "retryAwaitableFunction must not be null");
     }
 
+    @Nullable
     @Override
-    public Optional<T> await() {
+    public T await() {
         try {
             return initialAwaitable.await();
         } catch (WorkflowFailureException e) {

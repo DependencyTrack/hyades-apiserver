@@ -57,7 +57,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -95,8 +94,8 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestActivityFoo implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Optional<Void> execute(final ActivityContext<Void> ctx) {
-            return Optional.empty();
+        public Void execute(final ActivityContext<Void> ctx) {
+            return null;
         }
 
     }
@@ -105,8 +104,8 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestActivityBar implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Optional<Void> execute(final ActivityContext<Void> ctx) {
-            return Optional.empty();
+        public Void execute(final ActivityContext<Void> ctx) {
+            return null;
         }
 
     }
@@ -115,8 +114,8 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestActivityBaz implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Optional<Void> execute(final ActivityContext<Void> ctx) {
-            return Optional.empty();
+        public Void execute(final ActivityContext<Void> ctx) {
+            return null;
         }
 
     }
@@ -125,11 +124,11 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestWorkflow implements WorkflowExecutor<Void, Void> {
 
         @Override
-        public Optional<Void> execute(final WorkflowContext<Void> ctx) {
+        public Void execute(final WorkflowContext<Void> ctx) {
             ctx.activityClient(TestActivityFoo.class).call(new ActivityCallOptions<>()).await();
             ctx.activityClient(TestActivityBar.class).call(new ActivityCallOptions<>()).await();
             ctx.activityClient(TestActivityBaz.class).call(new ActivityCallOptions<>()).await();
-            return Optional.empty();
+            return null;
         }
 
     }

@@ -34,7 +34,6 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -69,7 +68,8 @@ public interface WorkflowEngine extends Closeable {
         return results.getFirst();
     }
 
-    Optional<WorkflowRun> getRun(UUID id);
+    @Nullable
+    WorkflowRun getRun(UUID id);
 
     Page<WorkflowRun> listRuns(ListWorkflowRunsRequest request);
 

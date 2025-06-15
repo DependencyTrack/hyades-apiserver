@@ -18,7 +18,8 @@
  */
 package org.dependencytrack.workflow.api;
 
-import java.util.Optional;
+import org.jspecify.annotations.Nullable;
+
 import java.util.UUID;
 
 /**
@@ -30,6 +31,7 @@ public interface ActivityContext<T> {
 
     UUID workflowRunId();
 
-    Optional<T> argument();
+    @Nullable
+    T argument();
 
 }

@@ -25,7 +25,6 @@ import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
@@ -48,9 +47,10 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
         this.executionContext = executionContext;
         this.resultConverter = resultConverter;
     }
-    
+
+    @Nullable
     @Override
-    public Optional<T> await() {
+    public T await() {
         do {
             if (completed) {
                 if (exception != null) {
@@ -59,7 +59,7 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
                     throw new CancellationFailureException(cancelReason);
                 }
 
-                return Optional.ofNullable(result);
+                return result;
             }
         } while (executionContext.processNextEvent() != null);
 

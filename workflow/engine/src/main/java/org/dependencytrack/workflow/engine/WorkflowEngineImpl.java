@@ -99,7 +99,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -553,30 +552,26 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         });
     }
 
-    public Optional<WorkflowRun> getRun(final UUID runId) {
-        return jdbi.withHandle(handle -> {
-            final var dao = new WorkflowDao(handle);
+    @Nullable
+    public WorkflowRun getRun(final UUID runId) {
+        final WorkflowRunRow runRow = jdbi.withHandle(handle -> new WorkflowDao(handle).getRun(runId));
+        if (runRow == null) {
+            return null;
+        }
 
-            final WorkflowRunRow runRow = dao.getRun(runId);
-            if (runRow == null) {
-                return Optional.empty();
-            }
-
-            return Optional.of(
-                    new WorkflowRun(
-                            runRow.id(),
-                            runRow.workflowName(),
-                            runRow.workflowVersion(),
-                            runRow.status(),
-                            runRow.customStatus(),
-                            runRow.priority(),
-                            runRow.concurrencyGroupId(),
-                            runRow.labels(),
-                            runRow.createdAt(),
-                            runRow.updatedAt(),
-                            runRow.startedAt(),
-                            runRow.completedAt()));
-        });
+        return new WorkflowRun(
+                runRow.id(),
+                runRow.workflowName(),
+                runRow.workflowVersion(),
+                runRow.status(),
+                runRow.customStatus(),
+                runRow.priority(),
+                runRow.concurrencyGroupId(),
+                runRow.labels(),
+                runRow.createdAt(),
+                runRow.updatedAt(),
+                runRow.startedAt(),
+                runRow.completedAt());
     }
 
     @Override

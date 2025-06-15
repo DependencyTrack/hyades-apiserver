@@ -109,9 +109,8 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
         try {
             final WorkflowPayload result;
             try (ctx) {
-                result = (WorkflowPayload) activityMetadata.executor().execute(ctx)
-                        .map(activityMetadata.resultConverter()::convertToPayload)
-                        .orElse(null);
+                final Object activityResult = activityMetadata.executor().execute(ctx);
+                result = activityMetadata.resultConverter().convertToPayload(activityResult);
             }
 
             try {

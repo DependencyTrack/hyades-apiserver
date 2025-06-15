@@ -20,16 +20,16 @@ package org.dependencytrack.workflow.api;
 
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
 import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
-
-import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 public interface Awaitable<T> {
 
     /**
-     * @return An {@link Optional} wrapping the {@link Awaitable}'s result, if any.
+     * @return The {@link Awaitable}'s result, if any.
      * @throws WorkflowFailureException     If the {@link Awaitable} completed exceptionally.
-     * @throws CancellationFailureException When the awaitable was canceled before it could complete.
+     * @throws CancellationFailureException When the awaitable was cancelled before it could complete.
      */
-    Optional<T> await();
+    @Nullable
+    T await();
 
 }

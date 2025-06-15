@@ -18,10 +18,11 @@
  */
 package org.dependencytrack.workflow.api;
 
-import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 public interface ActivityExecutor<A, R> {
 
-    Optional<R> execute(ActivityContext<A> ctx) throws Exception;
+    @Nullable
+    R execute(ActivityContext<A> ctx) throws Exception;
 
 }

@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -47,7 +46,8 @@ public interface WorkflowContext<A> {
     @Nullable
     Map<String, String> labels();
 
-    Optional<A> argument();
+    @Nullable
+    A argument();
 
     /**
      * @return The current, deterministic time within the workflow execution.
