@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
-import org.dependencytrack.workflow.engine.api.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
 import org.dependencytrack.workflow.engine.proto.v1.ListWorkflowRunsPageToken;
 import org.jdbi.v3.core.Handle;
@@ -89,7 +89,7 @@ public final class WorkflowRunDao {
         final int limitWithNext = limit + 1;
 
         final List<WorkflowRun> rows = query
-                .bind("nameFilter", request.nameFilter())
+                .bind("workflowNameFilter", request.workflowNameFilter())
                 .bind("statusFilter", request.statusFilter())
                 .bindByType("labelFilter", labelsJson, String.class)
                 .bind("limit", limitWithNext)

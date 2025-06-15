@@ -16,13 +16,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.api;
+package org.dependencytrack.workflow.engine.api.request;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static java.util.Objects.requireNonNull;
 
@@ -37,9 +38,12 @@ public record CreateWorkflowScheduleRequest(
         @Nullable WorkflowPayload argument,
         @Nullable Duration initialDelay) {
 
+    private static final Pattern CRON_PATTERN = Pattern.compile("((((\\d+,)+\\d+|(\\d+([/\\-])\\d+)|\\d+|\\*) ?){5,7})");
+
     public CreateWorkflowScheduleRequest {
         requireNonNull(name, "name must not be null");
         requireNonNull(cron, "cron must not be null");
+        requireValidCron(cron);
         requireNonNull(workflowName, "workflowName must not be null");
     }
 
@@ -70,6 +74,12 @@ public record CreateWorkflowScheduleRequest(
     public CreateWorkflowScheduleRequest withInitialDelay(@Nullable final Duration initialDelay) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, this.labels, this.argument, initialDelay);
+    }
+
+    private static void requireValidCron(final String cron) {
+        if (!CRON_PATTERN.matcher(cron).matches()) {
+            throw new IllegalArgumentException("Invalid cron expression: " + cron);
+        }
     }
 
 }

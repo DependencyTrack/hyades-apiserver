@@ -19,9 +19,9 @@
 package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
-import org.dependencytrack.workflow.engine.api.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowScheduleRow;
 import org.dependencytrack.workflow.engine.proto.v1.ListWorkflowSchedulesPageToken;
 import org.jdbi.v3.core.Handle;

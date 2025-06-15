@@ -31,6 +31,7 @@ import java.io.Closeable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -43,6 +44,29 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public final class Buffer<T> implements Closeable {
+
+    private enum Status {
+
+        CREATED(1, 2), // 0
+        RUNNING(2),    // 1
+        STOPPING(3),   // 2
+        STOPPED;       // 3
+
+        private final Set<Integer> allowedTransitions;
+
+        Status(final Integer... allowedTransitions) {
+            this.allowedTransitions = Set.of(allowedTransitions);
+        }
+
+        private boolean canTransitionTo(final Status newStatus) {
+            return allowedTransitions.contains(newStatus.ordinal());
+        }
+
+        private boolean isRunningOrStopping() {
+            return equals(RUNNING) || equals(STOPPING);
+        }
+
+    }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Buffer.class);
 
@@ -57,6 +81,8 @@ public final class Buffer<T> implements Closeable {
     private final ScheduledExecutorService flushExecutor;
     private final Duration flushInterval;
     private final ReentrantLock flushLock;
+    private final ReentrantLock statusLock;
+    private Status status = Status.CREATED;
     @Nullable private final MeterRegistry meterRegistry;
     @Nullable private DistributionSummary batchSizeDistribution;
     @Nullable private Timer flushLatencyTimer;
@@ -72,9 +98,11 @@ public final class Buffer<T> implements Closeable {
         this.maxBatchSize = maxBatchSize;
         this.bufferedItems = new ArrayBlockingQueue<>(maxBatchSize);
         this.currentBatch = new ArrayList<>(maxBatchSize);
-        this.flushExecutor = Executors.newSingleThreadScheduledExecutor();
+        this.flushExecutor = Executors.newSingleThreadScheduledExecutor(
+                new DefaultThreadFactory("WorkflowEngine-Buffer-" + name));
         this.flushInterval = flushInterval;
         this.flushLock = new ReentrantLock();
+        this.statusLock = new ReentrantLock();
         this.meterRegistry = meterRegistry;
     }
 
@@ -86,14 +114,18 @@ public final class Buffer<T> implements Closeable {
                 flushInterval.toMillis(),
                 flushInterval.toMillis(),
                 TimeUnit.MILLISECONDS);
+
+        setStatus(Status.RUNNING);
     }
 
     @Override
     public void close() {
         LOGGER.debug("{}: Closing", name);
+        setStatus(Status.STOPPING);
 
         LOGGER.debug("{}: Waiting for flush executor to stop", name);
         flushExecutor.close();
+        setStatus(Status.STOPPED);
 
         // Flush one last time, in case new items were added to the buffer while
         // the executor was shutting down.
@@ -101,6 +133,10 @@ public final class Buffer<T> implements Closeable {
     }
 
     public CompletableFuture<Void> add(final T item) throws InterruptedException, TimeoutException {
+        if (!status.isRunningOrStopping()) {
+            throw new IllegalStateException("Cannot accept new items in current status: " + status);
+        }
+
         final CompletableFuture<Void> future = new CompletableFuture<>();
         final boolean added = bufferedItems.offer(
                 new BufferedItem<>(item, future), 5, TimeUnit.SECONDS);
@@ -135,8 +171,8 @@ public final class Buffer<T> implements Closeable {
                     bufferedItem.future().complete(null);
                 }
             } catch (Throwable e) {
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("{}: Flush of {} items failed", name, currentBatch.size(), e);
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("{}: Flush of {} items failed", name, currentBatch.size(), e);
                 }
 
                 for (final BufferedItem<T> item : currentBatch) {
@@ -177,6 +213,25 @@ public final class Buffer<T> implements Closeable {
 
         new ExecutorServiceMetrics(flushExecutor, "dtrack.buffer.%s".formatted(name), null)
                 .bindTo(meterRegistry);
+    }
+
+    private void setStatus(final Status newStatus) {
+        statusLock.lock();
+        try {
+            if (this.status == newStatus) {
+                return;
+            }
+
+            if (this.status.canTransitionTo(newStatus)) {
+                this.status = newStatus;
+                return;
+            }
+
+            throw new IllegalStateException(
+                    "Can not transition from status %s to %s".formatted(this.status, newStatus));
+        } finally {
+            statusLock.unlock();
+        }
     }
 
 }

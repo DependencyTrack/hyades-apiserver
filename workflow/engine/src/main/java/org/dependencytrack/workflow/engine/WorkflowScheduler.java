@@ -20,8 +20,8 @@ package org.dependencytrack.workflow.engine;
 
 import com.asahaf.javacron.InvalidExpressionException;
 import com.asahaf.javacron.Schedule;
-import org.dependencytrack.workflow.engine.api.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
+import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.persistence.WorkflowScheduleDao;
 import org.jdbi.v3.core.Jdbi;
 import org.slf4j.Logger;

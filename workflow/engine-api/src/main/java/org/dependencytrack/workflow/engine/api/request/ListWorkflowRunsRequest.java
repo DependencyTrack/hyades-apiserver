@@ -16,14 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.api;
+package org.dependencytrack.workflow.engine.api.request;
 
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
 public record ListWorkflowRunsRequest(
-        @Nullable String nameFilter,
+        @Nullable String workflowNameFilter,
         @Nullable WorkflowRunStatus statusFilter,
         @Nullable Map<String, String> labelFilter,
         @Nullable String pageToken,
@@ -33,24 +34,24 @@ public record ListWorkflowRunsRequest(
         this(null, null, null, null, 10);
     }
 
-    public ListWorkflowRunsRequest withNameFilter(@Nullable final String nameFilter) {
+    public ListWorkflowRunsRequest withWorkflowNameFilter(@Nullable final String nameFilter) {
         return new ListWorkflowRunsRequest(nameFilter, this.statusFilter, this.labelFilter, this.pageToken, this.limit);
     }
 
     public ListWorkflowRunsRequest withStatusFilter(@Nullable final WorkflowRunStatus statusFilter) {
-        return new ListWorkflowRunsRequest(this.nameFilter, statusFilter, this.labelFilter, this.pageToken, this.limit);
+        return new ListWorkflowRunsRequest(this.workflowNameFilter, statusFilter, this.labelFilter, this.pageToken, this.limit);
     }
 
     public ListWorkflowRunsRequest withLabelFilter(@Nullable final Map<String, String> labelFilter) {
-        return new ListWorkflowRunsRequest(this.nameFilter, this.statusFilter, labelFilter, this.pageToken, this.limit);
+        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.statusFilter, labelFilter, this.pageToken, this.limit);
     }
 
     public ListWorkflowRunsRequest withPageToken(@Nullable final String pageToken) {
-        return new ListWorkflowRunsRequest(this.nameFilter, this.statusFilter, this.labelFilter, pageToken, this.limit);
+        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.statusFilter, this.labelFilter, pageToken, this.limit);
     }
 
     public ListWorkflowRunsRequest withLimit(final int limit) {
-        return new ListWorkflowRunsRequest(this.nameFilter, this.statusFilter, this.labelFilter, this.pageToken, limit);
+        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.statusFilter, this.labelFilter, this.pageToken, limit);
     }
 
 }

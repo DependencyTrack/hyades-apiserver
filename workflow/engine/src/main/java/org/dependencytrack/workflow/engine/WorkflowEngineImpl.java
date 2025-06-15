@@ -46,10 +46,6 @@ import org.dependencytrack.workflow.engine.TaskCommand.CompleteActivityTaskComma
 import org.dependencytrack.workflow.engine.TaskCommand.CompleteWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.TaskCommand.FailActivityTaskCommand;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
-import org.dependencytrack.workflow.engine.api.CreateWorkflowRunRequest;
-import org.dependencytrack.workflow.engine.api.CreateWorkflowScheduleRequest;
-import org.dependencytrack.workflow.engine.api.ListWorkflowRunsRequest;
-import org.dependencytrack.workflow.engine.api.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
@@ -57,6 +53,10 @@ import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
+import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
+import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.persistence.JdbiFactory;
 import org.dependencytrack.workflow.engine.persistence.WorkflowActivityDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
@@ -1297,7 +1297,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             throw new IllegalStateException(
-                    "Can not transition from state %s to %s".formatted(this.status, newStatus));
+                    "Can not transition from status %s to %s".formatted(this.status, newStatus));
         } finally {
             statusLock.unlock();
         }

@@ -66,6 +66,7 @@ public record ActivityGroup(String name, Set<String> activityNames, int maxConcu
         if (maxConcurrency < 1) {
             throw new IllegalArgumentException("maxConcurrency must be greater than 0");
         }
+
         return new ActivityGroup(this.name, this.activityNames, maxConcurrency);
     }
 
