@@ -50,7 +50,7 @@ import java.util.Optional;
 import java.util.SequencedCollection;
 import java.util.UUID;
 
-import static org.dependencytrack.workflow.engine.WorkflowEngineImpl.randomUUIDv7;
+import static com.fasterxml.uuid.Generators.timeBasedEpochRandomGenerator;
 import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toInstant;
 import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toTimestamp;
 
@@ -414,7 +414,7 @@ final class WorkflowRunState {
     }
 
     private void executeScheduleSubWorkflowCommand(final ScheduleSubWorkflowCommand command) {
-        final UUID subWorkflowRunId = randomUUIDv7();
+        final UUID subWorkflowRunId = timeBasedEpochRandomGenerator().generate();
 
         final var subWorkflowScheduledBuilder = SubWorkflowRunScheduled.newBuilder()
                 .setRunId(subWorkflowRunId.toString())
