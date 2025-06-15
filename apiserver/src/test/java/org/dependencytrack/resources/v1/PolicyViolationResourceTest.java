@@ -20,8 +20,8 @@ package org.dependencytrack.resources.v1;
 
 import alpine.model.ConfigProperty;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
-import alpine.server.filters.AuthorizationFilter;
+import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -54,8 +54,8 @@ public class PolicyViolationResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(PolicyViolationResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class)
-                    .register(AuthorizationFilter.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void getViolationsTest() {

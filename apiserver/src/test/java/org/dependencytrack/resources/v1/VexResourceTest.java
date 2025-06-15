@@ -19,7 +19,7 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
@@ -65,7 +65,7 @@ public class VexResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(VexResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class)
+                    .register(AuthenticationFeature.class)
                     .register(MultiPartFeature.class));
 
     @Before
