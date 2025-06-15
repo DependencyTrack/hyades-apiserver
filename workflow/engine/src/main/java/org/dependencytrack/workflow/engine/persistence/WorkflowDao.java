@@ -636,20 +636,6 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public List<WorkflowEvent> getRunJournal(final UUID runId) {
-        final Query query = jdbiHandle.createQuery("""
-                select event
-                  from workflow_run_journal
-                 where workflow_run_id = :runId
-                 order by sequence_number
-                """);
-
-        return query
-                .bind("runId", runId)
-                .mapTo(WorkflowEvent.class)
-                .list();
-    }
-
     public boolean tryAcquireAdvisoryLock(final String lockName) {
         if (!jdbiHandle.isInTransaction()) {
             throw new IllegalStateException("Must be in transaction to acquire advisory lock");

@@ -55,6 +55,7 @@ import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
+import org.dependencytrack.workflow.engine.api.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.persistence.JdbiFactory;
@@ -100,6 +101,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -676,6 +678,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
+    public SortedMap<Integer, WorkflowEvent> getRunHistory(final GetWorkflowRunHistoryRequest request) {
+        return jdbi.withHandle(handle -> new WorkflowRunDao(handle).getRunHistory(request));
+    }
+
+    @Override
     public CompletableFuture<Void> sendExternalEvent(
             final UUID workflowRunId,
             final String eventId,
@@ -1234,10 +1241,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 completeWorkflowTasksInternal(workflowDao, activityDao, completeWorkflowTaskCommands);
             }
         });
-    }
-
-    public List<WorkflowEvent> getRunJournal(final UUID runId) {
-        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunJournal(runId));
     }
 
     public List<WorkflowEvent> getRunInbox(final UUID runId) {

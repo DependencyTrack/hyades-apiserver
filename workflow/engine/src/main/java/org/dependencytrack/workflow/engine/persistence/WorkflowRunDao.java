@@ -18,9 +18,12 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
+import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
+import org.dependencytrack.workflow.engine.api.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunJournalRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
@@ -28,9 +31,13 @@ import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.json.JsonConfig;
 import org.jdbi.v3.json.JsonMapper;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
@@ -142,6 +149,27 @@ public final class WorkflowRunDao extends AbstractDao {
                 : null;
 
         return new Page<>(resultItems, encodePageToken(nextPageToken));
+    }
+
+    public SortedMap<Integer, WorkflowEvent> getRunHistory(final GetWorkflowRunHistoryRequest request) {
+        final Query query = jdbiHandle.createQuery("""
+                select *
+                  from workflow_run_journal
+                 where workflow_run_id = :runId
+                   and sequence_number > :sequenceNumberOffset
+                 limit :limit
+                """);
+
+        return query
+                .bind("runId", request.runId())
+                .bind("sequenceNumberOffset", request.sequenceNumberOffset())
+                .bind("limit", request.limit())
+                .mapTo(WorkflowRunJournalRow.class)
+                .collect(Collectors.toMap(
+                        WorkflowRunJournalRow::sequenceNumber,
+                        WorkflowRunJournalRow::event,
+                        (a, b) -> a,
+                        () -> new TreeMap<>(Comparator.comparingInt(Integer::intValue))));
     }
 
 }

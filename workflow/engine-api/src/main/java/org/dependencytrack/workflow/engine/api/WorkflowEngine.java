@@ -21,10 +21,12 @@ package org.dependencytrack.workflow.engine.api;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
+import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
 import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
+import org.dependencytrack.workflow.engine.api.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.jspecify.annotations.Nullable;
@@ -34,6 +36,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.SortedMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -111,6 +114,15 @@ public interface WorkflowEngine extends Closeable {
      *                               already in a terminal state, or a resumption has already been requested.
      */
     void requestRunResumption(UUID runId);
+
+    /**
+     * Retrieve the event history of a workflow run.
+     *
+     * @param request The request.
+     * @return A {@link SortedMap}, where the key is the sequence number of the {@link WorkflowEvent}
+     * in the workflow run's history, and the value is the {@link WorkflowEvent} itself.
+     */
+    SortedMap<Integer, WorkflowEvent> getRunHistory(GetWorkflowRunHistoryRequest request);
 
     CompletableFuture<Void> sendExternalEvent(UUID runId, String eventId, @Nullable WorkflowPayload payload);
 
