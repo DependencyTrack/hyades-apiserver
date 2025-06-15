@@ -23,7 +23,6 @@ import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowScheduleRow;
-import org.dependencytrack.workflow.engine.proto.v1.ListWorkflowSchedulesPageToken;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -38,15 +37,11 @@ import java.util.List;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.workflow.engine.support.PageTokenUtil.decodePageToken;
-import static org.dependencytrack.workflow.engine.support.PageTokenUtil.encodePageToken;
 
-public final class WorkflowScheduleDao {
-
-    private final Handle jdbiHandle;
+public final class WorkflowScheduleDao extends AbstractDao {
 
     public WorkflowScheduleDao(final Handle jdbiHandle) {
-        this.jdbiHandle = jdbiHandle;
+        super(jdbiHandle);
     }
 
     public List<WorkflowSchedule> createSchedules(final Collection<NewWorkflowScheduleRow> newSchedules) {
@@ -90,7 +85,8 @@ public final class WorkflowScheduleDao {
 
         final JsonMapper.TypedJsonMapper jsonMapper = jdbiHandle
                 .getConfig(JsonConfig.class).getJsonMapper()
-                .forType(new GenericType<Map<String, String>>() {}.getType(), jdbiHandle.getConfig());
+                .forType(new GenericType<Map<String, String>>() {
+                }.getType(), jdbiHandle.getConfig());
 
         for (final NewWorkflowScheduleRow newSchedule : newSchedules) {
             final String labelsJson;
@@ -126,11 +122,11 @@ public final class WorkflowScheduleDao {
                 .list();
     }
 
+    record ListSchedulesPageToken(String lastName) {
+    }
+
     public Page<WorkflowSchedule> listSchedules(final ListWorkflowSchedulesRequest request) {
         requireNonNull(request, "request must not be null");
-
-        final var pageTokenValue = decodePageToken(
-                request.pageToken(), ListWorkflowSchedulesPageToken.parser());
 
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="lastName" type="boolean" -->
@@ -148,6 +144,8 @@ public final class WorkflowScheduleDao {
                  limit :limit
                 """);
 
+        final var pageTokenValue = decodePageToken(request.pageToken(), ListSchedulesPageToken.class);
+
         // Query for one additional row to determine if there are more results.
         final int limit = request.limit() > 0 ? request.limit() : 100;
         final int limitWithNext = limit + 1;
@@ -155,7 +153,7 @@ public final class WorkflowScheduleDao {
         final List<WorkflowSchedule> rows = query
                 .bind("workflowNameFilter", request.workflowNameFilter())
                 .bind("limit", limitWithNext)
-                .bind("lastName", pageTokenValue != null ? pageTokenValue.getLastName() : null)
+                .bind("lastName", pageTokenValue != null ? pageTokenValue.lastName() : null)
                 .defineNamedBindings()
                 .mapTo(WorkflowSchedule.class)
                 .list();
@@ -164,8 +162,8 @@ public final class WorkflowScheduleDao {
                 ? rows.subList(0, Math.min(rows.size(), limit))
                 : rows;
 
-        final ListWorkflowSchedulesPageToken nextPageToken = rows.size() == limitWithNext
-                ? ListWorkflowSchedulesPageToken.newBuilder().setLastName(resultItems.getLast().name()).build()
+        final ListSchedulesPageToken nextPageToken = rows.size() == limitWithNext
+                ? new ListSchedulesPageToken(resultItems.getLast().name())
                 : null;
 
         return new Page<>(resultItems, encodePageToken(nextPageToken));

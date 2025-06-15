@@ -25,33 +25,44 @@ import java.util.Map;
 
 public record ListWorkflowRunsRequest(
         @Nullable String workflowNameFilter,
+        @Nullable Integer workflowVersionFilter,
         @Nullable WorkflowRunStatus statusFilter,
         @Nullable Map<String, String> labelFilter,
         @Nullable String pageToken,
         int limit) {
 
     public ListWorkflowRunsRequest() {
-        this(null, null, null, null, 10);
+        this(null, null, null, null, null, 10);
     }
 
-    public ListWorkflowRunsRequest withWorkflowNameFilter(@Nullable final String nameFilter) {
-        return new ListWorkflowRunsRequest(nameFilter, this.statusFilter, this.labelFilter, this.pageToken, this.limit);
+    public ListWorkflowRunsRequest withWorkflowNameFilter(@Nullable final String workflowNameFilter) {
+        return new ListWorkflowRunsRequest(workflowNameFilter, this.workflowVersionFilter, this.statusFilter,
+                this.labelFilter, this.pageToken, this.limit);
+    }
+
+    public ListWorkflowRunsRequest withWorkflowVersionFilter(@Nullable final Integer workflowVersionFilter) {
+        return new ListWorkflowRunsRequest(this.workflowNameFilter, workflowVersionFilter, this.statusFilter,
+                this.labelFilter, this.pageToken, this.limit);
     }
 
     public ListWorkflowRunsRequest withStatusFilter(@Nullable final WorkflowRunStatus statusFilter) {
-        return new ListWorkflowRunsRequest(this.workflowNameFilter, statusFilter, this.labelFilter, this.pageToken, this.limit);
+        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.workflowVersionFilter, statusFilter,
+                this.labelFilter, this.pageToken, this.limit);
     }
 
     public ListWorkflowRunsRequest withLabelFilter(@Nullable final Map<String, String> labelFilter) {
-        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.statusFilter, labelFilter, this.pageToken, this.limit);
+        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.workflowVersionFilter, this.statusFilter,
+                labelFilter, this.pageToken, this.limit);
     }
 
     public ListWorkflowRunsRequest withPageToken(@Nullable final String pageToken) {
-        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.statusFilter, this.labelFilter, pageToken, this.limit);
+        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.workflowVersionFilter, this.statusFilter,
+                this.labelFilter, pageToken, this.limit);
     }
 
     public ListWorkflowRunsRequest withLimit(final int limit) {
-        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.statusFilter, this.labelFilter, this.pageToken, limit);
+        return new ListWorkflowRunsRequest(this.workflowNameFilter, this.workflowVersionFilter, this.statusFilter,
+                this.labelFilter, this.pageToken, limit);
     }
 
 }

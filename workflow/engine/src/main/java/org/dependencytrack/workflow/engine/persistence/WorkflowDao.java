@@ -54,12 +54,10 @@ import java.util.SequencedCollection;
 import java.util.UUID;
 import java.util.function.Function;
 
-public final class WorkflowDao {
-
-    private final Handle jdbiHandle;
+public final class WorkflowDao extends AbstractDao {
 
     public WorkflowDao(final Handle jdbiHandle) {
-        this.jdbiHandle = jdbiHandle;
+        super(jdbiHandle);
     }
 
     public List<UUID> createRuns(final Collection<NewWorkflowRunRow> newRuns) {

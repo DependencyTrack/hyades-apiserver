@@ -34,12 +34,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-public final class WorkflowActivityDao {
-
-    private final Handle jdbiHandle;
+public final class WorkflowActivityDao extends AbstractDao {
 
     public WorkflowActivityDao(final Handle jdbiHandle) {
-        this.jdbiHandle = jdbiHandle;
+        super(jdbiHandle);
     }
 
     public int createActivityTasks(final Collection<NewActivityTaskRow> newTasks) {

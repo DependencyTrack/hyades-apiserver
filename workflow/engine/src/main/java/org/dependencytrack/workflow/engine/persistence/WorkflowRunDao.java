@@ -22,7 +22,6 @@ import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
-import org.dependencytrack.workflow.engine.proto.v1.ListWorkflowRunsPageToken;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -34,26 +33,23 @@ import java.util.Map;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.workflow.engine.support.PageTokenUtil.decodePageToken;
-import static org.dependencytrack.workflow.engine.support.PageTokenUtil.encodePageToken;
 
-public final class WorkflowRunDao {
-
-    private final Handle jdbiHandle;
+public final class WorkflowRunDao extends AbstractDao {
 
     public WorkflowRunDao(final Handle jdbiHandle) {
-        this.jdbiHandle = jdbiHandle;
+        super(jdbiHandle);
+    }
+
+    record ListRunsPageToken(UUID lastId) {
     }
 
     public Page<WorkflowRun> listRuns(final ListWorkflowRunsRequest request) {
         requireNonNull(request, "request must not be null");
 
-        final var pageTokenValue = decodePageToken(
-                request.pageToken(), ListWorkflowRunsPageToken.parser());
-
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="lastId" type="boolean" -->
-                <#-- @ftlvariable name="nameFilter" type="boolean" -->
+                <#-- @ftlvariable name="workflowNameFilter" type="boolean" -->
+                <#-- @ftlvariable name="workflowVersionFilter" type="boolean" -->
                 <#-- @ftlvariable name="statusFilter" type="boolean" -->
                 <#-- @ftlvariable name="labelFilter" type="boolean" -->
                 select *
@@ -62,8 +58,11 @@ public final class WorkflowRunDao {
                 <#if lastId>
                    and id > :lastId
                 </#if>
-                <#if nameFilter>
-                   and workflow_name = :nameFilter
+                <#if workflowNameFilter>
+                   and workflow_name = :workflowNameFilter
+                </#if>
+                <#if workflowVersionFilter>
+                   and workflow_version = :workflowVersionFilter
                 </#if>
                 <#if statusFilter>
                    and status = :statusFilter
@@ -84,16 +83,19 @@ public final class WorkflowRunDao {
             labelsJson = jsonMapper.toJson(request.labelFilter(), jdbiHandle.getConfig());
         }
 
+        final var pageTokenValue = decodePageToken(request.pageToken(), ListRunsPageToken.class);
+
         // Query for one additional row to determine if there are more results.
         final int limit = request.limit() > 0 ? request.limit() : 100;
         final int limitWithNext = limit + 1;
 
         final List<WorkflowRun> rows = query
                 .bind("workflowNameFilter", request.workflowNameFilter())
+                .bind("workflowVersionFilter", request.workflowVersionFilter())
                 .bind("statusFilter", request.statusFilter())
                 .bindByType("labelFilter", labelsJson, String.class)
                 .bind("limit", limitWithNext)
-                .bind("lastId", pageTokenValue != null ? UUID.fromString(pageTokenValue.getLastId()) : null)
+                .bind("lastId", pageTokenValue != null ? pageTokenValue.lastId() : null)
                 .defineNamedBindings()
                 .mapTo(WorkflowRunRow.class)
                 .map(row -> new WorkflowRun(
@@ -115,8 +117,8 @@ public final class WorkflowRunDao {
                 ? rows.subList(0, Math.min(rows.size(), limit))
                 : rows;
 
-        final ListWorkflowRunsPageToken nextPageToken = rows.size() == limitWithNext
-                ? ListWorkflowRunsPageToken.newBuilder().setLastId(resultItems.getLast().id().toString()).build()
+        final ListRunsPageToken nextPageToken = rows.size() == limitWithNext
+                ? new ListRunsPageToken(resultItems.getLast().id())
                 : null;
 
         return new Page<>(resultItems, encodePageToken(nextPageToken));

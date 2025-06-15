@@ -31,12 +31,14 @@ class ListWorkflowRunsRequestTest {
     void shouldPopulateFieldsUsingWithers() {
         final var request = new ListWorkflowRunsRequest()
                 .withWorkflowNameFilter("workflowName")
+                .withWorkflowVersionFilter(123)
                 .withStatusFilter(WorkflowRunStatus.RUNNING)
                 .withLabelFilter(Map.of("foo", "bar"))
                 .withPageToken("pageToken")
                 .withLimit(666);
 
         assertThat(request.workflowNameFilter()).isEqualTo("workflowName");
+        assertThat(request.workflowVersionFilter()).isEqualTo(123);
         assertThat(request.statusFilter()).isEqualTo(WorkflowRunStatus.RUNNING);
         assertThat(request.labelFilter()).containsEntry("foo", "bar");
         assertThat(request.pageToken()).isEqualTo("pageToken");
