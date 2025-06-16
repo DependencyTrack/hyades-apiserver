@@ -34,10 +34,10 @@ jobs:
       github.event.workflow_run.event == 'pull_request'
         && github.event.workflow_run.conclusion == 'success'
     steps:
-    - name: Download PR test coverage report
+    - name: Download PR workspace
       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # tag=v4.3.0
       with:
-        name: pr-test-coverage-report
+        name: pr-workspace
         github-token: ${{ secrets.GITHUB_TOKEN }}
         run-id: ${{ github.event.workflow_run.id }}
     - name: Report Coverage to Codacy
