@@ -30,7 +30,7 @@
         <lib.jackson.version>2.19.0</lib.jackson.version>
         <lib.jackson-databind.version>2.18.3</lib.jackson-databind.version>
         <lib.jersey.version>3.1.10</lib.jersey.version>
-        <lib.jdbi.version>3.49.4</lib.jdbi.version>
+        <lib.jdbi.version>3.49.5</lib.jdbi.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.9.0</lib.kafka.version>
