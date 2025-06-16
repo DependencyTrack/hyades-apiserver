@@ -25,9 +25,9 @@ module org.dependencytrack.workflow.api {
     exports org.dependencytrack.workflow.api.annotation;
     exports org.dependencytrack.workflow.api.failure;
     exports org.dependencytrack.workflow.api.payload;
-    exports org.dependencytrack.workflow.api.proto.v1;
 
     requires com.google.protobuf;
+    requires org.dependencytrack.proto;
     requires org.slf4j;
 
     requires static org.jspecify;

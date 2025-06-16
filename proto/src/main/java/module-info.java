@@ -16,20 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
+module org.dependencytrack.proto {
+    exports org.cyclonedx.proto.v1_6;
+    exports org.dependencytrack.proto.filestorage.v1;
+    exports org.dependencytrack.proto.mirror.v1;
+    exports org.dependencytrack.proto.notification.v1;
+    exports org.dependencytrack.proto.policy.v1;
+    exports org.dependencytrack.proto.repometaanalysis.v1;
+    exports org.dependencytrack.proto.vulnanalysis.v1;
+    exports org.dependencytrack.workflow.api.proto.v1;
 
-import org.jspecify.annotations.NullMarked;
-
-@NullMarked
-module org.dependencytrack.workflow.engine.api {
-    exports org.dependencytrack.workflow.engine.api;
-    exports org.dependencytrack.workflow.engine.api.pagination;
-    exports org.dependencytrack.workflow.engine.api.request;
-
-    requires io.github.resilience4j.core;
-    requires java.sql;
-    requires micrometer.core;
-    requires org.dependencytrack.proto;
-    requires org.dependencytrack.workflow.api;
-
-    requires static org.jspecify;
+    requires com.google.protobuf;
 }

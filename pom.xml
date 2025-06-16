@@ -322,26 +322,6 @@
                 </plugin>
 
                 <plugin>
-                    <groupId>io.github.ascopes</groupId>
-                    <artifactId>protobuf-maven-plugin</artifactId>
-                    <version>3.4.0</version>
-                    <!--
-                      https://github.com/ascopes/protobuf-maven-plugin/issues/472
-                      https://issues.apache.org/jira/browse/MBUILDCACHE-115
-                    -->
-                    <configuration>
-                        <protocVersion>${lib.protobuf-java.version}</protocVersion>
-                    </configuration>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.codehaus.plexus</groupId>
-                            <artifactId>plexus-utils</artifactId>
-                            <version>4.0.2</version>
-                        </dependency>
-                    </dependencies>
-                </plugin>
-
-                <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>0.8.13</version>
