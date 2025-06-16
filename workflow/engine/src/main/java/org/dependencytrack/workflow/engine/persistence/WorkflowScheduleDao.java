@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
-import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;

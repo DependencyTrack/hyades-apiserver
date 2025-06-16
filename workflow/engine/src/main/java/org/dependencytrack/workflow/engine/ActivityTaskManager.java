@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.workflow.api.proto.v1.ActivityTaskCompleted;
-import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.api.v1.ActivityTaskCompleted;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.ActivityMetadata;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.persistence.model.PollActivityTaskCommand;

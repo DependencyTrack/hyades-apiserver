@@ -24,7 +24,7 @@ module org.dependencytrack.proto {
     exports org.dependencytrack.proto.policy.v1;
     exports org.dependencytrack.proto.repometaanalysis.v1;
     exports org.dependencytrack.proto.vulnanalysis.v1;
-    exports org.dependencytrack.workflow.api.proto.v1;
+    exports org.dependencytrack.proto.workflow.api.v1;
 
     requires com.google.protobuf;
 }

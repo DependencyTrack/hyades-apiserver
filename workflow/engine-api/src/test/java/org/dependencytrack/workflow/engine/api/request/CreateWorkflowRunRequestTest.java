@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.api.request;
 
-import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;

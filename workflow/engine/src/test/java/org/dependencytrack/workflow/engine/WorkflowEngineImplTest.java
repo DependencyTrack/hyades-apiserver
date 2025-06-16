@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.engine;
 
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.workflow.api.ActivityContext;
 import org.dependencytrack.workflow.api.Awaitable;
 import org.dependencytrack.workflow.api.ContinueAsNewOptions;
@@ -26,7 +27,6 @@ import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.SubWorkflowFailureException;
 import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
-import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
@@ -61,11 +61,11 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
+import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
+import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
+import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 import static org.dependencytrack.workflow.api.RetryPolicy.defaultRetryPolicy;
 import static org.dependencytrack.workflow.api.payload.PayloadConverters.voidConverter;
-import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
-import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
-import static org.dependencytrack.workflow.api.proto.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 
 @Testcontainers
 class WorkflowEngineImplTest {

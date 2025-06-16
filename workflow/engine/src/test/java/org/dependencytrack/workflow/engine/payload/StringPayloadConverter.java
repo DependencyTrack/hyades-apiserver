@@ -19,10 +19,10 @@
 package org.dependencytrack.workflow.engine.payload;
 
 import com.google.protobuf.ByteString;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload.BinaryContent;
 import org.dependencytrack.workflow.api.payload.PayloadConversionException;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
-import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
-import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload.BinaryContent;
 
 public class StringPayloadConverter implements PayloadConverter<String> {
 

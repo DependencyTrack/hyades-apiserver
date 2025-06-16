@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
-import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 
 public final class WorkflowEventArgumentFactory extends ProtobufArgumentFactory<WorkflowEvent> {
 }

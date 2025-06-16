@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
-import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
-import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.persistence.mapping.PolledActivityTaskRowMapper;

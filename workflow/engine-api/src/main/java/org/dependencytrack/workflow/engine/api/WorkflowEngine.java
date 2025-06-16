@@ -18,13 +18,13 @@
  */
 package org.dependencytrack.workflow.engine.api;
 
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.annotation.Activity;
 import org.dependencytrack.workflow.api.annotation.Workflow;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
-import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
-import org.dependencytrack.workflow.api.proto.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;

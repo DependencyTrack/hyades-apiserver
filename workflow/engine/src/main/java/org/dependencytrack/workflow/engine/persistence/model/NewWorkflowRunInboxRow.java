@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
-import org.dependencytrack.workflow.api.proto.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;

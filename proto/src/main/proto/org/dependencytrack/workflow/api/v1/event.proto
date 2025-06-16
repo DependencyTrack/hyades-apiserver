@@ -26,7 +26,7 @@ import "org/dependencytrack/workflow/api/v1/failure.proto";
 import "org/dependencytrack/workflow/api/v1/payload.proto";
 
 option java_multiple_files = true;
-option java_package = "org.dependencytrack.workflow.api.proto.v1";
+option java_package = "org.dependencytrack.proto.workflow.api.v1";
 
 message WorkflowEvent {
   int32 id = 1;
