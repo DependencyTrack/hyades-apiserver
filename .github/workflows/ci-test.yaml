@@ -52,6 +52,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4.2.2
         with:
+          # For PRs, ensure that the actual HEAD commit is checked out,
+          # rather than an artificial merge commit. We need the actual
+          # commit in order for coverage reports to be matched properly.
+          # https://github.com/actions/checkout/issues/426
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
           # Do not store the GitHub token in .git/config.
           # Required because we upload the workspace as workflow artifact.
           persist-credentials: false
