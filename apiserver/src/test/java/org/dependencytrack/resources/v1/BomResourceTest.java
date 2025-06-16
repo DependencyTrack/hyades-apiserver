@@ -20,6 +20,9 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
+import alpine.model.ManagedUser;
+import alpine.model.Permission;
+import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
@@ -53,6 +56,7 @@ import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
@@ -192,6 +196,42 @@ public class BomResourceTest extends ResourceTest {
                 """);
 
         project.addAccessTeam(super.team);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+    }
+
+    @Test
+    public void exportProjectAsCycloneDxAclUserTest() {
+        enablePortfolioAccessControl();
+
+        final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(testUser);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_BOM + "/cyclonedx/project/" + project.getUuid())
+                .queryParam("variant", "inventory")
+                .request()
+                .header("Authorization", "Bearer " + jwt)
+                .get(Response.class);
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_FORBIDDEN);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        final Permission permission = qm.createPermission("VIEW_PORTFOLIO", null);
+        final Role role = qm.createRole("Test Role", List.of(permission));
+        qm.addRoleToUser(testUser, role, project);
 
         response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
