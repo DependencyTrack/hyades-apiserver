@@ -27,7 +27,7 @@
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>10.2.1</lib.cyclonedx-java.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.jackson.version>2.19.0</lib.jackson.version>
+        <lib.jackson.version>2.19.1</lib.jackson.version>
         <lib.jackson-databind.version>2.18.3</lib.jackson-databind.version>
         <lib.jersey.version>3.1.10</lib.jersey.version>
         <lib.jdbi.version>3.49.4</lib.jdbi.version>
