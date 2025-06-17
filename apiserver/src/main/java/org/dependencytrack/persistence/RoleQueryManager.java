@@ -19,7 +19,6 @@
 package org.dependencytrack.persistence;
 
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.jdo.PersistenceManager;
@@ -52,7 +51,7 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     public Role createRole(final String name, final List<Permission> permissions) {
         final Role role = new Role();
         role.setName(name);
-        role.setPermissions(Set.copyOf(permissions));
+        role.getPermissions().addAll(permissions);
 
         LOGGER.debug("%s role created with permissions: %s".formatted(
                 name, permissions.stream().map(Permission::getName).collect(Collectors.joining(", "))));
