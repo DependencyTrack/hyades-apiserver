@@ -2617,4 +2617,10 @@
             <column name="INACTIVE_SINCE" />
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-30" author="nscuro">
+        <createIndex tableName="DEPENDENCYMETRICS" indexName="DEPENDENCYMETRICS_PROJECT_ID_IDX">
+            <column name="PROJECT_ID"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
