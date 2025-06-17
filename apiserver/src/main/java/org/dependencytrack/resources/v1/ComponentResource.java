@@ -87,6 +87,7 @@ import java.util.UUID;
 import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
 import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
 import static org.dependencytrack.model.FetchStatus.PROCESSED;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -505,7 +506,10 @@ public class ComponentResource extends AbstractApiResource {
                 }
 
                 final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
-                withJdbiHandle(getAlpineRequest(), handle -> handle.attach(VulnerabilityScanDao.class).createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT.name(), component.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now()));
+                try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
+                    jdbiHandle.attach(VulnerabilityScanDao.class).createVulnerabilityScan(
+                            VulnerabilityScan.TargetType.COMPONENT.name(), component.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now());
+                }
                 kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
                 return Response.status(Response.Status.CREATED).entity(component).build();
             });
@@ -632,8 +636,10 @@ public class ComponentResource extends AbstractApiResource {
                     }
 
                     final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
-                    withJdbiHandle(getAlpineRequest(), handle -> handle.attach(VulnerabilityScanDao.class)
-                            .createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT.name(), component.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now()));
+                    try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
+                        jdbiHandle.attach(VulnerabilityScanDao.class).createVulnerabilityScan(
+                                VulnerabilityScan.TargetType.COMPONENT.name(), component.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now());
+                    }
                     kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
                     return Response.ok(component).build();
                 } else {
