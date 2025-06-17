@@ -37,6 +37,7 @@ import alpine.model.Team;
 import alpine.model.User;
 import alpine.resources.AlpineRequest;
 import alpine.security.ApiKeyGenerator;
+import org.datanucleus.store.rdbms.query.JDOQLQuery;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -49,8 +50,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.datanucleus.store.rdbms.query.JDOQLQuery;
 
 /**
  * This QueryManager provides a concrete extension of {@link AbstractAlpineQueryManager} by
@@ -801,64 +800,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         query.setNamedParameters(Map.of("userId", user.getId()));
 
         return Set.copyOf(executeAndCloseResultList(query, String.class));
-    }
-
-    /**
-     * Determines if the specified User has been assigned the specified permission.
-     * @param user the User to query
-     * @param permissionName the name of the permission
-     * @param includeTeams if true, will query all Team membership assigned to the user for the specified permission
-     * @return true if the user has the permission assigned, false if not
-     * @since 1.0.0
-     */
-    public boolean hasPermission(final User user, String permissionName, boolean includeTeams) {
-        Query<Permission> query = pm.newQuery(Permission.class)
-                .filter("name == :permissionName && users.contains(user) && user.id == :userId")
-                .variables("alpine.model.User user")
-                .setParameters(permissionName, user.getId())
-                .result("count(id)");
-
-        final long count = query.executeResultUnique(Long.class);
-
-        return count > 0 || (includeTeams && user.getTeams().stream()
-                .anyMatch(team -> hasPermission(team, permissionName)));
-    }
-
-    /**
-     * Determines if the specified Team has been assigned the specified permission.
-     * @param team the Team to query
-     * @param permissionName the name of the permission
-     * @return true if the team has the permission assigned, false if not
-     * @since 1.0.0
-     */
-    public boolean hasPermission(final Team team, String permissionName) {
-        final Query<Permission> query = pm.newQuery(Permission.class, "name == :permissionName && teams.contains(team) && team.id == :teamId");
-        query.declareVariables("alpine.model.Team team");
-        query.setParameters(permissionName, team.getId());
-        query.setResult("count(id)");
-        return executeAndCloseResultUnique(query, Long.class) > 0;
-    }
-
-    /**
-     * Determines if the specified ApiKey has been assigned the specified permission.
-     * @param apiKey the ApiKey to query
-     * @param permissionName the name of the permission
-     * @return true if the apiKey has the permission assigned, false if not
-     * @since 1.1.1
-     */
-    public boolean hasPermission(final ApiKey apiKey, String permissionName) {
-        if (apiKey.getTeams() == null) {
-            return false;
-        }
-        for (final Team team: apiKey.getTeams()) {
-            final List<Permission> teamPermissions = getObjectById(Team.class, team.getId()).getPermissions();
-            for (final Permission permission: teamPermissions) {
-                if (permission.getName().equals(permissionName)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     /**

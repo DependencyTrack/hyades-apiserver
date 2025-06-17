@@ -90,7 +90,7 @@ public class RoleResource extends AlpineResource {
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
     public Response getRoles() {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             return Response.ok(qm.getRoles()).header(TOTAL_COUNT_HEADER, qm.getCount(Role.class)).build();
         }
     }
@@ -115,7 +115,7 @@ public class RoleResource extends AlpineResource {
                     description = "The UUID of the role to retrieve",
                     schema = @Schema(type = "string", format = "uuid"),
                     required = true) @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             Role role = qm.getObjectByUuid(Role.class, uuid);
             if (role == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
@@ -137,7 +137,7 @@ public class RoleResource extends AlpineResource {
     })
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE })
     public Response createRole(@Valid CreateRoleRequest request) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             if (qm.getRoleByName(request.name()) != null)
                 return Response.status(Response.Status.CONFLICT)
                         .entity(String.format("Role '%s' already exists", request.name()))
@@ -170,7 +170,7 @@ public class RoleResource extends AlpineResource {
     public Response updateRole(Role jsonRole) {
         failOnValidationError(super.getValidator().validateProperty(jsonRole, "name"));
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             Role role = qm.updateRole(jsonRole);
             if (role == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
@@ -199,7 +199,7 @@ public class RoleResource extends AlpineResource {
                 description = "The UUID of the role to retrieve",
                 schema = @Schema(type = "string", format = "uuid"),
                 required = true) @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Role role = qm.getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
             if (role == null)
                 return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
@@ -229,7 +229,7 @@ public class RoleResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
     public Response getUserRoles(
             @Parameter(description = "A valid username", required = true) @PathParam("username") String username) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             List<UserProjectRole> roles = qm.getUserRoles(username);
             if (roles == null || roles.isEmpty()) {
                 LOGGER.debug("No roles found for user: " + username);

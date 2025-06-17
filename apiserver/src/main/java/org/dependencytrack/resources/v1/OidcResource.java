@@ -102,7 +102,7 @@ public class OidcResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
     public Response retrieveGroups() {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final List<OidcGroup> oidcGroups = qm.getOidcGroups();
             return Response.ok(oidcGroups).build();
         }
@@ -131,7 +131,7 @@ public class OidcResource extends AlpineResource {
                 validator.validateProperty(jsonGroup, "name")
         );
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             if (qm.getOidcGroup(jsonGroup.getName()) == null) {
                 final OidcGroup group = qm.createOidcGroup(jsonGroup.getName());
                 super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Group created: " + group.getName());
@@ -166,7 +166,7 @@ public class OidcResource extends AlpineResource {
                 validator.validateProperty(jsonGroup, "name")
         );
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             OidcGroup oidcGroup = qm.getObjectByUuid(OidcGroup.class, jsonGroup.getUuid());
             if (oidcGroup != null) {
                 oidcGroup.setName(jsonGroup.getName());
@@ -194,7 +194,7 @@ public class OidcResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE })
     public Response deleteGroup(@Parameter(description = "The UUID of the group to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
                                 @PathParam("uuid") @ValidUuid final String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final OidcGroup group = qm.getObjectByUuid(OidcGroup.class, uuid);
             if (group != null) {
                 qm.delete(qm.getMappedOidcGroups(group));
@@ -226,7 +226,7 @@ public class OidcResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
     public Response retrieveTeamsMappedToGroup(@Parameter(description = "The UUID of the mapping to retrieve the team for", schema = @Schema(type = "string", format = "uuid"), required = true)
                                                @PathParam("uuid") @ValidUuid final String uuid) {
-        try (final QueryManager qm = new QueryManager()) {
+        try (final QueryManager qm = new QueryManager(getAlpineRequest())) {
             final OidcGroup oidcGroup = qm.getObjectByUuid(OidcGroup.class, uuid);
             if (oidcGroup != null) {
                 final List<Team> teams = qm.getMappedOidcGroups(oidcGroup).stream()
@@ -265,7 +265,7 @@ public class OidcResource extends AlpineResource {
                 validator.validateProperty(request, "group")
         );
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Team team = qm.getObjectByUuid(Team.class, request.getTeam());
             if (team == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("A team with the specified UUID could not be found.").build();
@@ -301,7 +301,7 @@ public class OidcResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE })
     public Response deleteMappingByUuid(@Parameter(description = "The UUID of the mapping to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
                                         @PathParam("uuid") @ValidUuid final String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final MappedOidcGroup mapping = qm.getObjectByUuid(MappedOidcGroup.class, uuid);
             if (mapping != null) {
                 super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Mapping for group " + mapping.getGroup().getName() + " and team " + mapping.getTeam().getName() + " deleted");
@@ -330,7 +330,7 @@ public class OidcResource extends AlpineResource {
                                   @PathParam("groupUuid") @ValidUuid final String groupUuid,
                                   @Parameter(description = "The UUID of the team to delete a mapping for", schema = @Schema(type = "string", format = "uuid"), required = true)
                                   @PathParam("teamUuid") @ValidUuid final String teamUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Team team = qm.getObjectByUuid(Team.class, teamUuid);
             if (team == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team could not be found.").build();

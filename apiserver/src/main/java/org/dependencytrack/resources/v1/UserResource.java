@@ -124,7 +124,7 @@ public class UserResource extends AlpineResource {
     @AuthenticationNotRequired
     public Response validateCredentials(@FormParam("username") String username, @FormParam("password") String password) {
         final Authenticator auth = new Authenticator(username, password);
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Principal principal = auth.authenticate();
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful user login / username: " + username);
             final Set<String> permissionNames = qm.getEffectivePermissions(principal);
@@ -175,7 +175,7 @@ public class UserResource extends AlpineResource {
             return Response.status(Response.Status.NO_CONTENT).build();
         }
 
-        try (final QueryManager qm = new QueryManager()) {
+        try (final QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Principal principal = authService.authenticate();
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful OpenID Connect login / username: " + principal.getName());
             final Set<String> permissionNames = qm.getEffectivePermissions(principal);
@@ -212,7 +212,7 @@ public class UserResource extends AlpineResource {
             @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
         final Authenticator auth = new Authenticator(username, password);
         Principal principal;
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             try {
                 principal = auth.authenticate();
             } catch (AlpineAuthenticationException e) {
@@ -347,7 +347,7 @@ public class UserResource extends AlpineResource {
     })
     public Response getSelf() {
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.ENFORCE_AUTHENTICATION)) {
-            try (QueryManager qm = new QueryManager()) {
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
                 if (super.isLdapUser()) {
                     final LdapUser user = qm.getLdapUser(getPrincipal().getName());
                     return Response.ok(user).build();
@@ -382,7 +382,7 @@ public class UserResource extends AlpineResource {
     })
     public Response updateSelf(ManagedUser jsonUser) {
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.ENFORCE_AUTHENTICATION)) {
-            try (QueryManager qm = new QueryManager()) {
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
                 if (super.isLdapUser()) {
                     final LdapUser user = qm.getLdapUser(getPrincipal().getName());
                     return Response.status(Response.Status.BAD_REQUEST).entity(user).build();
@@ -437,7 +437,7 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response createLdapUser(LdapUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             if (StringUtils.isBlank(jsonUser.getUsername())) {
                 return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
             }
@@ -468,7 +468,7 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteLdapUser(LdapUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final LdapUser user = qm.getLdapUser(jsonUser.getUsername());
             if (user != null) {
                 final LdapUser detachedUser = qm.getPersistenceManager().detachCopy(user);
@@ -502,7 +502,7 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response createManagedUser(ManagedUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
 
             if (StringUtils.isBlank(jsonUser.getUsername())) {
                 return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
@@ -554,7 +554,7 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE})
     public Response updateManagedUser(ManagedUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
             if (user != null) {
                 if (StringUtils.isBlank(jsonUser.getFullname())) {
@@ -596,7 +596,7 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteManagedUser(ManagedUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
             if (user != null) {
                 final ManagedUser detachedUser = qm.getPersistenceManager().detachCopy(user);
@@ -630,7 +630,7 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
     public Response createOidcUser(final OidcUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             if (StringUtils.isBlank(jsonUser.getUsername())) {
                 return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
             }
@@ -661,7 +661,7 @@ public class UserResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteOidcUser(final OidcUser jsonUser) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final OidcUser user = qm.getOidcUser(jsonUser.getUsername());
             if (user != null) {
                 final OidcUser detachedUser = qm.getPersistenceManager().detachCopy(user);
@@ -699,7 +699,7 @@ public class UserResource extends AlpineResource {
             @PathParam("username") String username,
             @Parameter(description = "The UUID of the team to associate username with", required = true)
             IdentifiableObject identifiableObject) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Team team = qm.getObjectByUuid(Team.class, identifiableObject.getUuid());
             if (team == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
@@ -743,7 +743,7 @@ public class UserResource extends AlpineResource {
             @PathParam("username") String username,
             @Parameter(description = "The UUID of the team to un-associate username from", required = true)
             IdentifiableObject identifiableObject) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Team team = qm.getObjectByUuid(Team.class, identifiableObject.getUuid());
             if (team == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
@@ -780,7 +780,7 @@ public class UserResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response setUserTeams(
             @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             User principal = qm.getUser(request.username());
             if (principal == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
@@ -868,7 +868,7 @@ public class UserResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response assignProjectRoleToUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
             final User user = qm.getUser(request.username());
             final Project project = qm.getProject(request.project());
@@ -914,7 +914,7 @@ public class UserResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response removeProjectRoleFromUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
             final User user = qm.getUser(request.username());
             final Project project = qm.getProject(request.project());

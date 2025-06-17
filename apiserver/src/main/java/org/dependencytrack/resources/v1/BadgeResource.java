@@ -19,15 +19,9 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.model.ApiKey;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
-import alpine.model.User;
 import alpine.server.auth.ApiKeyAuthenticationService;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.JwtAuthenticationService;
-import alpine.server.filters.AuthenticationFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -77,7 +71,7 @@ public class BadgeResource extends AbstractApiResource {
 
     private static final String SVG_MEDIA_TYPE = "image/svg+xml";
 
-    private final Logger LOGGER = Logger.getLogger(AuthenticationFilter.class);
+    private static final Logger LOGGER = Logger.getLogger(BadgeResource.class);
 
     // Stand-in methods for alpine.server.filters.AuthenticationFilter and
     // alpine.server.filters.AuthorizationFilter to allow enabling and disabling of
@@ -121,44 +115,13 @@ public class BadgeResource extends AbstractApiResource {
     }
 
     private boolean passesAuthorization(final QueryManager qm) {
-        final Principal principal = (Principal) super.getRequestContext().getProperty("Principal");
-        if (principal == null) {
-            LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "A request was made without the assertion of a valid user principal");
+        if (!qm.getEffectivePermissions(getPrincipal()).contains(Permissions.Constants.VIEW_BADGES)) {
+            LOGGER.info(
+                    SecurityMarkers.SECURITY_FAILURE,
+                    "Unauthorized access attempt made by " + getPrincipal().getName());
             return false;
         }
 
-        final String[] permissions = { Permissions.Constants.VIEW_BADGES };
-
-        if (principal instanceof ApiKey) {
-            final ApiKey apiKey = (ApiKey)principal;
-            for (final String permission: permissions) {
-                if (qm.hasPermission(apiKey, permission)) {
-                    return true;
-                }
-            }
-            LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by API Key "
-                    + apiKey.getMaskedKey() + " to " + ((ContainerRequest) super.getRequestContext()).getRequestUri().toString());
-        } else {
-            User user = null;
-            if (principal instanceof ManagedUser) {
-                user = qm.getManagedUser(((ManagedUser) principal).getUsername());
-            } else if (principal instanceof LdapUser) {
-                user = qm.getLdapUser(((LdapUser) principal).getUsername());
-            } else if (principal instanceof OidcUser) {
-                user = qm.getOidcUser(((OidcUser) principal).getUsername());
-            }
-            if (user == null) {
-                LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "A request was made but the system in unable to find the user principal");
-                return false;
-            }
-            for (final String permission : permissions) {
-                if (qm.hasPermission(user, permission, true)) {
-                    return true;
-                }
-            }
-            LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by "
-                    + user.getUsername() + " to " + ((ContainerRequest) super.getRequestContext()).getRequestUri().toString());
-        }
         return false;
     }
 
@@ -186,7 +149,7 @@ public class BadgeResource extends AbstractApiResource {
     public Response getProjectVulnerabilitiesBadge(
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
             if (!shouldBypassAuth && !passesAuthentication()) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -235,7 +198,7 @@ public class BadgeResource extends AbstractApiResource {
             @PathParam("name") String name,
             @Parameter(description = "The version of the project to query on", required = true)
             @PathParam("version") String version) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
             if (!shouldBypassAuth && !passesAuthentication()) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -282,7 +245,7 @@ public class BadgeResource extends AbstractApiResource {
     public Response getProjectPolicyViolationsBadge(
             @Parameter(description = "The UUID of the project to retrieve a badge for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
             if (!shouldBypassAuth && !passesAuthentication()) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -331,7 +294,7 @@ public class BadgeResource extends AbstractApiResource {
             @PathParam("name") String name,
             @Parameter(description = "The version of the project to query on", required = true)
             @PathParam("version") String version) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final boolean shouldBypassAuth = qm.isEnabled(GENERAL_BADGE_ENABLED);
             if (!shouldBypassAuth && !passesAuthentication()) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();

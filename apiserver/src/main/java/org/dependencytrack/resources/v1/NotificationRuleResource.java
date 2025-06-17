@@ -118,7 +118,7 @@ public class NotificationRuleResource extends AbstractApiResource {
                 validator.validateProperty(jsonRule, "name")
         );
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             NotificationPublisher publisher = null;
             if (jsonRule.getPublisher() != null) {
                 publisher = qm.getObjectByUuid(NotificationPublisher.class, jsonRule.getPublisher().getUuid());
@@ -159,7 +159,7 @@ public class NotificationRuleResource extends AbstractApiResource {
                 validator.validateProperty(jsonRule, "publisherConfig")
         );
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, jsonRule.getUuid());
             if (rule != null) {
                 jsonRule.setName(StringUtils.trimToNull(jsonRule.getName()));
@@ -184,7 +184,7 @@ public class NotificationRuleResource extends AbstractApiResource {
     })
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_DELETE})
     public Response deleteNotificationRule(NotificationRule jsonRule) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, jsonRule.getUuid());
             if (rule != null) {
                 qm.delete(rule);
@@ -222,7 +222,7 @@ public class NotificationRuleResource extends AbstractApiResource {
             @PathParam("ruleUuid") @ValidUuid String ruleUuid,
             @Parameter(description = "The UUID of the project to add to the rule", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
             if (rule == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
@@ -272,7 +272,7 @@ public class NotificationRuleResource extends AbstractApiResource {
             @PathParam("ruleUuid") @ValidUuid String ruleUuid,
             @Parameter(description = "The UUID of the project to remove from the rule", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
             if (rule == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
@@ -318,7 +318,7 @@ public class NotificationRuleResource extends AbstractApiResource {
             @PathParam("ruleUuid") @ValidUuid String ruleUuid,
             @Parameter(description = "The UUID of the team to add to the rule", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("teamUuid") @ValidUuid String teamUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
             if (rule == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
@@ -363,7 +363,7 @@ public class NotificationRuleResource extends AbstractApiResource {
             @PathParam("ruleUuid") @ValidUuid String ruleUuid,
             @Parameter(description = "The UUID of the project to remove from the rule", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("teamUuid") @ValidUuid String teamUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
             if (rule == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();

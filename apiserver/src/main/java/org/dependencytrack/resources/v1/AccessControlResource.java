@@ -132,7 +132,7 @@ public class AccessControlResource extends AlpineResource {
     public Response retrieveUserProjects(
             @Parameter(description = "The username to retrieve projects for", required = true) @PathParam("username") String username) {
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             User user = qm.getUser(username);
 
             if (user == null)
@@ -176,7 +176,7 @@ public class AccessControlResource extends AlpineResource {
                 validator.validateProperty(request, "team"),
                 validator.validateProperty(request, "project")
         );
-        try (final var qm = new QueryManager()) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
             qm.runInTransaction(() -> {
                 final Team team = qm.getObjectByUuid(Team.class, request.getTeam());
                 if (team == null) {
@@ -225,7 +225,7 @@ public class AccessControlResource extends AlpineResource {
             @PathParam("teamUuid") @ValidUuid String teamUuid,
             @Parameter(description = "The UUID of the project to delete the mapping for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
-        try (final var qm = new QueryManager()) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
             qm.runInTransaction(() -> {
                 final Team team = qm.getObjectByUuid(Team.class, teamUuid);
                 if (team == null) {

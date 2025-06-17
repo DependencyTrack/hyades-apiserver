@@ -26,15 +26,8 @@ import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import com.github.packageurl.PackageURL;
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonObjectBuilder;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -49,7 +42,6 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
-import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
@@ -79,6 +71,14 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -117,7 +117,8 @@ public class ProjectResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(ProjectResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @After
     @Override
@@ -128,6 +129,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsDefaultRequestTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         for (int i = 0; i < 1000; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
         }
@@ -146,6 +149,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsWithDataTest() throws Exception {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         var project = qm.createProject("Acme Example", null, "1.0", null, null, new PackageURL(RepositoryType.MAVEN.toString(), "foo", "acme", "1.0", null, null), null, false);
         var component = new Component();
         component.setProject(project);
@@ -222,6 +227,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/2583
     public void getProjectsWithAclEnabledTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         // Create project and give access to current principal's team.
@@ -246,6 +252,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsPaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         for (int i = 0; i < 3; i++) {
             final var project = new Project();
             project.setName("acme-app-" + (i+1));
@@ -301,6 +309,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsByTagTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -345,6 +355,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsNotAssignedToTeamWithUuidTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -375,6 +387,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getSingleProjectByNameTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         for (int i = 0; i < 10; i++) {
             qm.createProject("Acme Example " + i, null, String.valueOf(i), null, null, null, null, false);
         }
@@ -394,6 +408,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsByNameRequestTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         for (int i = 0; i < 1000; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
         }
@@ -413,6 +429,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsByClassifierRequestTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         qm.createProject("Acme Example A", null, "1.0", null, null, null, null, false);
         var p2 = qm.createProject("Acme Example B", null, "1.0", null, null, null, null, false);
         p2.setClassifier(Classifier.LIBRARY);
@@ -431,6 +449,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsWithMetricsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         var projectMetrics = new ProjectMetrics();
         projectMetrics.setProjectId(project.getId());
@@ -455,6 +475,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsByInvalidNameRequestTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         for (int i = 0; i < 1000; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
         }
@@ -472,6 +494,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsByNameActiveOnlyRequestTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         for (int i = 0; i < 500; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
         }
@@ -493,6 +517,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsOnlyRootTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -550,6 +576,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectLookupTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         for (int i = 0; i < 500; i++) {
             qm.createProject("Acme Example", null, String.valueOf(i), null, null, null, null, false);
         }
@@ -573,6 +601,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectLookupNotFoundTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.2.3");
@@ -590,6 +620,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectLookupNotPermittedTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -603,18 +634,14 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
-        assertThat(response.getStatus()).isEqualTo(403);
-        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
-                {
-                  "status": 403,
-                  "title": "Project access denied",
-                  "detail": "Access to the requested project is forbidden"
-                }
-                """);
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(getPlainTextBody(response)).isEqualTo("The project could not be found.");
     }
 
     @Test
     public void getProjectsAscOrderedRequestTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         qm.createProject("DEF", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT)
@@ -632,6 +659,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsDescOrderedRequestTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         qm.createProject("DEF", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT)
@@ -649,6 +678,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConciseTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var project = new Project();
         project.setGroup("com.acme");
         project.setName("acme-app");
@@ -689,6 +720,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConciseWithAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var projectA = new Project();
@@ -729,6 +761,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConciseEmptyTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final Response response = jersey.target(V1_PROJECT + "/concise")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -740,6 +774,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConcisePaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         for (int i = 0; i < 3; i++) {
             final var project = new Project();
             project.setName("acme-app-" + (i+1));
@@ -796,6 +832,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConciseFilterByNameTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -837,6 +875,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConciseFilterByTagTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -885,6 +925,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConciseFilterByTeamTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
         // Create project and give access to current principal's team.
         final var projectB= new Project();
@@ -931,6 +972,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConciseOnlyRootTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -1017,6 +1060,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConciseWithFilterByActiveTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         projectA.setInactiveSince(new Date());
@@ -1075,6 +1120,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsConciseWithLatestMetricsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -1173,6 +1220,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectChildrenConciseTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var parentProject = new Project();
         parentProject.setGroup("com.acme");
         parentProject.setName("acme-app");
@@ -1221,6 +1270,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectChildrenConciseWithAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var parentProject = new Project();
@@ -1312,6 +1362,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectChildrenConciseEmptyTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var parentProject = new Project();
         parentProject.setName("acme-app");
         qm.persist(parentProject);
@@ -1327,6 +1379,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectChildrenConciseWithParentNotExistsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final Response response = jersey.target(V1_PROJECT + "/concise/6ce40fad-0cff-427a-86ce-acb248872b5b/children")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1338,6 +1392,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectChildrenConcisePaginationTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var parentProject = new Project();
         parentProject.setName("acme-app");
         qm.persist(parentProject);
@@ -1399,6 +1455,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectChildrenConciseFilterByNameTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var parentProject = new Project();
         parentProject.setName("acme-app");
         qm.persist(parentProject);
@@ -1447,6 +1505,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectChildrenConciseFilterByTagTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var parentProject = new Project();
         parentProject.setName("acme-app");
         qm.persist(parentProject);
@@ -1501,6 +1561,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectChildrenConciseFilterByTeamTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var parentProject = new Project();
         parentProject.setName("acme-app");
         qm.persist(parentProject);
@@ -1556,6 +1618,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectChildrenConciseWithLatestMetricsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var parentProject = new Project();
         parentProject.setName("acme-app");
         qm.persist(parentProject);
@@ -1659,6 +1723,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectByUuidTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         final var parentProject = new Project();
         parentProject.setName("acme-app-parent");
         parentProject.setVersion("1.0.0");
@@ -1723,6 +1789,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectByUuidNotPermittedTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -1745,6 +1812,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectByInvalidUuidTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Response response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID())
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1757,6 +1826,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectByTagTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         List<Tag> tags = new ArrayList<>();
         Tag tag = qm.createTag("production");
         tags.add(tag);
@@ -1775,6 +1846,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectByCaseInsensitiveTagTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         List<Tag> tags = new ArrayList<>();
         Tag tag = qm.createTag("PRODUCTION");
         tags.add(tag);
@@ -1793,6 +1866,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectByUnknownTagTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         List<Tag> tags = new ArrayList<>();
         Tag tag = qm.createTag("production");
         tags.add(tag);
@@ -1811,6 +1886,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsByTagAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         final var accessibleProject = new Project();
@@ -1841,6 +1917,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectTest() throws Exception {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0");
@@ -1868,6 +1946,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectDuplicateTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0");
@@ -1887,6 +1967,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectInactiveParentTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final var parentProject = new Project();
         parentProject.setName("acme-app-parent");
         parentProject.setVersion("1.0.0");
@@ -1911,6 +1993,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectDuplicateRaceConditionTest() throws Exception {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final ExecutorService executor = Executors.newFixedThreadPool(10);
         final var countDownLatch = new CountDownLatch(1);
 
@@ -1947,6 +2031,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectEmptyTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project project = new Project();
         project.setName(" ");
         Response response = jersey.target(V1_PROJECT)
@@ -1958,6 +2044,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectNonExistentParentTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final Response response = jersey.target(V1_PROJECT)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1981,6 +2069,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectInaccessibleParentTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var parentProject = new Project();
@@ -2018,6 +2107,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         project.setDescription("Test project");
         Response response = jersey.target(V1_PROJECT)
@@ -2034,6 +2125,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectNotFoundTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final Response response = jersey.target(V1_PROJECT)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -2050,6 +2143,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectNotPermittedTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -2077,6 +2171,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectTagsTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
         final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
 
@@ -2134,6 +2230,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectEmptyNameTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         project.setName(" ");
         Response response = jersey.target(V1_PROJECT)
@@ -2145,6 +2243,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectDuplicateTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Project project = qm.createProject("DEF", null, "1.0", null, null, null, null, false);
         project = qm.detach(Project.class, project.getId());
@@ -2160,6 +2260,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectInaccessibleParentTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var parentProject = new Project();
@@ -2203,6 +2304,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectNonExistentParentTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
@@ -2231,6 +2334,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void deleteProjectTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/" + project.getUuid().toString())
                 .request()
@@ -2241,6 +2346,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void deleteProjectInvalidUuidTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Response response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID().toString())
                 .request()
@@ -2251,6 +2358,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void deleteProjectAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -2281,6 +2389,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectNotModifiedTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
         final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
 
@@ -2297,6 +2407,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectNameVersionConflictTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
         final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
         qm.createProject("ABC", "Test project", "0.9", null, null, null, null, false);
@@ -2313,6 +2425,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectNotFoundTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final var response = jersey.target(V1_PROJECT + "/" + UUID.randomUUID())
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -2323,6 +2437,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectNotPermittedTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -2350,6 +2465,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         final Project project = qm.createProject("DEF", null, "2.0", null, parent, null, null, false);
         final Project newParent = qm.createProject("GHI", null, "3.0", null, null, null, null, false);
@@ -2394,6 +2511,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectExternalReferencesTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final var project = qm.createProject("referred-project", "ExtRef test project", "1.0", null, null, null, null, false);
         final var ref1 = new ExternalReference();
         ref1.setType(org.cyclonedx.model.ExternalReference.Type.VCS);
@@ -2427,6 +2546,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentNotFoundTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         final Project project = qm.createProject("DEF", null, "2.0", null, parent, null, null, false);
 
@@ -2452,6 +2573,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentInaccessibleTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var parentProject = new Project();
@@ -2489,6 +2611,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectSuccessfullyPatchedTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
         final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
         final var projectManufacturerContact = new OrganizationalContact();
@@ -2580,6 +2704,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getRootProjectsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Project child = qm.createProject("DEF", null, "1.0", null, parent, null, null, false);
         qm.createProject("GHI", null, "1.0", null, child, null, null, false);
@@ -2598,6 +2724,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getChildrenProjectsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Project child = qm.createProject("DEF", null, "1.0", null, parent, null, null, false);
         qm.createProject("GHI", null, "1.0", null, parent, null, null, false);
@@ -2616,6 +2744,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateChildAsParentOfChild() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Project child = qm.createProject("DEF", null, "1.0", null, parent, null, null, false);
 
@@ -2631,6 +2761,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateParentToInactiveWithActiveChild() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         qm.createProject("DEF", null, "1.0", null, parent, null, null, false);
 
@@ -2646,6 +2778,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectWithoutVersionDuplicateTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project project = new Project();
         project.setName("Acme Example");
         Response response = jersey.target(V1_PROJECT)
@@ -2664,6 +2798,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectParentToSelf() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
 
         Project tmpProject = new Project();
@@ -2678,6 +2814,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getProjectsWithoutDescendantsOfTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Project grandParent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         Project parent = qm.createProject("DEF", null, "1.0", null, grandParent, null, null, false);
         Project child = qm.createProject("GHI", null, "1.0", null, parent, null, null, false);
@@ -2697,6 +2835,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void cloneProjectTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         EventService.getInstance().subscribe(CloneProjectEvent.class, CloneProjectTask.class);
 
         final var projectManufacturer = new OrganizationalEntity();
@@ -2938,6 +3078,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void cloneProjectConflictTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
@@ -2958,6 +3100,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void cloneProjectWithAclTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var accessProject = new Project();
@@ -3005,6 +3148,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void validateProjectVersionsActiveInactiveTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         qm.createProject("ABC", null, "2.0", null, null, null, new Date(), false);
         qm.createProject("ABC", null, "3.0", null, null, null, null, false);
@@ -3035,6 +3180,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/4048
     public void issue4048RegressionTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO, Permissions.PORTFOLIO_MANAGEMENT);
+
         final int projectsPerLevel = 10;
         final int maxDepth = 5;
 
@@ -3107,6 +3254,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/4413
     public void cloneProjectWithBrokenDependencyGraphTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         EventService.getInstance().subscribe(CloneProjectEvent.class, CloneProjectTask.class);
 
         final var project = new Project();
@@ -3152,6 +3301,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test // https://github.com/DependencyTrack/dependency-track/issues/3883
     public void issue3883RegressionTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO, Permissions.PORTFOLIO_MANAGEMENT);
+
         Response response = jersey.target(V1_PROJECT)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -3246,6 +3397,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsLatestTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0");
@@ -3285,6 +3438,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsLatestWithACLTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var accessProject = new Project();
@@ -3323,6 +3477,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsInactiveTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         Project project = new Project();
         project.setName("Acme Example");
         project.setVersion("1.0");
@@ -3349,6 +3505,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectAsLatestTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         // create project not as latest
         Project project = qm.createProject("ABC", null, "1.0", null, null, null,
                 null, false, false);
@@ -3384,6 +3542,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectAsLatestWithACLAndAccessTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var accessLatestProject = new Project();
@@ -3418,6 +3577,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectAsLatestWithACLAndNoAccessTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var noAccessLatestProject = new Project();
@@ -3447,6 +3607,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectAsLatestTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         // create project not as latest
         Project project = qm.createProject("ABC", null, "1.0", null, null, null,
                 null, false, false);
@@ -3484,6 +3646,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectAsLatestWithACLAndAccessTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var accessLatestProject = new Project();
@@ -3519,6 +3682,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectAsLatestWithACLAndNoAccessTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var noAccessLatestProject = new Project();
@@ -3550,6 +3714,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void cloneProjectAsLatestTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         EventService.getInstance().subscribe(CloneProjectEvent.class, CloneProjectTask.class);
 
         final var project = new Project();
@@ -3589,6 +3755,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getLatestProjectTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         qm.createProject("Acme Example", null, "1.0.0", null, null, null, null, false);
         qm.createProject("Acme Example", null, "1.0.2", null, null, null, null, true, false);
         qm.createProject("Different project", null, "1.0.3", null, null, null, null, true, false);
@@ -3606,6 +3774,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getLatestProjectWithAclEnabledTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         // Create project and give access to current principal's team.
@@ -3630,6 +3799,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void getLatestProjectWithAclEnabledNoAccessTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
         // Create projects and give NO access
@@ -3640,17 +3810,13 @@ public class ProjectResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assert.assertEquals(404, response.getStatus(), 0);
     }
 
     @Test
     public void createProjectAsUserWithAclEnabledAndExistingTeamByUuidTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        enablePortfolioAccessControl();
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
@@ -3690,12 +3856,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsUserWithAclEnabledAndExistingTeamByNameTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        enablePortfolioAccessControl();
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
@@ -3735,12 +3897,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsUserWithAclEnabledAndWithoutTeamTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        enablePortfolioAccessControl();
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
@@ -3775,14 +3933,13 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsUserWithNotAllowedExistingTeamTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+        enablePortfolioAccessControl();
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        testUser.setPermissions(List.of(
+                qm.createPermission(
+                        Permissions.PORTFOLIO_MANAGEMENT.name(),
+                        Permissions.PORTFOLIO_MANAGEMENT.getDescription())));
 
         final String userJwt = new JsonWebToken().createToken(testUser);
 
@@ -3807,14 +3964,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsUserWithAclEnabledAndNotMemberOfTeamAdminTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
-
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        enablePortfolioAccessControl();
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
@@ -3856,14 +4007,11 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsUserWithAclEnabledAndTeamNotExistingNoAdminTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        enablePortfolioAccessControl();
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        qm.addUserToTeam(testUser, team);
 
         final String userJwt = new JsonWebToken().createToken(testUser);
 
@@ -3889,14 +4037,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsUserWithAclEnabledAndTeamNotExistingAdminTest() {
-        qm.createConfigProperty(
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getDescription());
-
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+        enablePortfolioAccessControl();
 
         final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         qm.addUserToTeam(testUser, team);
@@ -3925,6 +4067,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void createProjectAsApiKeyWithAclEnabledAndWithExistentTeamTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final Response response = jersey.target(V1_PROJECT)
@@ -3960,6 +4103,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchActiveProjectToInactiveTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         // create project as active
         Project project = qm.createProject("ABC", null, null, null, null, null,
                 null, false, false);
@@ -3991,6 +4136,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchInactiveProjectToActiveTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         // create project as inactive
         Project project = qm.createProject("ABC", null, null, null, null, null,
                 new Date(), false, false);
@@ -4021,6 +4168,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateActiveProjectToInactiveTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         // create project as active
         Project project = qm.createProject("ABC", null, null, null, null, null,
                 null, false, false);
@@ -4053,6 +4202,8 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateInactiveProjectToActiveTest() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
         // create project as inactive
         Project project = qm.createProject("ABC", null, null, null, null, null,
                 new Date(), false, false);

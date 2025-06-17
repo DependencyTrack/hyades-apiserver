@@ -29,17 +29,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-
 import java.util.List;
 import java.util.UUID;
 
@@ -49,7 +49,7 @@ import java.util.UUID;
         @SecurityRequirement(name = "ApiKeyAuth"),
         @SecurityRequirement(name = "BearerAuth")
 })
-public class WorkflowResource {
+public class WorkflowResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowResource.class);
 
@@ -74,7 +74,7 @@ public class WorkflowResource {
             @Parameter(description = "The UUID of the token to query", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         List<WorkflowState> workflowStates;
-        try (final var qm = new QueryManager()) {
+        try (final var qm = new QueryManager(getAlpineRequest())) {
             workflowStates = qm.getAllWorkflowStatesForAToken(UUID.fromString(uuid));
             if (workflowStates.isEmpty()) {
                 return Response.status(Response.Status.NOT_FOUND).entity("Provided token " + uuid + " does not exist.").build();

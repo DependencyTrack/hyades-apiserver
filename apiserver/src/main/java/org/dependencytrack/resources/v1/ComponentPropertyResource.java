@@ -141,7 +141,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
                 validator.validateProperty(json, "propertyValue"),
                 validator.validateProperty(json, "propertyType")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component != null) {
                 requireAccess(qm, component.getProject());
@@ -192,7 +192,7 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
             @PathParam("uuid") @ValidUuid final String componentUuid,
             @Parameter(description = "The UUID of the component property to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("propertyUuid") @ValidUuid final String propertyUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, componentUuid);
             if (component != null) {
                 requireAccess(qm, component.getProject());

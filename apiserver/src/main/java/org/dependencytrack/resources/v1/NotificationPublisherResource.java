@@ -91,7 +91,7 @@ public class NotificationPublisherResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
     public Response getAllNotificationPublishers() {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final List<NotificationPublisher> publishers = qm.getAllNotificationPublishers();
             return Response.ok(publishers).build();
         }
@@ -125,7 +125,7 @@ public class NotificationPublisherResource extends AlpineResource {
                 validator.validateProperty(jsonNotificationPublisher, "template")
         );
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             NotificationPublisher existingNotificationPublisher = qm.getNotificationPublisher(jsonNotificationPublisher.getName());
             if (existingNotificationPublisher != null) {
                 return Response.status(Response.Status.CONFLICT).entity("The notification with the name " + jsonNotificationPublisher.getName() + " already exist").build();
@@ -178,7 +178,7 @@ public class NotificationPublisherResource extends AlpineResource {
                 validator.validateProperty(jsonNotificationPublisher, "uuid")
         );
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             NotificationPublisher existingPublisher = qm.getObjectByUuid(NotificationPublisher.class, jsonNotificationPublisher.getUuid());
             if (existingPublisher != null) {
                 if (existingPublisher.isDefaultPublisher()) {
@@ -229,7 +229,7 @@ public class NotificationPublisherResource extends AlpineResource {
             Permissions.Constants.SYSTEM_CONFIGURATION_DELETE })
     public Response deleteNotificationPublisher(@Parameter(description = "The UUID of the notification publisher to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
                                                 @PathParam("notificationPublisherUuid") @ValidUuid String notificationPublisherUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final NotificationPublisher notificationPublisher = qm.getObjectByUuid(NotificationPublisher.class, notificationPublisherUuid);
             if (notificationPublisher != null) {
                 if (notificationPublisher.isDefaultPublisher()) {
@@ -258,7 +258,7 @@ public class NotificationPublisherResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
     public Response restoreDefaultTemplates() {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final ConfigProperty property = qm.getConfigProperty(
                     ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getGroupName(),
                     ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getPropertyName()
@@ -290,7 +290,7 @@ public class NotificationPublisherResource extends AlpineResource {
     public Response testNotificationRule(
             @Parameter(description = "The UUID of the rule to test", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String ruleUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
             if (rule == null) {
                 return Response.status(Response.Status.NOT_FOUND).build();

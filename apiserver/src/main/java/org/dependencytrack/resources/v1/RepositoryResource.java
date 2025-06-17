@@ -191,7 +191,7 @@ public class RepositoryResource extends AlpineResource {
         if (jsonRepository.isAuthenticationRequired() == null) {
             jsonRepository.setAuthenticationRequired(false);
         }
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final boolean exists = qm.repositoryExist(jsonRepository.getType(), StringUtils.trimToNull(jsonRepository.getIdentifier()));
             if (!exists) {
                 final Repository repository = qm.createRepository(
@@ -236,7 +236,7 @@ public class RepositoryResource extends AlpineResource {
         if (jsonRepository.isAuthenticationRequired() == null) {
             jsonRepository.setAuthenticationRequired(false);
         }
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             Repository repository = qm.getObjectByUuid(Repository.class, jsonRepository.getUuid());
             if (repository != null) {
                 final String url = StringUtils.trimToNull(jsonRepository.getUrl());
@@ -275,7 +275,7 @@ public class RepositoryResource extends AlpineResource {
     public Response deleteRepository(
             @Parameter(description = "The UUID of the repository to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Repository repository = qm.getObjectByUuid(Repository.class, uuid);
             if (repository != null) {
                 qm.delete(repository);

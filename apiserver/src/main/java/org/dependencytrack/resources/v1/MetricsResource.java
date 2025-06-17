@@ -95,7 +95,7 @@ public class MetricsResource extends AbstractApiResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     @ResourceAccessRequired
     public Response getVulnerabilityMetrics() {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final List<VulnerabilityMetrics> metrics = qm.getVulnerabilityMetrics();
             return Response.ok(metrics).build();
         }

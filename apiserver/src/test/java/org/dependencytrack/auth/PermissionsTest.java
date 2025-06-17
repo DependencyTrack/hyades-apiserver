@@ -46,6 +46,7 @@ import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATIO
 import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE;
 import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT;
 import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT_DELETE;
+import static org.dependencytrack.auth.Permissions.Constants.VIEW_BADGES;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_POLICY_VIOLATION;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_PORTFOLIO;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_VULNERABILITY;
@@ -58,7 +59,6 @@ import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAG
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_DELETE;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_READ;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE;
-import static org.dependencytrack.auth.Permissions.Constants.VIEW_BADGES;
 
 public class PermissionsTest {
 

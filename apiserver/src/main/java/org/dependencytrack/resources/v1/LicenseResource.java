@@ -127,7 +127,7 @@ public class LicenseResource extends AlpineResource {
     public Response getLicense(
             @Parameter(description = "The SPDX License ID of the license to retrieve", required = true)
             @PathParam("licenseId") String licenseId) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final License license = qm.getLicense(licenseId);
             if (license != null) {
                 return Response.ok(license).build();
@@ -159,7 +159,7 @@ public class LicenseResource extends AlpineResource {
                 validator.validateProperty(jsonLicense, "name"),
                 validator.validateProperty(jsonLicense, "licenseId")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             License license = qm.getLicense(jsonLicense.getLicenseId());
             if (license == null) {
                 license = qm.createCustomLicense(jsonLicense, true);
@@ -188,7 +188,7 @@ public class LicenseResource extends AlpineResource {
     public Response deleteLicense(
             @Parameter(description = "The SPDX License ID of the license to delete", required = true)
             @PathParam("licenseId") String licenseId) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final License license = qm.getLicense(licenseId);
             if (license != null) {
                 if (Boolean.TRUE.equals(license.isCustomLicense())) {
