@@ -51,9 +51,10 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
     public Role createRole(final String name, final List<Permission> permissions) {
         Role role = new Role();
         role.setName(name);
-        role = persist(role);
-
-        role.getPermissions().addAll(permissions);
+        role.getPermissions().addAll(getPermissionsByName(
+                permissions.stream()
+                        .map(Permission::getName)
+                        .toList()));
 
         LOGGER.debug("%s role created with permissions: %s".formatted(
                 name, permissions.stream().map(Permission::getName).collect(Collectors.joining(", "))));
