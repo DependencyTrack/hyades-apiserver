@@ -28,7 +28,6 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.Before;
@@ -58,8 +57,40 @@ public class RoleResourceTest extends ResourceTest {
     @Override
     public void before() throws Exception {
         super.before();
-        final var generator = new DefaultObjectGenerator();
-        generator.loadDefaultRoles();
+
+        for (Permissions permission : Permissions.values())
+            qm.createPermission(permission.name(), null);
+
+        qm.createRole("Project Admin", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
+                Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
+                Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
+                Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE,
+                Permissions.Constants.VULNERABILITY_ANALYSIS,
+                Permissions.Constants.VULNERABILITY_ANALYSIS_CREATE,
+                Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
+                Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE,
+                Permissions.Constants.POLICY_MANAGEMENT,
+                Permissions.Constants.POLICY_MANAGEMENT_CREATE,
+                Permissions.Constants.POLICY_MANAGEMENT_READ,
+                Permissions.Constants.POLICY_MANAGEMENT_UPDATE,
+                Permissions.Constants.POLICY_MANAGEMENT_DELETE)));
+        qm.createRole("Project Auditor", qm.getPermissionsByName(List.of(
+                Permissions.Constants.VIEW_PORTFOLIO,
+                Permissions.Constants.VIEW_VULNERABILITY,
+                Permissions.Constants.VIEW_POLICY_VIOLATION,
+                Permissions.Constants.VULNERABILITY_ANALYSIS_READ)));
+        qm.createRole("Project Editor", qm.getPermissionsByName(List.of(
+                Permissions.Constants.BOM_UPLOAD,
+                Permissions.Constants.VIEW_PORTFOLIO,
+                Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
+                Permissions.Constants.VIEW_VULNERABILITY,
+                Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
+                Permissions.Constants.PROJECT_CREATION_UPLOAD)));
+        qm.createRole("Project Viewer", qm.getPermissionsByName(List.of(
+                Permissions.Constants.VIEW_PORTFOLIO,
+                Permissions.Constants.VIEW_VULNERABILITY,
+                Permissions.Constants.VIEW_BADGES)));
     }
 
     @Test
