@@ -49,8 +49,10 @@ final class RoleQueryManager extends QueryManager implements IQueryManager {
 
     @Override
     public Role createRole(final String name, final List<Permission> permissions) {
-        final Role role = new Role();
+        Role role = new Role();
         role.setName(name);
+        role = persist(role);
+
         role.getPermissions().addAll(permissions);
 
         LOGGER.debug("%s role created with permissions: %s".formatted(
