@@ -646,6 +646,7 @@
                                 <copy file="${project.build.directory}/bom.json"
                                       tofile="${project.build.directory}/${project.build.finalName}/.well-known/sbom"/>
                             </target>
+                            <skip>${cyclonedx.skip}</skip>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -660,6 +661,7 @@
                                 <copy file="${project.build.directory}/${project.build.finalName}.war"
                                       tofile="${project.build.directory}/${project.build.finalName}.jar" />
                             </target>
+                            <skip>${maven.war.skip}</skip>
                         </configuration>
                         <goals>
                             <goal>run</goal>
