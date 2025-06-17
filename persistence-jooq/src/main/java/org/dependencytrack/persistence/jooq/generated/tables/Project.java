@@ -69,7 +69,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Project extends TableImpl<ProjectRecord> {
 
-    private static final long serialVersionUID = 435729631;
+    private static final long serialVersionUID = 1157287883;
 
     /**
      * The reference instance of <code>PROJECT</code>
@@ -232,7 +232,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public static class ProjectPath extends Project implements Path<ProjectRecord> {
 
-        private static final long serialVersionUID = 435729631;
+        private static final long serialVersionUID = 1157287883;
         public <O extends Record> ProjectPath(Table<O> path, ForeignKey<O, ProjectRecord> childPath, InverseForeignKey<O, ProjectRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -263,7 +263,7 @@ public class Project extends TableImpl<ProjectRecord> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.PROJECT_CLASSIFIER_IDX, Indexes.PROJECT_CPE_IDX, Indexes.PROJECT_GROUP_IDX, Indexes.PROJECT_IS_LATEST_IDX, Indexes.PROJECT_LAST_RISKSCORE_IDX, Indexes.PROJECT_LASTBOMIMPORT_FORMAT_IDX, Indexes.PROJECT_LASTBOMIMPORT_IDX, Indexes.PROJECT_NAME_IDX, Indexes.PROJECT_NAME_VERSION_IDX, Indexes.PROJECT_NAME_VERSION_NULL_IDX, Indexes.PROJECT_PARENT_PROJECT_ID_IDX, Indexes.PROJECT_PURL_IDX, Indexes.PROJECT_SWID_TAGID_IDX, Indexes.PROJECT_VERSION_IDX);
+        return Arrays.asList(Indexes.PROJECT_CLASSIFIER_IDX, Indexes.PROJECT_CPE_IDX, Indexes.PROJECT_GROUP_IDX, Indexes.PROJECT_INACTIVE_SINCE_IDX, Indexes.PROJECT_IS_LATEST_IDX, Indexes.PROJECT_LAST_RISKSCORE_IDX, Indexes.PROJECT_LASTBOMIMPORT_FORMAT_IDX, Indexes.PROJECT_LASTBOMIMPORT_IDX, Indexes.PROJECT_NAME_IDX, Indexes.PROJECT_NAME_VERSION_IDX, Indexes.PROJECT_NAME_VERSION_NULL_IDX, Indexes.PROJECT_PARENT_PROJECT_ID_IDX, Indexes.PROJECT_PURL_IDX, Indexes.PROJECT_SWID_TAGID_IDX, Indexes.PROJECT_VERSION_IDX);
     }
 
     @Override
