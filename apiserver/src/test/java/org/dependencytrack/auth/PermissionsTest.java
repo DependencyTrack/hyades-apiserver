@@ -26,6 +26,7 @@ import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_C
 import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_DELETE;
 import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_READ;
 import static org.dependencytrack.auth.Permissions.Constants.ACCESS_MANAGEMENT_UPDATE;
+import static org.dependencytrack.auth.Permissions.Constants.ALL_PROJECT_ACCESS;
 import static org.dependencytrack.auth.Permissions.Constants.BOM_UPLOAD;
 import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT;
 import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_CREATE;
@@ -46,6 +47,7 @@ import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATIO
 import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE;
 import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT;
 import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT_DELETE;
+import static org.dependencytrack.auth.Permissions.Constants.VIEW_BADGES;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_POLICY_VIOLATION;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_PORTFOLIO;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_VULNERABILITY;
@@ -58,13 +60,13 @@ import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAG
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_DELETE;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_READ;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE;
-import static org.dependencytrack.auth.Permissions.Constants.VIEW_BADGES;
 
 public class PermissionsTest {
 
     @Test
     public void testPermissionEnums() {
-        Assert.assertEquals(38, Permissions.values().length);
+        Assert.assertEquals(39, Permissions.values().length);
+        Assert.assertEquals("ALL_PROJECT_ACCESS", Permissions.ALL_PROJECT_ACCESS.name());
         Assert.assertEquals("BOM_UPLOAD", Permissions.BOM_UPLOAD.name());
         Assert.assertEquals("VIEW_PORTFOLIO", Permissions.VIEW_PORTFOLIO.name());
         Assert.assertEquals("PORTFOLIO_MANAGEMENT", Permissions.PORTFOLIO_MANAGEMENT.name());
@@ -107,6 +109,7 @@ public class PermissionsTest {
 
     @Test
     public void testPermissionConstants() {
+        Assert.assertEquals("ALL_PROJECT_ACCESS", ALL_PROJECT_ACCESS);
         Assert.assertEquals("BOM_UPLOAD", BOM_UPLOAD);
         Assert.assertEquals("VIEW_PORTFOLIO", VIEW_PORTFOLIO);
         Assert.assertEquals("PORTFOLIO_MANAGEMENT", PORTFOLIO_MANAGEMENT);

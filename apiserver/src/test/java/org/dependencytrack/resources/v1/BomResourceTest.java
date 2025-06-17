@@ -27,11 +27,6 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.core.StreamReadConstraints;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.javacrumbs.jsonunit.core.Option;
@@ -79,6 +74,11 @@ import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runner.RunWith;
 
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -1855,6 +1855,6 @@ public class BomResourceTest extends ResourceTest {
         Response response = jersey.target(V1_BOM).request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.entity(request, MediaType.APPLICATION_JSON));
-        Assert.assertEquals(403, response.getStatus(), 0);
+        Assert.assertEquals(200, response.getStatus(), 0);
     }
 }

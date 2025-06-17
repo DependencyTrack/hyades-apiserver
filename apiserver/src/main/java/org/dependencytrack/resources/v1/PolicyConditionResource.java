@@ -96,7 +96,7 @@ public class PolicyConditionResource extends AlpineResource {
         failOnValidationError(
                 validator.validateProperty(jsonPolicyCondition, "value")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             Policy policy = qm.getObjectByUuid(Policy.class, uuid);
             if (policy != null) {
                 maybeValidateExpression(jsonPolicyCondition);
@@ -138,7 +138,7 @@ public class PolicyConditionResource extends AlpineResource {
         failOnValidationError(
                 validator.validateProperty(jsonPolicyCondition, "value")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             PolicyCondition pc = qm.getObjectByUuid(PolicyCondition.class, jsonPolicyCondition.getUuid());
             if (pc != null) {
                 maybeValidateExpression(jsonPolicyCondition);
@@ -172,7 +172,7 @@ public class PolicyConditionResource extends AlpineResource {
     public Response deletePolicyCondition(
             @Parameter(description = "The UUID of the policy condition to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final PolicyCondition pc = qm.getObjectByUuid(PolicyCondition.class, uuid);
             if (pc != null) {
                 qm.deletePolicyCondition(pc);

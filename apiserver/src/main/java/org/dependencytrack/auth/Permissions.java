@@ -26,6 +26,7 @@ package org.dependencytrack.auth;
  */
 public enum Permissions {
 
+    ALL_PROJECT_ACCESS(""), // TODO: Better name, Description.
     BOM_UPLOAD("Allows the ability to upload CycloneDX Software Bill of Materials (SBOM)"),
     VIEW_PORTFOLIO("Provides the ability to view the portfolio of projects, components, and licenses"),
     PORTFOLIO_MANAGEMENT("Allows the creation, modification, and deletion of data in the portfolio"),
@@ -76,6 +77,7 @@ public enum Permissions {
     }
 
     public static class Constants {
+        public static final String ALL_PROJECT_ACCESS = Permissions.ALL_PROJECT_ACCESS.name();
         public static final String BOM_UPLOAD = "BOM_UPLOAD";
         public static final String VIEW_PORTFOLIO = "VIEW_PORTFOLIO";
         public static final String PORTFOLIO_MANAGEMENT = "PORTFOLIO_MANAGEMENT";

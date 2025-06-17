@@ -178,9 +178,9 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
 
     private void defineProjectAclCondition(final StatementContext ctx) throws SQLException {
         if (apiRequest == null
-                || apiRequest.getPrincipal() == null
-                || !isAclEnabled(ctx)
-                || apiRequest.getEffectivePermissions().contains(Permissions.ACCESS_MANAGEMENT.name())) {
+            || apiRequest.getPrincipal() == null
+            || !isAclEnabled(ctx)
+            || apiRequest.getEffectivePermissions().contains(Permissions.ALL_PROJECT_ACCESS.name())) {
             ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION, "TRUE");
             return;
         }
