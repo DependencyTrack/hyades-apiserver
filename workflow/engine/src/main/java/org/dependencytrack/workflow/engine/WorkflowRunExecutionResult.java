@@ -22,11 +22,5 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-/**
- * Outcome of a workflow run execution.
- *
- * @param commands     Commands to be applied to the {@link WorkflowRunState}.
- * @param customStatus Custom status to be applied to the {@link WorkflowRunState}.
- */
 record WorkflowRunExecutionResult(List<WorkflowCommand> commands, @Nullable String customStatus) {
 }

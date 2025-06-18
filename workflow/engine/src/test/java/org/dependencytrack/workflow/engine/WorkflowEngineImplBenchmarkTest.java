@@ -250,15 +250,15 @@ public class WorkflowEngineImplBenchmarkTest {
                 LOGGER.info("Statuses: {}", countByStatus);
 
                 final Collection<Timer> taskDispatcherPollLatencies = meterRegistry.get(
-                        "dtrack.workflow.task.dispatcher.poll.latency").timers();
+                        "dtrack.workflow.engine.task.dispatcher.poll.latency").timers();
                 final Collection<DistributionSummary> taskDispatcherPollTasks = meterRegistry.get(
-                        "dtrack.workflow.task.dispatcher.poll.tasks").summaries();
+                        "dtrack.workflow.engine.task.dispatcher.poll.tasks").summaries();
                 final Collection<Timer> taskProcessLatencies = meterRegistry.get(
-                        "dtrack.workflow.task.process.latency").timers();
+                        "dtrack.workflow.engine.task.process.latency").timers();
                 final Collection<Timer> bufferFlushLatencies = meterRegistry.get(
-                        "dtrack.buffer.flush.latency").timers();
+                        "dtrack.workflow.engine.buffer.flush.latency").timers();
                 final Collection<DistributionSummary> bufferBatchSizes = meterRegistry.get(
-                        "dtrack.buffer.flush.batch.size").summaries();
+                        "dtrack.workflow.engine.buffer.flush.batch.size").summaries();
 
                 for (final Timer timer : taskDispatcherPollLatencies) {
                     LOGGER.info(

@@ -22,10 +22,8 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-public record Page<T>(List<T> items, @Nullable String nextPageToken) {
-
-    public boolean hasItems() {
-        return !items.isEmpty();
-    }
-
+public record Page<T>(
+        List<T> items,
+        @Nullable String currentPageToken,
+        @Nullable String nextPageToken) {
 }

@@ -38,6 +38,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.SequencedMap;
 import java.util.SortedMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -168,7 +169,7 @@ public interface WorkflowEngine extends Closeable {
      * @return A {@link SortedMap}, where the key is the sequence number of the {@link WorkflowEvent}
      * in the workflow run's history, and the value is the {@link WorkflowEvent} itself.
      */
-    SortedMap<Integer, WorkflowEvent> getRunHistory(GetWorkflowRunHistoryRequest request);
+    SequencedMap<Integer, WorkflowEvent> getRunHistory(GetWorkflowRunHistoryRequest request);
 
     CompletableFuture<Void> sendExternalEvent(UUID runId, String eventId, @Nullable WorkflowPayload payload);
 

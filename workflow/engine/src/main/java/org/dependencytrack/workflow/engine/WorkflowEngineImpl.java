@@ -74,10 +74,10 @@ import org.dependencytrack.workflow.engine.persistence.model.PollWorkflowTaskCom
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.UnlockWorkflowRunInboxEventsCommand;
+import org.dependencytrack.workflow.engine.persistence.model.UpdateAndUnlockRunCommand;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrencyGroupRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRowUpdate;
 import org.dependencytrack.workflow.engine.support.Buffer;
 import org.dependencytrack.workflow.engine.support.DefaultThreadFactory;
 import org.dependencytrack.workflow.engine.support.LoggingUncaughtExceptionHandler;
@@ -98,8 +98,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.SequencedMap;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -643,7 +643,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public SortedMap<Integer, WorkflowEvent> getRunHistory(final GetWorkflowRunHistoryRequest request) {
+    public SequencedMap<Integer, WorkflowEvent> getRunHistory(final GetWorkflowRunHistoryRequest request) {
         return jdbi.withHandle(handle -> new WorkflowRunDao(handle).getRunHistory(request));
     }
 
@@ -835,10 +835,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 .map(CompleteWorkflowTaskCommand::workflowRunState)
                 .collect(Collectors.toList());
 
-        final List<UUID> updatedRunIds = workflowDao.updateRuns(
+        final List<UUID> updatedRunIds = workflowDao.updateAndUnlockRuns(
                 this.config.instanceId(),
                 actionableRuns.stream()
-                        .map(run -> new WorkflowRunRowUpdate(
+                        .map(run -> new UpdateAndUnlockRunCommand(
                                 run.id(),
                                 run.status(),
                                 run.customStatus().orElse(null),

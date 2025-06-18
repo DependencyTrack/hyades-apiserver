@@ -24,7 +24,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.util.UUID;
 
-public record WorkflowRunRowUpdate(
+public record UpdateAndUnlockRunCommand(
         UUID id,
         WorkflowRunStatus status,
         @Nullable String customStatus,

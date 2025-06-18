@@ -216,16 +216,16 @@ public final class Buffer<T> implements Closeable {
         final List<Tag> commonTags = List.of(Tag.of("buffer", name));
 
         batchSizeDistribution = DistributionSummary
-                .builder("dtrack.buffer.flush.batch.size")
+                .builder("dtrack.workflow.engine.buffer.flush.batch.size")
                 .tags(commonTags)
                 .register(meterRegistry);
 
         flushLatencyTimer = Timer
-                .builder("dtrack.buffer.flush.latency")
+                .builder("dtrack.workflow.engine.buffer.flush.latency")
                 .tags(commonTags)
                 .register(meterRegistry);
 
-        new ExecutorServiceMetrics(flushExecutor, "dtrack.buffer.%s".formatted(name), null)
+        new ExecutorServiceMetrics(flushExecutor, "dtrack.workflow.engine.buffer.%s".formatted(name), null)
                 .bindTo(meterRegistry);
     }
 

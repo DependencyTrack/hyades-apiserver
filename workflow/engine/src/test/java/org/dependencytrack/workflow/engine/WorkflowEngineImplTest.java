@@ -52,7 +52,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
+import java.util.SequencedMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1037,7 +1037,7 @@ class WorkflowEngineImplTest {
 
         final Page<WorkflowRun> runsPage = await("Workflow Run to be scheduled")
                 .atMost(Duration.ofSeconds(5))
-                .until(() -> engine.listRuns(new ListWorkflowRunsRequest()), Page::hasItems);
+                .until(() -> engine.listRuns(new ListWorkflowRunsRequest()), page -> !page.items().isEmpty());
 
         assertThat(runsPage.items()).satisfiesExactly(run -> {
             assertThat(run.workflowName()).isEqualTo("foo");
@@ -1071,18 +1071,20 @@ class WorkflowEngineImplTest {
             engine.createRun(new CreateWorkflowRunRequest("test", 1));
         }
 
-        Page<WorkflowRun> runsPage = engine.listRuns(
+        final Page<WorkflowRun> firstRunsPage = engine.listRuns(
                 new ListWorkflowRunsRequest()
                         .withLimit(5));
-        assertThat(runsPage.items()).hasSize(5);
-        assertThat(runsPage.nextPageToken()).isNotNull();
+        assertThat(firstRunsPage.items()).hasSize(5);
+        assertThat(firstRunsPage.currentPageToken()).isNull();
+        assertThat(firstRunsPage.nextPageToken()).isNotNull();
 
-        runsPage = engine.listRuns(
+        final Page<WorkflowRun> secondRunsPage = engine.listRuns(
                 new ListWorkflowRunsRequest()
-                        .withPageToken(runsPage.nextPageToken())
+                        .withPageToken(firstRunsPage.nextPageToken())
                         .withLimit(5));
-        assertThat(runsPage.items()).hasSize(5);
-        assertThat(runsPage.nextPageToken()).isNull();
+        assertThat(secondRunsPage.items()).hasSize(5);
+        assertThat(secondRunsPage.currentPageToken()).isEqualTo(firstRunsPage.nextPageToken());
+        assertThat(secondRunsPage.nextPageToken()).isNull();
     }
 
     @Test
@@ -1093,18 +1095,20 @@ class WorkflowEngineImplTest {
                             "schedule-" + i, "* * * * *", "workflow-foo", 1));
         }
 
-        Page<WorkflowSchedule> schedulesPage = engine.listSchedules(
+        final Page<WorkflowSchedule> firstSchedulesPage = engine.listSchedules(
                 new ListWorkflowSchedulesRequest()
                         .withLimit(5));
-        assertThat(schedulesPage.items()).hasSize(5);
-        assertThat(schedulesPage.nextPageToken()).isNotNull();
+        assertThat(firstSchedulesPage.items()).hasSize(5);
+        assertThat(firstSchedulesPage.currentPageToken()).isNull();
+        assertThat(firstSchedulesPage.nextPageToken()).isNotNull();
 
-        schedulesPage = engine.listSchedules(
+        final Page<WorkflowSchedule> secondSchedulesPage = engine.listSchedules(
                 new ListWorkflowSchedulesRequest()
-                        .withPageToken(schedulesPage.nextPageToken())
+                        .withPageToken(firstSchedulesPage.nextPageToken())
                         .withLimit(5));
-        assertThat(schedulesPage.items()).hasSize(5);
-        assertThat(schedulesPage.nextPageToken()).isNull();
+        assertThat(secondSchedulesPage.items()).hasSize(5);
+        assertThat(secondSchedulesPage.currentPageToken()).isEqualTo(firstSchedulesPage.nextPageToken());
+        assertThat(secondSchedulesPage.nextPageToken()).isNull();
     }
 
     @Test
@@ -1122,7 +1126,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
-        SortedMap<Integer, WorkflowEvent> history = engine.getRunHistory(
+        SequencedMap<Integer, WorkflowEvent> history = engine.getRunHistory(
                 new GetWorkflowRunHistoryRequest(runId)
                         .withSequenceNumberOffset(2)
                         .withLimit(3));
@@ -1130,7 +1134,7 @@ class WorkflowEngineImplTest {
 
         history = engine.getRunHistory(
                 new GetWorkflowRunHistoryRequest(runId)
-                        .withSequenceNumberOffset(history.lastKey()));
+                        .withSequenceNumberOffset(history.lastEntry().getKey()));
         assertThat(history).containsOnlyKeys(6, 7);
     }
 

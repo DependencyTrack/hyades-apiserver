@@ -30,10 +30,10 @@ import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvent
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.UnlockWorkflowRunInboxEventsCommand;
+import org.dependencytrack.workflow.engine.persistence.model.UpdateAndUnlockRunCommand;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrencyGroupRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRowUpdate;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -213,16 +213,15 @@ public final class WorkflowDao extends AbstractDao {
                 .list();
     }
 
-    public List<UUID> updateRuns(
+    public List<UUID> updateAndUnlockRuns(
             final UUID workerInstanceId,
-            final Collection<WorkflowRunRowUpdate> runUpdates) {
+            final Collection<UpdateAndUnlockRunCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 update workflow_run
                    set status = coalesce(run_update.status, workflow_run.status)
                      , custom_status = coalesce(run_update.custom_status, workflow_run.custom_status)
                      , locked_by = null
                      , locked_until = null
-                     , created_at = coalesce(run_update.created_at, workflow_run.created_at)
                      , updated_at = coalesce(run_update.updated_at, workflow_run.updated_at)
                      , started_at = coalesce(run_update.started_at, workflow_run.started_at)
                      , completed_at = coalesce(run_update.completed_at, workflow_run.completed_at)
@@ -230,7 +229,6 @@ public final class WorkflowDao extends AbstractDao {
                          :ids
                        , :statuses
                        , :customStatuses
-                       , :createdAts
                        , :updatedAts
                        , :startedAts
                        , :completedAts
@@ -238,30 +236,29 @@ public final class WorkflowDao extends AbstractDao {
                          id
                        , status
                        , custom_status
-                       , created_at
                        , updated_at
                        , started_at
-                       , completed_at)
+                       , completed_at
+                       )
                  where workflow_run.id = run_update.id
                    and workflow_run.locked_by = :workerInstanceId
                 returning workflow_run.id
                 """);
 
-        final var ids = new ArrayList<UUID>(runUpdates.size());
-        final var statuses = new ArrayList<WorkflowRunStatus>(runUpdates.size());
-        final var customStatuses = new ArrayList<String>(runUpdates.size());
-        final var createdAts = new ArrayList<Instant>(runUpdates.size());
-        final var updatedAts = new ArrayList<Instant>(runUpdates.size());
-        final var startedAts = new ArrayList<Instant>(runUpdates.size());
-        final var completedAts = new ArrayList<Instant>(runUpdates.size());
-        for (final WorkflowRunRowUpdate runUpdate : runUpdates) {
-            ids.add(runUpdate.id());
-            statuses.add(runUpdate.status());
-            customStatuses.add(runUpdate.customStatus());
-            createdAts.add(runUpdate.createdAt());
-            updatedAts.add(runUpdate.updatedAt());
-            startedAts.add(runUpdate.startedAt());
-            completedAts.add(runUpdate.completedAt());
+        final var ids = new ArrayList<UUID>(commands.size());
+        final var statuses = new ArrayList<WorkflowRunStatus>(commands.size());
+        final var customStatuses = new ArrayList<String>(commands.size());
+        final var updatedAts = new ArrayList<Instant>(commands.size());
+        final var startedAts = new ArrayList<Instant>(commands.size());
+        final var completedAts = new ArrayList<Instant>(commands.size());
+
+        for (final UpdateAndUnlockRunCommand command : commands) {
+            ids.add(command.id());
+            statuses.add(command.status());
+            customStatuses.add(command.customStatus());
+            updatedAts.add(command.updatedAt());
+            startedAts.add(command.startedAt());
+            completedAts.add(command.completedAt());
         }
 
         return update
@@ -269,7 +266,6 @@ public final class WorkflowDao extends AbstractDao {
                 .bindArray("ids", UUID.class, ids)
                 .bindArray("statuses", WorkflowRunStatus.class, statuses)
                 .bindArray("customStatuses", String.class, customStatuses)
-                .bindArray("createdAts", Instant.class, createdAts)
                 .bindArray("updatedAts", Instant.class, updatedAts)
                 .bindArray("startedAts", Instant.class, startedAts)
                 .bindArray("completedAts", Instant.class, completedAts)

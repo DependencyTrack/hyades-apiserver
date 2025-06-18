@@ -34,7 +34,7 @@ import org.jdbi.v3.json.JsonMapper;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
+import java.util.SequencedMap;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -148,10 +148,10 @@ public final class WorkflowRunDao extends AbstractDao {
                 ? new ListRunsPageToken(resultItems.getLast().id())
                 : null;
 
-        return new Page<>(resultItems, encodePageToken(nextPageToken));
+        return new Page<>(resultItems, request.pageToken(), encodePageToken(nextPageToken));
     }
 
-    public SortedMap<Integer, WorkflowEvent> getRunHistory(final GetWorkflowRunHistoryRequest request) {
+    public SequencedMap<Integer, WorkflowEvent> getRunHistory(final GetWorkflowRunHistoryRequest request) {
         final Query query = jdbiHandle.createQuery("""
                 select *
                   from workflow_run_journal

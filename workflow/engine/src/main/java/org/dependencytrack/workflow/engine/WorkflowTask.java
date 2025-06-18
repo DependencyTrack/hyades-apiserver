@@ -25,21 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Unit of work for the execution of a workflow run.
- *
- * @param workflowRunId      ID of the workflow run.
- * @param workflowName       Name of the workflow.
- * @param workflowVersion    Version of the workflow.
- * @param concurrencyGroupId ID of the workflow's concurrency group. May be {@code null}.
- * @param priority           Priority of the workflow run. May be {@code null}.
- * @param labels             Labels assigned to the workflow run.
- * @param attempt            Number of attempts for execution of this workflow run.
- *                           Equal to the highest number of dequeue attempts across all messages
- *                           in the run's inbox.
- * @param journal            Journal of processed {@link WorkflowEvent}.
- * @param inbox              {@link WorkflowEvent}s in the run's inbox.
- */
 record WorkflowTask(
         UUID workflowRunId,
         String workflowName,

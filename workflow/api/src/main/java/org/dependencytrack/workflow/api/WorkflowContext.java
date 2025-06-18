@@ -43,7 +43,6 @@ public interface WorkflowContext<A> {
 
     int workflowVersion();
 
-    @Nullable
     Map<String, String> labels();
 
     @Nullable
@@ -52,7 +51,6 @@ public interface WorkflowContext<A> {
     /**
      * @return The current, deterministic time within the workflow execution.
      */
-    @Nullable
     Instant currentTime();
 
     /**

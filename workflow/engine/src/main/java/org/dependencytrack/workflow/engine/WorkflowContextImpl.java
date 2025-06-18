@@ -77,14 +77,9 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
 import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toInstant;
 
-/**
- * Context available to {@link WorkflowExecutor}s.
- *
- * @param <A> Type of the workflow's argument.
- * @param <R> Type of the workflow's result.
- */
 final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowContextImpl.class);
@@ -163,10 +158,9 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return workflowVersion;
     }
 
-    @Nullable
     @Override
     public Map<String, String> labels() {
-        return labels;
+        return requireNonNullElse(labels, Collections.emptyMap());
     }
 
     @Nullable
@@ -175,9 +169,12 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return argument;
     }
 
-    @Nullable
     @Override
     public Instant currentTime() {
+        if (currentTime == null) {
+            throw new IllegalStateException("currentTime was not initialized");
+        }
+
         return currentTime;
     }
 
