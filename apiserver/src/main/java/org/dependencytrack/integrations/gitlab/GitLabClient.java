@@ -157,6 +157,12 @@ public class GitLabClient {
             request.setEntity(entity);
 
             try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
+                int statusCode = response.getStatusLine().getStatusCode();
+                if (statusCode < 200 || statusCode >= 300) {
+                    LOGGER.warn("GitLab GraphQL query failed with status code: " + statusCode);
+                    break;
+                }
+
                 HttpEntity responseEntity = response.getEntity();
 
                 if (responseEntity == null)
@@ -164,6 +170,13 @@ public class GitLabClient {
 
                 String responseBody = EntityUtils.toString(responseEntity);
                 JSONObject responseData = JSONValue.parse(responseBody, JSONObject.class);
+
+                // Check for GraphQL errors
+                if (responseData.containsKey("errors")) {
+                    LOGGER.warn("GitLab GraphQL query returned errors: " + responseData.get("errors"));
+                    break;
+                }
+
                 JSONObject dataObject = (JSONObject) responseData.getOrDefault("data", new JSONObject());
                 JSONObject projectsObject = (JSONObject) dataObject.getOrDefault("withoutTopics",
                         dataObject.getOrDefault("withTopics", new JSONObject()));
@@ -174,7 +187,7 @@ public class GitLabClient {
                     projects.add(GitLabProject.parse(node.toJSONString()));
                 }
 
-                JSONObject pageInfo = (JSONObject) projectsObject.get("pageInfo");
+                JSONObject pageInfo = (JSONObject) projectsObject.getOrDefault("pageInfo", new JSONObject());
 
                 if (!(boolean) pageInfo.get("hasNextPage"))
                     break;
