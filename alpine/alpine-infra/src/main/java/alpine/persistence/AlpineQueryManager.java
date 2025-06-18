@@ -345,6 +345,17 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
+     * Returns a complete list of all subclasses extending User.class, in ascending order by username.
+     * @return a list of all Users
+     * @since 1.0.0
+     */
+    public List<User> getAllUsers() {
+        final Query<User> query = pm.newQuery(User.class);
+        query.setOrdering("username asc");
+        return executeAndCloseList(query);
+    }
+
+    /**
      * Retrieves an LdapUser containing the specified username. If the username
      * does not exist, returns null.
      * @param username The username to retrieve
@@ -545,6 +556,22 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
                 .extension(JDOQLQuery.EXTENSION_CANDIDATE_DONT_RESTRICT_DISCRIMINATOR, true);
 
         return executeAndCloseUnique(query);
+    }
+
+    /**
+     * Resolves a type of User.
+     * @param cls the class of the principal to retrieve
+     * @param username the username of the principal to retrieve
+     * @return a User if found, null if not found
+     * @since 1.0.0
+     */
+    public <T extends User> T getUser(String username, Class<T> cls) {
+        final Query<T> query = pm.newQuery(cls)
+                .filter("username == :username")
+                .setNamedParameters(Map.of("username", username))
+                .extension(JDOQLQuery.EXTENSION_CANDIDATE_DONT_RESTRICT_DISCRIMINATOR, true);
+
+        return (T) executeAndCloseUnique(query);
     }
 
     /**

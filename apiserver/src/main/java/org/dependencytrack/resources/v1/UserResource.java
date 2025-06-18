@@ -76,6 +76,7 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import javax.jdo.Query;
@@ -253,6 +254,73 @@ public class UserResource extends AlpineResource {
                 super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized login attempt / invalid credentials / username: " + username);
                 return Response.status(Response.Status.UNAUTHORIZED).entity(e.getCauseType().name()).build();
             }
+        }
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+            summary = "Returns a list of users or a single user, optionally filtered by type and/or username.",
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
+            + "<p><strong>Note:</strong> To retrieve additional subclass-specific information (such as ManagedUser fields like <code>suspended</code>, <code>forcePasswordChange</code>, etc.), "
+            + "you must specify the <code>type</code> query parameter (e.g., <code>type=managed</code>, <code>type=ldap</code>, or <code>type=oidc</code>). "
+            + "If <code>type</code> is omitted, only base User fields will be included in the response.</p>"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "A list of users or a single user (may be filtered by type and/or username)",
+                    headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of managed users", schema = @Schema(format = "integer")),
+                    content = @Content(
+                        schema = @Schema(
+                            oneOf = {User.class, ManagedUser.class, LdapUser.class, OidcUser.class}
+                        ),
+                        array = @ArraySchema(
+                            schema = @Schema(oneOf = {User.class, ManagedUser.class, LdapUser.class, OidcUser.class})
+                        )
+                    )
+            ),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
+    public Response getUsers(
+            @QueryParam("userType") String type,
+            @QueryParam("username") String username) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
+            final List<User> users;
+            if (type == null) {
+                users = qm.getAllUsers();
+                return Response.ok(users).header(TOTAL_COUNT_HEADER, users.size()).build();
+            }
+
+            Query<? extends User> query = qm.getPersistenceManager()
+                    .newQuery((Class<? extends User>) switch (StringUtils.defaultString(type).toLowerCase()) {
+                        case "managed" -> ManagedUser.class;
+                        case "ldap" -> LdapUser.class;
+                        case "oidc" -> OidcUser.class;
+                        default -> User.class;
+                    });
+
+            if (username != null)
+                query.filter("username == :username").setParameters(username);
+
+            try {
+                users = List.copyOf(query.executeList());
+            } finally {
+                query.closeAll();
+            }
+
+            if (users == null)
+                return Response.status(Response.Status.NOT_FOUND)
+                        .entity("No user(s) found for the given criteria [type=%s, username=%s]"
+                                .formatted(type, username))
+                        .build();
+
+            if (username != null && users.size() == 1)
+                return Response.ok(users.get(0)).build();
+
+            return Response.ok(users).header(TOTAL_COUNT_HEADER, users.size()).build();
+
         }
     }
 
@@ -706,15 +774,15 @@ public class UserResource extends AlpineResource {
             if (team == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
             }
-            User principal = qm.getUser(username);
-            if (principal == null) {
+            User user = qm.getUser(username);
+            if (user == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
-            final boolean modified = qm.addUserToTeam(principal, team);
-            principal = qm.getObjectById(principal.getClass(), principal.getId());
+            final boolean modified = qm.addUserToTeam(user, team);
+            user = qm.getObjectById(user.getClass(), user.getId());
             if (modified) {
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added team membership for: " + principal.getName() + " / team: " + team.getName());
-                return Response.ok(principal).build();
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added team membership for: %s / team: %s".formatted(user.getUsername(), team.getName()));
+                return Response.ok(user).build();
             } else {
                 return Response.status(Response.Status.NOT_MODIFIED).entity("The user is already a member of the specified team.").build();
             }
@@ -750,15 +818,15 @@ public class UserResource extends AlpineResource {
             if (team == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
             }
-            User principal = qm.getUser(username);
-            if (principal == null) {
+            User user = qm.getUser(username);
+            if (user == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
-            final boolean modified = qm.removeUserFromTeam(principal, team);
-            principal = qm.getObjectById(principal.getClass(), principal.getId());
+            final boolean modified = qm.removeUserFromTeam(user, team);
+            user = qm.getObjectById(user.getClass(), user.getId());
             if (modified) {
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed team membership for: " + principal.getName() + " / team: " + team.getName());
-                return Response.ok(principal).build();
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed team membership for: " + user.getName() + " / team: " + team.getName());
+                return Response.ok(user).build();
             } else {
                 return Response.status(Response.Status.NOT_MODIFIED)
                         .entity("The user was not a member of the specified team.")
@@ -783,8 +851,15 @@ public class UserResource extends AlpineResource {
     public Response setUserTeams(
             @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            User principal = qm.getUser(request.username());
-            if (principal == null) {
+            User user = qm.getUser(request.username(),
+                    (Class<? extends User>) switch (StringUtils.defaultString(request.userType()).toLowerCase()) {
+                        case "managed" -> ManagedUser.class;
+                        case "ldap" -> LdapUser.class;
+                        case "oidc" -> OidcUser.class;
+                        default -> User.class;
+                    });
+
+            if (user == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
             }
 
@@ -813,16 +888,16 @@ public class UserResource extends AlpineResource {
                 return problem.toResponse();
             }
 
-            final List<Team> currentUserTeams = Objects.requireNonNullElse(principal.getTeams(), List.<Team>of());
+            final List<Team> currentUserTeams = Objects.requireNonNullElse(user.getTeams(), List.<Team>of());
             if (currentUserTeams.equals(requestedTeams)) {
                 return Response.notModified().entity("The user is already a member of the selected team(s)").build();
             }
 
-            principal.setTeams(requestedTeams);
-            qm.persist(principal);
+            user.setTeams(requestedTeams);
+            user = qm.persist(user);
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                    "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
-            return Response.ok(principal).build();
+                    "Added team membership for: " + user.getName() + " / team: " + requestedTeams.toString());
+            return Response.ok(user).build();
         }
     }
 
