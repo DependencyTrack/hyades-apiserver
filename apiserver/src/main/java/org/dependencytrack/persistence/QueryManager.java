@@ -504,10 +504,6 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getAllProjects(excludeInactive);
     }
 
-    public Project getProject(final String uuid) {
-        return getProjectQueryManager().getProject(uuid);
-    }
-
     public Project getProject(final String name, final String version) {
         return getProjectQueryManager().getProject(name, version);
     }

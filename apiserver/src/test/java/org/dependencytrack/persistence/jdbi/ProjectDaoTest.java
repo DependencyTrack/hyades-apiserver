@@ -248,7 +248,7 @@ public class ProjectDaoTest extends PersistenceCapableTest {
         final var project = new Project();
         project.setName("acme-app");
         project.setVersion("1.0.0");
-        assertThat(projectDao.getProjectId(project.getUuid())).isEqualTo(null);
+        assertThat(projectDao.getProjectId(project.getUuid())).isNull();
         qm.persist(project);
         assertThat(projectDao.getProjectId(project.getUuid())).isEqualTo(project.getId());
     }

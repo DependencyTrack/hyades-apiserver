@@ -132,24 +132,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Returns a project by its uuid.
-     * @param uuid the uuid of the Project (required)
-     * @return a Project object, or null if not found
-     */
-    @Override
-    public Project getProject(final String uuid) {
-        final Project project = getObjectByUuid(Project.class, uuid, Project.FetchGroup.ALL.name());
-        if (project != null) {
-            // set Metrics to minimize the number of round trips a client needs to make
-            project.setMetrics(withJdbiHandle(handle ->
-                    handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
-            // set ProjectVersions to minimize the number of round trips a client needs to make
-            project.setVersions(getProjectVersions(project));
-        }
-        return project;
-    }
-
-    /**
      * Returns a project by its name and version.
      *
      * @param name    the name of the Project (required)

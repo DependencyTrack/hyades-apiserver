@@ -255,8 +255,9 @@ public class ProjectResource extends AbstractApiResource {
     public Response getProject(
             @Parameter(description = "The UUID of the project to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getProject(uuid);
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
+            Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                    handle.attach(ProjectDao.class).getProject(UUID.fromString(uuid)));
             if (project != null) {
                 requireAccess(qm, project);
                 return Response.ok(project).build();

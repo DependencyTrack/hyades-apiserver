@@ -66,6 +66,7 @@ import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -1668,6 +1669,12 @@ public class ProjectResourceTest extends ResourceTest {
         project.setName("acme-app");
         project.setVersion("1.0.0");
         project.setParent(parentProject);
+
+        var tag = new Tag();
+        tag.setName("projectTag");
+        qm.persist(tag);
+
+        project.setTags(Set.of(tag));
         qm.persist(project);
 
         final var childProject = new Project();
@@ -1707,9 +1714,14 @@ public class ProjectResourceTest extends ResourceTest {
                               "inactiveSince": "${json-unit.any-number}"
                             }
                           ],
-                          "tags": [],
+                          "tags": [
+                            {
+                                "name": "projectTag"
+                            }
+                          ],
                           "isLatest": false,
                           "active":true,
+                          "externalReferences":[],
                           "versions": [
                             {
                               "uuid": "${json-unit.matches:projectUuid}",
@@ -3200,7 +3212,7 @@ public class ProjectResourceTest extends ResourceTest {
                       "active": true
                     }
                   ],
-                  "tags": [],
+                  "externalReferences": [],
                   "isLatest": false,
                   "active": true,
                   "versions": [
@@ -3229,8 +3241,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "version": "1.0.0",
                     "uuid": "${json-unit.any-string}"
                   },
-                  "children": [],
-                  "tags": [],
+                  "externalReferences": [],
                   "isLatest": false,
                   "active": true,
                   "versions": [
@@ -3280,7 +3291,8 @@ public class ProjectResourceTest extends ResourceTest {
         // ensure value of latest version is true when specified
         Assert.assertTrue(json.getBoolean("isLatest"));
         // ensure v2.0 is no longer latest
-        Assert.assertFalse(qm.getProject(v20uuid).isLatest());
+        var projectV20 = withJdbiHandle(handle -> handle.attach(ProjectDao.class).getProject(UUID.fromString(v20uuid)));
+        Assert.assertFalse(projectV20.isLatest());
     }
 
     @Test
