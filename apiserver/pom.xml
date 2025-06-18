@@ -27,17 +27,17 @@
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>10.2.1</lib.cyclonedx-java.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.jackson.version>2.19.0</lib.jackson.version>
+        <lib.jackson.version>2.19.1</lib.jackson.version>
         <lib.jackson-databind.version>2.18.3</lib.jackson-databind.version>
         <lib.jersey.version>3.1.10</lib.jersey.version>
-        <lib.jdbi.version>3.49.4</lib.jdbi.version>
+        <lib.jdbi.version>3.49.5</lib.jdbi.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.9.0</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.17</lib.minio.version>
         <lib.kotlin-stdlib.version>2.1.21</lib.kotlin-stdlib.version>
-        <lib.wiremock.version>3.13.0</lib.wiremock.version>
+        <lib.wiremock.version>3.13.1</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.3.2</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.4</lib.pebble.version>
@@ -646,6 +646,7 @@
                                 <copy file="${project.build.directory}/bom.json"
                                       tofile="${project.build.directory}/${project.build.finalName}/.well-known/sbom"/>
                             </target>
+                            <skip>${cyclonedx.skip}</skip>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -660,6 +661,7 @@
                                 <copy file="${project.build.directory}/${project.build.finalName}.war"
                                       tofile="${project.build.directory}/${project.build.finalName}.jar" />
                             </target>
+                            <skip>${maven.war.skip}</skip>
                         </configuration>
                         <goals>
                             <goal>run</goal>
