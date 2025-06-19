@@ -166,7 +166,6 @@ public class WorkflowEngineImplBenchmarkTest {
         engine.register(new TestActivityFoo(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
         engine.register(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
         engine.register(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
-        engine.start();
 
         engine.mount(new WorkflowGroup("test")
                 .withWorkflow(TestWorkflow.class)
@@ -176,6 +175,8 @@ public class WorkflowEngineImplBenchmarkTest {
                 .withActivity(TestActivityBar.class)
                 .withActivity(TestActivityBaz.class)
                 .withMaxConcurrency(150));
+
+        engine.start();
     }
 
     @AfterEach

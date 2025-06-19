@@ -58,6 +58,7 @@ public interface WorkflowEngine extends Closeable {
      * @param lockTimeout       How long runs of this workflow shall be locked for execution.
      * @param <A>               Type of the workflow's argument.
      * @param <R>               Type of the workflow's result.
+     * @throws IllegalStateException When the engine was already started.
      */
     <A, R> void register(
             WorkflowExecutor<A, R> executor,
@@ -76,6 +77,7 @@ public interface WorkflowEngine extends Closeable {
      * @param lockTimeout       How instances of this activity shall be locked for execution.
      * @param <A>               Type of the activity's argument.
      * @param <R>               Type of the activity's result.
+     * @throws IllegalStateException When the engine was already started.
      */
     <A, R> void register(
             ActivityExecutor<A, R> executor,
@@ -91,6 +93,7 @@ public interface WorkflowEngine extends Closeable {
      * @param group The {@link WorkflowGroup} to mount.
      * @throws IllegalStateException When any of the workflows within the group have not been registered,
      *                               or another group with the same name is already mounted.
+     * @throws IllegalStateException When the engine was already started.
      * @see #register(WorkflowExecutor, PayloadConverter, PayloadConverter, Duration)
      */
     void mount(WorkflowGroup group);
@@ -103,6 +106,7 @@ public interface WorkflowEngine extends Closeable {
      * @param group The {@link ActivityGroup} to mount.
      * @throws IllegalStateException When any of the activities within the group have not been registered,
      *                               or another group with the same name is already mounted.
+     * @throws IllegalStateException When the engine was already started.
      * @see #register(ActivityExecutor, PayloadConverter, PayloadConverter, Duration)
      */
     void mount(ActivityGroup group);
@@ -171,6 +175,16 @@ public interface WorkflowEngine extends Closeable {
      */
     SequencedMap<Integer, WorkflowEvent> getRunHistory(GetWorkflowRunHistoryRequest request);
 
+    /**
+     * Send an external event to a workflow run.
+     *
+     * @param runId   ID of the workflow run that shall receive the event.
+     * @param eventId ID of the event that the workflow run may use for correlation.
+     * @param payload Payload of the event.
+     * @return A {@link CompletableFuture} that will complete when the event was successfully
+     * recorded in the recipient workflow run's message inbox.
+     * @throws IllegalStateException When the engine is not running.
+     */
     CompletableFuture<Void> sendExternalEvent(UUID runId, String eventId, @Nullable WorkflowPayload payload);
 
     List<WorkflowSchedule> createSchedules(Collection<CreateWorkflowScheduleRequest> requests);

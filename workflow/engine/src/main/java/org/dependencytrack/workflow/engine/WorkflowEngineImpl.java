@@ -125,11 +125,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
     public enum Status {
 
-        CREATED(1),  // 0
-        STARTING(2), // 1
-        RUNNING(3),  // 2
-        STOPPING(4), // 3
-        STOPPED(1);  // 4
+        CREATED(1, 3), // 0
+        STARTING(2),   // 1
+        RUNNING(3),    // 2
+        STOPPING(4),   // 3
+        STOPPED(1);    // 4
 
         private final Set<Integer> allowedTransitions;
 
@@ -160,6 +160,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private final Jdbi jdbi;
     private final ReentrantLock statusLock = new ReentrantLock();
     private final ExecutorMetadataRegistry executorMetadataRegistry = new ExecutorMetadataRegistry();
+    private final Set<WorkflowGroup> workflowGroups = new HashSet<>();
+    private final Set<ActivityGroup> activityGroups = new HashSet<>();
     private Status status = Status.CREATED;
     @Nullable private ExecutorService taskDispatcherExecutor;
     @Nullable private Map<String, ExecutorService> executorServiceByName;
@@ -260,6 +262,16 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             LOGGER.debug("Retention worker is disabled");
         }
 
+        for (final WorkflowGroup group : workflowGroups) {
+            LOGGER.debug("Starting workflow group {}", group.name());
+            startWorkflowGroup(group);
+        }
+
+        for (final ActivityGroup group : activityGroups) {
+            LOGGER.debug("Starting activity group {}", group.name());
+            startActivityGroup(group);
+        }
+
         setStatus(Status.RUNNING);
         LOGGER.debug("Started");
     }
@@ -320,16 +332,18 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout) {
+        requireStatus(Status.CREATED);
         executorMetadataRegistry.register(workflowExecutor, argumentConverter, resultConverter, lockTimeout);
     }
 
-    <A, R> void register(
+    <A, R> void registerWorkflowInternal(
             final String workflowName,
             final int workflowVersion,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout,
             final WorkflowExecutor<A, R> workflowExecutor) {
+        requireStatus(Status.CREATED);
         executorMetadataRegistry.register(workflowName, workflowVersion, argumentConverter, resultConverter, lockTimeout, workflowExecutor);
     }
 
@@ -339,23 +353,25 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout) {
+        requireStatus(Status.CREATED);
         executorMetadataRegistry.register(activityExecutor, argumentConverter, resultConverter, lockTimeout);
     }
 
-    <A, R> void register(
+    <A, R> void registerActivityInternal(
             final String activityName,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout,
             final boolean heartbeatEnabled,
             final ActivityExecutor<A, R> activityExecutor) {
+        requireStatus(Status.CREATED);
         executorMetadataRegistry.register(activityName, argumentConverter, resultConverter, lockTimeout, heartbeatEnabled, activityExecutor);
     }
 
     @Override
     public void mount(final WorkflowGroup group) {
-        requireRunningStatus();
-        LOGGER.debug("Mounting {}", group);
+        requireStatus(Status.CREATED);
+        requireNonNull(group, "group must not be null");
 
         for (final String workflowName : group.workflowNames()) {
             try {
@@ -365,38 +381,13 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
         }
 
-        final String executorName = "WorkflowEngine-WorkflowGroup-%s".formatted(group.name());
-        if (executorServiceByName.containsKey(executorName)) {
-            throw new IllegalStateException("Workflow group %s is already registered".formatted(group.name()));
-        }
-
-        final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual()
-                        .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
-                        .name(executorName, 0)
-                        .factory());
-        if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(executorService, executorName, null)
-                    .bindTo(config.meterRegistry());
-        }
-        executorServiceByName.put(executorName, executorService);
-
-        final var taskDispatcher = new TaskDispatcher<>(
-                this,
-                executorService,
-                new WorkflowTaskManager(this, group, executorMetadataRegistry),
-                group.maxConcurrency(),
-                config.workflowTaskDispatcher().minPollInterval(),
-                config.workflowTaskDispatcher().pollBackoffIntervalFunction(),
-                config.meterRegistry());
-
-        taskDispatcherExecutor.execute(taskDispatcher);
+        workflowGroups.add(group);
     }
 
     @Override
     public void mount(final ActivityGroup group) {
-        requireRunningStatus();
-        LOGGER.debug("Mounting {}", group);
+        requireStatus(Status.CREATED);
+        requireNonNull(group, "group must not be null");
 
         for (final String activityName : group.activityNames()) {
             try {
@@ -406,38 +397,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
         }
 
-        final String executorName = "WorkflowEngine-ActivityGroup-%s".formatted(group.name());
-        if (executorServiceByName.containsKey(executorName)) {
-            throw new IllegalStateException("Activity group %s is already mounted".formatted(group.name()));
-        }
-
-        final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual()
-                        .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
-                        .name(executorName, 0)
-                        .factory());
-        if (config.meterRegistry() != null) {
-            new ExecutorServiceMetrics(executorService, executorName, null)
-                    .bindTo(config.meterRegistry());
-        }
-        executorServiceByName.put(executorName, executorService);
-
-        final var taskDispatcher = new TaskDispatcher<>(
-                this,
-                executorService,
-                new ActivityTaskManager(this, group, executorMetadataRegistry),
-                group.maxConcurrency(),
-                config.activityTaskDispatcher().minPollInterval(),
-                config.activityTaskDispatcher().pollBackoffIntervalFunction(),
-                config.meterRegistry());
-
-        taskDispatcherExecutor.execute(taskDispatcher);
+        activityGroups.add(group);
     }
 
     @Override
     public List<UUID> createRuns(final Collection<CreateWorkflowRunRequest> options) {
-        requireRunningStatus();
-
         final var now = Timestamps.now();
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(options.size());
         final var createInboxEntryCommand = new ArrayList<CreateWorkflowRunInboxEntryCommand>(options.size());
@@ -653,7 +617,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final UUID workflowRunId,
             final String eventId,
             final WorkflowPayload content) {
-        requireRunningStatus();
+        requireStatus(Status.RUNNING);
 
         try {
             return externalEventBuffer.add(new NewExternalEvent(workflowRunId, eventId, content));
@@ -706,6 +670,70 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     @Override
     public Page<WorkflowSchedule> listSchedules(final ListWorkflowSchedulesRequest request) {
         return jdbi.withHandle(handle -> new WorkflowScheduleDao(handle).listSchedules(request));
+    }
+
+    private void startWorkflowGroup(final WorkflowGroup group) {
+        requireStatus(Status.STARTING);
+        requireNonNull(group, "group must not be null");
+
+        final String executorName = "WorkflowEngine-WorkflowGroup-%s".formatted(group.name());
+        if (executorServiceByName.containsKey(executorName)) {
+            throw new IllegalStateException("Workflow group %s is already registered".formatted(group.name()));
+        }
+
+        final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual()
+                        .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
+                        .name(executorName, 0)
+                        .factory());
+        if (config.meterRegistry() != null) {
+            new ExecutorServiceMetrics(executorService, executorName, null)
+                    .bindTo(config.meterRegistry());
+        }
+        executorServiceByName.put(executorName, executorService);
+
+        final var taskDispatcher = new TaskDispatcher<>(
+                this,
+                executorService,
+                new WorkflowTaskManager(this, group, executorMetadataRegistry),
+                group.maxConcurrency(),
+                config.workflowTaskDispatcher().minPollInterval(),
+                config.workflowTaskDispatcher().pollBackoffIntervalFunction(),
+                config.meterRegistry());
+
+        taskDispatcherExecutor.execute(taskDispatcher);
+    }
+
+    private void startActivityGroup(final ActivityGroup group) {
+        requireStatus(Status.STARTING);
+        requireNonNull(group, "group must not be null");
+
+        final String executorName = "WorkflowEngine-ActivityGroup-%s".formatted(group.name());
+        if (executorServiceByName.containsKey(executorName)) {
+            throw new IllegalStateException("Activity group %s is already mounted".formatted(group.name()));
+        }
+
+        final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual()
+                        .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
+                        .name(executorName, 0)
+                        .factory());
+        if (config.meterRegistry() != null) {
+            new ExecutorServiceMetrics(executorService, executorName, null)
+                    .bindTo(config.meterRegistry());
+        }
+        executorServiceByName.put(executorName, executorService);
+
+        final var taskDispatcher = new TaskDispatcher<>(
+                this,
+                executorService,
+                new ActivityTaskManager(this, group, executorMetadataRegistry),
+                group.maxConcurrency(),
+                config.activityTaskDispatcher().minPollInterval(),
+                config.activityTaskDispatcher().pollBackoffIntervalFunction(),
+                config.meterRegistry());
+
+        taskDispatcherExecutor.execute(taskDispatcher);
     }
 
     private void flushExternalEvents(final List<NewExternalEvent> externalEvents) {
@@ -1276,10 +1304,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
     }
 
-    private void requireRunningStatus() {
-        if (!Status.RUNNING.equals(status)) {
+    private void requireStatus(final Status expectedStatus) {
+        if (!expectedStatus.equals(this.status)) {
             throw new IllegalStateException(
-                    "Engine must be in state %s, but is %s".formatted(Status.RUNNING, this));
+                    "Engine must be in state %s, but is %s".formatted(expectedStatus, this.status));
         }
     }
 
