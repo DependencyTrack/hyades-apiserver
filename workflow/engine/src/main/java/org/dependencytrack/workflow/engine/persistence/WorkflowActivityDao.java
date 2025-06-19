@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
-import org.dependencytrack.workflow.engine.persistence.model.NewActivityTaskRow;
+import org.dependencytrack.workflow.engine.persistence.model.CreateActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.PollActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTaskRow;
 import org.jdbi.v3.core.Handle;
@@ -40,7 +40,7 @@ public final class WorkflowActivityDao extends AbstractDao {
         super(jdbiHandle);
     }
 
-    public int createActivityTasks(final Collection<NewActivityTaskRow> newTasks) {
+    public int createActivityTasks(final Collection<CreateActivityTaskCommand> newTasks) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into workflow_activity_task (
                   workflow_run_id
@@ -68,7 +68,7 @@ public final class WorkflowActivityDao extends AbstractDao {
         final var priorities = new ArrayList<Integer>(newTasks.size());
         final var arguments = new ArrayList<WorkflowPayload>(newTasks.size());
         final var visibleFroms = new ArrayList<Instant>(newTasks.size());
-        for (final NewActivityTaskRow newTask : newTasks) {
+        for (final CreateActivityTaskCommand newTask : newTasks) {
             runIds.add(newTask.workflowRunId());
             scheduledEventIds.add(newTask.scheduledEventId());
             activityNames.add(newTask.activityName());

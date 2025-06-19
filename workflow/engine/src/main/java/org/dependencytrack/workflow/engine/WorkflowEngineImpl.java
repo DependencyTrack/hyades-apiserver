@@ -61,13 +61,13 @@ import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowRunDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowScheduleDao;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
+import org.dependencytrack.workflow.engine.persistence.model.CreateActivityTaskCommand;
+import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunCommand;
 import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunHistoryEntryCommand;
+import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunInboxEntryCommand;
+import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowScheduleCommand;
 import org.dependencytrack.workflow.engine.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunHistoryRequest;
-import org.dependencytrack.workflow.engine.persistence.model.NewActivityTaskRow;
-import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunInboxRow;
-import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunRow;
-import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowScheduleRow;
 import org.dependencytrack.workflow.engine.persistence.model.PollActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.PollWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvents;
@@ -439,14 +439,14 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         requireRunningStatus();
 
         final var now = Timestamps.now();
-        final var newWorkflowRunRows = new ArrayList<NewWorkflowRunRow>(options.size());
-        final var newInboxEventRows = new ArrayList<NewWorkflowRunInboxRow>(options.size());
+        final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(options.size());
+        final var createInboxEntryCommand = new ArrayList<CreateWorkflowRunInboxEntryCommand>(options.size());
         final var nextRunIdByConcurrencyGroupId = new HashMap<String, UUID>();
 
         for (final CreateWorkflowRunRequest option : options) {
             final UUID runId = timeBasedEpochRandomGenerator().generate();
-            newWorkflowRunRows.add(
-                    new NewWorkflowRunRow(
+            createWorkflowRunCommands.add(
+                    new CreateWorkflowRunCommand(
                             runId,
                             /* parentId */ null,
                             option.workflowName(),
@@ -471,8 +471,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 runScheduledBuilder.setArgument(option.argument());
             }
 
-            newInboxEventRows.add(
-                    new NewWorkflowRunInboxRow(runId, null,
+            createInboxEntryCommand.add(
+                    new CreateWorkflowRunInboxEntryCommand(
+                            runId,
+                            null,
                             WorkflowEvent.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(now)
@@ -500,15 +502,15 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final List<UUID> createdRunIds = dao.createRuns(newWorkflowRunRows);
-            assert createdRunIds.size() == newWorkflowRunRows.size()
+            final List<UUID> createdRunIds = dao.createRuns(createWorkflowRunCommands);
+            assert createdRunIds.size() == createWorkflowRunCommands.size()
                     : "Created runs: actual=%d, expected=%d".formatted(
-                    createdRunIds.size(), newWorkflowRunRows.size());
+                    createdRunIds.size(), createWorkflowRunCommands.size());
 
-            final int createdInboxEvents = dao.createRunInboxEvents(newInboxEventRows);
-            assert createdInboxEvents == newInboxEventRows.size()
+            final int createdInboxEvents = dao.createRunInboxEvents(createInboxEntryCommand);
+            assert createdInboxEvents == createInboxEntryCommand.size()
                     : "Created inbox events: actual=%d, expected=%d".formatted(
-                    createdInboxEvents, newInboxEventRows.size());
+                    createdInboxEvents, createInboxEntryCommand.size());
 
             if (!newConcurrencyGroupRows.isEmpty()) {
                 dao.maybeCreateConcurrencyGroups(newConcurrencyGroupRows);
@@ -572,7 +574,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             final int createdInboxEvents = dao.createRunInboxEvents(List.of(
-                    new NewWorkflowRunInboxRow(runId, null, cancellationEvent)));
+                    new CreateWorkflowRunInboxEntryCommand(runId, null, cancellationEvent)));
             assert createdInboxEvents == 1;
         });
     }
@@ -604,7 +606,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             final int createdInboxEvents = dao.createRunInboxEvents(List.of(
-                    new NewWorkflowRunInboxRow(runId, null, suspensionEvent)));
+                    new CreateWorkflowRunInboxEntryCommand(runId, null, suspensionEvent)));
             assert createdInboxEvents == 1;
         });
     }
@@ -636,7 +638,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             final int createdInboxEvents = dao.createRunInboxEvents(List.of(
-                    new NewWorkflowRunInboxRow(runId, null, resumeEvent)));
+                    new CreateWorkflowRunInboxEntryCommand(runId, null, resumeEvent)));
             assert createdInboxEvents == 1;
         });
     }
@@ -666,37 +668,38 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final var dao = new WorkflowScheduleDao(handle);
 
             final var now = Instant.now();
-            final var schedulesToCreate = new ArrayList<NewWorkflowScheduleRow>(requests.size());
+            final var createScheduleCommands = new ArrayList<CreateWorkflowScheduleCommand>(requests.size());
 
-            for (final CreateWorkflowScheduleRequest newSchedule : requests) {
+            for (final CreateWorkflowScheduleRequest request : requests) {
                 final Schedule cronSchedule;
                 try {
-                    cronSchedule = Schedule.create(newSchedule.cron());
+                    cronSchedule = Schedule.create(request.cron());
                 } catch (InvalidExpressionException e) {
                     throw new IllegalArgumentException("Cron expression %s of schedule %s is invalid".formatted(
-                            newSchedule.cron(), newSchedule.name()), e);
+                            request.cron(), request.name()), e);
                 }
 
                 final Instant nextFireAt;
-                if (newSchedule.initialDelay() == null) {
+                if (request.initialDelay() == null) {
                     nextFireAt = cronSchedule.next(Date.from(now)).toInstant();
                 } else {
-                    nextFireAt = now.plus(newSchedule.initialDelay());
+                    nextFireAt = now.plus(request.initialDelay());
                 }
 
-                schedulesToCreate.add(new NewWorkflowScheduleRow(
-                        newSchedule.name(),
-                        newSchedule.cron(),
-                        newSchedule.workflowName(),
-                        newSchedule.workflowVersion(),
-                        newSchedule.concurrencyGroupId(),
-                        newSchedule.priority(),
-                        newSchedule.labels(),
-                        newSchedule.argument(),
-                        nextFireAt));
+                createScheduleCommands.add(
+                        new CreateWorkflowScheduleCommand(
+                                request.name(),
+                                request.cron(),
+                                request.workflowName(),
+                                request.workflowVersion(),
+                                request.concurrencyGroupId(),
+                                request.priority(),
+                                request.labels(),
+                                request.argument(),
+                                nextFireAt));
             }
 
-            return dao.createSchedules(schedulesToCreate);
+            return dao.createSchedules(createScheduleCommands);
         });
     }
 
@@ -711,7 +714,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
             final var now = Timestamps.now();
             dao.createRunInboxEvents(externalEvents.stream()
-                    .map(externalEvent -> new NewWorkflowRunInboxRow(
+                    .map(externalEvent -> new CreateWorkflowRunInboxEntryCommand(
                             externalEvent.workflowRunId(),
                             null,
                             WorkflowEvent.newBuilder()
@@ -862,10 +865,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
 
         final var createHistoryEntryCommands = new ArrayList<CreateWorkflowRunHistoryEntryCommand>(commands.size() * 2);
-        final var newInboxEvents = new ArrayList<NewWorkflowRunInboxRow>(commands.size() * 2);
-        final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
+        final var createInboxEntryCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size() * 2);
+        final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>();
         final var continuedAsNewRunIds = new ArrayList<UUID>();
-        final var newActivityTasks = new ArrayList<NewActivityTaskRow>();
+        final var createActivityTaskCommands = new ArrayList<CreateActivityTaskCommand>();
         final var nextRunIdByNewConcurrencyGroupId = new HashMap<String, UUID>();
         final var concurrencyGroupsToUpdate = new HashSet<String>();
 
@@ -880,8 +883,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             for (final WorkflowEvent newEvent : run.pendingTimerElapsedEvents()) {
-                newInboxEvents.add(
-                        new NewWorkflowRunInboxRow(
+                createInboxEntryCommands.add(
+                        new CreateWorkflowRunInboxEntryCommand(
                                 run.id(),
                                 toInstant(newEvent.getTimerElapsed().getElapseAt()),
                                 newEvent));
@@ -897,20 +900,21 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 shouldCreateWorkflowRun &= !(run.continuedAsNew() && message.recipientRunId().equals(run.id()));
 
                 if (shouldCreateWorkflowRun) {
-                    newWorkflowRuns.add(new NewWorkflowRunRow(
-                            message.recipientRunId(),
-                            /* parentId */ run.id(),
-                            message.event().getRunScheduled().getWorkflowName(),
-                            message.event().getRunScheduled().getWorkflowVersion(),
-                            message.event().getRunScheduled().hasConcurrencyGroupId()
-                                    ? message.event().getRunScheduled().getConcurrencyGroupId()
-                                    : null,
-                            message.event().getRunScheduled().hasPriority()
-                                    ? message.event().getRunScheduled().getPriority()
-                                    : null,
-                            message.event().getRunScheduled().getLabelsCount() > 0
-                                    ? Map.copyOf(message.event().getRunScheduled().getLabelsMap())
-                                    : null));
+                    createWorkflowRunCommands.add(
+                            new CreateWorkflowRunCommand(
+                                    message.recipientRunId(),
+                                    /* parentId */ run.id(),
+                                    message.event().getRunScheduled().getWorkflowName(),
+                                    message.event().getRunScheduled().getWorkflowVersion(),
+                                    message.event().getRunScheduled().hasConcurrencyGroupId()
+                                            ? message.event().getRunScheduled().getConcurrencyGroupId()
+                                            : null,
+                                    message.event().getRunScheduled().hasPriority()
+                                            ? message.event().getRunScheduled().getPriority()
+                                            : null,
+                                    message.event().getRunScheduled().getLabelsCount() > 0
+                                            ? Map.copyOf(message.event().getRunScheduled().getLabelsMap())
+                                            : null));
 
                     if (message.event().getRunScheduled().hasConcurrencyGroupId()) {
                         nextRunIdByNewConcurrencyGroupId.compute(
@@ -927,42 +931,45 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     }
                 }
 
-                newInboxEvents.add(new NewWorkflowRunInboxRow(
-                        message.recipientRunId(),
-                        toInstant(message.event().getTimestamp()),
-                        message.event()));
+                createInboxEntryCommands.add(
+                        new CreateWorkflowRunInboxEntryCommand(
+                                message.recipientRunId(),
+                                toInstant(message.event().getTimestamp()),
+                                message.event()));
             }
 
             // If there are pending sub workflow runs, make sure those are cancelled, too.
             if (run.status() == WorkflowRunStatus.CANCELLED) {
                 for (final UUID subWorkflowRunId : getPendingSubWorkflowRunIds(run)) {
-                    newInboxEvents.add(new NewWorkflowRunInboxRow(
-                            subWorkflowRunId,
-                            /* visibleFrom */ null,
-                            WorkflowEvent.newBuilder()
-                                    .setId(-1)
-                                    .setTimestamp(Timestamps.now())
-                                    .setRunCancelled(RunCancelled.newBuilder()
-                                            .setReason("Parent cancelled")
-                                            .build())
-                                    .build()));
+                    createInboxEntryCommands.add(
+                            new CreateWorkflowRunInboxEntryCommand(
+                                    subWorkflowRunId,
+                                    /* visibleFrom */ null,
+                                    WorkflowEvent.newBuilder()
+                                            .setId(-1)
+                                            .setTimestamp(Timestamps.now())
+                                            .setRunCancelled(RunCancelled.newBuilder()
+                                                    .setReason("Parent cancelled")
+                                                    .build())
+                                            .build()));
                 }
             }
 
             for (final WorkflowEvent newEvent : run.pendingActivityTaskScheduledEvents()) {
-                newActivityTasks.add(new NewActivityTaskRow(
-                        run.id(),
-                        newEvent.getId(),
-                        newEvent.getActivityTaskScheduled().getName(),
-                        newEvent.getActivityTaskScheduled().hasPriority()
-                                ? newEvent.getActivityTaskScheduled().getPriority()
-                                : null,
-                        newEvent.getActivityTaskScheduled().hasArgument()
-                                ? newEvent.getActivityTaskScheduled().getArgument()
-                                : null,
-                        newEvent.getActivityTaskScheduled().hasScheduledFor()
-                                ? toInstant(newEvent.getActivityTaskScheduled().getScheduledFor())
-                                : null));
+                createActivityTaskCommands.add(
+                        new CreateActivityTaskCommand(
+                                run.id(),
+                                newEvent.getId(),
+                                newEvent.getActivityTaskScheduled().getName(),
+                                newEvent.getActivityTaskScheduled().hasPriority()
+                                        ? newEvent.getActivityTaskScheduled().getPriority()
+                                        : null,
+                                newEvent.getActivityTaskScheduled().hasArgument()
+                                        ? newEvent.getActivityTaskScheduled().getArgument()
+                                        : null,
+                                newEvent.getActivityTaskScheduled().hasScheduledFor()
+                                        ? toInstant(newEvent.getActivityTaskScheduled().getScheduledFor())
+                                        : null));
             }
 
             if (run.continuedAsNew()) {
@@ -985,27 +992,27 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     historyEntriesCreated, createHistoryEntryCommands.size());
         }
 
-        if (!newWorkflowRuns.isEmpty()) {
+        if (!createWorkflowRunCommands.isEmpty()) {
             // TODO: Call ScheduleWorkflowRuns instead so concurrency groups are updated, too.
             //  Ensure it can participate in this transaction!
-            final List<UUID> createdRunIds = workflowDao.createRuns(newWorkflowRuns);
-            assert createdRunIds.size() == newWorkflowRuns.size()
+            final List<UUID> createdRunIds = workflowDao.createRuns(createWorkflowRunCommands);
+            assert createdRunIds.size() == createWorkflowRunCommands.size()
                     : "Created runs: actual=%d, expected=%d".formatted(
-                    createdRunIds.size(), newWorkflowRuns.size());
+                    createdRunIds.size(), createWorkflowRunCommands.size());
         }
 
-        if (!newInboxEvents.isEmpty()) {
-            final int createdInboxEvents = workflowDao.createRunInboxEvents(newInboxEvents);
-            assert createdInboxEvents == newInboxEvents.size()
+        if (!createInboxEntryCommands.isEmpty()) {
+            final int createdInboxEvents = workflowDao.createRunInboxEvents(createInboxEntryCommands);
+            assert createdInboxEvents == createInboxEntryCommands.size()
                     : "Created inbox events: actual=%d, expected=%d".formatted(
-                    createdInboxEvents, newInboxEvents.size());
+                    createdInboxEvents, createInboxEntryCommands.size());
         }
 
-        if (!newActivityTasks.isEmpty()) {
-            final int createdActivityTasks = activityDao.createActivityTasks(newActivityTasks);
-            assert createdActivityTasks == newActivityTasks.size()
+        if (!createActivityTaskCommands.isEmpty()) {
+            final int createdActivityTasks = activityDao.createActivityTasks(createActivityTaskCommands);
+            assert createdActivityTasks == createActivityTaskCommands.size()
                     : "Created activity tasks: actual=%d, expected=%d".formatted(
-                    createdActivityTasks, newActivityTasks.size());
+                    createdActivityTasks, createActivityTaskCommands.size());
         }
 
         final int deletedInboxEvents = workflowDao.deleteRunInboxEvents(
@@ -1092,7 +1099,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final WorkflowActivityDao activityDao,
             final Collection<CompleteActivityTaskCommand> commands) {
         final var tasksToDelete = new ArrayList<ActivityTaskId>(commands.size());
-        final var inboxEventsToCreate = new ArrayList<NewWorkflowRunInboxRow>(commands.size());
+        final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size());
 
         for (final CompleteActivityTaskCommand command : commands) {
             tasksToDelete.add(new ActivityTaskId(command.task().workflowRunId(), command.task().scheduledEventId()));
@@ -1102,14 +1109,15 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             if (command.result() != null) {
                 taskCompletedBuilder.setResult(command.result());
             }
-            inboxEventsToCreate.add(new NewWorkflowRunInboxRow(
-                    command.task().workflowRunId(),
-                    null,
-                    WorkflowEvent.newBuilder()
-                            .setId(-1)
-                            .setTimestamp(toTimestamp(command.timestamp()))
-                            .setActivityTaskCompleted(taskCompletedBuilder.build())
-                            .build()));
+            inboxEventsToCreate.add(
+                    new CreateWorkflowRunInboxEntryCommand(
+                            command.task().workflowRunId(),
+                            null,
+                            WorkflowEvent.newBuilder()
+                                    .setId(-1)
+                                    .setTimestamp(toTimestamp(command.timestamp()))
+                                    .setActivityTaskCompleted(taskCompletedBuilder.build())
+                                    .build()));
         }
 
         final int deletedTasks = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);
@@ -1128,22 +1136,23 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final WorkflowActivityDao activityDao,
             final Collection<FailActivityTaskCommand> commands) {
         final var tasksToDelete = new ArrayList<ActivityTaskId>(commands.size());
-        final var inboxEventsToCreate = new ArrayList<NewWorkflowRunInboxRow>(commands.size());
+        final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size());
 
         for (final FailActivityTaskCommand command : commands) {
             tasksToDelete.add(new ActivityTaskId(command.task().workflowRunId(), command.task().scheduledEventId()));
 
-            inboxEventsToCreate.add(new NewWorkflowRunInboxRow(
-                    command.task().workflowRunId(),
-                    /* visibleFrom */ null,
-                    WorkflowEvent.newBuilder()
-                            .setId(-1)
-                            .setTimestamp(toTimestamp(command.timestamp()))
-                            .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
-                                    .setTaskScheduledEventId(command.task().scheduledEventId())
-                                    .setFailure(FailureConverter.toFailure(command.exception()))
-                                    .build())
-                            .build()));
+            inboxEventsToCreate.add(
+                    new CreateWorkflowRunInboxEntryCommand(
+                            command.task().workflowRunId(),
+                            /* visibleFrom */ null,
+                            WorkflowEvent.newBuilder()
+                                    .setId(-1)
+                                    .setTimestamp(toTimestamp(command.timestamp()))
+                                    .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
+                                            .setTaskScheduledEventId(command.task().scheduledEventId())
+                                            .setFailure(FailureConverter.toFailure(command.exception()))
+                                            .build())
+                                    .build()));
         }
 
         final int deletedTasks = activityDao.deleteLockedActivityTasks(this.config.instanceId(), tasksToDelete);

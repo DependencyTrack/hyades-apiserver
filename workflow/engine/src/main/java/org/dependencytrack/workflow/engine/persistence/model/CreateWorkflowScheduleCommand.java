@@ -24,7 +24,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.util.Map;
 
-public record NewWorkflowScheduleRow(
+public record CreateWorkflowScheduleCommand(
         String name,
         String cron,
         String workflowName,

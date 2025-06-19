@@ -20,11 +20,11 @@ package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
+import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunCommand;
 import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunHistoryEntryCommand;
+import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunInboxEntryCommand;
 import org.dependencytrack.workflow.engine.persistence.model.DeleteInboxEventsCommand;
 import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunHistoryRequest;
-import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunInboxRow;
-import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.PollWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEventRow;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvents;
@@ -60,7 +60,7 @@ public final class WorkflowDao extends AbstractDao {
         super(jdbiHandle);
     }
 
-    public List<UUID> createRuns(final Collection<NewWorkflowRunRow> newRuns) {
+    public List<UUID> createRuns(final Collection<CreateWorkflowRunCommand> newRuns) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into workflow_run (
                   id
@@ -97,7 +97,7 @@ public final class WorkflowDao extends AbstractDao {
                 .forType(new GenericType<Map<String, String>>() {
                 }.getType(), jdbiHandle.getConfig());
 
-        for (final NewWorkflowRunRow newRun : newRuns) {
+        for (final CreateWorkflowRunCommand newRun : newRuns) {
             final String labelsJson;
             if (newRun.labels() == null || newRun.labels().isEmpty()) {
                 labelsJson = null;
@@ -397,7 +397,7 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public int createRunInboxEvents(final SequencedCollection<NewWorkflowRunInboxRow> newEvents) {
+    public int createRunInboxEvents(final SequencedCollection<CreateWorkflowRunInboxEntryCommand> newEvents) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into workflow_run_inbox (
                   workflow_run_id
@@ -410,7 +410,7 @@ public final class WorkflowDao extends AbstractDao {
         final var runIds = new ArrayList<UUID>(newEvents.size());
         final var visibleFroms = new ArrayList<Instant>(newEvents.size());
         final var events = new ArrayList<WorkflowEvent>(newEvents.size());
-        for (final NewWorkflowRunInboxRow newEvent : newEvents) {
+        for (final CreateWorkflowRunInboxEntryCommand newEvent : newEvents) {
             runIds.add(newEvent.workflowRunId());
             visibleFroms.add(newEvent.visibleFrom());
             events.add(newEvent.event());

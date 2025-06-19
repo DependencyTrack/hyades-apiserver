@@ -18,17 +18,14 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Map;
+import java.time.Instant;
 import java.util.UUID;
 
-public record NewWorkflowRunRow(
-        UUID id,
-        @Nullable UUID parentId,
-        String workflowName,
-        int workflowVersion,
-        @Nullable String concurrencyGroupId,
-        @Nullable Integer priority,
-        @Nullable Map<String, String> labels) {
+public record CreateWorkflowRunInboxEntryCommand(
+        UUID workflowRunId,
+        @Nullable Instant visibleFrom,
+        WorkflowEvent event) {
 }

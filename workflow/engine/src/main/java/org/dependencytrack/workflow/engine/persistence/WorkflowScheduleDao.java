@@ -22,7 +22,7 @@ import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
-import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowScheduleRow;
+import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowScheduleCommand;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -44,7 +44,7 @@ public final class WorkflowScheduleDao extends AbstractDao {
         super(jdbiHandle);
     }
 
-    public List<WorkflowSchedule> createSchedules(final Collection<NewWorkflowScheduleRow> newSchedules) {
+    public List<WorkflowSchedule> createSchedules(final Collection<CreateWorkflowScheduleCommand> newSchedules) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into workflow_schedule (
                   name
@@ -88,7 +88,7 @@ public final class WorkflowScheduleDao extends AbstractDao {
                 .forType(new GenericType<Map<String, String>>() {
                 }.getType(), jdbiHandle.getConfig());
 
-        for (final NewWorkflowScheduleRow newSchedule : newSchedules) {
+        for (final CreateWorkflowScheduleCommand newSchedule : newSchedules) {
             final String labelsJson;
             if (newSchedule.labels() == null || newSchedule.labels().isEmpty()) {
                 labelsJson = null;

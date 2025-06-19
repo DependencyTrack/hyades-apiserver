@@ -18,14 +18,17 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.UUID;
 
-public record NewWorkflowRunInboxRow(
+public record CreateActivityTaskCommand(
         UUID workflowRunId,
-        @Nullable Instant visibleFrom,
-        WorkflowEvent event) {
+        int scheduledEventId,
+        String activityName,
+        @Nullable Integer priority,
+        @Nullable WorkflowPayload argument,
+        @Nullable Instant visibleFrom) {
 }

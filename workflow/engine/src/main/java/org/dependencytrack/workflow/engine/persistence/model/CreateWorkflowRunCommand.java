@@ -18,17 +18,17 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.jspecify.annotations.Nullable;
 
-import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
-public record NewActivityTaskRow(
-        UUID workflowRunId,
-        int scheduledEventId,
-        String activityName,
+public record CreateWorkflowRunCommand(
+        UUID id,
+        @Nullable UUID parentId,
+        String workflowName,
+        int workflowVersion,
+        @Nullable String concurrencyGroupId,
         @Nullable Integer priority,
-        @Nullable WorkflowPayload argument,
-        @Nullable Instant visibleFrom) {
+        @Nullable Map<String, String> labels) {
 }
