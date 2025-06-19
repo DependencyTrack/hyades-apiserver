@@ -93,7 +93,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private final WorkflowExecutor<A, R> workflowExecutor;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
-    private final List<WorkflowEvent> journal;
+    private final List<WorkflowEvent> history;
     private final List<WorkflowEvent> inbox;
     private final List<WorkflowEvent> suspendedEvents;
     private final Map<Integer, WorkflowEvent> eventByEventId;
@@ -121,7 +121,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             final WorkflowExecutor<A, R> workflowExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final List<WorkflowEvent> journal,
+            final List<WorkflowEvent> history,
             final List<WorkflowEvent> inbox) {
         this.runId = runId;
         this.workflowName = workflowName;
@@ -132,7 +132,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         this.workflowExecutor = workflowExecutor;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
-        this.journal = journal;
+        this.history = history;
         this.inbox = inbox;
         this.suspendedEvents = new ArrayList<>();
         this.eventByEventId = new HashMap<>();
@@ -497,12 +497,12 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     @Nullable
     private WorkflowEvent nextEvent() {
-        if (currentEventIndex < journal.size()) {
+        if (currentEventIndex < history.size()) {
             isReplaying = true;
-            return journal.get(currentEventIndex++);
-        } else if (currentEventIndex < (journal.size() + inbox.size())) {
+            return history.get(currentEventIndex++);
+        } else if (currentEventIndex < (history.size() + inbox.size())) {
             isReplaying = false;
-            return inbox.get(currentEventIndex++ - journal.size());
+            return inbox.get(currentEventIndex++ - history.size());
         }
 
         return null;

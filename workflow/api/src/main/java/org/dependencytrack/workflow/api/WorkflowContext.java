@@ -73,7 +73,7 @@ public interface WorkflowContext<A> {
     /**
      * Schedules a durable timer.
      *
-     * @param name  Name of the timer. Purely descriptive to make it recognizable in the journal.
+     * @param name  Name of the timer. Purely descriptive to make it recognizable in the history.
      * @param delay {@link Duration} for how far in the future the timer shall elapse.
      * @return An {@link Awaitable} for when the timer elapses.
      */
@@ -92,12 +92,12 @@ public interface WorkflowContext<A> {
     void setStatus(@Nullable String status);
 
     /**
-     * Execute a side effect and record its result in the journal.
+     * Execute a side effect and record its result in the history.
      * <p>
      * Calling {@link Awaitable#await()} on the {@link Awaitable} returned by this method
      * will throw an {@link SideEffectFailureException} if the side effect failed.
      *
-     * @param name               Name of the side effect. Purely descriptive to make it recognizable in the journal.
+     * @param name               Name of the side effect. Purely descriptive to make it recognizable in the history.
      * @param argument           Argument to pass to {@code sideEffectFunction}.
      * @param resultConverter    {@link PayloadConverter} to use for the side effect's result.
      * @param sideEffectFunction The side effect to execute.
@@ -130,9 +130,9 @@ public interface WorkflowContext<A> {
             Duration timeout);
 
     /**
-     * Restart this workflow with a truncated journal.
+     * Restart this workflow with a truncated history.
      * <p>
-     * May be used to prevent the journal from growing too large.
+     * May be used to prevent the history from growing too large.
      *
      * @param options Options for the restarted workflow.
      */

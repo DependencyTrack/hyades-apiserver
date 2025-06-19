@@ -213,7 +213,7 @@ public class WorkflowEngineConfig {
 
     private final UUID instanceId;
     private final DataSource dataSource;
-    private final CacheConfig runJournalCache = new CacheConfig();
+    private final CacheConfig runHistoryCache = new CacheConfig();
     private final BufferConfig externalEventBufferConfig = new BufferConfig();
     private final BufferConfig taskCommandBufferConfig = new BufferConfig();
     private final RetentionConfig retentionConfig = new RetentionConfig();
@@ -243,8 +243,8 @@ public class WorkflowEngineConfig {
         return dataSource;
     }
 
-    public CacheConfig runJournalCache() {
-        return runJournalCache;
+    public CacheConfig runHistoryCache() {
+        return runHistoryCache;
     }
 
     /**

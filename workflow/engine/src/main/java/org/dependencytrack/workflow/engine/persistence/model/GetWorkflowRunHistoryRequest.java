@@ -18,12 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
-
 import java.util.UUID;
 
-public record NewWorkflowRunJournalRow(
-        UUID workflowRunId,
-        int sequenceNumber,
-        WorkflowEvent event) {
+public record GetWorkflowRunHistoryRequest(UUID runId, int offset) {
 }

@@ -34,7 +34,7 @@ import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTaskR
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEventRow;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunJournalRow;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunHistoryRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
@@ -89,8 +89,8 @@ public final class JdbiFactory {
                         PolledWorkflowRunRow.class,
                         new PolledWorkflowRunRowMapper())
                 .registerRowMapper(
-                        WorkflowRunJournalRow.class,
-                        ConstructorMapper.of(WorkflowRunJournalRow.class))
+                        WorkflowRunHistoryRow.class,
+                        ConstructorMapper.of(WorkflowRunHistoryRow.class))
                 .registerRowMapper(
                         WorkflowSchedule.class,
                         new WorkflowScheduleRowMapper());

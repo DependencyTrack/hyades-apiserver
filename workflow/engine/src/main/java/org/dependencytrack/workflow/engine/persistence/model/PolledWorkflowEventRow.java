@@ -26,12 +26,12 @@ public record PolledWorkflowEventRow(
         EventType eventType,
         UUID workflowRunId,
         WorkflowEvent event,
-        int journalSequenceNumber,
+        int historySequenceNumber,
         int inboxDequeueCount) {
 
     public enum EventType {
-        INBOX,
-        JOURNAL
+        HISTORY,
+        INBOX
     }
 
 }

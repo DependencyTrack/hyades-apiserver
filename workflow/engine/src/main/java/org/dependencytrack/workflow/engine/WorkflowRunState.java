@@ -66,7 +66,7 @@ final class WorkflowRunState {
     private final String workflowName;
     private final int workflowVersion;
     @Nullable private final String concurrencyGroupId;
-    private final List<WorkflowEvent> journal;
+    private final List<WorkflowEvent> history;
     private final List<WorkflowEvent> inbox;
     private final List<WorkflowEvent> pendingActivityTaskScheduledEvents;
     private final List<WorkflowEvent> pendingTimerElapsedEvents;
@@ -92,18 +92,18 @@ final class WorkflowRunState {
             final String workflowName,
             final int workflowVersion,
             @Nullable final String concurrencyGroupId,
-            final List<WorkflowEvent> journal) {
+            final List<WorkflowEvent> history) {
         this.id = id;
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
         this.concurrencyGroupId = concurrencyGroupId;
-        this.journal = new ArrayList<>();
+        this.history = new ArrayList<>();
         this.inbox = new ArrayList<>();
         this.pendingActivityTaskScheduledEvents = new ArrayList<>();
         this.pendingTimerElapsedEvents = new ArrayList<>();
         this.pendingMessages = new ArrayList<>();
 
-        for (final WorkflowEvent event : journal) {
+        for (final WorkflowEvent event : history) {
             onEvent(event, /* isNew */ false);
         }
     }
@@ -124,8 +124,8 @@ final class WorkflowRunState {
         return Optional.ofNullable(concurrencyGroupId);
     }
 
-    List<WorkflowEvent> journal() {
-        return journal;
+    List<WorkflowEvent> history() {
+        return history;
     }
 
     List<WorkflowEvent> inbox() {
@@ -265,7 +265,7 @@ final class WorkflowRunState {
         if (isNew) {
             inbox.add(event);
         } else {
-            journal.add(event);
+            history.add(event);
         }
 
         updatedAt = toInstant(event.getTimestamp());
@@ -321,7 +321,7 @@ final class WorkflowRunState {
             pendingMessages.add(new WorkflowRunMessage(parentRunId, subWorkflowEventBuilder.build()));
         }
 
-        // Record completion of the run in the journal.
+        // Record completion of the run in the history.
         final var subjectBuilder = RunCompleted.newBuilder()
                 .setStatus(command.status().toProto());
         if (command.customStatus() != null) {
@@ -361,7 +361,7 @@ final class WorkflowRunState {
         }
 
         this.continuedAsNew = true;
-        this.journal.clear();
+        this.history.clear();
         this.inbox.clear();
         this.pendingActivityTaskScheduledEvents.clear();
         this.pendingTimerElapsedEvents.clear();

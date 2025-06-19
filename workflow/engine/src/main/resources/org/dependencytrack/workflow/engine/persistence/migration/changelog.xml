@@ -51,12 +51,12 @@
             , constraint workflow_concurrency_group_next_run_fk foreign key (next_run_id) references workflow_run (id) on delete cascade
             ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
-            create table workflow_run_journal (
+            create table workflow_run_history (
               workflow_run_id uuid
             , sequence_number int
             , event bytea not null
-            , constraint workflow_run_journal_pk primary key (workflow_run_id, sequence_number)
-            , constraint workflow_run_journal_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
+            , constraint workflow_run_history_pk primary key (workflow_run_id, sequence_number)
+            , constraint workflow_run_history_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
             );
 
             create table workflow_run_inbox (

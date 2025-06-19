@@ -33,7 +33,7 @@ record WorkflowTask(
         @Nullable Integer priority,
         @Nullable Map<String, String> labels,
         int attempt,
-        List<WorkflowEvent> journal,
+        List<WorkflowEvent> history,
         List<WorkflowEvent> inbox) implements Task {
 
     @Override

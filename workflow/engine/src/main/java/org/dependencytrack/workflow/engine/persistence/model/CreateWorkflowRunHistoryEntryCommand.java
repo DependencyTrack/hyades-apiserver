@@ -22,7 +22,7 @@ import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 
 import java.util.UUID;
 
-public record WorkflowRunJournalRow(
+public record CreateWorkflowRunHistoryEntryCommand(
         UUID workflowRunId,
         int sequenceNumber,
         WorkflowEvent event) {

@@ -53,7 +53,6 @@ import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
-import org.dependencytrack.workflow.engine.api.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.persistence.JdbiFactory;
@@ -62,11 +61,11 @@ import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowRunDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowScheduleDao;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
+import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunHistoryEntryCommand;
 import org.dependencytrack.workflow.engine.persistence.model.DeleteInboxEventsCommand;
-import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunJournalRequest;
+import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.persistence.model.NewActivityTaskRow;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunInboxRow;
-import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunJournalRow;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowScheduleRow;
 import org.dependencytrack.workflow.engine.persistence.model.PollActivityTaskCommand;
@@ -152,7 +151,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
     }
 
-    private record CachedWorkflowRunJournal(List<WorkflowEvent> events, int maxSequenceNumber) {
+    private record CachedWorkflowRunHistory(List<WorkflowEvent> events, int maxSequenceNumber) {
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineImpl.class);
@@ -168,7 +167,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     @Nullable private ScheduledExecutorService retentionExecutor;
     @Nullable private Buffer<NewExternalEvent> externalEventBuffer;
     @Nullable private Buffer<TaskCommand> taskCommandBuffer;
-    @Nullable private Cache<UUID, CachedWorkflowRunJournal> cachedJournalByRunId;
+    @Nullable private Cache<UUID, CachedWorkflowRunHistory> cachedHistoryByRunId;
 
     WorkflowEngineImpl(final WorkflowEngineConfig config) {
         this.config = requireNonNull(config);
@@ -180,18 +179,18 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         setStatus(Status.STARTING);
         LOGGER.debug("Starting");
 
-        LOGGER.debug("Initializing journal cache");
-        final var journalCacheBuilder = Caffeine.newBuilder()
-                .maximumSize(config.runJournalCache().maxSize());
-        if (config.runJournalCache().evictAfterAccess() != null) {
-            journalCacheBuilder.expireAfterAccess(config.runJournalCache().evictAfterAccess());
+        LOGGER.debug("Initializing history cache");
+        final var runHistoryCacheBuilder = Caffeine.newBuilder()
+                .maximumSize(config.runHistoryCache().maxSize());
+        if (config.runHistoryCache().evictAfterAccess() != null) {
+            runHistoryCacheBuilder.expireAfterAccess(config.runHistoryCache().evictAfterAccess());
         }
         if (config.meterRegistry() != null) {
-            journalCacheBuilder.recordStats();
+            runHistoryCacheBuilder.recordStats();
         }
-        cachedJournalByRunId = journalCacheBuilder.build();
+        cachedHistoryByRunId = runHistoryCacheBuilder.build();
         if (config.meterRegistry() != null) {
-            new CaffeineCacheMetrics<>(cachedJournalByRunId, "WorkflowEngine-RunJournalCache", null);
+            new CaffeineCacheMetrics<>(cachedHistoryByRunId, "WorkflowEngine-RunHistoryCache", null);
         }
 
         LOGGER.debug("Starting external event buffer");
@@ -306,9 +305,9 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             taskCommandBuffer = null;
         }
 
-        if (cachedJournalByRunId != null) {
-            cachedJournalByRunId.invalidateAll();
-            cachedJournalByRunId = null;
+        if (cachedHistoryByRunId != null) {
+            cachedHistoryByRunId.invalidateAll();
+            cachedHistoryByRunId = null;
         }
 
         setStatus(Status.STOPPED);
@@ -643,7 +642,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public SequencedMap<Integer, WorkflowEvent> getRunHistory(final GetWorkflowRunHistoryRequest request) {
+    public SequencedMap<Integer, WorkflowEvent> getRunHistory(final org.dependencytrack.workflow.engine.api.request.GetWorkflowRunHistoryRequest request) {
         return jdbi.withHandle(handle -> new WorkflowRunDao(handle).getRunHistory(request));
     }
 
@@ -743,36 +742,36 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 return Collections.emptyList();
             }
 
-            final var journalRequests = new ArrayList<GetWorkflowRunJournalRequest>(polledRunById.size());
-            final var cachedJournalEventsByRunId = new HashMap<UUID, List<WorkflowEvent>>(polledRunById.size());
+            final var historyRequests = new ArrayList<GetWorkflowRunHistoryRequest>(polledRunById.size());
+            final var cachedHistoryByRunId = new HashMap<UUID, List<WorkflowEvent>>(polledRunById.size());
             for (final UUID runId : polledRunById.keySet()) {
-                final CachedWorkflowRunJournal cachedJournal = cachedJournalByRunId.getIfPresent(runId);
-                if (cachedJournal == null) {
-                    journalRequests.add(new GetWorkflowRunJournalRequest(runId, -1));
+                final CachedWorkflowRunHistory cachedHistory = this.cachedHistoryByRunId.getIfPresent(runId);
+                if (cachedHistory == null) {
+                    historyRequests.add(new GetWorkflowRunHistoryRequest(runId, -1));
                 } else {
-                    cachedJournalEventsByRunId.put(runId, cachedJournal.events());
-                    journalRequests.add(new GetWorkflowRunJournalRequest(runId, cachedJournal.maxSequenceNumber()));
+                    cachedHistoryByRunId.put(runId, cachedHistory.events());
+                    historyRequests.add(new GetWorkflowRunHistoryRequest(runId, cachedHistory.maxSequenceNumber()));
                 }
             }
 
             final Map<UUID, PolledWorkflowEvents> polledEventsByRunId =
-                    dao.pollRunEvents(this.config.instanceId(), journalRequests);
+                    dao.pollRunEvents(this.config.instanceId(), historyRequests);
 
             return polledRunById.values().stream()
                     .map(polledRun -> {
                         final PolledWorkflowEvents polledEvents = polledEventsByRunId.get(polledRun.id());
-                        final List<WorkflowEvent> cachedJournalEvents = cachedJournalEventsByRunId.get(polledRun.id());
+                        final List<WorkflowEvent> cachedHistoryEvents = cachedHistoryByRunId.get(polledRun.id());
 
-                        final var journal = new ArrayList<WorkflowEvent>(
-                                polledEvents.journal().size()
-                                + (cachedJournalEvents != null ? cachedJournalEvents.size() : 0));
-                        if (cachedJournalEvents != null) {
-                            journal.addAll(cachedJournalEvents);
+                        final var history = new ArrayList<WorkflowEvent>(
+                                polledEvents.history().size()
+                                + (cachedHistoryEvents != null ? cachedHistoryEvents.size() : 0));
+                        if (cachedHistoryEvents != null) {
+                            history.addAll(cachedHistoryEvents);
                         }
-                        journal.addAll(polledEvents.journal());
+                        history.addAll(polledEvents.history());
 
-                        cachedJournalByRunId.put(polledRun.id(), new CachedWorkflowRunJournal(
-                                journal, polledEvents.maxJournalEventSequenceNumber()));
+                        this.cachedHistoryByRunId.put(polledRun.id(), new CachedWorkflowRunHistory(
+                                history, polledEvents.maxHistoryEventSequenceNumber()));
 
                         return new WorkflowTask(
                                 polledRun.id(),
@@ -782,7 +781,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                                 polledRun.priority(),
                                 polledRun.labels(),
                                 polledEvents.maxInboxEventDequeueCount(),
-                                journal,
+                                history,
                                 polledEvents.inbox());
                     })
                     .toList();
@@ -862,7 +861,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             actionableRuns.removeIf(run -> notUpdatedRunIds.contains(run.id()));
         }
 
-        final var newJournalEntries = new ArrayList<NewWorkflowRunJournalRow>(commands.size() * 2);
+        final var createHistoryEntryCommands = new ArrayList<CreateWorkflowRunHistoryEntryCommand>(commands.size() * 2);
         final var newInboxEvents = new ArrayList<NewWorkflowRunInboxRow>(commands.size() * 2);
         final var newWorkflowRuns = new ArrayList<NewWorkflowRunRow>();
         final var continuedAsNewRunIds = new ArrayList<UUID>();
@@ -871,19 +870,21 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var concurrencyGroupsToUpdate = new HashSet<String>();
 
         for (final WorkflowRunState run : actionableRuns) {
-            int sequenceNumber = run.journal().size();
+            int sequenceNumber = run.history().size();
             for (final WorkflowEvent newEvent : run.inbox()) {
-                newJournalEntries.add(new NewWorkflowRunJournalRow(
-                        run.id(),
-                        sequenceNumber++,
-                        newEvent));
+                createHistoryEntryCommands.add(
+                        new CreateWorkflowRunHistoryEntryCommand(
+                                run.id(),
+                                sequenceNumber++,
+                                newEvent));
             }
 
             for (final WorkflowEvent newEvent : run.pendingTimerElapsedEvents()) {
-                newInboxEvents.add(new NewWorkflowRunInboxRow(
-                        run.id(),
-                        toInstant(newEvent.getTimerElapsed().getElapseAt()),
-                        newEvent));
+                newInboxEvents.add(
+                        new NewWorkflowRunInboxRow(
+                                run.id(),
+                                toInstant(newEvent.getTimerElapsed().getElapseAt()),
+                                newEvent));
             }
 
             for (final WorkflowRunMessage message : run.pendingWorkflowMessages()) {
@@ -974,14 +975,14 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
 
         if (!continuedAsNewRunIds.isEmpty()) {
-            workflowDao.truncateRunJournals(continuedAsNewRunIds);
+            workflowDao.truncateRunHistories(continuedAsNewRunIds);
         }
 
-        if (!newJournalEntries.isEmpty()) {
-            final int journalEntriesCreated = workflowDao.createRunJournalEntries(newJournalEntries);
-            assert journalEntriesCreated == newJournalEntries.size()
-                    : "Created journal entries: actual=%d, expected=%d".formatted(
-                    journalEntriesCreated, newJournalEntries.size());
+        if (!createHistoryEntryCommands.isEmpty()) {
+            final int historyEntriesCreated = workflowDao.createRunHistoryEntries(createHistoryEntryCommands);
+            assert historyEntriesCreated == createHistoryEntryCommands.size()
+                    : "Created history entries: actual=%d, expected=%d".formatted(
+                    historyEntriesCreated, createHistoryEntryCommands.size());
         }
 
         if (!newWorkflowRuns.isEmpty()) {
@@ -1223,7 +1224,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private Set<UUID> getPendingSubWorkflowRunIds(final WorkflowRunState run) {
         final var runIdByEventId = new HashMap<Integer, UUID>();
 
-        Stream.concat(run.journal().stream(), run.inbox().stream()).forEach(event -> {
+        Stream.concat(run.history().stream(), run.inbox().stream()).forEach(event -> {
             switch (event.getSubjectCase()) {
                 case SUB_WORKFLOW_RUN_SCHEDULED -> {
                     final String runId = event.getSubWorkflowRunScheduled().getRunId();

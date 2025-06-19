@@ -23,8 +23,8 @@ import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import java.util.List;
 
 public record PolledWorkflowEvents(
-        List<WorkflowEvent> journal,
+        List<WorkflowEvent> history,
         List<WorkflowEvent> inbox,
-        int maxJournalEventSequenceNumber,
+        int maxHistoryEventSequenceNumber,
         int maxInboxEventDequeueCount) {
 }

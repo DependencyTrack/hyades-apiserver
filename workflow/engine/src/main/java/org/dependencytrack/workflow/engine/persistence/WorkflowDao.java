@@ -20,10 +20,10 @@ package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
+import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunHistoryEntryCommand;
 import org.dependencytrack.workflow.engine.persistence.model.DeleteInboxEventsCommand;
-import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunJournalRequest;
+import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunInboxRow;
-import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunJournalRow;
 import org.dependencytrack.workflow.engine.persistence.model.NewWorkflowRunRow;
 import org.dependencytrack.workflow.engine.persistence.model.PollWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEventRow;
@@ -425,23 +425,23 @@ public final class WorkflowDao extends AbstractDao {
 
     public Map<UUID, PolledWorkflowEvents> pollRunEvents(
             final UUID workerInstanceId,
-            final Collection<GetWorkflowRunJournalRequest> journalRequests) {
+            final Collection<GetWorkflowRunHistoryRequest> requests) {
         final Query query = jdbiHandle.createQuery("""
                 with
-                cte_journal as (
-                    select workflow_run_journal.workflow_run_id
+                cte_history as (
+                    select workflow_run_history.workflow_run_id
                          , event
                          , sequence_number
-                      from workflow_run_journal
-                     inner join unnest(:journalRequestRunIds, :journalRequestOffsets) as request(run_id, "offset")
-                        on request.run_id = workflow_run_journal.workflow_run_id
-                       and request."offset" < workflow_run_journal.sequence_number
+                      from workflow_run_history
+                     inner join unnest(:historyRequestRunIds, :historyRequestOffsets) as request(run_id, "offset")
+                        on request.run_id = workflow_run_history.workflow_run_id
+                       and request."offset" < workflow_run_history.sequence_number
                      order by sequence_number
                 ),
                 cte_inbox_poll_candidate as (
                     select id
                       from workflow_run_inbox
-                     where workflow_run_id = any(:journalRequestRunIds)
+                     where workflow_run_id = any(:historyRequestRunIds)
                        and (visible_from is null or visible_from <= now())
                      order by id
                        for no key update
@@ -457,12 +457,12 @@ public final class WorkflowDao extends AbstractDao {
                             , workflow_run_inbox.event
                             , workflow_run_inbox.dequeue_count
                 )
-                select 'JOURNAL' as event_type
+                select 'HISTORY' as event_type
                      , workflow_run_id
                      , event
                      , sequence_number
                      , null as dequeue_count
-                  from cte_journal
+                  from cte_history
                  union all
                 select 'INBOX' as event_type
                      , workflow_run_id
@@ -472,35 +472,36 @@ public final class WorkflowDao extends AbstractDao {
                   from cte_polled_inbox
                 """);
 
-        final var journalRequestRunIds = new ArrayList<UUID>(journalRequests.size());
-        final var journalRequestOffsets = new ArrayList<Integer>(journalRequests.size());
-        for (final GetWorkflowRunJournalRequest journalRequest : journalRequests) {
-            journalRequestRunIds.add(journalRequest.runId());
-            journalRequestOffsets.add(journalRequest.offset());
+        final var historyRequestRunIds = new ArrayList<UUID>(requests.size());
+        final var historyRequestOffsets = new ArrayList<Integer>(requests.size());
+
+        for (final GetWorkflowRunHistoryRequest request : requests) {
+            historyRequestRunIds.add(request.runId());
+            historyRequestOffsets.add(request.offset());
         }
 
         final List<PolledWorkflowEventRow> polledEventRows = query
                 .bind("workerInstanceId", workerInstanceId.toString())
-                .bindArray("journalRequestRunIds", UUID.class, journalRequestRunIds)
-                .bindArray("journalRequestOffsets", Integer.class, journalRequestOffsets)
+                .bindArray("historyRequestRunIds", UUID.class, historyRequestRunIds)
+                .bindArray("historyRequestOffsets", Integer.class, historyRequestOffsets)
                 .mapTo(PolledWorkflowEventRow.class)
                 .list();
 
-        final var journalByRunId = new HashMap<UUID, List<WorkflowEvent>>(journalRequests.size());
-        final var inboxByRunId = new HashMap<UUID, List<WorkflowEvent>>(journalRequests.size());
-        final var maxJournalEventSequenceNumberByRunId = new HashMap<UUID, Integer>(journalRequests.size());
-        final var maxInboxEventDequeueCountByRunId = new HashMap<UUID, Integer>(journalRequests.size());
+        final var historyByRunId = new HashMap<UUID, List<WorkflowEvent>>(requests.size());
+        final var inboxByRunId = new HashMap<UUID, List<WorkflowEvent>>(requests.size());
+        final var maxHistoryEventSequenceNumberByRunId = new HashMap<UUID, Integer>(requests.size());
+        final var maxInboxEventDequeueCountByRunId = new HashMap<UUID, Integer>(requests.size());
 
         for (final PolledWorkflowEventRow row : polledEventRows) {
             switch (row.eventType()) {
-                case JOURNAL -> {
-                    journalByRunId.computeIfAbsent(
+                case HISTORY -> {
+                    historyByRunId.computeIfAbsent(
                             row.workflowRunId(), ignored -> new ArrayList<>()).add(row.event());
 
-                    maxJournalEventSequenceNumberByRunId.compute(
+                    maxHistoryEventSequenceNumberByRunId.compute(
                             row.workflowRunId(),
-                            (ignored, previousMax) -> (previousMax == null || previousMax < row.journalSequenceNumber())
-                                    ? row.journalSequenceNumber()
+                            (ignored, previousMax) -> (previousMax == null || previousMax < row.historySequenceNumber())
+                                    ? row.historySequenceNumber()
                                     : previousMax);
                 }
                 case INBOX -> {
@@ -516,12 +517,12 @@ public final class WorkflowDao extends AbstractDao {
             }
         }
 
-        final var polledEventsByRunId = new HashMap<UUID, PolledWorkflowEvents>(journalRequests.size());
-        for (final UUID runId : journalRequestRunIds) {
+        final var polledEventsByRunId = new HashMap<UUID, PolledWorkflowEvents>(requests.size());
+        for (final UUID runId : historyRequestRunIds) {
             polledEventsByRunId.put(runId, new PolledWorkflowEvents(
-                    journalByRunId.getOrDefault(runId, Collections.emptyList()),
+                    historyByRunId.getOrDefault(runId, Collections.emptyList()),
                     inboxByRunId.getOrDefault(runId, Collections.emptyList()),
-                    maxJournalEventSequenceNumberByRunId.getOrDefault(runId, -1),
+                    maxHistoryEventSequenceNumberByRunId.getOrDefault(runId, -1),
                     maxInboxEventDequeueCountByRunId.getOrDefault(runId, 0)));
         }
 
@@ -595,9 +596,9 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public int createRunJournalEntries(final Collection<NewWorkflowRunJournalRow> newJournalEntries) {
+    public int createRunHistoryEntries(final Collection<CreateWorkflowRunHistoryEntryCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
-                insert into workflow_run_journal (
+                insert into workflow_run_history (
                   workflow_run_id
                 , sequence_number
                 , event
@@ -605,13 +606,14 @@ public final class WorkflowDao extends AbstractDao {
                 select * from unnest(:runIds, :sequenceNumbers, :events)
                 """);
 
-        final var runIds = new ArrayList<UUID>(newJournalEntries.size());
-        final var sequenceNumbers = new ArrayList<Integer>(newJournalEntries.size());
-        final var events = new ArrayList<WorkflowEvent>(newJournalEntries.size());
-        for (final NewWorkflowRunJournalRow newJournalEntry : newJournalEntries) {
-            runIds.add(newJournalEntry.workflowRunId());
-            sequenceNumbers.add(newJournalEntry.sequenceNumber());
-            events.add(newJournalEntry.event());
+        final var runIds = new ArrayList<UUID>(commands.size());
+        final var sequenceNumbers = new ArrayList<Integer>(commands.size());
+        final var events = new ArrayList<WorkflowEvent>(commands.size());
+
+        for (final CreateWorkflowRunHistoryEntryCommand command : commands) {
+            runIds.add(command.workflowRunId());
+            sequenceNumbers.add(command.sequenceNumber());
+            events.add(command.event());
         }
 
         return update
@@ -621,9 +623,9 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public int truncateRunJournals(final Collection<UUID> runIds) {
+    public int truncateRunHistories(final Collection<UUID> runIds) {
         final Update update = jdbiHandle.createUpdate("""
-                delete from workflow_run_journal
+                delete from workflow_run_history
                  where workflow_run_id = any(:runIds)
                 """);
 

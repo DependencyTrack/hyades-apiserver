@@ -23,7 +23,7 @@ import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunJournalRow;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunHistoryRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
@@ -154,7 +154,7 @@ public final class WorkflowRunDao extends AbstractDao {
     public SequencedMap<Integer, WorkflowEvent> getRunHistory(final GetWorkflowRunHistoryRequest request) {
         final Query query = jdbiHandle.createQuery("""
                 select *
-                  from workflow_run_journal
+                  from workflow_run_history
                  where workflow_run_id = :runId
                    and sequence_number > :sequenceNumberOffset
                  limit :limit
@@ -164,10 +164,10 @@ public final class WorkflowRunDao extends AbstractDao {
                 .bind("runId", request.runId())
                 .bind("sequenceNumberOffset", request.sequenceNumberOffset())
                 .bind("limit", request.limit())
-                .mapTo(WorkflowRunJournalRow.class)
+                .mapTo(WorkflowRunHistoryRow.class)
                 .collect(Collectors.toMap(
-                        WorkflowRunJournalRow::sequenceNumber,
-                        WorkflowRunJournalRow::event,
+                        WorkflowRunHistoryRow::sequenceNumber,
+                        WorkflowRunHistoryRow::event,
                         (a, b) -> a,
                         () -> new TreeMap<>(Comparator.comparingInt(Integer::intValue))));
     }
