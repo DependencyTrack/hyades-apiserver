@@ -20,7 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -41,7 +41,7 @@ public class IntegrationResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(IntegrationResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     @Before
     public void before() throws Exception {

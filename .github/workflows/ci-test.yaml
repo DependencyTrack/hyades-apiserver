@@ -51,6 +51,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.2.2
+        with:
+          # For PRs, ensure that the actual HEAD commit is checked out,
+          # rather than an artificial merge commit. We need the actual
+          # commit in order for coverage reports to be matched properly.
+          # https://github.com/actions/checkout/issues/426
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
+          # Do not store the GitHub token in .git/config.
+          # Required because we upload the workspace as workflow artifact.
+          persist-credentials: false
 
       - name: Set up JDK
         uses: actions/setup-java@v4.7.1
@@ -76,18 +85,17 @@ jobs:
           language: Java
           coverage-reports: coverage-report/target/site/jacoco-aggregate/jacoco.xml
 
-      - name: Save PR details
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |-
-          echo ${{ github.sha }} > pr-commit.txt
-          echo ${{ github.event.number }} > pr-number.txt
-
-      - name: Upload PR test coverage report
+      - name: Upload PR workspace
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/upload-artifact@6027e3dd177782cd8ab9af838c04fd81a07f1d47 # tag=v4.4.0
         with:
-          name: pr-test-coverage-report
+          name: pr-workspace
+          include-hidden-files: true
           path: |-
-            pr-commit.txt
-            pr-number.txt
-            coverage-report/target/site/jacoco-aggregate
+            ./**/*
+            !./**/target/classes/**/*
+            !./**/*.jar
+            !./**/*.war
+            !./**/bom.json
+            !./apiserver/target/dependency-track-apiserver/**/*
+            !./apiserver/target/war/**/*

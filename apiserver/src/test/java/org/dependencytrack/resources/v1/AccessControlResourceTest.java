@@ -22,18 +22,18 @@ import alpine.model.ManagedUser;
 import alpine.model.Team;
 import alpine.server.auth.PasswordService;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
-import alpine.server.filters.AuthorizationFilter;
+import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
-
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.Response;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,8 +47,8 @@ public class AccessControlResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(AccessControlResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class)
-                    .register(AuthorizationFilter.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @Test
     public void addMappingTest() {
@@ -230,6 +230,36 @@ public class AccessControlResourceTest extends ResourceTest {
     }
 
     @Test
+    public void retrieveProjectsByTeamTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        var localTeam = new Team();
+        localTeam.setName("test-team");
+        qm.persist(localTeam);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.addAccessTeam(super.team);
+        qm.persist(project);
+
+        // No projects assigned to local team
+        Response response = jersey.target(V1_ACL + "/team/" + localTeam.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        Assert.assertEquals(String.valueOf(0), response.getHeaderString(TOTAL_COUNT_HEADER));
+
+        // One project assigned to super team
+        response = jersey.target(V1_ACL + "/team/" + super.team.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+    }
+
+    @Test
     public void retrieveUserProjectsTest() {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
 
@@ -270,5 +300,4 @@ public class AccessControlResourceTest extends ResourceTest {
         assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER)).isNotNull();
         assertThat(response.getHeaders().get(TOTAL_COUNT_HEADER).get(0)).isEqualTo("0");
     }
-
 }

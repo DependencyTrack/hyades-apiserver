@@ -25,7 +25,7 @@ import alpine.model.Team;
 import alpine.model.User;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.event.kafka.KafkaTopics;
@@ -67,7 +67,7 @@ public class UserResourceAuthenticatedTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(UserResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     private ManagedUser testUser;
     private String jwt;

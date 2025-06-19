@@ -27,6 +27,8 @@
     <version>5.6.0-SNAPSHOT</version>
 
     <modules>
+        <module>support/datanucleus-plugin</module>
+        <module>support/liquibase</module>
         <module>alpine</module>
         <module>proto</module>
         <module>persistence-migration</module>
@@ -91,12 +93,17 @@
 
         <!-- Dependency versions -->
         <lib.assertj.version>3.27.3</lib.assertj.version>
-        <lib.jooq.version>3.20.4</lib.jooq.version>
-        <lib.junit-jupiter.version>5.13.0</lib.junit-jupiter.version>
+        <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
+        <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
+        <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
+        <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
+        <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
+        <lib.jooq.version>3.20.5</lib.jooq.version>
+        <lib.junit-jupiter.version>5.13.1</lib.junit-jupiter.version>
         <lib.liquibase.version>4.32.0</lib.liquibase.version>
-        <lib.postgresql.version>42.7.6</lib.postgresql.version>
+        <lib.postgresql.version>42.7.7</lib.postgresql.version>
         <lib.protobuf-java.version>4.31.1</lib.protobuf-java.version>
-        <lib.testcontainers.version>1.21.1</lib.testcontainers.version>
+        <lib.testcontainers.version>1.21.2</lib.testcontainers.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
 
         <!-- Number of JVM processes to use for unit test parallelization -->
@@ -142,6 +149,16 @@
             </dependency>
             <dependency>
                 <groupId>org.dependencytrack</groupId>
+                <artifactId>datanucleus-plugin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>liquibase-support</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
                 <artifactId>persistence-migration</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -160,6 +177,33 @@
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
                 <version>${lib.assertj.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.datanucleus</groupId>
+                <artifactId>datanucleus-api-jdo</artifactId>
+                <version>${lib.datanucleus-api-jdo.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.datanucleus</groupId>
+                <artifactId>datanucleus-core</artifactId>
+                <version>${lib.datanucleus-core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.datanucleus</groupId>
+                <artifactId>javax.jdo</artifactId>
+                <version>${lib.datanucleus-javax-jdo.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.datanucleus</groupId>
+                <artifactId>datanucleus-rdbms</artifactId>
+                <version>${lib.datanucleus-rdbms.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.uuid</groupId>
+                <artifactId>java-uuid-generator</artifactId>
+                <version>${lib.java-uuid-generator.version}</version>
             </dependency>
 
             <dependency>
@@ -273,6 +317,23 @@
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>0.8.13</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.datanucleus</groupId>
+                    <artifactId>datanucleus-maven-plugin</artifactId>
+                    <version>6.0.0-release</version>
+                    <dependencies>
+                        <!--
+                          The DataNucleus Enhancer still depends on SLF4J 1.x and will
+                          fail if that version is not present.
+                        -->
+                        <dependency>
+                            <groupId>org.slf4j</groupId>
+                            <artifactId>slf4j-nop</artifactId>
+                            <version>1.7.36</version>
+                        </dependency>
+                    </dependencies>
                 </plugin>
             </plugins>
         </pluginManagement>

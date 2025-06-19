@@ -26,19 +26,18 @@
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>10.2.1</lib.cyclonedx-java.version>
-        <lib.datanucleus-postgresql.version>0.3.0</lib.datanucleus-postgresql.version>
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
-        <lib.jackson.version>2.19.0</lib.jackson.version>
+        <lib.jackson.version>2.19.1</lib.jackson.version>
         <lib.jackson-databind.version>2.18.3</lib.jackson-databind.version>
         <lib.jersey.version>3.1.10</lib.jersey.version>
-        <lib.jdbi.version>3.49.4</lib.jdbi.version>
+        <lib.jdbi.version>3.49.5</lib.jdbi.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
         <lib.kafka.version>3.9.0</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.17</lib.minio.version>
         <lib.kotlin-stdlib.version>2.1.21</lib.kotlin-stdlib.version>
-        <lib.wiremock.version>3.13.0</lib.wiremock.version>
+        <lib.wiremock.version>3.13.1</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.3.2</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.4</lib.pebble.version>
@@ -51,7 +50,7 @@
         <lib.junit-params.version>1.1.1</lib.junit-params.version>
         <lib.log4j-over-slf4j.version>2.0.17</lib.log4j-over-slf4j.version>
         <lib.httpclient.version>4.5.14</lib.httpclient.version>
-        <lib.net.javacrumbs.shedlock.version>6.8.0</lib.net.javacrumbs.shedlock.version>
+        <lib.net.javacrumbs.shedlock.version>6.9.0</lib.net.javacrumbs.shedlock.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
 
         <!-- CycloneDX CLI -->
@@ -79,6 +78,14 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>datanucleus-plugin</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>liquibase-support</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>persistence-jooq</artifactId>
@@ -185,12 +192,6 @@
             <groupId>org.cyclonedx</groupId>
             <artifactId>cyclonedx-core-java</artifactId>
             <version>${lib.cyclonedx-java.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.github.nscuro</groupId>
-            <artifactId>datanucleus-postgresql</artifactId>
-            <version>${lib.datanucleus-postgresql.version}</version>
         </dependency>
 
         <dependency>
@@ -323,7 +324,7 @@
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-artifact</artifactId>
-            <version>3.9.9</version>
+            <version>3.9.10</version>
         </dependency>
 
         <dependency>
@@ -563,7 +564,6 @@
             <plugin>
                 <groupId>org.datanucleus</groupId>
                 <artifactId>datanucleus-maven-plugin</artifactId>
-                <version>6.0.0-release</version>
                 <configuration>
                     <api>JDO</api>
                     <persistenceUnitName>Alpine</persistenceUnitName>
@@ -578,17 +578,6 @@
                         </goals>
                     </execution>
                 </executions>
-                <dependencies>
-                    <!--
-                      The DataNucleus Enhancer still depends on SLF4J 1.x and will
-                      fail if that version is not present.
-                    -->
-                    <dependency>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-nop</artifactId>
-                        <version>1.7.36</version>
-                    </dependency>
-                </dependencies>
             </plugin>
 
             <plugin>
@@ -657,6 +646,7 @@
                                 <copy file="${project.build.directory}/bom.json"
                                       tofile="${project.build.directory}/${project.build.finalName}/.well-known/sbom"/>
                             </target>
+                            <skip>${cyclonedx.skip}</skip>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -671,6 +661,7 @@
                                 <copy file="${project.build.directory}/${project.build.finalName}.war"
                                       tofile="${project.build.directory}/${project.build.finalName}.jar" />
                             </target>
+                            <skip>${maven.war.skip}</skip>
                         </configuration>
                         <goals>
                             <goal>run</goal>
@@ -736,7 +727,7 @@
             <plugin>
                 <groupId>org.eclipse.jetty.ee10</groupId>
                 <artifactId>jetty-ee10-maven-plugin</artifactId>
-                <version>12.0.21</version>
+                <version>12.0.22</version>
                 <configuration>
                     <webApp>
                         <!-- Disable classpath scanning. -->

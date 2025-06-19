@@ -20,8 +20,12 @@ package org.dependencytrack.resources.v1;
 
 import alpine.common.util.UuidUtil;
 import alpine.model.IConfigProperty;
+import alpine.model.ManagedUser;
+import alpine.model.Permission;
+import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -52,6 +56,7 @@ import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
@@ -118,7 +123,8 @@ public class BomResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(BomResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class)
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class)
                     .register(MultiPartFeature.class));
 
     @Rule
@@ -134,6 +140,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c = new Component();
         c.setProject(project);
@@ -151,6 +159,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxInvalidTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Response response = jersey.target(V1_BOM + "/cyclonedx/project/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -192,7 +202,45 @@ public class BomResourceTest extends ResourceTest {
     }
 
     @Test
+    public void exportProjectAsCycloneDxAclUserTest() {
+        enablePortfolioAccessControl();
+
+        final ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(testUser);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final Supplier<Response> responseSupplier = () -> jersey
+                .target(V1_BOM + "/cyclonedx/project/" + project.getUuid())
+                .queryParam("variant", "inventory")
+                .request()
+                .header("Authorization", "Bearer " + jwt)
+                .get(Response.class);
+
+        Response response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_FORBIDDEN);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+
+        final Permission permission = qm.createPermission("VIEW_PORTFOLIO", null);
+        final Role role = qm.createRole("Test Role", List.of(permission));
+        qm.addRoleToUser(testUser, role, project);
+
+        response = responseSupplier.get();
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
+    }
+
+    @Test
     public void exportProjectAsCycloneDxInventoryTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
@@ -426,6 +474,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxLicenseTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         Component c = new Component();
         c.setProject(project);
@@ -501,6 +551,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxInventoryWithVulnerabilitiesTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
@@ -697,6 +749,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxVdrTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
         vulnerability.setSource(Vulnerability.Source.INTERNAL);
@@ -886,6 +940,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportComponentAsCycloneDx() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         Component c = new Component();
         c.setProject(project);
@@ -903,6 +959,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportComponentAsCycloneDxInvalid() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
         Response response = jersey.target(V1_BOM + "/cyclonedx/component/" + UUID.randomUUID()).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
@@ -1116,6 +1174,8 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomUnauthorizedTest() throws Exception {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, false, bomString);

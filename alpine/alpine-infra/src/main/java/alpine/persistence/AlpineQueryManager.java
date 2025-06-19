@@ -727,9 +727,14 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      */
     public Permission createPermission(final String name, final String description) {
         return callInTransaction(() -> {
+            final Permission existing = getPermission(name);
+            if (existing != null)
+                return existing;
+
             final var permission = new Permission();
             permission.setName(name);
             permission.setDescription(description);
+
             return pm.makePersistent(permission);
         });
     }

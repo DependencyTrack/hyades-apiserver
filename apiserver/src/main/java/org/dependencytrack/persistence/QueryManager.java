@@ -42,6 +42,7 @@ import io.github.resilience4j.retry.RetryConfig;
 import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.AffectedVersionAttribution;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalyzerIdentity;
@@ -107,8 +108,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -478,22 +481,6 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Get the IDs of the {@link UserProjectRole}s a given {@link Principal} is a member of.
-     *
-     * @return A {@link Set} of {@link UserProjectRole} IDs
-     */
-    protected Set<Long> getRoleIds(final Principal principal, final Project project) {
-        final Query<UserProjectRole> query = pm.newQuery(UserProjectRole.class)
-                .filter("project.id == :projectId && users.contains(:principal)")
-                .setNamedParameters(Map.ofEntries(
-                    Map.entry("principal", principal),
-                    Map.entry("projectId", project.getId())))
-                .result("this.id");
-
-        return Set.copyOf(executeAndCloseResultList(query, Long.class));
-    }
-
-    /**
      * Get the IDs of the {@link Team}s a given {@link Principal} is a member of.
      *
      * @return A {@link Set} of {@link Team} IDs
@@ -511,17 +498,6 @@ public class QueryManager extends AlpineQueryManager {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //// BEGIN WRAPPER METHODS                                                                                      ////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public PaginatedResult getProjects(final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot, final Team notAssignedToTeam) {
-        return getProjectQueryManager().getProjects(includeMetrics, excludeInactive, onlyRoot, notAssignedToTeam);
-    }
-
-    public PaginatedResult getProjects(final boolean includeMetrics) {
-        return getProjectQueryManager().getProjects(includeMetrics);
-    }
-
-    public PaginatedResult getProjects() {
-        return getProjectQueryManager().getProjects();
-    }
 
     public List<Project> getAllProjects() {
         return getProjectQueryManager().getAllProjects();
@@ -531,20 +507,12 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getAllProjects(excludeInactive);
     }
 
-    public PaginatedResult getProjects(final String name, final boolean excludeInactive, final boolean onlyRoot, final Team notAssignedToTeam) {
-        return getProjectQueryManager().getProjects(name, excludeInactive, onlyRoot, notAssignedToTeam);
-    }
-
     public Project getProject(final String uuid) {
         return getProjectQueryManager().getProject(uuid);
     }
 
     public Project getProject(final String name, final String version) {
         return getProjectQueryManager().getProject(name, version);
-    }
-
-    public PaginatedResult getProjects(final Team team, final boolean excludeInactive, final boolean bypass, final boolean onlyRoot) {
-        return getProjectQueryManager().getProjects(team, excludeInactive, bypass, onlyRoot);
     }
 
     public Project getLatestProjectVersion(final String name) {
@@ -563,16 +531,8 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().hasAccess(principal, project);
     }
 
-    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params, final boolean bypass) {
-        getProjectQueryManager().preprocessACLs(query, inputFilter, params, bypass);
-    }
-
-    public PaginatedResult getProjects(final Tag tag, final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot) {
-        return getProjectQueryManager().getProjects(tag, includeMetrics, excludeInactive, onlyRoot);
-    }
-
-    public PaginatedResult getProjects(final Classifier classifier, final boolean includeMetrics, final boolean excludeInactive, final boolean onlyRoot) {
-        return getProjectQueryManager().getProjects(classifier, includeMetrics, excludeInactive, onlyRoot);
+    void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params) {
+        getProjectQueryManager().preprocessACLs(query, inputFilter, params);
     }
 
     public PaginatedResult getChildrenProjects(final UUID uuid, final boolean includeMetrics, final boolean excludeInactive) {
@@ -1235,6 +1195,29 @@ public class QueryManager extends AlpineQueryManager {
         return getNotificationQueryManager().bind(notificationRule, tags);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Set<String> getEffectivePermissions(Principal principal) {
+        // Get effective permissions for the principal, either
+        // directly assigned or based on their team membership
+        final Set<String> permissions = new HashSet<>();
+        permissions.addAll(Objects.requireNonNullElse(
+                super.getEffectivePermissions(principal), Collections.emptyList()));
+
+        if (!(principal instanceof User user))
+            return permissions;
+
+        List<UserProjectRole> userRoles = getUserRoles(user.getUsername());
+
+        // If a user has a role on any project, grant VIEW_PORTFOLIO permission
+        if (userRoles != null && !userRoles.isEmpty())
+            permissions.add(Permissions.Constants.VIEW_PORTFOLIO);
+
+        return permissions;
+    }
+
     public List<Permission> getEffectivePermissions(User user, Project project) {
         return JdbiFactory.withJdbiHandle(request, handle -> handle.attach(EffectivePermissionDao.class)
                 .getEffectivePermissions(user.getId(), project.getId()));
@@ -1732,27 +1715,35 @@ public class QueryManager extends AlpineQueryManager {
 
     /**
      * @param projectTableAlias Name or alias of the {@code PROJECT} table to use in the condition.
-     * @return A SQL condition that may be used to check if the {@link #principal} has access to a project
+     * @return A SQL condition that may be used to check if the {@link Principal} has access to a project
      * @since 4.12.0
      */
     public Map.Entry<String, Map<String, Object>> getProjectAclSqlCondition(final String projectTableAlias) {
-        if (request == null) {
+        if (request == null
+                || principal == null
+                || !isEnabled(ACCESS_MANAGEMENT_ACL_ENABLED)
+                || hasAccessManagementPermission(principal))
             return Map.entry("TRUE", Collections.emptyMap());
+
+        final Set<Long> teamIds = getTeamIds(principal);
+        final Map<String, Object> params = new HashMap<>();
+        final String conditionTemplate;
+
+        switch (principal) {
+            case User user -> {
+                params.put("userId", user.getId());
+                conditionTemplate = "HAS_USER_PROJECT_ACCESS(\"%s\".\"ID\", :userId)";
+            }
+            case ApiKey apiKey when !teamIds.isEmpty() -> {
+                params.put("projectAclTeamIds", teamIds.toArray(Long[]::new));
+                conditionTemplate = "HAS_PROJECT_ACCESS(\"%s\".\"ID\", :projectAclTeamIds)";
+            }
+            default -> {
+                return Map.entry("FALSE", Collections.emptyMap());
+            }
         }
 
-        if (principal == null || !isEnabled(ACCESS_MANAGEMENT_ACL_ENABLED) || hasAccessManagementPermission(principal)) {
-            return Map.entry("TRUE", Collections.emptyMap());
-        }
-
-        final var teamIds = new ArrayList<>(getTeamIds(principal));
-        if (teamIds.isEmpty()) {
-            return Map.entry("FALSE", Collections.emptyMap());
-        }
-
-        final var params = new HashMap<String, Object>();
-        params.put("projectAclTeamIds", teamIds.toArray(new Long[0]));
-
-        return Map.entry("HAS_PROJECT_ACCESS(\"%s\".\"ID\", :projectAclTeamIds)".formatted(projectTableAlias), params);
+        return Map.entry(conditionTemplate.formatted(projectTableAlias), params); 
     }
 
     /**

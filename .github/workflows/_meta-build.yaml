@@ -96,7 +96,7 @@ jobs:
         uses: docker/setup-qemu-action@v3.6.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.10.0
+        uses: docker/setup-buildx-action@v3.11.0
         id: buildx
         with:
           install: true
@@ -140,7 +140,7 @@ jobs:
 
       - name: Run Trivy Vulnerability Scanner
         if: ${{ inputs.publish-container }}
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@0.31.0
         with:
           image-ref: ghcr.io/dependencytrack/hyades-apiserver:${{ inputs.app-version }}
           format: 'sarif'

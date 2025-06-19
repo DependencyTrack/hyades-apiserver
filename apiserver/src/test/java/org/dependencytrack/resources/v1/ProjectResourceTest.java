@@ -25,7 +25,16 @@ import alpine.model.ManagedUser;
 import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
+import com.github.packageurl.PackageURL;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -48,6 +57,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
@@ -69,14 +79,6 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonObjectBuilder;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -115,7 +117,7 @@ public class ProjectResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(ProjectResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     @After
     @Override
@@ -142,13 +144,89 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals("999", json.getJsonObject(0).getString("version"));
     }
 
+    @Test
+    public void getProjectsWithDataTest() throws Exception {
+        var project = qm.createProject("Acme Example", null, "1.0", null, null, new PackageURL(RepositoryType.MAVEN.toString(), "foo", "acme", "1.0", null, null), null, false);
+        var component = new Component();
+        component.setProject(project);
+        component.setName("Acme Component");
+        component.setVersion("1.0");
+        qm.createComponent(component, false);
+
+        project.setAuthor("author");
+        project.setClassifier(Classifier.APPLICATION);
+        project.setDescription("project description");
+        project.setExternalReferences(List.of(new ExternalReference()));
+        project.setLastBomImport(new java.util.Date());
+        project.setLastBomImportFormat("projectBomFormat");
+        project.setLastInheritedRiskScore(7.7);
+        project.setPublisher("projectPublisher");
+
+        final var projectContact = new OrganizationalContact();
+        projectContact.setName("supplierContactName");
+        final var projectSupplier = new OrganizationalEntity();
+        projectSupplier.setName("supplierName");
+        projectSupplier.setUrls(new String[]{"https://supplier.example.com"});
+        projectSupplier.setContacts(List.of(projectContact));
+        project.setSupplier(projectSupplier);
+
+        final var projectManufacturer = new OrganizationalEntity();
+        projectManufacturer.setName("manufacturerName");
+        projectManufacturer.setUrls(new String[]{"https://manufacturer.example.com"});
+        projectManufacturer.setContacts(List.of(projectContact));
+        project.setManufacturer(projectManufacturer);
+
+        qm.bind(project, List.of(qm.createTag("foo")));
+
+        final Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [ {
+                   "publisher" : "projectPublisher",
+                   "manufacturer" : {
+                     "name" : "manufacturerName",
+                     "urls" : [ "https://manufacturer.example.com" ],
+                     "contacts" : [ {
+                       "name" : "supplierContactName"
+                     } ]
+                   },
+                   "supplier" : {
+                     "name" : "supplierName",
+                     "urls" : [ "https://supplier.example.com" ],
+                     "contacts" : [ {
+                       "name" : "supplierContactName"
+                     } ]
+                   },
+                   "name" : "Acme Example",
+                   "description" : "project description",
+                   "version" : "1.0",
+                   "classifier" : "APPLICATION",
+                   "purl" : "pkg:maven/foo/acme@1.0",
+                   "uuid" : "${json-unit.any-string}",
+                   "tags" : [ {
+                     "name" : "foo"
+                   } ],
+                   "lastBomImport" : "${json-unit.any-number}",
+                   "lastBomImportFormat" : "projectBomFormat",
+                   "lastInheritedRiskScore" : 7.7,
+                   "externalReferences" : [ { } ],
+                   "isLatest" : false,
+                   "active" : true
+                 } ]
+                """);
+    }
+
     @Test // https://github.com/DependencyTrack/dependency-track/issues/2583
     public void getProjectsWithAclEnabledTest() {
         enablePortfolioAccessControl();
+
         // Create project and give access to current principal's team.
         final Project accessProject = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
-        accessProject.setAccessTeams(Set.of(team));
-        qm.persist(accessProject);
+        accessProject.addAccessTeam(team);
 
         // Create a second project that the current principal has no access to.
         qm.createProject("acme-app-b", null, "2.0.0", null, null, null, null, false);
@@ -164,6 +242,154 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals(1, json.size());
         Assert.assertEquals("acme-app-a", json.getJsonObject(0).getString("name"));
         Assert.assertEquals("1.0.0", json.getJsonObject(0).getString("version"));
+    }
+
+    @Test
+    public void getProjectsPaginationTest() {
+        for (int i = 0; i < 3; i++) {
+            final var project = new Project();
+            project.setName("acme-app-" + (i+1));
+            qm.persist(project);
+        }
+
+        Response response = jersey.target(V1_PROJECT)
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "2")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("3");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                      "name" : "acme-app-1",
+                      "uuid" : "${json-unit.any-string}",
+                      "externalReferences" : [ ],
+                      "isLatest" : false,
+                      "active" : true
+                    }, {
+                      "name" : "acme-app-2",
+                      "uuid" : "${json-unit.any-string}",
+                      "externalReferences" : [ ],
+                      "isLatest" : false,
+                      "active" : true
+                  }
+                ]
+                """);
+
+        response = jersey.target(V1_PROJECT)
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "2")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("3");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                      "name" : "acme-app-3",
+                      "uuid" : "${json-unit.any-string}",
+                      "externalReferences" : [ ],
+                      "isLatest" : false,
+                      "active" : true
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectsByTagTest() {
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+
+        qm.bind(projectB, List.of(qm.createTag("foo")));
+
+        // Should not return results for partial matches.
+        Response response = jersey.target(V1_PROJECT + "/tag/" + "f")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Should return results for exact matches.
+        response = jersey.target(V1_PROJECT + "/tag/" + "foo")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                      "name" : "acme-app-b",
+                      "uuid" : "${json-unit.any-string}",
+                      "tags" : [ {
+                        "name" : "foo"
+                      } ],
+                      "externalReferences":[],
+                      "isLatest" : false,
+                      "active" : true
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectsNotAssignedToTeamWithUuidTest() {
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+        projectB.setAccessTeams(Set.of(team));
+
+        // Should exclude projectB as it is assigned to the team.
+        Response response = jersey.target(V1_PROJECT)
+                .queryParam("notAssignedToTeamWithUuid", team.getUuid())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [ {
+                   "name" : "acme-app-a",
+                   "uuid" : "${json-unit.any-string}",
+                   "externalReferences" : [ ],
+                   "isLatest" : false,
+                   "active" : true
+                 } ]
+                """);
+    }
+
+    @Test
+    public void getSingleProjectByNameTest() {
+        for (int i = 0; i < 10; i++) {
+            qm.createProject("Acme Example " + i, null, String.valueOf(i), null, null, null, null, false);
+        }
+        Response response = jersey.target(V1_PROJECT)
+                .queryParam("name", "Acme Example 7")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray json = parseJsonArray(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals(1, json.size());
+        Assert.assertEquals("Acme Example 7", json.getJsonObject(0).getString("name"));
+        Assert.assertEquals("7", json.getJsonObject(0).getString("version"));
     }
 
     @Test
@@ -183,6 +409,48 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals(100, json.size());
         Assert.assertEquals("Acme Example", json.getJsonObject(0).getString("name"));
         Assert.assertEquals("999", json.getJsonObject(0).getString("version"));
+    }
+
+    @Test
+    public void getProjectsByClassifierRequestTest() {
+        qm.createProject("Acme Example A", null, "1.0", null, null, null, null, false);
+        var p2 = qm.createProject("Acme Example B", null, "1.0", null, null, null, null, false);
+        p2.setClassifier(Classifier.LIBRARY);
+        Response response = jersey.target(V1_PROJECT + "/classifier/" + Classifier.LIBRARY.name())
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray json = parseJsonArray(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals(1, json.size());
+        Assert.assertEquals("Acme Example B", json.getJsonObject(0).getString("name"));
+        Assert.assertEquals("LIBRARY", json.getJsonObject(0).getString("classifier"));
+    }
+
+    @Test
+    public void getProjectsWithMetricsTest() {
+        var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        var projectMetrics = new ProjectMetrics();
+        projectMetrics.setProjectId(project.getId());
+        projectMetrics.setLow(10);
+        projectMetrics.setFirstOccurrence(Date.from(Instant.now()));
+        projectMetrics.setLastOccurrence(Date.from(Instant.now()));
+        withJdbiHandle(handle -> handle.attach(MetricsTestDao.class).createProjectMetrics(projectMetrics));
+        project.setMetrics(projectMetrics);
+
+        Response response = jersey.target(V1_PROJECT)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        Assert.assertEquals(200, response.getStatus(), 0);
+        Assert.assertEquals(String.valueOf(1), response.getHeaderString(TOTAL_COUNT_HEADER));
+        JsonArray json = parseJsonArray(response);
+        Assert.assertNotNull(json);
+        Assert.assertEquals(1, json.size());
+        Assert.assertEquals("Acme Example", json.getJsonObject(0).getString("name"));
+        Assert.assertEquals(10, json.getJsonObject(0).getJsonObject("metrics").getInt("low"));
     }
 
     @Test
@@ -221,6 +489,63 @@ public class ProjectResourceTest extends ResourceTest {
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
         Assert.assertEquals(100, json.size());
+    }
+
+    @Test
+    public void getProjectsOnlyRootTest() {
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setParent(projectA);
+        projectB.setName("acme-app-b");
+        projectB.setInactiveSince(new Date());
+        qm.persist(projectB);
+
+
+        // Should return both when onlyRoot=false.
+        var response = jersey.target(V1_PROJECT)
+                .queryParam("onlyRoot", "false")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [ {
+                   "name" : "acme-app-a",
+                   "uuid" : "${json-unit.any-string}",
+                   "externalReferences" : [ ],
+                   "isLatest" : false,
+                   "active" : true
+                 }, {
+                   "name" : "acme-app-b",
+                   "uuid" : "${json-unit.any-string}",
+                   "inactiveSince" : "${json-unit.any-number}",
+                   "externalReferences" : [ ],
+                   "isLatest" : false,
+                   "active" : false
+                 } ]
+                """);
+
+        // Should return only the parent when onlyRoot=true.
+        response = jersey.target(V1_PROJECT)
+                .queryParam("onlyRoot", "true")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [ {
+                   "name" : "acme-app-a",
+                   "uuid" : "${json-unit.any-string}",
+                   "externalReferences" : [ ],
+                   "isLatest" : false,
+                   "active" : true
+                 } ]
+                """);
     }
 
     @Test

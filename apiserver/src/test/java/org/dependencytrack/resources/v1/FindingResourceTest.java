@@ -24,7 +24,7 @@ import alpine.model.ApiKey;
 import alpine.model.ConfigProperty;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -75,7 +75,7 @@ public class FindingResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(FindingResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     @Test
     public void getFindingsByProjectTest() {
@@ -772,16 +772,16 @@ public class FindingResourceTest extends ResourceTest {
         assertEquals(p1.getName() ,json.getJsonObject(1).getJsonObject("component").getString("projectName"));
         assertEquals(p1.getVersion() ,json.getJsonObject(1).getJsonObject("component").getString("projectVersion"));
         assertEquals(p1.getUuid().toString(), json.getJsonObject(1).getJsonObject("component").getString("project"));
-        assertEquals(date.getTime(), json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
-        assertEquals(p1.getName() ,json.getJsonObject(3).getJsonObject("component").getString("projectName"));
-        assertEquals(p1.getVersion() ,json.getJsonObject(3).getJsonObject("component").getString("projectVersion"));
-        assertEquals(p1.getUuid().toString(), json.getJsonObject(3).getJsonObject("component").getString("project"));
+        assertEquals(date.getTime(), json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(p1.getName() ,json.getJsonObject(2).getJsonObject("component").getString("projectName"));
+        assertEquals(p1.getVersion() ,json.getJsonObject(2).getJsonObject("component").getString("projectVersion"));
+        assertEquals(p1.getUuid().toString(), json.getJsonObject(2).getJsonObject("component").getString("project"));
 
         // Findings of p1_child are returned because team was given access to its parent project p1.
-        assertEquals(date.getTime(), json.getJsonObject(2).getJsonObject("vulnerability").getJsonNumber("published").longValue());
-        assertEquals(p1_child.getName(), json.getJsonObject(2).getJsonObject("component").getString("projectName"));
-        assertEquals(p1_child.getVersion(), json.getJsonObject(2).getJsonObject("component").getString("projectVersion"));
-        assertEquals(p1_child.getUuid().toString(), json.getJsonObject(2).getJsonObject("component").getString("project"));
+        assertEquals(date.getTime(), json.getJsonObject(3).getJsonObject("vulnerability").getJsonNumber("published").longValue());
+        assertEquals(p1_child.getName(), json.getJsonObject(3).getJsonObject("component").getString("projectName"));
+        assertEquals(p1_child.getVersion(), json.getJsonObject(3).getJsonObject("component").getString("projectVersion"));
+        assertEquals(p1_child.getUuid().toString(), json.getJsonObject(3).getJsonObject("component").getString("project"));
     }
 
     @Test
