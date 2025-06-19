@@ -18,15 +18,25 @@
  */
 package org.dependencytrack.persistence;
 
+import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
+
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
+
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
-import org.junit.Test;
+import org.dependencytrack.model.Role;
 
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,6 +47,7 @@ import java.util.function.Function;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+@RunWith(JUnitParamsRunner.class)
 public class QueryManagerTest extends PersistenceCapableTest {
 
     @Test
@@ -93,6 +104,29 @@ public class QueryManagerTest extends PersistenceCapableTest {
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> qm.tryAcquireAdvisoryLock("foo"))
                 .withMessage("Advisory lock can only be acquired in a transaction");
+    }
+
+    @SuppressWarnings("unused")
+    private Object[] parametersForTestGetEffectivePermissionsRoles() {
+        return new Object[] {
+            new Object[] { false, Collections.emptySet() },
+            new Object[] { true, Set.of("VIEW_PORTFOLIO") }
+        };
+    }
+
+    @Test
+    @Parameters
+    public void testGetEffectivePermissionsRoles(boolean hasRole, Set<String> expected) {
+        final ManagedUser mgdUser = qm.createManagedUser("mgduser", "mgduser", "mgduser@localhost",
+                TEST_PASSWORD_HASH, true, false, false);
+
+        if (hasRole) {
+            final Role role = qm.createRole("Test Role", Collections.emptyList());
+            final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+            qm.addRoleToUser(mgdUser, role, project);
+        }
+
+        assertThat(qm.getEffectivePermissions(mgdUser)).isEqualTo(expected);
     }
 
     @Test

@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.event.framework.Event;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.filters.ResourceAccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -92,6 +93,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @ResourceAccessRequired
     public Response getVulnerabilityMetrics() {
         try (QueryManager qm = new QueryManager()) {
             final List<VulnerabilityMetrics> metrics = qm.getVulnerabilityMetrics();
@@ -115,6 +117,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @ResourceAccessRequired
     public Response getPortfolioCurrentMetrics() {
         PortfolioMetrics metrics = withJdbiHandle(handle ->
                 handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
@@ -138,6 +141,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @ResourceAccessRequired
     public Response getPortfolioMetricsSince(
             @Parameter(description = "The start date to retrieve metrics for", required = true)
             @PathParam("date") String date) {
@@ -167,6 +171,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @ResourceAccessRequired
     public Response getPortfolioMetricsXDays(
             @Parameter(description = "The number of days back to retrieve metrics for", required = true)
             @PathParam("days") int days) {
@@ -214,6 +219,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @ResourceAccessRequired
     public Response getProjectCurrentMetrics(
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -251,6 +257,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @ResourceAccessRequired
     public Response getProjectMetricsSince(
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -281,6 +288,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @ResourceAccessRequired
     public Response getProjectMetricsXDays(
             @Parameter(description = "The UUID of the project to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -343,6 +351,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @ResourceAccessRequired
     public Response getComponentCurrentMetrics(
             @Parameter(description = "The UUID of the component to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -380,6 +389,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @ResourceAccessRequired
     public Response getComponentMetricsSince(
             @Parameter(description = "The UUID of the component to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -413,6 +423,7 @@ public class MetricsResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @ResourceAccessRequired
     public Response getComponentMetricsXDays(
             @Parameter(description = "The UUID of the component to retrieve metrics for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
