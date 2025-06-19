@@ -37,6 +37,7 @@ import alpine.model.Team;
 import alpine.model.User;
 import alpine.resources.AlpineRequest;
 import alpine.security.ApiKeyGenerator;
+import org.datanucleus.store.rdbms.query.JDOQLQuery;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -49,8 +50,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.datanucleus.store.rdbms.query.JDOQLQuery;
 
 /**
  * This QueryManager provides a concrete extension of {@link AbstractAlpineQueryManager} by
@@ -586,6 +585,9 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         final Query<Team> query = pm.newQuery(Team.class);
         query.getFetchPlan().addGroup(Team.FetchGroup.ALL.name());
         query.setOrdering("name asc");
+        if (pagination != null && pagination.isPaginated()) {
+            query.setRange(pagination.getOffset(), pagination.getOffset() + pagination.getLimit());
+        }
         return executeAndCloseList(query);
     }
 

@@ -38,15 +38,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.TeamDao;
-import org.dependencytrack.resources.v1.vo.TeamSelfResponse;
-import org.dependencytrack.resources.v1.vo.VisibleTeams;
-import org.jdbi.v3.core.Handle;
-import org.owasp.security.logging.SecurityMarkers;
-
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -58,6 +49,16 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.TeamDao;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.vo.TeamSelfResponse;
+import org.dependencytrack.resources.v1.vo.VisibleTeams;
+import org.jdbi.v3.core.Handle;
+import org.owasp.security.logging.SecurityMarkers;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -86,6 +87,7 @@ public class TeamResource extends AlpineResource {
             summary = "Returns a list of all teams",
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
     )
+    @PaginatedApi
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",

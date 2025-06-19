@@ -32,6 +32,7 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.assertj.core.api.Assertions;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -92,6 +93,36 @@ public class TeamResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals(1001, json.size()); // There's already a built-in team in ResourceTest
         Assert.assertEquals("Team 0", json.getJsonObject(0).getString("name"));
+    }
+
+    @Test
+    public void getTeamsPaginationTest() {
+        for (int i = 0; i < 3; i++) {
+            final var team = new Team();
+            team.setName("team " + i);
+            qm.persist(team);
+        }
+
+        Response response = jersey.target(V1_TEAM)
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assertions.assertThat(response.getStatus()).isEqualTo(200);
+        // There's already a built-in team in ResourceTest
+        Assertions.assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("4");
+        assertThat(parseJsonArray(response).size()).isEqualTo(3);
+
+        response = jersey.target(V1_TEAM)
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "1")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assertions.assertThat(response.getStatus()).isEqualTo(200);
+        Assertions.assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("4");
+        assertThat(parseJsonArray(response).size()).isEqualTo(1);
     }
 
     @Test
