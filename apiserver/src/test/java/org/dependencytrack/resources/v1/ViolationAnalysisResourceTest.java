@@ -75,7 +75,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void retrieveAnalysisTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.POLICY_VIOLATION_READ);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -135,7 +135,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void retrieveAnalysisComponentNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.POLICY_VIOLATION_READ);
 
         final Response response = jersey.target(V1_VIOLATION_ANALYSIS)
                 .queryParam("component", UUID.randomUUID())
@@ -150,7 +150,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void retrieveAnalysisViolationNotFoundTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.POLICY_VIOLATION_READ);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -173,7 +173,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void retrieveAnalysisAclTest() {
-        initializeWithPermissions(Permissions.VIEW_POLICY_VIOLATION);
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.POLICY_VIOLATION_READ);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -211,7 +211,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisCreateNewTest() throws Exception {
-        initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
+        initializeWithPermissions(Permissions.PROJECT_UPDATE, Permissions.POLICY_VIOLATION_UPDATE);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -268,7 +268,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisCreateNewWithEmptyRequestTest() throws Exception {
-        initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
+        initializeWithPermissions(Permissions.PROJECT_UPDATE, Permissions.POLICY_VIOLATION_UPDATE);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -318,7 +318,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisUpdateExistingTest() throws Exception {
-        initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
+        initializeWithPermissions(Permissions.PROJECT_UPDATE, Permissions.POLICY_VIOLATION_UPDATE);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -386,7 +386,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisUpdateExistingNoChangesTest() throws Exception {
-        initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
+        initializeWithPermissions(Permissions.PROJECT_UPDATE, Permissions.POLICY_VIOLATION_UPDATE);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -434,7 +434,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisUpdateExistingWithEmptyRequestTest() throws Exception {
-        initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
+        initializeWithPermissions(Permissions.PROJECT_UPDATE, Permissions.POLICY_VIOLATION_UPDATE);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -507,7 +507,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisComponentNotFoundTest() {
-        initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
+        initializeWithPermissions(Permissions.PROJECT_UPDATE, Permissions.POLICY_VIOLATION_UPDATE);
 
         final var request = new ViolationAnalysisRequest(UUID.randomUUID().toString(),
                 UUID.randomUUID().toString(), ViolationAnalysisState.REJECTED, "Some comment", false);
@@ -523,7 +523,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisViolationNotFoundTest() {
-        initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
+        initializeWithPermissions(Permissions.PROJECT_UPDATE, Permissions.POLICY_VIOLATION_UPDATE);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -547,7 +547,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisAclTest() {
-        initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
+        initializeWithPermissions(Permissions.PROJECT_UPDATE, Permissions.POLICY_VIOLATION_UPDATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();

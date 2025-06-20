@@ -26,94 +26,76 @@ package org.dependencytrack.auth;
  */
 public enum Permissions {
 
-    BOM_UPLOAD("Allows the ability to upload CycloneDX Software Bill of Materials (SBOM)"),
-    VIEW_PORTFOLIO("Provides the ability to view the portfolio of projects, components, and licenses"),
-    PORTFOLIO_MANAGEMENT("Allows the creation, modification, and deletion of data in the portfolio"),
-    PORTFOLIO_MANAGEMENT_CREATE("Allows the creation of data in the portfolio"),
-    PORTFOLIO_MANAGEMENT_READ("Allows the reading of data in the portfolio"),
-    PORTFOLIO_MANAGEMENT_UPDATE("Allows the updating of data in the portfolio"),
-    PORTFOLIO_MANAGEMENT_DELETE("Allows the deletion of data in the portfolio"),
-    VIEW_VULNERABILITY("Provides the ability to view the vulnerabilities projects are affected by"),
-    VULNERABILITY_ANALYSIS("Provides all abilities to make analysis decisions on vulnerabilities"),
-    VULNERABILITY_ANALYSIS_CREATE("Provides the ability to upload supported VEX documents to a project"),
-    VULNERABILITY_ANALYSIS_READ("Provides the ability read the VEX document for a project"),
-    VULNERABILITY_ANALYSIS_UPDATE("Provides the ability to make analysis decisions on vulnerabilities and upload supported VEX documents for a project"),
-    VIEW_POLICY_VIOLATION("Provides the ability to view policy violations"),
-    VULNERABILITY_MANAGEMENT("Allows all management permissions of internally-defined vulnerabilities"),
-    VULNERABILITY_MANAGEMENT_CREATE("Allows creation of internally-defined vulnerabilities"),
-    VULNERABILITY_MANAGEMENT_READ("Allows reading internally-defined vulnerabilities"),
-    VULNERABILITY_MANAGEMENT_UPDATE("Allows updating internally-defined vulnerabilities and vulnerability tags"),
-    VULNERABILITY_MANAGEMENT_DELETE("Allows management of internally-defined vulnerabilities"),
-    POLICY_VIOLATION_ANALYSIS("Provides the ability to make analysis decisions on policy violations"),
-    ACCESS_MANAGEMENT("Allows the management of users, teams, and API keys"),
-    ACCESS_MANAGEMENT_CREATE("Allows create permissions of users, teams, and API keys"),
-    ACCESS_MANAGEMENT_READ("Allows read permissions of users, teams, and API keys"),
-    ACCESS_MANAGEMENT_UPDATE("Allows update permissions of users, teams, and API keys"),
-    ACCESS_MANAGEMENT_DELETE("Allows delete permissions of users, teams, and API keys"),
-    SYSTEM_CONFIGURATION("Allows all access to configuration of the system including notifications, repositories, and email settings"),
-    SYSTEM_CONFIGURATION_CREATE("Allows creating configuration of the system including notifications, repositories, and email settings"),
-    SYSTEM_CONFIGURATION_READ("Allows reading the configuration of the system including notifications, repositories, and email settings"),
-    SYSTEM_CONFIGURATION_UPDATE("Allows updating the configuration of the system including notifications, repositories, and email settings"),
-    SYSTEM_CONFIGURATION_DELETE("Allows deleting the configuration of the system including notifications, repositories, and email settings"),
-    PROJECT_CREATION_UPLOAD("Provides the ability to optionally create project (if non-existent) on BOM or scan upload"),
-    POLICY_MANAGEMENT("Allows the creation, modification, and deletion of policy"),
-    POLICY_MANAGEMENT_CREATE("Allows the creation of a policy"),
-    POLICY_MANAGEMENT_READ("Allows reading of policies"),
-    POLICY_MANAGEMENT_UPDATE("Allows the modification of a policy"),
-    POLICY_MANAGEMENT_DELETE("Allows the deletion of a policy"),
-    TAG_MANAGEMENT("Allows the modification and deletion of tags"),
-    TAG_MANAGEMENT_DELETE("Allows the deletion of a tag"),
-    VIEW_BADGES("Provides the ability to view badges");
+    // @formatter:off
+    ACCESS_MANAGEMENT("Allows the management of users, teams, and API keys", Scope.SYSTEM),
+    BADGES_READ("Provides the ability to view badges", Scope.PROJECT),
+    BOM_CREATE("Allows the ability to upload CycloneDX Software Bill of Materials (SBOM)", Scope.PROJECT),
+    BOM_READ("Allows the ability to view CycloneDX Software Bill of Materials (SBOM)", Scope.PROJECT),
+    FINDING_CREATE("Provides the ability to upload supported VEX documents to a project", Scope.PROJECT),
+    FINDING_READ("Provides the ability read the VEX document for a project", Scope.PROJECT),
+    FINDING_UPDATE("Provides the ability to make analysis decisions on vulnerabilities and upload supported VEX documents for a project", Scope.PROJECT),
+    NOTIFICATION_RULE("Allows configuration of notifications and email settings", Scope.SYSTEM),
+    POLICY_VIOLATION_CREATE("Provides the ability to create policy violations", Scope.PROJECT),
+    POLICY_VIOLATION_READ("Provides the ability to view policy violations", Scope.PROJECT),
+    POLICY_VIOLATION_UPDATE("Provides the ability to make analysis decisions on policy violations", Scope.PROJECT),
+    POLICY("Allows the creation, modification, and deletion of policy", Scope.SYSTEM),
+    PORTFOLIO("Allows the creation, modification, and deletion of data in the portfolio", Scope.SYSTEM),
+    PROJECT_DELETE("Provides the ability to delete resources within a project", Scope.PROJECT),
+    PROJECT_READ("Provides the ability to read resources within a project", Scope.PROJECT),
+    PROJECT_UPDATE("Provides the ability to update resources within a project", Scope.PROJECT),
+    SYSTEM_CONFIGURATION("Allows all access to configuration of the system including notifications, repositories, and email settings", Scope.SYSTEM),
+    TAG("Allows the management of global tag definitions", Scope.SYSTEM),
+    VULNERABILITY("Allows the management of custom vulnerabilities", Scope.SYSTEM);
+    // @formatter:on
+
+    enum Scope {
+        PROJECT, SYSTEM
+    }
 
     private final String description;
+    private final Scope scope;
 
-    Permissions(final String description) {
+    Permissions(final String description, final Scope scope) {
         this.description = description;
+        this.scope = scope;
     }
 
     public String getDescription() {
         return description;
     }
 
+    public Scope getScope() {
+        return scope;
+    }
+
+    public boolean isProject() {
+        return scope == Scope.PROJECT;
+    }
+
+    public boolean isSystem() {
+        return scope == Scope.SYSTEM;
+    }
+
     public static class Constants {
-        public static final String BOM_UPLOAD = "BOM_UPLOAD";
-        public static final String VIEW_PORTFOLIO = "VIEW_PORTFOLIO";
-        public static final String PORTFOLIO_MANAGEMENT = "PORTFOLIO_MANAGEMENT";
-        public static final String PORTFOLIO_MANAGEMENT_CREATE = "PORTFOLIO_MANAGEMENT_CREATE";
-        public static final String PORTFOLIO_MANAGEMENT_READ = "PORTFOLIO_MANAGEMENT_READ";
-        public static final String PORTFOLIO_MANAGEMENT_UPDATE = "PORTFOLIO_MANAGEMENT_UPDATE";
-        public static final String PORTFOLIO_MANAGEMENT_DELETE = "PORTFOLIO_MANAGEMENT_DELETE";
-        public static final String VIEW_VULNERABILITY = "VIEW_VULNERABILITY";
-        public static final String VULNERABILITY_ANALYSIS = "VULNERABILITY_ANALYSIS";
-        public static final String VULNERABILITY_ANALYSIS_CREATE = "VULNERABILITY_ANALYSIS_CREATE";
-        public static final String VULNERABILITY_ANALYSIS_READ = "VULNERABILITY_ANALYSIS_READ";
-        public static final String VULNERABILITY_ANALYSIS_UPDATE = "VULNERABILITY_ANALYSIS_UPDATE";
-        public static final String VIEW_POLICY_VIOLATION = "VIEW_POLICY_VIOLATION";
-        public static final String VULNERABILITY_MANAGEMENT = "VULNERABILITY_MANAGEMENT";
-        public static final String VULNERABILITY_MANAGEMENT_CREATE = "VULNERABILITY_MANAGEMENT_CREATE";
-        public static final String VULNERABILITY_MANAGEMENT_READ = "VULNERABILITY_MANAGEMENT_READ";
-        public static final String VULNERABILITY_MANAGEMENT_UPDATE = "VULNERABILITY_MANAGEMENT_UPDATE";
-        public static final String VULNERABILITY_MANAGEMENT_DELETE = "VULNERABILITY_MANAGEMENT_DELETE";
-        public static final String POLICY_VIOLATION_ANALYSIS = "POLICY_VIOLATION_ANALYSIS";
         public static final String ACCESS_MANAGEMENT = "ACCESS_MANAGEMENT";
-        public static final String ACCESS_MANAGEMENT_CREATE = "ACCESS_MANAGEMENT_CREATE";
-        public static final String ACCESS_MANAGEMENT_READ = "ACCESS_MANAGEMENT_READ";
-        public static final String ACCESS_MANAGEMENT_UPDATE = "ACCESS_MANAGEMENT_UPDATE";
-        public static final String ACCESS_MANAGEMENT_DELETE = "ACCESS_MANAGEMENT_DELETE";
+        public static final String BADGES_READ = "BADGES_READ";
+        public static final String BOM_CREATE = "BOM_CREATE";
+        public static final String BOM_READ = "BOM_READ";
+        public static final String FINDING_CREATE = "FINDING_CREATE";
+        public static final String FINDING_READ = "FINDING_READ";
+        public static final String FINDING_UPDATE = "FINDING_UPDATE";
+        public static final String NOTIFICATION_RULE = "NOTIFICATION_RULE";
+        public static final String POLICY = "POLICY";
+        public static final String POLICY_VIOLATION_CREATE = "POLICY_VIOLATION_CREATE";
+        public static final String POLICY_VIOLATION_READ = "POLICY_VIOLATION_READ";
+        public static final String POLICY_VIOLATION_UPDATE = "POLICY_VIOLATION_UPDATE";
+        public static final String PORTFOLIO = "PORTFOLIO";
+        public static final String PROJECT_DELETE = "PROJECT_DELETE";
+        public static final String PROJECT_READ = "PROJECT_READ";
+        public static final String PROJECT_UPDATE = "PROJECT_UPDATE";
         public static final String SYSTEM_CONFIGURATION = "SYSTEM_CONFIGURATION";
-        public static final String SYSTEM_CONFIGURATION_CREATE = "SYSTEM_CONFIGURATION_CREATE";
-        public static final String SYSTEM_CONFIGURATION_READ = "SYSTEM_CONFIGURATION_READ";
-        public static final String SYSTEM_CONFIGURATION_UPDATE = "SYSTEM_CONFIGURATION_UPDATE";
-        public static final String SYSTEM_CONFIGURATION_DELETE = "SYSTEM_CONFIGURATION_DELETE";
-        public static final String PROJECT_CREATION_UPLOAD = "PROJECT_CREATION_UPLOAD";
-        public static final String POLICY_MANAGEMENT = "POLICY_MANAGEMENT";
-        public static final String POLICY_MANAGEMENT_CREATE = "POLICY_MANAGEMENT_CREATE";
-        public static final String POLICY_MANAGEMENT_READ = "POLICY_MANAGEMENT_READ";
-        public static final String POLICY_MANAGEMENT_UPDATE = "POLICY_MANAGEMENT_UPDATE";
-        public static final String POLICY_MANAGEMENT_DELETE = "POLICY_MANAGEMENT_DELETE";
-        public static final String TAG_MANAGEMENT = "TAG_MANAGEMENT";
-        public static final String TAG_MANAGEMENT_DELETE = "TAG_MANAGEMENT_DELETE";
-        public static final String VIEW_BADGES = "VIEW_BADGES";
+        public static final String TAG = "TAG";
+        public static final String VULNERABILITY = "VULNERABILITY";
     }
 
 }

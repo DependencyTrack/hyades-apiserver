@@ -120,7 +120,7 @@ public class BomResource extends AbstractApiResource {
     @Produces({CycloneDxMediaType.APPLICATION_CYCLONEDX_XML, CycloneDxMediaType.APPLICATION_CYCLONEDX_JSON, MediaType.APPLICATION_OCTET_STREAM})
     @Operation(
             summary = "Returns dependency metadata for a project in CycloneDX format",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>BOM_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -135,7 +135,7 @@ public class BomResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.BOM_READ })
     @ResourceAccessRequired
     public Response exportProjectAsCycloneDx(
             @Parameter(description = "The UUID of the project to export", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -196,7 +196,7 @@ public class BomResource extends AbstractApiResource {
     @Produces({CycloneDxMediaType.APPLICATION_CYCLONEDX_XML, CycloneDxMediaType.APPLICATION_CYCLONEDX_JSON})
     @Operation(
             summary = "Returns dependency metadata for a specific component in CycloneDX format",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>BOM_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -211,7 +211,7 @@ public class BomResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.BOM_READ })
     @ResourceAccessRequired
     public Response exportComponentAsCycloneDx(
             @Parameter(description = "The UUID of the component to export", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -254,8 +254,7 @@ public class BomResource extends AbstractApiResource {
                       then the <code>projectName</code> and <code>projectVersion</code> must be specified.
                       Optionally, if <code>autoCreate</code> is specified and <code>true</code> and the project does not exist,
                       the project will be created. In this scenario, the principal making the request will
-                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>, 
-                      or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
+                      additionally need the <strong>PORTFOLIO</strong> permission.
                     </p>
                     <p>
                       The BOM will be validated against the CycloneDX schema. If schema validation fails,
@@ -267,7 +266,7 @@ public class BomResource extends AbstractApiResource {
                       When uploading large BOMs, the <code>POST</code> endpoint is preferred,
                       as it does not have this limit.
                     </p>
-                    <p>Requires permission <strong>BOM_UPLOAD</strong></p>""",
+                    <p>Requires permission <strong>BOM_CREATE</strong></p>""",
             operationId = "UploadBomBase64Encoded"
     )
     @ApiResponses(value = {
@@ -292,7 +291,7 @@ public class BomResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
+    @PermissionRequired(Permissions.Constants.BOM_CREATE)
     @ResourceAccessRequired
     public Response uploadBom(@Parameter(required = true) BomSubmitRequest request) {
         final Validator validator = getValidator();
@@ -314,7 +313,7 @@ public class BomResource extends AbstractApiResource {
             try (QueryManager qm = new QueryManager()) {
                 Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
                 if (project == null && request.isAutoCreate()) {
-                    if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
+                    if (hasPermission(Permissions.Constants.PORTFOLIO)) {
                         Project parent = null;
                         if (request.getParentUUID() != null || request.getParentName() != null) {
                             if (request.getParentUUID() != null) {
@@ -367,8 +366,7 @@ public class BomResource extends AbstractApiResource {
                       then the <code>projectName</code> and <code>projectVersion</code> must be specified.
                       Optionally, if <code>autoCreate</code> is specified and <code>true</code> and the project does not exist,
                       the project will be created. In this scenario, the principal making the request will
-                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>, 
-                      or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
+                      additionally need the <strong>PORTFOLIO</strong> permission.
                     </p>
                     <p>
                       MediaType supported for BOM artifact is 'application/xml', 'application/json' or 'application/x.vnd.cyclonedx+protobuf'.
@@ -376,7 +374,7 @@ public class BomResource extends AbstractApiResource {
                       a response with problem details in RFC 9457 format will be returned. In this case,
                       the response's content type will be <code>application/problem+json</code>.
                     </p>
-                    <p>Requires permission <strong>BOM_UPLOAD</strong></p>""",
+                    <p>Requires permission <strong>BOM_CREATE</strong></p>""",
             operationId = "UploadBom"
     )
     @ApiResponses(value = {
@@ -401,7 +399,8 @@ public class BomResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
+    @PermissionRequired(Permissions.Constants.BOM_CREATE)
+    @ResourceAccessRequired
     public Response uploadBom(
             @FormDataParam("project") String projectUuid,
             @DefaultValue("false") @FormDataParam("autoCreate") boolean autoCreate,
@@ -425,7 +424,7 @@ public class BomResource extends AbstractApiResource {
                 final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
                 Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
                 if (project == null && autoCreate) {
-                    if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
+                    if (hasPermission(Permissions.Constants.PORTFOLIO)) {
                         Project parent = null;
                         if (parentUUID != null || parentName != null) {
                             if (parentUUID != null) {

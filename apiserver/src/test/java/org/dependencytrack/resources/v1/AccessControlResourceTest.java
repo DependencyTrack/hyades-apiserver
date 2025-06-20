@@ -261,7 +261,7 @@ public class AccessControlResourceTest extends ResourceTest {
 
     @Test
     public void retrieveUserProjectsTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
 
         final var project1 = new Project();
         project1.setName("Project 1");
@@ -287,7 +287,7 @@ public class AccessControlResourceTest extends ResourceTest {
 
     @Test
     public void retrieveUserProjectsNoContentTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_READ);
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
 
         final ManagedUser user = qm.createManagedUser("user", TEST_PASSWORD_HASH);
 

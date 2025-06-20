@@ -24,6 +24,7 @@ import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.filters.ResourceAccessRequired;
 import com.google.protobuf.Any;
 import com.google.protobuf.util.Timestamps;
 import io.swagger.v3.oas.annotations.Operation;
@@ -93,7 +94,7 @@ public class AnalysisResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Retrieves an analysis trail",
-            description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>FINDING_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -108,7 +109,8 @@ public class AnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
+    @ResourceAccessRequired
     public Response retrieveAnalysis(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"))
                                      @QueryParam("project") @ValidUuid String projectUuid,
                                      @Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -149,7 +151,7 @@ public class AnalysisResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Records an analysis decision",
-            description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong></strong> or <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></strong> and <strong>FINDING_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -164,7 +166,8 @@ public class AnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
+    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_UPDATE })
+    @ResourceAccessRequired
     public Response updateAnalysis(AnalysisRequest request) {
         final Validator validator = getValidator();
         failOnValidationError(

@@ -27,13 +27,15 @@ import org.datanucleus.store.rdbms.sql.expression.BooleanLiteral;
 import org.datanucleus.store.rdbms.sql.expression.IntegerLiteral;
 import org.datanucleus.store.rdbms.sql.expression.ObjectExpression;
 import org.datanucleus.store.rdbms.sql.expression.SQLExpression;
+import org.datanucleus.store.rdbms.sql.expression.SQLLiteral;
 import org.datanucleus.store.rdbms.sql.expression.StringExpression;
 import org.datanucleus.store.rdbms.sql.expression.StringLiteral;
 import org.datanucleus.store.rdbms.sql.method.SQLMethod;
 import org.dependencytrack.model.Project;
 
 import java.util.List;
-import java.util.StringJoiner;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @since 5.6.0
@@ -45,11 +47,7 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
             final SQLStatement stmt,
             final SQLExpression expr,
             final List<SQLExpression> args) {
-        if (!(expr instanceof final ObjectExpression objectExpr))
-            // DataNucleus should prevent this from ever happening since
-            // the method is explicitly registered for java.lang.Object.
-            throw new IllegalStateException("Expected expression to be of type %s, but got: %s".formatted(
-                    ObjectExpression.class.getName(), expr.getClass().getName()));
+        final ObjectExpression objectExpr = validateType(expr, ObjectExpression.class);
 
         final String objectTypeName = objectExpr.getJavaTypeMapping().getType();
         if (!Project.class.getName().equals(objectTypeName))
@@ -57,89 +55,96 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
                     "isAccessibleBy is only allowed for objects of type %s, but was called on %s".formatted(
                             Project.class.getName(), objectTypeName));
 
-        if (args == null) {
-            throw new IllegalArgumentException();
-        } else if (args.size() != 1) {
-            throw new IllegalArgumentException("Expected exactly one argument, but got " + args.size());
-        }
-
         // TODO: When a list, set, etc. is passed as argument, it will be of type CollectionLiteral.
         //  Array literals are easier to verify the type of, hence we're focusing on that for now.
+        switch (args) {
+            case List<SQLExpression> a when a == null || a.isEmpty() -> throw new IllegalArgumentException();
+            case List<SQLExpression> a when a.size() == 1 -> {
+                final ArrayLiteral arrayLiteralArg = validateType(args.getFirst(), ArrayLiteral.class);
 
-        switch (args.getFirst()) {
-            case IntegerLiteral userIdArg -> {
-                return getUserExpression(stmt, objectExpr, userIdArg);
-            }
-            case ArrayLiteral arrayLiteralArg -> {
                 return getApiKeyExpression(stmt, objectExpr, arrayLiteralArg);
             }
-            default -> {
-                throw new IllegalArgumentException("Expected argument to be of type %s or %s, but got %s"
-                        .formatted(ArrayLiteral.class.getName(),
-                                IntegerLiteral.class.getName(),
-                                args.getFirst().getClass().getName()));
+            case List<SQLExpression> a when a.size() == 2 -> {
+                final IntegerLiteral userIdArg = validateType(args.getFirst(), IntegerLiteral.class);
+                final ArrayLiteral arrayLiteralArg = validateType(args.getLast(), ArrayLiteral.class);
+
+                return getUserExpression(stmt, objectExpr, userIdArg, arrayLiteralArg);
             }
+            default -> throw new IllegalArgumentException("Expected one or two arguments, but got " + args.size());
         }
     }
 
     private SQLExpression getApiKeyExpression(final SQLStatement stmt, final ObjectExpression objectExpr, final ArrayLiteral arrayLiteralArg) {
-        if (!(arrayLiteralArg.getValue() instanceof final Long[] teamIds))
-            throw new IllegalArgumentException(
-                    "Expected array argument to be of type %s, but got %s".formatted(
-                            Long[].class.getName(), arrayLiteralArg.getValue().getClass().getName()));
+        final Long[] teamIds = validateType(arrayLiteralArg.getValue(), Long[].class);
 
-        final JavaTypeMapping booleanTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(Boolean.class);
-        final JavaTypeMapping stringTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(String.class);
+        final JavaTypeMapping booleanTypeMapping = getTypeMapping(stmt, Boolean.class);
+        final JavaTypeMapping stringTypeMapping = getTypeMapping(stmt, String.class);
 
         // Transform the array literal to have the correct type for Postgres.
         // Will result in the following expression: cast('{1,2,3}' as bigint[])
-        final StringJoiner joiner = new StringJoiner(",", "{", "}");
-        for (final Long teamId : teamIds) {
-            joiner.add(String.valueOf(teamId));
-        }
-        final var teamIdsLiteral = new StringLiteral(
-                stmt, stringTypeMapping, joiner.toString(), null);
-        final var teamIdsExpr = new StringExpression(
-                stmt, stringTypeMapping, "cast", List.of(teamIdsLiteral), List.of("bigint[]"));
+        final String arrayString = Stream.of(teamIds).map(String::valueOf).collect(Collectors.joining(",", "{", "}"));
+        final StringLiteral arrayLiteral = new StringLiteral(stmt, stringTypeMapping, arrayString, null);
+        final StringExpression castExpr = new StringExpression(
+                stmt, stringTypeMapping, "cast", List.of(arrayLiteral), List.of("bigint[]"));
 
         // NB: objectExpr will compile to a reference of the object table's ID column, e.g.:
         //   * "A0"."ID"
         //   * "B0"."PROJECT_ID"
-        final var hasProjectAccessFunctionExpr = new StringExpression(
-                stmt, stringTypeMapping, "has_project_access", List.of(objectExpr, teamIdsExpr));
+        final StringExpression functionExpr = new StringExpression(
+                stmt, stringTypeMapping, "has_project_access", List.of(objectExpr, castExpr));
 
         // Wrap the function call in a boolean expression. Final result(s) will be:
         //   * has_project_access("A0"."ID", cast('{1,2,3}' as bigint[])) = TRUE
         //   * has_project_access("B0"."PROJECT_ID", cast('{1,2,3}' as bigint[])) = TRUE
-        final var booleanTrueLiteral = new BooleanLiteral(stmt, booleanTypeMapping, Boolean.TRUE, null);
+        final BooleanLiteral booleanTrueLiteral = new BooleanLiteral(stmt, booleanTypeMapping, Boolean.TRUE, null);
 
-        return new BooleanExpression(hasProjectAccessFunctionExpr, Expression.OP_EQ, booleanTrueLiteral);
+        return new BooleanExpression(functionExpr, Expression.OP_EQ, booleanTrueLiteral);
     }
 
-    private SQLExpression getUserExpression(final SQLStatement stmt, final ObjectExpression objectExpr, final IntegerLiteral userIdArg) {
-        if (!(userIdArg.getValue() instanceof final Long userId))
-            throw new IllegalArgumentException(
-                    "Expected user ID argument to be of type %s, but got %s".formatted(
-                            Long.class.getName(), userIdArg.getValue().getClass().getName()));
+    private SQLExpression getUserExpression(final SQLStatement stmt, final ObjectExpression objectExpr, final IntegerLiteral userIdArg, final ArrayLiteral arrayLiteralArg) {
+        final Long userId = validateType(userIdArg.getValue(), Long.class);
+        final String[] permissions = validateType(arrayLiteralArg.getValue(), String[].class);
 
-        final JavaTypeMapping booleanTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(Boolean.class);
-        final JavaTypeMapping stringTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(String.class);
-        final JavaTypeMapping integerTypeMapping = stmt.getSQLExpressionFactory().getMappingForType(Long.class);
+        final JavaTypeMapping booleanTypeMapping = getTypeMapping(stmt, Boolean.class);
+        final JavaTypeMapping integerTypeMapping = getTypeMapping(stmt, Long.class);
+        final JavaTypeMapping stringTypeMapping = getTypeMapping(stmt, String.class);
 
-        final var userIdLiteral = new IntegerLiteral(stmt, integerTypeMapping, userId, "userId");
+        final IntegerLiteral userIdLiteral = new IntegerLiteral(stmt, integerTypeMapping, userId, "userId");
+
+        // Transform the array literal to have the correct type for Postgres.
+        // Will result in the following expression: cast('{one,two,three}' as text[])
+        final String arrayString = Stream.of(permissions).collect(Collectors.joining(",", "{", "}"));
+        final StringLiteral arrayLiteral = new StringLiteral(stmt, stringTypeMapping, arrayString, null);
+        final StringExpression castExpr = new StringExpression(
+                stmt, stringTypeMapping, "cast", List.of(arrayLiteral), List.of("text[]"));
 
         // NB: objectExpr will compile to a reference of the object table's ID column, e.g.:
         //   * "A0"."ID"
         //   * "B0"."PROJECT_ID"
-        final var hasProjectAccessFunctionExpr = new StringExpression(
-                stmt, stringTypeMapping, "has_user_project_access", List.of(objectExpr, userIdLiteral));
+        final StringExpression functionExpr = new StringExpression(
+                stmt, stringTypeMapping, "has_user_project_access", List.of(objectExpr, userIdLiteral, castExpr));
 
         // Wrap the function call in a boolean expression. Final result(s) will be:
         //   * has_user_project_access("A0"."ID", 1) = TRUE
         //   * has_user_project_access("B0"."PROJECT_ID", 1) = TRUE
-        final var booleanTrueLiteral = new BooleanLiteral(stmt, booleanTypeMapping, Boolean.TRUE, null);
+        final BooleanLiteral booleanTrueLiteral = new BooleanLiteral(stmt, booleanTypeMapping, Boolean.TRUE, null);
 
-        return new BooleanExpression(hasProjectAccessFunctionExpr, Expression.OP_EQ, booleanTrueLiteral);
+        return new BooleanExpression(functionExpr, Expression.OP_EQ, booleanTrueLiteral);
+    }
+
+    private JavaTypeMapping getTypeMapping(final SQLStatement stmt, final Class<?> type) {
+        return stmt.getSQLExpressionFactory().getMappingForType(type);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T validateType(final Object arg, final Class<T> expected) {
+        final String argType = arg instanceof SQLLiteral ? "argument" : "expression";
+
+        if (!expected.isInstance(arg))
+            throw new IllegalArgumentException("Expected %s to be of type %s, but got %s"
+                    .formatted(argType, expected.getName(), arg.getClass().getName()));
+
+        return (T) arg;
     }
 
 }

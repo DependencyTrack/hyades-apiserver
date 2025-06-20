@@ -1,6 +1,7 @@
 CREATE OR REPLACE FUNCTION has_user_project_access(
   project_id BIGINT
 , user_id BIGINT
+, permissions TEXT[] DEFAULT '{PROJECT_READ}'
 ) RETURNS BOOL
   LANGUAGE "sql"
   PARALLEL SAFE
@@ -14,6 +15,6 @@ SELECT EXISTS(
       ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
    WHERE ph."CHILD_PROJECT_ID" = project_id
      AND upep."USER_ID" = user_id
-     AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+     AND upep."PERMISSION_NAME" = ALL(permissions)
 )
 $$;

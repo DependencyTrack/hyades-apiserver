@@ -127,7 +127,7 @@ public class BadgeResource extends AbstractApiResource {
             return false;
         }
 
-        final String[] permissions = { Permissions.Constants.VIEW_BADGES };
+        final String[] permissions = { Permissions.Constants.BADGES_READ };
 
         if (principal instanceof ApiKey) {
             final ApiKey apiKey = (ApiKey)principal;
@@ -167,7 +167,7 @@ public class BadgeResource extends AbstractApiResource {
     @Produces(SVG_MEDIA_TYPE)
     @Operation(
             summary = "Returns current metrics for a specific project",
-            description = "<p>Requires permission <strong>VIEW_BADGES</strong></p>"
+            description = "<p>Requires permission <strong>BADGES_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -214,7 +214,7 @@ public class BadgeResource extends AbstractApiResource {
     @Produces(SVG_MEDIA_TYPE)
     @Operation(
             summary = "Returns current metrics for a specific project",
-            description = "<p>Requires permission <strong>VIEW_BADGES</strong></p>"
+            description = "<p>Requires permission <strong>BADGES_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -263,7 +263,7 @@ public class BadgeResource extends AbstractApiResource {
     @Produces(SVG_MEDIA_TYPE)
     @Operation(
             summary = "Returns a policy violations badge for a specific project",
-            description = "<p>Requires permission <strong>VIEW_BADGES</strong></p>"
+            description = "<p>Requires permission <strong>BADGES_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -310,7 +310,7 @@ public class BadgeResource extends AbstractApiResource {
     @Produces(SVG_MEDIA_TYPE)
     @Operation(
             summary = "Returns a policy violations badge for a specific project",
-            description = "<p>Requires permission <strong>VIEW_BADGES</strong></p>"
+            description = "<p>Requires permission <strong>BADGES_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
