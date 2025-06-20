@@ -102,7 +102,7 @@ public class FindingResource extends AbstractApiResource {
     @Produces({MediaType.APPLICATION_JSON, MEDIA_TYPE_SARIF_JSON})
     @Operation(
             summary = "Returns a list of all findings for a specific project or generates SARIF file if Accept: application/sarif+json header is provided",
-            description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>FINDING_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -122,7 +122,7 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
     public Response getFindingsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                          @PathParam("uuid") @ValidUuid String uuid,
                                          @Parameter(description = "Optionally includes suppressed findings")
@@ -166,7 +166,7 @@ public class FindingResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns the findings for the specified project as FPF",
-            description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>FINDING_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -181,7 +181,7 @@ public class FindingResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
     public Response exportFindingsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
@@ -204,14 +204,14 @@ public class FindingResource extends AbstractApiResource {
     @Path("/portfolio/analyze")
     @Operation(
             summary = "Triggers Vulnerability Analysis for the entire portfolio",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Analysis triggered successfully"),
             @ApiResponse(responseCode = "304", description = "Analysis is already in progress"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE}) // Require admin privileges due to system impact
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION) // Require admin privileges due to system impact
     public Response analyzePortfolio() {
         LOGGER.info("Portfolio analysis requested by " + super.getPrincipal().getName());
         if (Event.isEventBeingProcessed(PortfolioRepositoryMetaAnalysisEvent.CHAIN_IDENTIFIER)) {
@@ -228,7 +228,7 @@ public class FindingResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Triggers Vulnerability Analysis on a specific project",
-            description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>FINDING_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -243,7 +243,7 @@ public class FindingResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
     public Response analyzeProject(
             @Parameter(description = "The UUID of the project to analyze", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -270,7 +270,7 @@ public class FindingResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all findings",
-            description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>FINDING_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -282,7 +282,7 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
     public Response getAllFindings(@Parameter(description = "Show inactive projects")
                                    @QueryParam("showInactive") boolean showInactive,
                                    @Parameter(description = "Show suppressed findings")
@@ -340,7 +340,7 @@ public class FindingResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all findings grouped by vulnerability",
-            description = "<p>Requires permission <strong>VIEW_VULNERABILITY</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>FINDING_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -352,7 +352,7 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
+    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
     public Response getAllFindings(@Parameter(description = "Show inactive projects")
                                    @QueryParam("showInactive") boolean showInactive,
                                    @Parameter(description = "Filter by severity")

@@ -110,7 +110,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
     private Object[] parametersForTestGetEffectivePermissionsRoles() {
         return new Object[] {
             new Object[] { false, Collections.emptySet() },
-            new Object[] { true, Set.of("VIEW_PORTFOLIO") }
+            new Object[] { true, Set.of("PROJECT_READ") }
         };
     }
 
@@ -148,30 +148,30 @@ public class QueryManagerTest extends PersistenceCapableTest {
         };
 
         var team1 = teamCreator.apply("Effective Permissions Test Team 1", List.of(
-                Permissions.PORTFOLIO_MANAGEMENT,
-                Permissions.VULNERABILITY_ANALYSIS,
-                Permissions.VULNERABILITY_MANAGEMENT,
+                Permissions.PORTFOLIO,
+                Permissions.FINDING_UPDATE,
+                Permissions.VULNERABILITY,
                 Permissions.ACCESS_MANAGEMENT,
                 Permissions.SYSTEM_CONFIGURATION,
-                Permissions.POLICY_MANAGEMENT));
+                Permissions.POLICY));
 
         var team2 = teamCreator.apply("Effective Permissions Test Team 2", List.of(
-                Permissions.VIEW_PORTFOLIO,
-                Permissions.VIEW_VULNERABILITY,
-                Permissions.VIEW_POLICY_VIOLATION,
-                Permissions.VIEW_BADGES));
+                Permissions.PROJECT_READ,
+                Permissions.FINDING_READ,
+                Permissions.POLICY_VIOLATION_READ,
+                Permissions.BADGES_READ));
 
         var team3 = teamCreator.apply("Effective Permissions Test Team 3", List.of(
-                Permissions.PORTFOLIO_MANAGEMENT_UPDATE,
-                Permissions.VULNERABILITY_ANALYSIS_UPDATE,
-                Permissions.VULNERABILITY_MANAGEMENT_UPDATE,
-                Permissions.ACCESS_MANAGEMENT_UPDATE,
-                Permissions.SYSTEM_CONFIGURATION_UPDATE,
-                Permissions.POLICY_MANAGEMENT_UPDATE));
+                Permissions.PORTFOLIO,
+                Permissions.FINDING_UPDATE,
+                Permissions.VULNERABILITY,
+                Permissions.ACCESS_MANAGEMENT,
+                Permissions.SYSTEM_CONFIGURATION,
+                Permissions.POLICY));
 
         var noAccessTeam = teamCreator.apply("Effective Permissions Test with No Access", List.of(
-                Permissions.BOM_UPLOAD,
-                Permissions.PROJECT_CREATION_UPLOAD));
+                Permissions.BOM_CREATE,
+                Permissions.TAG));
 
         qm.addUserToTeam(ldapUser, team1);
         qm.addUserToTeam(mgdUser, team2);
@@ -222,8 +222,8 @@ public class QueryManagerTest extends PersistenceCapableTest {
         }
 
         var permission = qm.createPermission(
-                Permissions.POLICY_VIOLATION_ANALYSIS.name(),
-                Permissions.POLICY_VIOLATION_ANALYSIS.getDescription());
+                Permissions.POLICY_VIOLATION_UPDATE.name(),
+                Permissions.POLICY_VIOLATION_UPDATE.getDescription());
 
         for (var entry : new TestMatrixEntry[] {
                 new TestMatrixEntry(ldapUser, project1, team1, List.of(project2, project3)),
@@ -247,7 +247,7 @@ public class QueryManagerTest extends PersistenceCapableTest {
             });
 
             assertThat(entry.getPermissionNames(qm.getEffectivePermissions(entry.user(), entry.project())))
-                    .contains(Permissions.POLICY_VIOLATION_ANALYSIS.name());
+                    .contains(Permissions.POLICY_VIOLATION_UPDATE.name());
         }
     }
 

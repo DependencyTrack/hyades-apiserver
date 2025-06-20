@@ -756,12 +756,12 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Query<?> query;
         switch (principal) {
             case User user -> {
-                query = pm.newQuery(Query.SQL, "SELECT has_user_project_access(?, ?)")
-                        .setParameters(project.getId(), user.getId());
+                query = pm.newQuery(Query.SQL, "SELECT has_user_project_access(?, ?, ?)").setParameters(
+                        project.getId(), user.getId(), new ArrayList<String>());
             }
             case ApiKey apiKey when !teamIds.isEmpty() -> {
-                query = pm.newQuery(Query.SQL, "SELECT has_project_access(?, ?)")
-                        .setParameters(project.getId(), teamIds.toArray(Long[]::new));
+                query = pm.newQuery(Query.SQL, "SELECT has_project_access(?, ?)").setParameters(
+                        project.getId(), teamIds.toArray(Long[]::new));
             }
             default -> {
                 return false;

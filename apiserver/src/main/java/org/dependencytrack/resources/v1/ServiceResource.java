@@ -77,7 +77,7 @@ class ServiceResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all services for a given project",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -94,7 +94,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getAllServices(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                    @PathParam("uuid") @ValidUuid String uuid) {
@@ -115,7 +115,7 @@ class ServiceResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a specific service",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -130,7 +130,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The service could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getServiceByUuid(
             @Parameter(description = "The UUID of the service to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -153,7 +153,7 @@ class ServiceResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Creates a new service",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -168,7 +168,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE})
+    @PermissionRequired(Permissions.Constants.PORTFOLIO)
     public Response createService(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                   @PathParam("uuid") @ValidUuid String uuid, ServiceComponent jsonService) {
         final Validator validator = super.getValidator();
@@ -211,7 +211,7 @@ class ServiceResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Updates a service",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -226,7 +226,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the service could not be found"),
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
+    @PermissionRequired(Permissions.Constants.PORTFOLIO)
     public Response updateService(ServiceComponent jsonService) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -267,7 +267,7 @@ class ServiceResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a service",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_DELETE</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Service removed successfully"),
@@ -278,7 +278,7 @@ class ServiceResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the service could not be found")
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
+    @PermissionRequired(Permissions.Constants.PORTFOLIO)
     public Response deleteService(
             @Parameter(description = "The UUID of the service to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

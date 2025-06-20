@@ -71,7 +71,7 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all license groups",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_READ</strong></p>"
+            description = "<p>Requires permission <strong>POLICY</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -83,7 +83,7 @@ public class LicenseGroupResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_READ})
+    @PermissionRequired(Permissions.Constants.POLICY)
     public Response getLicenseGroups() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final PaginatedResult result = qm.getLicenseGroups();
@@ -96,7 +96,7 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a specific license group",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_READ</strong></p>"
+            description = "<p>Requires permission <strong>POLICY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -107,7 +107,7 @@ public class LicenseGroupResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The license group could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_READ})
+    @PermissionRequired(Permissions.Constants.POLICY)
     public Response getLicenseGroup(
             @Parameter(description = "The UUID of the license group to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -126,7 +126,7 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Creates a new license group",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_CREATE</strong></p>"
+            description = "<p>Requires permission <strong>POLICY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -137,7 +137,7 @@ public class LicenseGroupResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "A license group with the specified name already exists")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_CREATE})
+    @PermissionRequired(Permissions.Constants.POLICY)
     public Response createLicenseGroup(LicenseGroup jsonLicenseGroup) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -160,7 +160,7 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Updates a license group",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
+            description = "<p>Requires permission <strong>POLICY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -171,7 +171,7 @@ public class LicenseGroupResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The license group could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
+    @PermissionRequired(Permissions.Constants.POLICY)
     public Response updateLicenseGroup(LicenseGroup jsonLicenseGroup) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -195,14 +195,14 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a license group",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_DELETE</strong></p>"
+            description = "<p>Requires permission <strong>POLICY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "License group removed successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the license group could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_DELETE})
+    @PermissionRequired(Permissions.Constants.POLICY)
     public Response deleteLicenseGroup(
             @Parameter(description = "The UUID of the license group to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -223,7 +223,7 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Adds the license to the specified license group.",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
+            description = "<p>Requires permission <strong>POLICY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -235,7 +235,7 @@ public class LicenseGroupResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The license group or license could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
+    @PermissionRequired(Permissions.Constants.POLICY)
     public Response addLicenseToLicenseGroup(
             @Parameter(description = "A valid license group", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -267,7 +267,7 @@ public class LicenseGroupResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Removes the license from the license group.",
-            description = "<p>Requires permission <strong>POLICY_MANAGEMENT</strong> or <strong>POLICY_MANAGEMENT_UPDATE</strong></p>"
+            description = "<p>Requires permission <strong>POLICY</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -279,7 +279,7 @@ public class LicenseGroupResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The license group or license could not be found")
     })
-    @PermissionRequired({Permissions.Constants.POLICY_MANAGEMENT, Permissions.Constants.POLICY_MANAGEMENT_UPDATE})
+    @PermissionRequired(Permissions.Constants.POLICY)
     public Response removeLicenseFromLicenseGroup(
             @Parameter(description = "A valid license group", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,

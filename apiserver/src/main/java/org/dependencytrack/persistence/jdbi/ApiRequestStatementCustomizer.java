@@ -34,6 +34,7 @@ import javax.jdo.Query;
 import java.security.Principal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -69,8 +70,9 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
 
     static final String PARAMETER_PROJECT_ACL_TEAM_IDS = "projectAclTeamIds";
     static final String PARAMETER_USER_ID = "projectAclUserId";
+    static final String PARAMETER_PERMISSIONS = "projectAclPermissions";
     static final String TEMPLATE_PROJECT_ACL_CONDITION = "HAS_PROJECT_ACCESS(%s, :projectAclTeamIds)";
-    static final String TEMPLATE_USER_PROJECT_ACL_CONDITION = "HAS_USER_PROJECT_ACCESS(%s, :projectAclUserId)";
+    static final String TEMPLATE_USER_PROJECT_ACL_CONDITION = "HAS_USER_PROJECT_ACCESS(%s, :projectAclUserId, :projectAclPermissions)";
 
     private final AlpineRequest apiRequest;
 
@@ -194,6 +196,8 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
                 ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION,
                         TEMPLATE_USER_PROJECT_ACL_CONDITION.formatted(config.projectAclProjectIdColumn()));
                 ctx.getBinding().addNamed(PARAMETER_USER_ID, user.getId(), QualifiedType.of(Long.class));
+                ctx.getBinding().addNamed(PARAMETER_PERMISSIONS, new LinkedHashSet<String>(),
+                        QualifiedType.of(parameterizeClass(Set.class, String.class)));
             }
             case ApiKey apiKey when !principalTeamIds.isEmpty() -> {
                 ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION,

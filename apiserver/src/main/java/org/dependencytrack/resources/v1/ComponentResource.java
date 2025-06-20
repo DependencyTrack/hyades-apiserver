@@ -111,7 +111,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all components for a given project",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -128,7 +128,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getAllComponents(
             @Parameter(description = "The UUID of the project to retrieve components for", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -154,7 +154,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a specific component",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -169,7 +169,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getComponentByUuid(
             @Parameter(description = "The UUID of the component to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -209,7 +209,7 @@ public class ComponentResource extends AbstractApiResource {
             summary = """
                     Provides the published date and hashes of the requested version of component,
                     as received from configured repositories for integrity analysis.""",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -221,7 +221,7 @@ public class ComponentResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The integrity meta information for the specified component cannot be found"),
             @ApiResponse(responseCode = "400", description = "The package url being queried for is invalid")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getIntegrityMetaComponent(
             @Parameter(description = "The package url of the component", required = true)
@@ -253,7 +253,7 @@ public class ComponentResource extends AbstractApiResource {
             summary = """
                     Provides the integrity check status of component with provided UUID,
                     based on the configured repository for integrity analysis.""",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -268,7 +268,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The integrity analysis information for the specified component cannot be found"),
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getIntegrityStatus(
             @Parameter(description = "UUID of the component for which integrity status information is needed", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -295,7 +295,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of components that have the specified component identity. This resource accepts coordinates (group, name, version) or purl, cpe, or swidTagId",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -311,7 +311,7 @@ public class ComponentResource extends AbstractApiResource {
                     description = "Access to the requested project is forbidden",
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON))
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getComponentByIdentity(@Parameter(description = "The group of the component")
                                            @QueryParam("group") String group,
@@ -362,7 +362,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of components that have the specified hash value",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -374,7 +374,7 @@ public class ComponentResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getComponentByHash(
             @Parameter(description = "The MD5, SHA-1, SHA-256, SHA-384, SHA-512, SHA3-256, SHA3-384, SHA3-512, BLAKE2b-256, BLAKE2b-384, BLAKE2b-512, or BLAKE3 hash of the component to retrieve", required = true)
@@ -391,7 +391,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Creates a new component",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -406,8 +406,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT,
-            Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
+    @PermissionRequired(Permissions.Constants.PORTFOLIO)
     public Response createComponent(@Parameter(description = "The UUID of the project to create a component for", schema = @Schema(format = "uuid"), required = true)
                                     @PathParam("uuid") @ValidUuid String uuid, Component jsonComponent) {
         final Validator validator = super.getValidator();
@@ -520,7 +519,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Updates a component",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_UPDATE</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -535,7 +534,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the component could not be found"),
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
+    @PermissionRequired(Permissions.Constants.PORTFOLIO)
     public Response updateComponent(Component jsonComponent) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -649,7 +648,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a component",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Component removed successfully"),
@@ -660,7 +659,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the component could not be found")
     })
-    @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE})
+    @PermissionRequired(Permissions.Constants.PORTFOLIO)
     public Response deleteComponent(
             @Parameter(description = "The UUID of the component to delete", schema = @Schema(format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -684,13 +683,13 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Requests the identification of internal components in the portfolio",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_READ</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Identification requested successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response identifyInternalComponents() {
         Event.dispatch(new InternalComponentIdentificationEvent());
         return Response.status(Response.Status.NO_CONTENT).build();
@@ -701,7 +700,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns the expanded dependency graph to every occurrence of a component",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -716,7 +715,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "- The UUID of the project could not be found\n- The UUID of the component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getDependencyGraphForComponent(
             @Parameter(description = "The UUID of the project to get the expanded dependency graph for", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -749,7 +748,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns the occurrences of a component",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>")
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>")
     @PaginatedApi
     @ApiResponses(value = {
             @ApiResponse(
@@ -767,7 +766,7 @@ public class ComponentResource extends AbstractApiResource {
                     description = "Component could not be found",
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getOccurrences(@PathParam("uuid") final UUID uuid) {
         final List<ComponentOccurrence> occurrences = withJdbiHandle(getAlpineRequest(), handle -> {
