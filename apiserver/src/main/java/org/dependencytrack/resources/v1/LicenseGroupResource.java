@@ -111,7 +111,7 @@ public class LicenseGroupResource extends AlpineResource {
     public Response getLicenseGroup(
             @Parameter(description = "The UUID of the license group to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, uuid);
             if (licenseGroup != null) {
                 return Response.ok(licenseGroup).build();
@@ -144,7 +144,7 @@ public class LicenseGroupResource extends AlpineResource {
                 validator.validateProperty(jsonLicenseGroup, "name")
         );
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             LicenseGroup licenseGroup = qm.getLicenseGroup(StringUtils.trimToNull(jsonLicenseGroup.getName()));
             if (licenseGroup == null) {
                 licenseGroup = qm.createLicenseGroup(StringUtils.trimToNull(jsonLicenseGroup.getName()));
@@ -177,7 +177,7 @@ public class LicenseGroupResource extends AlpineResource {
         failOnValidationError(
                 validator.validateProperty(jsonLicenseGroup, "name")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, jsonLicenseGroup.getUuid());
             if (licenseGroup != null) {
                 licenseGroup.setName(jsonLicenseGroup.getName());
@@ -206,7 +206,7 @@ public class LicenseGroupResource extends AlpineResource {
     public Response deleteLicenseGroup(
             @Parameter(description = "The UUID of the license group to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, uuid);
             if (licenseGroup != null) {
                 qm.delete(licenseGroup);
@@ -241,7 +241,7 @@ public class LicenseGroupResource extends AlpineResource {
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "A valid license", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("licenseUuid") @ValidUuid String licenseUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, uuid);
             if (licenseGroup == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The license group could not be found.").build();
@@ -285,7 +285,7 @@ public class LicenseGroupResource extends AlpineResource {
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "A valid license", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("licenseUuid") @ValidUuid String licenseUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             LicenseGroup licenseGroup = qm.getObjectByUuid(LicenseGroup.class, uuid);
             if (licenseGroup == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The license group could not be found.").build();

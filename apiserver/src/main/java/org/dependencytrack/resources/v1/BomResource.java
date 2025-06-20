@@ -146,7 +146,7 @@ public class BomResource extends AbstractApiResource {
             @QueryParam("variant") String variant,
             @Parameter(description = "Force the resulting BOM to be downloaded as a file (defaults to 'false')")
             @QueryParam("download") boolean download) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -218,7 +218,7 @@ public class BomResource extends AbstractApiResource {
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "The format to output (defaults to JSON)")
             @QueryParam("format") String format) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, uuid);
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
@@ -301,7 +301,7 @@ public class BomResource extends AbstractApiResource {
                     validator.validateProperty(request, "project"),
                     validator.validateProperty(request, "bom")
             );
-            try (QueryManager qm = new QueryManager()) {
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
                 final Project project = qm.getObjectByUuid(Project.class, request.getProject());
                 return process(qm, project, request.getBom());
             }
@@ -311,7 +311,7 @@ public class BomResource extends AbstractApiResource {
                     validator.validateProperty(request, "projectVersion"),
                     validator.validateProperty(request, "bom")
             );
-            try (QueryManager qm = new QueryManager()) {
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
                 Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
                 if (project == null && request.isAutoCreate()) {
                     if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
@@ -415,12 +415,12 @@ public class BomResource extends AbstractApiResource {
             @Parameter(schema = @Schema(type = "string")) @FormDataParam("bom") final List<FormDataBodyPart> artifactParts
     ) {
         if (projectUuid != null) { // behavior in v3.0.0
-            try (QueryManager qm = new QueryManager()) {
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
                 final Project project = qm.getObjectByUuid(Project.class, projectUuid);
                 return process(qm, project, artifactParts);
             }
         } else { // additional behavior added in v3.1.0
-            try (QueryManager qm = new QueryManager()) {
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
                 final String trimmedProjectName = StringUtils.trimToNull(projectName);
                 final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
                 Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
@@ -474,7 +474,7 @@ public class BomResource extends AbstractApiResource {
             try (final var encodedInputStream = new ByteArrayInputStream(encodedBomData.getBytes(StandardCharsets.UTF_8));
                  final var decodedInputStream = Base64.getDecoder().wrap(encodedInputStream);
                  final var byteOrderMarkInputStream = new BOMInputStream(decodedInputStream)) {
-                bomFileMetadata = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project);
+                bomFileMetadata = validateAndStoreBom(qm, IOUtils.toByteArray(byteOrderMarkInputStream), project);
             } catch (IOException e) {
                 LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -504,7 +504,7 @@ public class BomResource extends AbstractApiResource {
                 final FileMetadata bomFileMetadata;
                 try (final var inputStream = bodyPartEntity.getInputStream();
                      final var byteOrderMarkInputStream = new BOMInputStream(inputStream)) {
-                    bomFileMetadata = validateAndStoreBom(IOUtils.toByteArray(byteOrderMarkInputStream), project, artifactPart.getMediaType());
+                    bomFileMetadata = validateAndStoreBom(qm, IOUtils.toByteArray(byteOrderMarkInputStream), project, artifactPart.getMediaType());
                 } catch (IOException e) {
                     LOGGER.error("An unexpected error occurred while validating or storing a BOM uploaded to project: " + project.getUuid(), e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
@@ -527,12 +527,19 @@ public class BomResource extends AbstractApiResource {
         return Response.ok().build();
     }
 
-    private FileMetadata validateAndStoreBom(final byte[] bomBytes, final Project project) throws IOException {
-        return validateAndStoreBom(bomBytes, project, null);
+    private FileMetadata validateAndStoreBom(
+            final QueryManager qm,
+            final byte[] bomBytes,
+            final Project project) throws IOException {
+        return validateAndStoreBom(qm, bomBytes, project, null);
     }
 
-    private FileMetadata validateAndStoreBom(final byte[] bomBytes, final Project project, MediaType mediaType) throws IOException {
-        validate(bomBytes, project, mediaType);
+    private FileMetadata validateAndStoreBom(
+            final QueryManager qm,
+            final byte[] bomBytes,
+            final Project project,
+            final MediaType mediaType) throws IOException {
+        validate(qm, bomBytes, project, mediaType);
 
         // TODO: Provide mediaType to FileStorage#store. Should be any of:
         //   * application/vnd.cyclonedx+json
@@ -545,12 +552,12 @@ public class BomResource extends AbstractApiResource {
         }
     }
 
-    static void validate(final byte[] bomBytes, final Project project) {
-        validate(bomBytes, project, null);
+    static void validate(final QueryManager qm, final byte[] bomBytes, final Project project) {
+        validate(qm, bomBytes, project, null);
     }
 
-    static void validate(final byte[] bomBytes, final Project project, MediaType mediaType) {
-        if (!shouldValidate(project)) {
+    static void validate(final QueryManager qm, final byte[] bomBytes, final Project project, MediaType mediaType) {
+        if (!shouldValidate(qm, project)) {
             return;
         }
 
@@ -586,59 +593,57 @@ public class BomResource extends AbstractApiResource {
                 .subject(new BomValidationFailed(project, /* bom */ "(Omitted)", errors)));
     }
 
-    private static boolean shouldValidate(final Project project) {
-        try (final var qm = new QueryManager()) {
-            final ConfigProperty validationModeProperty = qm.getConfigProperty(
-                    BOM_VALIDATION_MODE.getGroupName(),
-                    BOM_VALIDATION_MODE.getPropertyName()
-            );
+    private static boolean shouldValidate(final QueryManager qm, final Project project) {
+        final ConfigProperty validationModeProperty = qm.getConfigProperty(
+                BOM_VALIDATION_MODE.getGroupName(),
+                BOM_VALIDATION_MODE.getPropertyName()
+        );
 
-            var validationMode = BomValidationMode.valueOf(BOM_VALIDATION_MODE.getDefaultPropertyValue());
-            try {
-                validationMode = BomValidationMode.valueOf(validationModeProperty.getPropertyValue());
-            } catch (RuntimeException e) {
-                LOGGER.warn("""
-                        No BOM validation mode configured, or configured value is invalid; \
-                        Assuming default mode %s""".formatted(validationMode), e);
-            }
-
-            if (validationMode == BomValidationMode.ENABLED) {
-                LOGGER.debug("Validating BOM because validation is enabled globally");
-                return true;
-            } else if (validationMode == BomValidationMode.DISABLED) {
-                LOGGER.debug("Not validating BOM because validation is disabled globally");
-                return false;
-            }
-
-            // Other modes depend on tags. Does the project even have tags?
-            if (project.getTags() == null || project.getTags().isEmpty()) {
-                return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
-            }
-
-            final ConfigPropertyConstants tagsPropertyConstant = validationMode == BomValidationMode.ENABLED_FOR_TAGS
-                    ? BOM_VALIDATION_TAGS_INCLUSIVE
-                    : BOM_VALIDATION_TAGS_EXCLUSIVE;
-            final ConfigProperty tagsProperty = qm.getConfigProperty(
-                    tagsPropertyConstant.getGroupName(),
-                    tagsPropertyConstant.getPropertyName()
-            );
-
-            final Set<String> validationModeTags;
-            try {
-                final JsonReader jsonParser = Json.createReader(new StringReader(tagsProperty.getPropertyValue()));
-                final JsonArray jsonArray = jsonParser.readArray();
-                validationModeTags = Set.copyOf(jsonArray.getValuesAs(JsonString::getString));
-            } catch (RuntimeException e) {
-                LOGGER.warn("Tags of property %s:%s could not be parsed as JSON array"
-                        .formatted(tagsPropertyConstant.getGroupName(), tagsPropertyConstant.getPropertyName()), e);
-                return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
-            }
-
-            final boolean doTagsMatch = project.getTags().stream()
-                    .map(org.dependencytrack.model.Tag::getName)
-                    .anyMatch(validationModeTags::contains);
-            return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
-                   || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
+        var validationMode = BomValidationMode.valueOf(BOM_VALIDATION_MODE.getDefaultPropertyValue());
+        try {
+            validationMode = BomValidationMode.valueOf(validationModeProperty.getPropertyValue());
+        } catch (RuntimeException e) {
+            LOGGER.warn("""
+                    No BOM validation mode configured, or configured value is invalid; \
+                    Assuming default mode %s""".formatted(validationMode), e);
         }
+
+        if (validationMode == BomValidationMode.ENABLED) {
+            LOGGER.debug("Validating BOM because validation is enabled globally");
+            return true;
+        } else if (validationMode == BomValidationMode.DISABLED) {
+            LOGGER.debug("Not validating BOM because validation is disabled globally");
+            return false;
+        }
+
+        // Other modes depend on tags. Does the project even have tags?
+        if (project.getTags() == null || project.getTags().isEmpty()) {
+            return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
+        }
+
+        final ConfigPropertyConstants tagsPropertyConstant = validationMode == BomValidationMode.ENABLED_FOR_TAGS
+                ? BOM_VALIDATION_TAGS_INCLUSIVE
+                : BOM_VALIDATION_TAGS_EXCLUSIVE;
+        final ConfigProperty tagsProperty = qm.getConfigProperty(
+                tagsPropertyConstant.getGroupName(),
+                tagsPropertyConstant.getPropertyName()
+        );
+
+        final Set<String> validationModeTags;
+        try {
+            final JsonReader jsonParser = Json.createReader(new StringReader(tagsProperty.getPropertyValue()));
+            final JsonArray jsonArray = jsonParser.readArray();
+            validationModeTags = Set.copyOf(jsonArray.getValuesAs(JsonString::getString));
+        } catch (RuntimeException e) {
+            LOGGER.warn("Tags of property %s:%s could not be parsed as JSON array"
+                    .formatted(tagsPropertyConstant.getGroupName(), tagsPropertyConstant.getPropertyName()), e);
+            return validationMode == BomValidationMode.DISABLED_FOR_TAGS;
+        }
+
+        final boolean doTagsMatch = project.getTags().stream()
+                .map(org.dependencytrack.model.Tag::getName)
+                .anyMatch(validationModeTags::contains);
+        return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
+               || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
     }
 }
