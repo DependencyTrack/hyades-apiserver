@@ -48,23 +48,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.model.IdentifiableObject;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.Role;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.proto.notification.v1.UserSubject;
-import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
-import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
-import org.owasp.security.logging.SecurityMarkers;
-
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -77,6 +60,24 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.IdentifiableObject;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Role;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.proto.notification.v1.UserSubject;
+import org.dependencytrack.resources.v1.problems.AccessManagementProblemDetails;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
+import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
+import org.owasp.security.logging.SecurityMarkers;
+
 import javax.jdo.Query;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -86,6 +87,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing users.
@@ -871,7 +874,8 @@ public class UserResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
             final User user = qm.getUser(request.username());
-            final Project project = qm.getProject(request.project());
+            Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                    handle.attach(ProjectDao.class).getProject(UUID.fromString(request.project())));
 
             List<String> problems = new ArrayList<>();
             if (role == null) problems.add("role");
@@ -917,7 +921,8 @@ public class UserResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
             final User user = qm.getUser(request.username());
-            final Project project = qm.getProject(request.project());
+            Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                    handle.attach(ProjectDao.class).getProject(UUID.fromString(request.project())));
 
             final List<String> problems = new ArrayList<>();
             if (role == null) problems.add("role");
