@@ -88,10 +88,11 @@ public class TeamResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
+        // There's already a built-in team in ResourceTest
         Assert.assertEquals(String.valueOf(1001), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
-        Assert.assertEquals(1001, json.size()); // There's already a built-in team in ResourceTest
+        Assert.assertEquals(100, json.size()); // Max size on one page
         Assert.assertEquals("Team 0", json.getJsonObject(0).getString("name"));
     }
 
@@ -268,7 +269,7 @@ public class TeamResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(null, MediaType.APPLICATION_JSON));
         Assert.assertEquals(201, response.getStatus(), 0);
-        team = qm.getTeams().get(0);
+        team = qm.getTeams().getList(Team.class).get(0);
         Assert.assertEquals(1, team.getApiKeys().size());
     }
 

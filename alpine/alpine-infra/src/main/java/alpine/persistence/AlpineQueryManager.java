@@ -581,14 +581,11 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * @return a List of Teams
      * @since 1.0.0
      */
-    public List<Team> getTeams() {
+    public PaginatedResult getTeams() {
         final Query<Team> query = pm.newQuery(Team.class);
         query.getFetchPlan().addGroup(Team.FetchGroup.ALL.name());
         query.setOrdering("name asc");
-        if (pagination != null && pagination.isPaginated()) {
-            query.setRange(pagination.getOffset(), pagination.getOffset() + pagination.getLimit());
-        }
-        return executeAndCloseList(query);
+        return execute(query);
     }
 
     /**

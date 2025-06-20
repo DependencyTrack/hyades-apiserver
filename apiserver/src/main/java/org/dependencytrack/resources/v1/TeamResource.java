@@ -23,6 +23,7 @@ import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
+import alpine.persistence.PaginatedResult;
 import alpine.security.ApiKeyDecoder;
 import alpine.security.InvalidApiKeyFormatException;
 import alpine.server.auth.PermissionRequired;
@@ -100,9 +101,8 @@ public class TeamResource extends AlpineResource {
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
     public Response getTeams() {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final long totalCount = qm.getCount(Team.class);
-            final List<Team> teams = qm.getTeams();
-            return Response.ok(teams).header(TOTAL_COUNT_HEADER, totalCount).build();
+            final PaginatedResult result = qm.getTeams();
+            return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
         }
     }
 
@@ -246,7 +246,8 @@ public class TeamResource extends AlpineResource {
             boolean isAllTeams = qm.hasAccessManagementPermission(getPrincipal());
             List<Team> teams = new ArrayList<>();
             if (isAllTeams) {
-                teams = qm.getTeams();
+                var paginatedResult = qm.getTeams();
+                teams = paginatedResult.getList(Team.class);
             } else {
                 if (getPrincipal() instanceof final User user) {
                     teams = user.getTeams();

@@ -293,7 +293,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
      * Loads the default users and teams
      */
     private void loadDefaultPersonas(final QueryManager qm) {
-        if (!qm.getManagedUsers().isEmpty() && !qm.getTeams().isEmpty())
+        if (!qm.getManagedUsers().isEmpty() && qm.getTeams().getTotal() != 0)
             return;
 
         LOGGER.info("Adding default users and teams to datastore");
