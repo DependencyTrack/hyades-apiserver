@@ -512,7 +512,7 @@ public class ProjectResource extends AbstractApiResource {
                     }
 
                     boolean isAdmin = qm.hasAccessManagementPermission(principal);
-                    List<Team> visibleTeams = isAdmin ? qm.getTeams() : userTeams;
+                    List<Team> visibleTeams = isAdmin ? qm.getTeams().getList(Team.class) : userTeams;
                     final var visibleTeamByUuid = new HashMap<UUID, Team>(visibleTeams.size());
                     final var visibleTeamByName = new HashMap<String, Team>(visibleTeams.size());
                     for (final Team visibleTeam : visibleTeams) {
