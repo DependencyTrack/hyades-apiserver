@@ -23,6 +23,11 @@ import alpine.model.Team;
 import alpine.notification.NotificationLevel;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -40,11 +45,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -76,9 +76,9 @@ public class NotificationRuleResourceTest extends ResourceTest {
     @Test
     public void getAllNotificationRulesTest() {
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
-        NotificationRule r1 = qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
-        NotificationRule r2 = qm.createNotificationRule("Rule 2", NotificationScope.PORTFOLIO, NotificationLevel.WARNING, publisher);
-        NotificationRule r3 = qm.createNotificationRule("Rule 3", NotificationScope.SYSTEM, NotificationLevel.ERROR, publisher);
+        qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
+        qm.createNotificationRule("Rule 2", NotificationScope.PORTFOLIO, NotificationLevel.WARNING, publisher);
+        qm.createNotificationRule("Rule 3", NotificationScope.SYSTEM, NotificationLevel.ERROR, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE).request()
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);

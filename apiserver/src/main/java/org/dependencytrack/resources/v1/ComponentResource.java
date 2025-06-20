@@ -36,6 +36,18 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
@@ -59,6 +71,7 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ComponentMetaDao;
+import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
@@ -66,18 +79,7 @@ import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
 import org.jdbi.v3.core.Handle;
 
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -86,6 +88,7 @@ import java.util.UUID;
 import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
 import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
 import static org.dependencytrack.model.FetchStatus.PROCESSED;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -438,80 +441,85 @@ public class ComponentResource extends AbstractApiResource {
         );
 
         try (QueryManager qm = new QueryManager()) {
-            Component parent = null;
-            if (jsonComponent.getParent() != null && jsonComponent.getParent().getUuid() != null) {
-                parent = qm.getObjectByUuid(Component.class, jsonComponent.getParent().getUuid());
-            }
-            final Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
-            requireAccess(qm, project);
-            final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
-            Component component = new Component();
-            component.setProject(project);
-            component.setAuthors(jsonComponent.getAuthors());
-            component.setPublisher(StringUtils.trimToNull(jsonComponent.getPublisher()));
-            component.setName(StringUtils.trimToNull(jsonComponent.getName()));
-            component.setVersion(StringUtils.trimToNull(jsonComponent.getVersion()));
-            component.setGroup(StringUtils.trimToNull(jsonComponent.getGroup()));
-            component.setDescription(StringUtils.trimToNull(jsonComponent.getDescription()));
-            component.setFilename(StringUtils.trimToNull(jsonComponent.getFilename()));
-            component.setClassifier(jsonComponent.getClassifier());
-            component.setPurl(jsonComponent.getPurl());
-            component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(jsonComponent.getPurl()));
-            component.setInternal(new InternalComponentIdentifier().isInternal(component));
-            component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
-            component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
-            component.setCopyright(StringUtils.trimToNull(jsonComponent.getCopyright()));
-            component.setMd5(StringUtils.trimToNull(jsonComponent.getMd5()));
-            component.setSha1(StringUtils.trimToNull(jsonComponent.getSha1()));
-            component.setSha256(StringUtils.trimToNull(jsonComponent.getSha256()));
-            component.setSha384(StringUtils.trimToNull(jsonComponent.getSha384()));
-            component.setSha512(StringUtils.trimToNull(jsonComponent.getSha512()));
-            component.setSha3_256(StringUtils.trimToNull(jsonComponent.getSha3_256()));
-            component.setSha3_384(StringUtils.trimToNull(jsonComponent.getSha3_384()));
-            component.setSha3_512(StringUtils.trimToNull(jsonComponent.getSha3_512()));
-            if (resolvedLicense != null) {
-                component.setLicense(null);
-                component.setLicenseExpression(null);
-                component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
-                component.setResolvedLicense(resolvedLicense);
-            } else if (StringUtils.isNotBlank(jsonComponent.getLicense())) {
-                component.setLicense(StringUtils.trim(jsonComponent.getLicense()));
-                component.setLicenseExpression(null);
-                component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
-                component.setResolvedLicense(null);
-            } else if (StringUtils.isNotBlank(jsonComponent.getLicenseExpression())) {
-                component.setLicense(null);
-                component.setLicenseExpression(StringUtils.trim(jsonComponent.getLicenseExpression()));
-                component.setLicenseUrl(null);
-                component.setResolvedLicense(null);
-            }
-            component.setParent(parent);
-            component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
-
-            component = qm.createComponent(component, true);
-
-            if (component.getPurl() != null) {
-                ComponentProjection componentProjection =
-                        new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
-                                component.isInternal(), component.getPurl());
-                try {
-                    Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
-                    IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
-                    if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
-                        calculateIntegrityResult(integrityMetaComponent, component, qm);
-                    }
-                } catch (MalformedPackageURLException ex) {
-                    LOGGER.warn("Unable to process package url %s".formatted(componentProjection.purl()));
+            return qm.callInTransaction(() -> {
+                Component parent = null;
+                if (jsonComponent.getParent() != null && jsonComponent.getParent().getUuid() != null) {
+                    parent = qm.getObjectByUuid(Component.class, jsonComponent.getParent().getUuid());
                 }
-            }
+                final Project project = qm.getObjectByUuid(Project.class, uuid);
+                if (project == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+                }
+                requireAccess(qm, project);
+                final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
+                final Component component = new Component();
+                component.setProject(project);
+                component.setAuthors(jsonComponent.getAuthors());
+                component.setPublisher(StringUtils.trimToNull(jsonComponent.getPublisher()));
+                component.setName(StringUtils.trimToNull(jsonComponent.getName()));
+                component.setVersion(StringUtils.trimToNull(jsonComponent.getVersion()));
+                component.setGroup(StringUtils.trimToNull(jsonComponent.getGroup()));
+                component.setDescription(StringUtils.trimToNull(jsonComponent.getDescription()));
+                component.setFilename(StringUtils.trimToNull(jsonComponent.getFilename()));
+                component.setClassifier(jsonComponent.getClassifier());
+                component.setPurl(jsonComponent.getPurl());
+                component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(jsonComponent.getPurl()));
+                component.setInternal(new InternalComponentIdentifier().isInternal(component));
+                component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
+                component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
+                component.setCopyright(StringUtils.trimToNull(jsonComponent.getCopyright()));
+                component.setMd5(StringUtils.trimToNull(jsonComponent.getMd5()));
+                component.setSha1(StringUtils.trimToNull(jsonComponent.getSha1()));
+                component.setSha256(StringUtils.trimToNull(jsonComponent.getSha256()));
+                component.setSha384(StringUtils.trimToNull(jsonComponent.getSha384()));
+                component.setSha512(StringUtils.trimToNull(jsonComponent.getSha512()));
+                component.setSha3_256(StringUtils.trimToNull(jsonComponent.getSha3_256()));
+                component.setSha3_384(StringUtils.trimToNull(jsonComponent.getSha3_384()));
+                component.setSha3_512(StringUtils.trimToNull(jsonComponent.getSha3_512()));
+                if (resolvedLicense != null) {
+                    component.setLicense(null);
+                    component.setLicenseExpression(null);
+                    component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
+                    component.setResolvedLicense(resolvedLicense);
+                } else if (StringUtils.isNotBlank(jsonComponent.getLicense())) {
+                    component.setLicense(StringUtils.trim(jsonComponent.getLicense()));
+                    component.setLicenseExpression(null);
+                    component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
+                    component.setResolvedLicense(null);
+                } else if (StringUtils.isNotBlank(jsonComponent.getLicenseExpression())) {
+                    component.setLicense(null);
+                    component.setLicenseExpression(StringUtils.trim(jsonComponent.getLicenseExpression()));
+                    component.setLicenseUrl(null);
+                    component.setResolvedLicense(null);
+                }
+                component.setParent(parent);
+                component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
 
-            final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
-            qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token(), 1);
-            kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
-            return Response.status(Response.Status.CREATED).entity(component).build();
+                qm.createComponent(component, true);
+
+                if (component.getPurl() != null) {
+                    ComponentProjection componentProjection =
+                            new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
+                                    component.isInternal(), component.getPurl());
+                    try {
+                        Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
+                        IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
+                        if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
+                            calculateIntegrityResult(integrityMetaComponent, component, qm);
+                        }
+                    } catch (MalformedPackageURLException ex) {
+                        LOGGER.warn("Unable to process package url %s".formatted(componentProjection.purl()));
+                    }
+                }
+
+                final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
+                try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
+                    jdbiHandle.attach(VulnerabilityScanDao.class).createVulnerabilityScan(
+                            VulnerabilityScan.TargetType.COMPONENT.name(), component.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now());
+                }
+                kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
+                return Response.status(Response.Status.CREATED).entity(component).build();
+            });
         }
     }
 
@@ -560,86 +568,91 @@ public class ComponentResource extends AbstractApiResource {
                 validator.validateProperty(jsonComponent, "sha3_512")
         );
         try (QueryManager qm = new QueryManager()) {
-            Component component = qm.getObjectByUuid(Component.class, jsonComponent.getUuid());
-            if (component != null) {
-                requireAccess(qm, component.getProject());
-                // Name cannot be empty or null - prevent it
-                final String name = StringUtils.trimToNull(jsonComponent.getName());
-                if (name != null) {
-                    component.setName(name);
-                }
-                component.setAuthors(jsonComponent.getAuthors());
-                component.setPublisher(StringUtils.trimToNull(jsonComponent.getPublisher()));
-                component.setVersion(StringUtils.trimToNull(jsonComponent.getVersion()));
-                component.setGroup(StringUtils.trimToNull(jsonComponent.getGroup()));
-                component.setDescription(StringUtils.trimToNull(jsonComponent.getDescription()));
-                component.setFilename(StringUtils.trimToNull(jsonComponent.getFilename()));
-                component.setClassifier(jsonComponent.getClassifier());
-                component.setPurl(jsonComponent.getPurl());
-                component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(component.getPurl()));
-                component.setInternal(new InternalComponentIdentifier().isInternal(component));
-                component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
-                component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
-                component.setCopyright(StringUtils.trimToNull(jsonComponent.getCopyright()));
-                component.setMd5(StringUtils.trimToNull(jsonComponent.getMd5()));
-                component.setSha1(StringUtils.trimToNull(jsonComponent.getSha1()));
-                component.setSha256(StringUtils.trimToNull(jsonComponent.getSha256()));
-                component.setSha384(StringUtils.trimToNull(jsonComponent.getSha384()));
-                component.setSha512(StringUtils.trimToNull(jsonComponent.getSha512()));
-                component.setSha3_256(StringUtils.trimToNull(jsonComponent.getSha3_256()));
-                component.setSha3_384(StringUtils.trimToNull(jsonComponent.getSha3_384()));
-                component.setSha3_512(StringUtils.trimToNull(jsonComponent.getSha3_512()));
-                component.setExternalReferences(jsonComponent.getExternalReferences());
-
-                final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
-                if (resolvedLicense != null) {
-                    component.setLicense(null);
-                    component.setLicenseExpression(null);
-                    component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
-                    component.setResolvedLicense(resolvedLicense);
-                } else if (StringUtils.trimToNull(jsonComponent.getLicense()) != null) {
-                    component.setLicense(StringUtils.trim(jsonComponent.getLicense()));
-                    component.setLicenseExpression(null);
-                    component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
-                    component.setResolvedLicense(null);
-                } else if (StringUtils.trimToNull(jsonComponent.getLicenseExpression()) != null) {
-                    component.setLicense(null);
-                    component.setLicenseExpression(StringUtils.trim(jsonComponent.getLicenseExpression()));
-                    component.setLicenseUrl(null);
-                    component.setResolvedLicense(null);
-                } else {
-                    component.setLicense(null);
-                    component.setLicenseExpression(null);
-                    component.setLicenseUrl(null);
-                    component.setResolvedLicense(null);
-                }
-                component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
-
-                component = qm.updateComponent(component, true);
-
-                if (component.getPurl() != null) {
-                    ComponentProjection componentProjection =
-                            new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
-                                    component.isInternal(), component.getPurl());
-                    try {
-
-                        Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
-                        IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
-                        if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
-                            calculateIntegrityResult(integrityMetaComponent, component, qm);
-                        }
-                    } catch (MalformedPackageURLException ex) {
-                        LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.getPurl().getType()), ex);
+            return qm.callInTransaction(() -> {
+                final Component component = qm.getObjectByUuid(Component.class, jsonComponent.getUuid());
+                if (component != null) {
+                    requireAccess(qm, component.getProject());
+                    // Name cannot be empty or null - prevent it
+                    final String name = StringUtils.trimToNull(jsonComponent.getName());
+                    if (name != null) {
+                        component.setName(name);
                     }
-                }
+                    component.setAuthors(jsonComponent.getAuthors());
+                    component.setPublisher(StringUtils.trimToNull(jsonComponent.getPublisher()));
+                    component.setVersion(StringUtils.trimToNull(jsonComponent.getVersion()));
+                    component.setGroup(StringUtils.trimToNull(jsonComponent.getGroup()));
+                    component.setDescription(StringUtils.trimToNull(jsonComponent.getDescription()));
+                    component.setFilename(StringUtils.trimToNull(jsonComponent.getFilename()));
+                    component.setClassifier(jsonComponent.getClassifier());
+                    component.setPurl(jsonComponent.getPurl());
+                    component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(component.getPurl()));
+                    component.setInternal(new InternalComponentIdentifier().isInternal(component));
+                    component.setCpe(StringUtils.trimToNull(jsonComponent.getCpe()));
+                    component.setSwidTagId(StringUtils.trimToNull(jsonComponent.getSwidTagId()));
+                    component.setCopyright(StringUtils.trimToNull(jsonComponent.getCopyright()));
+                    component.setMd5(StringUtils.trimToNull(jsonComponent.getMd5()));
+                    component.setSha1(StringUtils.trimToNull(jsonComponent.getSha1()));
+                    component.setSha256(StringUtils.trimToNull(jsonComponent.getSha256()));
+                    component.setSha384(StringUtils.trimToNull(jsonComponent.getSha384()));
+                    component.setSha512(StringUtils.trimToNull(jsonComponent.getSha512()));
+                    component.setSha3_256(StringUtils.trimToNull(jsonComponent.getSha3_256()));
+                    component.setSha3_384(StringUtils.trimToNull(jsonComponent.getSha3_384()));
+                    component.setSha3_512(StringUtils.trimToNull(jsonComponent.getSha3_512()));
+                    component.setExternalReferences(jsonComponent.getExternalReferences());
 
-                final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
-                qm.createVulnerabilityScan(VulnerabilityScan.TargetType.COMPONENT, component.getUuid(), vulnAnalysisEvent.token(), 1);
-                kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
-                return Response.ok(component).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();
-            }
+                    final License resolvedLicense = qm.getLicense(jsonComponent.getLicense());
+                    if (resolvedLicense != null) {
+                        component.setLicense(null);
+                        component.setLicenseExpression(null);
+                        component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
+                        component.setResolvedLicense(resolvedLicense);
+                    } else if (StringUtils.trimToNull(jsonComponent.getLicense()) != null) {
+                        component.setLicense(StringUtils.trim(jsonComponent.getLicense()));
+                        component.setLicenseExpression(null);
+                        component.setLicenseUrl(StringUtils.trimToNull(jsonComponent.getLicenseUrl()));
+                        component.setResolvedLicense(null);
+                    } else if (StringUtils.trimToNull(jsonComponent.getLicenseExpression()) != null) {
+                        component.setLicense(null);
+                        component.setLicenseExpression(StringUtils.trim(jsonComponent.getLicenseExpression()));
+                        component.setLicenseUrl(null);
+                        component.setResolvedLicense(null);
+                    } else {
+                        component.setLicense(null);
+                        component.setLicenseExpression(null);
+                        component.setLicenseUrl(null);
+                        component.setResolvedLicense(null);
+                    }
+                    component.setNotes(StringUtils.trimToNull(jsonComponent.getNotes()));
+
+                    qm.updateComponent(component, true);
+
+                    if (component.getPurl() != null) {
+                        ComponentProjection componentProjection =
+                                new ComponentProjection(component.getUuid(), component.getPurlCoordinates().toString(),
+                                        component.isInternal(), component.getPurl());
+                        try {
+
+                            Handler repoMetaHandler = HandlerFactory.createHandler(componentProjection, qm, kafkaEventDispatcher, FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION);
+                            IntegrityMetaComponent integrityMetaComponent = repoMetaHandler.handle();
+                            if (integrityMetaComponent != null && (integrityMetaComponent.getStatus() == PROCESSED || integrityMetaComponent.getStatus() == NOT_AVAILABLE)) {
+                                calculateIntegrityResult(integrityMetaComponent, component, qm);
+                            }
+                        } catch (MalformedPackageURLException ex) {
+                            LOGGER.warn("Unable to determine package url type for this purl %s".formatted(component.getPurl().getType()), ex);
+                        }
+                    }
+
+                    final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, false);
+                    try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
+                        jdbiHandle.attach(VulnerabilityScanDao.class).createVulnerabilityScan(
+                                VulnerabilityScan.TargetType.COMPONENT.name(), component.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now());
+                    }
+                    kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
+                    return Response.ok(component).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();
+                }
+            });
         }
     }
 
@@ -665,17 +678,19 @@ public class ComponentResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the component to delete", schema = @Schema(format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Component component = qm.getObjectByUuid(Component.class, uuid, Component.FetchGroup.ALL.name());
-            if (component != null) {
-                requireAccess(qm, component.getProject());
-                try (final Handle jdbiHandle = openJdbiHandle()) {
-                    final var componentDao = jdbiHandle.attach(ComponentDao.class);
-                    componentDao.deleteComponent(component.getUuid());
+            return qm.callInTransaction(() -> {
+                final Component component = qm.getObjectByUuid(Component.class, uuid, Component.FetchGroup.ALL.name());
+                if (component != null) {
+                    requireAccess(qm, component.getProject());
+                    try (final Handle jdbiHandle = openJdbiHandle()) {
+                        final var componentDao = jdbiHandle.attach(ComponentDao.class);
+                        componentDao.deleteComponent(component.getUuid());
+                    }
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();
                 }
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the component could not be found.").build();
-            }
+            });
         }
     }
 

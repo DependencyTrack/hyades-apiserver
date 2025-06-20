@@ -56,7 +56,6 @@ import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.util.NotificationUtil;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -126,25 +125,27 @@ public class NotificationPublisherResource extends AlpineResource {
         );
 
         try (QueryManager qm = new QueryManager()) {
-            NotificationPublisher existingNotificationPublisher = qm.getNotificationPublisher(jsonNotificationPublisher.getName());
-            if (existingNotificationPublisher != null) {
-                return Response.status(Response.Status.CONFLICT).entity("The notification with the name " + jsonNotificationPublisher.getName() + " already exist").build();
-            }
+            return qm.callInTransaction(() -> {
+                NotificationPublisher existingNotificationPublisher = qm.getNotificationPublisher(jsonNotificationPublisher.getName());
+                if (existingNotificationPublisher != null) {
+                    return Response.status(Response.Status.CONFLICT).entity("The notification with the name " + jsonNotificationPublisher.getName() + " already exist").build();
+                }
 
-            if (jsonNotificationPublisher.isDefaultPublisher()) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("The creation of a new default publisher is forbidden").build();
-            }
-            if (Arrays.stream(PublisherClass.values()).anyMatch(clazz ->
-                    clazz.name().equalsIgnoreCase(jsonNotificationPublisher.getPublisherClass()))) {
-                NotificationPublisher notificationPublisherCreated = qm.createNotificationPublisher(
-                        jsonNotificationPublisher.getName(), jsonNotificationPublisher.getDescription(),
-                        jsonNotificationPublisher.getPublisherClass(), jsonNotificationPublisher.getTemplate(), jsonNotificationPublisher.getTemplateMimeType(),
-                        jsonNotificationPublisher.isDefaultPublisher()
-                );
-                return Response.status(Response.Status.CREATED).entity(notificationPublisherCreated).build();
-            } else {
-                return Response.status(Response.Status.BAD_REQUEST).entity("The publisher class " + jsonNotificationPublisher.getPublisherClass() + " is not valid.").build();
-            }
+                if (jsonNotificationPublisher.isDefaultPublisher()) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("The creation of a new default publisher is forbidden").build();
+                }
+                if (Arrays.stream(PublisherClass.values()).anyMatch(clazz ->
+                        clazz.name().equalsIgnoreCase(jsonNotificationPublisher.getPublisherClass()))) {
+                    NotificationPublisher notificationPublisherCreated = qm.createNotificationPublisher(
+                            jsonNotificationPublisher.getName(), jsonNotificationPublisher.getDescription(),
+                            jsonNotificationPublisher.getPublisherClass(), jsonNotificationPublisher.getTemplate(), jsonNotificationPublisher.getTemplateMimeType(),
+                            jsonNotificationPublisher.isDefaultPublisher()
+                    );
+                    return Response.status(Response.Status.CREATED).entity(notificationPublisherCreated).build();
+                } else {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("The publisher class " + jsonNotificationPublisher.getPublisherClass() + " is not valid.").build();
+                }
+            });
         }
     }
 
@@ -179,35 +180,37 @@ public class NotificationPublisherResource extends AlpineResource {
         );
 
         try (QueryManager qm = new QueryManager()) {
-            NotificationPublisher existingPublisher = qm.getObjectByUuid(NotificationPublisher.class, jsonNotificationPublisher.getUuid());
-            if (existingPublisher != null) {
-                if (existingPublisher.isDefaultPublisher()) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("The modification of a default publisher is forbidden").build();
-                }
-
-                if (!jsonNotificationPublisher.getName().equals(existingPublisher.getName())) {
-                    NotificationPublisher existingNotificationPublisherWithModifiedName = qm.getNotificationPublisher(jsonNotificationPublisher.getName());
-                    if (existingNotificationPublisherWithModifiedName != null) {
-                        return Response.status(Response.Status.CONFLICT).entity("An existing publisher with the name '" + existingNotificationPublisherWithModifiedName.getName() + "' already exist").build();
+            return qm.callInTransaction(() -> {
+                NotificationPublisher existingPublisher = qm.getObjectByUuid(NotificationPublisher.class, jsonNotificationPublisher.getUuid());
+                if (existingPublisher != null) {
+                    if (existingPublisher.isDefaultPublisher()) {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("The modification of a default publisher is forbidden").build();
                     }
-                }
-                existingPublisher.setName(jsonNotificationPublisher.getName());
-                existingPublisher.setDescription(jsonNotificationPublisher.getDescription());
 
-                if (Arrays.stream(PublisherClass.values()).anyMatch(clazz ->
-                        clazz.name().equalsIgnoreCase(jsonNotificationPublisher.getPublisherClass()))) {
-                    existingPublisher.setPublisherClass(jsonNotificationPublisher.getPublisherClass());
+                    if (!jsonNotificationPublisher.getName().equals(existingPublisher.getName())) {
+                        NotificationPublisher existingNotificationPublisherWithModifiedName = qm.getNotificationPublisher(jsonNotificationPublisher.getName());
+                        if (existingNotificationPublisherWithModifiedName != null) {
+                            return Response.status(Response.Status.CONFLICT).entity("An existing publisher with the name '" + existingNotificationPublisherWithModifiedName.getName() + "' already exist").build();
+                        }
+                    }
+                    existingPublisher.setName(jsonNotificationPublisher.getName());
+                    existingPublisher.setDescription(jsonNotificationPublisher.getDescription());
+
+                    if (Arrays.stream(PublisherClass.values()).anyMatch(clazz ->
+                            clazz.name().equalsIgnoreCase(jsonNotificationPublisher.getPublisherClass()))) {
+                        existingPublisher.setPublisherClass(jsonNotificationPublisher.getPublisherClass());
+                    } else {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("The publisher class " + jsonNotificationPublisher.getPublisherClass() + " is not valid.").build();
+                    }
+                    existingPublisher.setTemplate(jsonNotificationPublisher.getTemplate());
+                    existingPublisher.setTemplateMimeType(jsonNotificationPublisher.getTemplateMimeType());
+                    existingPublisher.setDefaultPublisher(false);
+                    NotificationPublisher notificationPublisherUpdated = qm.updateNotificationPublisher(existingPublisher);
+                    return Response.ok(notificationPublisherUpdated).build();
                 } else {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("The publisher class " + jsonNotificationPublisher.getPublisherClass() + " is not valid.").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the notification publisher could not be found.").build();
                 }
-                existingPublisher.setTemplate(jsonNotificationPublisher.getTemplate());
-                existingPublisher.setTemplateMimeType(jsonNotificationPublisher.getTemplateMimeType());
-                existingPublisher.setDefaultPublisher(false);
-                NotificationPublisher notificationPublisherUpdated = qm.updateNotificationPublisher(existingPublisher);
-                return Response.ok(notificationPublisherUpdated).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the notification publisher could not be found.").build();
-            }
+            });
         }
     }
 
@@ -230,17 +233,19 @@ public class NotificationPublisherResource extends AlpineResource {
     public Response deleteNotificationPublisher(@Parameter(description = "The UUID of the notification publisher to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
                                                 @PathParam("notificationPublisherUuid") @ValidUuid String notificationPublisherUuid) {
         try (QueryManager qm = new QueryManager()) {
-            final NotificationPublisher notificationPublisher = qm.getObjectByUuid(NotificationPublisher.class, notificationPublisherUuid);
-            if (notificationPublisher != null) {
-                if (notificationPublisher.isDefaultPublisher()) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("Deleting a default notification publisher is forbidden.").build();
+            return qm.callInTransaction(() -> {
+                final NotificationPublisher notificationPublisher = qm.getObjectByUuid(NotificationPublisher.class, notificationPublisherUuid);
+                if (notificationPublisher != null) {
+                    if (notificationPublisher.isDefaultPublisher()) {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("Deleting a default notification publisher is forbidden.").build();
+                    } else {
+                        qm.deleteNotificationPublisher(notificationPublisher);
+                        return Response.status(Response.Status.NO_CONTENT).build();
+                    }
                 } else {
-                    qm.deleteNotificationPublisher(notificationPublisher);
-                    return Response.status(Response.Status.NO_CONTENT).build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the notification rule could not be found.").build();
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the notification rule could not be found.").build();
-            }
+            });
         }
     }
 
@@ -259,16 +264,18 @@ public class NotificationPublisherResource extends AlpineResource {
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
     public Response restoreDefaultTemplates() {
         try (QueryManager qm = new QueryManager()) {
-            final ConfigProperty property = qm.getConfigProperty(
-                    ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getGroupName(),
-                    ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getPropertyName()
-            );
-            property.setPropertyValue("false");
-            qm.persist(property);
-            NotificationUtil.loadDefaultNotificationPublishers(qm);
-            return Response.ok().build();
-        } catch (IOException ioException) {
-            LOGGER.error(ioException.getMessage(), ioException);
+            return qm.callInTransaction(() -> {
+                final ConfigProperty property = qm.getConfigProperty(
+                        ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getGroupName(),
+                        ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getPropertyName()
+                );
+                property.setPropertyValue("false");
+                qm.persist(property);
+                NotificationUtil.loadDefaultNotificationPublishers(qm);
+                return Response.ok().build();
+            });
+        } catch (Exception exception) {
+            LOGGER.error(exception.getMessage(), exception);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Exception occured while restoring default notification publisher templates.").build();
         }
     }
@@ -291,21 +298,23 @@ public class NotificationPublisherResource extends AlpineResource {
             @Parameter(description = "The UUID of the rule to test", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String ruleUuid) {
         try (QueryManager qm = new QueryManager()) {
-            NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
-            if (rule == null) {
-                return Response.status(Response.Status.NOT_FOUND).build();
-            }
-            final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
-            for(NotificationGroup group : rule.getNotifyOn()){
-                eventDispatcher.dispatchNotification(new Notification()
-                        .scope(rule.getScope())
-                        .group(group.toString())
-                        .level(rule.getNotificationLevel())
-                        .title(NotificationConstants.Title.NOTIFICATION_TEST)
-                        .subject(NotificationUtil.generateSubjectForTestRuleNotification(group))
-                        .content("Rule configuration test"));
-            }
-            return Response.ok().build();
+            return qm.callInTransaction(() -> {
+                NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
+                if (rule == null) {
+                    return Response.status(Response.Status.NOT_FOUND).build();
+                }
+                final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
+                for (NotificationGroup group : rule.getNotifyOn()) {
+                    eventDispatcher.dispatchNotification(new Notification()
+                            .scope(rule.getScope())
+                            .group(group.toString())
+                            .level(rule.getNotificationLevel())
+                            .title(NotificationConstants.Title.NOTIFICATION_TEST)
+                            .subject(NotificationUtil.generateSubjectForTestRuleNotification(group))
+                            .content("Rule configuration test"));
+                }
+                return Response.ok().build();
+            });
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Exception occured while sending the notification.").build();

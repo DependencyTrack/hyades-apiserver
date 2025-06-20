@@ -247,13 +247,16 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
         assertThat(jsonObject.getBoolean("isSuppressed")).isFalse();
 
         assertThat(jsonObject.getJsonArray("analysisComments")).hasSize(2);
-        assertThat(jsonObject.getJsonArray("analysisComments").getJsonObject(0))
-                .hasFieldOrPropertyWithValue("comment", Json.createValue("NOT_SET → APPROVED"))
-                .doesNotContainKey("commenter"); // Not set when authenticating via API key
-        assertThat(jsonObject.getJsonArray("analysisComments").getJsonObject(1))
-                .hasFieldOrPropertyWithValue("comment", Json.createValue("Some comment"))
-                .doesNotContainKey("commenter"); // Not set when authenticating via API key;
-
+        assertThat(jsonObject.getJsonArray("analysisComments")).satisfiesExactlyInAnyOrder(
+                obj1 -> {
+                    assertThat(obj1.asJsonObject()).hasFieldOrPropertyWithValue("comment", Json.createValue("NOT_SET → APPROVED"))
+                    .doesNotContainKey("commenter"); // Not set when authenticating via API key
+                },
+                obj2 -> {
+                    assertThat(obj2.asJsonObject()).hasFieldOrPropertyWithValue("comment", Json.createValue("Some comment"))
+                            .doesNotContainKey("commenter"); // Not set when authenticating via API key;
+                }
+        );
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
         final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
         assertThat(projectNotification).isNotNull();

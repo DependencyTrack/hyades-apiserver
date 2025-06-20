@@ -142,30 +142,32 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
                 validator.validateProperty(json, "propertyType")
         );
         try (QueryManager qm = new QueryManager()) {
-            final Component component = qm.getObjectByUuid(Component.class, uuid);
-            if (component != null) {
-                requireAccess(qm, component.getProject());
-                final List<ComponentProperty> existingProperties = qm.getComponentProperties(component,
-                        StringUtils.trimToNull(json.getGroupName()), StringUtils.trimToNull(json.getPropertyName()));
-                final var jsonPropertyIdentity = new ComponentProperty.Identity(json);
-                final boolean isDuplicate = existingProperties.stream()
-                        .map(ComponentProperty.Identity::new)
-                        .anyMatch(jsonPropertyIdentity::equals);
-                if (existingProperties.isEmpty() || !isDuplicate) {
-                    final ComponentProperty property = qm.createComponentProperty(component,
-                            StringUtils.trimToNull(json.getGroupName()),
-                            StringUtils.trimToNull(json.getPropertyName()),
-                            null, // Set value to null - this will be taken care of by updatePropertyValue below
-                            json.getPropertyType(),
-                            StringUtils.trimToNull(json.getDescription()));
-                    updatePropertyValue(qm, json, property);
-                    return Response.status(Response.Status.CREATED).entity(property).build();
+            return qm.callInTransaction(() -> {
+                final Component component = qm.getObjectByUuid(Component.class, uuid);
+                if (component != null) {
+                    requireAccess(qm, component.getProject());
+                    final List<ComponentProperty> existingProperties = qm.getComponentProperties(component,
+                            StringUtils.trimToNull(json.getGroupName()), StringUtils.trimToNull(json.getPropertyName()));
+                    final var jsonPropertyIdentity = new ComponentProperty.Identity(json);
+                    final boolean isDuplicate = existingProperties.stream()
+                            .map(ComponentProperty.Identity::new)
+                            .anyMatch(jsonPropertyIdentity::equals);
+                    if (existingProperties.isEmpty() || !isDuplicate) {
+                        final ComponentProperty property = qm.createComponentProperty(component,
+                                StringUtils.trimToNull(json.getGroupName()),
+                                StringUtils.trimToNull(json.getPropertyName()),
+                                null, // Set value to null - this will be taken care of by updatePropertyValue below
+                                json.getPropertyType(),
+                                StringUtils.trimToNull(json.getDescription()));
+                        updatePropertyValue(qm, json, property);
+                        return Response.status(Response.Status.CREATED).entity(property).build();
+                    } else {
+                        return Response.status(Response.Status.CONFLICT).entity("A property with the specified component/group/name/value combination already exists.").build();
+                    }
                 } else {
-                    return Response.status(Response.Status.CONFLICT).entity("A property with the specified component/group/name/value combination already exists.").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
-            }
+            });
         }
     }
 
@@ -193,18 +195,20 @@ public class ComponentPropertyResource extends AbstractConfigPropertyResource {
             @Parameter(description = "The UUID of the component property to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("propertyUuid") @ValidUuid final String propertyUuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Component component = qm.getObjectByUuid(Component.class, componentUuid);
-            if (component != null) {
-                requireAccess(qm, component.getProject());
-                final long propertiesDeleted = qm.deleteComponentPropertyByUuid(component, UUID.fromString(propertyUuid));
-                if (propertiesDeleted > 0) {
-                    return Response.status(Response.Status.NO_CONTENT).build();
+            return qm.callInTransaction(() -> {
+                final Component component = qm.getObjectByUuid(Component.class, componentUuid);
+                if (component != null) {
+                    requireAccess(qm, component.getProject());
+                    final long propertiesDeleted = qm.deleteComponentPropertyByUuid(component, UUID.fromString(propertyUuid));
+                    if (propertiesDeleted > 0) {
+                        return Response.status(Response.Status.NO_CONTENT).build();
+                    } else {
+                        return Response.status(Response.Status.NOT_FOUND).entity("The component property could not be found.").build();
+                    }
                 } else {
-                    return Response.status(Response.Status.NOT_FOUND).entity("The component property could not be found.").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
-            }
+            });
         }
     }
 }

@@ -140,48 +140,50 @@ public class ViolationAnalysisResource extends AbstractApiResource {
                 validator.validateProperty(request, "comment")
         );
         try (QueryManager qm = new QueryManager()) {
-            final Component component = qm.getObjectByUuid(Component.class, request.getComponent());
-            if (component == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
-            }
-            requireAccess(qm, component.getProject());
-            final PolicyViolation violation = qm.getObjectByUuid(PolicyViolation.class, request.getPolicyViolation());
-            if (violation == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The policy violation could not be found.").build();
-            }
-
-            String commenter = null;
-            if (getPrincipal() instanceof final User user) {
-                commenter = user.getUsername();
-            }
-
-            boolean analysisStateChange = false;
-            boolean suppressionChange = false;
-            ViolationAnalysis analysis = qm.getViolationAnalysis(component, violation);
-            if (analysis != null) {
-                if (request.getAnalysisState() != null && analysis.getAnalysisState() != request.getAnalysisState()) {
-                    analysisStateChange = true;
-                    qm.makeViolationAnalysisComment(analysis, String.format("%s → %s", analysis.getAnalysisState(), request.getAnalysisState()), commenter);
+            return qm.callInTransaction(() -> {
+                final Component component = qm.getObjectByUuid(Component.class, request.getComponent());
+                if (component == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
                 }
-                if (request.isSuppressed() != null && analysis.isSuppressed() != request.isSuppressed()) {
-                    suppressionChange = true;
-                    final String message = (request.isSuppressed()) ? "Suppressed" : "Unsuppressed";
-                    qm.makeViolationAnalysisComment(analysis, message, commenter);
+                requireAccess(qm, component.getProject());
+                final PolicyViolation violation = qm.getObjectByUuid(PolicyViolation.class, request.getPolicyViolation());
+                if (violation == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The policy violation could not be found.").build();
                 }
-                analysis = qm.makeViolationAnalysis(component, violation, request.getAnalysisState(), request.isSuppressed());
-            } else {
-                analysis = qm.makeViolationAnalysis(component, violation, request.getAnalysisState(), request.isSuppressed());
-                analysisStateChange = true; // this is a new analysis - so set to true because it was previously null
-                if (ViolationAnalysisState.NOT_SET != request.getAnalysisState()) {
-                    qm.makeViolationAnalysisComment(analysis, String.format("%s → %s", ViolationAnalysisState.NOT_SET, request.getAnalysisState()), commenter);
-                }
-            }
 
-            final String comment = StringUtils.trimToNull(request.getComment());
-            qm.makeViolationAnalysisComment(analysis, comment, commenter);
-            analysis = qm.getObjectById(ViolationAnalysis.class, analysis.getId());
-            NotificationUtil.analyzeNotificationCriteria(qm, analysis, analysisStateChange, suppressionChange);
-            return Response.ok(analysis).build();
+                String commenter = null;
+                if (getPrincipal() instanceof final User user) {
+                    commenter = user.getUsername();
+                }
+
+                boolean analysisStateChange = false;
+                boolean suppressionChange = false;
+                ViolationAnalysis analysis = qm.getViolationAnalysis(component, violation);
+                if (analysis != null) {
+                    if (request.getAnalysisState() != null && analysis.getAnalysisState() != request.getAnalysisState()) {
+                        analysisStateChange = true;
+                        qm.makeViolationAnalysisComment(analysis, String.format("%s → %s", analysis.getAnalysisState(), request.getAnalysisState()), commenter);
+                    }
+                    if (request.isSuppressed() != null && analysis.isSuppressed() != request.isSuppressed()) {
+                        suppressionChange = true;
+                        final String message = (request.isSuppressed()) ? "Suppressed" : "Unsuppressed";
+                        qm.makeViolationAnalysisComment(analysis, message, commenter);
+                    }
+                    analysis = qm.makeViolationAnalysis(component, violation, request.getAnalysisState(), request.isSuppressed());
+                } else {
+                    analysis = qm.makeViolationAnalysis(component, violation, request.getAnalysisState(), request.isSuppressed());
+                    analysisStateChange = true; // this is a new analysis - so set to true because it was previously null
+                    if (ViolationAnalysisState.NOT_SET != request.getAnalysisState()) {
+                        qm.makeViolationAnalysisComment(analysis, String.format("%s → %s", ViolationAnalysisState.NOT_SET, request.getAnalysisState()), commenter);
+                    }
+                }
+
+                final String comment = StringUtils.trimToNull(request.getComment());
+                qm.makeViolationAnalysisComment(analysis, comment, commenter);
+                analysis = qm.getObjectById(ViolationAnalysis.class, analysis.getId());
+                NotificationUtil.analyzeNotificationCriteria(qm, analysis, analysisStateChange, suppressionChange);
+                return Response.ok(analysis).build();
+            });
         }
     }
 
