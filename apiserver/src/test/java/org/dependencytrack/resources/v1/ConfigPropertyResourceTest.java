@@ -21,7 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.model.ConfigProperty;
 import alpine.model.IConfigProperty;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -52,7 +52,7 @@ public class ConfigPropertyResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(ConfigPropertyResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     @Test
     public void getConfigPropertiesTest() {
@@ -244,38 +244,38 @@ public class ConfigPropertyResourceTest extends ResourceTest {
     @Test
     public void testRiskScoreInvalid(){
         qm.createConfigProperty(
-                CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), 
-                CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), 
-                CUSTOM_RISK_SCORE_CRITICAL.getDefaultPropertyValue(), 
-                CUSTOM_RISK_SCORE_CRITICAL.getPropertyType(), 
+                CUSTOM_RISK_SCORE_CRITICAL.getGroupName(),
+                CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(),
+                CUSTOM_RISK_SCORE_CRITICAL.getDefaultPropertyValue(),
+                CUSTOM_RISK_SCORE_CRITICAL.getPropertyType(),
                 CUSTOM_RISK_SCORE_CRITICAL.getDescription()
             );
             qm.createConfigProperty(
-                CUSTOM_RISK_SCORE_HIGH.getGroupName(), 
-                CUSTOM_RISK_SCORE_HIGH.getPropertyName(), 
-                CUSTOM_RISK_SCORE_HIGH.getDefaultPropertyValue(), 
-                CUSTOM_RISK_SCORE_HIGH.getPropertyType(), 
+                CUSTOM_RISK_SCORE_HIGH.getGroupName(),
+                CUSTOM_RISK_SCORE_HIGH.getPropertyName(),
+                CUSTOM_RISK_SCORE_HIGH.getDefaultPropertyValue(),
+                CUSTOM_RISK_SCORE_HIGH.getPropertyType(),
                 CUSTOM_RISK_SCORE_HIGH.getDescription()
             );
             qm.createConfigProperty(
-                CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), 
-                CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), 
-                CUSTOM_RISK_SCORE_MEDIUM.getDefaultPropertyValue(), 
-                CUSTOM_RISK_SCORE_MEDIUM.getPropertyType(), 
+                CUSTOM_RISK_SCORE_MEDIUM.getGroupName(),
+                CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(),
+                CUSTOM_RISK_SCORE_MEDIUM.getDefaultPropertyValue(),
+                CUSTOM_RISK_SCORE_MEDIUM.getPropertyType(),
                 CUSTOM_RISK_SCORE_MEDIUM.getDescription()
             );
             qm.createConfigProperty(
-                CUSTOM_RISK_SCORE_LOW.getGroupName(), 
-                CUSTOM_RISK_SCORE_LOW.getPropertyName(), 
-                CUSTOM_RISK_SCORE_LOW.getDefaultPropertyValue(), 
-                CUSTOM_RISK_SCORE_LOW.getPropertyType(), 
+                CUSTOM_RISK_SCORE_LOW.getGroupName(),
+                CUSTOM_RISK_SCORE_LOW.getPropertyName(),
+                CUSTOM_RISK_SCORE_LOW.getDefaultPropertyValue(),
+                CUSTOM_RISK_SCORE_LOW.getPropertyType(),
                 CUSTOM_RISK_SCORE_LOW.getDescription()
             );
             qm.createConfigProperty(
-                CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), 
-                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), 
-                CUSTOM_RISK_SCORE_UNASSIGNED.getDefaultPropertyValue(), 
-                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyType(), 
+                CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(),
+                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(),
+                CUSTOM_RISK_SCORE_UNASSIGNED.getDefaultPropertyValue(),
+                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyType(),
                 CUSTOM_RISK_SCORE_UNASSIGNED.getDescription()
             );
 
@@ -296,38 +296,38 @@ public class ConfigPropertyResourceTest extends ResourceTest {
     @Test
     public void testRiskScoreUpdate(){
         qm.createConfigProperty(
-                CUSTOM_RISK_SCORE_CRITICAL.getGroupName(), 
-                CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(), 
-                CUSTOM_RISK_SCORE_CRITICAL.getDefaultPropertyValue(), 
-                CUSTOM_RISK_SCORE_CRITICAL.getPropertyType(), 
+                CUSTOM_RISK_SCORE_CRITICAL.getGroupName(),
+                CUSTOM_RISK_SCORE_CRITICAL.getPropertyName(),
+                CUSTOM_RISK_SCORE_CRITICAL.getDefaultPropertyValue(),
+                CUSTOM_RISK_SCORE_CRITICAL.getPropertyType(),
                 CUSTOM_RISK_SCORE_CRITICAL.getDescription()
             );
             qm.createConfigProperty(
-                CUSTOM_RISK_SCORE_HIGH.getGroupName(), 
-                CUSTOM_RISK_SCORE_HIGH.getPropertyName(), 
-                CUSTOM_RISK_SCORE_HIGH.getDefaultPropertyValue(), 
-                CUSTOM_RISK_SCORE_HIGH.getPropertyType(), 
+                CUSTOM_RISK_SCORE_HIGH.getGroupName(),
+                CUSTOM_RISK_SCORE_HIGH.getPropertyName(),
+                CUSTOM_RISK_SCORE_HIGH.getDefaultPropertyValue(),
+                CUSTOM_RISK_SCORE_HIGH.getPropertyType(),
                 CUSTOM_RISK_SCORE_HIGH.getDescription()
             );
             qm.createConfigProperty(
-                CUSTOM_RISK_SCORE_MEDIUM.getGroupName(), 
-                CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(), 
-                CUSTOM_RISK_SCORE_MEDIUM.getDefaultPropertyValue(), 
-                CUSTOM_RISK_SCORE_MEDIUM.getPropertyType(), 
+                CUSTOM_RISK_SCORE_MEDIUM.getGroupName(),
+                CUSTOM_RISK_SCORE_MEDIUM.getPropertyName(),
+                CUSTOM_RISK_SCORE_MEDIUM.getDefaultPropertyValue(),
+                CUSTOM_RISK_SCORE_MEDIUM.getPropertyType(),
                 CUSTOM_RISK_SCORE_MEDIUM.getDescription()
             );
             qm.createConfigProperty(
-                CUSTOM_RISK_SCORE_LOW.getGroupName(), 
-                CUSTOM_RISK_SCORE_LOW.getPropertyName(), 
-                CUSTOM_RISK_SCORE_LOW.getDefaultPropertyValue(), 
-                CUSTOM_RISK_SCORE_LOW.getPropertyType(), 
+                CUSTOM_RISK_SCORE_LOW.getGroupName(),
+                CUSTOM_RISK_SCORE_LOW.getPropertyName(),
+                CUSTOM_RISK_SCORE_LOW.getDefaultPropertyValue(),
+                CUSTOM_RISK_SCORE_LOW.getPropertyType(),
                 CUSTOM_RISK_SCORE_LOW.getDescription()
             );
             qm.createConfigProperty(
-                CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(), 
-                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(), 
-                CUSTOM_RISK_SCORE_UNASSIGNED.getDefaultPropertyValue(), 
-                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyType(), 
+                CUSTOM_RISK_SCORE_UNASSIGNED.getGroupName(),
+                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyName(),
+                CUSTOM_RISK_SCORE_UNASSIGNED.getDefaultPropertyValue(),
+                CUSTOM_RISK_SCORE_UNASSIGNED.getPropertyType(),
                 CUSTOM_RISK_SCORE_UNASSIGNED.getDescription()
             );
 
