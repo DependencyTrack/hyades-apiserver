@@ -31,7 +31,7 @@
     </configuration>
     <input>
         <global>
-            <glob>{*.java,*.properties,*.proto,*.xml}</glob>
+            <glob>{*.java,*.properties,*.proto,*.sql,*.xml}</glob>
             <includes>
                 <include>src/</include>
             </includes>

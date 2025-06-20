@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
+import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.Component.ComponentPath;
 import org.dependencytrack.persistence.jooq.generated.tables.Project.ProjectPath;
@@ -17,6 +18,7 @@ import org.dependencytrack.persistence.jooq.generated.tables.records.DependencyM
 import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -42,7 +44,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
 
-    private static final long serialVersionUID = -716434016;
+    private static final long serialVersionUID = 1784759628;
 
     /**
      * The reference instance of <code>DEPENDENCYMETRICS</code>
@@ -253,7 +255,7 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
      */
     public static class DependencyMetricsPath extends DependencyMetrics implements Path<DependencyMetricsRecord> {
 
-        private static final long serialVersionUID = -716434016;
+        private static final long serialVersionUID = 1784759628;
         public <O extends Record> DependencyMetricsPath(Table<O> path, ForeignKey<O, DependencyMetricsRecord> childPath, InverseForeignKey<O, DependencyMetricsRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -280,6 +282,11 @@ public class DependencyMetrics extends TableImpl<DependencyMetricsRecord> {
     @Override
     public Schema getSchema() {
         return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.DEPENDENCYMETRICS_PROJECT_ID_IDX);
     }
 
     @Override
