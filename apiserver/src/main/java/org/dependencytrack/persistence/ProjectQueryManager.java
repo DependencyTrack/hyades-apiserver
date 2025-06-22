@@ -748,7 +748,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     public boolean hasAccess(final Principal principal, final Project project) {
         if (!isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)
                 || principal == null // System request (e.g. MetricsUpdateTask, etc) where there isn't a principal
-                || super.hasAccessManagementPermission(principal))
+                || getEffectivePermissions(principal).contains(Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS))
             return true;
 
         final Set<Long> teamIds = getTeamIds(principal);
@@ -774,18 +774,8 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params) {
         if (principal == null
             || !isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED)
-            || hasAccessManagementPermission(principal)) {
+            || getEffectivePermissions(principal).contains(Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS)) {
             query.setFilter(inputFilter);
-            return;
-        }
-
-        final Set<Long> teamIds = getTeamIds(principal);
-        if (teamIds.isEmpty()) {
-            if (inputFilter != null && !inputFilter.isBlank()) {
-                query.setFilter(inputFilter + " && false");
-            } else {
-                query.setFilter("false");
-            }
             return;
         }
 
@@ -817,15 +807,30 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             }
         }
 
-        final var aclCondition = "%s.isAccessibleBy(:projectAclTeamIds)".formatted(
-                requireNonNullElse(projectMemberFieldName, "this"));
+        final String aclCondition = switch (principal) {
+            case ApiKey apiKey -> {
+                final Set<Long> teamIds = getTeamIds(apiKey);
+                if (teamIds.isEmpty()) {
+                    yield "false";
+                }
+
+                params.put("projectAclTeamIds", teamIds.toArray(new Long[0]));
+                yield "%s.isAccessibleBy(:projectAclTeamIds)".formatted(
+                        requireNonNullElse(projectMemberFieldName, "this"));
+            }
+            case User user -> {
+                params.put("projectAclUserId", user.getId());
+                yield "%s.isAccessibleBy(:projectAclUserId)".formatted(
+                        requireNonNullElse(projectMemberFieldName, "this"));
+            }
+            default -> "false";
+        };
+
         if (inputFilter != null && !inputFilter.isBlank()) {
             query.setFilter("%s && (%s)".formatted(inputFilter, aclCondition));
         } else {
             query.setFilter("(%s)".formatted(aclCondition));
         }
-
-        params.put("projectAclTeamIds", teamIds.toArray(new Long[0]));
     }
 
     /**
