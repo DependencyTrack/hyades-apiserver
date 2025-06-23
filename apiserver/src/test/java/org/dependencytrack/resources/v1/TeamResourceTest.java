@@ -127,6 +127,47 @@ public class TeamResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getTeamsFilterByNameTest() {
+        for (int i = 0; i < 11; i++) {
+            final var team = new Team();
+            team.setName("team " + i);
+            qm.persist(team);
+        }
+
+        Response response = jersey.target(V1_TEAM)
+                .queryParam("name", "1")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Assertions.assertThat(response.getStatus()).isEqualTo(200);
+        Assertions.assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [ {
+                  "uuid" : "${json-unit.any-string}",
+                  "name" : "team 1",
+                  "apiKeys" : [ ],
+                  "mappedLdapGroups" : [ ],
+                  "mappedOidcGroups" : [ ],
+                  "permissions" : [ ],
+                  "ldapUsers" : [ ],
+                  "oidcUsers" : [ ],
+                  "managedUsers" : [ ]
+                }, {
+                  "uuid" : "${json-unit.any-string}",
+                  "name" : "team 10",
+                  "apiKeys" : [ ],
+                  "mappedLdapGroups" : [ ],
+                  "mappedOidcGroups" : [ ],
+                  "permissions" : [ ],
+                  "ldapUsers" : [ ],
+                  "oidcUsers" : [ ],
+                  "managedUsers" : [ ]
+                } ]
+                """);
+    }
+
+    @Test
     public void getTeamTest() {
         Team team = qm.createTeam("ABC");
         Response response = jersey.target(V1_TEAM + "/" + team.getUuid())
@@ -269,7 +310,7 @@ public class TeamResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(null, MediaType.APPLICATION_JSON));
         Assert.assertEquals(201, response.getStatus(), 0);
-        team = qm.getTeams().getList(Team.class).get(0);
+        team = qm.getTeams(null).getList(Team.class).get(0);
         Assert.assertEquals(1, team.getApiKeys().size());
     }
 

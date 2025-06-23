@@ -128,7 +128,7 @@ public class DefaultObjectGeneratorTest extends PersistenceCapableTest {
     public void testLoadDefaultPersonas() throws Exception {
         DefaultObjectGenerator generator = new DefaultObjectGenerator();
         generator.loadDefaultPersonas();
-        Assert.assertEquals(4, qm.getTeams().getTotal());
+        Assert.assertEquals(4, qm.getTeams(null).getTotal());
     }
 
     @Test

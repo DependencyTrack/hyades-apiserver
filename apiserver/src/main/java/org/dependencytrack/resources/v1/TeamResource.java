@@ -48,6 +48,7 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
@@ -99,9 +100,10 @@ public class TeamResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ})
-    public Response getTeams() {
+    public Response getTeams(@Parameter(description = "Filter by team name")
+                                 @QueryParam("name") String name) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final PaginatedResult result = qm.getTeams();
+            final PaginatedResult result = qm.getTeams(name);
             return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
         }
     }
@@ -246,7 +248,7 @@ public class TeamResource extends AlpineResource {
             boolean isAllTeams = qm.hasAccessManagementPermission(getPrincipal());
             List<Team> teams = new ArrayList<>();
             if (isAllTeams) {
-                var paginatedResult = qm.getTeams();
+                var paginatedResult = qm.getTeams(null);
                 teams = paginatedResult.getList(Team.class);
             } else {
                 if (getPrincipal() instanceof final User user) {
