@@ -27,11 +27,7 @@ import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
+import alpine.server.filters.AuthorizationFeature;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -44,6 +40,11 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -61,7 +62,8 @@ public class TeamResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(TeamResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     public void setUpUser(boolean isAdmin) {
         ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
@@ -80,6 +82,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void getTeamsTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         for (int i = 0; i < 1000; i++) {
             qm.createTeam("Team " + i);
         }
@@ -96,6 +100,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void getTeamTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         Team team = qm.createTeam("ABC");
         Response response = jersey.target(V1_TEAM + "/" + team.getUuid())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
@@ -108,6 +114,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void getTeamByInvalidUuidTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         Response response = jersey.target(V1_TEAM + "/" + UUID.randomUUID())
                 .request().header(X_API_KEY, apiKey).get(Response.class);
         Assert.assertEquals(404, response.getStatus(), 0);
@@ -146,6 +154,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void createTeamTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         Team team = new Team();
         team.setName("My Team");
         Response response = jersey.target(V1_TEAM).request()
@@ -161,6 +171,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void updateTeamTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         Team team = qm.createTeam("My Team");
         team.setName("My New Teams Name");
         Response response = jersey.target(V1_TEAM).request()
@@ -174,6 +186,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void updateTeamEmptyNameTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         Team team = qm.createTeam("My Team");
         team.setName(" ");
         Response response = jersey.target(V1_TEAM).request()
@@ -184,6 +198,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void updateTeamInvalidTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         Team team = new Team();
         team.setName("My Team");
         team.setUuid(UUID.randomUUID());
@@ -198,6 +214,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void deleteTeamTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         Team team = qm.createTeam("My Team");
         Response response = jersey.target(V1_TEAM).request()
                 .header(X_API_KEY, apiKey)
@@ -209,6 +227,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void deleteTeamWithAclTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         Team team = qm.createTeam("My Team");
         ConfigProperty aclToogle = qm.getConfigProperty(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(), ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName());
         if (aclToogle == null) {
@@ -332,6 +352,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void deleteApiKeyInvalidTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         Response response = jersey.target(V1_TEAM + "/key/" + UUID.randomUUID().toString()).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
@@ -343,6 +365,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void updateApiKeyCommentTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         final Team team = qm.createTeam("foo");
         final ApiKey apiKey = qm.createApiKey(team);
 
@@ -371,6 +395,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void updateApiKeyCommentLegacyTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         final Team team = qm.createTeam("foo");
         final ApiKey apiKey = qm.createApiKey(team);
 
@@ -399,6 +425,8 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void updateApiKeyCommentNotFoundTest() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
         final Response response = jersey.target("%s/key/does-not-exist/comment".formatted(V1_TEAM)).request()
                 .header(X_API_KEY, this.apiKey)
                 .post(Entity.entity("Some comment 123", MediaType.TEXT_PLAIN));

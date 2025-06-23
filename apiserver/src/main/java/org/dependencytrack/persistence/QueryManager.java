@@ -39,7 +39,6 @@ import com.github.packageurl.PackageURL;
 import com.google.common.collect.Lists;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
-import org.apache.commons.lang3.ClassUtils;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.auth.Permissions;
@@ -1223,24 +1222,6 @@ public class QueryManager extends AlpineQueryManager {
                 .getEffectivePermissions(user.getId(), project.getId()));
     }
 
-    public boolean hasAccessManagementPermission(final Object principal) {
-        if (principal instanceof final User user) {
-            return hasAccessManagementPermission(user);
-        } else if (principal instanceof final ApiKey apiKey) {
-            return hasAccessManagementPermission(apiKey);
-        }
-
-        throw new IllegalArgumentException("Provided principal is of invalid type " + ClassUtils.getName(principal));
-    }
-
-    public boolean hasAccessManagementPermission(final User user) {
-        return getProjectQueryManager().hasAccessManagementPermission(user);
-    }
-
-    public boolean hasAccessManagementPermission(final ApiKey apiKey) {
-        return getProjectQueryManager().hasAccessManagementPermission(apiKey);
-    }
-
     public List<TagQueryManager.TagListRow> getTags() {
         return getTagQueryManager().getTags();
     }
@@ -1722,7 +1703,7 @@ public class QueryManager extends AlpineQueryManager {
         if (request == null
                 || principal == null
                 || !isEnabled(ACCESS_MANAGEMENT_ACL_ENABLED)
-                || hasAccessManagementPermission(principal))
+                || (request != null && request.getEffectivePermissions().contains(Permissions.ACCESS_MANAGEMENT.name())))
             return Map.entry("TRUE", Collections.emptyMap());
 
         final Set<Long> teamIds = getTeamIds(principal);
@@ -1743,7 +1724,7 @@ public class QueryManager extends AlpineQueryManager {
             }
         }
 
-        return Map.entry(conditionTemplate.formatted(projectTableAlias), params); 
+        return Map.entry(conditionTemplate.formatted(projectTableAlias), params);
     }
 
     /**

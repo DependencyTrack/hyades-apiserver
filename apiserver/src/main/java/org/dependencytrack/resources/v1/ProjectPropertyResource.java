@@ -142,7 +142,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
                 validator.validateProperty(json, "propertyValue"),
                 validator.validateProperty(json, "propertyType")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);
@@ -201,7 +201,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
                 validator.validateProperty(json, "propertyName"),
                 validator.validateProperty(json, "propertyValue")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);
@@ -243,7 +243,7 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
                 validator.validateProperty(json, "groupName"),
                 validator.validateProperty(json, "propertyName")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);

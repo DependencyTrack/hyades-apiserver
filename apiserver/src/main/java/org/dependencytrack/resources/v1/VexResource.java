@@ -108,7 +108,7 @@ public class VexResource extends AbstractApiResource {
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "Force the resulting VEX to be downloaded as a file (defaults to 'false')")
             @QueryParam("download") boolean download) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
@@ -183,7 +183,7 @@ public class VexResource extends AbstractApiResource {
                     validator.validateProperty(request, "project"),
                     validator.validateProperty(request, "vex")
             );
-            try (QueryManager qm = new QueryManager()) {
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
                 final Project project = qm.getObjectByUuid(Project.class, request.getProject());
                 return process(qm, project, request.getVex());
             }
@@ -193,7 +193,7 @@ public class VexResource extends AbstractApiResource {
                     validator.validateProperty(request, "projectVersion"),
                     validator.validateProperty(request, "vex")
             );
-            try (QueryManager qm = new QueryManager()) {
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
                 Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
                 return process(qm, project, request.getVex());
             }
@@ -244,12 +244,12 @@ public class VexResource extends AbstractApiResource {
                               @FormDataParam("projectVersion") String projectVersion,
                               @Parameter(schema = @Schema(type = "string")) @FormDataParam("vex") final List<FormDataBodyPart> artifactParts) {
         if (projectUuid != null) {
-            try (QueryManager qm = new QueryManager()) {
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
                 final Project project = qm.getObjectByUuid(Project.class, projectUuid);
                 return process(qm, project, artifactParts);
             }
         } else {
-            try (QueryManager qm = new QueryManager()) {
+            try (QueryManager qm = new QueryManager(getAlpineRequest())) {
                 final String trimmedProjectName = StringUtils.trimToNull(projectName);
                 final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
                 Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
@@ -265,7 +265,7 @@ public class VexResource extends AbstractApiResource {
         if (project != null) {
             requireAccess(qm, project);
             final byte[] decoded = Base64.getDecoder().decode(encodedVexData);
-            BomResource.validate(decoded, project);
+            BomResource.validate(qm, decoded, project);
             final VexUploadEvent vexUploadEvent = new VexUploadEvent(project.getUuid(), decoded);
             Event.dispatch(vexUploadEvent);
             return Response.ok(Collections.singletonMap("token", vexUploadEvent.getChainIdentifier())).build();
@@ -284,7 +284,7 @@ public class VexResource extends AbstractApiResource {
                 requireAccess(qm, project);
                 try (InputStream in = bodyPartEntity.getInputStream()) {
                     final byte[] content = IOUtils.toByteArray(new BOMInputStream((in)));
-                    BomResource.validate(content, project);
+                    BomResource.validate(qm, content, project);
                     final VexUploadEvent vexUploadEvent = new VexUploadEvent(project.getUuid(), content);
                     Event.dispatch(vexUploadEvent);
                     return Response.ok(Collections.singletonMap("token", vexUploadEvent.getChainIdentifier())).build();

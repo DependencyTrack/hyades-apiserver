@@ -110,7 +110,7 @@ public class PolicyResource extends AbstractApiResource {
     public Response getPolicy(
             @Parameter(description = "The UUID of the policy to retrieve", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Policy policy = qm.getObjectByUuid(Policy.class, uuid);
             if (policy != null) {
                 return Response.ok(policy).build();
@@ -143,7 +143,7 @@ public class PolicyResource extends AbstractApiResource {
                 validator.validateProperty(jsonPolicy, "name")
         );
 
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             Policy policy = qm.getPolicy(StringUtils.trimToNull(jsonPolicy.getName()));
             if (policy == null) {
                 Policy.Operator operator = jsonPolicy.getOperator();
@@ -186,7 +186,7 @@ public class PolicyResource extends AbstractApiResource {
         failOnValidationError(
                 validator.validateProperty(jsonPolicy, "name")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             Policy policy = qm.getObjectByUuid(Policy.class, jsonPolicy.getUuid());
             if (policy != null) {
                 policy.setName(StringUtils.trimToNull(jsonPolicy.getName()));
@@ -219,7 +219,7 @@ public class PolicyResource extends AbstractApiResource {
     public Response deletePolicy(
             @Parameter(description = "The UUID of the policy to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Policy policy = qm.getObjectByUuid(Policy.class, uuid);
             if (policy != null) {
                 qm.deletePolicy(policy);
@@ -258,7 +258,7 @@ public class PolicyResource extends AbstractApiResource {
             @PathParam("policyUuid") @ValidUuid String policyUuid,
             @Parameter(description = "The UUID of the project to add to the rule", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Policy policy = qm.getObjectByUuid(Policy.class, policyUuid);
             if (policy == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The policy could not be found.").build();
@@ -306,7 +306,7 @@ public class PolicyResource extends AbstractApiResource {
             @PathParam("policyUuid") @ValidUuid String policyUuid,
             @Parameter(description = "The UUID of the project to remove from the policy", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Policy policy = qm.getObjectByUuid(Policy.class, policyUuid);
             if (policy == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The policy could not be found.").build();

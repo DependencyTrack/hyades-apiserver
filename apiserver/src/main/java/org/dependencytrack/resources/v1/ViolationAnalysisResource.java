@@ -95,7 +95,7 @@ public class ViolationAnalysisResource extends AbstractApiResource {
                 new ValidationTask(RegexSequence.Pattern.UUID, componentUuid, "Component is not a valid UUID"),
                 new ValidationTask(RegexSequence.Pattern.UUID, violationUuid, "Policy violation is not a valid UUID")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, componentUuid);
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();
@@ -139,7 +139,7 @@ public class ViolationAnalysisResource extends AbstractApiResource {
                 validator.validateProperty(request, "analysisState"),
                 validator.validateProperty(request, "comment")
         );
-        try (QueryManager qm = new QueryManager()) {
+        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
             final Component component = qm.getObjectByUuid(Component.class, request.getComponent());
             if (component == null) {
                 return Response.status(Response.Status.NOT_FOUND).entity("The component could not be found.").build();

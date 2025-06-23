@@ -25,8 +25,6 @@ import alpine.model.ApiKey;
 import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
-import alpine.model.User;
-import alpine.persistence.AlpineQueryManager;
 import alpine.resources.AlpineRequest;
 import alpine.server.filters.AuthorizationFilter;
 import io.jsonwebtoken.lang.Collections;
@@ -328,15 +326,8 @@ public abstract class AlpineResource {
         if (getPrincipal() == null) {
             return false;
         }
-        try (AlpineQueryManager qm = new AlpineQueryManager()) {
-            boolean hasPermission = false;
-            if (getPrincipal() instanceof ApiKey) {
-                hasPermission = qm.hasPermission((ApiKey)getPrincipal(), permission);
-            } else if (getPrincipal() instanceof User) {
-                hasPermission = qm.hasPermission((User)getPrincipal(), permission, true);
-            }
-            return hasPermission;
-        }
+
+        return getEffectivePermissions().contains(permission);
     }
 
     /**
@@ -344,8 +335,11 @@ public abstract class AlpineResource {
      */
     @SuppressWarnings("unchecked")
     protected Set<String> getEffectivePermissions() {
-        return (Set<String>) requestContext.getProperty(
+        final var permissions = (Set<String>) requestContext.getProperty(
                 AuthorizationFilter.EFFECTIVE_PERMISSIONS_PROPERTY);
+        return permissions != null
+                ? Set.copyOf(permissions)
+                : Collections.emptySet();
     }
 
     /**
