@@ -578,16 +578,15 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
 
     /**
      * Returns a complete list of all Team objects, in ascending order by name.
-     * @param filterByName The name of the team to filter
      * @return a List of Teams
      * @since 1.0.0
      */
-    public PaginatedResult getTeams(String filterByName) {
+    public PaginatedResult getTeams() {
         final Query<Team> query = pm.newQuery(Team.class);
         query.getFetchPlan().addGroup(Team.FetchGroup.ALL.name());
-        if (filterByName != null) {
+        if (filter != null) {
             query.setFilter("name.toLowerCase().matches(:filter)");
-            final String filterString = ".*" + filterByName.toLowerCase() + ".*";
+            final String filterString = ".*" + filter.toLowerCase() + ".*";
             return execute(query, filterString);
         }
         query.setOrdering("name asc");

@@ -310,7 +310,7 @@ public class TeamResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(null, MediaType.APPLICATION_JSON));
         Assert.assertEquals(201, response.getStatus(), 0);
-        team = qm.getTeams(null).getList(Team.class).get(0);
+        team = qm.getTeams().getList(Team.class).get(0);
         Assert.assertEquals(1, team.getApiKeys().size());
     }
 
