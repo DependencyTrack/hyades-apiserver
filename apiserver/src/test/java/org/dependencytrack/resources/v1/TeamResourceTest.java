@@ -135,7 +135,7 @@ public class TeamResourceTest extends ResourceTest {
         }
 
         Response response = jersey.target(V1_TEAM)
-                .queryParam("name", "1")
+                .queryParam("searchText", "1")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
