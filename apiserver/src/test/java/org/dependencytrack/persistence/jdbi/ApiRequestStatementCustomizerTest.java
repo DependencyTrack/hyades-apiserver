@@ -420,10 +420,15 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
         useJdbiHandle(request, handle -> handle
                 .addCustomizer(inspectStatement(ctx -> {
                     assertThat(ctx.getRenderedSql()).isEqualToIgnoringWhitespace("""
-                            SELECT 1 AS "valueA", 2 AS "valueB" FROM "PROJECT" WHERE FALSE
+                            SELECT
+                              1 AS "valueA",
+                              2 AS "valueB"
+                              FROM "PROJECT" 
+                             WHERE HAS_USER_PROJECT_ACCESS("PROJECT"."ID", :projectAclUserId)
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("{}");
+                    assertThat(ctx.getBinding())
+                            .hasToString("{named:{projectAclUserId:%d}}".formatted(managedUser.getId()));
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -431,7 +436,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testWithPortfolioAclEnabledWithApiKeyHavingAccessManagementPermission() {
+    public void testWithPortfolioAclEnabledWithApiKeyHavingPortfolioAccessControlBypassPermission() {
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -449,7 +454,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                 /* filter */ null,
                 /* orderBy */ null,
                 /* orderDirection */ null,
-                /* effectivePermissions */ Set.of(Permissions.ACCESS_MANAGEMENT.name())
+                /* effectivePermissions */ Set.of(Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS)
         );
 
         useJdbiHandle(request, handle -> handle
@@ -466,7 +471,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testWithPortfolioAclEnabledWithManagedUserHavingAccessManagementPermission() {
+    public void testWithPortfolioAclEnabledWithManagedUserHavingPortfolioAccessControlBypassPermission() {
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -483,7 +488,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                 /* filter */ null,
                 /* orderBy */ null,
                 /* orderDirection */ null,
-                /* effectivePermissions */ Set.of(Permissions.ACCESS_MANAGEMENT.name())
+                /* effectivePermissions */ Set.of(Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS)
         );
 
         useJdbiHandle(request, handle -> handle
@@ -500,7 +505,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testWithPortfolioAclEnabledWithLdapUserHavingAccessManagementPermission() {
+    public void testWithPortfolioAclEnabledWithLdapUserHavingPortfolioAccessControlBypassPermission() {
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -517,7 +522,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                 /* filter */ null,
                 /* orderBy */ null,
                 /* orderDirection */ null,
-                /* effectivePermissions */ Set.of(Permissions.ACCESS_MANAGEMENT.name())
+                /* effectivePermissions */ Set.of(Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS)
         );
 
         useJdbiHandle(request, handle -> handle
@@ -534,7 +539,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testWithPortfolioAclEnabledWithOidcUserHavingAccessManagementPermission() {
+    public void testWithPortfolioAclEnabledWithOidcUserHavingPortfolioAccessControlBypassPermission() {
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -551,7 +556,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                 /* filter */ null,
                 /* orderBy */ null,
                 /* orderDirection */ null,
-                /* effectivePermissions */ Set.of(Permissions.ACCESS_MANAGEMENT.name())
+                /* effectivePermissions */ Set.of(Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS)
         );
 
         useJdbiHandle(request, handle -> handle

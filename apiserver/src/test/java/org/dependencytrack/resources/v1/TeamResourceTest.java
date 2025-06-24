@@ -26,12 +26,13 @@ import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.assertj.core.api.Assertions;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -61,7 +62,7 @@ public class TeamResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(TeamResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     public void setUpUser(boolean isAdmin) {
         ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
@@ -87,11 +88,83 @@ public class TeamResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
+        // There's already a built-in team in ResourceTest
         Assert.assertEquals(String.valueOf(1001), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
-        Assert.assertEquals(1001, json.size()); // There's already a built-in team in ResourceTest
+        Assert.assertEquals(100, json.size()); // Max size on one page
         Assert.assertEquals("Team 0", json.getJsonObject(0).getString("name"));
+    }
+
+    @Test
+    public void getTeamsPaginationTest() {
+        for (int i = 0; i < 3; i++) {
+            final var team = new Team();
+            team.setName("team " + i);
+            qm.persist(team);
+        }
+
+        Response response = jersey.target(V1_TEAM)
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assertions.assertThat(response.getStatus()).isEqualTo(200);
+        // There's already a built-in team in ResourceTest
+        Assertions.assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("4");
+        assertThat(parseJsonArray(response).size()).isEqualTo(3);
+
+        response = jersey.target(V1_TEAM)
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "1")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assertions.assertThat(response.getStatus()).isEqualTo(200);
+        Assertions.assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("4");
+        assertThat(parseJsonArray(response).size()).isEqualTo(1);
+    }
+
+    @Test
+    public void getTeamsFilterByNameTest() {
+        for (int i = 0; i < 11; i++) {
+            final var team = new Team();
+            team.setName("team " + i);
+            qm.persist(team);
+        }
+
+        Response response = jersey.target(V1_TEAM)
+                .queryParam("searchText", "1")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Assertions.assertThat(response.getStatus()).isEqualTo(200);
+        Assertions.assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [ {
+                  "uuid" : "${json-unit.any-string}",
+                  "name" : "team 1",
+                  "apiKeys" : [ ],
+                  "mappedLdapGroups" : [ ],
+                  "mappedOidcGroups" : [ ],
+                  "permissions" : [ ],
+                  "ldapUsers" : [ ],
+                  "oidcUsers" : [ ],
+                  "managedUsers" : [ ]
+                }, {
+                  "uuid" : "${json-unit.any-string}",
+                  "name" : "team 10",
+                  "apiKeys" : [ ],
+                  "mappedLdapGroups" : [ ],
+                  "mappedOidcGroups" : [ ],
+                  "permissions" : [ ],
+                  "ldapUsers" : [ ],
+                  "oidcUsers" : [ ],
+                  "managedUsers" : [ ]
+                } ]
+                """);
     }
 
     @Test
@@ -237,7 +310,7 @@ public class TeamResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(null, MediaType.APPLICATION_JSON));
         Assert.assertEquals(201, response.getStatus(), 0);
-        team = qm.getTeams().get(0);
+        team = qm.getTeams().getList(Team.class).get(0);
         Assert.assertEquals(1, team.getApiKeys().size());
     }
 
