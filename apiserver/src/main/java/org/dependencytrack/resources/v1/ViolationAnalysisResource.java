@@ -22,6 +22,7 @@ import alpine.common.validation.RegexSequence;
 import alpine.common.validation.ValidationTask;
 import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.filters.ResourceAccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -71,7 +72,7 @@ public class ViolationAnalysisResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Retrieves a violation analysis trail",
-            description = "<p>Requires permission <strong>VIEW_POLICY_VIOLATION</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>POLICY_VIOLATION_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -86,7 +87,8 @@ public class ViolationAnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component or policy violation could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
+    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ })
+    @ResourceAccessRequired
     public Response retrieveAnalysis(@Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
                                      @QueryParam("component") @ValidUuid String componentUuid,
                                      @Parameter(description = "The UUID of the policy violation", schema = @Schema(type = "string", format = "uuid"), required = true)
@@ -115,7 +117,7 @@ public class ViolationAnalysisResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Records a violation analysis decision",
-            description = "<p>Requires permission <strong>POLICY_VIOLATION_ANALYSIS</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_UPDATE</strong> and <strong>POLICY_VIOLATION_UPDATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -130,7 +132,7 @@ public class ViolationAnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component or policy violation could not be found")
     })
-    @PermissionRequired(Permissions.Constants.POLICY_VIOLATION_ANALYSIS)
+    @PermissionRequired({ Permissions.Constants.PROJECT_UPDATE, Permissions.Constants.POLICY_VIOLATION_UPDATE })
     public Response updateAnalysis(ViolationAnalysisRequest request) {
         final Validator validator = getValidator();
         failOnValidationError(
