@@ -30,7 +30,6 @@ import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.core.statement.StatementCustomizer;
 
 import javax.jdo.Query;
-
 import java.security.Principal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -180,7 +179,7 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
         if (apiRequest == null
                 || apiRequest.getPrincipal() == null
                 || !isAclEnabled(ctx)
-                || apiRequest.getEffectivePermissions().contains(Permissions.ACCESS_MANAGEMENT.name())) {
+                || apiRequest.getEffectivePermissions().contains(Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS)) {
             ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION, "TRUE");
             return;
         }

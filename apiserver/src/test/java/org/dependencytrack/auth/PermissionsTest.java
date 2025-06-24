@@ -33,6 +33,7 @@ import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_D
 import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_READ;
 import static org.dependencytrack.auth.Permissions.Constants.POLICY_MANAGEMENT_UPDATE;
 import static org.dependencytrack.auth.Permissions.Constants.POLICY_VIOLATION_ANALYSIS;
+import static org.dependencytrack.auth.Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS;
 import static org.dependencytrack.auth.Permissions.Constants.PORTFOLIO_MANAGEMENT;
 import static org.dependencytrack.auth.Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE;
 import static org.dependencytrack.auth.Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE;
@@ -46,6 +47,7 @@ import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATIO
 import static org.dependencytrack.auth.Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE;
 import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT;
 import static org.dependencytrack.auth.Permissions.Constants.TAG_MANAGEMENT_DELETE;
+import static org.dependencytrack.auth.Permissions.Constants.VIEW_BADGES;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_POLICY_VIOLATION;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_PORTFOLIO;
 import static org.dependencytrack.auth.Permissions.Constants.VIEW_VULNERABILITY;
@@ -58,15 +60,15 @@ import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAG
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_DELETE;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_READ;
 import static org.dependencytrack.auth.Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE;
-import static org.dependencytrack.auth.Permissions.Constants.VIEW_BADGES;
 
 public class PermissionsTest {
 
     @Test
     public void testPermissionEnums() {
-        Assert.assertEquals(38, Permissions.values().length);
+        Assert.assertEquals(39, Permissions.values().length);
         Assert.assertEquals("BOM_UPLOAD", Permissions.BOM_UPLOAD.name());
         Assert.assertEquals("VIEW_PORTFOLIO", Permissions.VIEW_PORTFOLIO.name());
+        Assert.assertEquals("PORTFOLIO_ACCESS_CONTROL_BYPASS", Permissions.PORTFOLIO_ACCESS_CONTROL_BYPASS.name());
         Assert.assertEquals("PORTFOLIO_MANAGEMENT", Permissions.PORTFOLIO_MANAGEMENT.name());
         Assert.assertEquals("PORTFOLIO_MANAGEMENT_CREATE", Permissions.PORTFOLIO_MANAGEMENT_CREATE.name());
         Assert.assertEquals("PORTFOLIO_MANAGEMENT_READ", Permissions.PORTFOLIO_MANAGEMENT_READ.name());
@@ -109,6 +111,7 @@ public class PermissionsTest {
     public void testPermissionConstants() {
         Assert.assertEquals("BOM_UPLOAD", BOM_UPLOAD);
         Assert.assertEquals("VIEW_PORTFOLIO", VIEW_PORTFOLIO);
+        Assert.assertEquals("PORTFOLIO_ACCESS_CONTROL_BYPASS", PORTFOLIO_ACCESS_CONTROL_BYPASS);
         Assert.assertEquals("PORTFOLIO_MANAGEMENT", PORTFOLIO_MANAGEMENT);
         Assert.assertEquals("PORTFOLIO_MANAGEMENT_CREATE", PORTFOLIO_MANAGEMENT_CREATE);
         Assert.assertEquals("PORTFOLIO_MANAGEMENT_READ", PORTFOLIO_MANAGEMENT_READ);
