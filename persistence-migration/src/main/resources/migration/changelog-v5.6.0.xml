@@ -2623,4 +2623,29 @@
             <column name="PROJECT_ID"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.6.0-31" author="nscuro">
+        <sql splitStatements="true">
+            INSERT INTO "PERMISSION" ("NAME", "DESCRIPTION")
+            VALUES ('PORTFOLIO_ACCESS_CONTROL_BYPASS', 'Provides the ability to bypass portfolio access control, granting access to all projects');
+
+            INSERT INTO "TEAMS_PERMISSIONS" ("TEAM_ID", "PERMISSION_ID")
+            SELECT "TEAM_ID"
+                 , (SELECT "ID" FROM "PERMISSION" WHERE "NAME" = 'PORTFOLIO_ACCESS_CONTROL_BYPASS')
+              FROM "TEAMS_PERMISSIONS" AS tp
+             INNER JOIN "PERMISSION" AS p
+                ON p."ID" = tp."PERMISSION_ID"
+             WHERE p."NAME" IN ('ACCESS_MANAGEMENT', 'ACCESS_MANAGEMENT_CREATE')
+                ON CONFLICT ("TEAM_ID", "PERMISSION_ID") DO NOTHING;
+
+            INSERT INTO "USERS_PERMISSIONS" ("USER_ID", "PERMISSION_ID")
+            SELECT "USER_ID"
+                 , (SELECT "ID" FROM "PERMISSION" WHERE "NAME" = 'PORTFOLIO_ACCESS_CONTROL_BYPASS')
+              FROM "USERS_PERMISSIONS" AS up
+             INNER JOIN "PERMISSION" AS p
+                ON p."ID" = up."PERMISSION_ID"
+             WHERE p."NAME" IN ('ACCESS_MANAGEMENT', 'ACCESS_MANAGEMENT_CREATE')
+                ON CONFLICT ("USER_ID", "PERMISSION_ID") DO NOTHING;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
