@@ -233,6 +233,32 @@ public class TeamResourceTest extends ResourceTest {
     }
 
     @Test
+    public void createTeamWhenAlreadyExistsTest() {
+        final Team existingTeam = qm.createTeam("My Team");
+
+        final Response response = jersey.target(V1_TEAM).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "My Team"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(409);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("teamUuid", equalTo(existingTeam.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "status": 409,
+                          "title": "Team already exists",
+                          "detail": "A team with the name \\"My Team\\" already exists",
+                          "teamUuid": "${json-unit.matches:teamUuid}",
+                          "teamName": "My Team"
+                        }
+                        """);
+    }
+
+    @Test
     public void updateTeamTest() {
         Team team = qm.createTeam("My Team");
         team.setName("My New Teams Name");
