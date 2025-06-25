@@ -220,7 +220,8 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(query::execute)
                 .withMessage("""
-                        Expected argument to be of type org.datanucleus.store.rdbms.sql.expression.ArrayLiteral, \
+                        Expected argument to be of type org.datanucleus.store.rdbms.sql.expression.ArrayLiteral or \
+                        org.datanucleus.store.rdbms.sql.expression.IntegerLiteral, \
                         but got org.datanucleus.store.rdbms.sql.expression.ParameterLiteral""");
     }
 
@@ -233,7 +234,8 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(query::execute)
                 .withMessage("""
-                        Expected argument to be of type org.datanucleus.store.rdbms.sql.expression.ArrayLiteral, \
+                        Expected argument to be of type org.datanucleus.store.rdbms.sql.expression.ArrayLiteral or \
+                        org.datanucleus.store.rdbms.sql.expression.IntegerLiteral, \
                         but got org.datanucleus.store.rdbms.sql.expression.ParameterLiteral""");
     }
 

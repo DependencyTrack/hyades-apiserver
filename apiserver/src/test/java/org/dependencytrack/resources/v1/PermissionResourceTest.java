@@ -22,7 +22,7 @@ import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -52,7 +52,7 @@ public class PermissionResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(PermissionResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     @Before
     public void before() throws Exception {
@@ -70,7 +70,7 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
-        Assert.assertEquals(38, json.size());
+        Assert.assertEquals(39, json.size());
         Assert.assertEquals("ACCESS_MANAGEMENT", json.getJsonObject(0).getString("name"));
         Assert.assertEquals("Allows the management of users, teams, and API keys", json.getJsonObject(0).getString("description"));
     }

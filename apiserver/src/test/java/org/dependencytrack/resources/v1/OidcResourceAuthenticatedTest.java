@@ -22,7 +22,7 @@ import alpine.model.MappedOidcGroup;
 import alpine.model.OidcGroup;
 import alpine.model.Team;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.resources.v1.vo.MappedOidcGroupRequest;
@@ -45,7 +45,7 @@ public class OidcResourceAuthenticatedTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(OidcResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     @Test
     public void retrieveGroupsShouldReturnListOfGroups() {

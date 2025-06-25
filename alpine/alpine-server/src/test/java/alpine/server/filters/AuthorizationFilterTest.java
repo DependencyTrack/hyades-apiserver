@@ -79,8 +79,8 @@ public class AuthorizationFilterTest extends JerseyTest {
     protected Application configure() {
         forceSet(TestProperties.CONTAINER_PORT, "0");
         return new ResourceConfig(TestResource.class)
-                .register(AuthenticationFilter.class)
-                .register(AuthorizationFilter.class)
+                .register(AuthenticationFeature.class)
+                .register(AuthorizationFeature.class)
                 .register(ApiFilter.class);
     }
 

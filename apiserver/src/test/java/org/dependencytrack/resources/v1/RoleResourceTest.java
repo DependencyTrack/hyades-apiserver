@@ -39,7 +39,7 @@ import alpine.common.util.UuidUtil;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFilter;
+import alpine.server.filters.AuthenticationFeature;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
@@ -52,13 +52,14 @@ public class RoleResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(RoleResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFilter.class));
+                    .register(AuthenticationFeature.class));
 
     @Before
     @Override
     public void before() throws Exception {
         super.before();
         final var generator = new DefaultObjectGenerator();
+        generator.loadDefaultPermissions();
         generator.loadDefaultRoles();
     }
 
