@@ -756,12 +756,31 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Query<?> query;
         switch (principal) {
             case User user -> {
-                query = pm.newQuery(Query.SQL, "SELECT has_user_project_access(?, ?)")
+                query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                                SELECT EXISTS(
+                                  SELECT 1
+                                    FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" AS upep
+                                   INNER JOIN "PROJECT_HIERARCHY" AS ph
+                                      ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
+                                   WHERE ph."CHILD_PROJECT_ID" = ?
+                                     AND upep."USER_ID" = ?
+                                     AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                                )
+                                """)
                         .setParameters(project.getId(), user.getId());
             }
             case ApiKey apiKey when !teamIds.isEmpty() -> {
-                query = pm.newQuery(Query.SQL, "SELECT has_project_access(?, ?)")
-                        .setParameters(project.getId(), teamIds.toArray(Long[]::new));
+                query = pm.newQuery(Query.SQL, /* language=SQL */ """
+                                SELECT EXISTS(
+                                  SELECT 1
+                                    FROM "PROJECT_ACCESS_TEAMS" AS pat
+                                   INNER JOIN "PROJECT_HIERARCHY" AS ph
+                                      ON ph."PARENT_PROJECT_ID" = pat."PROJECT_ID"
+                                   WHERE pat."TEAM_ID" = ANY(?)
+                                     AND ph."CHILD_PROJECT_ID" = ?
+                                )
+                                """)
+                        .setParameters(teamIds.toArray(Long[]::new), project.getId());
             }
             default -> {
                 return false;
