@@ -34,6 +34,23 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -56,6 +73,7 @@ import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
@@ -66,23 +84,6 @@ import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonReader;
-import jakarta.json.JsonString;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
@@ -98,6 +99,7 @@ import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -312,7 +314,8 @@ public class BomResource extends AbstractApiResource {
                     validator.validateProperty(request, "bom")
             );
             try (QueryManager qm = new QueryManager()) {
-                Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
+                Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                                handle.attach(ProjectDao.class).getProjectByNameAndVersion(request.getProjectName(), request.getProjectVersion()));
                 if (project == null && request.isAutoCreate()) {
                     if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
                         Project parent = null;
@@ -327,7 +330,8 @@ public class BomResource extends AbstractApiResource {
                                 );
                                 final String trimmedParentName = StringUtils.trimToNull(request.getParentName());
                                 final String trimmedParentVersion = StringUtils.trimToNull(request.getParentVersion());
-                                parent = qm.getProject(trimmedParentName, trimmedParentVersion);
+                                parent = withJdbiHandle(getAlpineRequest(), handle ->
+                                        handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedParentName, trimmedParentVersion));
                             }
 
                             if (parent == null) { // if parent project is specified but not found
@@ -423,7 +427,8 @@ public class BomResource extends AbstractApiResource {
             try (QueryManager qm = new QueryManager()) {
                 final String trimmedProjectName = StringUtils.trimToNull(projectName);
                 final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
-                Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
+                Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                        handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedProjectName, trimmedProjectVersion));
                 if (project == null && autoCreate) {
                     if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
                         Project parent = null;
@@ -434,7 +439,8 @@ public class BomResource extends AbstractApiResource {
                             } else {
                                 final String trimmedParentName = StringUtils.trimToNull(parentName);
                                 final String trimmedParentVersion = StringUtils.trimToNull(parentVersion);
-                                parent = qm.getProject(trimmedParentName, trimmedParentVersion);
+                                parent = withJdbiHandle(getAlpineRequest(), handle ->
+                                        handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedParentName, trimmedParentVersion));
                             }
 
                             if (parent == null) { // if parent project is specified but not found

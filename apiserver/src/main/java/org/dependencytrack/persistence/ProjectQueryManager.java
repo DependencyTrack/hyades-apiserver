@@ -132,38 +132,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     }
 
     /**
-     * Returns a project by its name and version.
-     *
-     * @param name    the name of the Project (required)
-     * @param version the version of the Project (or null)
-     * @return a Project object, or null if not found
-     */
-    @Override
-    public Project getProject(final String name, final String version) {
-        final Query<Project> query = pm.newQuery(Project.class);
-
-        final var filterBuilder = new ProjectQueryFilterBuilder()
-                .withName(name)
-                .withVersion(version);
-
-        final String queryFilter = filterBuilder.buildFilter();
-        final Map<String, Object> params = filterBuilder.getParams();
-
-        preprocessACLs(query, queryFilter, params);
-        query.setFilter(queryFilter);
-        query.setRange(0, 1);
-        final Project project = singleResult(query.executeWithMap(params));
-        if (project != null) {
-            // set Metrics to prevent extra round trip
-            project.setMetrics(withJdbiHandle(handle ->
-                    handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
-            // set ProjectVersions to prevent extra round trip
-            project.setVersions(getProjectVersions(project));
-        }
-        return project;
-    }
-
-    /**
      * Returns the latest version of a project by its name.
      *
      * @param name the name of the Project (required)
@@ -536,7 +504,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             }
 
             if (includeServices) {
-                final List<ServiceComponent> sourceServices = getAllServiceComponents(source);
+                final List<ServiceComponent> sourceServices = getAllServiceComponents(source.getId());
                 if (sourceServices != null) {
                     for (final ServiceComponent sourceService : sourceServices) {
                         cloneServiceComponent(sourceService, project, false);
@@ -661,20 +629,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
         final Query<ProjectProperty> query = this.pm.newQuery(ProjectProperty.class, "project == :project && groupName == :groupName && propertyName == :propertyName");
         query.setRange(0, 1);
         return singleResult(query.execute(project, groupName, propertyName));
-    }
-
-    /**
-     * Returns a List of ProjectProperty's for the specified project.
-     *
-     * @param project the project the property belongs to
-     * @return a List ProjectProperty objects
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public List<ProjectProperty> getProjectProperties(final Project project) {
-        final Query<ProjectProperty> query = this.pm.newQuery(ProjectProperty.class, "project == :project");
-        query.setOrdering("groupName asc, propertyName asc");
-        return (List<ProjectProperty>) query.execute(project);
     }
 
     /**
@@ -850,42 +804,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
     @Override
     public boolean hasAccessManagementPermission(final ApiKey apiKey) {
         return hasPermission(apiKey, Permissions.ACCESS_MANAGEMENT.name());
-    }
-
-    @Override
-    public PaginatedResult getChildrenProjects(final UUID uuid, final boolean includeMetrics, final boolean excludeInactive) {
-        final PaginatedResult result;
-        final Query<Project> query = pm.newQuery(Project.class);
-        if (orderBy == null) {
-            query.setOrdering("name asc, version desc, id asc");
-        }
-
-        var filterBuilder = new ProjectQueryFilterBuilder()
-                .excludeInactive(excludeInactive)
-                .withParent(uuid);
-
-        if (filter != null) {
-            final String filterString = ".*" + filter.toLowerCase() + ".*";
-            final Tag tag = getTagByName(filter.trim());
-
-            if (tag != null) {
-                filterBuilder = filterBuilder.withFuzzyNameOrExactTag(filterString, tag);
-
-            } else {
-                filterBuilder = filterBuilder.withFuzzyName(filterString);
-            }
-        }
-
-        final String queryFilter = filterBuilder.buildFilter();
-        final Map<String, Object> params = filterBuilder.getParams();
-
-        preprocessACLs(query, queryFilter, params);
-        query.getFetchPlan().addGroup(Project.FetchGroup.ALL.name());
-        result = execute(query, params);
-        if (!result.getObjects().isEmpty() && includeMetrics) {
-            populateMetrics(result.getList(Project.class));
-        }
-        return result;
     }
 
     @Override

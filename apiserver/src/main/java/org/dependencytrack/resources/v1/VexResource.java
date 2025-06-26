@@ -41,6 +41,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
@@ -65,6 +66,8 @@ import java.io.InputStream;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing VEX documents.
@@ -194,7 +197,8 @@ public class VexResource extends AbstractApiResource {
                     validator.validateProperty(request, "vex")
             );
             try (QueryManager qm = new QueryManager()) {
-                Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
+                Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                        handle.attach(ProjectDao.class).getProjectByNameAndVersion(request.getProjectName(), request.getProjectVersion()));
                 return process(qm, project, request.getVex());
             }
         }
@@ -252,7 +256,8 @@ public class VexResource extends AbstractApiResource {
             try (QueryManager qm = new QueryManager()) {
                 final String trimmedProjectName = StringUtils.trimToNull(projectName);
                 final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
-                Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
+                Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                        handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedProjectName, trimmedProjectVersion));
                 return process(qm, project, artifactParts);
             }
         }

@@ -29,14 +29,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectProperty;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -48,7 +40,18 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+
 import java.util.List;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing ProjectProperties
@@ -91,11 +94,8 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);
-                final List<ProjectProperty> properties = qm.getProjectProperties(project);
-                // Detaches the objects and closes the persistence manager so that if/when encrypted string
-                // values are replaced by the placeholder, they are not erroneously persisted to the database.
-                qm.getPersistenceManager().detachCopyAll(properties);
-                qm.close();
+                final List<ProjectProperty> properties = withJdbiHandle(getAlpineRequest(), handle ->
+                        handle.attach(ProjectDao.class).getProjectProperties(project.getId()));
                 for (final ProjectProperty property : properties) {
                     // Replace the value of encrypted strings with the pre-defined placeholder
                     if (ProjectProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {

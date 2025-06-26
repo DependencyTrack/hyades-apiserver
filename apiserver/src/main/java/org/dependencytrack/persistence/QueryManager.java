@@ -507,10 +507,6 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().getAllProjects(excludeInactive);
     }
 
-    public Project getProject(final String name, final String version) {
-        return getProjectQueryManager().getProject(name, version);
-    }
-
     public Project getLatestProjectVersion(final String name) {
         return getProjectQueryManager().getLatestProjectVersion(name);
     }
@@ -529,10 +525,6 @@ public class QueryManager extends AlpineQueryManager {
 
     void preprocessACLs(final Query<?> query, final String inputFilter, final Map<String, Object> params) {
         getProjectQueryManager().preprocessACLs(query, inputFilter, params);
-    }
-
-    public PaginatedResult getChildrenProjects(final UUID uuid, final boolean includeMetrics, final boolean excludeInactive) {
-        return getProjectQueryManager().getChildrenProjects(uuid, includeMetrics, excludeInactive);
     }
 
     public PaginatedResult getChildrenProjects(final Tag tag, final UUID uuid, final boolean includeMetrics, final boolean excludeInactive) {
@@ -595,10 +587,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public ProjectProperty getProjectProperty(final Project project, final String groupName, final String propertyName) {
         return getProjectQueryManager().getProjectProperty(project, groupName, propertyName);
-    }
-
-    public List<ProjectProperty> getProjectProperties(final Project project) {
-        return getProjectQueryManager().getProjectProperties(project);
     }
 
     public Bom createBom(Project project, Date imported, Bom.Format format, String specVersion, Integer bomVersion, String serialNumber, final UUID uploadToken, Date bomGenerated) {
@@ -957,6 +945,10 @@ public class QueryManager extends AlpineQueryManager {
         return getComponentQueryManager().getAllComponents(project);
     }
 
+    public List<Component> getAllComponents(Long projectId) {
+        return getComponentQueryManager().getAllComponents(projectId);
+    }
+
     public PaginatedResult getComponents(final Project project, final boolean includeMetrics, final boolean onlyOutdated, final boolean onlyDirect) {
         return getComponentQueryManager().getComponents(project, includeMetrics, onlyOutdated, onlyDirect);
     }
@@ -969,8 +961,8 @@ public class QueryManager extends AlpineQueryManager {
         return getServiceComponentQueryManager().createServiceComponent(service, commitIndex);
     }
 
-    public List<ServiceComponent> getAllServiceComponents(Project project) {
-        return getServiceComponentQueryManager().getAllServiceComponents(project);
+    public List<ServiceComponent> getAllServiceComponents(Long projectId) {
+        return getServiceComponentQueryManager().getAllServiceComponents(projectId);
     }
 
     public PaginatedResult getServiceComponents(final Project project, final boolean includeMetrics) {

@@ -337,7 +337,8 @@ public class ProjectResource extends AbstractApiResource {
             @Parameter(description = "The version of the project to query on", required = true)
             @QueryParam("version") String version) {
         try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getProject(name, version);
+            final Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                    handle.attach(ProjectDao.class).getProjectByNameAndVersion(name, version));
             if (project != null) {
                 requireAccess(qm, project);
                 return Response.ok(project).build();
@@ -1011,7 +1012,8 @@ public class ProjectResource extends AbstractApiResource {
             final Project project = qm.getObjectByUuid(Project.class, uuid);
             if (project != null) {
                 requireAccess(qm, project);
-                final PaginatedResult result = qm.getChildrenProjects(project.getUuid(), true, excludeInactive);
+                final PaginatedResult result = withJdbiHandle(this.getAlpineRequest(), handle ->
+                        handle.attach(ProjectDao.class).getChildrenProjects(project.getId(), true, excludeInactive));
                 return Response.ok(result.getObjects()).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the project could not be found.").build();
