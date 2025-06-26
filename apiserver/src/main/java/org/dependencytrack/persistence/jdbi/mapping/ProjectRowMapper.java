@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.deserializeJson;
+import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.hasColumnAndValue;
 import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSet;
 
 /**
@@ -41,7 +42,6 @@ public class ProjectRowMapper implements RowMapper<Project> {
 
     private static final TypeReference<Set<Tag>> TAGS_TYPE_REF = new TypeReference<>() {};
     private static final TypeReference<Set<Team>> TEAMS_TYPE_REF = new TypeReference<>() {};
-    private static final TypeReference<Set<Project>> PROJECT_TYPE_REF = new TypeReference<>() {};
 
     private final RowMapper<Project> projectMapper = BeanMapper.of(Project.class);
 
@@ -53,21 +53,16 @@ public class ProjectRowMapper implements RowMapper<Project> {
                 deserializeJson(rs, columnName, TEAMS_TYPE_REF), project::setAccessTeams);
         maybeSet(rs, "tagsJson", (ignored, columnName) ->
                 deserializeJson(rs, columnName, TAGS_TYPE_REF), project::setTags);
-        maybeSet(rs, "childrenJson", (ignored, columnName) ->
-                deserializeJson(rs, columnName, PROJECT_TYPE_REF), project::setChildren);
-
-        final String parentName = rs.getString("parentName");
-        final String parentVersion = rs.getString("parentVersion");
-        final String parentUuid = rs.getString("parentUuid");
 
         // Only create and assign parent if at least one field is not null
-        if (parentName != null || parentVersion != null || parentUuid != null) {
+        if (hasColumnAndValue(rs, "parentName") || hasColumnAndValue(rs, "parentVersion") || hasColumnAndValue(rs, "parentUuid")) {
             final Project parentProject = new Project();
-            parentProject.setName(parentName);
-            parentProject.setVersion(parentVersion);
-            if (parentUuid != null) {
-                parentProject.setUuid(UUID.fromString(parentUuid));
-            }
+            maybeSet(rs, "parentName", ResultSet::getString, parentProject::setName);
+            maybeSet(rs, "parentVersion", ResultSet::getString, parentProject::setVersion);
+            maybeSet(rs, "parentUuid", (r, col) -> {
+                final String uuidStr = r.getString(col);
+                return uuidStr != null ? UUID.fromString(uuidStr) : null;
+            }, parentProject::setUuid);
             project.setParent(parentProject);
         }
         return project;

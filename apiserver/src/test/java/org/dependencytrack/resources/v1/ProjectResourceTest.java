@@ -1709,6 +1709,7 @@ public class ProjectResourceTest extends ResourceTest {
                               "name": "acme-app-child",
                               "version": "1.0.0",
                               "uuid": "${json-unit.matches:childUuid}",
+                              "externalReferences": [],
                               "isLatest": false,
                               "active": false,
                               "inactiveSince": "${json-unit.any-number}"
@@ -3208,6 +3209,7 @@ public class ProjectResourceTest extends ResourceTest {
                       "version": "1.0.0",
                       "classifier": "APPLICATION",
                       "uuid": "${json-unit.any-string}",
+                      "externalReferences": [],
                       "isLatest": false,
                       "active": true
                     }
@@ -3291,7 +3293,7 @@ public class ProjectResourceTest extends ResourceTest {
         // ensure value of latest version is true when specified
         Assert.assertTrue(json.getBoolean("isLatest"));
         // ensure v2.0 is no longer latest
-        var projectV20 = withJdbiHandle(handle -> handle.attach(ProjectDao.class).getProject(UUID.fromString(v20uuid)));
+        var projectV20 = withJdbiHandle(handle -> handle.attach(ProjectDao.class).getProjectByUuid(UUID.fromString(v20uuid)));
         Assert.assertFalse(projectV20.isLatest());
     }
 

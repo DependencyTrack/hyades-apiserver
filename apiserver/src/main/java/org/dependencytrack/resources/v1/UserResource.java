@@ -875,7 +875,7 @@ public class UserResource extends AlpineResource {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
             final User user = qm.getUser(request.username());
             Project project = withJdbiHandle(getAlpineRequest(), handle ->
-                    handle.attach(ProjectDao.class).getProject(UUID.fromString(request.project())));
+                    handle.attach(ProjectDao.class).getProjectByUuid(UUID.fromString(request.project())));
 
             List<String> problems = new ArrayList<>();
             if (role == null) problems.add("role");
@@ -922,7 +922,7 @@ public class UserResource extends AlpineResource {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
             final User user = qm.getUser(request.username());
             Project project = withJdbiHandle(getAlpineRequest(), handle ->
-                    handle.attach(ProjectDao.class).getProject(UUID.fromString(request.project())));
+                    handle.attach(ProjectDao.class).getProjectByUuid(UUID.fromString(request.project())));
 
             final List<String> problems = new ArrayList<>();
             if (role == null) problems.add("role");

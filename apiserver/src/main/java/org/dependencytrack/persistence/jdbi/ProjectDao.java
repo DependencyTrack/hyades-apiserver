@@ -49,6 +49,7 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -501,16 +502,55 @@ public interface ProjectDao {
                             ON "PROJECT_ACCESS_TEAMS"."TEAM_ID" = "TEAM"."ID"
                         WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
                     ) AS "teamsJson"
-                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT(
-                           'uuid', cp."UUID",
-                           'name', cp."NAME",
-                           'version', cp."VERSION",
-                           'classifier', cp."CLASSIFIER",
-                           'isLatest', cp."IS_LATEST",
-                           'inactiveSince', cp."INACTIVE_SINCE"))
-                       FROM "PROJECT" cp
-                       WHERE cp."PARENT_PROJECT_ID" = "PROJECT"."ID"
-                   ) AS "childrenJson"
+              FROM "PROJECT"
+              WHERE "PROJECT"."PARENT_PROJECT_ID" = :parentId
+            """)
+    @RegisterColumnMapper(ExternalReferenceMapper.class)
+    @RegisterColumnMapper(OrganizationalEntityMapper.class)
+    @RegisterColumnMapper(OrganizationalContactMapper.class)
+    @RegisterRowMapper(ProjectRowMapper.class)
+    List<Project> getChildrenProjectsForParentId(@Bind long parentId);
+
+    default List<Project> getChildrenProjects(@Bind long parentId) {
+        List<Project> childrenProjects = getChildrenProjectsForParentId(parentId);
+        populateMetrics(childrenProjects);
+        return childrenProjects;
+    }
+
+    @SqlQuery("""
+            SELECT "PROJECT"."ID"
+                 , "PROJECT"."CLASSIFIER"
+                 , "PROJECT"."CPE"
+                 , "PROJECT"."DESCRIPTION"
+                 , "PROJECT"."DIRECT_DEPENDENCIES" AS "directDependencies"
+                 , "PROJECT"."EXTERNAL_REFERENCES" AS "externalReferences"
+                 , "PROJECT"."GROUP"
+                 , "PROJECT"."LAST_BOM_IMPORTED" AS "lastBomImport"
+                 , "PROJECT"."LAST_BOM_IMPORTED_FORMAT" AS "lastBomImportFormat"
+                 , "PROJECT"."LAST_RISKSCORE" AS "lastInheritedRiskScore"
+                 , "PROJECT"."NAME"
+                 , "PROJECT"."PUBLISHER"
+                 , "PROJECT"."PURL" AS "projectPurl"
+                 , "PROJECT"."SWIDTAGID"
+                 , "PROJECT"."UUID"
+                 , "PROJECT"."VERSION"
+                 , "PROJECT"."SUPPLIER"
+                 , "PROJECT"."MANUFACTURER"
+                 , "PROJECT"."AUTHORS"
+                 , "PROJECT"."IS_LATEST" AS "isLatest"
+                 , "PROJECT"."INACTIVE_SINCE" AS "inactiveSince"
+                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
+                        FROM "TAG"
+                        INNER JOIN "PROJECTS_TAGS"
+                            ON "PROJECTS_TAGS"."PROJECT_ID" = "PROJECT"."ID"
+                        WHERE "TAG"."ID" = "PROJECTS_TAGS"."TAG_ID"
+                    ) AS "tagsJson"
+                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
+                        FROM "TEAM"
+                        INNER JOIN "PROJECT_ACCESS_TEAMS"
+                            ON "PROJECT_ACCESS_TEAMS"."TEAM_ID" = "TEAM"."ID"
+                        WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
+                    ) AS "teamsJson"
                  , "PP"."NAME" AS "parentName"
                  , "PP"."VERSION" AS "parentVersion"
                  , "PP"."UUID" AS "parentUuid"
@@ -523,10 +563,10 @@ public interface ProjectDao {
     @RegisterColumnMapper(OrganizationalEntityMapper.class)
     @RegisterColumnMapper(OrganizationalContactMapper.class)
     @RegisterRowMapper(ProjectRowMapper.class)
-    Project getProjectByUuid(@Bind UUID uuid);
+    Project getProject(@Bind UUID uuid);
 
-    default Project getProject(final UUID uuid) {
-        Project project = getProjectByUuid(uuid);
+    default Project getProjectByUuid(final UUID uuid) {
+        Project project = this.getProject(uuid);
         if (project != null) {
             // set Metrics to minimize the number of round trips a client needs to make
             project.setMetrics(withJdbiHandle(handle ->
@@ -538,6 +578,11 @@ public interface ProjectDao {
                                     projectVersionRow.uuid(), projectVersionRow.version(), projectVersionRow.inactiveSince() == null))
                             .toList()
             );
+            // set project's children
+            final var childrenProjects = getChildrenProjects(project.getId());
+            if (!childrenProjects.isEmpty()) {
+                project.setChildren(childrenProjects);
+            }
         }
         return project;
     }
@@ -593,6 +638,19 @@ public interface ProjectDao {
                     deserializeJson(rs, columnName, TAGS_TYPE_REF), project::setTags);
             final ProjectListRow projectListRow = new ProjectListRow(project, rs.getInt("totalCount"));
             return projectListRow;
+        }
+    }
+
+    private void populateMetrics(final Collection<Project> projects) {
+        final Map<Long, Project> projectById = projects.stream()
+                .collect(Collectors.toMap(Project::getId, Function.identity()));
+        final List<ProjectMetrics> metricsList = withJdbiHandle(
+                handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(projectById.keySet()));
+        for (final ProjectMetrics metrics : metricsList) {
+            final Project project = projectById.get(metrics.getProjectId());
+            if (project != null) {
+                project.setMetrics(metrics);
+            }
         }
     }
 }
