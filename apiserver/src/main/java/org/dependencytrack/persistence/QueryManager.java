@@ -1692,19 +1692,38 @@ public class QueryManager extends AlpineQueryManager {
 
         switch (principal) {
             case User user -> {
-                params.put("userId", user.getId());
-                conditionTemplate = "HAS_USER_PROJECT_ACCESS(\"%s\".\"ID\", :userId)";
+                params.put("projectAclUserId", user.getId());
+                conditionTemplate = /* language=SQL */ """
+                        EXISTS(
+                          SELECT 1
+                            FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" AS upep
+                           INNER JOIN "PROJECT_HIERARCHY" AS ph
+                              ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
+                           WHERE ph."CHILD_PROJECT_ID" = "%s"."ID"
+                             AND upep."USER_ID" = :projectAclUserId
+                             AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                        )
+                        """;
             }
             case ApiKey apiKey when !teamIds.isEmpty() -> {
                 params.put("projectAclTeamIds", teamIds.toArray(Long[]::new));
-                conditionTemplate = "HAS_PROJECT_ACCESS(\"%s\".\"ID\", :projectAclTeamIds)";
+                conditionTemplate = /* language=SQL */ """
+                        EXISTS(
+                          SELECT 1
+                            FROM "PROJECT_ACCESS_TEAMS" AS pat
+                           INNER JOIN "PROJECT_HIERARCHY" AS ph
+                              ON ph."PARENT_PROJECT_ID" = pat."PROJECT_ID"
+                           WHERE pat."TEAM_ID" = ANY(:projectAclTeamIds)
+                             AND ph."CHILD_PROJECT_ID" = "%s"."ID"
+                        )
+                        """;
             }
             default -> {
                 return Map.entry("FALSE", Collections.emptyMap());
             }
         }
 
-        return Map.entry(conditionTemplate.formatted(projectTableAlias), params); 
+        return Map.entry(conditionTemplate.formatted(projectTableAlias), params);
     }
 
     /**

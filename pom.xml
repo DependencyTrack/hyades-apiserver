@@ -99,7 +99,7 @@
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
         <lib.jooq.version>3.20.5</lib.jooq.version>
-        <lib.junit-jupiter.version>5.13.1</lib.junit-jupiter.version>
+        <lib.junit-jupiter.version>5.13.2</lib.junit-jupiter.version>
         <lib.liquibase.version>4.32.0</lib.liquibase.version>
         <lib.postgresql.version>42.7.7</lib.postgresql.version>
         <lib.protobuf-java.version>4.31.1</lib.protobuf-java.version>
@@ -364,7 +364,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>10.25.0</version>
+                        <version>10.26.0</version>
                     </dependency>
                 </dependencies>
             </plugin>
