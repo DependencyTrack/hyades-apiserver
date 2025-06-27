@@ -143,30 +143,32 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
                 validator.validateProperty(json, "propertyType")
         );
         try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project != null) {
-                requireAccess(qm, project);
-                final ProjectProperty existing = qm.getProjectProperty(project,
-                        StringUtils.trimToNull(json.getGroupName()), StringUtils.trimToNull(json.getPropertyName()));
-                if (existing == null) {
-                    final ProjectProperty property = qm.createProjectProperty(project,
-                            StringUtils.trimToNull(json.getGroupName()),
-                            StringUtils.trimToNull(json.getPropertyName()),
-                            null, // Set value to null - this will be taken care of by updatePropertyValue below
-                            json.getPropertyType(),
-                            StringUtils.trimToNull(json.getDescription()));
-                    updatePropertyValue(qm, json, property);
-                    qm.getPersistenceManager().detachCopy(project);
-                    if (ProjectProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
-                        property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
+            return qm.callInTransaction(() -> {
+                final Project project = qm.getObjectByUuid(Project.class, uuid);
+                if (project != null) {
+                    requireAccess(qm, project);
+                    final ProjectProperty existing = qm.getProjectProperty(project,
+                            StringUtils.trimToNull(json.getGroupName()), StringUtils.trimToNull(json.getPropertyName()));
+                    if (existing == null) {
+                        final ProjectProperty property = qm.createProjectProperty(project,
+                                StringUtils.trimToNull(json.getGroupName()),
+                                StringUtils.trimToNull(json.getPropertyName()),
+                                null, // Set value to null - this will be taken care of by updatePropertyValue below
+                                json.getPropertyType(),
+                                StringUtils.trimToNull(json.getDescription()));
+                        updatePropertyValue(qm, json, property);
+                        qm.getPersistenceManager().detachCopy(project);
+                        if (ProjectProperty.PropertyType.ENCRYPTEDSTRING == property.getPropertyType()) {
+                            property.setPropertyValue(ENCRYPTED_PLACEHOLDER);
+                        }
+                        return Response.status(Response.Status.CREATED).entity(property).build();
+                    } else {
+                        return Response.status(Response.Status.CONFLICT).entity("A property with the specified project/group/name combination already exists.").build();
                     }
-                    return Response.status(Response.Status.CREATED).entity(property).build();
                 } else {
-                    return Response.status(Response.Status.CONFLICT).entity("A property with the specified project/group/name combination already exists.").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
+            });
         }
     }
 
@@ -202,18 +204,20 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
                 validator.validateProperty(json, "propertyValue")
         );
         try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project != null) {
-                requireAccess(qm, project);
-                final ProjectProperty property = qm.getProjectProperty(project, json.getGroupName(), json.getPropertyName());
-                if (property != null) {
-                    return updatePropertyValue(qm, json, property);
+            return qm.callInTransaction(() -> {
+                final Project project = qm.getObjectByUuid(Project.class, uuid);
+                if (project != null) {
+                    requireAccess(qm, project);
+                    final ProjectProperty property = qm.getProjectProperty(project, json.getGroupName(), json.getPropertyName());
+                    if (property != null) {
+                        return updatePropertyValue(qm, json, property);
+                    } else {
+                        return Response.status(Response.Status.NOT_FOUND).entity("A property with the specified project/group/name combination could not be found.").build();
+                    }
                 } else {
-                    return Response.status(Response.Status.NOT_FOUND).entity("A property with the specified project/group/name combination could not be found.").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
+            });
         }
     }
 
@@ -244,19 +248,21 @@ public class ProjectPropertyResource extends AbstractConfigPropertyResource {
                 validator.validateProperty(json, "propertyName")
         );
         try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project != null) {
-                requireAccess(qm, project);
-                final ProjectProperty property = qm.getProjectProperty(project, json.getGroupName(), json.getPropertyName());
-                if (property != null) {
-                    qm.delete(property);
-                    return Response.status(Response.Status.NO_CONTENT).build();
+            return qm.callInTransaction(() -> {
+                final Project project = qm.getObjectByUuid(Project.class, uuid);
+                if (project != null) {
+                    requireAccess(qm, project);
+                    final ProjectProperty property = qm.getProjectProperty(project, json.getGroupName(), json.getPropertyName());
+                    if (property != null) {
+                        qm.delete(property);
+                        return Response.status(Response.Status.NO_CONTENT).build();
+                    } else {
+                        return Response.status(Response.Status.NOT_FOUND).entity("The project property could not be found.").build();
+                    }
                 } else {
-                    return Response.status(Response.Status.NOT_FOUND).entity("The project property could not be found.").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
+            });
         }
     }
 }

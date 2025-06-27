@@ -184,8 +184,10 @@ public class VexResource extends AbstractApiResource {
                     validator.validateProperty(request, "vex")
             );
             try (QueryManager qm = new QueryManager()) {
-                final Project project = qm.getObjectByUuid(Project.class, request.getProject());
-                return process(qm, project, request.getVex());
+                return qm.callInTransaction(() -> {
+                    final Project project = qm.getObjectByUuid(Project.class, request.getProject());
+                    return process(qm, project, request.getVex());
+                });
             }
         } else {
             failOnValidationError(
@@ -194,8 +196,10 @@ public class VexResource extends AbstractApiResource {
                     validator.validateProperty(request, "vex")
             );
             try (QueryManager qm = new QueryManager()) {
-                Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
-                return process(qm, project, request.getVex());
+                return qm.callInTransaction(() -> {
+                    Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
+                    return process(qm, project, request.getVex());
+                });
             }
         }
     }
@@ -245,15 +249,19 @@ public class VexResource extends AbstractApiResource {
                               @Parameter(schema = @Schema(type = "string")) @FormDataParam("vex") final List<FormDataBodyPart> artifactParts) {
         if (projectUuid != null) {
             try (QueryManager qm = new QueryManager()) {
-                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
-                return process(qm, project, artifactParts);
+                return qm.callInTransaction(() -> {
+                    final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+                    return process(qm, project, artifactParts);
+                });
             }
         } else {
             try (QueryManager qm = new QueryManager()) {
-                final String trimmedProjectName = StringUtils.trimToNull(projectName);
-                final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
-                Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
-                return process(qm, project, artifactParts);
+                return qm.callInTransaction(() -> {
+                    final String trimmedProjectName = StringUtils.trimToNull(projectName);
+                    final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
+                    Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
+                    return process(qm, project, artifactParts);
+                });
             }
         }
     }
