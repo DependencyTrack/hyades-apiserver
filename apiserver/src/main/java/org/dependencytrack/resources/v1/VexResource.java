@@ -30,6 +30,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -50,17 +61,6 @@ import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
@@ -187,8 +187,10 @@ public class VexResource extends AbstractApiResource {
                     validator.validateProperty(request, "vex")
             );
             try (QueryManager qm = new QueryManager()) {
-                final Project project = qm.getObjectByUuid(Project.class, request.getProject());
-                return process(qm, project, request.getVex());
+                return qm.callInTransaction(() -> {
+                    final Project project = qm.getObjectByUuid(Project.class, request.getProject());
+                    return process(qm, project, request.getVex());
+                });
             }
         } else {
             failOnValidationError(
@@ -197,9 +199,11 @@ public class VexResource extends AbstractApiResource {
                     validator.validateProperty(request, "vex")
             );
             try (QueryManager qm = new QueryManager()) {
-                Project project = withJdbiHandle(getAlpineRequest(), handle ->
-                        handle.attach(ProjectDao.class).getProjectByNameAndVersion(request.getProjectName(), request.getProjectVersion()));
-                return process(qm, project, request.getVex());
+                return qm.callInTransaction(() -> {
+                    Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                            handle.attach(ProjectDao.class).getProjectByNameAndVersion(request.getProjectName(), request.getProjectVersion()));
+                    return process(qm, project, request.getVex());
+                });
             }
         }
     }
@@ -249,16 +253,20 @@ public class VexResource extends AbstractApiResource {
                               @Parameter(schema = @Schema(type = "string")) @FormDataParam("vex") final List<FormDataBodyPart> artifactParts) {
         if (projectUuid != null) {
             try (QueryManager qm = new QueryManager()) {
-                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
-                return process(qm, project, artifactParts);
+                return qm.callInTransaction(() -> {
+                    final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+                    return process(qm, project, artifactParts);
+                });
             }
         } else {
             try (QueryManager qm = new QueryManager()) {
-                final String trimmedProjectName = StringUtils.trimToNull(projectName);
-                final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
-                Project project = withJdbiHandle(getAlpineRequest(), handle ->
-                        handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedProjectName, trimmedProjectVersion));
-                return process(qm, project, artifactParts);
+                return qm.callInTransaction(() -> {
+                    final String trimmedProjectName = StringUtils.trimToNull(projectName);
+                    final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
+                    Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                            handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedProjectName, trimmedProjectVersion));
+                    return process(qm, project, artifactParts);
+                });
             }
         }
     }

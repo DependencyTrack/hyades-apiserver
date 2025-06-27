@@ -40,6 +40,8 @@ jobs:
         name: pr-workspace
         github-token: ${{ secrets.GITHUB_TOKEN }}
         run-id: ${{ github.event.workflow_run.id }}
+    - name: Ensure Git repository is initialized
+      run: git init
     - name: Report Coverage to Codacy
       run: |-
         bash <(curl -Ls https://coverage.codacy.com/get.sh) report \

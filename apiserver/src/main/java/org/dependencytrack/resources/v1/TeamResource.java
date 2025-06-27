@@ -55,6 +55,8 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.TeamDao;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.problems.TeamAlreadyExistsProblemDetails;
 import org.dependencytrack.resources.v1.vo.TeamSelfResponse;
 import org.dependencytrack.resources.v1.vo.VisibleTeams;
 import org.jdbi.v3.core.Handle;
@@ -64,7 +66,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.datanucleus.PropertyNames.PROPERTY_RETAIN_VALUES;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
+import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 /**
  * JAX-RS resources for processing teams.
@@ -138,7 +141,7 @@ public class TeamResource extends AlpineResource {
 
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, ProblemDetails.MEDIA_TYPE_JSON})
     @Operation(
             summary = "Creates a new team",
             description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
@@ -147,21 +150,34 @@ public class TeamResource extends AlpineResource {
             @ApiResponse(
                     responseCode = "201",
                     description = "The created team",
-                    content = @Content(schema = @Schema(implementation = Team.class))
-            ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+                    content = @Content(schema = @Schema(implementation = Team.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Team already exists",
+                    content = @Content(
+                            schema = @Schema(implementation = TeamAlreadyExistsProblemDetails.class),
+                            mediaType = ProblemDetails.MEDIA_TYPE_JSON))
     })
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
-    //public Response createTeam(String jsonRequest) {
     public Response createTeam(Team jsonTeam) {
-        //Team team = MapperUtil.readAsObjectOf(Team.class, jsonRequest);
         final Validator validator = super.getValidator();
-        failOnValidationError(
-                validator.validateProperty(jsonTeam, "name")
-        );
+        failOnValidationError(validator.validateProperty(jsonTeam, "name"));
 
-        try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.createTeam(jsonTeam.getName());
+        try (final var qm = new QueryManager()) {
+            final Team team;
+            try {
+                team = qm.createTeam(jsonTeam.getName());
+            } catch (RuntimeException e) {
+                if (isUniqueConstraintViolation(e)) {
+                    final Team existingTeam = qm.getTeam(jsonTeam.getName());
+                    return new TeamAlreadyExistsProblemDetails(existingTeam).toResponse();
+                }
+
+                LOGGER.error("Failed to create team with name: " + jsonTeam.getName(), e);
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+            }
+
             super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Team created: " + team.getName());
             return Response.status(Response.Status.CREATED).entity(team).build();
         }
@@ -218,18 +234,20 @@ public class TeamResource extends AlpineResource {
     @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
     public Response deleteTeam(Team jsonTeam) {
         try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.getObjectByUuid(Team.class, jsonTeam.getUuid(), Team.FetchGroup.ALL.name());
-            if (team != null) {
-                String teamName = team.getName();
-                try (final Handle jdbiHandle = openJdbiHandle()) {
-                    final var teamDao = jdbiHandle.attach(TeamDao.class);
-                    teamDao.deleteTeam(team.getId());
+            return qm.callInTransaction(() -> {
+                final Team team = qm.getObjectByUuid(Team.class, jsonTeam.getUuid(), Team.FetchGroup.ALL.name());
+                if (team != null) {
+                    String teamName = team.getName();
+                    try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
+                        final var teamDao = jdbiHandle.attach(TeamDao.class);
+                        teamDao.deleteTeam(team.getId());
+                    }
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Team deleted: " + teamName);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
                 }
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Team deleted: " + teamName);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
-            }
+            });
         }
     }
 
@@ -397,21 +415,23 @@ public class TeamResource extends AlpineResource {
             @Parameter(description = "The public ID for the API key or for Legacy the full Key to delete", required = true)
             @PathParam("publicIdOrKey") String publicIdOrKey) {
         try (QueryManager qm = new QueryManager()) {
-            ApiKey apiKey = qm.getApiKeyByPublicId(publicIdOrKey);
-            if (apiKey == null) {
-                try {
-                    final ApiKey deocdedApiKey = ApiKeyDecoder.decode(publicIdOrKey);
-                    apiKey = qm.getApiKeyByPublicId(deocdedApiKey.getPublicId());
-                } catch (InvalidApiKeyFormatException e) {
-                    LOGGER.debug("Failed to decode value as API key", e);
+            return qm.callInTransaction(() -> {
+                ApiKey apiKey = qm.getApiKeyByPublicId(publicIdOrKey);
+                if (apiKey == null) {
+                    try {
+                        final ApiKey deocdedApiKey = ApiKeyDecoder.decode(publicIdOrKey);
+                        apiKey = qm.getApiKeyByPublicId(deocdedApiKey.getPublicId());
+                    } catch (InvalidApiKeyFormatException e) {
+                        LOGGER.debug("Failed to decode value as API key", e);
+                    }
                 }
-            }
-            if (apiKey != null) {
-                qm.delete(apiKey);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The API key could not be found.").build();
-            }
+                if (apiKey != null) {
+                    qm.delete(apiKey);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The API key could not be found.").build();
+                }
+            });
         }
     }
 

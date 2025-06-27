@@ -102,6 +102,10 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
         final var teamIdsExpr = new StringExpression(
                 stmt, stringTypeMapping, "cast", List.of(teamIdsLiteral), List.of("bigint[]"));
 
+        // TODO: This should not rely on a SQL function, as functions yield a
+        //  suboptimal query plan (https://github.com/DependencyTrack/hyades/issues/1801).
+        //  Instead, a SQLExpression equivalent to the function content should be assembled.
+
         // NB: objectExpr will compile to a reference of the object table's ID column, e.g.:
         //   * "A0"."ID"
         //   * "B0"."PROJECT_ID"

@@ -192,21 +192,23 @@ public class RepositoryResource extends AlpineResource {
             jsonRepository.setAuthenticationRequired(false);
         }
         try (QueryManager qm = new QueryManager()) {
-            final boolean exists = qm.repositoryExist(jsonRepository.getType(), StringUtils.trimToNull(jsonRepository.getIdentifier()));
-            if (!exists) {
-                final Repository repository = qm.createRepository(
-                        jsonRepository.getType(),
-                        StringUtils.trimToNull(jsonRepository.getIdentifier()),
-                        StringUtils.trimToNull(jsonRepository.getUrl()),
-                        jsonRepository.isEnabled(),
-                        jsonRepository.isInternal(),
-                        jsonRepository.isAuthenticationRequired(),
-                        jsonRepository.getUsername(), jsonRepository.getPassword());
+            return qm.callInTransaction(() -> {
+                final boolean exists = qm.repositoryExist(jsonRepository.getType(), StringUtils.trimToNull(jsonRepository.getIdentifier()));
+                if (!exists) {
+                    final Repository repository = qm.createRepository(
+                            jsonRepository.getType(),
+                            StringUtils.trimToNull(jsonRepository.getIdentifier()),
+                            StringUtils.trimToNull(jsonRepository.getUrl()),
+                            jsonRepository.isEnabled(),
+                            jsonRepository.isInternal(),
+                            jsonRepository.isAuthenticationRequired(),
+                            jsonRepository.getUsername(), jsonRepository.getPassword());
 
-                return Response.status(Response.Status.CREATED).entity(repository).build();
-            } else {
-                return Response.status(Response.Status.CONFLICT).entity("A repository with the specified identifier already exists.").build();
-            }
+                    return Response.status(Response.Status.CREATED).entity(repository).build();
+                } else {
+                    return Response.status(Response.Status.CONFLICT).entity("A repository with the specified identifier already exists.").build();
+                }
+            });
         }
     }
 
@@ -237,24 +239,26 @@ public class RepositoryResource extends AlpineResource {
             jsonRepository.setAuthenticationRequired(false);
         }
         try (QueryManager qm = new QueryManager()) {
-            Repository repository = qm.getObjectByUuid(Repository.class, jsonRepository.getUuid());
-            if (repository != null) {
-                final String url = StringUtils.trimToNull(jsonRepository.getUrl());
-                try {
-                    // The password is not passed to the front-end, so it should only be overwritten if it is not null.
-                    final String updatedPassword = jsonRepository.getPassword() != null && !jsonRepository.getPassword().equals(ENCRYPTED_PLACEHOLDER)
-                            ? DataEncryption.encryptAsString(jsonRepository.getPassword())
-                            : repository.getPassword();
+            return qm.callInTransaction(() -> {
+                Repository repository = qm.getObjectByUuid(Repository.class, jsonRepository.getUuid());
+                if (repository != null) {
+                    final String url = StringUtils.trimToNull(jsonRepository.getUrl());
+                    try {
+                        // The password is not passed to the front-end, so it should only be overwritten if it is not null.
+                        final String updatedPassword = jsonRepository.getPassword() != null && !jsonRepository.getPassword().equals(ENCRYPTED_PLACEHOLDER)
+                                ? DataEncryption.encryptAsString(jsonRepository.getPassword())
+                                : repository.getPassword();
 
-                    repository = qm.updateRepository(jsonRepository.getUuid(), repository.getIdentifier(), url,
-                            jsonRepository.isInternal(), jsonRepository.isAuthenticationRequired(), jsonRepository.getUsername(), updatedPassword, jsonRepository.isEnabled());
-                    return Response.ok(repository).build();
-                } catch (Exception e) {
-                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("The specified repository password could not be encrypted.").build();
+                        repository = qm.updateRepository(jsonRepository.getUuid(), repository.getIdentifier(), url,
+                                jsonRepository.isInternal(), jsonRepository.isAuthenticationRequired(), jsonRepository.getUsername(), updatedPassword, jsonRepository.isEnabled());
+                        return Response.ok(repository).build();
+                    } catch (Exception e) {
+                        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("The specified repository password could not be encrypted.").build();
+                    }
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the repository could not be found.").build();
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the repository could not be found.").build();
-            }
+            });
         }
     }
 
@@ -276,13 +280,15 @@ public class RepositoryResource extends AlpineResource {
             @Parameter(description = "The UUID of the repository to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Repository repository = qm.getObjectByUuid(Repository.class, uuid);
-            if (repository != null) {
-                qm.delete(repository);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the repository could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final Repository repository = qm.getObjectByUuid(Repository.class, uuid);
+                if (repository != null) {
+                    qm.delete(repository);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the repository could not be found.").build();
+                }
+            });
         }
     }
 }

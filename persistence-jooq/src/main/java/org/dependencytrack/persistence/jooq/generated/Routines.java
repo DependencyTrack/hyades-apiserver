@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.routines.CalcRiskScore;
 import org.dependencytrack.persistence.jooq.generated.routines.HasProjectAccess;
+import org.dependencytrack.persistence.jooq.generated.routines.HasUserProjectAccess;
 import org.dependencytrack.persistence.jooq.generated.routines.JsonbVulnAliases;
 import org.dependencytrack.persistence.jooq.generated.routines.RecalcUserProjectEffectivePermissions;
 import org.dependencytrack.persistence.jooq.generated.routines.UpdateComponentMetrics;
@@ -128,6 +129,50 @@ public class Routines {
         HasProjectAccess f = new HasProjectAccess();
         f.setProjectId(projectId);
         f.setTeamIds(teamIds);
+
+        return f.asField();
+    }
+
+    /**
+     * Call <code>has_user_project_access</code>
+     */
+    public static Boolean hasUserProjectAccess(
+          Configuration configuration
+        , Long projectId
+        , Long userId
+    ) {
+        HasUserProjectAccess f = new HasUserProjectAccess();
+        f.setProjectId(projectId);
+        f.setUserId(userId);
+
+        f.execute(configuration);
+        return f.getReturnValue();
+    }
+
+    /**
+     * Get <code>has_user_project_access</code> as a field.
+     */
+    public static Field<Boolean> hasUserProjectAccess(
+          Long projectId
+        , Long userId
+    ) {
+        HasUserProjectAccess f = new HasUserProjectAccess();
+        f.setProjectId(projectId);
+        f.setUserId(userId);
+
+        return f.asField();
+    }
+
+    /**
+     * Get <code>has_user_project_access</code> as a field.
+     */
+    public static Field<Boolean> hasUserProjectAccess(
+          Field<Long> projectId
+        , Field<Long> userId
+    ) {
+        HasUserProjectAccess f = new HasUserProjectAccess();
+        f.setProjectId(projectId);
+        f.setUserId(userId);
 
         return f.asField();
     }

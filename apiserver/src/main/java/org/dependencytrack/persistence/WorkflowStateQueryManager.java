@@ -27,7 +27,6 @@ import org.dependencytrack.model.WorkflowStep;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
-import javax.jdo.Transaction;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -236,9 +235,7 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
     }
 
     public void createReanalyzeSteps(UUID token) {
-        final Transaction trx = pm.currentTransaction();
-        try {
-            trx.begin();
+        runInTransaction(() -> {
             Date now = new Date();
 
             WorkflowState vulnAnalysisState = new WorkflowState();
@@ -256,19 +253,11 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             policyEvaluationState.setStatus(WorkflowStatus.PENDING);
             policyEvaluationState.setUpdatedAt(now);
             pm.makePersistent(policyEvaluationState);
-
-            trx.commit();
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
+        });
     }
 
     public void createWorkflowSteps(UUID token) {
-        final Transaction trx = pm.currentTransaction();
-        try {
-            trx.begin();
+        runInTransaction(() -> {
             final Date now = new Date();
             WorkflowState consumptionState = new WorkflowState();
             consumptionState.setToken(token);
@@ -308,12 +297,6 @@ public class WorkflowStateQueryManager extends QueryManager implements IQueryMan
             metricsUpdateState.setStatus(WorkflowStatus.PENDING);
             metricsUpdateState.setUpdatedAt(now);
             pm.makePersistent(metricsUpdateState);
-            trx.commit();
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
+        });
     }
-
 }

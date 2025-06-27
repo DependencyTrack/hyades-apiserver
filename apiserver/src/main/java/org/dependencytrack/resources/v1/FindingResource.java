@@ -248,21 +248,22 @@ public class FindingResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the project to analyze", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Project project = qm.getObjectByUuid(Project.class, uuid);
-            if (project != null) {
-                requireAccess(qm, project);
-                LOGGER.info("Analysis of project " + project.getUuid() + " requested by " + super.getPrincipal().getName());
+            return qm.callInTransaction(() -> {
+                final Project project = qm.getObjectByUuid(Project.class, uuid);
+                if (project != null) {
+                    requireAccess(qm, project);
+                    LOGGER.info("Analysis of project " + project.getUuid() + " requested by " + super.getPrincipal().getName());
+                    final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
+                    qm.createReanalyzeSteps(vae.getChainIdentifier());
+                    Event.dispatch(vae);
+                    final ProjectRepositoryMetaAnalysisEvent projectRepositoryMetaAnalysisEvent = new ProjectRepositoryMetaAnalysisEvent(project.getUuid());
+                    Event.dispatch(projectRepositoryMetaAnalysisEvent);
 
-                final ProjectVulnerabilityAnalysisEvent vae = new ProjectVulnerabilityAnalysisEvent(project.getUuid());
-                qm.createReanalyzeSteps(vae.getChainIdentifier());
-                Event.dispatch(vae);
-                final ProjectRepositoryMetaAnalysisEvent projectRepositoryMetaAnalysisEvent = new ProjectRepositoryMetaAnalysisEvent(project.getUuid());
-                Event.dispatch(projectRepositoryMetaAnalysisEvent);
-
-                return Response.ok(Collections.singletonMap("token", vae.getChainIdentifier())).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
+                    return Response.ok(Collections.singletonMap("token", vae.getChainIdentifier())).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+                }
+            });
         }
     }
 
