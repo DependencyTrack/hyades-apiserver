@@ -1,0 +1,70 @@
+# This file is part of Dependency-Track.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) OWASP Foundation. All Rights Reserved.
+name: OpenAPI
+
+on:
+  pull_request:
+    branches:
+    - main
+    - "feature-**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions: { }
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    - name: Lint OpenAPI Spec
+      run: |-
+        docker run -i --rm -v "$(pwd)/api/src/main:/work:ro" \
+          dshanley/vacuum lint \
+          --details --snippets --no-banner \
+          --ruleset /work/spectral/ruleset.yaml \
+          --ignore-file /work/spectral/ignored.yaml \
+          /work/resources/org/dependencytrack/api/v2/openapi.yaml
+
+# TODO: Uncomment after the OpenAPI Spec is present in main.
+#  breaking-changes:
+#    name: Breaking Changes
+#    runs-on: ubuntu-latest
+#    timeout-minutes: 5
+#    steps:
+#    - name: Checkout Repository
+#      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+#      with:
+#        fetch-depth: 0
+#    - name: Prepare OpenAPI Spec Comparison
+#      run: |-
+#        cd api/src/main/resources/org/dependencytrack/api/v2
+#        mv openapi.yaml openapi-after.yaml
+#
+#        git checkout ${{ github.event.pull_request.base.sha }} -- openapi.yaml
+#        mv openapi.yaml openapi-before.yaml
+#    - name: Detect Breaking Changes in OpenAPI Spec
+#      run: |-
+#        docker run -i --rm \
+#          -v "$(pwd)/api/src/main/resources/org/dependencytrack/api/v2:/work:ro" \
+#          pb33f/openapi-changes summary --no-color --no-logo \
+#          openapi-before.yaml openapi-after.yaml

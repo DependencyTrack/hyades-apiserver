@@ -29,6 +29,7 @@
     <modules>
         <module>support/datanucleus-plugin</module>
         <module>support/liquibase</module>
+        <module>api</module>
         <module>alpine</module>
         <module>proto</module>
         <module>persistence-migration</module>
@@ -97,6 +98,7 @@
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
+        <lib.jackson.version>2.19.1</lib.jackson.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
         <lib.jooq.version>3.20.5</lib.jooq.version>
         <lib.junit-jupiter.version>5.13.2</lib.junit-jupiter.version>
@@ -141,6 +143,11 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.dependencytrack</groupId>
+                <artifactId>api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.dependencytrack</groupId>
                 <artifactId>apiserver</artifactId>
@@ -198,6 +205,14 @@
                 <groupId>org.datanucleus</groupId>
                 <artifactId>datanucleus-rdbms</artifactId>
                 <version>${lib.datanucleus-rdbms.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${lib.jackson.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
 
             <dependency>
