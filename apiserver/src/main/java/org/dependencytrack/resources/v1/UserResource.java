@@ -874,8 +874,7 @@ public class UserResource extends AlpineResource {
         try (QueryManager qm = new QueryManager()) {
             final Role role = qm.getObjectByUuid(Role.class, request.role());
             final User user = qm.getUser(request.username());
-            Project project = withJdbiHandle(getAlpineRequest(), handle ->
-                    handle.attach(ProjectDao.class).getProjectByUuid(UUID.fromString(request.project())));
+            final var project = qm.getObjectByUuid(Project.class, request.project());
 
             List<String> problems = new ArrayList<>();
             if (role == null) problems.add("role");

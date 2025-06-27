@@ -332,6 +332,7 @@ public class BomResource extends AbstractApiResource {
                                 final String trimmedParentVersion = StringUtils.trimToNull(request.getParentVersion());
                                 parent = withJdbiHandle(getAlpineRequest(), handle ->
                                         handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedParentName, trimmedParentVersion));
+                                parent = qm.getObjectByUuid(Project.class, parent.getUuid());
                             }
 
                             if (parent == null) { // if parent project is specified but not found
