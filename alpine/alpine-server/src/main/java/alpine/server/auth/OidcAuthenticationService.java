@@ -136,9 +136,7 @@ public class OidcAuthenticationService implements AuthenticationService {
             throw new AlpineAuthenticationException(AlpineAuthenticationException.CauseType.OTHER);
         }
 
-        final OidcProfileCreator profileCreator = claims -> {
-            return customizer.createProfile(claims);
-        };
+        final OidcProfileCreator profileCreator = customizer::createProfile;
 
         OidcProfile idTokenProfile = null;
         if (idToken != null) {
