@@ -75,15 +75,14 @@ final class ServiceComponentQueryManager extends QueryManager implements IQueryM
     /**
      * Returns a List of all ServiceComponent for the specified Project.
      * This method if designed NOT to provide paginated results.
-     * @param project the Project to retrieve dependencies of
+     * @param projectId the Project ID to retrieve dependencies of
      * @return a List of ServiceComponent objects
      */
-    @SuppressWarnings("unchecked")
-    public List<ServiceComponent> getAllServiceComponents(Project project) {
-        final Query<ServiceComponent> query = pm.newQuery(ServiceComponent.class, "project == :project");
+    public List<ServiceComponent> getAllServiceComponents(Long projectId) {
+        final Query<ServiceComponent> query = pm.newQuery(ServiceComponent.class, "project.id == :projectId");
         query.getFetchPlan().setMaxFetchDepth(2);
         query.setOrdering("name asc");
-        return (List<ServiceComponent>)query.execute(project);
+        return (List<ServiceComponent>)query.execute(projectId);
     }
 
     /**

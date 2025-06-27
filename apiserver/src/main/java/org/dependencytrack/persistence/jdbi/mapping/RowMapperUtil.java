@@ -95,6 +95,24 @@ public class RowMapperUtil {
         }
     }
 
+    public static boolean hasColumnAndValue(final ResultSet rs, final String columnName) throws SQLException {
+        try {
+            if (rs.findColumn(columnName) >= 0) {
+                return rs.getString(columnName) != null;
+            }
+            return false;
+
+        } catch (SQLException e) {
+            if (e instanceof final PSQLException pe) {
+                if (PSQLState.UNDEFINED_COLUMN.getState().equals(pe.getSQLState())) {
+                    return false;
+                }
+            }
+
+            throw e;
+        }
+    }
+
     public static Double nullableDouble(final ResultSet rs, final String columnName) throws SQLException {
         final double value = rs.getDouble(columnName);
         if (rs.wasNull()) {

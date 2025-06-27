@@ -99,6 +99,13 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
         return (List<Component>) query.execute(project);
     }
 
+    public List<Component> getAllComponents(Long projectId) {
+        final Query<Component> query = pm.newQuery(Component.class, "project.id == :projectId");
+        query.getFetchPlan().setMaxFetchDepth(2);
+        query.setOrdering("name asc");
+        return (List<Component>) query.execute(projectId);
+    }
+
     /**
      * Returns a List of Dependency for the specified Project.
      *
