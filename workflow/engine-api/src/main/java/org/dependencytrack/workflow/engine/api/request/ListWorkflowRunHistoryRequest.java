@@ -18,32 +18,34 @@
  */
 package org.dependencytrack.workflow.engine.api.request;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
 
-public record GetWorkflowRunHistoryRequest(
+public record ListWorkflowRunHistoryRequest(
         UUID runId,
-        int sequenceNumberOffset,
+        @Nullable String pageToken,
         int limit) {
 
-    public GetWorkflowRunHistoryRequest {
+    public ListWorkflowRunHistoryRequest {
         requireNonNull(runId, "runId must not be null");
         if (limit <= 0) {
             throw new IllegalArgumentException("limit must be greater than 0");
         }
     }
 
-    public GetWorkflowRunHistoryRequest(final UUID runId) {
-        this(runId, -1, 10);
+    public ListWorkflowRunHistoryRequest(final UUID runId) {
+        this(runId, null, 10);
     }
 
-    public GetWorkflowRunHistoryRequest withSequenceNumberOffset(final int sequenceNumberOffset) {
-        return new GetWorkflowRunHistoryRequest(this.runId, sequenceNumberOffset, this.limit);
+    public ListWorkflowRunHistoryRequest withPageToken(@Nullable final String pageToken) {
+        return new ListWorkflowRunHistoryRequest(this.runId, pageToken, this.limit);
     }
 
-    public GetWorkflowRunHistoryRequest withLimit(final int limit) {
-        return new GetWorkflowRunHistoryRequest(this.runId, this.sequenceNumberOffset, limit);
+    public ListWorkflowRunHistoryRequest withLimit(final int limit) {
+        return new ListWorkflowRunHistoryRequest(this.runId, this.pageToken, limit);
     }
 
 }

@@ -36,7 +36,7 @@ import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
-import org.dependencytrack.workflow.engine.api.request.GetWorkflowRunHistoryRequest;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.payload.StringPayloadConverter;
@@ -52,7 +52,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.SequencedMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -131,7 +130,7 @@ class WorkflowEngineImplTest {
         assertThat(completedRun.startedAt()).isNotNull();
         assertThat(completedRun.completedAt()).isNotNull();
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 event -> {
                     assertThat(event.getId()).isEqualTo(-1);
                     assertThat(event.hasTimestamp()).isTrue();
@@ -198,7 +197,7 @@ class WorkflowEngineImplTest {
         assertThat(failedRun.startedAt()).isNotNull();
         assertThat(failedRun.completedAt()).isNotNull();
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -240,7 +239,7 @@ class WorkflowEngineImplTest {
         assertThat(cancelledRun.startedAt()).isNotNull();
         assertThat(cancelledRun.completedAt()).isNotNull();
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -273,7 +272,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(10));
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -311,7 +310,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED, Duration.ofSeconds(10));
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId).withLimit(15)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId).withLimit(15)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -351,7 +350,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -384,7 +383,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -600,7 +599,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -626,7 +625,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -665,7 +664,7 @@ class WorkflowEngineImplTest {
 
         assertThat(sideEffectInvocationCounter.get()).isEqualTo(1);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -699,7 +698,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -730,7 +729,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -764,7 +763,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId).withLimit(15)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId).withLimit(15)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -802,7 +801,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId).withLimit(20)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId).withLimit(20)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -842,7 +841,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
@@ -975,7 +974,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED);
@@ -1015,7 +1014,7 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
-        assertThat(engine.getRunHistory(new GetWorkflowRunHistoryRequest(runId)).values()).satisfiesExactly(
+        assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED), // TODO: Get rid of this.
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> {
@@ -1138,11 +1137,10 @@ class WorkflowEngineImplTest {
     }
 
     @Test
-    void getRunHistoryShouldReturnEventsWithOffsetAndLimit() {
+    void shouldListRunHistory() {
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.sideEffect("a", null, voidConverter(), ignored -> null).await();
             ctx.sideEffect("b", null, voidConverter(), ignored -> null).await();
-            ctx.sideEffect("c", null, voidConverter(), ignored -> null).await();
             return null;
         });
 
@@ -1153,16 +1151,25 @@ class WorkflowEngineImplTest {
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
-        SequencedMap<Integer, WorkflowEvent> history = engine.getRunHistory(
-                new GetWorkflowRunHistoryRequest(runId)
-                        .withSequenceNumberOffset(2)
+        final Page<WorkflowEvent> firstHistoryPage = engine.listRunHistory(
+                new ListWorkflowRunHistoryRequest(runId)
                         .withLimit(3));
-        assertThat(history).containsOnlyKeys(3, 4, 5);
+        assertThat(firstHistoryPage.items()).satisfiesExactly(
+                event -> assertThat(event.hasExecutionStarted()).isTrue(),
+                event -> assertThat(event.hasRunScheduled()).isTrue(),
+                event -> assertThat(event.hasRunStarted()).isTrue());
+        assertThat(firstHistoryPage.currentPageToken()).isNull();
+        assertThat(firstHistoryPage.nextPageToken()).isNotNull();
 
-        history = engine.getRunHistory(
-                new GetWorkflowRunHistoryRequest(runId)
-                        .withSequenceNumberOffset(history.lastEntry().getKey()));
-        assertThat(history).containsOnlyKeys(6, 7);
+        final Page<WorkflowEvent> secondHistoryPage = engine.listRunHistory(
+                new ListWorkflowRunHistoryRequest(runId)
+                        .withPageToken(firstHistoryPage.nextPageToken())
+                        .withLimit(2));
+        assertThat(secondHistoryPage.items()).satisfiesExactly(
+                event -> assertThat(event.hasSideEffectExecuted()).isTrue(),
+                event -> assertThat(event.hasSideEffectExecuted()).isTrue());
+        assertThat(secondHistoryPage.currentPageToken()).isEqualTo(firstHistoryPage.nextPageToken());
+        assertThat(secondHistoryPage.nextPageToken()).isNotNull();
     }
 
     private WorkflowRun awaitRunStatus(

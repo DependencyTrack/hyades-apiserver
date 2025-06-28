@@ -21,7 +21,7 @@ package org.dependencytrack.workflow.engine.persistence;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
-import org.dependencytrack.workflow.engine.api.request.GetWorkflowRunHistoryRequest;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunHistoryRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
@@ -31,13 +31,9 @@ import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.json.JsonConfig;
 import org.jdbi.v3.json.JsonMapper;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.SequencedMap;
-import java.util.TreeMap;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
@@ -67,7 +63,7 @@ public final class WorkflowRunDao extends AbstractDao {
                   from workflow_run
                  where true
                 <#if lastId>
-                   and id > :lastId
+                   and id < :lastId
                 </#if>
                 <#if workflowNameFilter>
                    and workflow_name = :workflowNameFilter
@@ -93,7 +89,7 @@ public final class WorkflowRunDao extends AbstractDao {
                 <#if completedAtTo>
                    and completed_at < :completedAtTo
                 </#if>
-                 order by id
+                 order by id desc
                  limit :limit
                 """);
 
@@ -106,11 +102,7 @@ public final class WorkflowRunDao extends AbstractDao {
             labelsJson = jsonMapper.toJson(request.labelFilter(), jdbiHandle.getConfig());
         }
 
-        final var pageTokenValue = decodePageToken(request.pageToken(), ListRunsPageToken.class);
-
-        // Query for one additional row to determine if there are more results.
-        final int limit = request.limit() > 0 ? request.limit() : 100;
-        final int limitWithNext = limit + 1;
+        final var decodedPageToken = decodePageToken(request.pageToken(), ListRunsPageToken.class);
 
         final List<WorkflowRun> rows = query
                 .bind("workflowNameFilter", request.workflowNameFilter())
@@ -121,8 +113,8 @@ public final class WorkflowRunDao extends AbstractDao {
                 .bind("createdAtTo", request.createdAtTo())
                 .bind("completedAtFrom", request.completedAtFrom())
                 .bind("completedAtTo", request.completedAtTo())
-                .bind("limit", limitWithNext)
-                .bind("lastId", pageTokenValue != null ? pageTokenValue.lastId() : null)
+                .bind("limit", request.limit() + 1)
+                .bind("lastId", decodedPageToken != null ? decodedPageToken.lastId() : null)
                 .defineNamedBindings()
                 .mapTo(WorkflowRunRow.class)
                 .map(row -> new WorkflowRun(
@@ -141,35 +133,52 @@ public final class WorkflowRunDao extends AbstractDao {
                 .list();
 
         final List<WorkflowRun> resultItems = rows.size() > 1
-                ? rows.subList(0, Math.min(rows.size(), limit))
+                ? rows.subList(0, Math.min(rows.size(), request.limit()))
                 : rows;
 
-        final ListRunsPageToken nextPageToken = rows.size() == limitWithNext
+        final ListRunsPageToken nextPageToken = rows.size() == (request.limit() + 1)
                 ? new ListRunsPageToken(resultItems.getLast().id())
                 : null;
 
         return new Page<>(resultItems, request.pageToken(), encodePageToken(nextPageToken));
     }
 
-    public SequencedMap<Integer, WorkflowEvent> getRunHistory(final GetWorkflowRunHistoryRequest request) {
+    record ListRunHistoryPageToken(int lastSequenceNumber) {
+    }
+
+    public Page<WorkflowEvent> listRunHistory(final ListWorkflowRunHistoryRequest request) {
+        requireNonNull(request, "request must not be null");
+
         final Query query = jdbiHandle.createQuery("""
                 select *
                   from workflow_run_history
                  where workflow_run_id = :runId
-                   and sequence_number > :sequenceNumberOffset
+                   and sequence_number > :lastSequenceNumber
+                 order by sequence_number
                  limit :limit
                 """);
 
-        return query
+        final var decodedPageToken = decodePageToken(request.pageToken(), ListRunHistoryPageToken.class);
+
+        final List<WorkflowRunHistoryRow> rows = query
                 .bind("runId", request.runId())
-                .bind("sequenceNumberOffset", request.sequenceNumberOffset())
-                .bind("limit", request.limit())
+                .bind("lastSequenceNumber", decodedPageToken != null ? decodedPageToken.lastSequenceNumber() : -1)
+                .bind("limit", request.limit() + 1)
                 .mapTo(WorkflowRunHistoryRow.class)
-                .collect(Collectors.toMap(
-                        WorkflowRunHistoryRow::sequenceNumber,
-                        WorkflowRunHistoryRow::event,
-                        (a, b) -> a,
-                        () -> new TreeMap<>(Comparator.comparingInt(Integer::intValue))));
+                .list();
+
+        final List<WorkflowRunHistoryRow> resultRows = rows.size() > 1
+                ? rows.subList(0, Math.min(rows.size(), request.limit()))
+                : rows;
+
+        final ListRunHistoryPageToken nextPageToken = rows.size() == (request.limit() + 1)
+                ? new ListRunHistoryPageToken(resultRows.getLast().sequenceNumber())
+                : null;
+
+        return new Page<>(
+                resultRows.stream().map(WorkflowRunHistoryRow::event).toList(),
+                request.pageToken(),
+                encodePageToken(nextPageToken));
     }
 
 }

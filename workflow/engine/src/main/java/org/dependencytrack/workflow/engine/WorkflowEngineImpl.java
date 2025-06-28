@@ -53,6 +53,7 @@ import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.persistence.JdbiFactory;
@@ -97,7 +98,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.SequencedMap;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -608,8 +608,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public SequencedMap<Integer, WorkflowEvent> getRunHistory(final org.dependencytrack.workflow.engine.api.request.GetWorkflowRunHistoryRequest request) {
-        return jdbi.withHandle(handle -> new WorkflowRunDao(handle).getRunHistory(request));
+    public Page<WorkflowEvent> listRunHistory(final ListWorkflowRunHistoryRequest request) {
+        return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRunHistory(request));
     }
 
     @Override
