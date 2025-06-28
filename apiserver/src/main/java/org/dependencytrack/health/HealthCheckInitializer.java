@@ -18,11 +18,9 @@
  */
 package org.dependencytrack.health;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.server.health.HealthCheckRegistry;
 import alpine.server.health.checks.DatabaseHealthCheck;
-import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.processor.ProcessorsHealthCheck;
 
 import jakarta.servlet.ServletContextEvent;
@@ -34,12 +32,6 @@ public class HealthCheckInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
-            LOGGER.debug("Not registering health checks because %s is enabled"
-                    .formatted(ConfigKey.INIT_AND_EXIT.getPropertyName()));
-            return;
-        }
-
         LOGGER.info("Registering health checks");
         HealthCheckRegistry.getInstance().register("database", new DatabaseHealthCheck());
         HealthCheckRegistry.getInstance().register("kafka-processors", new ProcessorsHealthCheck());

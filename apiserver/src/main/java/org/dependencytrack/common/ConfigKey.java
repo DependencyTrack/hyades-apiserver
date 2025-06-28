@@ -55,8 +55,6 @@ public enum ConfigKey implements Config.Key {
     DATABASE_MIGRATION_URL("database.migration.url", null),
     DATABASE_MIGRATION_USERNAME("database.migration.username", null),
     DATABASE_MIGRATION_PASSWORD("database.migration.password", null),
-    DATABASE_RUN_MIGRATIONS("database.run.migrations", true),
-    DATABASE_RUN_MIGRATIONS_ONLY("database.run.migrations.only", false),
     INIT_TASKS_ENABLED("init.tasks.enabled", true),
     INIT_AND_EXIT("init.and.exit", false),
 
