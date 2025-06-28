@@ -24,28 +24,27 @@ import alpine.model.ConfigProperty;
 import alpine.model.ManagedUser;
 import alpine.model.Permission;
 import alpine.server.auth.PasswordService;
-
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
-
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailParser;
+import org.dependencytrack.parser.spdx.json.SpdxLicenseDetails;
+import org.dependencytrack.parser.spdx.json.SpdxLicenseDetailsParser;
 import org.dependencytrack.persistence.defaults.DefaultLicenseGroupImporter;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.util.NotificationUtil;
 import org.dependencytrack.util.WaitingLockConfiguration;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import java.io.IOException;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -229,16 +228,29 @@ public class DefaultObjectGenerator implements ServletContextListener {
     private static void loadDefaultLicenses(final QueryManager qm) {
         LOGGER.info("Synchronizing SPDX license definitions to datastore");
 
-        final SpdxLicenseDetailParser parser = new SpdxLicenseDetailParser();
-        try {
-            final List<License> licenses = parser.getLicenseDefinitions();
-            for (final License license : licenses) {
-                LOGGER.debug("Synchronizing: " + license.getName());
-                qm.synchronizeLicense(license, false);
-            }
-        } catch (IOException e) {
-            LOGGER.error("An error occurred during the parsing SPDX license definitions");
-            LOGGER.error(e.getMessage());
+        final SpdxLicenseDetailsParser parser = new SpdxLicenseDetailsParser();
+        final Iterator<SpdxLicenseDetails> iterator = parser.getLicenseDetails();
+
+        while (iterator.hasNext()) {
+            final SpdxLicenseDetails licenseDetails = iterator.next();
+            LOGGER.debug("Synchronizing: " + licenseDetails.name());
+
+            final var license = new License();
+            license.setLicenseId(licenseDetails.id());
+            license.setName(licenseDetails.name());
+            license.setHeader(licenseDetails.header());
+            license.setText(licenseDetails.text());
+            license.setTemplate(licenseDetails.template());
+            license.setDeprecatedLicenseId(licenseDetails.isDeprecatedLicenseId());
+            license.setFsfLibre(licenseDetails.isFsfLibre());
+            license.setOsiApproved(licenseDetails.isOsiApproved());
+            license.setComment(licenseDetails.comments());
+            license.setSeeAlso(licenseDetails.seeAlso() != null
+                    ? licenseDetails.seeAlso().toArray(new String[0])
+                    : null);
+
+            final License persistentLicense = qm.synchronizeLicense(license, false);
+            qm.getPersistenceManager().evict(persistentLicense);
         }
     }
 

@@ -17,18 +17,36 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 
-set -euxo pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$(cd -P -- "$(dirname "$0")" && pwd -P)"
-LICENSE_LIST_DATA_DIR="$(cd -P -- "${SCRIPT_DIR}/../../apiserver/src/main/resources/license-list-data" && pwd -P)"
+RESOURCES_DIR="$(cd -P -- "${SCRIPT_DIR}/../../apiserver/src/main/resources" && pwd -P)"
 TMP_DOWNLOAD_FILE="$(mktemp)"
+TMP_WORK_DIR="$(mktemp -d)"
 
+echo "[+] Downloading license list v$1"
 gh -R spdx/license-list-data release download "v$1" \
   --archive tar.gz --clobber --output "${TMP_DOWNLOAD_FILE}"
 
-rm -rf "${LICENSE_LIST_DATA_DIR}/json"
-
+echo "[+] Extracting license list contents to ${TMP_WORK_DIR}"
 tar -xvzf "${TMP_DOWNLOAD_FILE}" \
   --strip-components "1" \
-  --directory "${LICENSE_LIST_DATA_DIR}" \
+  --directory "${TMP_WORK_DIR}" \
   "license-list-data-$1/json"
+
+echo '[+] Preprocessing license list'
+jq --slurp --sort-keys '. | map({
+  id: .licenseId // .licenseExceptionId,
+  name,
+  header: .standardLicenseHeader,
+  text: .licenseText // .licenseExceptionText,
+  template: .standardLicenseTemplate,
+  isDeprecatedLicenseId,
+  isFsfLibre,
+  isOsiApproved,
+  comments: .licenseComments,
+  seeAlso,
+}) | sort_by(.id)' $TMP_WORK_DIR/json/*/*.json > "${RESOURCES_DIR}/spdx-license-list.json"
+
+echo "[+] Removing temporary files"
+rm -r "${TMP_DOWNLOAD_FILE}" "${TMP_WORK_DIR}"
