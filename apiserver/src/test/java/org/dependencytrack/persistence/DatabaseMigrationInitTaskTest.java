@@ -20,10 +20,12 @@ package org.dependencytrack.persistence;
 
 import alpine.Config;
 import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.init.InitTaskContext;
 import org.jdbi.v3.core.Jdbi;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -34,9 +36,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class MigrationInitializerTest {
+public class DatabaseMigrationInitTaskTest {
 
     private PostgreSQLContainer<?> postgresContainer;
+    private PGSimpleDataSource dataSource;
     private Jdbi jdbi;
 
     @Before
@@ -44,11 +47,12 @@ public class MigrationInitializerTest {
         postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"));
         postgresContainer.start();
 
-        jdbi = Jdbi.create(
-                postgresContainer.getJdbcUrl(),
-                postgresContainer.getUsername(),
-                postgresContainer.getPassword()
-        );
+        dataSource = new PGSimpleDataSource();
+        dataSource.setUrl(postgresContainer.getJdbcUrl());
+        dataSource.setUser(postgresContainer.getUsername());
+        dataSource.setPassword(postgresContainer.getPassword());
+
+        jdbi = Jdbi.create(dataSource);
     }
 
     @After
@@ -59,65 +63,33 @@ public class MigrationInitializerTest {
     }
 
     @Test
-    public void test() {
+    public void test() throws Exception {
         final var configMock = mock(Config.class);
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_URL))).thenReturn(postgresContainer.getJdbcUrl());
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_DRIVER))).thenReturn(postgresContainer.getDriverClassName());
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_USERNAME))).thenReturn(postgresContainer.getUsername());
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_PASSWORD))).thenReturn(postgresContainer.getPassword());
         when(configMock.getPropertyAsBoolean(eq(ConfigKey.INIT_TASKS_ENABLED))).thenReturn(true);
-        when(configMock.getPropertyAsBoolean(eq(ConfigKey.DATABASE_RUN_MIGRATIONS))).thenReturn(true);
 
-        new MigrationInitializer(configMock).contextInitialized(null);
+        new DatabaseMigrationInitTask().execute(new InitTaskContext(configMock, dataSource));
 
         assertMigrationExecuted(/* expectExecuted */ true);
     }
 
     @Test
-    public void testWithMigrationCredentials() {
+    public void testWithMigrationCredentials() throws Exception {
         final var configMock = mock(Config.class);
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_URL))).thenReturn(postgresContainer.getJdbcUrl());
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_DRIVER))).thenReturn(postgresContainer.getDriverClassName());
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_USERNAME))).thenReturn("username");
         when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_PASSWORD))).thenReturn("password");
         when(configMock.getPropertyAsBoolean(eq(ConfigKey.INIT_TASKS_ENABLED))).thenReturn(true);
-        when(configMock.getPropertyAsBoolean(eq(ConfigKey.DATABASE_RUN_MIGRATIONS))).thenReturn(true);
-        when(configMock.getProperty(eq(ConfigKey.DATABASE_MIGRATION_USERNAME))).thenReturn(postgresContainer.getUsername());
-        when(configMock.getProperty(eq(ConfigKey.DATABASE_MIGRATION_PASSWORD))).thenReturn(postgresContainer.getPassword());
+        when(configMock.getProperty(eq(ConfigKey.INIT_TASKS_DATABASE_USERNAME))).thenReturn(postgresContainer.getUsername());
+        when(configMock.getProperty(eq(ConfigKey.INIT_TASKS_DATABASE_PASSWORD))).thenReturn(postgresContainer.getPassword());
 
-        new MigrationInitializer(configMock).contextInitialized(null);
+        new DatabaseMigrationInitTask().execute(new InitTaskContext(configMock, dataSource));
 
         assertMigrationExecuted(/* expectExecuted */ true);
-    }
-
-    @Test
-    public void testWithRunMigrationsDisabled() {
-        final var configMock = mock(Config.class);
-        when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_URL))).thenReturn(postgresContainer.getJdbcUrl());
-        when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_DRIVER))).thenReturn(postgresContainer.getDriverClassName());
-        when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_USERNAME))).thenReturn(postgresContainer.getUsername());
-        when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_PASSWORD))).thenReturn(postgresContainer.getPassword());
-        when(configMock.getPropertyAsBoolean(eq(ConfigKey.INIT_TASKS_ENABLED))).thenReturn(true);
-        when(configMock.getPropertyAsBoolean(eq(ConfigKey.DATABASE_RUN_MIGRATIONS))).thenReturn(false);
-
-        new MigrationInitializer(configMock).contextInitialized(null);
-
-        assertMigrationExecuted(/* expectExecuted */ false);
-    }
-
-    @Test
-    public void testWithInitTasksDisabled() {
-        final var configMock = mock(Config.class);
-        when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_URL))).thenReturn(postgresContainer.getJdbcUrl());
-        when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_DRIVER))).thenReturn(postgresContainer.getDriverClassName());
-        when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_USERNAME))).thenReturn(postgresContainer.getUsername());
-        when(configMock.getProperty(eq(Config.AlpineKey.DATABASE_PASSWORD))).thenReturn(postgresContainer.getPassword());
-        when(configMock.getPropertyAsBoolean(eq(ConfigKey.INIT_TASKS_ENABLED))).thenReturn(false);
-        when(configMock.getPropertyAsBoolean(eq(ConfigKey.DATABASE_RUN_MIGRATIONS))).thenReturn(true);
-
-        new MigrationInitializer(configMock).contextInitialized(null);
-
-        assertMigrationExecuted(/* expectExecuted */ false);
     }
 
     private void assertMigrationExecuted(final boolean expectExecuted) {
