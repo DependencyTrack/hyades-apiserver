@@ -2655,4 +2655,10 @@
             DROP PROCEDURE IF EXISTS "UPDATE_PORTFOLIO_METRICS";
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-33" author="nscuro">
+        <createIndex tableName="NOTIFICATIONPUBLISHER" indexName="NOTIFICATIONPUBLISHER_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
