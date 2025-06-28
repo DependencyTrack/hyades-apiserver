@@ -20,7 +20,8 @@ module org.dependencytrack.support.liquibase {
     exports org.dependencytrack.support.liquibase;
 
     requires java.logging;
-    requires java.sql;
     requires liquibase.core;
     requires org.slf4j;
+
+    requires transitive java.sql;
 }
