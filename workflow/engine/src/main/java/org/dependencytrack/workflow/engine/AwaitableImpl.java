@@ -34,7 +34,7 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
     private final WorkflowContextImpl<?, ?> executionContext;
     private final PayloadConverter<T> resultConverter;
     private boolean completed;
-    private boolean cancelled;
+    private boolean canceled;
     @Nullable private String cancelReason;
     @Nullable private Consumer<T> completeCallback;
     @Nullable private Consumer<WorkflowFailureException> errorCallback;
@@ -55,7 +55,7 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
             if (completed) {
                 if (exception != null) {
                     throw exception;
-                } else if (cancelled) {
+                } else if (canceled) {
                     throw new CancellationFailureException(cancelReason);
                 }
 
@@ -102,7 +102,7 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
         }
 
         this.completed = true;
-        this.cancelled = true;
+        this.canceled = true;
         this.cancelReason = reason;
 
         return true;

@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 public sealed class WorkflowEngineException extends RuntimeException permits
         NonDeterministicWorkflowException,
         WorkflowRunBlockedException,
-        WorkflowRunCancelledException,
+        WorkflowRunCanceledException,
         WorkflowRunContinuedAsNewException {
 
     WorkflowEngineException(final String message) {

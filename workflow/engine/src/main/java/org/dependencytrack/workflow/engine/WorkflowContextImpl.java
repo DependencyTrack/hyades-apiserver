@@ -24,7 +24,7 @@ import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskFailed;
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskScheduled;
-import org.dependencytrack.proto.workflow.api.v1.RunCancelled;
+import org.dependencytrack.proto.workflow.api.v1.RunCanceled;
 import org.dependencytrack.proto.workflow.api.v1.RunResumed;
 import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
 import org.dependencytrack.proto.workflow.api.v1.RunStarted;
@@ -432,7 +432,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Blocked", e);
             }
-        } catch (WorkflowRunCancelledException e) {
+        } catch (WorkflowRunCanceledException e) {
             cancel(e.getMessage());
         } catch (WorkflowRunContinuedAsNewException e) {
             continueAsNew(e.getArgument());
@@ -463,7 +463,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             eventByEventId.put(event.getId(), event);
         }
 
-        if (isSuspended && !event.hasRunResumed() && !event.hasRunCancelled()) {
+        if (isSuspended && !event.hasRunResumed() && !event.hasRunCanceled()) {
             if (event.hasRunSuspended()) {
                 logger().warn("""
                         Encountered RunSuspended event at index {}, \
@@ -479,7 +479,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             case EXECUTION_STARTED -> onExecutionStarted(event.getTimestamp());
             case RUN_SCHEDULED -> onRunScheduled(event.getRunScheduled());
             case RUN_STARTED -> onRunStarted(event.getRunStarted());
-            case RUN_CANCELLED -> onRunCancelled(event.getRunCancelled());
+            case RUN_CANCELED -> onRunCanceled(event.getRunCanceled());
             case RUN_SUSPENDED -> onRunSuspended(event.getRunSuspended());
             case RUN_RESUMED -> onRunResumed(event.getRunResumed());
             case ACTIVITY_TASK_SCHEDULED -> onActivityTaskScheduled(event.getId());
@@ -537,9 +537,9 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         complete(result);
     }
 
-    private void onRunCancelled(final RunCancelled runCancelled) {
-        logger().debug("Cancelled with reason: {}", runCancelled.getReason());
-        throw new WorkflowRunCancelledException(runCancelled.getReason());
+    private void onRunCanceled(final RunCanceled runCanceled) {
+        logger().debug("Canceled with reason: {}", runCanceled.getReason());
+        throw new WorkflowRunCanceledException(runCanceled.getReason());
     }
 
     private void onRunSuspended(final RunSuspended ignored) {
@@ -776,7 +776,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     private void cancel(final String reason) {
         if (logger().isDebugEnabled()) {
-            logger().debug("Workflow run {}/{} cancelled", workflowName, runId);
+            logger().debug("Workflow run {}/{} canceled", workflowName, runId);
         }
 
         final int eventId = currentEventId++;
@@ -784,7 +784,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                 eventId,
                 new CompleteRunCommand(
                         eventId,
-                        WorkflowRunStatus.CANCELLED,
+                        WorkflowRunStatus.CANCELED,
                         customStatus,
                         /* result */ null,
                         FailureConverter.toFailure(new CancellationFailureException(reason))));

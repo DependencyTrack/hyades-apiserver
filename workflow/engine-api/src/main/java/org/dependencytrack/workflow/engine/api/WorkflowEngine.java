@@ -133,7 +133,7 @@ public interface WorkflowEngine extends Closeable {
      * It is possible that the corresponding workflow run completes execution before the cancellation can take effect.
      *
      * @param runId  ID of the workflow run to cancel.
-     * @param reason Reason for why the run is being cancelled.
+     * @param reason Reason for why the run is being canceled.
      * @throws NoSuchElementException When no workflow run with the given ID exists.
      * @throws IllegalStateException  When the workflow run is already in a terminal state,
      *                                or a cancellation has already been requested.

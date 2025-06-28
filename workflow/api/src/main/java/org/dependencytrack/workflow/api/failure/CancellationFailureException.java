@@ -23,7 +23,7 @@ public final class CancellationFailureException extends WorkflowFailureException
     private final String reason;
 
     public CancellationFailureException(final String reason) {
-        super("Cancelled with reason: %s".formatted(reason), reason, null);
+        super("Canceled with reason: %s".formatted(reason), reason, null);
         this.reason = reason;
     }
 

@@ -88,7 +88,7 @@ final class ActivityContextImpl<T> implements ActivityContext<T>, Closeable {
     private void heartbeat() {
         // TODO: Fail when task was not locked by this worker.
         // TODO: Return info about workflow run so the task can
-        //  detect when run was cancelled or failed.
+        //  detect when run was canceled or failed.
         this.lockedUntil = engine.heartbeatActivityTask(
                 new ActivityTaskId(workflowRunId, scheduledEventId), lockTimeout);
         LoggerFactory.getLogger(activityExecutor.getClass()).debug(

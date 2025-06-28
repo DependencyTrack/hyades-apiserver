@@ -10,7 +10,7 @@
               'PENDING'
             , 'RUNNING'
             , 'SUSPENDED'
-            , 'CANCELLED'
+            , 'CANCELED'
             , 'COMPLETED'
             , 'FAILED'
             );

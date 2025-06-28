@@ -29,7 +29,7 @@ import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskFailed;
 import org.dependencytrack.proto.workflow.api.v1.ExternalEventReceived;
-import org.dependencytrack.proto.workflow.api.v1.RunCancelled;
+import org.dependencytrack.proto.workflow.api.v1.RunCanceled;
 import org.dependencytrack.proto.workflow.api.v1.RunResumed;
 import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
 import org.dependencytrack.proto.workflow.api.v1.RunSuspended;
@@ -516,7 +516,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var cancellationEvent = WorkflowEvent.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
-                .setRunCancelled(RunCancelled.newBuilder()
+                .setRunCanceled(RunCanceled.newBuilder()
                         .setReason(reason)
                         .build())
                 .build();
@@ -532,7 +532,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             final boolean hasPendingCancellation = dao.getRunInbox(runId).stream()
-                    .anyMatch(WorkflowEvent::hasRunCancelled);
+                    .anyMatch(WorkflowEvent::hasRunCanceled);
             if (hasPendingCancellation) {
                 throw new IllegalStateException("Cancellation of workflow run %s already pending".formatted(runId));
             }
@@ -966,8 +966,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                                 message.event()));
             }
 
-            // If there are pending sub workflow runs, make sure those are cancelled, too.
-            if (run.status() == WorkflowRunStatus.CANCELLED) {
+            // If there are pending sub workflow runs, make sure those are canceled, too.
+            if (run.status() == WorkflowRunStatus.CANCELED) {
                 for (final UUID subWorkflowRunId : getPendingSubWorkflowRunIds(run)) {
                     createInboxEntryCommands.add(
                             new CreateWorkflowRunInboxEntryCommand(
@@ -976,8 +976,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                                     WorkflowEvent.newBuilder()
                                             .setId(-1)
                                             .setTimestamp(Timestamps.now())
-                                            .setRunCancelled(RunCancelled.newBuilder()
-                                                    .setReason("Parent cancelled")
+                                            .setRunCanceled(RunCanceled.newBuilder()
+                                                    .setReason("Parent canceled")
                                                     .build())
                                             .build()));
                 }

@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.engine.api;
 
 import java.util.Set;
 
-import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
+import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELED;
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_PENDING;
@@ -32,7 +32,7 @@ public enum WorkflowRunStatus {
     PENDING(1, 3),       // 0
     RUNNING(2, 3, 4, 5), // 1
     SUSPENDED(1, 3),     // 2
-    CANCELLED,           // 3
+    CANCELED,            // 3
     COMPLETED,           // 4
     FAILED;              // 5
 
@@ -56,7 +56,7 @@ public enum WorkflowRunStatus {
             case WORKFLOW_RUN_STATUS_PENDING -> PENDING;
             case WORKFLOW_RUN_STATUS_RUNNING -> RUNNING;
             case WORKFLOW_RUN_STATUS_SUSPENDED -> SUSPENDED;
-            case WORKFLOW_RUN_STATUS_CANCELLED -> CANCELLED;
+            case WORKFLOW_RUN_STATUS_CANCELED -> CANCELED;
             case WORKFLOW_RUN_STATUS_COMPLETED -> COMPLETED;
             case WORKFLOW_RUN_STATUS_FAILED -> FAILED;
             default -> throw new IllegalArgumentException("Unexpected status: " + protoStatus);
@@ -68,7 +68,7 @@ public enum WorkflowRunStatus {
             case PENDING -> WORKFLOW_RUN_STATUS_PENDING;
             case RUNNING -> WORKFLOW_RUN_STATUS_RUNNING;
             case SUSPENDED -> WORKFLOW_RUN_STATUS_SUSPENDED;
-            case CANCELLED -> WORKFLOW_RUN_STATUS_CANCELLED;
+            case CANCELED -> WORKFLOW_RUN_STATUS_CANCELED;
             case COMPLETED -> WORKFLOW_RUN_STATUS_COMPLETED;
             case FAILED -> WORKFLOW_RUN_STATUS_FAILED;
         };

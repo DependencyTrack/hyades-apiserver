@@ -60,7 +60,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
-import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELLED;
+import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELED;
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 import static org.dependencytrack.workflow.api.RetryPolicy.defaultRetryPolicy;
@@ -228,16 +228,16 @@ class WorkflowEngineImplTest {
 
         engine.requestRunCancellation(runId, "Stop it!");
 
-        final WorkflowRun cancelledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
+        final WorkflowRun canceledRun = awaitRunStatus(runId, WorkflowRunStatus.CANCELED);
 
-        assertThat(cancelledRun.customStatus()).isNull();
-        assertThat(cancelledRun.concurrencyGroupId()).isNull();
-        assertThat(cancelledRun.priority()).isNull();
-        assertThat(cancelledRun.labels()).isNull();
-        assertThat(cancelledRun.createdAt()).isNotNull();
-        assertThat(cancelledRun.updatedAt()).isNotNull();
-        assertThat(cancelledRun.startedAt()).isNotNull();
-        assertThat(cancelledRun.completedAt()).isNotNull();
+        assertThat(canceledRun.customStatus()).isNull();
+        assertThat(canceledRun.concurrencyGroupId()).isNull();
+        assertThat(canceledRun.priority()).isNull();
+        assertThat(canceledRun.labels()).isNull();
+        assertThat(canceledRun.createdAt()).isNotNull();
+        assertThat(canceledRun.updatedAt()).isNotNull();
+        assertThat(canceledRun.startedAt()).isNotNull();
+        assertThat(canceledRun.completedAt()).isNotNull();
 
         assertThat(engine.listRunHistory(new ListWorkflowRunHistoryRequest(runId)).items()).satisfiesExactly(
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
@@ -246,10 +246,10 @@ class WorkflowEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.TIMER_SCHEDULED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_CANCELLED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_CANCELED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
-                    assertThat(entry.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_CANCELLED);
+                    assertThat(entry.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_CANCELED);
                     assertThat(entry.getRunCompleted().hasResult()).isFalse();
                     assertThat(entry.getRunCompleted().getFailure().getMessage()).isEqualTo("Stop it!");
                 },
@@ -440,9 +440,9 @@ class WorkflowEngineImplTest {
 
         engine.requestRunCancellation(parentRunId, "someReason");
 
-        awaitRunStatus(parentRunId, WorkflowRunStatus.CANCELLED);
-        awaitRunStatus(childRunIdReference.get(), WorkflowRunStatus.CANCELLED);
-        awaitRunStatus(grandChildRunIdReference.get(), WorkflowRunStatus.CANCELLED);
+        awaitRunStatus(parentRunId, WorkflowRunStatus.CANCELED);
+        awaitRunStatus(childRunIdReference.get(), WorkflowRunStatus.CANCELED);
+        awaitRunStatus(grandChildRunIdReference.get(), WorkflowRunStatus.CANCELED);
     }
 
     @Test
@@ -501,7 +501,7 @@ class WorkflowEngineImplTest {
 
         engine.requestRunCancellation(runId, "someReason");
 
-        awaitRunStatus(runId, WorkflowRunStatus.CANCELLED);
+        awaitRunStatus(runId, WorkflowRunStatus.CANCELED);
     }
 
     @Test

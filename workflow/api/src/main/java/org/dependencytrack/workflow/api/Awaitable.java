@@ -27,7 +27,7 @@ public interface Awaitable<T> {
     /**
      * @return The {@link Awaitable}'s result, if any.
      * @throws WorkflowFailureException     If the {@link Awaitable} completed exceptionally.
-     * @throws CancellationFailureException When the awaitable was cancelled before it could complete.
+     * @throws CancellationFailureException When the awaitable was canceled before it could complete.
      */
     @Nullable
     T await();

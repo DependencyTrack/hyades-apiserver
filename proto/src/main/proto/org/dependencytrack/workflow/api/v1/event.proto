@@ -39,7 +39,7 @@ message WorkflowEvent {
 
     RunScheduled run_scheduled = 50;
     RunStarted run_started = 51;
-    RunCancelled run_cancelled = 52;
+    RunCanceled run_canceled = 52;
     RunSuspended run_suspended = 53;
     RunResumed run_resumed = 54;
     RunCompleted run_completed = 55;
@@ -87,7 +87,7 @@ message RunScheduled {
 message RunStarted {
 }
 
-message RunCancelled {
+message RunCanceled {
   string reason = 1;
 }
 
