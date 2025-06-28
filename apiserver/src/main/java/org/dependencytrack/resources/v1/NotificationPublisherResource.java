@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
@@ -33,6 +32,19 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.NotificationPublisher;
+import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.publisher.PublisherClass;
+import org.dependencytrack.persistence.DatabaseSeedingInitTask;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
+import org.dependencytrack.util.NotificationUtil;
+
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -44,20 +56,11 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.NotificationPublisher;
-import org.dependencytrack.model.NotificationRule;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.publisher.PublisherClass;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.NotificationUtil;
-
 import java.util.Arrays;
 import java.util.List;
+
+import static org.dependencytrack.model.ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 /**
  * JAX-RS resources for processing notification publishers.
@@ -263,21 +266,14 @@ public class NotificationPublisherResource extends AlpineResource {
     })
     @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
     public Response restoreDefaultTemplates() {
-        try (QueryManager qm = new QueryManager()) {
-            return qm.callInTransaction(() -> {
-                final ConfigProperty property = qm.getConfigProperty(
-                        ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getGroupName(),
-                        ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getPropertyName()
-                );
-                property.setPropertyValue("false");
-                qm.persist(property);
-                NotificationUtil.loadDefaultNotificationPublishers(qm);
-                return Response.ok().build();
-            });
-        } catch (Exception exception) {
-            LOGGER.error(exception.getMessage(), exception);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Exception occured while restoring default notification publisher templates.").build();
-        }
+        useJdbiTransaction(handle -> {
+            handle.attach(ConfigPropertyDao.class).setValue(
+                    NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED, "false");
+
+            DatabaseSeedingInitTask.seedDefaultNotificationPublishers(handle);
+        });
+
+        return Response.ok().build();
     }
 
     @POST

@@ -24,7 +24,7 @@ import alpine.server.filters.AuthenticationFeature;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.License;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -35,6 +35,8 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 public class LicenseResourceTest extends ResourceTest {
 
@@ -47,8 +49,8 @@ public class LicenseResourceTest extends ResourceTest {
     @Override
     public void before() throws Exception {
         super.before();
-        final var generator = new DefaultObjectGenerator();
-        generator.loadDefaultLicenses();
+
+        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultLicenses);
     }
 
     @Test
