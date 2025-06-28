@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
-import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.ActivityMetadata;
+import org.dependencytrack.workflow.engine.MetadataRegistry.ActivityMetadata;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.persistence.model.PollActivityTaskCommand;
 import org.slf4j.Logger;
@@ -36,18 +36,18 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
 
     private final WorkflowEngineImpl engine;
     private final ActivityGroup activityGroup;
-    private final ExecutorMetadataRegistry executorMetadataRegistry;
+    private final MetadataRegistry metadataRegistry;
     private final List<PollActivityTaskCommand> pollCommands;
 
     ActivityTaskManager(
             final WorkflowEngineImpl engine,
             final ActivityGroup activityGroup,
-            final ExecutorMetadataRegistry executorMetadataRegistry) {
+            final MetadataRegistry metadataRegistry) {
         this.engine = engine;
         this.activityGroup = activityGroup;
-        this.executorMetadataRegistry = executorMetadataRegistry;
+        this.metadataRegistry = metadataRegistry;
         this.pollCommands = activityGroup.activityNames().stream()
-                .map(executorMetadataRegistry::getActivityMetadata)
+                .map(metadataRegistry::getActivityMetadata)
                 .map(metadata -> new PollActivityTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
     }
@@ -94,7 +94,7 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
                             task.activityName(), activityGroup.name()));
         }
 
-        final ActivityMetadata activityMetadata = executorMetadataRegistry.getActivityMetadata(task.activityName());
+        final ActivityMetadata activityMetadata = metadataRegistry.getActivityMetadata(task.activityName());
 
         final var ctx = new ActivityContextImpl<>(
                 engine,

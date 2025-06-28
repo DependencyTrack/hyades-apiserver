@@ -44,6 +44,14 @@ import java.util.concurrent.CompletableFuture;
 
 public interface WorkflowEngine extends Closeable {
 
+    /**
+     * Execute any required database migrations.
+     *
+     * @throws Exception             When migration execution failed.
+     * @throws IllegalStateException When the engine was already started.
+     */
+    void migrateDatabase() throws Exception;
+
     void start();
 
     /**
@@ -110,9 +118,19 @@ public interface WorkflowEngine extends Closeable {
      */
     void mount(ActivityGroup group);
 
-    List<UUID> createRuns(Collection<CreateWorkflowRunRequest> requests);
+    /**
+     * Create one or more workflow runs.
+     *
+     * @param requests Requests for runs to create.
+     * @return IDs of the created runs.
+     * @throws NoSuchElementException When a workflow is not known to the engine.
+     */
+    List<UUID> createRuns(Collection<CreateWorkflowRunRequest<?>> requests);
 
-    default UUID createRun(final CreateWorkflowRunRequest request) {
+    /**
+     * @see #createRuns(Collection)
+     */
+    default <A> UUID createRun(final CreateWorkflowRunRequest<A> request) {
         final List<UUID> results = createRuns(List.of(request));
         if (results.isEmpty()) {
             throw new IllegalStateException("createRuns returned no results");

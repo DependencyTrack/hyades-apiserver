@@ -23,7 +23,7 @@ import org.dependencytrack.proto.workflow.api.v1.ExecutionCompleted;
 import org.dependencytrack.proto.workflow.api.v1.ExecutionStarted;
 import org.dependencytrack.proto.workflow.api.v1.RunStarted;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
-import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.WorkflowMetadata;
+import org.dependencytrack.workflow.engine.MetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.persistence.model.PollWorkflowTaskCommand;
 import org.slf4j.Logger;
@@ -39,18 +39,18 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
 
     private final WorkflowEngineImpl engine;
     private final WorkflowGroup workflowGroup;
-    private final ExecutorMetadataRegistry executorMetadataRegistry;
+    private final MetadataRegistry metadataRegistry;
     private final List<PollWorkflowTaskCommand> pollCommands;
 
     WorkflowTaskManager(
             final WorkflowEngineImpl engine,
             final WorkflowGroup workflowGroup,
-            final ExecutorMetadataRegistry executorMetadataRegistry) {
+            final MetadataRegistry metadataRegistry) {
         this.engine = engine;
         this.workflowGroup = workflowGroup;
-        this.executorMetadataRegistry = executorMetadataRegistry;
+        this.metadataRegistry = metadataRegistry;
         this.pollCommands = workflowGroup.workflowNames().stream()
-                .map(executorMetadataRegistry::getWorkflowMetadata)
+                .map(metadataRegistry::getWorkflowMetadata)
                 .map(metadata -> new PollWorkflowTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
     }
@@ -100,7 +100,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
                             task.workflowName(), workflowGroup.name()));
         }
 
-        final WorkflowMetadata workflowMetadata = executorMetadataRegistry.getWorkflowMetadata(task.workflowName());
+        final WorkflowMetadata workflowMetadata = metadataRegistry.getWorkflowMetadata(task.workflowName());
 
         // Hydrate workflow run state from the history.
         final var workflowRunState = new WorkflowRunState(

@@ -51,8 +51,8 @@ import org.dependencytrack.workflow.api.failure.SideEffectFailureException;
 import org.dependencytrack.workflow.api.failure.SubWorkflowFailureException;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.api.payload.VoidPayloadConverter;
-import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.ActivityMetadata;
-import org.dependencytrack.workflow.engine.ExecutorMetadataRegistry.WorkflowMetadata;
+import org.dependencytrack.workflow.engine.MetadataRegistry.ActivityMetadata;
+import org.dependencytrack.workflow.engine.MetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ContinueRunAsNewCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResultCommand;
@@ -89,7 +89,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private final int workflowVersion;
     @Nullable private final Integer priority;
     @Nullable private final Map<String, String> labels;
-    private final ExecutorMetadataRegistry executorMetadataRegistry;
+    private final MetadataRegistry metadataRegistry;
     private final WorkflowExecutor<A, R> workflowExecutor;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
@@ -117,7 +117,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             final int workflowVersion,
             @Nullable final Integer priority,
             @Nullable final Map<String, String> labels,
-            final ExecutorMetadataRegistry executorMetadataRegistry,
+            final MetadataRegistry metadataRegistry,
             final WorkflowExecutor<A, R> workflowExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
@@ -128,7 +128,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         this.workflowVersion = workflowVersion;
         this.priority = priority;
         this.labels = labels;
-        this.executorMetadataRegistry = executorMetadataRegistry;
+        this.metadataRegistry = metadataRegistry;
         this.workflowExecutor = workflowExecutor;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
@@ -192,7 +192,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     public <AA, AR> ActivityClient<AA, AR> activityClient(
             final Class<? extends ActivityExecutor<AA, AR>> activityClass) {
         final ActivityMetadata<AA, AR> activityMetadata =
-                executorMetadataRegistry.getActivityMetadata(activityClass);
+                metadataRegistry.getActivityMetadata(activityClass);
         return new ActivityClientImpl<>(
                 this,
                 activityMetadata.name(),
@@ -204,7 +204,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     public <WA, WR> WorkflowClient<WA, WR> workflowClient(
             final Class<? extends WorkflowExecutor<WA, WR>> workflowClass) {
         final WorkflowMetadata<WA, WR> workflowMetadata =
-                executorMetadataRegistry.getWorkflowMetadata(workflowClass);
+                metadataRegistry.getWorkflowMetadata(workflowClass);
         return new WorkflowClientImpl<>(
                 this,
                 workflowMetadata.name(),

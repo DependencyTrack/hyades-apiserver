@@ -32,7 +32,7 @@ public record ActivityCallOptions<A>(@Nullable A argument, RetryPolicy retryPoli
         this(null, RetryPolicy.defaultRetryPolicy());
     }
 
-    public ActivityCallOptions<A> withArgument(final A argument) {
+    public ActivityCallOptions<A> withArgument(@Nullable final A argument) {
         return new ActivityCallOptions<>(argument, this.retryPolicy);
     }
 

@@ -35,9 +35,11 @@ import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
 import org.dependencytrack.proto.workflow.api.v1.RunSuspended;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
+import org.dependencytrack.workflow.engine.MetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.workflow.engine.TaskCommand.AbandonActivityTaskCommand;
 import org.dependencytrack.workflow.engine.TaskCommand.AbandonWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.TaskCommand.CompleteActivityTaskCommand;
@@ -159,7 +161,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private final WorkflowEngineConfig config;
     private final Jdbi jdbi;
     private final ReentrantLock statusLock = new ReentrantLock();
-    private final ExecutorMetadataRegistry executorMetadataRegistry = new ExecutorMetadataRegistry();
+    private final MetadataRegistry metadataRegistry = new MetadataRegistry();
     private final Set<WorkflowGroup> workflowGroups = new HashSet<>();
     private final Set<ActivityGroup> activityGroups = new HashSet<>();
     private Status status = Status.CREATED;
@@ -174,6 +176,18 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     WorkflowEngineImpl(final WorkflowEngineConfig config) {
         this.config = requireNonNull(config);
         this.jdbi = JdbiFactory.create(config.dataSource());
+    }
+
+    @Override
+    public void migrateDatabase() throws Exception {
+        requireStatusAnyOf(Status.CREATED, Status.STOPPED);
+
+        new MigrationExecutor(
+                config.dataSource(),
+                "/org/dependencytrack/workflow/engine/persistence/migration/changelog.xml")
+                .withChangeLogTableName("workflow_engine_database_changelog")
+                .withChangeLogLockTableName("workflow_engine_database_changelog_lock")
+                .executeMigration();
     }
 
     @Override
@@ -332,8 +346,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout) {
-        requireStatus(Status.CREATED);
-        executorMetadataRegistry.register(workflowExecutor, argumentConverter, resultConverter, lockTimeout);
+        requireStatusAnyOf(Status.CREATED, Status.STOPPED);
+        metadataRegistry.register(workflowExecutor, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerWorkflowInternal(
@@ -343,8 +357,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout,
             final WorkflowExecutor<A, R> workflowExecutor) {
-        requireStatus(Status.CREATED);
-        executorMetadataRegistry.register(workflowName, workflowVersion, argumentConverter, resultConverter, lockTimeout, workflowExecutor);
+        requireStatusAnyOf(Status.CREATED, Status.STOPPED);
+        metadataRegistry.register(workflowName, workflowVersion, argumentConverter, resultConverter, lockTimeout, workflowExecutor);
     }
 
     @Override
@@ -353,8 +367,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout) {
-        requireStatus(Status.CREATED);
-        executorMetadataRegistry.register(activityExecutor, argumentConverter, resultConverter, lockTimeout);
+        requireStatusAnyOf(Status.CREATED, Status.STOPPED);
+        metadataRegistry.register(activityExecutor, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerActivityInternal(
@@ -364,18 +378,18 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final Duration lockTimeout,
             final boolean heartbeatEnabled,
             final ActivityExecutor<A, R> activityExecutor) {
-        requireStatus(Status.CREATED);
-        executorMetadataRegistry.register(activityName, argumentConverter, resultConverter, lockTimeout, heartbeatEnabled, activityExecutor);
+        requireStatusAnyOf(Status.CREATED, Status.STOPPED);
+        metadataRegistry.register(activityName, argumentConverter, resultConverter, lockTimeout, heartbeatEnabled, activityExecutor);
     }
 
     @Override
     public void mount(final WorkflowGroup group) {
-        requireStatus(Status.CREATED);
+        requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         requireNonNull(group, "group must not be null");
 
         for (final String workflowName : group.workflowNames()) {
             try {
-                executorMetadataRegistry.getWorkflowMetadata(workflowName);
+                metadataRegistry.getWorkflowMetadata(workflowName);
             } catch (NoSuchElementException e) {
                 throw new IllegalStateException("Workflow %s is not registered".formatted(workflowName), e);
             }
@@ -386,12 +400,12 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
     @Override
     public void mount(final ActivityGroup group) {
-        requireStatus(Status.CREATED);
+        requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         requireNonNull(group, "group must not be null");
 
         for (final String activityName : group.activityNames()) {
             try {
-                executorMetadataRegistry.getActivityMetadata(activityName);
+                metadataRegistry.getActivityMetadata(activityName);
             } catch (NoSuchElementException e) {
                 throw new IllegalStateException("Activity %s is not registered".formatted(activityName), e);
             }
@@ -401,13 +415,17 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public List<UUID> createRuns(final Collection<CreateWorkflowRunRequest> options) {
+    public List<UUID> createRuns(final Collection<CreateWorkflowRunRequest<?>> options) {
         final var now = Timestamps.now();
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(options.size());
         final var createInboxEntryCommand = new ArrayList<CreateWorkflowRunInboxEntryCommand>(options.size());
         final var nextRunIdByConcurrencyGroupId = new HashMap<String, UUID>();
 
-        for (final CreateWorkflowRunRequest option : options) {
+        for (final CreateWorkflowRunRequest<?> option : options) {
+            //noinspection rawtypes
+            final WorkflowMetadata workflowMetadata =
+                    metadataRegistry.getWorkflowMetadata(option.workflowName());
+
             final UUID runId = timeBasedEpochRandomGenerator().generate();
             createWorkflowRunCommands.add(
                     new CreateWorkflowRunCommand(
@@ -432,7 +450,14 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 runScheduledBuilder.putAllLabels(option.labels());
             }
             if (option.argument() != null) {
-                runScheduledBuilder.setArgument(option.argument());
+                final WorkflowPayload argumentPayload;
+                if (option.argument() instanceof final WorkflowPayload payload) {
+                    argumentPayload = payload;
+                } else {
+                    //noinspection unchecked
+                    argumentPayload = workflowMetadata.argumentConverter().convertToPayload(option.argument());
+                }
+                runScheduledBuilder.setArgument(argumentPayload);
             }
 
             createInboxEntryCommand.add(
@@ -617,7 +642,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final UUID workflowRunId,
             final String eventId,
             final WorkflowPayload content) {
-        requireStatus(Status.RUNNING);
+        requireStatusAnyOf(Status.RUNNING);
 
         try {
             return externalEventBuffer.add(new NewExternalEvent(workflowRunId, eventId, content));
@@ -673,7 +698,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     private void startWorkflowGroup(final WorkflowGroup group) {
-        requireStatus(Status.STARTING);
+        requireStatusAnyOf(Status.STARTING);
         requireNonNull(group, "group must not be null");
 
         final String executorName = "WorkflowEngine-WorkflowGroup-%s".formatted(group.name());
@@ -695,7 +720,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var taskDispatcher = new TaskDispatcher<>(
                 this,
                 executorService,
-                new WorkflowTaskManager(this, group, executorMetadataRegistry),
+                new WorkflowTaskManager(this, group, metadataRegistry),
                 group.maxConcurrency(),
                 config.workflowTaskDispatcher().minPollInterval(),
                 config.workflowTaskDispatcher().pollBackoffIntervalFunction(),
@@ -705,7 +730,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     private void startActivityGroup(final ActivityGroup group) {
-        requireStatus(Status.STARTING);
+        requireStatusAnyOf(Status.STARTING);
         requireNonNull(group, "group must not be null");
 
         final String executorName = "WorkflowEngine-ActivityGroup-%s".formatted(group.name());
@@ -727,7 +752,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var taskDispatcher = new TaskDispatcher<>(
                 this,
                 executorService,
-                new ActivityTaskManager(this, group, executorMetadataRegistry),
+                new ActivityTaskManager(this, group, metadataRegistry),
                 group.maxConcurrency(),
                 config.activityTaskDispatcher().minPollInterval(),
                 config.activityTaskDispatcher().pollBackoffIntervalFunction(),
@@ -1254,8 +1279,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunCountByNameAndStatus());
     }
 
-    ExecutorMetadataRegistry executorMetadataRegistry() {
-        return executorMetadataRegistry;
+    MetadataRegistry executorMetadataRegistry() {
+        return metadataRegistry;
     }
 
     private Set<UUID> getPendingSubWorkflowRunIds(final WorkflowRunState run) {
@@ -1304,11 +1329,15 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
     }
 
-    private void requireStatus(final Status expectedStatus) {
-        if (!expectedStatus.equals(this.status)) {
-            throw new IllegalStateException(
-                    "Engine must be in state %s, but is %s".formatted(expectedStatus, this.status));
+    private void requireStatusAnyOf(final Status... expectedStatuses) {
+        for (final Status expectedStatus : expectedStatuses) {
+            if (this.status == expectedStatus) {
+                return;
+            }
         }
+
+        throw new IllegalStateException(
+                "Engine must be in state any of %s, but is %s".formatted(expectedStatuses, this.status));
     }
 
 }

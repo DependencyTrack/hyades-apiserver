@@ -63,7 +63,7 @@ final class WorkflowScheduler implements Runnable {
             }
 
             final var now = Instant.now();
-            final var scheduleRunOptions = new ArrayList<CreateWorkflowRunRequest>(dueSchedules.size());
+            final var scheduleRunOptions = new ArrayList<CreateWorkflowRunRequest<?>>(dueSchedules.size());
             final var nextFireAtByName = new HashMap<String, Instant>(dueSchedules.size());
 
             for (final WorkflowSchedule schedule : dueSchedules) {
@@ -84,7 +84,7 @@ final class WorkflowScheduler implements Runnable {
                 }
                 labels.put("schedule", schedule.name());
 
-                scheduleRunOptions.add(new CreateWorkflowRunRequest(
+                scheduleRunOptions.add(new CreateWorkflowRunRequest<>(
                         schedule.workflowName(),
                         schedule.workflowVersion(),
                         schedule.concurrencyGroupId(),

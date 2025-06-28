@@ -198,11 +198,11 @@ public class WorkflowEngineImplBenchmarkTest {
     void test() {
         final int numRuns = 100_000;
 
-        final var scheduleOptions = new ArrayList<CreateWorkflowRunRequest>(numRuns);
+        final var scheduleOptions = new ArrayList<CreateWorkflowRunRequest<?>>(numRuns);
         for (int i = 0; i < numRuns; i++) {
             final String concurrencyGroupId = (i % 2 == 0 && i != 0) ? "test-" + (i - 1) : "test-" + i;
             final Map<String, String> labels = (i % 5 == 0) ? Map.of("foo", "test-" + i) : null;
-            scheduleOptions.add(new CreateWorkflowRunRequest("test", 1)
+            scheduleOptions.add(new CreateWorkflowRunRequest<>("test", 1)
                     .withConcurrencyGroupId(concurrencyGroupId)
                     .withLabels(labels));
         }

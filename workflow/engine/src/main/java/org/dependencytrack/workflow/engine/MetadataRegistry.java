@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 
 import static java.util.Objects.requireNonNull;
 
-final class ExecutorMetadataRegistry {
+final class MetadataRegistry {
 
     record WorkflowMetadata<A, R>(
             String name,
