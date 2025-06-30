@@ -335,11 +335,11 @@ public class BomResource extends AbstractApiResource {
                                     final String trimmedParentVersion = StringUtils.trimToNull(request.getParentVersion());
                                     parent = withJdbiHandle(getAlpineRequest(), handle ->
                                             handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedParentName, trimmedParentVersion));
-                                    parent = qm.getObjectByUuid(Project.class, parent.getUuid());
                                 }
                                 if (parent == null) { // if parent project is specified but not found
                                     return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
                                 }
+                                parent = qm.getObjectByUuid(Project.class, parent.getUuid());
                                 requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                             }
                             final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
