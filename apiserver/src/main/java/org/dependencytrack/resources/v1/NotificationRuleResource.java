@@ -32,17 +32,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.NotificationPublisher;
-import org.dependencytrack.model.NotificationRule;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.openapi.PaginatedApi;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -54,6 +43,17 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.NotificationPublisher;
+import org.dependencytrack.model.NotificationRule;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.notification.NotificationScope;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.v1.openapi.PaginatedApi;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+
 import java.util.List;
 import java.util.Set;
 
@@ -185,13 +185,15 @@ public class NotificationRuleResource extends AbstractApiResource {
     @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response deleteNotificationRule(NotificationRule jsonRule) {
         try (QueryManager qm = new QueryManager()) {
-            final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, jsonRule.getUuid());
-            if (rule != null) {
-                qm.delete(rule);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the notification rule could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, jsonRule.getUuid());
+                if (rule != null) {
+                    qm.delete(rule);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the notification rule could not be found.").build();
+                }
+            });
         }
     }
 
@@ -223,25 +225,27 @@ public class NotificationRuleResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the project to add to the rule", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
         try (QueryManager qm = new QueryManager()) {
-            final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
-            if (rule == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
-            }
-            if (rule.getScope() != NotificationScope.PORTFOLIO) {
-                return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Project limitations are only possible on notification rules with PORTFOLIO scope.").build();
-            }
-            final Project project = qm.getObjectByUuid(Project.class, projectUuid);
-            if (project == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
-            requireAccess(qm, project);
-            final List<Project> projects = rule.getProjects();
-            if (projects != null && !projects.contains(project)) {
-                rule.getProjects().add(project);
-                qm.persist(rule);
-                return Response.ok(rule).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
+            return qm.callInTransaction(() -> {
+                final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
+                if (rule == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
+                }
+                if (rule.getScope() != NotificationScope.PORTFOLIO) {
+                    return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Project limitations are only possible on notification rules with PORTFOLIO scope.").build();
+                }
+                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+                if (project == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+                }
+                requireAccess(qm, project);
+                final List<Project> projects = rule.getProjects();
+                if (projects != null && !projects.contains(project)) {
+                    rule.getProjects().add(project);
+                    qm.persist(rule);
+                    return Response.ok(rule).build();
+                }
+                return Response.status(Response.Status.NOT_MODIFIED).build();
+            });
         }
     }
 
@@ -273,25 +277,27 @@ public class NotificationRuleResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the project to remove from the rule", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("projectUuid") @ValidUuid String projectUuid) {
         try (QueryManager qm = new QueryManager()) {
-            final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
-            if (rule == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
-            }
-            if (rule.getScope() != NotificationScope.PORTFOLIO) {
-                return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Project limitations are only possible on notification rules with PORTFOLIO scope.").build();
-            }
-            final Project project = qm.getObjectByUuid(Project.class, projectUuid);
-            if (project == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
-            }
-            requireAccess(qm, project);
-            final List<Project> projects = rule.getProjects();
-            if (projects != null && projects.contains(project)) {
-                rule.getProjects().remove(project);
-                qm.persist(rule);
-                return Response.ok(rule).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
+            return qm.callInTransaction(() -> {
+                final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
+                if (rule == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
+                }
+                if (rule.getScope() != NotificationScope.PORTFOLIO) {
+                    return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Project limitations are only possible on notification rules with PORTFOLIO scope.").build();
+                }
+                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+                if (project == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The project could not be found.").build();
+                }
+                requireAccess(qm, project);
+                final List<Project> projects = rule.getProjects();
+                if (projects != null && projects.contains(project)) {
+                    rule.getProjects().remove(project);
+                    qm.persist(rule);
+                    return Response.ok(rule).build();
+                }
+                return Response.status(Response.Status.NOT_MODIFIED).build();
+            });
         }
     }
 
@@ -319,24 +325,26 @@ public class NotificationRuleResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the team to add to the rule", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("teamUuid") @ValidUuid String teamUuid) {
         try (QueryManager qm = new QueryManager()) {
-            final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
-            if (rule == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
-            }
-            if (!rule.getPublisher().getPublisherClass().equals(SendMailPublisher.name())) {
-                return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Team subscriptions are only possible on notification rules with EMAIL publisher.").build();
-            }
-            final Team team = qm.getObjectByUuid(Team.class, teamUuid);
-            if (team == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
-            }
-            final Set<Team> teams = rule.getTeams();
-            if (teams != null && !teams.contains(team)) {
-                rule.getTeams().add(team);
-                qm.persist(rule);
-                return Response.ok(rule).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
+            return qm.callInTransaction(() -> {
+                final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
+                if (rule == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
+                }
+                if (!rule.getPublisher().getPublisherClass().equals(SendMailPublisher.name())) {
+                    return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Team subscriptions are only possible on notification rules with EMAIL publisher.").build();
+                }
+                final Team team = qm.getObjectByUuid(Team.class, teamUuid);
+                if (team == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
+                }
+                final Set<Team> teams = rule.getTeams();
+                if (teams != null && !teams.contains(team)) {
+                    rule.getTeams().add(team);
+                    qm.persist(rule);
+                    return Response.ok(rule).build();
+                }
+                return Response.status(Response.Status.NOT_MODIFIED).build();
+            });
         }
     }
 
@@ -364,24 +372,26 @@ public class NotificationRuleResource extends AbstractApiResource {
             @Parameter(description = "The UUID of the project to remove from the rule", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("teamUuid") @ValidUuid String teamUuid) {
         try (QueryManager qm = new QueryManager()) {
-            final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
-            if (rule == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
-            }
-            if (!rule.getPublisher().getPublisherClass().equals(SendMailPublisher.name())) {
-                return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Team subscriptions are only possible on notification rules with EMAIL publisher.").build();
-            }
-            final Team team = qm.getObjectByUuid(Team.class, teamUuid);
-            if (team == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
-            }
-            final Set<Team> teams = rule.getTeams();
-            if (teams != null && teams.contains(team)) {
-                rule.getTeams().remove(team);
-                qm.persist(rule);
-                return Response.ok(rule).build();
-            }
-            return Response.status(Response.Status.NOT_MODIFIED).build();
+            return qm.callInTransaction(() -> {
+                final NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, ruleUuid);
+                if (rule == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The notification rule could not be found.").build();
+                }
+                if (!rule.getPublisher().getPublisherClass().equals(SendMailPublisher.name())) {
+                    return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Team subscriptions are only possible on notification rules with EMAIL publisher.").build();
+                }
+                final Team team = qm.getObjectByUuid(Team.class, teamUuid);
+                if (team == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
+                }
+                final Set<Team> teams = rule.getTeams();
+                if (teams != null && teams.contains(team)) {
+                    rule.getTeams().remove(team);
+                    qm.persist(rule);
+                    return Response.ok(rule).build();
+                }
+                return Response.status(Response.Status.NOT_MODIFIED).build();
+            });
         }
     }
 }

@@ -48,6 +48,18 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.FormParam;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -65,18 +77,6 @@ import org.dependencytrack.resources.v1.vo.ModifyUserProjectRoleRequest;
 import org.dependencytrack.resources.v1.vo.TeamsSetRequest;
 import org.owasp.security.logging.SecurityMarkers;
 
-import jakarta.validation.Valid;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.FormParam;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import javax.jdo.Query;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -86,6 +86,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * JAX-RS resources for processing users.
@@ -125,22 +126,26 @@ public class UserResource extends AlpineResource {
     public Response validateCredentials(@FormParam("username") String username, @FormParam("password") String password) {
         final Authenticator auth = new Authenticator(username, password);
         try (QueryManager qm = new QueryManager()) {
-            final Principal principal = auth.authenticate();
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful user login / username: " + username);
-            final Set<String> permissionNames = qm.getEffectivePermissions(principal);
-            final List<Permission> permissions = qm.getPermissionsByName(permissionNames);
-            final KeyManager km = KeyManager.getInstance();
-            final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
-            final String token = jwt.createToken(principal, permissions);
-            return Response.ok(token).build();
-        } catch (AlpineAuthenticationException e) {
-            if (AlpineAuthenticationException.CauseType.SUSPENDED == e.getCauseType() || AlpineAuthenticationException.CauseType.UNMAPPED_ACCOUNT == e.getCauseType()) {
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized login attempt / account is suspended / username: " + username);
-                return Response.status(Response.Status.FORBIDDEN).entity(e.getCauseType().name()).build();
-            } else {
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized login attempt / invalid credentials / username: " + username);
-                return Response.status(Response.Status.UNAUTHORIZED).entity(e.getCauseType().name()).build();
-            }
+            return qm.callInTransaction(() -> {
+                try {
+                    final Principal principal = auth.authenticate();
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful user login / username: " + username);
+                    final Set<String> permissionNames = qm.getEffectivePermissions(principal);
+                    final List<Permission> permissions = qm.getPermissionsByName(permissionNames);
+                    final KeyManager km = KeyManager.getInstance();
+                    final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
+                    final String token = jwt.createToken(principal, permissions);
+                    return Response.ok(token).build();
+                } catch (AlpineAuthenticationException e) {
+                    if (AlpineAuthenticationException.CauseType.SUSPENDED == e.getCauseType() || AlpineAuthenticationException.CauseType.UNMAPPED_ACCOUNT == e.getCauseType()) {
+                        super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized login attempt / account is suspended / username: " + username);
+                        return Response.status(Response.Status.FORBIDDEN).entity(e.getCauseType().name()).build();
+                    } else {
+                        super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized login attempt / invalid credentials / username: " + username);
+                        return Response.status(Response.Status.UNAUTHORIZED).entity(e.getCauseType().name()).build();
+                    }
+                }
+            });
         }
     }
 
@@ -176,21 +181,25 @@ public class UserResource extends AlpineResource {
         }
 
         try (final QueryManager qm = new QueryManager()) {
-            final Principal principal = authService.authenticate();
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful OpenID Connect login / username: " + principal.getName());
-            final Set<String> permissionNames = qm.getEffectivePermissions(principal);
-            final List<Permission> permissions = qm.getPermissionsByName(permissionNames);
-            final KeyManager km = KeyManager.getInstance();
-            final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
-            final String token = jwt.createToken(principal, permissions);
-            return Response.ok(token).build();
-        } catch (AlpineAuthenticationException e) {
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized OpenID Connect login attempt");
-            if (AlpineAuthenticationException.CauseType.SUSPENDED == e.getCauseType() || AlpineAuthenticationException.CauseType.UNMAPPED_ACCOUNT == e.getCauseType()) {
-                return Response.status(Response.Status.FORBIDDEN).entity(e.getCauseType().name()).build();
-            } else {
-                return Response.status(Response.Status.UNAUTHORIZED).entity(e.getCauseType().name()).build();
-            }
+            return qm.callInTransaction(() -> {
+                try {
+                    final Principal principal = authService.authenticate();
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_SUCCESS, "Successful OpenID Connect login / username: " + principal.getName());
+                    final Set<String> permissionNames = qm.getEffectivePermissions(principal);
+                    final List<Permission> permissions = qm.getPermissionsByName(permissionNames);
+                    final KeyManager km = KeyManager.getInstance();
+                    final JsonWebToken jwt = new JsonWebToken(km.getSecretKey());
+                    final String token = jwt.createToken(principal, permissions);
+                    return Response.ok(token).build();
+                } catch (AlpineAuthenticationException e) {
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized OpenID Connect login attempt");
+                    if (AlpineAuthenticationException.CauseType.SUSPENDED == e.getCauseType() || AlpineAuthenticationException.CauseType.UNMAPPED_ACCOUNT == e.getCauseType()) {
+                        return Response.status(Response.Status.FORBIDDEN).entity(e.getCauseType().name()).build();
+                    } else {
+                        return Response.status(Response.Status.UNAUTHORIZED).entity(e.getCauseType().name()).build();
+                    }
+                }
+            });
         }
     }
 
@@ -211,46 +220,50 @@ public class UserResource extends AlpineResource {
     public Response forceChangePassword(@FormParam("username") String username, @FormParam("password") String password,
             @FormParam("newPassword") String newPassword, @FormParam("confirmPassword") String confirmPassword) {
         final Authenticator auth = new Authenticator(username, password);
-        Principal principal;
+        AtomicReference<Principal> principal = new AtomicReference<>();
         try (QueryManager qm = new QueryManager()) {
-            try {
-                principal = auth.authenticate();
-            } catch (AlpineAuthenticationException e) {
-                if (AlpineAuthenticationException.CauseType.FORCE_PASSWORD_CHANGE == e.getCauseType()) {
-                    principal = e.getPrincipal();
-                } else {
-                    throw new AlpineAuthenticationException(e.getCauseType());
-                }
-            }
-            if (principal instanceof ManagedUser) {
-                final ManagedUser user = qm.getManagedUser(((ManagedUser) principal).getUsername());
-                if (StringUtils.isNotBlank(newPassword) && StringUtils.isNotBlank(confirmPassword) && newPassword.equals(confirmPassword)) {
-                    if (PasswordService.matches(newPassword.toCharArray(), user)) {
-                        super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Existing password is the same as new password. Password not changed. / username: " + username);
-                        return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Existing password is the same as new password. Password not changed.").build();
-                    } else {
-                        user.setPassword(String.valueOf(PasswordService.createHash(newPassword.toCharArray())));
-                        user.setForcePasswordChange(false);
-                        qm.updateManagedUser(user);
-                        super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Password successfully changed / username: " + username);
-                        return Response.ok().build();
+            return qm.callInTransaction(() -> {
+                try {
+                    try {
+                        principal.set(auth.authenticate());
+                    } catch (AlpineAuthenticationException e) {
+                        if (AlpineAuthenticationException.CauseType.FORCE_PASSWORD_CHANGE == e.getCauseType()) {
+                            principal.set(e.getPrincipal());
+                        } else {
+                            throw new AlpineAuthenticationException(e.getCauseType());
+                        }
                     }
-                } else {
-                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "The passwords do not match. Password not changed. / username: " + username);
-                    return Response.status(Response.Status.NOT_ACCEPTABLE).entity("The passwords do not match. Password not changed.").build();
+                    if (principal.get() instanceof ManagedUser) {
+                        final ManagedUser user = qm.getManagedUser(((ManagedUser) principal.get()).getUsername());
+                        if (StringUtils.isNotBlank(newPassword) && StringUtils.isNotBlank(confirmPassword) && newPassword.equals(confirmPassword)) {
+                            if (PasswordService.matches(newPassword.toCharArray(), user)) {
+                                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Existing password is the same as new password. Password not changed. / username: " + username);
+                                return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Existing password is the same as new password. Password not changed.").build();
+                            } else {
+                                user.setPassword(String.valueOf(PasswordService.createHash(newPassword.toCharArray())));
+                                user.setForcePasswordChange(false);
+                                qm.updateManagedUser(user);
+                                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Password successfully changed / username: " + username);
+                                return Response.ok().build();
+                            }
+                        } else {
+                            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "The passwords do not match. Password not changed. / username: " + username);
+                            return Response.status(Response.Status.NOT_ACCEPTABLE).entity("The passwords do not match. Password not changed.").build();
+                        }
+                    } else {
+                        super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Changing passwords for non-managed users is not forbidden. Password not changed. / username: " + username);
+                        return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Changing passwords for non-managed users is not forbidden. Password not changed.").build();
+                    }
+                } catch (AlpineAuthenticationException e) {
+                    if (AlpineAuthenticationException.CauseType.SUSPENDED == e.getCauseType() || AlpineAuthenticationException.CauseType.UNMAPPED_ACCOUNT == e.getCauseType()) {
+                        super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized login attempt / account is suspended / username: " + username);
+                        return Response.status(Response.Status.FORBIDDEN).entity(e.getCauseType().name()).build();
+                    } else {
+                        super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized login attempt / invalid credentials / username: " + username);
+                        return Response.status(Response.Status.UNAUTHORIZED).entity(e.getCauseType().name()).build();
+                    }
                 }
-            } else {
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Changing passwords for non-managed users is not forbidden. Password not changed. / username: " + username);
-                return Response.status(Response.Status.NOT_ACCEPTABLE).entity("Changing passwords for non-managed users is not forbidden. Password not changed.").build();
-            }
-        } catch (AlpineAuthenticationException e) {
-            if (AlpineAuthenticationException.CauseType.SUSPENDED == e.getCauseType() || AlpineAuthenticationException.CauseType.UNMAPPED_ACCOUNT == e.getCauseType()) {
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized login attempt / account is suspended / username: " + username);
-                return Response.status(Response.Status.FORBIDDEN).entity(e.getCauseType().name()).build();
-            } else {
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_FAILURE, "Unauthorized login attempt / invalid credentials / username: " + username);
-                return Response.status(Response.Status.UNAUTHORIZED).entity(e.getCauseType().name()).build();
-            }
+            });
         }
     }
 
@@ -438,18 +451,20 @@ public class UserResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response createLdapUser(LdapUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
-            if (StringUtils.isBlank(jsonUser.getUsername())) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
-            }
-            LdapUser user = qm.getLdapUser(jsonUser.getUsername());
-            if (user == null) {
-                user = qm.createLdapUser(jsonUser.getUsername());
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user created: " + jsonUser.getUsername());
-                dispatchUserCreatedNotification("LDAP user created", buildUserSubject(jsonUser.getUsername(), jsonUser.getEmail()));
-                return Response.status(Response.Status.CREATED).entity(user).build();
-            } else {
-                return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
-            }
+            return qm.callInTransaction(() -> {
+                if (StringUtils.isBlank(jsonUser.getUsername())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
+                }
+                LdapUser user = qm.getLdapUser(jsonUser.getUsername());
+                if (user == null) {
+                    user = qm.createLdapUser(jsonUser.getUsername());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user created: " + jsonUser.getUsername());
+                    dispatchUserCreatedNotification("LDAP user created", buildUserSubject(jsonUser.getUsername(), jsonUser.getEmail()));
+                    return Response.status(Response.Status.CREATED).entity(user).build();
+                } else {
+                    return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
+                }
+            });
         }
     }
 
@@ -469,16 +484,18 @@ public class UserResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response deleteLdapUser(LdapUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
-            final LdapUser user = qm.getLdapUser(jsonUser.getUsername());
-            if (user != null) {
-                final LdapUser detachedUser = qm.getPersistenceManager().detachCopy(user);
-                qm.delete(user);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user deleted: " + detachedUser.getUsername());
-                dispatchUserDeletedNotification("LDAP user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final LdapUser user = qm.getLdapUser(jsonUser.getUsername());
+                if (user != null) {
+                    final LdapUser detachedUser = qm.getPersistenceManager().detachCopy(user);
+                    qm.delete(user);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "LDAP user deleted: " + detachedUser.getUsername());
+                    dispatchUserDeletedNotification("LDAP user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+                }
+            });
         }
     }
 
@@ -503,34 +520,35 @@ public class UserResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response createManagedUser(ManagedUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
+            return qm.callInTransaction(() -> {
+                if (StringUtils.isBlank(jsonUser.getUsername())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
+                }
+                if (StringUtils.isBlank(jsonUser.getFullname())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("The users full name is missing.").build();
+                }
+                if (StringUtils.isBlank(jsonUser.getEmail())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("The users email address is missing.").build();
+                }
+                if (StringUtils.isBlank(jsonUser.getNewPassword()) || StringUtils.isBlank(jsonUser.getConfirmPassword())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("A password must be set.").build();
+                }
+                if (!jsonUser.getNewPassword().equals(jsonUser.getConfirmPassword())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("The passwords do not match.").build();
+                }
 
-            if (StringUtils.isBlank(jsonUser.getUsername())) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
-            }
-            if (StringUtils.isBlank(jsonUser.getFullname())) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("The users full name is missing.").build();
-            }
-            if (StringUtils.isBlank(jsonUser.getEmail())) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("The users email address is missing.").build();
-            }
-            if (StringUtils.isBlank(jsonUser.getNewPassword()) || StringUtils.isBlank(jsonUser.getConfirmPassword())) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("A password must be set.").build();
-            }
-            if (!jsonUser.getNewPassword().equals(jsonUser.getConfirmPassword())) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("The passwords do not match.").build();
-            }
-
-            ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
-            if (user == null) {
-                user = qm.createManagedUser(jsonUser.getUsername(), jsonUser.getFullname(), jsonUser.getEmail(),
-                        String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())),
-                        jsonUser.isForcePasswordChange(), jsonUser.isNonExpiryPassword(), jsonUser.isSuspended());
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user created: " + jsonUser.getUsername());
-                dispatchUserCreatedNotification("Managed user created", buildUserSubject(jsonUser.getUsername(), jsonUser.getEmail()));
-                return Response.status(Response.Status.CREATED).entity(user).build();
-            } else {
-                return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
-            }
+                ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
+                if (user == null) {
+                    user = qm.createManagedUser(jsonUser.getUsername(), jsonUser.getFullname(), jsonUser.getEmail(),
+                            String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())),
+                            jsonUser.isForcePasswordChange(), jsonUser.isNonExpiryPassword(), jsonUser.isSuspended());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user created: " + jsonUser.getUsername());
+                    dispatchUserCreatedNotification("Managed user created", buildUserSubject(jsonUser.getUsername(), jsonUser.getEmail()));
+                    return Response.status(Response.Status.CREATED).entity(user).build();
+                } else {
+                    return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
+                }
+            });
         }
     }
 
@@ -555,29 +573,31 @@ public class UserResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response updateManagedUser(ManagedUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
-            ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
-            if (user != null) {
-                if (StringUtils.isBlank(jsonUser.getFullname())) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("The users full name is missing.").build();
+            return qm.callInTransaction(() -> {
+                ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
+                if (user != null) {
+                    if (StringUtils.isBlank(jsonUser.getFullname())) {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("The users full name is missing.").build();
+                    }
+                    if (StringUtils.isBlank(jsonUser.getEmail())) {
+                        return Response.status(Response.Status.BAD_REQUEST).entity("The users email address is missing.").build();
+                    }
+                    if (StringUtils.isNotBlank(jsonUser.getNewPassword()) && StringUtils.isNotBlank(jsonUser.getConfirmPassword()) &&
+                            jsonUser.getNewPassword().equals(jsonUser.getConfirmPassword())) {
+                        user.setPassword(String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())));
+                    }
+                    user.setFullname(jsonUser.getFullname());
+                    user.setEmail(jsonUser.getEmail());
+                    user.setForcePasswordChange(jsonUser.isForcePasswordChange());
+                    user.setNonExpiryPassword(jsonUser.isNonExpiryPassword());
+                    user.setSuspended(jsonUser.isSuspended());
+                    user = qm.updateManagedUser(user);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user updated: " + jsonUser.getUsername());
+                    return Response.ok(user).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
                 }
-                if (StringUtils.isBlank(jsonUser.getEmail())) {
-                    return Response.status(Response.Status.BAD_REQUEST).entity("The users email address is missing.").build();
-                }
-                if (StringUtils.isNotBlank(jsonUser.getNewPassword()) && StringUtils.isNotBlank(jsonUser.getConfirmPassword()) &&
-                        jsonUser.getNewPassword().equals(jsonUser.getConfirmPassword())) {
-                    user.setPassword(String.valueOf(PasswordService.createHash(jsonUser.getNewPassword().toCharArray())));
-                }
-                user.setFullname(jsonUser.getFullname());
-                user.setEmail(jsonUser.getEmail());
-                user.setForcePasswordChange(jsonUser.isForcePasswordChange());
-                user.setNonExpiryPassword(jsonUser.isNonExpiryPassword());
-                user.setSuspended(jsonUser.isSuspended());
-                user = qm.updateManagedUser(user);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user updated: " + jsonUser.getUsername());
-                return Response.ok(user).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
+            });
         }
     }
 
@@ -597,16 +617,18 @@ public class UserResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response deleteManagedUser(ManagedUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
-            final ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
-            if (user != null) {
-                final ManagedUser detachedUser = qm.getPersistenceManager().detachCopy(user);
-                qm.delete(user);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user deleted: " + detachedUser.getUsername());
-                dispatchUserDeletedNotification("Managed user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final ManagedUser user = qm.getManagedUser(jsonUser.getUsername());
+                if (user != null) {
+                    final ManagedUser detachedUser = qm.getPersistenceManager().detachCopy(user);
+                    qm.delete(user);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Managed user deleted: " + detachedUser.getUsername());
+                    dispatchUserDeletedNotification("Managed user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+                }
+            });
         }
     }
 
@@ -631,18 +653,20 @@ public class UserResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response createOidcUser(final OidcUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
-            if (StringUtils.isBlank(jsonUser.getUsername())) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
-            }
-            OidcUser user = qm.getOidcUser(jsonUser.getUsername());
-            if (user == null) {
-                user = qm.createOidcUser(jsonUser.getUsername());
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user created: " + jsonUser.getUsername());
-                dispatchUserCreatedNotification("OpenID Connect user created", buildUserSubject(jsonUser.getUsername(), jsonUser.getEmail()));
-                return Response.status(Response.Status.CREATED).entity(user).build();
-            } else {
-                return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
-            }
+            return qm.callInTransaction(() -> {
+                if (StringUtils.isBlank(jsonUser.getUsername())) {
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Username cannot be null or blank.").build();
+                }
+                OidcUser user = qm.getOidcUser(jsonUser.getUsername());
+                if (user == null) {
+                    user = qm.createOidcUser(jsonUser.getUsername());
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user created: " + jsonUser.getUsername());
+                    dispatchUserCreatedNotification("OpenID Connect user created", buildUserSubject(jsonUser.getUsername(), jsonUser.getEmail()));
+                    return Response.status(Response.Status.CREATED).entity(user).build();
+                } else {
+                    return Response.status(Response.Status.CONFLICT).entity("A user with the same username already exists. Cannot create new user.").build();
+                }
+            });
         }
     }
 
@@ -662,16 +686,18 @@ public class UserResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response deleteOidcUser(final OidcUser jsonUser) {
         try (QueryManager qm = new QueryManager()) {
-            final OidcUser user = qm.getOidcUser(jsonUser.getUsername());
-            if (user != null) {
-                final OidcUser detachedUser = qm.getPersistenceManager().detachCopy(user);
-                qm.delete(user);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user deleted: " + detachedUser.getUsername());
-                dispatchUserDeletedNotification("OpenID Connect user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final OidcUser user = qm.getOidcUser(jsonUser.getUsername());
+                if (user != null) {
+                    final OidcUser detachedUser = qm.getPersistenceManager().detachCopy(user);
+                    qm.delete(user);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "OpenID Connect user deleted: " + detachedUser.getUsername());
+                    dispatchUserDeletedNotification("OpenID Connect user deleted", buildUserSubject(detachedUser.getUsername(), detachedUser.getEmail()));
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+                }
+            });
         }
     }
 
@@ -700,22 +726,25 @@ public class UserResource extends AlpineResource {
             @Parameter(description = "The UUID of the team to associate username with", required = true)
             IdentifiableObject identifiableObject) {
         try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.getObjectByUuid(Team.class, identifiableObject.getUuid());
-            if (team == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
-            }
-            User principal = qm.getUser(username);
-            if (principal == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
-            final boolean modified = qm.addUserToTeam(principal, team);
-            principal = qm.getObjectById(principal.getClass(), principal.getId());
-            if (modified) {
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added team membership for: " + principal.getName() + " / team: " + team.getName());
-                return Response.ok(principal).build();
-            } else {
-                return Response.status(Response.Status.NOT_MODIFIED).entity("The user is already a member of the specified team.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final Team team = qm.getObjectByUuid(Team.class, identifiableObject.getUuid());
+                if (team == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
+                }
+                User principal = qm.getUser(username);
+                if (principal == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+                }
+                final boolean modified = qm.addUserToTeam(principal, team);
+                qm.getPersistenceManager().refresh(principal);
+                principal = qm.getObjectById(principal.getClass(), principal.getId());
+                if (modified) {
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Added team membership for: " + principal.getName() + " / team: " + team.getName());
+                    return Response.ok(principal).build();
+                } else {
+                    return Response.status(Response.Status.NOT_MODIFIED).entity("The user is already a member of the specified team.").build();
+                }
+            });
         }
     }
 
@@ -744,24 +773,26 @@ public class UserResource extends AlpineResource {
             @Parameter(description = "The UUID of the team to un-associate username from", required = true)
             IdentifiableObject identifiableObject) {
         try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.getObjectByUuid(Team.class, identifiableObject.getUuid());
-            if (team == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
-            }
-            User principal = qm.getUser(username);
-            if (principal == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
-            final boolean modified = qm.removeUserFromTeam(principal, team);
-            principal = qm.getObjectById(principal.getClass(), principal.getId());
-            if (modified) {
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed team membership for: " + principal.getName() + " / team: " + team.getName());
-                return Response.ok(principal).build();
-            } else {
-                return Response.status(Response.Status.NOT_MODIFIED)
-                        .entity("The user was not a member of the specified team.")
-                        .build();
-            }
+            return qm.callInTransaction(() -> {
+                final Team team = qm.getObjectByUuid(Team.class, identifiableObject.getUuid());
+                if (team == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The team could not be found.").build();
+                }
+                User principal = qm.getUser(username);
+                if (principal == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+                }
+                final boolean modified = qm.removeUserFromTeam(principal, team);
+                principal = qm.getObjectById(principal.getClass(), principal.getId());
+                if (modified) {
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Removed team membership for: " + principal.getName() + " / team: " + team.getName());
+                    return Response.ok(principal).build();
+                } else {
+                    return Response.status(Response.Status.NOT_MODIFIED)
+                            .entity("The user was not a member of the specified team.")
+                            .build();
+                }
+            });
         }
     }
 
@@ -781,46 +812,48 @@ public class UserResource extends AlpineResource {
     public Response setUserTeams(
             @Parameter(description = "Username and list of UUIDs to assign to user", required = true) @Valid TeamsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            User principal = qm.getUser(request.username());
-            if (principal == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                User principal = qm.getUser(request.username());
+                if (principal == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
+                }
 
-            final Query<Team> query = qm.getPersistenceManager().newQuery(Team.class)
-                    .filter(":uuids.contains(uuid)")
-                    .setNamedParameters(Map.of("uuids", request.teams()));
+                final Query<Team> query = qm.getPersistenceManager().newQuery(Team.class)
+                        .filter(":uuids.contains(uuid)")
+                        .setNamedParameters(Map.of("uuids", request.teams()));
 
-            final List<Team> requestedTeams;
-            try {
-                requestedTeams = List.copyOf(query.executeList());
-            } finally {
-                query.closeAll();
-            }
+                final List<Team> requestedTeams;
+                try {
+                    requestedTeams = List.copyOf(query.executeList());
+                } finally {
+                    query.closeAll();
+                }
 
-            if(requestedTeams.size() != request.teams().size()) {
-                List<String> notFound = new ArrayList<String>(request.teams());
-                final List<String> differences = requestedTeams.stream().map(Team::getUuid).map(UUID::toString).toList();
-                notFound.removeAll(differences);
+                if (requestedTeams.size() != request.teams().size()) {
+                    List<String> notFound = new ArrayList<String>(request.teams());
+                    final List<String> differences = requestedTeams.stream().map(Team::getUuid).map(UUID::toString).toList();
+                    notFound.removeAll(differences);
 
-                ProblemDetails problem = new AccessManagementProblemDetails(
-                        Response.Status.BAD_REQUEST.getStatusCode(),
-                        "Invalid team",
-                        "One or more teams could not be found",
-                        notFound);
+                    ProblemDetails problem = new AccessManagementProblemDetails(
+                            Response.Status.BAD_REQUEST.getStatusCode(),
+                            "Invalid team",
+                            "One or more teams could not be found",
+                            notFound);
 
-                return problem.toResponse();
-            }
+                    return problem.toResponse();
+                }
 
-            final List<Team> currentUserTeams = Objects.requireNonNullElse(principal.getTeams(), List.<Team>of());
-            if (currentUserTeams.equals(requestedTeams)) {
-                return Response.notModified().entity("The user is already a member of the selected team(s)").build();
-            }
+                final List<Team> currentUserTeams = Objects.requireNonNullElse(principal.getTeams(), List.<Team>of());
+                if (currentUserTeams.equals(requestedTeams)) {
+                    return Response.notModified().entity("The user is already a member of the selected team(s)").build();
+                }
 
-            principal.setTeams(requestedTeams);
-            qm.persist(principal);
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                    "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
-            return Response.ok(principal).build();
+                principal.setTeams(requestedTeams);
+                qm.persist(principal);
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                        "Added team membership for: " + principal.getName() + " / team: " + requestedTeams.toString());
+                return Response.ok(principal).build();
+            });
         }
     }
 
@@ -869,30 +902,32 @@ public class UserResource extends AlpineResource {
     public Response assignProjectRoleToUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            final Role role = qm.getObjectByUuid(Role.class, request.role());
-            final User user = qm.getUser(request.username());
-            final Project project = qm.getProject(request.project());
+            return qm.callInTransaction(() -> {
+                final Role role = qm.getObjectByUuid(Role.class, request.role());
+                final User user = qm.getUser(request.username());
+                final Project project = qm.getProject(request.project());
 
-            List<String> problems = new ArrayList<>();
-            if (role == null) problems.add("role");
-            if (user == null) problems.add("user");
-            if (project == null) problems.add("project");
+                List<String> problems = new ArrayList<>();
+                if (role == null) problems.add("role");
+                if (user == null) problems.add("user");
+                if (project == null) problems.add("project");
 
-            if (!problems.isEmpty())
-                return new AccessManagementProblemDetails(
-                        Response.Status.NOT_FOUND.getStatusCode(),
-                        "Invalid role, user or project",
-                        "One or more variables could not be found",
-                        problems).toResponse();
+                if (!problems.isEmpty())
+                    return new AccessManagementProblemDetails(
+                            Response.Status.NOT_FOUND.getStatusCode(),
+                            "Invalid role, user or project",
+                            "One or more variables could not be found",
+                            problems).toResponse();
 
-            if (!qm.addRoleToUser(user, role, project))
-                return Response.notModified().build();
+                if (!qm.addRoleToUser(user, role, project))
+                    return Response.notModified().build();
 
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                    "Granted project role: user='%s', role='%s', project='%s'"
-                            .formatted(user.getUsername(), role.getName(), project.getName()));
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                        "Granted project role: user='%s', role='%s', project='%s'"
+                                .formatted(user.getUsername(), role.getName(), project.getName()));
 
-            return Response.ok(user).build();
+                return Response.ok(user).build();
+            });
         }
     }
 
@@ -915,31 +950,32 @@ public class UserResource extends AlpineResource {
     public Response removeProjectRoleFromUser(
             @Parameter(description = "User, Role and Project information", required = true) @Valid ModifyUserProjectRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            final Role role = qm.getObjectByUuid(Role.class, request.role());
-            final User user = qm.getUser(request.username());
-            final Project project = qm.getProject(request.project());
+            return qm.callInTransaction(() -> {
+                final Role role = qm.getObjectByUuid(Role.class, request.role());
+                final User user = qm.getUser(request.username());
+                final Project project = qm.getProject(request.project());
 
-            final List<String> problems = new ArrayList<>();
-            if (role == null) problems.add("role");
-            if (user == null) problems.add("user");
-            if (project == null) problems.add("project");
+                final List<String> problems = new ArrayList<>();
+                if (role == null) problems.add("role");
+                if (user == null) problems.add("user");
+                if (project == null) problems.add("project");
 
-            if (!problems.isEmpty())
-                return new AccessManagementProblemDetails(
-                        Response.Status.NOT_FOUND.getStatusCode(),
-                        "Invalid role, user or project",
-                        "One or more variables could not be found",
-                        problems).toResponse();
+                if (!problems.isEmpty())
+                    return new AccessManagementProblemDetails(
+                            Response.Status.NOT_FOUND.getStatusCode(),
+                            "Invalid role, user or project",
+                            "One or more variables could not be found",
+                            problems).toResponse();
 
-            boolean removed = qm.removeRoleFromUser(user, role, project);
-            if (!removed) return Response.notModified().build();
+                boolean removed = qm.removeRoleFromUser(user, role, project);
+                if (!removed) return Response.notModified().build();
 
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                    "Revoked project role: user='%s', role='%s', project='%s'"
-                            .formatted(user.getUsername(), role.getName(), project.getName()));
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                        "Revoked project role: user='%s', role='%s', project='%s'"
+                                .formatted(user.getUsername(), role.getName(), project.getName()));
 
-            return Response.noContent().build();
+                return Response.noContent().build();
+            });
         }
     }
-
 }

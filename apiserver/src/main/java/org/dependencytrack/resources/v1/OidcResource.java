@@ -195,15 +195,18 @@ public class OidcResource extends AlpineResource {
     public Response deleteGroup(@Parameter(description = "The UUID of the group to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
                                 @PathParam("uuid") @ValidUuid final String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final OidcGroup group = qm.getObjectByUuid(OidcGroup.class, uuid);
-            if (group != null) {
-                qm.delete(qm.getMappedOidcGroups(group));
-                qm.delete(group);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Group deleted: " + group.getName());
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("An OpenID Connect group with the specified UUID could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final OidcGroup group = qm.getObjectByUuid(OidcGroup.class, uuid);
+                if (group != null) {
+                    final var groupNameToDelete = group.getName();
+                    qm.delete(qm.getMappedOidcGroups(group));
+                    qm.delete(group);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Group deleted: " + groupNameToDelete);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("An OpenID Connect group with the specified UUID could not be found.").build();
+                }
+            });
         }
     }
 
@@ -266,23 +269,25 @@ public class OidcResource extends AlpineResource {
         );
 
         try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.getObjectByUuid(Team.class, request.getTeam());
-            if (team == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("A team with the specified UUID could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final Team team = qm.getObjectByUuid(Team.class, request.getTeam());
+                if (team == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("A team with the specified UUID could not be found.").build();
+                }
 
-            final OidcGroup group = qm.getObjectByUuid(OidcGroup.class, request.getGroup());
-            if (group == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("A group with the specified UUID could not be found.").build();
-            }
+                final OidcGroup group = qm.getObjectByUuid(OidcGroup.class, request.getGroup());
+                if (group == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("A group with the specified UUID could not be found.").build();
+                }
 
-            if (!qm.isOidcGroupMapped(team, group)) {
-                final MappedOidcGroup mappedOidcGroup = qm.createMappedOidcGroup(team, group);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Mapping created for group " + group.getName() + " and team " + team.getName());
-                return Response.ok(mappedOidcGroup).build();
-            } else {
-                return Response.status(Response.Status.CONFLICT).entity("A mapping for the same team and group already exists.").build();
-            }
+                if (!qm.isOidcGroupMapped(team, group)) {
+                    final MappedOidcGroup mappedOidcGroup = qm.createMappedOidcGroup(team, group);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Mapping created for group " + group.getName() + " and team " + team.getName());
+                    return Response.ok(mappedOidcGroup).build();
+                } else {
+                    return Response.status(Response.Status.CONFLICT).entity("A mapping for the same team and group already exists.").build();
+                }
+            });
         }
     }
 
@@ -302,14 +307,16 @@ public class OidcResource extends AlpineResource {
     public Response deleteMappingByUuid(@Parameter(description = "The UUID of the mapping to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
                                         @PathParam("uuid") @ValidUuid final String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final MappedOidcGroup mapping = qm.getObjectByUuid(MappedOidcGroup.class, uuid);
-            if (mapping != null) {
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Mapping for group " + mapping.getGroup().getName() + " and team " + mapping.getTeam().getName() + " deleted");
-                qm.delete(mapping);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the mapping could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final MappedOidcGroup mapping = qm.getObjectByUuid(MappedOidcGroup.class, uuid);
+                if (mapping != null) {
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Mapping for group " + mapping.getGroup().getName() + " and team " + mapping.getTeam().getName() + " deleted");
+                    qm.delete(mapping);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the mapping could not be found.").build();
+                }
+            });
         }
     }
 
@@ -331,24 +338,26 @@ public class OidcResource extends AlpineResource {
                                   @Parameter(description = "The UUID of the team to delete a mapping for", schema = @Schema(type = "string", format = "uuid"), required = true)
                                   @PathParam("teamUuid") @ValidUuid final String teamUuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Team team = qm.getObjectByUuid(Team.class, teamUuid);
-            if (team == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final Team team = qm.getObjectByUuid(Team.class, teamUuid);
+                if (team == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the team could not be found.").build();
+                }
 
-            final OidcGroup group = qm.getObjectByUuid(OidcGroup.class, groupUuid);
-            if (group == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the group could not be found.").build();
-            }
+                final OidcGroup group = qm.getObjectByUuid(OidcGroup.class, groupUuid);
+                if (group == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the group could not be found.").build();
+                }
 
-            final MappedOidcGroup mapping = qm.getMappedOidcGroup(team, group);
-            if (mapping != null) {
-                qm.delete(mapping);
-                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Mapping for group " + group.getName() + " and team " + team.getName() + " deleted");
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("A mapping for the group " + group.getName() + " and team " + team.getName() + " does not exist.").build();
-            }
+                final MappedOidcGroup mapping = qm.getMappedOidcGroup(team, group);
+                if (mapping != null) {
+                    qm.delete(mapping);
+                    super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Mapping for group " + group.getName() + " and team " + team.getName() + " deleted");
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("A mapping for the group " + group.getName() + " and team " + team.getName() + " does not exist.").build();
+                }
+            });
         }
     }
 

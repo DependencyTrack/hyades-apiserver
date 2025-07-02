@@ -21,7 +21,6 @@ package org.dependencytrack.resources.v1;
 import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -44,14 +43,12 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.model.UserProjectRole;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.CreateRoleRequest;
-
 import org.owasp.security.logging.SecurityMarkers;
 
 import java.util.List;
@@ -138,20 +135,22 @@ public class RoleResource extends AlpineResource {
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response createRole(@Valid CreateRoleRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            if (qm.getRoleByName(request.name()) != null)
-                return Response.status(Response.Status.CONFLICT)
-                        .entity(String.format("Role '%s' already exists", request.name()))
-                        .build();
+            return qm.callInTransaction(() -> {
+                if (qm.getRoleByName(request.name()) != null)
+                    return Response.status(Response.Status.CONFLICT)
+                            .entity(String.format("Role '%s' already exists", request.name()))
+                            .build();
 
-            final Role role = qm.createRole(request.name(),
-                    qm.getPermissionsByName(request.permissions()
-                            .stream()
-                            .map(Permissions::name)
-                            .toList()));
+                final Role role = qm.createRole(request.name(),
+                        qm.getPermissionsByName(request.permissions()
+                                .stream()
+                                .map(Permissions::name)
+                                .toList()));
 
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role created: " + role.getName());
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role created: " + role.getName());
 
-            return Response.status(Response.Status.CREATED).entity(role).build();
+                return Response.status(Response.Status.CREATED).entity(role).build();
+            });
         }
     }
 
@@ -171,13 +170,15 @@ public class RoleResource extends AlpineResource {
         failOnValidationError(super.getValidator().validateProperty(jsonRole, "name"));
 
         try (QueryManager qm = new QueryManager()) {
-            Role role = qm.updateRole(jsonRole);
-            if (role == null)
-                return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
+            return qm.callInTransaction(() -> {
+                Role role = qm.updateRole(jsonRole);
+                if (role == null)
+                    return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
 
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role updated: " + role.getName());
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role updated: " + role.getName());
 
-            return Response.ok(role).build();
+                return Response.ok(role).build();
+            });
         }
     }
 
@@ -200,15 +201,16 @@ public class RoleResource extends AlpineResource {
                 schema = @Schema(type = "string", format = "uuid"),
                 required = true) @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final Role role = qm.getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
-            if (role == null)
-                return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
-
-            qm.delete(role);
-
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role deleted: " + role.getName());
-
-            return Response.noContent().build();
+            return qm.callInTransaction(() -> {
+                final Role role = qm.getObjectByUuid(Role.class, uuid, Role.FetchGroup.ALL.name());
+                if (role == null) {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
+                }
+                final var roleToDelete = role.getName();
+                qm.delete(role);
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT, "Role deleted: " + roleToDelete);
+                return Response.noContent().build();
+            });
         }
     }
 

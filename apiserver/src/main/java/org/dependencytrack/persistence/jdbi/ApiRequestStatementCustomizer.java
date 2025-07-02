@@ -30,7 +30,6 @@ import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.core.statement.StatementCustomizer;
 
 import javax.jdo.Query;
-
 import java.security.Principal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -60,8 +59,7 @@ import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
  * The functionality provided by this customizer is equivalent to these JDO counterparts:
  * <ul>
  *     <li>{@link org.dependencytrack.persistence.QueryManager#decorate(Query)}</li>
- *     <li>{@link org.dependencytrack.persistence.ComponentQueryManager#preprocessACLs(Query, String, Map, boolean)}</li>
- *     <li>{@link org.dependencytrack.persistence.ProjectQueryManager#preprocessACLs(Query, String, Map, boolean)}</li>
+ *     <li>{@link org.dependencytrack.persistence.ProjectQueryManager#preprocessACLs(Query, String, Map)}</li>
  * </ul>
  *
  * @since 5.5.0
@@ -71,8 +69,27 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
     static final String PARAMETER_PROJECT_ACL_TEAM_IDS = "projectAclTeamIds";
     static final String PARAMETER_USER_ID = "projectAclUserId";
     static final String PARAMETER_PERMISSIONS = "projectAclPermissions";
-    static final String TEMPLATE_PROJECT_ACL_CONDITION = "HAS_PROJECT_ACCESS(%s, :projectAclTeamIds)";
-    static final String TEMPLATE_USER_PROJECT_ACL_CONDITION = "HAS_USER_PROJECT_ACCESS(%s, :projectAclUserId, :projectAclPermissions)";
+    static final String TEMPLATE_PROJECT_ACL_CONDITION = /* language=SQL */ """
+            EXISTS(
+              SELECT 1
+                FROM "PROJECT_ACCESS_TEAMS" AS pat
+               INNER JOIN "PROJECT_HIERARCHY" AS ph
+                  ON ph."PARENT_PROJECT_ID" = pat."PROJECT_ID"
+               WHERE pat."TEAM_ID" = ANY(:projectAclTeamIds)
+                 AND ph."CHILD_PROJECT_ID" = %s
+            )
+            """;
+    static final String TEMPLATE_USER_PROJECT_ACL_CONDITION = /* language=SQL */ """
+            EXISTS(
+              SELECT 1
+                FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" AS upep
+               INNER JOIN "PROJECT_HIERARCHY" AS ph
+                  ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
+               WHERE ph."CHILD_PROJECT_ID" = %s
+                 AND upep."USER_ID" = :projectAclUserId
+                 AND upep."PERMISSION_NAME" = ALL(:projectAclPermissions)
+            )
+            """;
 
     private final AlpineRequest apiRequest;
 
@@ -182,7 +199,7 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
         if (apiRequest == null
                 || apiRequest.getPrincipal() == null
                 || !isAclEnabled(ctx)
-                || apiRequest.getEffectivePermissions().contains(Permissions.ACCESS_MANAGEMENT.name())) {
+                || apiRequest.getEffectivePermissions().contains(Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS)) {
             ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION, "TRUE");
             return;
         }

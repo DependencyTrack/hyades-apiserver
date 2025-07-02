@@ -39,6 +39,7 @@ public enum Permissions {
     POLICY_VIOLATION_READ("Provides the ability to view policy violations", Scope.PROJECT),
     POLICY_VIOLATION_UPDATE("Provides the ability to make analysis decisions on policy violations", Scope.PROJECT),
     POLICY("Allows the creation, modification, and deletion of policy", Scope.SYSTEM),
+    PORTFOLIO_ACCESS_CONTROL_BYPASS("Provides the ability to bypass portfolio access control, granting access to all projects", Scope.SYSTEM),
     PORTFOLIO("Allows the creation, modification, and deletion of data in the portfolio", Scope.SYSTEM),
     PROJECT_DELETE("Provides the ability to delete resources within a project", Scope.PROJECT),
     PROJECT_READ("Provides the ability to read resources within a project", Scope.PROJECT),
@@ -89,6 +90,7 @@ public enum Permissions {
         public static final String POLICY_VIOLATION_CREATE = "POLICY_VIOLATION_CREATE";
         public static final String POLICY_VIOLATION_READ = "POLICY_VIOLATION_READ";
         public static final String POLICY_VIOLATION_UPDATE = "POLICY_VIOLATION_UPDATE";
+        public static final String PORTFOLIO_ACCESS_CONTROL_BYPASS = "PORTFOLIO_ACCESS_CONTROL_BYPASS";
         public static final String PORTFOLIO = "PORTFOLIO";
         public static final String PROJECT_DELETE = "PROJECT_DELETE";
         public static final String PROJECT_READ = "PROJECT_READ";

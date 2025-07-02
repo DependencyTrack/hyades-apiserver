@@ -32,6 +32,7 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.assertj.core.api.Assertions;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -87,11 +88,83 @@ public class TeamResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get(Response.class);
         Assert.assertEquals(200, response.getStatus(), 0);
+        // There's already a built-in team in ResourceTest
         Assert.assertEquals(String.valueOf(1001), response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
-        Assert.assertEquals(1001, json.size()); // There's already a built-in team in ResourceTest
+        Assert.assertEquals(100, json.size()); // Max size on one page
         Assert.assertEquals("Team 0", json.getJsonObject(0).getString("name"));
+    }
+
+    @Test
+    public void getTeamsPaginationTest() {
+        for (int i = 0; i < 3; i++) {
+            final var team = new Team();
+            team.setName("team " + i);
+            qm.persist(team);
+        }
+
+        Response response = jersey.target(V1_TEAM)
+                .queryParam("pageNumber", "1")
+                .queryParam("pageSize", "3")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assertions.assertThat(response.getStatus()).isEqualTo(200);
+        // There's already a built-in team in ResourceTest
+        Assertions.assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("4");
+        assertThat(parseJsonArray(response).size()).isEqualTo(3);
+
+        response = jersey.target(V1_TEAM)
+                .queryParam("pageNumber", "2")
+                .queryParam("pageSize", "1")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assertions.assertThat(response.getStatus()).isEqualTo(200);
+        Assertions.assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("4");
+        assertThat(parseJsonArray(response).size()).isEqualTo(1);
+    }
+
+    @Test
+    public void getTeamsFilterByNameTest() {
+        for (int i = 0; i < 11; i++) {
+            final var team = new Team();
+            team.setName("team " + i);
+            qm.persist(team);
+        }
+
+        Response response = jersey.target(V1_TEAM)
+                .queryParam("searchText", "1")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+
+        Assertions.assertThat(response.getStatus()).isEqualTo(200);
+        Assertions.assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("2");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [ {
+                  "uuid" : "${json-unit.any-string}",
+                  "name" : "team 1",
+                  "apiKeys" : [ ],
+                  "mappedLdapGroups" : [ ],
+                  "mappedOidcGroups" : [ ],
+                  "permissions" : [ ],
+                  "ldapUsers" : [ ],
+                  "oidcUsers" : [ ],
+                  "managedUsers" : [ ]
+                }, {
+                  "uuid" : "${json-unit.any-string}",
+                  "name" : "team 10",
+                  "apiKeys" : [ ],
+                  "mappedLdapGroups" : [ ],
+                  "mappedOidcGroups" : [ ],
+                  "permissions" : [ ],
+                  "ldapUsers" : [ ],
+                  "oidcUsers" : [ ],
+                  "managedUsers" : [ ]
+                } ]
+                """);
     }
 
     @Test
@@ -157,6 +230,32 @@ public class TeamResourceTest extends ResourceTest {
         Assert.assertEquals("My Team", json.getString("name"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
         Assert.assertEquals(0, json.getJsonArray("apiKeys").size());
+    }
+
+    @Test
+    public void createTeamWhenAlreadyExistsTest() {
+        final Team existingTeam = qm.createTeam("My Team");
+
+        final Response response = jersey.target(V1_TEAM).request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.json(/* language=JSON */ """
+                        {
+                          "name": "My Team"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(409);
+        assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/problem+json");
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("teamUuid", equalTo(existingTeam.getUuid().toString()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "status": 409,
+                          "title": "Team already exists",
+                          "detail": "A team with the name \\"My Team\\" already exists",
+                          "teamUuid": "${json-unit.matches:teamUuid}",
+                          "teamName": "My Team"
+                        }
+                        """);
     }
 
     @Test
@@ -237,7 +336,7 @@ public class TeamResourceTest extends ResourceTest {
                 .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                 .put(Entity.entity(null, MediaType.APPLICATION_JSON));
         Assert.assertEquals(201, response.getStatus(), 0);
-        team = qm.getTeams().get(0);
+        team = qm.getTeams().getList(Team.class).get(0);
         Assert.assertEquals(1, team.getApiKeys().size());
     }
 

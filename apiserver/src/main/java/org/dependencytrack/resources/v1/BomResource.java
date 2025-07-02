@@ -34,6 +34,23 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -66,23 +83,6 @@ import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonReader;
-import jakarta.json.JsonString;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
@@ -301,8 +301,10 @@ public class BomResource extends AbstractApiResource {
                     validator.validateProperty(request, "bom")
             );
             try (QueryManager qm = new QueryManager()) {
-                final Project project = qm.getObjectByUuid(Project.class, request.getProject());
-                return process(qm, project, request.getBom());
+                return qm.callInTransaction(() -> {
+                    final Project project = qm.getObjectByUuid(Project.class, request.getProject());
+                    return process(qm, project, request.getBom());
+                });
             }
         } else { // additional behavior added in v3.1.0
             failOnValidationError(
@@ -310,47 +312,49 @@ public class BomResource extends AbstractApiResource {
                     validator.validateProperty(request, "projectVersion"),
                     validator.validateProperty(request, "bom")
             );
-            try (QueryManager qm = new QueryManager()) {
-                Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
-                if (project == null && request.isAutoCreate()) {
-                    if (hasPermission(Permissions.Constants.PORTFOLIO)) {
-                        Project parent = null;
-                        if (request.getParentUUID() != null || request.getParentName() != null) {
-                            if (request.getParentUUID() != null) {
-                                failOnValidationError(validator.validateProperty(request, "parentUUID"));
-                                parent = qm.getObjectByUuid(Project.class, request.getParentUUID());
-                            } else {
-                                failOnValidationError(
-                                        validator.validateProperty(request, "parentName"),
-                                        validator.validateProperty(request, "parentVersion")
-                                );
-                                final String trimmedParentName = StringUtils.trimToNull(request.getParentName());
-                                final String trimmedParentVersion = StringUtils.trimToNull(request.getParentVersion());
-                                parent = qm.getProject(trimmedParentName, trimmedParentVersion);
-                            }
+            try (final var qm = new QueryManager()) {
+                return qm.callInTransaction(() -> {
+                    Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
+                    if (project == null && request.isAutoCreate()) {
+                        if (hasPermission(Permissions.Constants.PORTFOLIO)) {
+                            Project parent = null;
+                            if (request.getParentUUID() != null || request.getParentName() != null) {
+                                if (request.getParentUUID() != null) {
+                                    failOnValidationError(validator.validateProperty(request, "parentUUID"));
+                                    parent = qm.getObjectByUuid(Project.class, request.getParentUUID());
+                                } else {
+                                    failOnValidationError(
+                                            validator.validateProperty(request, "parentName"),
+                                            validator.validateProperty(request, "parentVersion")
+                                    );
+                                    final String trimmedParentName = StringUtils.trimToNull(request.getParentName());
+                                    final String trimmedParentVersion = StringUtils.trimToNull(request.getParentVersion());
+                                    parent = qm.getProject(trimmedParentName, trimmedParentVersion);
+                                }
 
-                            if (parent == null) { // if parent project is specified but not found
-                                return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
+                                if (parent == null) { // if parent project is specified but not found
+                                    return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
+                                }
+                                requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                             }
-                            requireAccess(qm, parent, "Access to the specified parent project is forbidden");
-                        }
-                        final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
-                        if (request.isLatestProjectVersion()) {
-                            final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if(oldLatest != null) {
-                                requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
+                            final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
+                            if (request.isLatestProjectVersion()) {
+                                final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
+                                if (oldLatest != null) {
+                                    requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
+                                }
                             }
+                            project = qm.createProject(trimmedProjectName, null,
+                                    StringUtils.trimToNull(request.getProjectVersion()), request.getProjectTags(), parent,
+                                    null, null, request.isLatestProjectVersion(), true);
+                            Principal principal = getPrincipal();
+                            qm.updateNewProjectACL(project, principal);
+                        } else {
+                            return Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                         }
-                        project = qm.createProject(trimmedProjectName, null,
-                                StringUtils.trimToNull(request.getProjectVersion()), request.getProjectTags(), parent,
-                                null, null, request.isLatestProjectVersion(), true);
-                        Principal principal = getPrincipal();
-                        qm.updateNewProjectACL(project, principal);
-                    } else {
-                        return Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                     }
-                }
-                return process(qm, project, request.getBom());
+                    return process(qm, project, request.getBom());
+                });
             }
         }
     }
@@ -415,49 +419,53 @@ public class BomResource extends AbstractApiResource {
     ) {
         if (projectUuid != null) { // behavior in v3.0.0
             try (QueryManager qm = new QueryManager()) {
-                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
-                return process(qm, project, artifactParts);
+                return qm.callInTransaction(() -> {
+                    final Project project = qm.getObjectByUuid(Project.class, projectUuid);
+                    return process(qm, project, artifactParts);
+                });
             }
         } else { // additional behavior added in v3.1.0
             try (QueryManager qm = new QueryManager()) {
-                final String trimmedProjectName = StringUtils.trimToNull(projectName);
-                final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
-                Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
-                if (project == null && autoCreate) {
-                    if (hasPermission(Permissions.Constants.PORTFOLIO)) {
-                        Project parent = null;
-                        if (parentUUID != null || parentName != null) {
-                            if (parentUUID != null) {
+                return qm.callInTransaction(() -> {
+                    final String trimmedProjectName = StringUtils.trimToNull(projectName);
+                    final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
+                    Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
+                    if (project == null && autoCreate) {
+                        if (hasPermission(Permissions.Constants.PORTFOLIO)) {
+                            Project parent = null;
+                            if (parentUUID != null || parentName != null) {
+                                if (parentUUID != null) {
 
-                                parent = qm.getObjectByUuid(Project.class, parentUUID);
-                            } else {
-                                final String trimmedParentName = StringUtils.trimToNull(parentName);
-                                final String trimmedParentVersion = StringUtils.trimToNull(parentVersion);
-                                parent = qm.getProject(trimmedParentName, trimmedParentVersion);
-                            }
+                                    parent = qm.getObjectByUuid(Project.class, parentUUID);
+                                } else {
+                                    final String trimmedParentName = StringUtils.trimToNull(parentName);
+                                    final String trimmedParentVersion = StringUtils.trimToNull(parentVersion);
+                                    parent = qm.getProject(trimmedParentName, trimmedParentVersion);
+                                }
 
-                            if (parent == null) { // if parent project is specified but not found
-                                return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
+                                if (parent == null) { // if parent project is specified but not found
+                                    return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
+                                }
+                                requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                             }
-                            requireAccess(qm, parent, "Access to the specified parent project is forbidden");
-                        }
-                        if (isLatest) {
-                            final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if(oldLatest != null) {
-                                requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
+                            if (isLatest) {
+                                final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
+                                if (oldLatest != null) {
+                                    requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
+                                }
                             }
+                            final List<org.dependencytrack.model.Tag> tags = (projectTags != null && !projectTags.isBlank())
+                                    ? Arrays.stream(projectTags.split(",")).map(String::trim).filter(not(String::isEmpty)).map(org.dependencytrack.model.Tag::new).toList()
+                                    : null;
+                            project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, null, isLatest, true);
+                            Principal principal = getPrincipal();
+                            qm.updateNewProjectACL(project, principal);
+                        } else {
+                            return Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                         }
-                        final List<org.dependencytrack.model.Tag> tags = (projectTags != null && !projectTags.isBlank())
-                                ? Arrays.stream(projectTags.split(",")).map(String::trim).filter(not(String::isEmpty)).map(org.dependencytrack.model.Tag::new).toList()
-                                : null;
-                        project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, null, isLatest, true);
-                        Principal principal = getPrincipal();
-                        qm.updateNewProjectACL(project, principal);
-                    } else {
-                        return Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                     }
-                }
-                return process(qm, project, artifactParts);
+                    return process(qm, project, artifactParts);
+                });
             }
         }
     }

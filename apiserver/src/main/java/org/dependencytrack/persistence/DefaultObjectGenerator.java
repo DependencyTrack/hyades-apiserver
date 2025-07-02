@@ -65,7 +65,6 @@ import static org.dependencytrack.util.LockProvider.executeWithLockWaiting;
 public class DefaultObjectGenerator implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultObjectGenerator.class);
-    private static final Map<String, Permission> PERMISSIONS_MAP = new HashMap<>();
 
     private static final Map<String, List<String>> DEFAULT_TEAM_PERMISSIONS = Map.of(
             "Administrators", Stream.of(Permissions.values()).map(Permissions::name).toList(),
@@ -107,6 +106,8 @@ public class DefaultObjectGenerator implements ServletContextListener {
                     Permissions.Constants.BADGES_READ,
                     Permissions.Constants.BOM_READ,
                     Permissions.Constants.PROJECT_READ));
+
+    private final Map<String, Permission> persistentPermissionByName = new HashMap<>();
 
     /**
      * {@inheritDoc}
@@ -270,7 +271,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
         for (final Permissions value : Permissions.values())
             if (!existing.contains(value.name())) {
                 LOGGER.debug("Creating permission: " + value.name());
-                PERMISSIONS_MAP.put(value.name(), qm.createPermission(value.name(), value.getDescription()));
+                persistentPermissionByName.put(value.name(), qm.createPermission(value.name(), value.getDescription()));
             }
     }
 
@@ -285,7 +286,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
      * Loads the default users and teams
      */
     private void loadDefaultPersonas(final QueryManager qm) {
-        if (!qm.getManagedUsers().isEmpty() && !qm.getTeams().isEmpty())
+        if (!qm.getManagedUsers().isEmpty() && qm.getTeams().getTotal() != 0)
             return;
 
         LOGGER.info("Adding default users and teams to datastore");
@@ -319,7 +320,7 @@ public class DefaultObjectGenerator implements ServletContextListener {
      * @return list of {@link Permission}s
      */
     private List<Permission> getPermissionsByName(List<String> names) {
-        return names.stream().map(PERMISSIONS_MAP::get).filter(Objects::nonNull).toList();
+        return names.stream().map(persistentPermissionByName::get).filter(Objects::nonNull).toList();
     }
 
     public void loadDefaultRoles() {

@@ -160,14 +160,16 @@ public class LicenseResource extends AlpineResource {
                 validator.validateProperty(jsonLicense, "licenseId")
         );
         try (QueryManager qm = new QueryManager()) {
-            License license = qm.getLicense(jsonLicense.getLicenseId());
-            if (license == null) {
-                license = qm.createCustomLicense(jsonLicense, true);
-                LOGGER.info("License " + license.getName() + " created by " + super.getPrincipal().getName());
-                return Response.status(Response.Status.CREATED).entity(license).build();
-            } else {
-                return Response.status(Response.Status.CONFLICT).entity("A license with the specified name already exists.").build();
-            }
+            return qm.callInTransaction(() -> {
+                License license = qm.getLicense(jsonLicense.getLicenseId());
+                if (license == null) {
+                    license = qm.createCustomLicense(jsonLicense, true);
+                    LOGGER.info("License " + license.getName() + " created by " + super.getPrincipal().getName());
+                    return Response.status(Response.Status.CREATED).entity(license).build();
+                } else {
+                    return Response.status(Response.Status.CONFLICT).entity("A license with the specified name already exists.").build();
+                }
+            });
         }
     }
 
@@ -189,19 +191,20 @@ public class LicenseResource extends AlpineResource {
             @Parameter(description = "The SPDX License ID of the license to delete", required = true)
             @PathParam("licenseId") String licenseId) {
         try (QueryManager qm = new QueryManager()) {
-            final License license = qm.getLicense(licenseId);
-            if (license != null) {
-                if (Boolean.TRUE.equals(license.isCustomLicense())) {
-                    LOGGER.info("License " + license + " deletion request by " + super.getPrincipal().getName());
-                    qm.deleteLicense(license, true);
-                    return Response.status(Response.Status.NO_CONTENT).build();
+            return qm.callInTransaction(() -> {
+                final License license = qm.getLicense(licenseId);
+                if (license != null) {
+                    if (Boolean.TRUE.equals(license.isCustomLicense())) {
+                        LOGGER.info("License " + license + " deletion request by " + super.getPrincipal().getName());
+                        qm.deleteLicense(license, true);
+                        return Response.status(Response.Status.NO_CONTENT).build();
+                    } else {
+                        return Response.status(Response.Status.CONFLICT).entity("Only custom licenses can be deleted.").build();
+                    }
                 } else {
-                    return Response.status(Response.Status.CONFLICT).entity("Only custom licenses can be deleted.").build();
+                    return Response.status(Response.Status.NOT_FOUND).entity("The license could not be found.").build();
                 }
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The license could not be found.").build();
-            }
+            });
         }
     }
-
 }

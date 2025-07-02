@@ -1,3 +1,6 @@
+-- DEPRECATED: Do not use, except through DataNucleus methods!
+-- Calling this function produces suboptimal query plans.
+-- https://github.com/DependencyTrack/hyades/issues/1801
 CREATE OR REPLACE FUNCTION has_user_project_access(
   project_id BIGINT
 , user_id BIGINT

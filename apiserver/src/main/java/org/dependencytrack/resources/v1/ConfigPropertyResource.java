@@ -117,8 +117,10 @@ public class ConfigPropertyResource extends AbstractConfigPropertyResource {
                 validator.validateProperty(json, "propertyValue")
         );
         try (QueryManager qm = new QueryManager()) {
-            final ConfigProperty property = qm.getConfigProperty(json.getGroupName(), json.getPropertyName());
-            return updatePropertyValue(qm, json, property);
+            return qm.callInTransaction(() -> {
+                final ConfigProperty property = qm.getConfigProperty(json.getGroupName(), json.getPropertyName());
+                return updatePropertyValue(qm, json, property);
+            });
         }
     }
 
@@ -151,10 +153,12 @@ public class ConfigPropertyResource extends AbstractConfigPropertyResource {
         }
         List<Object> returnList = new ArrayList<>();
         try (QueryManager qm = new QueryManager()) {
-            for (ConfigProperty item : list) {
-                final ConfigProperty property = qm.getConfigProperty(item.getGroupName(), item.getPropertyName());
-                returnList.add(updatePropertyValue(qm, item, property).getEntity());
-            }
+            qm.runInTransaction(() -> {
+                for (ConfigProperty item : list) {
+                    final ConfigProperty property = qm.getConfigProperty(item.getGroupName(), item.getPropertyName());
+                    returnList.add(updatePropertyValue(qm, item, property).getEntity());
+                }
+            });
         }
         return Response.ok(returnList).build();
     }
