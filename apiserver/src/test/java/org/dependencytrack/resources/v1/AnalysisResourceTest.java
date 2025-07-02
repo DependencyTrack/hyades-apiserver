@@ -41,6 +41,7 @@ import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.notification.NotificationConstants;
@@ -346,9 +347,14 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisCreateNewTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY);
-
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final Role role = qm.createRole("Test Role", List.of(
+                qm.createPermission(Permissions.Constants.PROJECT_READ, null),
+                qm.createPermission(Permissions.Constants.FINDING_UPDATE, null)));
+
+        qm.addRoleToUser(user, role, project);
 
         var component = new Component();
         component.setProject(project);
@@ -369,7 +375,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
@@ -403,7 +409,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisCreateNewWithUserTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY);
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.FINDING_UPDATE);
 
         ManagedUser testUser = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         String jwt = new JsonWebToken().createToken(testUser);
@@ -464,9 +470,14 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisCreateNewWithEmptyRequestTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY);
-
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final Role role = qm.createRole("Test Role", List.of(
+                qm.createPermission(Permissions.Constants.PROJECT_READ, null),
+                qm.createPermission(Permissions.Constants.FINDING_UPDATE, null)));
+
+        qm.addRoleToUser(user, role, project);
 
         var component = new Component();
         component.setProject(project);
@@ -486,7 +497,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
@@ -514,9 +525,14 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisUpdateExistingTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY);
-
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final Role role = qm.createRole("Test Role", List.of(
+                qm.createPermission(Permissions.Constants.PROJECT_READ, null),
+                qm.createPermission(Permissions.Constants.FINDING_UPDATE, null)));
+
+        qm.addRoleToUser(user, role, project);
 
         var component = new Component();
         component.setProject(project);
@@ -544,7 +560,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
@@ -595,9 +611,14 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithNoChangesTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY);
-
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final Role role = qm.createRole("Test Role", List.of(
+                qm.createPermission(Permissions.Constants.PROJECT_READ, null),
+                qm.createPermission(Permissions.Constants.FINDING_UPDATE, null)));
+
+        qm.addRoleToUser(user, role, project);
 
         var component = new Component();
         component.setProject(project);
@@ -625,7 +646,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
@@ -648,9 +669,14 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisUpdateExistingWithEmptyRequestTest() throws Exception {
-        initializeWithPermissions(Permissions.VULNERABILITY);
-
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final Role role = qm.createRole("Test Role", List.of(
+                qm.createPermission(Permissions.Constants.PROJECT_READ, null),
+                qm.createPermission(Permissions.Constants.FINDING_UPDATE, null)));
+
+        qm.addRoleToUser(user, role, project);
 
         var component = new Component();
         component.setProject(project);
@@ -677,7 +703,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
@@ -718,9 +744,14 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithProjectNotFoundTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY);
-
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final Role role = qm.createRole("Test Role", List.of(
+                qm.createPermission(Permissions.Constants.PROJECT_READ, null),
+                qm.createPermission(Permissions.Constants.FINDING_UPDATE, null)));
+
+        qm.addRoleToUser(user, role, project);
 
         var component = new Component();
         component.setProject(project);
@@ -741,7 +772,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_NOT_FOUND);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
@@ -750,9 +781,14 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithComponentNotFoundTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY);
-
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final Role role = qm.createRole("Test Role", List.of(
+                qm.createPermission(Permissions.Constants.PROJECT_READ, null),
+                qm.createPermission(Permissions.Constants.FINDING_UPDATE, null)));
+
+        qm.addRoleToUser(user, role, project);
 
         var component = new Component();
         component.setProject(project);
@@ -773,7 +809,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_NOT_FOUND);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
@@ -782,9 +818,14 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithVulnerabilityNotFoundTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY);
-
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final Role role = qm.createRole("Test Role", List.of(
+                qm.createPermission(Permissions.Constants.PROJECT_READ, null),
+                qm.createPermission(Permissions.Constants.FINDING_UPDATE, null)));
+
+        qm.addRoleToUser(user, role, project);
 
         var component = new Component();
         component.setProject(project);
@@ -805,7 +846,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_NOT_FOUND);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
@@ -818,9 +859,14 @@ public class AnalysisResourceTest extends ResourceTest {
     // see https://github.com/DependencyTrack/dependency-track/issues/1409
     @Test
     public void updateAnalysisIssue1409Test() throws InterruptedException {
-        initializeWithPermissions(Permissions.VULNERABILITY);
-
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
+        final Role role = qm.createRole("Test Role", List.of(
+                qm.createPermission(Permissions.Constants.PROJECT_READ, null),
+                qm.createPermission(Permissions.Constants.FINDING_UPDATE, null)));
+
+        qm.addRoleToUser(user, role, project);
 
         final var component = new Component();
         component.setProject(project);
@@ -844,7 +890,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity(analysisRequest, MediaType.APPLICATION_JSON));
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isNull();
@@ -954,11 +1000,17 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithAssociatedVulnerabilityPolicyTest() {
-        initializeWithPermissions(Permissions.VULNERABILITY);
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
+        final Role role = qm.createRole("Test Role", List.of(
+                qm.createPermission(Permissions.Constants.PROJECT_READ, null),
+                qm.createPermission(Permissions.Constants.FINDING_UPDATE, null)));
 
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
+
+        qm.addRoleToUser(user, role, project);
 
         final var component = new Component();
         component.setProject(project);
@@ -1001,7 +1053,7 @@ public class AnalysisResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_ANALYSIS)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .put(Entity.entity("""
                         {
                           "project": "%s",

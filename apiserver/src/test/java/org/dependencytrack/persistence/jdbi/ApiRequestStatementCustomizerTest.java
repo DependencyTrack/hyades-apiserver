@@ -431,7 +431,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                                    ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
                                 WHERE ph."CHILD_PROJECT_ID" = "PROJECT"."ID"
                                   AND upep."USER_ID" = :projectAclUserId
-                                  AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                                  AND upep."PERMISSION_NAME" = ALL(:projectAclPermissions)
                              )
                             """);
 

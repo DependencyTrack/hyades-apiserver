@@ -58,7 +58,7 @@ public class ProjectIsAccessibleByMethod implements SQLMethod {
         // TODO: When a list, set, etc. is passed as argument, it will be of type CollectionLiteral.
         //  Array literals are easier to verify the type of, hence we're focusing on that for now.
         switch (args) {
-            case List<SQLExpression> a when a == null || a.isEmpty() -> throw new IllegalArgumentException();
+            case null -> throw new IllegalArgumentException();
             case List<SQLExpression> a when a.size() == 1 -> {
                 final ArrayLiteral arrayLiteralArg = validateType(args.getFirst(), ArrayLiteral.class);
 
