@@ -1699,7 +1699,7 @@ public class QueryManager extends AlpineQueryManager {
                             FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" AS upep
                            INNER JOIN "PROJECT_HIERARCHY" AS ph
                               ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
-                           WHERE ph."CHILD_PROJECT_ID" = project_id
+                           WHERE ph."CHILD_PROJECT_ID" = "%s"."ID"
                              AND upep."USER_ID" = :projectAclUserId
                              AND upep."PERMISSION_NAME" = 'PROJECT_READ'
                         )
