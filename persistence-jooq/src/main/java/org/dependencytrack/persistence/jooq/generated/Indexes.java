@@ -13,6 +13,7 @@ import org.dependencytrack.persistence.jooq.generated.tables.Component;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentOccurrence;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentProperty;
 import org.dependencytrack.persistence.jooq.generated.tables.ComponentsVulnerabilities;
+import org.dependencytrack.persistence.jooq.generated.tables.DependencyMetrics;
 import org.dependencytrack.persistence.jooq.generated.tables.Epss;
 import org.dependencytrack.persistence.jooq.generated.tables.FindingAttribution;
 import org.dependencytrack.persistence.jooq.generated.tables.IntegrityAnalysis;
@@ -96,6 +97,7 @@ public class Indexes {
     public static final Index COMPONENT_SWID_TAGID_IDX = Internal.createIndex(DSL.name("COMPONENT_SWID_TAGID_IDX"), Component.COMPONENT, new OrderField[] { Component.COMPONENT.swidTagId }, false);
     public static final Index COMPONENTS_VULNERABILITIES_COMPOSITE_IDX = Internal.createIndex(DSL.name("COMPONENTS_VULNERABILITIES_COMPOSITE_IDX"), ComponentsVulnerabilities.COMPONENTS_VULNERABILITIES, new OrderField[] { ComponentsVulnerabilities.COMPONENTS_VULNERABILITIES.componentId, ComponentsVulnerabilities.COMPONENTS_VULNERABILITIES.vulnerabilityId }, true);
     public static final Index COMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX = Internal.createIndex(DSL.name("COMPONENTS_VULNERABILITIES_VULNERABILITY_ID_IDX"), ComponentsVulnerabilities.COMPONENTS_VULNERABILITIES, new OrderField[] { ComponentsVulnerabilities.COMPONENTS_VULNERABILITIES.vulnerabilityId }, false);
+    public static final Index DEPENDENCYMETRICS_PROJECT_ID_IDX = Internal.createIndex(DSL.name("DEPENDENCYMETRICS_PROJECT_ID_IDX"), DependencyMetrics.DEPENDENCYMETRICS, new OrderField[] { DependencyMetrics.DEPENDENCYMETRICS.projectId }, false);
     public static final Index EPSS_CVE_IDX = Internal.createIndex(DSL.name("EPSS_CVE_IDX"), Epss.EPSS, new OrderField[] { Epss.EPSS.cve }, true);
     public static final Index FINDINGATTRIBUTION_COMPOUND_IDX = Internal.createIndex(DSL.name("FINDINGATTRIBUTION_COMPOUND_IDX"), FindingAttribution.FINDINGATTRIBUTION, new OrderField[] { FindingAttribution.FINDINGATTRIBUTION.componentId, FindingAttribution.FINDINGATTRIBUTION.vulnerabilityId }, true);
     public static final Index FINDINGATTRIBUTION_PROJECT_ID_IDX = Internal.createIndex(DSL.name("FINDINGATTRIBUTION_PROJECT_ID_IDX"), FindingAttribution.FINDINGATTRIBUTION, new OrderField[] { FindingAttribution.FINDINGATTRIBUTION.projectId }, false);
@@ -123,6 +125,7 @@ public class Indexes {
     public static final Index PROJECT_CLASSIFIER_IDX = Internal.createIndex(DSL.name("PROJECT_CLASSIFIER_IDX"), Project.PROJECT, new OrderField[] { Project.PROJECT.classifier }, false);
     public static final Index PROJECT_CPE_IDX = Internal.createIndex(DSL.name("PROJECT_CPE_IDX"), Project.PROJECT, new OrderField[] { Project.PROJECT.cpe }, false);
     public static final Index PROJECT_GROUP_IDX = Internal.createIndex(DSL.name("PROJECT_GROUP_IDX"), Project.PROJECT, new OrderField[] { Project.PROJECT.group }, false);
+    public static final Index PROJECT_INACTIVE_SINCE_IDX = Internal.createIndex(DSL.name("PROJECT_INACTIVE_SINCE_IDX"), Project.PROJECT, new OrderField[] { Project.PROJECT.inactiveSince }, false);
     public static final Index PROJECT_IS_LATEST_IDX = Internal.createIndex(DSL.name("PROJECT_IS_LATEST_IDX"), Project.PROJECT, new OrderField[] { Project.PROJECT.isLatest }, false);
     public static final Index PROJECT_LAST_RISKSCORE_IDX = Internal.createIndex(DSL.name("PROJECT_LAST_RISKSCORE_IDX"), Project.PROJECT, new OrderField[] { Project.PROJECT.lastRiskScore }, false);
     public static final Index PROJECT_LASTBOMIMPORT_FORMAT_IDX = Internal.createIndex(DSL.name("PROJECT_LASTBOMIMPORT_FORMAT_IDX"), Project.PROJECT, new OrderField[] { Project.PROJECT.lastBomImportedFormat }, false);

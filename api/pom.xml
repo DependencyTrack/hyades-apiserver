@@ -32,8 +32,6 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
-
-        <lib.jackson.version>2.19.0</lib.jackson.version>
         <lib.jakarta-annoation-api.version>3.0.0</lib.jakarta-annoation-api.version>
         <lib.jakarta-validation-api.version>3.0.0</lib.jakarta-validation-api.version>
         <lib.jakarta-ws-rs-api.version>3.0.0</lib.jakarta-ws-rs-api.version>
@@ -45,7 +43,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>${lib.jackson.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -72,48 +69,6 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.5.1</version>
-                <executions>
-                    <execution>
-                        <id>spectral</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>docker</executable>
-                            <arguments>
-                                <argument>run</argument>
-                                <argument>-i</argument>
-                                <argument>--rm</argument>
-                                <!--
-                                  arm64 image is not yet available.
-                                  https://github.com/daveshanley/vacuum/issues/604
-                                -->
-                                <argument>--platform</argument>
-                                <argument>linux/amd64</argument>
-                                <argument>-v</argument>
-                                <argument>${project.basedir}:/work:ro</argument>
-                                <argument>dshanley/vacuum</argument>
-                                <argument>lint</argument>
-                                <argument>--details</argument>
-                                <argument>--snippets</argument>
-                                <argument>--no-banner</argument>
-                                <argument>--ruleset</argument>
-                                <argument>/work/src/main/spectral/ruleset.yaml</argument>
-                                <argument>--ignore-file</argument>
-                                <argument>/work/src/main/spectral/ignored.yaml</argument>
-                                <argument>/work/src/main/resources/org/dependencytrack/api/v2/openapi.yaml</argument>
-                            </arguments>
-                            <skip>${openapi-lint.skip}</skip>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
                 <groupId>org.openapitools</groupId>
                 <artifactId>openapi-generator-maven-plugin</artifactId>
                 <version>7.13.0</version>
@@ -136,6 +91,7 @@
                                 <modelPackage>org.dependencytrack.api.v2.model</modelPackage>
                                 <interfaceOnly>true</interfaceOnly>
                                 <useJakartaEe>true</useJakartaEe>
+                                <useTags>true</useTags>
                                 <dateLibrary>java8</dateLibrary>
                                 <useSwaggerAnnotations>false</useSwaggerAnnotations>
                                 <generateBuilders>true</generateBuilders>
