@@ -32,7 +32,6 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
-
         <lib.jakarta-annoation-api.version>3.0.0</lib.jakarta-annoation-api.version>
         <lib.jakarta-validation-api.version>3.0.0</lib.jakarta-validation-api.version>
         <lib.jakarta-ws-rs-api.version>3.0.0</lib.jakarta-ws-rs-api.version>

@@ -27,16 +27,125 @@ info:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
 security:
-- apiKeyAuth: [ ]
-- bearerAuth: [ ]
+  - apiKeyAuth: [ ]
+  - bearerAuth: [ ]
 servers:
-- url: /api/v2
+  - url: /api/v2
 tags:
-- name: foo
-  description: bar
-paths: { }
+  - name: metrics
+    description: /metrics
+  - name: workflow
+    description: /workflow
+paths:
+  /token/{uuid}/status:
+    get:
+      tags:
+        - workflow
+      summary: Retrieves workflow states associated with the token received from bom upload.
+      description: Requires permission <strong>BOM_UPLOAD</strong>
+      operationId: getWorkflowStates
+      parameters:
+        - name: uuid
+          in: path
+          description: The UUID of the token to query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of workflow states
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowState'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Workflow does not exist
+      security:
+        - apiKeyAuth: [ ]
+        - bearerAuth: [ ]
+  /vulnerability:
+    get:
+      tags:
+        - metrics
+      summary: Returns the sum of all vulnerabilities in the database by year and month.
+      description: Requires permission <strong>VIEW_PORTFOLIO</strong>
+      operationId: getVulnerabilityMetrics
+      responses:
+        '200':
+          description: The sum of all vulnerabilities in the database by year and month
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VulnerabilityMetrics'
+        '401':
+          description: Unauthorized
+      security:
+        - apiKeyAuth: [ ]
+        - bearerAuth: [ ]
 components:
-  schemas: { }
+  schemas:
+    VulnerabilityMetrics:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        year:
+          type: integer
+          format: int32
+        month:
+          type: integer
+          format: int32
+        count:
+          type: integer
+          format: int32
+        measuredAt:
+          type: string
+          format: date-time
+    WorkflowState:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        parent:
+          $ref: '#/components/schemas/WorkflowState'
+        step:
+          type: string
+          enum:
+            - BOM_CONSUMPTION
+            - BOM_PROCESSING
+            - VULN_ANALYSIS
+            - REPO_META_ANALYSIS
+            - POLICY_EVALUATION
+            - METRICS_UPDATE
+            - POLICY_BUNDLE_SYNC
+            - PROJECT_CLONE
+        status:
+          type: string
+          enum:
+            - PENDING
+            - TIMED_OUT
+            - COMPLETED
+            - FAILED
+            - CANCELLED
+            - NOT_APPLICABLE
+        failureReason:
+          type: string
+        token:
+          type: string
+          format: uuid
+        startedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
   securitySchemes:
     apiKeyAuth:
       name: X-Api-Key
@@ -47,4 +156,3 @@ components:
       description: Authentication via Bearer token
       type: http
       scheme: Bearer
-
