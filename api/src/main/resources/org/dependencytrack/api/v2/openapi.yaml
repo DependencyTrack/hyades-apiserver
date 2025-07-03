@@ -32,8 +32,8 @@ security:
 servers:
   - url: /api/v2
 tags:
-  - name: foo
-    description: bar
+  - name: metrics
+    description: /metrics
   - name: workflow
     description: /workflow
 paths:
@@ -66,13 +66,53 @@ paths:
       security:
         - apiKeyAuth: [ ]
         - bearerAuth: [ ]
+  /vulnerability:
+    get:
+      tags:
+        - metrics
+      summary: Returns the sum of all vulnerabilities in the database by year and month.
+      description: Requires permission <strong>VIEW_PORTFOLIO</strong>
+      operationId: getVulnerabilityMetrics
+      responses:
+        '200':
+          description: The sum of all vulnerabilities in the database by year and month
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VulnerabilityMetrics'
+        '401':
+          description: Unauthorized
+      security:
+        - apiKeyAuth: [ ]
+        - bearerAuth: [ ]
 components:
   schemas:
+    VulnerabilityMetrics:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        year:
+          type: integer
+          format: int32
+        month:
+          type: integer
+          format: int32
+        count:
+          type: integer
+          format: int32
+        measuredAt:
+          type: string
+          format: date-time
     WorkflowState:
       type: object
       properties:
         id:
           type: integer
+          format: int64
         parent:
           $ref: '#/components/schemas/WorkflowState'
         step:
