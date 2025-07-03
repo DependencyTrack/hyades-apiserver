@@ -94,18 +94,24 @@
 
         <!-- Dependency versions -->
         <lib.assertj.version>3.27.3</lib.assertj.version>
+        <lib.cel-java.version>0.5.3</lib.cel-java.version>
         <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
+        <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
+        <lib.jackson.version>2.19.1</lib.jackson.version>
+        <lib.jdbi.version>3.49.5</lib.jdbi.version>
+        <lib.jersey.version>3.1.10</lib.jersey.version>
+        <lib.jetty.version>12.0.23</lib.jetty.version>
         <lib.jooq.version>3.20.5</lib.jooq.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit-jupiter.version>5.13.2</lib.junit-jupiter.version>
         <lib.liquibase.version>4.32.0</lib.liquibase.version>
         <lib.postgresql.version>42.7.7</lib.postgresql.version>
         <lib.protobuf-java.version>4.31.1</lib.protobuf-java.version>
-        <lib.testcontainers.version>1.21.2</lib.testcontainers.version>
+        <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
 
         <!-- Number of JVM processes to use for unit test parallelization -->
@@ -182,6 +188,14 @@
             </dependency>
 
             <dependency>
+                <groupId>org.projectnessie.cel</groupId>
+                <artifactId>cel-bom</artifactId>
+                <version>${lib.cel-java.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
                 <groupId>org.datanucleus</groupId>
                 <artifactId>datanucleus-api-jdo</artifactId>
                 <version>${lib.datanucleus-api-jdo.version}</version>
@@ -203,9 +217,56 @@
             </dependency>
 
             <dependency>
+                <groupId>jakarta.platform</groupId>
+                <artifactId>jakarta.jakartaee-bom</artifactId>
+                <version>${lib.jakarta-ee.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
                 <groupId>com.fasterxml.uuid</groupId>
                 <artifactId>java-uuid-generator</artifactId>
                 <version>${lib.java-uuid-generator.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${lib.jackson.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jdbi</groupId>
+                <artifactId>jdbi3-bom</artifactId>
+                <version>${lib.jdbi.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>org.glassfish.jersey</groupId>
+                <artifactId>jersey-bom</artifactId>
+                <version>${lib.jersey.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-bom</artifactId>
+                <version>${lib.jetty.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty.ee10</groupId>
+                <artifactId>jetty-ee10-bom</artifactId>
+                <version>${lib.jetty.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
 
             <dependency>
@@ -221,9 +282,11 @@
             </dependency>
 
             <dependency>
-                <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter</artifactId>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
                 <version>${lib.junit-jupiter.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
 
             <dependency>
@@ -262,13 +325,10 @@
 
             <dependency>
                 <groupId>org.testcontainers</groupId>
-                <artifactId>junit-jupiter</artifactId>
+                <artifactId>testcontainers-bom</artifactId>
                 <version>${lib.testcontainers.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>postgresql</artifactId>
-                <version>${lib.testcontainers.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -372,7 +432,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>10.26.0</version>
+                        <version>10.26.1</version>
                     </dependency>
                 </dependencies>
             </plugin>

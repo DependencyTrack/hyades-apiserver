@@ -35,10 +35,8 @@
 
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.caffeine.version>3.2.0</lib.caffeine.version>
-        <lib.jakarta-annotation-api.version>3.0.0</lib.jakarta-annotation-api.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
-        <lib.jdbi.version>3.49.0</lib.jdbi.version>
         <lib.liquibase.version>4.30.0</lib.liquibase.version>
         <lib.micrometer.version>1.14.6</lib.micrometer.version>
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
@@ -86,7 +84,6 @@
         <dependency>
             <groupId>com.fasterxml.uuid</groupId>
             <artifactId>java-uuid-generator</artifactId>
-            <version>${lib.java-uuid-generator.version}</version>
         </dependency>
 
         <dependency>
@@ -98,22 +95,18 @@
         <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-core</artifactId>
-            <version>${lib.jdbi.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-freemarker</artifactId>
-            <version>${lib.jdbi.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-jackson2</artifactId>
-            <version>${lib.jdbi.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-postgres</artifactId>
-            <version>${lib.jdbi.version}</version>
         </dependency>
 
         <dependency>
