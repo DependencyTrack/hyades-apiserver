@@ -150,7 +150,7 @@ public class TagResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all projects assigned to the given tag.",
-            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -161,8 +161,7 @@ public class TagResource extends AlpineResource {
             )
     })
     @PaginatedApi
-    @PermissionRequired(Permissions.Constants.PROJECT_READ)
-    @ResourceAccessRequired
+    @PermissionRequired(Permissions.Constants.PORTFOLIO)
     public Response getTaggedProjects(
             @Parameter(description = "Name of the tag to get projects for.", required = true)
             @PathParam("name") final String tagName

@@ -435,8 +435,8 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                              )
                             """);
 
-                    assertThat(ctx.getBinding())
-                            .hasToString("{named:{projectAclUserId:%d}}".formatted(managedUser.getId()));
+                    assertThat(ctx.getBinding()).hasToString(
+                            "{named:{projectAclUserId:%d,projectAclPermissions:[]}}".formatted(managedUser.getId()));
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)

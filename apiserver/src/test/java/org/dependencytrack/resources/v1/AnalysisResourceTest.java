@@ -347,6 +347,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisCreateNewTest() throws Exception {
+        enablePortfolioAccessControl();
+
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -470,6 +472,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisCreateNewWithEmptyRequestTest() throws Exception {
+        enablePortfolioAccessControl();
+
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -525,6 +529,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisUpdateExistingTest() throws Exception {
+        enablePortfolioAccessControl();
+
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -611,6 +617,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithNoChangesTest() throws Exception {
+        enablePortfolioAccessControl();
+
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -669,6 +677,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisUpdateExistingWithEmptyRequestTest() throws Exception {
+        enablePortfolioAccessControl();
+
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -744,6 +754,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithProjectNotFoundTest() {
+        enablePortfolioAccessControl();
+
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -781,6 +793,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithComponentNotFoundTest() {
+        enablePortfolioAccessControl();
+
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -818,6 +832,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithVulnerabilityNotFoundTest() {
+        enablePortfolioAccessControl();
+
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -859,6 +875,8 @@ public class AnalysisResourceTest extends ResourceTest {
     // see https://github.com/DependencyTrack/dependency-track/issues/1409
     @Test
     public void updateAnalysisIssue1409Test() throws InterruptedException {
+        enablePortfolioAccessControl();
+
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
@@ -1000,6 +1018,8 @@ public class AnalysisResourceTest extends ResourceTest {
 
     @Test
     public void updateAnalysisWithAssociatedVulnerabilityPolicyTest() {
+        enablePortfolioAccessControl();
+
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
         final Role role = qm.createRole("Test Role", List.of(

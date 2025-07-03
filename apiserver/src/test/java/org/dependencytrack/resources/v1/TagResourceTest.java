@@ -632,7 +632,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithNonLowerCaseTagNameTest() {
-        initializeWithPermissions(Permissions.TAG);
+        initializeWithPermissions(Permissions.PORTFOLIO);
         final Response response = jersey.target(V1_TAG + "/Foo/project")
                 .request()
                 .header(X_API_KEY, apiKey)
