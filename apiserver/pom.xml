@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>apiserver</artifactId>
-    <packaging>war</packaging>
+    <packaging>jar</packaging>
     <description>The Dependency-Track API Server</description>
 
     <properties>
@@ -124,11 +124,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>alpine-executable-war</artifactId>
-            <scope>provided</scope>
-        </dependency>
         <!-- Common Expression Language (CEL) -->
         <dependency>
             <groupId>org.projectnessie.cel</groupId>
@@ -192,7 +187,6 @@
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
-            <scope>provided</scope>
         </dependency>
         <!-- org.json
         This was previously transitively included with Unirest. However, Unirest v3.x removed reliance on org.json
@@ -436,6 +430,11 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.eclipse.jetty.ee10</groupId>
+            <artifactId>jetty-ee10-servlet</artifactId>
+        </dependency>
+
         <!--
           Dependencies required by executable WAR as overlays.
           Refer to the maven-war-plugin declaration in the build section.
@@ -522,25 +521,6 @@
                         <version>3.5.3</version>
                     </dependency>
                 </dependencies>
-            </plugin>
-
-            <plugin>
-                <groupId>com.coderplus.maven.plugins</groupId>
-                <artifactId>copy-rename-maven-plugin</artifactId>
-                <version>1.0.1</version>
-                <executions>
-                    <execution>
-                        <id>copy-and-rename-file</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <sourceFile>${project.basedir}/src/main/resources/logback.xml</sourceFile>
-                            <destinationFile>${project.build.directory}/${project.build.finalName}/logback.xml</destinationFile>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
 
             <plugin>
@@ -634,88 +614,39 @@
                             <goal>run</goal>
                         </goals>
                     </execution>
+                </executions>
+            </plugin>
 
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.7.0</version>
+                <executions>
                     <execution>
-                        <id>rename-war-file</id>
                         <phase>package</phase>
-                        <configuration>
-                            <target>
-                                <copy file="${project.build.directory}/${project.build.finalName}.war"
-                                      tofile="${project.build.directory}/${project.build.finalName}.jar" />
-                            </target>
-                            <skip>${maven.war.skip}</skip>
-                        </configuration>
                         <goals>
-                            <goal>run</goal>
+                            <goal>copy-dependencies</goal>
                         </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-war-plugin</artifactId>
-                <version>3.4.0</version>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
                 <configuration>
-                    <warName>dependency-track-apiserver</warName>
                     <archive>
                         <manifest>
-                            <mainClass>alpine.embedded.EmbeddedJettyServer</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>org.dependencytrack.Application</mainClass>
+                            <useUniqueVersions>false</useUniqueVersions>
                         </manifest>
                     </archive>
-                    <attachClasses>true</attachClasses>
-                    <packagingExcludes>WEB-INF/lib/executable-war-*.jar</packagingExcludes>
-                    <dependentWarExcludes>WEB-INF/lib/*log4j*.jar,WEB-INF/lib/*slf4j*.jar</dependentWarExcludes>
-                    <overlays>
-                        <overlay>
-                            <groupId>org.dependencytrack</groupId>
-                            <artifactId>alpine-executable-war</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>org.owasp</groupId>
-                            <artifactId>security-logging-common</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>org.owasp</groupId>
-                            <artifactId>security-logging-logback</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>net.logstash.logback</groupId>
-                            <artifactId>logstash-logback-encoder</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>com.fasterxml.jackson.core</groupId>
-                            <artifactId>jackson-annotations</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>com.fasterxml.jackson.core</groupId>
-                            <artifactId>jackson-core</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                        <overlay>
-                            <groupId>com.fasterxml.jackson.core</groupId>
-                            <artifactId>jackson-databind</artifactId>
-                            <type>jar</type>
-                        </overlay>
-                    </overlays>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.eclipse.jetty.ee10</groupId>
-                <artifactId>jetty-ee10-maven-plugin</artifactId>
-                <version>${lib.jetty.version}</version>
-                <configuration>
-                    <webApp>
-                        <!-- Disable classpath scanning. -->
-                        <containerIncludeJarPattern>^$</containerIncludeJarPattern>
-                        <webInfIncludeJarPattern>^$</webInfIncludeJarPattern>
-                    </webApp>
                 </configuration>
             </plugin>
         </plugins>
@@ -755,32 +686,6 @@
                     <scope>compile</scope>
                 </dependency>
             </dependencies>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.eclipse.jetty.ee10</groupId>
-                        <artifactId>jetty-ee10-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <systemProperties>
-                                <dev.services.enabled>true</dev.services.enabled>
-                            </systemProperties>
-                            <webApp>
-                                <!-- Disable classpath scanning. -->
-                                <containerIncludeJarPattern>^$</containerIncludeJarPattern>
-                                <webInfIncludeJarPattern>^$</webInfIncludeJarPattern>
-                            </webApp>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
         </profile>
     </profiles>
 

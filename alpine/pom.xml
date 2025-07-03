@@ -33,7 +33,6 @@
         <module>alpine-model</module>
         <module>alpine-infra</module>
         <module>alpine-server</module>
-        <module>alpine-executable-war</module>
     </modules>
 
     <name>alpine-parent</name>

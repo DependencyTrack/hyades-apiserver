@@ -6,4 +6,5 @@ scripts/
 # src/
 target/
 !target/*.jar
+!target/lib/*.jar
 /*.md
