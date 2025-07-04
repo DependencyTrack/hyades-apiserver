@@ -98,7 +98,7 @@
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
-        <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
+        <lib.jakarta-ee.version>11.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
         <lib.jackson.version>2.19.1</lib.jackson.version>
         <lib.jdbi.version>3.49.5</lib.jdbi.version>
