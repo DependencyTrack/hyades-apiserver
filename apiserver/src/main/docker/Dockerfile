@@ -14,16 +14,33 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-FROM eclipse-temurin:21.0.7_6-jre-alpine@sha256:8728e354e012e18310faa7f364d00185277dec741f4f6d593af6c61fc0eb15fd
 
 # Arguments that can be passed at build time
-# Directory names must end with / to avoid errors when ADDing and COPYing
+# Directory names must end with / to avoid errors when COPYing
 ARG COMMIT_SHA=unknown
 ARG APP_VERSION=0.0.0
 ARG APP_DIR=/opt/owasp/dependency-track/
 ARG DATA_DIR=/data/
 ARG UID=1000
 ARG GID=1000
+
+FROM eclipse-temurin:21.0.7_6-jdk-alpine@sha256:2f2f553ce09d25e2d2f0f521ab94cd73f70c9b21327a29149c23a2b63b8e29a0 AS jre-build
+
+WORKDIR /work
+
+COPY --chmod=755 ./src/main/docker/create-jre.sh ./
+COPY ./target/dependency-track-apiserver.jar ./
+
+RUN ./create-jre.sh -i ./dependency-track-apiserver.jar -o ./jre
+
+FROM alpine:3.22@sha256:8a1f59ffb675680d47db6337b49d22281a139e9d709335b492be023728e11715
+
+ARG COMMIT_SHA
+ARG APP_VERSION
+ARG APP_DIR
+ARG DATA_DIR
+ARG UID
+ARG GID
 
 ENV TZ=Etc/UTC \
     # Dependency-Track's default logging level
@@ -36,6 +53,8 @@ ENV TZ=Etc/UTC \
     # The web context defaults to the root. To override, supply an alternative context which starts with a / but does not end with one
     # Example: /dtrack
     CONTEXT="/" \
+    JAVA_HOME=/opt/java/openjdk \
+    PATH="/opt/java/openjdk/bin:${PATH}" \
     LANG=C.UTF-8 \
     # Ensure user home is always set to DATA_DIR, even for arbitrary UIDs (such as used by OpenShift)
     HOME=${DATA_DIR} \
@@ -51,10 +70,10 @@ RUN mkdir -p ${APP_DIR} ${DATA_DIR} \
     && adduser -S -D -G dtrack -H -h ${DATA_DIR} -g "dtrack user" -s /bin/false -u ${UID} dtrack || true \
     && chown -R dtrack:0 ${DATA_DIR} ${APP_DIR} \
     && chmod -R g=u ${DATA_DIR} ${APP_DIR} \
-    && apk add --no-cache tzdata wget
+    && apk add --no-cache tzdata
 
-# Copy the compiled WAR to the application directory created above
-COPY ./target/dependency-track-apiserver.jar ./src/main/docker/logback-json.xml ${APP_DIR}
+COPY --from=jre-build /work/jre ${JAVA_HOME}
+COPY ./target/dependency-track-apiserver.jar ./src/main/docker/logback-json.xml ${APP_DIR}/
 
 # Specify the user to run as (in numeric format for compatibility with Kubernetes/OpenShift's SCC)
 USER ${UID}
