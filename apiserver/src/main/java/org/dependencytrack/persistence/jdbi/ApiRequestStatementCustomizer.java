@@ -66,7 +66,7 @@ import static org.jdbi.v3.core.generic.GenericTypes.parameterizeClass;
 class ApiRequestStatementCustomizer implements StatementCustomizer {
 
     static final String PARAMETER_PROJECT_ACL_TEAM_IDS = "projectAclTeamIds";
-    static final String PARAMETER_USER_ID = "projectAclUserId";
+    static final String PARAMETER_PROJECT_ACL_USER_ID = "projectAclUserId";
     static final String TEMPLATE_PROJECT_ACL_CONDITION = /* language=SQL */ """
             EXISTS(
               SELECT 1
@@ -210,7 +210,7 @@ class ApiRequestStatementCustomizer implements StatementCustomizer {
             case User user -> {
                 ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION,
                         TEMPLATE_USER_PROJECT_ACL_CONDITION.formatted(config.projectAclProjectIdColumn()));
-                ctx.getBinding().addNamed(PARAMETER_USER_ID, user.getId(), QualifiedType.of(Long.class));
+                ctx.getBinding().addNamed(PARAMETER_PROJECT_ACL_USER_ID, user.getId(), QualifiedType.of(Long.class));
             }
             case ApiKey apiKey when !principalTeamIds.isEmpty() -> {
                 ctx.define(ATTRIBUTE_API_PROJECT_ACL_CONDITION,

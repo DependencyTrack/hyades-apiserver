@@ -23,6 +23,7 @@ import alpine.model.LdapUser;
 import alpine.model.ManagedUser;
 import alpine.model.OidcUser;
 import alpine.model.Team;
+import alpine.model.User;
 import alpine.persistence.OrderDirection;
 import alpine.persistence.Pagination;
 import alpine.resources.AlpineRequest;
@@ -619,6 +620,100 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
 
                     assertThat(ctx.getBinding()).hasToString("{named:{projectAclTeamIds:[%s]}}".formatted(team.getId()));
                 }))
+                .createQuery(TEST_QUERY_TEMPLATE)
+                .mapTo(Integer.class)
+                .findOne());
+    }
+
+    @Test
+    public void testWithPortfolioAclEnabledWithCustomizedAclStatement() {
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+        );
+
+        final Team team = qm.createTeam("team");
+        final ApiKey apiKey = qm.createApiKey(team);
+
+        final var request = new AlpineRequest(
+                /* principal */ apiKey,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ null,
+                /* orderDirection */ null
+        );
+
+        useJdbiHandle(request, handle -> handle
+                .addCustomizer(inspectStatement(ctx -> {
+                    assertThat(ctx.getRenderedSql()).isEqualToIgnoringWhitespace("""
+                            SELECT 1 AS "valueA"
+                                 , 2 AS "valueB"
+                              FROM "PROJECT"
+                             WHERE EXISTS(
+                               SELECT 1
+                                 FROM "PROJECT_ACCESS_TEAMS" AS pat
+                                INNER JOIN "PROJECT_HIERARCHY" AS ph
+                                   ON ph."PARENT_PROJECT_ID" = pat."PROJECT_ID"
+                                WHERE pat."TEAM_ID" = ANY(:projectAclTeamIds)
+                                  AND ph."CHILD_PROJECT_ID" = "PROJECT"."PARENT_PROJECT_ID"
+                             )
+                            """);
+
+                    assertThat(ctx.getBinding()).hasToString("{named:{projectAclTeamIds:[%s]}}".formatted(team.getId()));
+                }))
+                .addCustomizer(new DefineApiProjectAclCondition.StatementCustomizer(
+                        JdbiAttributes.ATTRIBUTE_API_PROJECT_ACL_CONDITION,
+                        "\"PROJECT\".\"PARENT_PROJECT_ID\""))
+                .createQuery(TEST_QUERY_TEMPLATE)
+                .mapTo(Integer.class)
+                .findOne());
+    }
+
+    @Test
+    public void testWithPortfolioAclEnabledWithUserPrincipalAndCustomizedAclStatement() {
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "true",
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyType(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getDescription()
+        );
+
+        final User user = qm.createManagedUser("foo", "password");
+
+        final var request = new AlpineRequest(
+                /* principal */ user,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ null,
+                /* orderDirection */ null
+        );
+
+        useJdbiHandle(request, handle -> handle
+                .addCustomizer(inspectStatement(ctx -> {
+                    assertThat(ctx.getRenderedSql()).isEqualToIgnoringWhitespace("""
+                            SELECT 1 AS "valueA"
+                                 , 2 AS "valueB"
+                              FROM "PROJECT"
+                             WHERE EXISTS(
+                               SELECT 1
+                                FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" AS upep
+                               INNER JOIN "PROJECT_HIERARCHY" AS ph
+                                  ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
+                               WHERE ph."CHILD_PROJECT_ID" = "PROJECT"."PARENT_PROJECT_ID"
+                                 AND upep."USER_ID" = :projectAclUserId
+                                 AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                             )
+                            """);
+
+                    assertThat(ctx.getBinding()).hasToString("{named:{projectAclUserId:%s}}".formatted(user.getId()));
+                }))
+                .addCustomizer(new DefineApiProjectAclCondition.StatementCustomizer(
+                        JdbiAttributes.ATTRIBUTE_API_PROJECT_ACL_CONDITION,
+                        "\"PROJECT\".\"PARENT_PROJECT_ID\""))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
                 .findOne());
