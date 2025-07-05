@@ -64,6 +64,7 @@ import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.client.ClientConfig;
@@ -1168,7 +1169,8 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
-        Project project = qm.getProject("Acme Example", "1.0");
+        Project project = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("Acme Example", "1.0"));
         Assert.assertNotNull(project);
     }
 
@@ -1200,7 +1202,8 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
         Assert.assertNotNull(json);
-        Project parent = qm.getProject("Acme Parent", "1.0");
+        Project parent = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("Acme Parent", "1.0"));
         Assert.assertNotNull(parent);
         String parentUUID = parent.getUuid().toString();
 
@@ -1214,7 +1217,8 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
-        Project child = qm.getProject("Acme Example", "1.0");
+        Project child = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("Acme Example", "1.0"));
         Assert.assertNotNull(child);
         Assert.assertNotNull(child.getParent());
         Assert.assertEquals(parentUUID, child.getParent().getUuid().toString());
@@ -1230,7 +1234,8 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
-        child = qm.getProject("Acme Example", "2.0");
+        child = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("Acme Example", "2.0"));
         Assert.assertNotNull(child);
         Assert.assertNotNull(child.getParent());
         Assert.assertEquals(parentUUID, child.getParent().getUuid().toString());
@@ -1245,7 +1250,8 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
-        child = qm.getProject("Acme Example", "3.0");
+        child = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("Acme Example", "3.0"));
         Assert.assertNotNull(child);
         Assert.assertNotNull(child.getParent());
         Assert.assertEquals(parentUUID, child.getParent().getUuid().toString());
@@ -1495,7 +1501,8 @@ public class BomResourceTest extends ResourceTest {
                 }
                 """);
 
-        final Project project = qm.getProject("Acme Example", "1.0");
+        final Project project = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("Acme Example", "1.0"));
         assertThat(project).isNotNull();
         assertThat(project.getTags())
                 .extracting(Tag::getName)
@@ -1528,7 +1535,8 @@ public class BomResourceTest extends ResourceTest {
                 }
                 """);
 
-        final var projectResponse = qm.getProject("Acme Example", "1.0");
+        final var projectResponse = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("Acme Example", "1.0"));
         assertThat(projectResponse).isNotNull();
         assertThat(projectResponse.getName()).isEqualTo(project.getName());
     }
@@ -1552,7 +1560,8 @@ public class BomResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
-        Project project = qm.getProject("Acme Example", "1.0");
+        Project project = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("Acme Example", "1.0"));
         Assert.assertNotNull(project);
         assertThat(project.getTags())
                 .extracting(Tag::getName)

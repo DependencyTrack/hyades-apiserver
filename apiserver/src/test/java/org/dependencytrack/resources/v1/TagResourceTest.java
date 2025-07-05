@@ -21,6 +21,10 @@ package org.dependencytrack.resources.v1;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
+import jakarta.json.JsonArray;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -36,10 +40,6 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.JsonArray;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -1311,12 +1311,12 @@ public class TagResourceTest extends ResourceTest {
         for (int i = 1; i < 5; i++) {
             qm.createTag("Tag " + i);
         }
-        qm.createProject("Project A", null, "1", List.of(qm.getTagByName("Tag 1"), qm.getTagByName("Tag 2")), null, null, null, false);
+        var p1 = qm.createProject("Project A", null, "1", List.of(qm.getTagByName("Tag 1"), qm.getTagByName("Tag 2")), null, null, null, false);
         qm.createProject("Project B", null, "1", List.of(qm.getTagByName("Tag 1"), qm.getTagByName("Tag 3")), null, null, null, false);
-        qm.createProject("Project C", null, "1", List.of(qm.getTagByName("Tag 1"), qm.getTagByName("Tag 4")), null, null, null, false);
+        var p3 = qm.createProject("Project C", null, "1", List.of(qm.getTagByName("Tag 1"), qm.getTagByName("Tag 4")), null, null, null, false);
 
         Policy policy = qm.createPolicy("Test Policy", Policy.Operator.ANY, Policy.ViolationState.INFO);
-        policy.setProjects(List.of(qm.getProject("Project A", "1"), qm.getProject("Project C", "1")));
+        policy.setProjects(List.of(p1, p3));
 
         Response response = jersey.target(V1_TAG + "/policy/" + policy.getUuid())
                 .request()

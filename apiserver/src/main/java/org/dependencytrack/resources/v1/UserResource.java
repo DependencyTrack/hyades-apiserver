@@ -905,7 +905,7 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final Role role = qm.getObjectByUuid(Role.class, request.role());
                 final User user = qm.getUser(request.username());
-                final Project project = qm.getProject(request.project());
+                final Project project = qm.getObjectByUuid(Project.class, request.project());
 
                 List<String> problems = new ArrayList<>();
                 if (role == null) problems.add("role");
@@ -953,7 +953,7 @@ public class UserResource extends AlpineResource {
             return qm.callInTransaction(() -> {
                 final Role role = qm.getObjectByUuid(Role.class, request.role());
                 final User user = qm.getUser(request.username());
-                final Project project = qm.getProject(request.project());
+                final Project project = qm.getObjectByUuid(Project.class, request.project());
 
                 final List<String> problems = new ArrayList<>();
                 if (role == null) problems.add("role");
