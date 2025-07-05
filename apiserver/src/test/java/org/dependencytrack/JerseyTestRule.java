@@ -18,7 +18,8 @@
  */
 package org.dependencytrack;
 
-import org.dependencytrack.resources.v1.exception.ClientErrorExceptionMapper;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.grizzly.connector.GrizzlyConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -32,6 +33,9 @@ import org.glassfish.jersey.test.spi.TestContainerFactory;
 import org.junit.rules.ExternalResource;
 
 import jakarta.ws.rs.client.WebTarget;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * @since 4.11.0
@@ -59,9 +63,24 @@ public class JerseyTestRule extends ExternalResource {
             @Override
             protected DeploymentContext configureDeployment() {
                 forceSet(TestProperties.CONTAINER_PORT, "0");
-                return ServletDeploymentContext.forServlet(new ServletContainer(
-                        // Ensure exception mappers are registered.
-                        resourceConfig.packages(ClientErrorExceptionMapper.class.getPackageName()))).build();
+
+                boolean isV2 = false;
+                for (final Class<?> clazz : resourceConfig.getClasses()) {
+                    if (clazz.getPackageName().startsWith("org.dependencytrack.resources.v2")) {
+                        isV2 = true;
+                        break;
+                    }
+                }
+
+                // Ensure exception mappers are registered.
+                if (isV2) {
+                    resourceConfig.packages("org.dependencytrack.resources.v2.exception");
+                } else {
+                    resourceConfig.packages("org.dependencytrack.resources.v1.exception");
+                }
+
+                return ServletDeploymentContext.forServlet(
+                        new ServletContainer(resourceConfig)).build();
             }
 
         };
@@ -87,6 +106,20 @@ public class JerseyTestRule extends ExternalResource {
 
     public final WebTarget target(final String path) {
         return jerseyTest.target(path);
+    }
+
+    public final WebTarget target(final URI uri) {
+        WebTarget target = jerseyTest.target(uri.getPath());
+
+        if (uri.getQuery() != null) {
+            final List<NameValuePair> uriQueryParams =
+                    URLEncodedUtils.parse(uri, StandardCharsets.UTF_8);
+            for (final NameValuePair queryParam : uriQueryParams) {
+                target = target.queryParam(queryParam.getName(), queryParam.getValue());
+            }
+        }
+
+        return target;
     }
 
 }

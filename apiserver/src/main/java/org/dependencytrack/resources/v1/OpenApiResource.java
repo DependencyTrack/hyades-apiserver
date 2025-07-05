@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.resources;
+package org.dependencytrack.resources.v1;
 
 import alpine.server.auth.AuthenticationNotRequired;
 import io.swagger.v3.jaxrs2.integration.resources.BaseOpenApiResource;
