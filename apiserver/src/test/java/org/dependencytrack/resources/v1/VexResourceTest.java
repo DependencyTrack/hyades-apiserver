@@ -260,7 +260,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexInvalidJsonTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.BOM_CREATE);
 
         final var project = new Project();
         project.setName("acme-app");
@@ -308,7 +308,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexInvalidXmlTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.BOM_CREATE);
 
         final var project = new Project();
         project.setName("acme-app");
@@ -654,7 +654,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeDisabledTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.BOM_CREATE);
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -699,7 +699,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeEnabledForTagsTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.BOM_CREATE);
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),
@@ -766,7 +766,7 @@ public class VexResourceTest extends ResourceTest {
 
     @Test
     public void uploadVexWithValidationModeDisabledForTagsTest() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.BOM_CREATE);
 
         qm.createConfigProperty(
                 BOM_VALIDATION_MODE.getGroupName(),

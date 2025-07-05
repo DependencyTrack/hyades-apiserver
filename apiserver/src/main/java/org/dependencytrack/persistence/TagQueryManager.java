@@ -244,23 +244,15 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                 hasSystemConfigurationUpdatePermission = true;
             } else {
                 if (principal instanceof final ApiKey apiKey) {
-                    hasPortfolioManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.PORTFOLIO_MANAGEMENT)
-                                                             || hasPermission(apiKey, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE);
-                    hasPolicyManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.POLICY_MANAGEMENT)
-                                                          || hasPermission(apiKey, Permissions.Constants.POLICY_MANAGEMENT_UPDATE);
-                    hasSystemConfigurationUpdatePermission = hasPermission(apiKey, Permissions.Constants.SYSTEM_CONFIGURATION)
-                                                             || hasPermission(apiKey, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE);
-                    hasvulnerabilityManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.VULNERABILITY_MANAGEMENT)
-                            || hasPermission(apiKey, Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE);
+                    hasPortfolioManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.PORTFOLIO);
+                    hasPolicyManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.POLICY);
+                    hasSystemConfigurationUpdatePermission = hasPermission(apiKey, Permissions.Constants.SYSTEM_CONFIGURATION);
+                    hasvulnerabilityManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.VULNERABILITY);
                 } else if (principal instanceof final User user) {
-                    hasPortfolioManagementUpdatePermission = hasPermission(user, Permissions.Constants.PORTFOLIO_MANAGEMENT, /* includeTeams */ true)
-                                                             || hasPermission(user, Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE, /* includeTeams */ true);
-                    hasPolicyManagementUpdatePermission = hasPermission(user, Permissions.Constants.POLICY_MANAGEMENT, /* includeTeams */ true)
-                                                          || hasPermission(user, Permissions.Constants.POLICY_MANAGEMENT_UPDATE, /* includeTeams */ true);
-                    hasSystemConfigurationUpdatePermission = hasPermission(user, Permissions.Constants.SYSTEM_CONFIGURATION, /* includeTeams */ true)
-                                                             || hasPermission(user, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE, /* includeTeams */ true);
-                    hasvulnerabilityManagementUpdatePermission = hasPermission(user, Permissions.Constants.VULNERABILITY_MANAGEMENT, /* includeTeams */ true)
-                            || hasPermission(user, Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE, /* includeTeams */ true);
+                    hasPortfolioManagementUpdatePermission = hasPermission(user, Permissions.Constants.PORTFOLIO, /* includeTeams */ true);
+                    hasPolicyManagementUpdatePermission = hasPermission(user, Permissions.Constants.POLICY, /* includeTeams */ true);
+                    hasSystemConfigurationUpdatePermission = hasPermission(user, Permissions.Constants.SYSTEM_CONFIGURATION, /* includeTeams */ true);
+                    hasvulnerabilityManagementUpdatePermission = hasPermission(user, Permissions.Constants.VULNERABILITY, /* includeTeams */ true);
                 }
             }
 
@@ -268,8 +260,8 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                 if (row.projectCount() > 0 && !hasPortfolioManagementUpdatePermission) {
                     errorByTagName.put(row.name(), """
                             The tag is assigned to %d project(s), but the authenticated principal \
-                            is missing the %s or %s permission.""".formatted(row.projectCount(),
-                            Permissions.PORTFOLIO_MANAGEMENT, Permissions.PORTFOLIO_MANAGEMENT_UPDATE));
+                            is missing the %s permission.""".formatted(row.projectCount(),
+                            Permissions.PORTFOLIO));
                     continue;
                 }
 
@@ -285,22 +277,22 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                 if (row.policyCount() > 0 && !hasPolicyManagementUpdatePermission) {
                     errorByTagName.put(row.name(), """
                             The tag is assigned to %d policies, but the authenticated principal \
-                            is missing the %s or %s permission.""".formatted(row.policyCount(),
-                            Permissions.POLICY_MANAGEMENT, Permissions.POLICY_MANAGEMENT_UPDATE));
+                            is missing the %s permission.""".formatted(row.policyCount(),
+                            Permissions.POLICY));
                 }
 
                 if (row.notificationRuleCount() > 0 && !hasSystemConfigurationUpdatePermission) {
                     errorByTagName.put(row.name(), """
                             The tag is assigned to %d notification rules, but the authenticated principal \
-                            is missing the %s or %s permission.""".formatted(row.notificationRuleCount(),
-                            Permissions.SYSTEM_CONFIGURATION, Permissions.SYSTEM_CONFIGURATION_UPDATE));
+                            is missing the %s permission.""".formatted(row.notificationRuleCount(),
+                            Permissions.SYSTEM_CONFIGURATION));
                 }
 
                 if (row.vulnerabilityCount() > 0 && !hasvulnerabilityManagementUpdatePermission) {
                     errorByTagName.put(row.name(), """
                             The tag is assigned to %d vulnerabilities, but the authenticated principal \
-                            is missing the %s or %s permission.""".formatted(row.vulnerabilityCount(),
-                            Permissions.VULNERABILITY_MANAGEMENT, Permissions.VULNERABILITY_MANAGEMENT_UPDATE));
+                            is missing the %s permission.""".formatted(row.vulnerabilityCount(),
+                            Permissions.VULNERABILITY));
                 }
             }
 
