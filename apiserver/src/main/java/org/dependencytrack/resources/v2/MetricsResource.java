@@ -20,16 +20,23 @@ package org.dependencytrack.resources.v2;
 
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.api.v2.MetricsApi;
+import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.persistence.QueryManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 
 import java.util.List;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
+
 public class MetricsResource implements MetricsApi {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MetricsResource.class);
+    @Override
+    public Response getPortfolioCurrentMetrics() {
+        PortfolioMetrics metrics = withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
+        return Response.ok(metrics).build();
+    }
 
     @Override
     public Response getVulnerabilityMetrics() {

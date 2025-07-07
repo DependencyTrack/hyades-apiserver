@@ -50,6 +50,8 @@ paths:
     $ref: "./paths/workflow-states__token_.yaml"
   /metrics/vulnerability:
     $ref: "./paths/metrics-vulnerability.yaml"
+  /metrics/portfolio/current:
+    $ref: "./paths/metrics-portfolio.yaml"
 
 components:
   securitySchemes:
