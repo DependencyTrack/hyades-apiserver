@@ -64,8 +64,8 @@ post:
         application/problem+json:
           schema:
             oneOf:
-            - $ref: "../components/schemas/problem-details.yaml"
             - $ref: "../components/schemas/invalid-request-problem-details.yaml"
+            - $ref: "../components/schemas/problem-details.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
