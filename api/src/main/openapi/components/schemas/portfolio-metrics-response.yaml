@@ -37,85 +37,87 @@ properties:
   projects:
     type: integer
     format: int32
-  vulnerableProjects:
+  vulnerable_projects:
     type: integer
     format: int32
   components:
     type: integer
     format: int32
-  vulnerableComponents:
+  vulnerable_components:
     type: integer
     format: int32
   suppressed:
     type: integer
     format: int32
-  findingsTotal:
+  findings_total:
     type: integer
     format: int32
-  findingsAudited:
+  findings_audited:
     type: integer
     format: int32
-  findingsUnaudited:
+  findings_unaudited:
     type: integer
     format: int32
-  inheritedRiskScore:
-    type: integer
+  inherited_risk_score:
+    type: number
     format: double
-  policyViolationsFail:
+  policy_violations_fail:
     type: integer
     format: int32
-  policyViolationsWarn:
+  policy_violations_warn:
     type: integer
     format: int32
-  policyViolationsInfo:
+  policy_violations_info:
     type: integer
     format: int32
-  policyViolationsTotal:
+  policy_violations_total:
     type: integer
     format: int32
-  policyViolationsAudited:
+  policy_violations_audited:
     type: integer
     format: int32
-  policyViolationsUnaudited:
+  policy_violations_unaudited:
     type: integer
     format: int32
-  policyViolationsSecurityTotal:
+  policy_violations_security_total:
     type: integer
     format: int32
-  policyViolationsSecurityAudited:
+  policy_violations_security_audited:
     type: integer
     format: int32
-  policyViolationsSecurityUnaudited:
+  policy_violations_security_unaudited:
     type: integer
     format: int32
-  policyViolationsLicenseTotal:
+  policy_violations_license_total:
     type: integer
     format: int32
-  policyViolationsLicenseAudited:
+  policy_violations_license_audited:
     type: integer
     format: int32
-  policyViolationsLicenseUnaudited:
+  policy_violations_license_unaudited:
     type: integer
     format: int32
-  policyViolationsOperationalTotal:
+  policy_violations_operational_total:
     type: integer
     format: int32
-  policyViolationsOperationalAudited:
+  policy_violations_operational_audited:
     type: integer
     format: int32
-  policyViolationsOperationalUnaudited:
+  policy_violations_operational_unaudited:
     type: integer
     format: int32
-  firstOccurrence:
+  first_occurrence:
     type: string
     format: date-time
-  lastOccurrence:
+    example: "2025-07-07T15:44:10.377Z"
+  last_occurrence:
     type: string
     format: date-time
+    example: "2025-07-07T15:44:10.377Z"
 required:
   - critical
   - high
   - medium
   - low
-  - firstOccurrence
-  - lastOccurrence
+  - first_occurrence
+  - last_occurrence
