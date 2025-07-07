@@ -69,15 +69,15 @@ public class GitLabSyncTask implements LoggableSubscriber {
             return;
         }
 
-        OidcUser user = gitLabSyncEvent.getUser();
-        if (user == null) {
-            LOGGER.warn("GitLab syncing is enabled, but no authenticated user was provided. Skipping.");
-            return;
-        }
-
         LOGGER.info("Starting GitLab sync task");
 
         try (QueryManager qm = new QueryManager()) {
+            final OidcUser user = qm.getUser(gitLabSyncEvent.getUser().getUsername(), OidcUser.class);
+            if (user == null) {
+                LOGGER.warn("GitLab syncing is enabled, but no authenticated user was provided. Skipping.");
+                return;
+            }
+
             String topicsProperty = qm.getConfigProperty(
                     GITLAB_TOPICS.getGroupName(), GITLAB_TOPICS.getPropertyName()).getPropertyValue();
             List<String> topics = List.of(JSONValue.parse(topicsProperty, JSONArray.class).toArray(String[]::new));
