@@ -62,6 +62,7 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.util.InternalComponentIdentifier;
@@ -119,6 +120,7 @@ import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.conv
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProject;
 import static org.dependencytrack.parser.cyclonedx.util.ModelConverterProto.convertToProjectMetadata;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_INTEGRITY_DATA_AND_LATEST_VERSION;
 import static org.dependencytrack.proto.repometaanalysis.v1.FetchMeta.FETCH_META_LATEST_VERSION;
 import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
@@ -1073,12 +1075,8 @@ public class BomUploadProcessingTask implements Subscriber {
             // TODO: Creation of the scan, and starting of the workflow step, should happen in the same transaction.
             //   Requires a bit of refactoring in QueryManager#createVulnerabilityScan.
 
-            qm.createVulnerabilityScan(
-                    TargetType.PROJECT,
-                    ctx.project.getUuid(),
-                    ctx.token,
-                    events.size()
-            );
+            withJdbiHandle(handle -> handle.attach(VulnerabilityScanDao.class)
+                    .createVulnerabilityScan(TargetType.PROJECT.name(), ctx.project.getUuid(), ctx.token, events.size(), Instant.now()));
 
             qm.runInTransaction(() -> {
                 final WorkflowState vulnAnalysisWorkflowState =

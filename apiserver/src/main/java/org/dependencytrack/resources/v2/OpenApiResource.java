@@ -36,7 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static java.util.Objects.requireNonNull;
 
-@Path("/v2/openapi.yaml")
+@Path("/openapi.yaml")
 public class OpenApiResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenApiResource.class);

@@ -38,7 +38,7 @@ public class OpenApiResourceTest {
 
     @Test
     public void shouldReturnSpecYaml() {
-        final Response response = jersey.target("/v2/openapi.yaml")
+        final Response response = jersey.target("/openapi.yaml")
                 .request()
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(200);

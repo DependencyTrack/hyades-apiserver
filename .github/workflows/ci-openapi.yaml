@@ -32,18 +32,17 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
     timeout-minutes: 5
     steps:
     - name: Checkout Repository
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
     - name: Lint OpenAPI Spec
-      run: |-
-        docker run -i --rm -v "$(pwd)/api/src/main:/work:ro" \
-          dshanley/vacuum lint \
-          --details --snippets --no-banner \
-          --ruleset /work/spectral/ruleset.yaml \
-          --ignore-file /work/spectral/ignored.yaml \
-          /work/resources/org/dependencytrack/api/v2/openapi.yaml
+      uses: stoplightio/spectral-action@577bade2d6e0eeb50528c94182a5588bf961ae8f # tag=v0.8.12
+      with:
+        spectral_ruleset: "api/src/main/spectral/ruleset.yaml"
+        file_glob: "api/src/main/openapi/openapi.yaml"
 
 # TODO: Uncomment after the OpenAPI Spec is present in main.
 #  breaking-changes:

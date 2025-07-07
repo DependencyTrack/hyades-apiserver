@@ -32,10 +32,6 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/..</project.parentBaseDir>
-        <lib.jakarta-annoation-api.version>3.0.0</lib.jakarta-annoation-api.version>
-        <lib.jakarta-validation-api.version>3.0.0</lib.jakarta-validation-api.version>
-        <lib.jakarta-ws-rs-api.version>3.0.0</lib.jakarta-ws-rs-api.version>
-
         <checkstyle.skip>true</checkstyle.skip>
     </properties>
 
@@ -45,23 +41,25 @@
             <artifactId>jackson-annotations</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
-            <version>${lib.jakarta-annoation-api.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
-            <version>${lib.jakarta-validation-api.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>jakarta.ws.rs</groupId>
             <artifactId>jakarta.ws.rs-api</artifactId>
-            <version>${lib.jakarta-ws-rs-api.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -81,15 +79,19 @@
                         </goals>
                         <configuration>
                             <addCompileSourceRoot>true</addCompileSourceRoot>
-                            <inputSpec>${project.basedir}/src/main/resources/org/dependencytrack/api/v2/openapi.yaml</inputSpec>
+                            <inputSpec>${basedir}/src/main/openapi/openapi.yaml</inputSpec>
+                            <collapsedSpec>${project.build.directory}/classes/org/dependencytrack/api/v2/openapi</collapsedSpec>
                             <generatorName>jaxrs-spec</generatorName>
                             <generateApiTests>false</generateApiTests>
                             <generateSupportingFiles>false</generateSupportingFiles>
                             <generateModelTests>false</generateModelTests>
+                            <enablePostProcessFile>true</enablePostProcessFile>
+                            <openapiNormalizer>REF_AS_PARENT_IN_ALLOF=true</openapiNormalizer>
                             <configOptions>
                                 <apiPackage>org.dependencytrack.api.v2</apiPackage>
                                 <modelPackage>org.dependencytrack.api.v2.model</modelPackage>
                                 <interfaceOnly>true</interfaceOnly>
+                                <returnResponse>true</returnResponse>
                                 <useJakartaEe>true</useJakartaEe>
                                 <useTags>true</useTags>
                                 <dateLibrary>java8</dateLibrary>
@@ -97,6 +99,9 @@
                                 <generateBuilders>true</generateBuilders>
                                 <generatePom>false</generatePom>
                                 <sourceFolder>.</sourceFolder>
+                                <additionalModelTypeAnnotations>
+                                    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+                                </additionalModelTypeAnnotations>
                             </configOptions>
                         </configuration>
                     </execution>

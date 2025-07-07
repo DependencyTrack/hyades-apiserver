@@ -29,6 +29,18 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Policy;
@@ -42,17 +54,6 @@ import org.dependencytrack.resources.v1.vo.CelExpressionError;
 import org.projectnessie.cel.common.CELError;
 import org.projectnessie.cel.tools.ScriptCreateException;
 
-import jakarta.validation.Validator;
-import jakarta.ws.rs.BadRequestException;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -97,21 +98,24 @@ public class PolicyConditionResource extends AlpineResource {
                 validator.validateProperty(jsonPolicyCondition, "value")
         );
         try (QueryManager qm = new QueryManager()) {
-            Policy policy = qm.getObjectByUuid(Policy.class, uuid);
-            if (policy != null) {
-                maybeValidateExpression(jsonPolicyCondition);
-                final PolicyCondition pc = qm.createPolicyCondition(policy, jsonPolicyCondition.getSubject(),
-                        jsonPolicyCondition.getOperator(), StringUtils.trimToNull(jsonPolicyCondition.getValue()),
-                        jsonPolicyCondition.getViolationType());
-
-                // Prevent infinite recursion during JSON serialization.
-                qm.makeTransient(pc);
-                pc.setPolicy(null);
-
-                return Response.status(Response.Status.CREATED).entity(pc).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy could not be found.").build();
-            }
+            PolicyCondition pcUpdated = qm.callInTransaction(() -> {
+                Policy policy = qm.getObjectByUuid(Policy.class, uuid);
+                if (policy != null) {
+                    maybeValidateExpression(jsonPolicyCondition);
+                    return qm.createPolicyCondition(policy, jsonPolicyCondition.getSubject(),
+                            jsonPolicyCondition.getOperator(), StringUtils.trimToNull(jsonPolicyCondition.getValue()),
+                            jsonPolicyCondition.getViolationType());
+                } else {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the policy could not be found.")
+                            .build());
+                }
+            });
+            // Prevent infinite recursion during JSON serialization.
+            qm.makeTransient(pcUpdated);
+            pcUpdated.setPolicy(null);
+            return Response.status(Response.Status.CREATED).entity(pcUpdated).build();
         }
     }
 
@@ -139,19 +143,22 @@ public class PolicyConditionResource extends AlpineResource {
                 validator.validateProperty(jsonPolicyCondition, "value")
         );
         try (QueryManager qm = new QueryManager()) {
-            PolicyCondition pc = qm.getObjectByUuid(PolicyCondition.class, jsonPolicyCondition.getUuid());
-            if (pc != null) {
-                maybeValidateExpression(jsonPolicyCondition);
-                pc = qm.updatePolicyCondition(jsonPolicyCondition);
-
-                // Prevent infinite recursion during JSON serialization.
-                qm.makeTransient(pc);
-                pc.setPolicy(null);
-
-                return Response.status(Response.Status.OK).entity(pc).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy condition could not be found.").build();
-            }
+            PolicyCondition pcUpdated = qm.callInTransaction(() -> {
+                PolicyCondition pc = qm.getObjectByUuid(PolicyCondition.class, jsonPolicyCondition.getUuid());
+                if (pc != null) {
+                    maybeValidateExpression(jsonPolicyCondition);
+                    return qm.updatePolicyCondition(jsonPolicyCondition);
+                } else {
+                    throw new ClientErrorException(Response
+                            .status(Response.Status.NOT_FOUND)
+                            .entity("The UUID of the policy condition could not be found.")
+                            .build());
+                }
+            });
+            // Prevent infinite recursion during JSON serialization.
+            qm.makeTransient(pcUpdated);
+            pcUpdated.setPolicy(null);
+            return Response.status(Response.Status.OK).entity(pcUpdated).build();
         }
     }
 
@@ -173,13 +180,15 @@ public class PolicyConditionResource extends AlpineResource {
             @Parameter(description = "The UUID of the policy condition to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
-            final PolicyCondition pc = qm.getObjectByUuid(PolicyCondition.class, uuid);
-            if (pc != null) {
-                qm.deletePolicyCondition(pc);
-                return Response.status(Response.Status.NO_CONTENT).build();
-            } else {
-                return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy condition could not be found.").build();
-            }
+            return qm.callInTransaction(() -> {
+                final PolicyCondition pc = qm.getObjectByUuid(PolicyCondition.class, uuid);
+                if (pc != null) {
+                    qm.deletePolicyCondition(pc);
+                    return Response.status(Response.Status.NO_CONTENT).build();
+                } else {
+                    return Response.status(Response.Status.NOT_FOUND).entity("The UUID of the policy condition could not be found.").build();
+                }
+            });
         }
     }
 
@@ -203,5 +212,4 @@ public class PolicyConditionResource extends AlpineResource {
             throw new BadRequestException(Response.status(Response.Status.BAD_REQUEST).entity(Map.of("celErrors", celErrors)).build());
         }
     }
-
 }

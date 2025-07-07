@@ -16,6 +16,6 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 extends:
 - ["spectral:oas", "all"]
-- ["vacuum:owasp", "all"]
+- ["./zalando.yaml", "all"]
 formats:
 - "oas3"
