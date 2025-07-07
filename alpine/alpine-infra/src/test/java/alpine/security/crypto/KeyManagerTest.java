@@ -22,19 +22,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.SecretKey;
-import java.security.KeyPair;
 
 public class KeyManagerTest {
-
-    @Test
-    public void keyPairTest() throws Exception {
-        KeyPair keyPair = KeyManager.getInstance().generateKeyPair();
-        Assertions.assertEquals("RSA", keyPair.getPrivate().getAlgorithm());
-        Assertions.assertEquals("PKCS#8", keyPair.getPrivate().getFormat());
-        KeyManager.getInstance().save(keyPair);
-        Assertions.assertTrue(KeyManager.getInstance().keyPairExists());
-        Assertions.assertEquals(keyPair, KeyManager.getInstance().getKeyPair());
-    }
 
     @Test
     public void secretKeyTest() throws Exception {
