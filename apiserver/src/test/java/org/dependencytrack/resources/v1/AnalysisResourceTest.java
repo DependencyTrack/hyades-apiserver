@@ -391,10 +391,10 @@ public class AnalysisResourceTest extends ResourceTest {
         assertThat(responseJson.getJsonArray("analysisComments")).hasSize(2);
         assertThat(responseJson.getJsonArray("analysisComments").getJsonObject(0))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Analysis: NOT_SET → NOT_AFFECTED"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(responseJson.getJsonArray("analysisComments").getJsonObject(1))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Analysis comment here"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(responseJson.getBoolean("isSuppressed")).isTrue();
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));

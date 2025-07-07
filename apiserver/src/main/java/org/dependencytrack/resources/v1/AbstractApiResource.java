@@ -24,6 +24,7 @@ import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ApiRequestConfig;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.jdbi.v3.core.Handle;
@@ -91,6 +92,7 @@ abstract class AbstractApiResource extends AlpineResource {
      *                                      does not have access to the given {@link Project}.
      */
     void requireComponentAccess(final Handle jdbiHandle, final UUID componentUuid) {
+        jdbiHandle.getConfig(ApiRequestConfig.class).setProjectAclProjectIdColumn("\"COMPONENT\".\"PROJECT_ID\"");
         final var dao = jdbiHandle.attach(ComponentDao.class);
 
         final Boolean isAccessible = dao.isAccessible(componentUuid);

@@ -502,7 +502,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsTest() {
-        initializeWithPermissions(Permissions.PROJECT_READ);
+        initializeWithPermissions(Permissions.PORTFOLIO);
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -559,7 +559,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithPaginationTest() {
-        initializeWithPermissions(Permissions.PROJECT_READ);
+        initializeWithPermissions(Permissions.PORTFOLIO);
         final Tag tag = qm.createTag("foo");
 
         for (int i = 0; i < 5; i++) {
@@ -619,7 +619,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.PROJECT_READ);
+        initializeWithPermissions(Permissions.PORTFOLIO);
         qm.createTag("foo");
         final Response response = jersey.target(V1_TAG + "/foo/project")
                 .request()
