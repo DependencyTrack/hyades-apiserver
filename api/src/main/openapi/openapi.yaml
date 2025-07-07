@@ -27,13 +27,17 @@ info:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
 security:
-- apiKeyAuth: [ ]
-- bearerAuth: [ ]
+  - apiKeyAuth: [ ]
+  - bearerAuth: [ ]
 servers:
-- url: /api/v2
+  - url: /api/v2
 tags:
-- name: Teams
-  description: Endpoints related to teams
+  - name: Teams
+    description: Endpoints related to teams
+  - name: Metrics
+    description: Endpoints related to metrics
+  - name: Workflow
+    description: Endpoints related to workflow states
 
 paths:
   /teams:
@@ -42,6 +46,10 @@ paths:
     $ref: "./paths/teams__name_.yaml"
   /team-memberships:
     $ref: "./paths/team-memberships.yaml"
+  /workflow/token/{uuid}/status:
+    $ref: "./paths/workflow-states__token_.yaml"
+  /metrics/vulnerability:
+    $ref: "./paths/metrics-vulnerability.yaml"
 
 components:
   securitySchemes:
@@ -54,4 +62,3 @@ components:
       description: Authentication via Bearer token
       type: http
       scheme: Bearer
-
