@@ -18,9 +18,9 @@ name: OpenAPI
 
 on:
   pull_request:
-    branches:
-    - main
-    - "feature-**"
+    paths:
+    - api/src/main/openapi/**
+    - api/src/main/spectral/**
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
