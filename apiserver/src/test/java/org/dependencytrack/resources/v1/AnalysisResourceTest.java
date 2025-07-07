@@ -585,7 +585,7 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Jane Doe"));
         assertThat(analysisComments.getJsonObject(1))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Analysis: NOT_AFFECTED → EXPLOITABLE"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(2))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Justification: CODE_NOT_REACHABLE → NOT_SET"))
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
@@ -732,7 +732,7 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Jane Doe"));
         assertThat(analysisComments.getJsonObject(1))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Analysis: NOT_AFFECTED → NOT_SET"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(2))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Justification: CODE_NOT_REACHABLE → NOT_SET"))
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
@@ -924,7 +924,7 @@ public class AnalysisResourceTest extends ResourceTest {
         assertThat(analysisComments).hasSize(5);
         assertThat(analysisComments.getJsonObject(0))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Analysis: IN_TRIAGE → NOT_AFFECTED"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(1))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Justification: NOT_SET → PROTECTED_BY_MITIGATING_CONTROL"))
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
