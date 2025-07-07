@@ -70,6 +70,11 @@ public class OpenApiValidationClientResponseFilter implements ClientResponseFilt
     public void filter(
             final ClientRequestContext requestContext,
             final ClientResponseContext responseContext) throws IOException {
+        if ("/openapi.yaml".equals(requestContext.getUri().getPath())) {
+            // The spec itself is not part of the API surface.
+            return;
+        }
+
         final Operation operationDef = findOpenApiOperation(requestContext);
         if (operationDef == null) {
             // Undocumented request?
