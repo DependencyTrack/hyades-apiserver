@@ -588,19 +588,19 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(2))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Justification: CODE_NOT_REACHABLE → NOT_SET"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(3))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Vendor Response: WILL_NOT_FIX → UPDATE"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(4))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Details: New analysis details here"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(5))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Unsuppressed"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(6))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("New analysis comment here"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
@@ -735,10 +735,10 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(2))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Justification: CODE_NOT_REACHABLE → NOT_SET"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(3))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Vendor Response: WILL_NOT_FIX → NOT_SET"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
         final Notification projectNotification = deserializeValue(KafkaTopics.NOTIFICATION_PROJECT_CREATED, kafkaMockProducer.history().get(0));
@@ -927,16 +927,16 @@ public class AnalysisResourceTest extends ResourceTest {
                 .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(1))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Justification: NOT_SET → PROTECTED_BY_MITIGATING_CONTROL"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(2))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Vendor Response: NOT_SET → UPDATE"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(3))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("Details: New analysis details here"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(analysisComments.getJsonObject(4))
                 .hasFieldOrPropertyWithValue("comment", Json.createValue("New analysis comment here"))
-                .hasFieldOrPropertyWithValue("commenter", Json.createValue("Test Users"));
+                .hasFieldOrPropertyWithValue("commenter", Json.createValue("testuser"));
         assertThat(responseJson.getBoolean("isSuppressed")).isFalse();
 
         assertConditionWithTimeout(() -> kafkaMockProducer.history().size() == 2, Duration.ofSeconds(5));
