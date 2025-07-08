@@ -208,7 +208,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
         query.setFilter("this.isAccessibleBy()");
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(query::execute)
-                .withMessage("Expected exactly one argument, but got 0");
+                .withMessage("Expected one or two arguments, but got 0");
     }
 
     @Test
@@ -220,8 +220,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(query::execute)
                 .withMessage("""
-                        Expected argument to be of type org.datanucleus.store.rdbms.sql.expression.ArrayLiteral or \
-                        org.datanucleus.store.rdbms.sql.expression.IntegerLiteral, \
+                        Expected argument to be of type org.datanucleus.store.rdbms.sql.expression.ArrayLiteral, \
                         but got org.datanucleus.store.rdbms.sql.expression.ParameterLiteral""");
     }
 
@@ -234,8 +233,7 @@ public class ProjectIsAccessibleByMethodTest extends PersistenceCapableTest {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(query::execute)
                 .withMessage("""
-                        Expected argument to be of type org.datanucleus.store.rdbms.sql.expression.ArrayLiteral or \
-                        org.datanucleus.store.rdbms.sql.expression.IntegerLiteral, \
+                        Expected argument to be of type org.datanucleus.store.rdbms.sql.expression.ArrayLiteral, \
                         but got org.datanucleus.store.rdbms.sql.expression.ParameterLiteral""");
     }
 

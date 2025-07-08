@@ -78,7 +78,7 @@ public class AccessControlResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns the projects assigned to the specified team",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -91,7 +91,7 @@ public class AccessControlResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the team could not be found"),
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
+    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response retrieveProjects(@Parameter(description = "The UUID of the team to retrieve mappings for", schema = @Schema(type = "string", format = "uuid"), required = true)
                                      @PathParam("uuid") @ValidUuid String uuid,
                                      @Parameter(description = "Optionally excludes inactive projects from being returned")
@@ -115,7 +115,7 @@ public class AccessControlResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns the projects accessible by the specified user",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>")
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong></p>")
     @PaginatedApi
     @ApiResponses(value = {
             @ApiResponse(
@@ -128,7 +128,7 @@ public class AccessControlResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "User not found"),
     })
-    @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_READ })
+    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response retrieveUserProjects(
             @Parameter(description = "The username to retrieve projects for", required = true) @PathParam("username") String username) {
 
@@ -169,7 +169,7 @@ public class AccessControlResource extends AlpineResource {
                     description = "A mapping with the same team and project already exists",
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON))
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_CREATE})
+    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response addMapping(AclMappingRequest request) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -209,7 +209,7 @@ public class AccessControlResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Removes an ACL mapping",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
+            description = "<p>Requires permission <strong>ACCESS_MANAGEMENTTE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Mapping removed successfully"),
@@ -219,7 +219,7 @@ public class AccessControlResource extends AlpineResource {
                     description = "Team or project could not be found",
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON))
     })
-    @PermissionRequired({Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_DELETE})
+    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response deleteMapping(
             @Parameter(description = "The UUID of the team to delete the mapping for", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("teamUuid") @ValidUuid String teamUuid,
