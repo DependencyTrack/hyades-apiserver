@@ -16,31 +16,50 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) Steve Springett. All Rights Reserved.
  */
-
 package alpine.server.auth;
-
-import net.minidev.json.JSONObject;
 
 import alpine.Config;
 import alpine.model.OidcUser;
-
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSet;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import net.minidev.json.JSONObject;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+
+import static java.util.function.Predicate.not;
 
 public class DefaultOidcAuthenticationCustomizer implements OidcAuthenticationCustomizer {
 
+    private final String usernameClaimName;
+    private final String teamsClaimName;
+
+    @SuppressWarnings("unused") // Used by ServiceLoader.
     public DefaultOidcAuthenticationCustomizer() {
+        this(Config.getInstance().getProperty(Config.AlpineKey.OIDC_USERNAME_CLAIM),
+                Config.getInstance().getProperty(Config.AlpineKey.OIDC_TEAMS_CLAIM));
+    }
+
+    DefaultOidcAuthenticationCustomizer(final String usernameClaimName, final String teamsClaimName) {
+        this.usernameClaimName = usernameClaimName;
+        this.teamsClaimName = teamsClaimName;
     }
 
     @Override
     public OidcProfile createProfile(ClaimsSet claimsSet) {
-        final String teamsClaimName = Config.getInstance().getProperty(Config.AlpineKey.OIDC_TEAMS_CLAIM);
-        final String usernameClaimName = Config.getInstance().getProperty(Config.AlpineKey.OIDC_USERNAME_CLAIM);
         final var profile = new OidcProfile();
 
         profile.setSubject(claimsSet.getStringClaim(UserInfo.SUB_CLAIM_NAME));
         profile.setUsername(claimsSet.getStringClaim(usernameClaimName));
-        profile.setGroups(claimsSet.getStringListClaim(teamsClaimName));
+        profile.setGroups(switch (claimsSet.getClaim(teamsClaimName)) {
+            case String groupsString -> Arrays.stream(groupsString.split(","))
+                    .map(String::trim)
+                    .filter(not(String::isEmpty))
+                    .toList();
+            case Collection<?> ignored -> claimsSet.getStringListClaim(teamsClaimName);
+            case null, default -> Collections.emptyList();
+        });
         profile.setEmail(claimsSet.getStringClaim(UserInfo.EMAIL_CLAIM_NAME));
 
         JSONObject claimsObj = claimsSet.toJSONObject();

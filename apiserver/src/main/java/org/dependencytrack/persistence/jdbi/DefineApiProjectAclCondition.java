@@ -33,7 +33,9 @@ import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 
 import static org.dependencytrack.persistence.jdbi.ApiRequestStatementCustomizer.PARAMETER_PROJECT_ACL_TEAM_IDS;
+import static org.dependencytrack.persistence.jdbi.ApiRequestStatementCustomizer.PARAMETER_PROJECT_ACL_USER_ID;
 import static org.dependencytrack.persistence.jdbi.ApiRequestStatementCustomizer.TEMPLATE_PROJECT_ACL_CONDITION;
+import static org.dependencytrack.persistence.jdbi.ApiRequestStatementCustomizer.TEMPLATE_USER_PROJECT_ACL_CONDITION;
 import static org.dependencytrack.persistence.jdbi.JdbiAttributes.ATTRIBUTE_API_PROJECT_ACL_CONDITION;
 
 /**
@@ -89,7 +91,7 @@ public @interface DefineApiProjectAclCondition {
         private final String attributeName;
         private final String projectIdColumn;
 
-        private StatementCustomizer(final String attributeName, final String projectIdColumn) {
+        StatementCustomizer(final String attributeName, final String projectIdColumn) {
             this.attributeName = attributeName;
             this.projectIdColumn = projectIdColumn;
         }
@@ -114,6 +116,11 @@ public @interface DefineApiProjectAclCondition {
                 // so it's not a trivial TRUE or FALSE. Re-use those bindings by defining
                 // a new condition, using the chosen project table alias.
                 ctx.define(attributeName, TEMPLATE_PROJECT_ACL_CONDITION.formatted(projectIdColumn));
+            } else if (ctx.getBinding().findForName(PARAMETER_PROJECT_ACL_USER_ID, ctx).isPresent()) {
+                // The existing condition has defined a user ID for the ACL check already,
+                // so it's not a trivial TRUE or FALSE. Re-use that binding by defining
+                // a new condition, using the chosen project table alias.
+                ctx.define(attributeName, TEMPLATE_USER_PROJECT_ACL_CONDITION.formatted(projectIdColumn));
             } else {
                 // Likely a trivial TRUE or FALSE; Just re-use it.
                 ctx.define(attributeName, aclCondition);

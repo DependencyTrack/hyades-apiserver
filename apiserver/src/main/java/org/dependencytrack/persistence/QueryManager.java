@@ -91,7 +91,6 @@ import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.PublisherClass;
 import org.dependencytrack.persistence.jdbi.EffectivePermissionDao;
 import org.dependencytrack.persistence.jdbi.JdbiFactory;
-import org.dependencytrack.proto.vulnanalysis.v1.ScanStatus;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
@@ -1475,44 +1474,6 @@ public class QueryManager extends AlpineQueryManager {
     }
 
     /**
-     * Create a new {@link VulnerabilityScan} record.
-     * <p>
-     * This method expects that access to the {@link VulnerabilityScan} table is serialized
-     * through Kafka events, keyed by the scan's token. This assumption allows for optimistic
-     * locking to be used.
-     *
-     * @param scanToken       The token that uniquely identifies the scan for clients
-     * @param expectedResults Number of expected {@link ScanStatus #SCAN_STATUS_COMPLETE} events for this scan
-     * @return The created {@link VulnerabilityScan}
-     */
-    public VulnerabilityScan createVulnerabilityScan(final VulnerabilityScan.TargetType targetType,
-                                                     final UUID targetIdentifier, final UUID scanToken,
-                                                     final int expectedResults) {
-        final Transaction trx = pm.currentTransaction();
-        trx.setOptimistic(true);
-        try {
-            trx.begin();
-            final var scan = new VulnerabilityScan();
-            scan.setToken(scanToken);
-            scan.setTargetType(targetType);
-            scan.setTargetIdentifier(targetIdentifier);
-            scan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
-            scan.setFailureThreshold(0.05);
-            final var startDate = new Date();
-            scan.setStartedAt(startDate);
-            scan.setUpdatedAt(startDate);
-            scan.setExpectedResults(expectedResults);
-            pm.makePersistent(scan);
-            trx.commit();
-            return scan;
-        } finally {
-            if (trx.isActive()) {
-                trx.rollback();
-            }
-        }
-    }
-
-    /**
      * Fetch a {@link VulnerabilityScan} by its token.
      *
      * @param token The token that uniquely identifies the scan for clients
@@ -1731,19 +1692,38 @@ public class QueryManager extends AlpineQueryManager {
 
         switch (principal) {
             case User user -> {
-                params.put("userId", user.getId());
-                conditionTemplate = "HAS_USER_PROJECT_ACCESS(\"%s\".\"ID\", :userId)";
+                params.put("projectAclUserId", user.getId());
+                conditionTemplate = /* language=SQL */ """
+                        EXISTS(
+                          SELECT 1
+                            FROM "USER_PROJECT_EFFECTIVE_PERMISSIONS" AS upep
+                           INNER JOIN "PROJECT_HIERARCHY" AS ph
+                              ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
+                           WHERE ph."CHILD_PROJECT_ID" = "%s"."ID"
+                             AND upep."USER_ID" = :projectAclUserId
+                             AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                        )
+                        """;
             }
             case ApiKey apiKey when !teamIds.isEmpty() -> {
                 params.put("projectAclTeamIds", teamIds.toArray(Long[]::new));
-                conditionTemplate = "HAS_PROJECT_ACCESS(\"%s\".\"ID\", :projectAclTeamIds)";
+                conditionTemplate = /* language=SQL */ """
+                        EXISTS(
+                          SELECT 1
+                            FROM "PROJECT_ACCESS_TEAMS" AS pat
+                           INNER JOIN "PROJECT_HIERARCHY" AS ph
+                              ON ph."PARENT_PROJECT_ID" = pat."PROJECT_ID"
+                           WHERE pat."TEAM_ID" = ANY(:projectAclTeamIds)
+                             AND ph."CHILD_PROJECT_ID" = "%s"."ID"
+                        )
+                        """;
             }
             default -> {
                 return Map.entry("FALSE", Collections.emptyMap());
             }
         }
 
-        return Map.entry(conditionTemplate.formatted(projectTableAlias), params); 
+        return Map.entry(conditionTemplate.formatted(projectTableAlias), params);
     }
 
     /**
