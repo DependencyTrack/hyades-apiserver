@@ -69,11 +69,11 @@ public enum Permissions {
         return scope;
     }
 
-    public boolean isProject() {
+    public boolean isProjectScope() {
         return scope == Scope.PROJECT;
     }
 
-    public boolean isSystem() {
+    public boolean isSystemScope() {
         return scope == Scope.SYSTEM;
     }
 

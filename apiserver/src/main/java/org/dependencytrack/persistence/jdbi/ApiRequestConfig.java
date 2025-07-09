@@ -76,10 +76,6 @@ public class ApiRequestConfig implements JdbiConfig<ApiRequestConfig> {
         return projectIdColumn;
     }
 
-    public void setProjectAclProjectIdColumn(final String projectIdColumn) {
-        this.projectIdColumn = projectIdColumn;
-    }
-
     public record OrderingColumn(String name, String queryName) {
 
         public OrderingColumn(final String name) {

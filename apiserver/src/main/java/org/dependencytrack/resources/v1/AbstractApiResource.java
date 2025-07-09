@@ -92,7 +92,6 @@ abstract class AbstractApiResource extends AlpineResource {
      *                                      does not have access to the given {@link Project}.
      */
     void requireComponentAccess(final Handle jdbiHandle, final UUID componentUuid) {
-        jdbiHandle.getConfig(ApiRequestConfig.class).setProjectAclProjectIdColumn("\"COMPONENT\".\"PROJECT_ID\"");
         final var dao = jdbiHandle.attach(ComponentDao.class);
 
         final Boolean isAccessible = dao.isAccessible(componentUuid);
