@@ -46,6 +46,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Role;
+import org.dependencytrack.model.validation.ValidRolePermission;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.resources.v1.vo.TeamPermissionsSetRequest;
@@ -293,7 +294,7 @@ public class PermissionResource extends AlpineResource {
             @Parameter(description = "A valid role uuid", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "A valid permission", required = true)
-            @PathParam("permission") String permissionName) {
+            @PathParam("permission") @ValidRolePermission String permissionName) {
         try (QueryManager qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
                 Role role = qm.getObjectByUuid(Role.class, uuid);
