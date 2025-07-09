@@ -67,6 +67,7 @@ public class GitLabIntegrationStateChanger extends AbstractIntegrationPoint {
             LOGGER.info("Disabling GitLab integration");
             removeGitLabRoles();
             removeGitLabDefaultTeam();
+            setConfigProperty(ConfigPropertyConstants.GITLAB_SBOM_PUSH_ENABLED, "false");
         } catch (RuntimeException ex) {
             LOGGER.error("An error occurred while changing GitLab Integration State", ex);
             handleException(LOGGER, ex);

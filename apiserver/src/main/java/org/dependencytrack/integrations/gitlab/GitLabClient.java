@@ -20,18 +20,25 @@
 package org.dependencytrack.integrations.gitlab;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.RSAPublicKeySpec;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
@@ -57,6 +64,11 @@ public class GitLabClient {
     private final Config config;
     private final List<String> topics;
     private final boolean includeArchived;
+
+    public static final String PROJECT_PATH_CLAIM = "project_path";
+    public static final String REF_PATH_CLAIM = "ref_path";
+    public static final String REF_TYPE_CLAIM = "ref_type";
+    public static final String USER_ACCESS_LEVEL_CLAIM = "user_access_level";
 
     private final Map<GitLabRole, List<Permissions>> rolePermissions = Map.of(
             GitLabRole.GUEST, List.of(
@@ -197,6 +209,55 @@ public class GitLabClient {
         }
 
         return projects;
+    }
+
+    private static JSONObject getJwks(String jwksUrl) throws IOException, InterruptedException, URISyntaxException {        
+        URIBuilder builder = new URIBuilder(jwksUrl);
+        HttpGet request = new HttpGet(builder.build());
+        request.setHeader("Accept", "application/json");
+        
+        try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
+            String jsonResponse = EntityUtils.toString(response.getEntity());
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) 
+                throw new IOException("Failed to fetch JWKS from URL: %s. Status code: %d".formatted(jwksUrl, response.getStatusLine().getStatusCode()));
+    
+            if (!jsonResponse.trim().startsWith("{"))
+                throw new IOException("Unexpected response: " + response.getEntity());
+            
+            return JSONValue.parse(jsonResponse, JSONObject.class);
+        }
+    }
+
+    public static PublicKey getPublicKeyFromJwks(String baseUrl, String jwksPath, String kid) throws Exception {
+        String gitLabJwksUrl = baseUrl + jwksPath;
+        Object keysObject = getJwks(gitLabJwksUrl).getOrDefault("keys", new JSONArray());
+        if (!(keysObject instanceof List))
+            throw new IllegalArgumentException("Invalid JWKS format: 'keys' is not a list");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> keys = (List<Map<String, Object>>) keysObject;
+        for (Map<String, Object> keyMap : keys) {
+            JSONObject jsonKey = new JSONObject();
+            jsonKey.put("kty", keyMap.get("kty"));
+            jsonKey.put("alg", keyMap.get("alg"));
+            jsonKey.put("use", keyMap.get("use"));
+            jsonKey.put("kid", keyMap.get("kid"));
+            jsonKey.put("n", keyMap.get("n"));
+            jsonKey.put("e", keyMap.get("e"));
+            
+            if (jsonKey.get("kid").equals(kid)) {
+                if (!jsonKey.containsKey("n") || !jsonKey.containsKey("e"))
+                    throw new IllegalArgumentException("Missing modulus 'n' or exponent 'e' in JWKS key: " + jsonKey);
+                
+                RSAPublicKeySpec spec = new RSAPublicKeySpec(
+                    new BigInteger(1, Base64.getUrlDecoder().decode(jsonKey.get("n").toString())), 
+                    new BigInteger(1, Base64.getUrlDecoder().decode(jsonKey.get("e").toString()))
+                    );
+                
+                return KeyFactory.getInstance("RSA").generatePublic(spec);
+            }
+        }
+        throw new IllegalArgumentException("Public key not found for kid: " + kid);
     }
 
     public List<Permissions> getRolePermissions(final GitLabRole role) {

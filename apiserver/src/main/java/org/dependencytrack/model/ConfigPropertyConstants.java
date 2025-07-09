@@ -91,7 +91,7 @@ public enum ConfigPropertyConstants {
     GITLAB_AUTOCREATE_PROJECTS("integrations", "gitlab.autocreate.projects", "false", PropertyType.BOOLEAN, "Flag to enable/disable auto-creation of projects in GitLab", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_ENABLED("integrations", "gitlab.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable GitLab integration", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_INCLUDE_ARCHIVED("integrations", "gitlab.include.archived", "false", PropertyType.BOOLEAN, "Flag to enable/disable syncing of archived GitLab projects", ConfigPropertyAccessMode.READ_WRITE),
-    GITLAB_SBOM_PUSH_ENABLED("integrations", "sbom.push.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable SBOM generation for GitLab projects", ConfigPropertyAccessMode.READ_WRITE),
+    GITLAB_SBOM_PUSH_ENABLED("integrations", "gitlab.sbom.push.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable SBOM generation for GitLab projects", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_TOPICS("integrations", "gitlab.topics", "[]", PropertyType.STRING, "JSON array of topics to include when syncing GitLab projects", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_URL("integrations", "gitlab.url", "https://gitlab.com", PropertyType.URL, "Base URL to GitLab instance", ConfigPropertyAccessMode.READ_WRITE),
     GITLAB_API_KEY("integrations", "gitlab.api.key", null, PropertyType.ENCRYPTEDSTRING, "API Key for GitLab Users team", ConfigPropertyAccessMode.READ_WRITE),

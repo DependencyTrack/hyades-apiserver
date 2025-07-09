@@ -24,6 +24,12 @@ import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
 import alpine.server.auth.PermissionRequired;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import alpine.server.filters.ResourceAccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -43,10 +49,13 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.filestorage.FileStorage;
+import org.dependencytrack.integrations.gitlab.GitLabClient;
+import org.dependencytrack.integrations.gitlab.GitLabRole;
 import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
@@ -65,6 +74,9 @@ import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.owasp.security.logging.SecurityMarkers;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -92,12 +104,18 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-
+import java.util.function.Function;
 import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_AUTOCREATE_PROJECTS;
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_JWKS_PATH;
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_SBOM_PUSH_ENABLED;
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_URL;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -335,24 +353,127 @@ public class BomResource extends AbstractApiResource {
                             }
                             requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                         }
-                        final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
-                        if (request.isLatestProjectVersion()) {
-                            final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if(oldLatest != null) {
-                                requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
-                            }
-                        }
-                        project = qm.createProject(trimmedProjectName, null,
-                                StringUtils.trimToNull(request.getProjectVersion()), request.getProjectTags(), parent,
-                                null, null, request.isLatestProjectVersion(), true);
-                        Principal principal = getPrincipal();
-                        qm.updateNewProjectACL(project, principal);
+                        createNewProject(request.getProjectName(), request.getProjectVersion(), request.getProjectTags(), parent, request.isLatestProjectVersion(), null);
                     } else {
                         return Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                     }
                 }
                 return process(qm, project, request.getBom());
             }
+        }
+    }
+
+    @POST
+    @Path("/gitlab")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Upload a supported bill of material from GitLab", description = "This endpoint processes input and delegates the request to the uploadBom method.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token to be used for checking BOM processing progress", content = @Content(schema = @Schema(implementation = BomUploadResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid input"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "The project could not be found")
+    })
+    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
+    @ResourceAccessRequired
+    public Response uploadBomGitLab(
+            @FormDataParam("gitLabToken") String idToken,
+            @FormDataParam("bom") String bom,
+            @FormDataParam("isLatest") @DefaultValue("false") boolean isLatest) {
+
+        try (QueryManager qm = new QueryManager()) {
+            Function<ConfigPropertyConstants, ConfigProperty> propertyGetter = cpc -> qm.getConfigProperty(
+                    cpc.getGroupName(),
+                    cpc.getPropertyName());
+
+            ConfigProperty gitLabIntegrationConfigProperty = propertyGetter.apply(GITLAB_ENABLED);
+            if (gitLabIntegrationConfigProperty == null
+                    || !Boolean.parseBoolean(gitLabIntegrationConfigProperty.getPropertyValue()))
+                return Response.notModified("GitLab integration not enabled").build();
+
+            ConfigProperty sbomPushConfigProperty = propertyGetter.apply(GITLAB_SBOM_PUSH_ENABLED);
+            if (sbomPushConfigProperty == null || !Boolean.parseBoolean(sbomPushConfigProperty.getPropertyValue()))
+                return Response.notModified("GitLab SBOM push functionality not enabled").build();
+
+            Boolean autoCreateProject = Boolean
+                    .parseBoolean(propertyGetter.apply(GITLAB_AUTOCREATE_PROJECTS).getPropertyValue());
+
+            if (idToken == null || !idToken.matches("^[\\w-]+\\.[\\w-]+\\.[\\w-]+$"))
+                return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid or missing GitLab idToken")
+                        .build();
+
+            ConfigProperty gitLabUrlProperty = propertyGetter.apply(GITLAB_URL);
+            ConfigProperty gitLabJwksPathProperty = propertyGetter.apply(GITLAB_JWKS_PATH);
+
+            // Get the key id (kid) from the JWT header
+            String headerJson = new String(Base64.getUrlDecoder().decode(idToken.split("\\.")[0]));
+            String kid = (String) new ObjectMapper().readValue(headerJson, Map.class).get("kid");
+
+            Claims claims = Jwts.parser()
+                    .verifyWith(GitLabClient.getPublicKeyFromJwks(gitLabUrlProperty.getPropertyValue(),
+                            gitLabJwksPathProperty.getPropertyValue(), kid))
+                    .build()
+                    .parseSignedClaims(idToken)
+                    .getPayload();
+
+            // If autoCreate is enabled and the project doesn't exist, create the project
+            final String projectName = List.of(claims.get(GitLabClient.PROJECT_PATH_CLAIM, String.class).split("/"))
+                    .getLast();
+            final String projectVersion = claims
+                    .get(claims.get(GitLabClient.REF_TYPE_CLAIM, String.class).equals("tag") ? "ref"
+                            : GitLabClient.REF_PATH_CLAIM, String.class);
+            Project project = qm.getProject(projectName, projectVersion);
+
+            final GitLabRole gitLabRole = GitLabRole
+                    .valueOf(claims.get(GitLabClient.USER_ACCESS_LEVEL_CLAIM, String.class).toUpperCase());
+            Role role = (gitLabRole != null)
+                    ? qm.getRoleByName(gitLabRole.getDescription())
+                    : null;
+
+            if (project == null) {
+                if (autoCreateProject
+                        && Set.of("owner", "maintainer")
+                                .contains(claims.get(GitLabClient.USER_ACCESS_LEVEL_CLAIM, String.class)))
+                    createNewProject(projectName, projectVersion, null, null, isLatest, role);
+                else
+                    return Response.status(Response.Status.UNAUTHORIZED)
+                            .entity("The principal does not have permission to create project.").build();
+            }
+
+            if (claims.get(GitLabClient.PROJECT_PATH_CLAIM, String.class) == null)
+                return Response.status(Response.Status.BAD_REQUEST).entity("Missing project_path claim").build();
+
+            if (!claims.get(GitLabClient.REF_TYPE_CLAIM, String.class).equals("tag")
+                    && claims.get(GitLabClient.REF_PATH_CLAIM, String.class) == null)
+                return Response.status(Response.Status.BAD_REQUEST).entity("Invalid ref_type or missing ref_path claim")
+                        .build();
+
+            BomSubmitRequest bomSubmitRequest = new BomSubmitRequest(
+                    null,
+                    projectName,
+                    projectVersion,
+                    null,
+                    autoCreateProject,
+                    isLatest,
+                    bom);
+
+            return uploadBom(bomSubmitRequest);
+        } catch (SignatureException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Received token that did not pass signature verification").build();
+        } catch (ExpiredJwtException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Received expired token").build();
+        } catch (MalformedJwtException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Received malformed token").build();
+        } catch (UnsupportedJwtException | IllegalArgumentException e) {
+            LOGGER.error(SecurityMarkers.SECURITY_FAILURE, e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Received unsupported JWT").build();
+        } catch (IOException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Error reading or parsing the JWT header or JWKS: " + e.getMessage()).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("An error occured in uploadBomGitLab: " + e.getMessage()).build();
         }
     }
 
@@ -442,18 +563,10 @@ public class BomResource extends AbstractApiResource {
                             }
                             requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                         }
-                        if (isLatest) {
-                            final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
-                            if(oldLatest != null) {
-                                requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
-                            }
-                        }
                         final List<org.dependencytrack.model.Tag> tags = (projectTags != null && !projectTags.isBlank())
                                 ? Arrays.stream(projectTags.split(",")).map(String::trim).filter(not(String::isEmpty)).map(org.dependencytrack.model.Tag::new).toList()
                                 : null;
-                        project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, null, isLatest, true);
-                        Principal principal = getPrincipal();
-                        qm.updateNewProjectACL(project, principal);
+                        createNewProject(projectName, projectVersion, tags, parent, isLatest, null);
                     } else {
                         return Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                     }
@@ -639,6 +752,27 @@ public class BomResource extends AbstractApiResource {
                     .anyMatch(validationModeTags::contains);
             return (validationMode == BomValidationMode.ENABLED_FOR_TAGS && doTagsMatch)
                    || (validationMode == BomValidationMode.DISABLED_FOR_TAGS && !doTagsMatch);
+        }
+    }
+
+    private void createNewProject(String name, String version,
+            List<org.dependencytrack.model.Tag> tags, Project parent,
+            boolean isLatest, Role role) {
+        try (QueryManager qm = new QueryManager()) {
+            final String trimmedProjectName = StringUtils.trimToNull(name);
+            final String trimmedProjectVersion = StringUtils.trimToNull(version);
+
+            if (isLatest) {
+                final Project oldLatest = qm.getLatestProjectVersion(trimmedProjectName);
+                if (oldLatest != null) {
+                    requireAccess(qm, oldLatest, "Access to the previous latest project version is forbidden");
+                }
+            }
+            Project project = qm.createProject(trimmedProjectName, null,
+                    trimmedProjectVersion, tags, parent,
+                    null, null, isLatest, true);
+            Principal principal = getPrincipal();
+            qm.updateNewProjectACL(project, principal, role);
         }
     }
 }

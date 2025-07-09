@@ -48,6 +48,7 @@ import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.ProjectVersion;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
@@ -839,20 +840,31 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      * @return True if ACL was updated
      */
     @Override
-    public boolean updateNewProjectACL(Project project, Principal principal) {
-        if (isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED) && principal instanceof ApiKey apiKey) {
-            final var apiTeam = apiKey.getTeams().stream().findFirst();
-            if (apiTeam.isPresent()) {
-                LOGGER.debug("adding Team to ACL of newly created project");
-                final Team team = getObjectByUuid(Team.class, apiTeam.get().getUuid());
-                project.addAccessTeam(team);
-                persist(project);
+    public boolean updateNewProjectACL(Project project, Principal principal, Role role) {
+        final boolean aclEnabled = isEnabled(ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED);
+        switch (principal) {
+            case ApiKey apiKey when aclEnabled -> {
+                final var apiTeam = apiKey.getTeams().stream().findFirst();
+                if (apiTeam.isPresent()) {
+                    LOGGER.debug("adding Team to ACL of newly created project");
+                    final Team team = getObjectByUuid(Team.class, apiTeam.get().getUuid());
+                    project.addAccessTeam(team);
+                    persist(project);
+                    return true;
+                } else {
+                    LOGGER.warn("API Key without a Team, unable to assign team ACL to project.");
+                    return false;
+                }
+            }
+            case User user when aclEnabled -> {
+                addRoleToUser(getUser(user.getUsername()), getRole(role.getUuid().toString()), project);
                 return true;
-            } else {
-                LOGGER.warn("API Key without a Team, unable to assign team ACL to project.");
+            }
+            default -> {
+                // No ACL update for other principals
+                return false;
             }
         }
-        return false;
     }
 
     @Override
