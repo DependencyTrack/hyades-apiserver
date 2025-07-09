@@ -357,9 +357,10 @@ public class BomResource extends AbstractApiResource {
                                 requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                             }
                             createNewProject(request.getProjectName(), request.getProjectVersion(), request.getProjectTags(), parent, request.isLatestProjectVersion(), null);
+                        } else {
+                            return Response.status(Response.Status.UNAUTHORIZED)
+                                    .entity("The principal does not have permission to create project.").build();
                         }
-                    } else {
-                        return Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                     }
                     return process(qm, project, request.getBom());
                 });
@@ -574,9 +575,10 @@ public class BomResource extends AbstractApiResource {
                                     ? Arrays.stream(projectTags.split(",")).map(String::trim).filter(not(String::isEmpty)).map(org.dependencytrack.model.Tag::new).toList()
                                     : null;
                             createNewProject(projectName, projectVersion, tags, parent, isLatest, null);
+                        } else {
+                            return Response.status(Response.Status.UNAUTHORIZED)
+                                    .entity("The principal does not have permission to create project.").build();
                         }
-                    } else {
-                        return Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                     }
                     return process(qm, project, artifactParts);
                 });
