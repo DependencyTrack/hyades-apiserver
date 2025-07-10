@@ -2685,23 +2685,17 @@
             DECLARE
               -- List of tables to update
               referencing_tables TEXT[] := ARRAY['TEAMS_PERMISSIONS', 'USERS_PERMISSIONS', 'ROLES_PERMISSIONS'];
-
-              -- Parallel array of the “entity” column in each table
-              id_columns TEXT[] := ARRAY['TEAM_ID', 'USER_ID', 'ROLE_ID'];
-
-              tbl_name TEXT;
-              id_col   TEXT;
-              sql      TEXT;
-              idx      INT;
+              tbl_name           TEXT;
+              id_col             TEXT;
             BEGIN
               -- Loop through our arrays by index
-              FOR idx IN array_lower(referencing_tables,1) .. array_upper(referencing_tables,1)
+              FOREACH tbl_name IN ARRAY referencing_tables
               LOOP
-                tbl_name := referencing_tables[idx];
-                id_col   := id_columns[idx];
+                id_col := regexp_replace(tbl_name, '([A-Z]+?)S_PERMISSIONS', '\1') || '_ID';
 
-                -- Build dynamic SQL: CTE + UPDATE … FROM … NOT EXISTS
-                sql := format($fmt$
+                -- Build dynamic INSERT statement
+                EXECUTE format($fmt$
+                  -- Input mapping of old permission names to their updated counterparts
                   WITH cte_permission_map (old_names, new_names) AS (
                     VALUES
                       ('ACCESS_MANAGEMENT%%', ARRAY['ACCESS_MANAGEMENT']),
@@ -2722,6 +2716,7 @@
                       ('VULNERABILITY_ANALYSIS_UPDATE', ARRAY['FINDING_UPDATE']),
                       ('VULNERABILITY_MANAGEMENT%%', ARRAY['VULNERABILITY'])
                   ),
+                  -- Delete references to old permissions from join table, returning the affected entity IDs
                   cte_deleted_items AS (
                     DELETE FROM %I
                      USING cte_permission_map
@@ -2732,6 +2727,7 @@
                      )
                     RETURNING %I AS entity_id
                   ),
+                  -- Get IDs of new permissions
                   cte_new_permissions AS (
                     SELECT p."ID" AS permission_id
                       FROM cte_permission_map
@@ -2744,9 +2740,6 @@
                   ON CONFLICT DO NOTHING;
                   $fmt$, tbl_name, id_col, tbl_name, id_col
                 );
-
-                -- Execute the statement
-                EXECUTE sql;
 
                 RAISE NOTICE 'Updated table "%" on column "%" → new permission', tbl_name, id_col;
               END LOOP;
