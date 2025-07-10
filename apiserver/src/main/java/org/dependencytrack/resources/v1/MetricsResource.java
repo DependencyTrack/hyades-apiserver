@@ -31,12 +31,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
 import org.apache.commons.lang3.time.DateUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
@@ -56,6 +58,8 @@ import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.DateUtil;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -119,9 +123,14 @@ public class MetricsResource extends AbstractApiResource {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     @ResourceAccessRequired
     public Response getPortfolioCurrentMetrics() {
-        PortfolioMetrics metrics = withJdbiHandle(handle ->
-                handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
-        return Response.ok(metrics).build();
+        final Instant today = Instant.now().truncatedTo(ChronoUnit.DAYS);
+        final List<PortfolioMetrics> metrics = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle.attach(MetricsDao.class).getPortfolioMetricsSince(today));
+        return Response.ok(
+                !metrics.isEmpty()
+                        ? metrics.getFirst()
+                        : new PortfolioMetrics()).build();
     }
 
     @GET
@@ -150,7 +159,7 @@ public class MetricsResource extends AbstractApiResource {
         if (since == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The specified date format is incorrect.").build();
         }
-        List<PortfolioMetrics> metrics = withJdbiHandle(handle ->
+        List<PortfolioMetrics> metrics = withJdbiHandle(getAlpineRequest(), handle ->
                 handle.attach(MetricsDao.class).getPortfolioMetricsSince(since.toInstant()));
         return Response.ok(metrics).build();
     }
@@ -176,7 +185,7 @@ public class MetricsResource extends AbstractApiResource {
             @Parameter(description = "The number of days back to retrieve metrics for", required = true)
             @PathParam("days") int days) {
         final Date since = DateUtils.addDays(new Date(), -days);
-        List<PortfolioMetrics> metrics = withJdbiHandle(handle ->
+        List<PortfolioMetrics> metrics = withJdbiHandle(getAlpineRequest(), handle ->
                 handle.attach(MetricsDao.class).getPortfolioMetricsSince(since.toInstant()));
         return Response.ok(metrics).build();
     }

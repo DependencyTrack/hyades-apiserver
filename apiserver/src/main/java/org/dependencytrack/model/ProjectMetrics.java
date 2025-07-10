@@ -21,7 +21,6 @@ package org.dependencytrack.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.jdbi.v3.core.mapper.reflect.ColumnName;
 
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -39,80 +38,36 @@ public class ProjectMetrics implements Serializable {
     private static final long serialVersionUID = 8741534340846353210L;
 
     @JsonIgnore
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private long projectId;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private int critical;
-
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private int high;
-
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private int medium;
-
-    @NotNull
     private int low;
-
-    private Integer unassigned;
-
+    private int unassigned;
     private int vulnerabilities;
-
     private int vulnerableComponents;
-
     private int components;
-
     private int suppressed;
-
-    private Integer findingsTotal;
-
-    private Integer findingsAudited;
-
-    private Integer findingsUnaudited;
-
+    private int findingsTotal;
+    private int findingsAudited;
+    private int findingsUnaudited;
     private double inheritedRiskScore;
-
-    private Integer policyViolationsFail;
-
-    private Integer policyViolationsWarn;
-
-    private Integer policyViolationsInfo;
-
-    // New column, must allow nulls on existing data bases)
-    private Integer policyViolationsTotal;
-
-    // New column, must allow nulls on existing databases)
-    private Integer policyViolationsAudited;
-
-    // New column, must allow nulls on existing databases)
-    private Integer policyViolationsUnaudited;
-
-    // New column, must allow nulls on existing data bases)
-    private Integer policyViolationsSecurityTotal;
-
-    // New column, must allow nulls on existing data bases)
-    private Integer policyViolationsSecurityAudited;
-
-    // New column, must allow nulls on existing data bases)
-    private Integer policyViolationsSecurityUnaudited;
-
-    // New column, must allow nulls on existing data bases)
-    private Integer policyViolationsLicenseTotal;
-
-    // New column, must allow nulls on existing data bases)
-    private Integer policyViolationsLicenseAudited;
-
-    // New column, must allow nulls on existing data bases)
-    private Integer policyViolationsLicenseUnaudited;
-
-    // New column, must allow nulls on existing data bases)
-    private Integer policyViolationsOperationalTotal;
-
-    // New column, must allow nulls on existing data bases)
-    private Integer policyViolationsOperationalAudited;
-
-    // New column, must allow nulls on existing data bases)
-    private Integer policyViolationsOperationalUnaudited;
+    private int policyViolationsFail;
+    private int policyViolationsWarn;
+    private int policyViolationsInfo;
+    private int policyViolationsTotal;
+    private int policyViolationsAudited;
+    private int policyViolationsUnaudited;
+    private int policyViolationsSecurityTotal;
+    private int policyViolationsSecurityAudited;
+    private int policyViolationsSecurityUnaudited;
+    private int policyViolationsLicenseTotal;
+    private int policyViolationsLicenseAudited;
+    private int policyViolationsLicenseUnaudited;
+    private int policyViolationsOperationalTotal;
+    private int policyViolationsOperationalAudited;
+    private int policyViolationsOperationalUnaudited;
 
     @NotNull
     @Schema(type = "integer", format = "int64", requiredMode = Schema.RequiredMode.REQUIRED, description = "UNIX epoch timestamp in milliseconds")
@@ -163,7 +118,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getUnassigned() {
-        return unassigned != null ? unassigned : 0;
+        return unassigned;
     }
 
     public void setUnassigned(int unassigned) {
@@ -203,7 +158,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getFindingsTotal() {
-        return findingsTotal != null ? findingsTotal : 0;
+        return findingsTotal;
     }
 
     public void setFindingsTotal(int findingsTotal) {
@@ -211,7 +166,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getFindingsAudited() {
-        return findingsAudited != null ? findingsAudited : 0;
+        return findingsAudited;
     }
 
     public void setFindingsAudited(int findingsAudited) {
@@ -219,14 +174,13 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getFindingsUnaudited() {
-        return findingsUnaudited != null ? findingsUnaudited : 0;
+        return findingsUnaudited;
     }
 
     public void setFindingsUnaudited(int findingsUnaudited) {
         this.findingsUnaudited = findingsUnaudited;
     }
 
-    @ColumnName("RISKSCORE")
     public double getInheritedRiskScore() {
         return inheritedRiskScore;
     }
@@ -236,7 +190,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsFail() {
-        return policyViolationsFail != null ? policyViolationsFail : 0;
+        return policyViolationsFail;
     }
 
     public void setPolicyViolationsFail(int policyViolationsFail) {
@@ -244,7 +198,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsWarn() {
-        return policyViolationsWarn != null ? policyViolationsWarn : 0;
+        return policyViolationsWarn;
     }
 
     public void setPolicyViolationsWarn(int policyViolationsWarn) {
@@ -252,7 +206,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsInfo() {
-        return policyViolationsInfo != null ? policyViolationsInfo : 0;
+        return policyViolationsInfo;
     }
 
     public void setPolicyViolationsInfo(int policyViolationsInfo) {
@@ -260,7 +214,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsTotal() {
-        return policyViolationsTotal != null ? policyViolationsTotal : 0;
+        return policyViolationsTotal;
     }
 
     public void setPolicyViolationsTotal(int policyViolationsTotal) {
@@ -268,7 +222,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsAudited() {
-        return policyViolationsAudited != null ? policyViolationsAudited : 0;
+        return policyViolationsAudited;
     }
 
     public void setPolicyViolationsAudited(int policyViolationsAudited) {
@@ -276,7 +230,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsUnaudited() {
-        return policyViolationsUnaudited != null ? policyViolationsUnaudited : 0;
+        return policyViolationsUnaudited;
     }
 
     public void setPolicyViolationsUnaudited(int policyViolationsUnaudited) {
@@ -284,7 +238,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsSecurityTotal() {
-        return policyViolationsSecurityTotal != null ? policyViolationsSecurityTotal : 0;
+        return policyViolationsSecurityTotal;
     }
 
     public void setPolicyViolationsSecurityTotal(int policyViolationsSecurityTotal) {
@@ -292,7 +246,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsSecurityAudited() {
-        return policyViolationsSecurityAudited != null ? policyViolationsSecurityAudited : 0;
+        return policyViolationsSecurityAudited;
     }
 
     public void setPolicyViolationsSecurityAudited(int policyViolationsSecurityAudited) {
@@ -300,7 +254,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsSecurityUnaudited() {
-        return policyViolationsSecurityUnaudited != null ? policyViolationsSecurityUnaudited : 0;
+        return policyViolationsSecurityUnaudited;
     }
 
     public void setPolicyViolationsSecurityUnaudited(int policyViolationsSecurityUnaudited) {
@@ -308,7 +262,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsLicenseTotal() {
-        return policyViolationsLicenseTotal != null ? policyViolationsLicenseTotal : 0;
+        return policyViolationsLicenseTotal;
     }
 
     public void setPolicyViolationsLicenseTotal(int policyViolationsLicenseTotal) {
@@ -316,7 +270,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsLicenseAudited() {
-        return policyViolationsLicenseAudited != null ? policyViolationsLicenseAudited : 0;
+        return policyViolationsLicenseAudited;
     }
 
     public void setPolicyViolationsLicenseAudited(int policyViolationsLicenseAudited) {
@@ -324,7 +278,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsLicenseUnaudited() {
-        return policyViolationsLicenseUnaudited != null ? policyViolationsLicenseUnaudited : 0;
+        return policyViolationsLicenseUnaudited;
     }
 
     public void setPolicyViolationsLicenseUnaudited(int policyViolationsLicenseUnaudited) {
@@ -332,7 +286,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsOperationalTotal() {
-        return policyViolationsOperationalTotal != null ? policyViolationsOperationalTotal : 0;
+        return policyViolationsOperationalTotal;
     }
 
     public void setPolicyViolationsOperationalTotal(int policyViolationsOperationalTotal) {
@@ -340,7 +294,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsOperationalAudited() {
-        return policyViolationsOperationalAudited != null ? policyViolationsOperationalAudited : 0;
+        return policyViolationsOperationalAudited;
     }
 
     public void setPolicyViolationsOperationalAudited(int policyViolationsOperationalAudited) {
@@ -348,7 +302,7 @@ public class ProjectMetrics implements Serializable {
     }
 
     public int getPolicyViolationsOperationalUnaudited() {
-        return policyViolationsOperationalUnaudited != null ? policyViolationsOperationalUnaudited : 0;
+        return policyViolationsOperationalUnaudited;
     }
 
     public void setPolicyViolationsOperationalUnaudited(int policyViolationsOperationalUnaudited) {
@@ -369,39 +323,6 @@ public class ProjectMetrics implements Serializable {
 
     public void setLastOccurrence(Date lastOccurrence) {
         this.lastOccurrence = lastOccurrence;
-    }
-
-    @JsonIgnore
-    public boolean hasChanged(final ProjectMetrics comparedTo) {
-        return comparedTo == null
-                || comparedTo.getCritical() != this.critical
-                || comparedTo.getHigh() != this.high
-                || comparedTo.getMedium() != this.medium
-                || comparedTo.getLow() != this.low
-                || comparedTo.getUnassigned() != this.unassigned
-                || comparedTo.getVulnerabilities() != this.vulnerabilities
-                || comparedTo.getSuppressed() != this.suppressed
-                || comparedTo.getFindingsTotal() != this.findingsTotal
-                || comparedTo.getFindingsAudited() != this.findingsAudited
-                || comparedTo.getFindingsUnaudited() != this.findingsUnaudited
-                || comparedTo.getInheritedRiskScore() != this.inheritedRiskScore
-                || comparedTo.getPolicyViolationsFail() != this.policyViolationsFail
-                || comparedTo.getPolicyViolationsWarn() != this.policyViolationsWarn
-                || comparedTo.getPolicyViolationsInfo() != this.policyViolationsInfo
-                || comparedTo.getPolicyViolationsTotal() != this.policyViolationsTotal
-                || comparedTo.getPolicyViolationsAudited() != this.policyViolationsAudited
-                || comparedTo.getPolicyViolationsUnaudited() != this.policyViolationsUnaudited
-                || comparedTo.getPolicyViolationsSecurityTotal() != this.policyViolationsSecurityTotal
-                || comparedTo.getPolicyViolationsSecurityAudited() != this.policyViolationsSecurityAudited
-                || comparedTo.getPolicyViolationsSecurityUnaudited() != this.policyViolationsSecurityUnaudited
-                || comparedTo.getPolicyViolationsLicenseTotal() != this.policyViolationsLicenseTotal
-                || comparedTo.getPolicyViolationsLicenseAudited() != this.policyViolationsLicenseAudited
-                || comparedTo.getPolicyViolationsLicenseUnaudited() != this.policyViolationsLicenseUnaudited
-                || comparedTo.getPolicyViolationsOperationalTotal() != this.policyViolationsOperationalTotal
-                || comparedTo.getPolicyViolationsOperationalAudited() != this.policyViolationsOperationalAudited
-                || comparedTo.getPolicyViolationsOperationalUnaudited() != this.policyViolationsOperationalUnaudited
-                || comparedTo.getComponents() != this.components
-                || comparedTo.getVulnerableComponents() != this.vulnerableComponents;
     }
 
 }
