@@ -106,10 +106,6 @@ properties:
   policy_violations_operational_unaudited:
     type: integer
     format: int32
-  first_occurrence:
-    type: string
-    format: date-time
-    example: "2025-07-07T15:44:10.377Z"
   last_occurrence:
     type: string
     format: date-time
@@ -119,5 +115,4 @@ required:
   - high
   - medium
   - low
-  - first_occurrence
   - last_occurrence

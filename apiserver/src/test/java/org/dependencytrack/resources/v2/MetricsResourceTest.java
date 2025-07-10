@@ -34,10 +34,12 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.Date;
 import java.util.function.Supplier;
 
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
@@ -84,31 +86,80 @@ public class MetricsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void getVulnerabilityMetricsTest() {
+    public void getVulnerabilityMetricsPaginated() {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
-        var metrics = new VulnerabilityMetrics();
-        metrics.setYear(2024);
-        metrics.setCount(24);
-        metrics.setMeasuredAt(Date.from(Instant.now()));
-        qm.persist(metrics);
+        for (int i = 1; i < 4; i++) {
+            var metrics = new VulnerabilityMetrics();
+            metrics.setYear(2025);
+            metrics.setMonth(i);
+            metrics.setCount(i);
+            metrics.setMeasuredAt(Date.from(Instant.now()));
+            qm.persist(metrics);
+        }
 
-        metrics = new VulnerabilityMetrics();
-        metrics.setYear(2025);
-        metrics.setCount(25);
-        metrics.setMeasuredAt(Date.from(Instant.now()));
-        qm.persist(metrics);
-
-        final Supplier<Response> responseSupplier = () -> jersey
-                .target("metrics/vulnerability")
+        Response response = jersey.target("metrics/vulnerability")
+                .queryParam("limit", 2)
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
-
-        Response response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(200);
-        JsonArray json = parseJsonArray(response);
-        assertThat(json.size()).isEqualTo(2);
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "metrics" :
+                  [
+                      {
+                        "measured_at" : "${json-unit.any-number}",
+                        "year" : 2025,
+                        "month" : 1,
+                        "count" : 1
+                      },
+                      {
+                        "measured_at" : "${json-unit.any-number}",
+                        "year" : 2025,
+                        "month" : 2,
+                        "count" : 2
+                      }
+                  ],
+                  "_pagination" : {
+                    "links" : {
+                      "self" : "${json-unit.any-string}",
+                      "next": "${json-unit.any-string}"
+                    }
+                  }
+                }
+                """);
+
+        final var nextPageUri = URI.create(
+                responseJson
+                        .getJsonObject("_pagination")
+                        .getJsonObject("links")
+                        .getString("next"));
+
+        response = jersey.target(nextPageUri)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "metrics" :
+                  [
+                      {
+                        "measured_at" : "${json-unit.any-number}",
+                        "year" : 2025,
+                        "month" : 3,
+                        "count" : 3
+                      }
+                  ],
+                  "_pagination": {
+                    "links": {
+                      "self": "${json-unit.any-string}"
+                    }
+                  }
+                }
+                """);
     }
 }

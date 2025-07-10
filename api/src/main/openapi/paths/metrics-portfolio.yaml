@@ -29,5 +29,7 @@ get:
             $ref: "../components/schemas/portfolio-metrics-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
+    "403":
+      $ref: "../components/responses/generic-forbidden-error.yaml"
     default:
       $ref: "../components/responses/generic-error.yaml"

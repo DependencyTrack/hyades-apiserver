@@ -36,6 +36,8 @@ get:
             $ref: "../components/schemas/list-workflow-states-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
+    "403":
+      $ref: "../components/responses/generic-forbidden-error.yaml"
     "404":
       $ref: "../components/responses/generic-not-found-error.yaml"
     default:
