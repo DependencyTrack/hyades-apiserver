@@ -20,8 +20,10 @@ package org.dependencytrack.resources.v2;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.InputFormat;
+import com.networknt.schema.JsonMetaSchema;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.NonValidationKeyword;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import com.networknt.schema.oas.OpenApi30;
@@ -55,7 +57,11 @@ public class OpenApiValidationClientResponseFilter implements ClientResponseFilt
             JsonSchemaFactory.getInstance(
                     SpecVersion.VersionFlag.V4,
                     builder -> builder
-                            .metaSchema(OpenApi30.getInstance())
+                            .metaSchema(JsonMetaSchema.builder(OpenApi30.getInstance())
+                                    .keyword(new NonValidationKeyword("exampleSetFlag"))
+                                    .keyword(new NonValidationKeyword("extensions"))
+                                    .keyword(new NonValidationKeyword("types"))
+                                    .build())
                             .defaultMetaSchemaIri(OpenApi30.getInstance().getIri()));
 
     private final OpenAPI openApiSpec;
@@ -70,6 +76,11 @@ public class OpenApiValidationClientResponseFilter implements ClientResponseFilt
     public void filter(
             final ClientRequestContext requestContext,
             final ClientResponseContext responseContext) throws IOException {
+        if ("/openapi.yaml".equals(requestContext.getUri().getPath())) {
+            // The spec itself is not part of the API surface.
+            return;
+        }
+
         final Operation operationDef = findOpenApiOperation(requestContext);
         if (operationDef == null) {
             // Undocumented request?
