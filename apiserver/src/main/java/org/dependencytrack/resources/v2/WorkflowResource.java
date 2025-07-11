@@ -28,6 +28,7 @@ import org.dependencytrack.persistence.QueryManager;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Provider
 public class WorkflowResource implements WorkflowApi {
@@ -41,9 +42,10 @@ public class WorkflowResource implements WorkflowApi {
                 return Response.status(Response.Status.NOT_FOUND).entity("Provided token " + uuid + " does not exist.").build();
             }
         }
-        List<ListWorkflowStatesResponseItem> states = List.of();
-        workflowStates.stream().map(workflowState -> states.add(mapWorkflowStateResponse(workflowState)));
-        return Response.ok(workflowStates).build();
+        List<ListWorkflowStatesResponseItem> states = workflowStates.stream()
+                .map(this::mapWorkflowStateResponse)
+                .collect(Collectors.toList());
+        return Response.ok(states).build();
     }
 
     private ListWorkflowStatesResponseItem mapWorkflowStateResponse(WorkflowState workflowState) {
@@ -52,11 +54,15 @@ public class WorkflowResource implements WorkflowApi {
                 .status(ListWorkflowStatesResponseItem.StatusEnum.fromString(workflowState.getStatus().name()))
                 .step(ListWorkflowStatesResponseItem.StepEnum.fromString(workflowState.getStep().name()))
                 .failureReason(workflowState.getFailureReason())
-                .startedAt(workflowState.getStartedAt().toInstant().atOffset(ZoneOffset.UTC))
-                .updatedAt(workflowState.getUpdatedAt().toInstant().atOffset(ZoneOffset.UTC))
                 .build();
         if (workflowState.getParent() != null) {
             mappedState.setParent(mapWorkflowStateResponse(workflowState.getParent()));
+        }
+        if (workflowState.getStartedAt() != null) {
+            mappedState.setStartedAt(workflowState.getStartedAt().toInstant().atOffset(ZoneOffset.UTC));
+        }
+        if (workflowState.getUpdatedAt() != null) {
+            mappedState.setUpdatedAt(workflowState.getUpdatedAt().toInstant().atOffset(ZoneOffset.UTC));
         }
         return mappedState;
     }

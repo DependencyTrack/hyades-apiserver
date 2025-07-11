@@ -92,12 +92,12 @@ public class WorkflowResourceTest extends ResourceTest {
                         "token": "${json-unit.matches:token}",
                         "step": "${json-unit.matches:step1}",
                         "status": "${json-unit.matches:status1}",
-                        "updatedAt": "${json-unit.any-number}"
+                        "updated_at": "${json-unit.any-number}"
                     },
                     {
                         "token": "${json-unit.matches:token}",
-                        "startedAt": "${json-unit.any-number}",
-                        "updatedAt": "${json-unit.any-number}",
+                        "started_at": "${json-unit.any-number}",
+                        "updated_at": "${json-unit.any-number}",
                         "step": "${json-unit.matches:step2}",
                         "status": "${json-unit.matches:status2}"
                     }]

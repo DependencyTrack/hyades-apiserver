@@ -33,10 +33,13 @@ get:
       content:
         application/json:
           schema:
-            type: array
-            items:
-              type: object
-              $ref: "../components/schemas/list-workflow-states-response-item.yaml"
+            type: object
+            properties:
+              states:
+                type: array
+                items:
+                  type: object
+                  $ref: "../components/schemas/list-workflow-states-response-item.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
