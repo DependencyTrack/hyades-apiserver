@@ -20,6 +20,7 @@ package org.dependencytrack;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.dependencytrack.resources.v2.OpenApiValidationClientResponseFilter;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.grizzly.connector.GrizzlyConnectorProvider;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -45,6 +46,7 @@ public class JerseyTestRule extends ExternalResource {
     private final JerseyTest jerseyTest;
 
     public JerseyTestRule(final ResourceConfig resourceConfig) {
+        final boolean isV2 = isV2(resourceConfig);
         this.jerseyTest = new JerseyTest() {
 
             @Override
@@ -58,19 +60,15 @@ public class JerseyTestRule extends ExternalResource {
                 // using the default HttpUrlConnection connector provider.
                 // See https://github.com/eclipse-ee4j/jersey/issues/4825
                 config.connectorProvider(new GrizzlyConnectorProvider());
+
+                if (isV2) {
+                    config.register(OpenApiValidationClientResponseFilter.class);
+                }
             }
 
             @Override
             protected DeploymentContext configureDeployment() {
                 forceSet(TestProperties.CONTAINER_PORT, "0");
-
-                boolean isV2 = false;
-                for (final Class<?> clazz : resourceConfig.getClasses()) {
-                    if (clazz.getPackageName().startsWith("org.dependencytrack.resources.v2")) {
-                        isV2 = true;
-                        break;
-                    }
-                }
 
                 // Ensure exception mappers are registered.
                 if (isV2) {
@@ -120,6 +118,16 @@ public class JerseyTestRule extends ExternalResource {
         }
 
         return target;
+    }
+
+    private boolean isV2(final ResourceConfig resourceConfig) {
+        for (final Class<?> clazz : resourceConfig.getClasses()) {
+            if (clazz.getPackageName().startsWith("org.dependencytrack.resources.v2")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

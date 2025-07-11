@@ -52,14 +52,20 @@ post:
         schema:
           $ref: "../components/schemas/bulk-create-teams-request.yaml"
   responses:
-    "201":
+    "207":
       description: Team creation results
       content:
         application/json:
           schema:
             $ref: "../components/schemas/bulk-create-teams-response.yaml"
     "400":
-      $ref: "../components/responses/invalid-request-error.yaml"
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            oneOf:
+            - $ref: "../components/schemas/invalid-request-problem-details.yaml"
+            - $ref: "../components/schemas/problem-details.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
