@@ -21,18 +21,16 @@ package org.dependencytrack.resources.v2;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.WorkflowApi;
+import org.dependencytrack.api.v2.model.ListWorkflowStatesResponseItem;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
 @Provider
 public class WorkflowResource implements WorkflowApi {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowResource.class);
 
     @Override
     public Response getWorkflowStates(String uuid) {
@@ -42,10 +40,24 @@ public class WorkflowResource implements WorkflowApi {
             if (workflowStates.isEmpty()) {
                 return Response.status(Response.Status.NOT_FOUND).entity("Provided token " + uuid + " does not exist.").build();
             }
-        } catch (Exception e) {
-            LOGGER.error("An error occurred while fetching workflow status", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
+        List<ListWorkflowStatesResponseItem> states = List.of();
+        workflowStates.stream().map(workflowState -> states.add(mapWorkflowStateResponse(workflowState)));
         return Response.ok(workflowStates).build();
+    }
+
+    private ListWorkflowStatesResponseItem mapWorkflowStateResponse(WorkflowState workflowState) {
+        var mappedState = ListWorkflowStatesResponseItem.builder()
+                .token(workflowState.getToken())
+                .status(ListWorkflowStatesResponseItem.StatusEnum.fromString(workflowState.getStatus().name()))
+                .step(ListWorkflowStatesResponseItem.StepEnum.fromString(workflowState.getStep().name()))
+                .failureReason(workflowState.getFailureReason())
+                .startedAt(workflowState.getStartedAt().toInstant().atOffset(ZoneOffset.UTC))
+                .updatedAt(workflowState.getUpdatedAt().toInstant().atOffset(ZoneOffset.UTC))
+                .build();
+        if (workflowState.getParent() != null) {
+            mappedState.setParent(mapWorkflowStateResponse(workflowState.getParent()));
+        }
+        return mappedState;
     }
 }

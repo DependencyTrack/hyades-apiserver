@@ -36,25 +36,24 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 
-import static org.dependencytrack.util.PageUtil.decodePageToken;
-import static org.dependencytrack.util.PageUtil.encodePageToken;
+import static org.dependencytrack.persistence.pagination.PageUtil.decodePageToken;
+import static org.dependencytrack.persistence.pagination.PageUtil.encodePageToken;
 
 /**
  * @since 5.6.0
  */
 public interface MetricsDao extends SqlObject {
 
-    record ListVulnerabilityMetricsToken(int year, int month) {
+    record ListVulnerabilityMetricsPageToken(int year, int month) {
     }
 
     record ListVulnerabilityMetricsRow(int year, int month, int count, Instant measuredAt) {
     }
 
     default Page<ListVulnerabilityMetricsRow> getVulnerabilityMetrics(final int limit, final String pageToken) {
-        final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListVulnerabilityMetricsToken.class);
+        final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListVulnerabilityMetricsPageToken.class);
 
         final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="year" type="Boolean" -->
@@ -85,8 +84,8 @@ public interface MetricsDao extends SqlObject {
                 ? rows.subList(0, Math.min(rows.size(), limit))
                 : rows;
 
-        final ListVulnerabilityMetricsToken nextPageToken = rows.size() > limit
-                ? new ListVulnerabilityMetricsToken(resultRows.getLast().year, resultRows.getLast().month)
+        final ListVulnerabilityMetricsPageToken nextPageToken = rows.size() > limit
+                ? new ListVulnerabilityMetricsPageToken(resultRows.getLast().year, resultRows.getLast().month)
                 : null;
 
         return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));

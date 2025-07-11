@@ -33,7 +33,7 @@ import java.time.ZoneOffset;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
-import static org.dependencytrack.util.PageUtil.createPaginationMetadata;
+import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 
 public class MetricsResource implements MetricsApi {
 

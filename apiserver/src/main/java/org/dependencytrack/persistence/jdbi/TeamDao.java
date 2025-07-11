@@ -29,8 +29,8 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import java.util.Collection;
 import java.util.List;
 
-import static org.dependencytrack.util.PageUtil.decodePageToken;
-import static org.dependencytrack.util.PageUtil.encodePageToken;
+import static org.dependencytrack.persistence.pagination.PageUtil.decodePageToken;
+import static org.dependencytrack.persistence.pagination.PageUtil.encodePageToken;
 
 public interface TeamDao extends SqlObject {
 

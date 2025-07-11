@@ -1,11 +1,9 @@
-package org.dependencytrack.util;
+package org.dependencytrack.persistence.pagination;
 
 import alpine.security.crypto.DataEncryption;
 import jakarta.ws.rs.core.UriInfo;
 import org.dependencytrack.api.v2.model.PaginationLinks;
 import org.dependencytrack.api.v2.model.PaginationMetadata;
-import org.dependencytrack.persistence.pagination.InvalidPageTokenException;
-import org.dependencytrack.persistence.pagination.Page;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.json.JsonConfig;
 import org.jdbi.v3.json.JsonMapper;

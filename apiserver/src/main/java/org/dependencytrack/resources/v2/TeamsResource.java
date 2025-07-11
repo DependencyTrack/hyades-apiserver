@@ -64,7 +64,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
-import static org.dependencytrack.util.PageUtil.createPaginationMetadata;
+import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 
 @Provider
 public class TeamsResource implements TeamsApi {

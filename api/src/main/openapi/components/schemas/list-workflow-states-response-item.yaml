@@ -17,7 +17,7 @@
 type: object
 properties:
   parent:
-    $ref: './list-workflow-states-response.yaml'
+    $ref: './list-workflow-states-response-item.yaml'
   step:
     type: string
     enum:
