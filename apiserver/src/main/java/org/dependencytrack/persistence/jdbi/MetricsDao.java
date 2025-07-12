@@ -40,16 +40,104 @@ import java.util.List;
  */
 public interface MetricsDao extends SqlObject {
 
-    @SqlQuery("""
-            SELECT * FROM "PORTFOLIOMETRICS"
+    @SqlQuery(/* language=InjectedFreeMarker */ """
+            <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
+            <#if !apiProjectAclCondition?has_content || apiProjectAclCondition?c_lower_case == "true">
+            SELECT *, "RISKSCORE" AS inherited_risk_score
+            FROM "PORTFOLIOMETRICS"
             WHERE "LAST_OCCURRENCE" >= :since
-            ORDER BY "LAST_OCCURRENCE" ASC
+            ORDER BY "LAST_OCCURRENCE"
+            <#else>
+            WITH
+            date_range AS(
+              SELECT CAST(GENERATE_SERIES(
+                DATE_TRUNC('day', CAST(:since AS TIMESTAMPTZ), (SELECT CURRENT_SETTING('TIMEZONE'))),
+                DATE_TRUNC('day', CURRENT_DATE),
+                INTERVAL '1 day'
+              ) AS DATE) AS "date"
+            ),
+            daily_metrics AS(
+              SELECT COUNT(DISTINCT "PROJECT_ID") AS projects
+                   , SUM("COMPONENTS") AS components
+                   , SUM("CRITICAL") AS critical
+                   , CAST(DATE_TRUNC('day', "LAST_OCCURRENCE") AS DATE) AS "date"
+                   , SUM("FINDINGS_AUDITED") AS findings_audited
+                   , SUM("FINDINGS_TOTAL") AS findings_total
+                   , SUM("FINDINGS_UNAUDITED") AS findings_unaudited
+                   , SUM("HIGH") AS high
+                   , SUM("RISKSCORE") as inherited_risk_score
+                   , SUM("LOW") AS low
+                   , SUM("MEDIUM") AS medium
+                   , SUM("POLICYVIOLATIONS_AUDITED") AS policy_violations_audited
+                   , SUM("POLICYVIOLATIONS_FAIL") AS policy_violations_fail
+                   , SUM("POLICYVIOLATIONS_INFO") AS policy_violations_info
+                   , SUM("POLICYVIOLATIONS_LICENSE_AUDITED") AS policy_violations_license_audited
+                   , SUM("POLICYVIOLATIONS_LICENSE_TOTAL") AS policy_violations_license_total
+                   , SUM("POLICYVIOLATIONS_LICENSE_UNAUDITED") AS policy_violations_license_unaudited
+                   , SUM("POLICYVIOLATIONS_OPERATIONAL_AUDITED") AS policy_violations_operational_audited
+                   , SUM("POLICYVIOLATIONS_OPERATIONAL_TOTAL") AS policy_violations_operational_total
+                   , SUM("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED") AS policy_violations_operational_unaudited
+                   , SUM("POLICYVIOLATIONS_SECURITY_AUDITED") AS policy_violations_security_audited
+                   , SUM("POLICYVIOLATIONS_SECURITY_TOTAL") AS policy_violations_security_total
+                   , SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED") AS policy_violations_security_unaudited
+                   , SUM("POLICYVIOLATIONS_TOTAL") AS policy_violations_total
+                   , SUM("POLICYVIOLATIONS_UNAUDITED") AS policy_violations_unaudited
+                   , SUM("POLICYVIOLATIONS_WARN") AS policy_violations_warn
+                   , SUM("SUPPRESSED") AS suppressed
+                   , SUM("UNASSIGNED_SEVERITY") AS unassigned
+                   , SUM("VULNERABILITIES") AS vulnerabilities
+                   , SUM("VULNERABLECOMPONENTS") AS vulnerable_components
+                   , SUM(CASE WHEN "VULNERABLECOMPONENTS" > 0 THEN 1 ELSE 0 END) AS vulnerable_projects
+                FROM "PROJECTMETRICS"
+               WHERE "LAST_OCCURRENCE" >= DATE_TRUNC('day', CAST(:since AS TIMESTAMPTZ), (SELECT CURRENT_SETTING('TIMEZONE')))
+                 AND "LAST_OCCURRENCE" < DATE_TRUNC('day', CURRENT_DATE + INTERVAL '1 day')
+                 AND ${apiProjectAclCondition}
+               GROUP BY DATE_TRUNC('day', "LAST_OCCURRENCE")
+            )
+            SELECT COALESCE(dm.components, 0) AS components
+                 , COALESCE(dm.critical, 0) AS critical
+                 , COALESCE(dm.findings_audited, 0) AS findings_audited
+                 , COALESCE(dm.findings_total, 0) AS findings_total
+                 , COALESCE(dm.findings_unaudited, 0) AS findings_unaudited
+                 , date_range."date" AS first_occurrence
+                 , COALESCE(dm.high, 0) AS high
+                 , COALESCE(dm.inherited_risk_score, 0) AS inherited_risk_score
+                 , date_range."date" AS last_occurrence
+                 , COALESCE(dm.low, 0) AS low
+                 , COALESCE(dm.medium, 0) AS medium
+                 , COALESCE(dm.policy_violations_audited, 0) AS policy_violations_audited
+                 , COALESCE(dm.policy_violations_fail, 0) AS policy_violations_fail
+                 , COALESCE(dm.policy_violations_info, 0) AS policy_violations_info
+                 , COALESCE(dm.policy_violations_license_audited, 0) AS policy_violations_license_audited
+                 , COALESCE(dm.policy_violations_license_total, 0) AS policy_violations_license_total
+                 , COALESCE(dm.policy_violations_license_unaudited, 0) AS policy_violations_license_unaudited
+                 , COALESCE(dm.policy_violations_operational_audited, 0) AS policy_violations_operational_audited
+                 , COALESCE(dm.policy_violations_operational_total, 0) AS policy_violations_operational_total
+                 , COALESCE(dm.policy_violations_operational_unaudited, 0) AS policy_violations_operational_unaudited
+                 , COALESCE(dm.policy_violations_security_audited, 0) AS policy_violations_security_audited
+                 , COALESCE(dm.policy_violations_security_total, 0) AS policy_violations_security_total
+                 , COALESCE(dm.policy_violations_security_unaudited, 0) AS policy_violations_security_unaudited
+                 , COALESCE(dm.policy_violations_total, 0) AS policy_violations_total
+                 , COALESCE(dm.policy_violations_unaudited, 0) AS policy_violations_unaudited
+                 , COALESCE(dm.policy_violations_warn, 0) AS policy_violations_warn
+                 , COALESCE(dm.projects, 0) AS projects
+                 , COALESCE(dm.suppressed, 0) AS suppressed
+                 , COALESCE(dm.unassigned, 0) AS unassigned
+                 , COALESCE(dm.vulnerabilities, 0) AS vulnerabilities
+                 , COALESCE(dm.vulnerable_components, 0) AS vulnerable_components
+                 , COALESCE(dm.vulnerable_projects, 0) AS vulnerable_projects
+              FROM date_range
+              LEFT JOIN daily_metrics AS dm
+                ON date_range."date" = dm."date"
+             ORDER BY date_range."date";
+            </#if>
             """)
     @RegisterBeanMapper(PortfolioMetrics.class)
+    @DefineApiProjectAclCondition(projectIdColumn = "\"PROJECTMETRICS\".\"PROJECT_ID\"")
     List<PortfolioMetrics> getPortfolioMetricsSince(@Bind Instant since);
 
     @SqlQuery("""
-            SELECT * FROM "PROJECTMETRICS"
+            SELECT *, "RISKSCORE" AS inherited_risk_score FROM "PROJECTMETRICS"
             WHERE "PROJECT_ID" = :projectId
             AND "LAST_OCCURRENCE" >= :since
             ORDER BY "LAST_OCCURRENCE" ASC
@@ -58,7 +146,7 @@ public interface MetricsDao extends SqlObject {
     List<ProjectMetrics> getProjectMetricsSince(@Bind long projectId, @Bind Instant since);
 
     @SqlQuery("""
-            SELECT * FROM "DEPENDENCYMETRICS"
+            SELECT *, "RISKSCORE" AS inherited_risk_score FROM "DEPENDENCYMETRICS"
             WHERE "COMPONENT_ID" = :componentId
             AND "LAST_OCCURRENCE" >= :since
             ORDER BY "LAST_OCCURRENCE" ASC
@@ -67,7 +155,7 @@ public interface MetricsDao extends SqlObject {
     List<DependencyMetrics> getDependencyMetricsSince(@Bind long componentId, @Bind Instant since);
 
     @SqlQuery("""
-            SELECT *
+            SELECT *, "RISKSCORE" AS inherited_risk_score
             FROM "PORTFOLIOMETRICS"
             ORDER BY "LAST_OCCURRENCE" DESC
             LIMIT 1
@@ -76,7 +164,7 @@ public interface MetricsDao extends SqlObject {
     PortfolioMetrics getMostRecentPortfolioMetrics();
 
     @SqlQuery("""
-            SELECT *
+            SELECT *, "RISKSCORE" AS inherited_risk_score
             FROM "PROJECTMETRICS"
             WHERE "PROJECT_ID" = :projectId
             ORDER BY "LAST_OCCURRENCE" DESC
@@ -86,7 +174,7 @@ public interface MetricsDao extends SqlObject {
     ProjectMetrics getMostRecentProjectMetrics(@Bind final long projectId);
 
     @SqlQuery("""
-            SELECT metrics.*
+            SELECT metrics.*, metrics."RISKSCORE" AS inherited_risk_score
               FROM UNNEST(:projectIds) AS project(id)
              INNER JOIN LATERAL (
                SELECT *
@@ -100,7 +188,7 @@ public interface MetricsDao extends SqlObject {
     List<ProjectMetrics> getMostRecentProjectMetrics(@Bind Collection<Long> projectIds);
 
     @SqlQuery("""
-            SELECT *
+            SELECT *, "RISKSCORE" AS inherited_risk_score
             FROM "DEPENDENCYMETRICS"
             WHERE "COMPONENT_ID" = :componentId
             ORDER BY "LAST_OCCURRENCE" DESC
@@ -110,7 +198,7 @@ public interface MetricsDao extends SqlObject {
     DependencyMetrics getMostRecentDependencyMetrics(@Bind long componentId);
 
     @SqlQuery("""
-            SELECT metrics.*
+            SELECT metrics.*, metrics."RISKSCORE" AS inherited_risk_score
               FROM UNNEST(:componentIds) AS component(id)
              INNER JOIN LATERAL (
                SELECT *
