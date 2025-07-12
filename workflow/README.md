@@ -1,7 +1,8 @@
 # workflow
 
-Embedded durable execution engine, optimized for PostgreSQL, and heavily influenced by
-Microsoft's [Durable Task Framework](https://github.com/Azure/durabletask)
+Embedded durable execution ("workflows-as-code") engine, optimized for PostgreSQL.
+
+Heavily influenced by Microsoft's [Durable Task Framework](https://github.com/Azure/durabletask)
 and [Temporal](https://github.com/temporalio/temporal).
 
 ## Structure

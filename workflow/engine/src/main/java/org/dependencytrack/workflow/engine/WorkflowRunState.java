@@ -46,7 +46,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.SequencedCollection;
 import java.util.UUID;
 
@@ -120,8 +119,9 @@ final class WorkflowRunState {
         return workflowVersion;
     }
 
-    Optional<String> concurrencyGroupId() {
-        return Optional.ofNullable(concurrencyGroupId);
+    @Nullable
+    String concurrencyGroupId() {
+        return concurrencyGroupId;
     }
 
     List<WorkflowEvent> history() {
@@ -148,48 +148,58 @@ final class WorkflowRunState {
         return status;
     }
 
-    Optional<String> customStatus() {
-        return Optional.ofNullable(customStatus);
+    @Nullable
+    String customStatus() {
+        return customStatus;
     }
 
     void setCustomStatus(final String customStatus) {
         this.customStatus = customStatus;
     }
 
-    Optional<Integer> priority() {
-        return Optional.ofNullable(priority);
+    @Nullable
+    Integer priority() {
+        return priority;
     }
 
-    Optional<Map<String, String>> labels() {
-        return Optional.ofNullable(labels);
+    @Nullable
+    Map<String, String> labels() {
+        return labels;
     }
 
-    Optional<WorkflowPayload> argument() {
-        return Optional.ofNullable(argument);
+    @Nullable
+    WorkflowPayload argument() {
+        return argument;
     }
 
-    Optional<WorkflowPayload> result() {
-        return Optional.ofNullable(result);
+    @Nullable
+    WorkflowPayload result() {
+        return result;
     }
 
-    Optional<WorkflowFailure> failure() {
-        return Optional.ofNullable(failure);
+    @Nullable
+    WorkflowFailure failure() {
+        return failure;
     }
 
-    Optional<Instant> createdAt() {
-        return Optional.ofNullable(createdAt);
+    @Nullable
+    Instant createdAt() {
+        return createdAt;
     }
 
-    Optional<Instant> updatedAt() {
-        return Optional.ofNullable(updatedAt);
+    @Nullable
+    Instant updatedAt() {
+        return updatedAt;
     }
 
-    Optional<Instant> startedAt() {
-        return Optional.ofNullable(startedAt);
+    @Nullable
+    Instant startedAt() {
+        return startedAt;
     }
 
-    Optional<Instant> completedAt() {
-        return Optional.ofNullable(completedAt);
+    @Nullable
+    Instant completedAt() {
+        return completedAt;
     }
 
     boolean continuedAsNew() {

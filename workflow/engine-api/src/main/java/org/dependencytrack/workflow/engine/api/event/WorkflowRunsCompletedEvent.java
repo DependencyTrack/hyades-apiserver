@@ -16,21 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
+package org.dependencytrack.workflow.engine.api.event;
 
-import org.jspecify.annotations.NullMarked;
+import org.dependencytrack.workflow.engine.api.WorkflowRun;
 
-@NullMarked
-module org.dependencytrack.workflow.engine.api {
-    exports org.dependencytrack.workflow.engine.api;
-    exports org.dependencytrack.workflow.engine.api.event;
-    exports org.dependencytrack.workflow.engine.api.pagination;
-    exports org.dependencytrack.workflow.engine.api.request;
+import java.util.List;
 
-    requires io.github.resilience4j.core;
-    requires java.sql;
-    requires micrometer.core;
-    requires org.dependencytrack.proto;
-    requires org.dependencytrack.workflow.api;
-
-    requires static org.jspecify;
+/**
+ * A {@link WorkflowEngineEvent} that informs about one or more {@link WorkflowRun}s having completed.
+ *
+ * @param completedRuns The completed {@link WorkflowRun}s
+ */
+public record WorkflowRunsCompletedEvent(List<WorkflowRun> completedRuns) implements WorkflowEngineEvent {
 }

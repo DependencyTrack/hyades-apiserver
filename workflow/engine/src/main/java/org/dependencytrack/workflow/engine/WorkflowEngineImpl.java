@@ -52,6 +52,10 @@ import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
+import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEvent;
+import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEventListener;
+import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEvent;
+import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
@@ -164,11 +168,13 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private final MetadataRegistry metadataRegistry = new MetadataRegistry();
     private final Set<WorkflowGroup> workflowGroups = new HashSet<>();
     private final Set<ActivityGroup> activityGroups = new HashSet<>();
+    private final List<WorkflowRunsCompletedEventListener> runsCompletedEventListeners = new ArrayList<>();
     private Status status = Status.CREATED;
     @Nullable private ExecutorService taskDispatcherExecutor;
     @Nullable private Map<String, ExecutorService> executorServiceByName;
     @Nullable private ScheduledExecutorService schedulerExecutor;
     @Nullable private ScheduledExecutorService retentionExecutor;
+    @Nullable private ExecutorService eventListenerExecutor;
     @Nullable private Buffer<NewExternalEvent> externalEventBuffer;
     @Nullable private Buffer<TaskCommand> taskCommandBuffer;
     @Nullable private Cache<UUID, CachedWorkflowRunHistory> cachedHistoryByRunId;
@@ -207,6 +213,18 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         cachedHistoryByRunId = runHistoryCacheBuilder.build();
         if (config.meterRegistry() != null) {
             new CaffeineCacheMetrics<>(cachedHistoryByRunId, "WorkflowEngine-RunHistoryCache", null);
+        }
+
+        if (!runsCompletedEventListeners.isEmpty()) {
+            LOGGER.debug("Starting event listener executor");
+            eventListenerExecutor = Executors.newSingleThreadExecutor(
+                    new DefaultThreadFactory("WorkflowEngine-EventListener"));
+            if (config.meterRegistry() != null) {
+                new ExecutorServiceMetrics(eventListenerExecutor, "WorkflowEngine-EventListener", null)
+                        .bindTo(config.meterRegistry());
+            }
+        } else {
+            LOGGER.debug("No event listeners registered");
         }
 
         LOGGER.debug("Starting external event buffer");
@@ -331,6 +349,12 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             taskCommandBuffer = null;
         }
 
+        if (eventListenerExecutor != null) {
+            eventListenerExecutor.close();
+            eventListenerExecutor = null;
+            runsCompletedEventListeners.clear();
+        }
+
         if (cachedHistoryByRunId != null) {
             cachedHistoryByRunId.invalidateAll();
             cachedHistoryByRunId = null;
@@ -412,6 +436,15 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
 
         activityGroups.add(group);
+    }
+
+    @Override
+    public void addEventListener(final WorkflowEngineEventListener<?> listener) {
+        requireStatusAnyOf(Status.CREATED, Status.STOPPED);
+        requireNonNull(listener, "listener must not be null");
+        switch (listener) {
+            case WorkflowRunsCompletedEventListener it -> runsCompletedEventListeners.add(it);
+        }
     }
 
     @Override
@@ -885,7 +918,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private void completeWorkflowTasksInternal(
             final WorkflowDao workflowDao,
             final WorkflowActivityDao activityDao,
-            final Collection<CompleteWorkflowTaskCommand> commands) {
+            final Collection<CompleteWorkflowTaskCommand> commands,
+            final Collection<WorkflowEngineEvent> engineEvents) {
         final List<WorkflowRunState> actionableRuns = commands.stream()
                 .map(CompleteWorkflowTaskCommand::workflowRunState)
                 .collect(Collectors.toList());
@@ -896,11 +930,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                         .map(run -> new UpdateAndUnlockRunCommand(
                                 run.id(),
                                 run.status(),
-                                run.customStatus().orElse(null),
-                                run.createdAt().orElse(null),
-                                run.updatedAt().orElse(null),
-                                run.startedAt().orElse(null),
-                                run.completedAt().orElse(null)))
+                                run.customStatus(),
+                                run.createdAt(),
+                                run.updatedAt(),
+                                run.startedAt(),
+                                run.completedAt()))
                         .toList());
 
         if (updatedRunIds.size() != commands.size()) {
@@ -924,8 +958,25 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var createActivityTaskCommands = new ArrayList<CreateActivityTaskCommand>();
         final var nextRunIdByNewConcurrencyGroupId = new HashMap<String, UUID>();
         final var concurrencyGroupsToUpdate = new HashSet<String>();
+        final var completedRuns = new ArrayList<WorkflowRun>();
 
         for (final WorkflowRunState run : actionableRuns) {
+            if (!runsCompletedEventListeners.isEmpty() && run.status().isTerminal()) {
+                completedRuns.add(new WorkflowRun(
+                        run.id(),
+                        run.workflowName(),
+                        run.workflowVersion(),
+                        run.status(),
+                        run.customStatus(),
+                        run.priority(),
+                        run.concurrencyGroupId(),
+                        run.labels(),
+                        run.createdAt(),
+                        run.updatedAt(),
+                        run.startedAt(),
+                        run.completedAt()));
+            }
+
             int sequenceNumber = run.history().size();
             for (final WorkflowEvent newEvent : run.inbox()) {
                 createHistoryEntryCommands.add(
@@ -1029,8 +1080,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 continuedAsNewRunIds.add(run.id());
             }
 
-            if (run.status().isTerminal() && run.concurrencyGroupId().isPresent()) {
-                concurrencyGroupsToUpdate.add(run.concurrencyGroupId().get());
+            if (run.status().isTerminal() && run.concurrencyGroupId() != null) {
+                concurrencyGroupsToUpdate.add(run.concurrencyGroupId());
             }
         }
 
@@ -1100,6 +1151,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     LOGGER.debug("Concurrency group {}: {}", entry.getKey(), entry.getValue());
                 }
             }
+        }
+
+        if (!completedRuns.isEmpty()) {
+            engineEvents.add(new WorkflowRunsCompletedEvent(completedRuns));
         }
     }
 
@@ -1233,6 +1288,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     private void executeTaskCommands(final List<TaskCommand> commands) {
+        final var engineEvents = new ArrayList<WorkflowEngineEvent>();
+
         jdbi.useTransaction(handle -> {
             final var workflowDao = new WorkflowDao(handle);
             final var activityDao = new WorkflowActivityDao(handle);
@@ -1266,9 +1323,27 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 abandonWorkflowTasksInternal(workflowDao, abandonWorkflowTaskCommands);
             }
             if (!completeWorkflowTaskCommands.isEmpty()) {
-                completeWorkflowTasksInternal(workflowDao, activityDao, completeWorkflowTaskCommands);
+                completeWorkflowTasksInternal(workflowDao, activityDao, completeWorkflowTaskCommands, engineEvents);
             }
         });
+
+        maybeNotifyEventListeners(engineEvents);
+    }
+
+    private void maybeNotifyEventListeners(final Collection<WorkflowEngineEvent> events) {
+        if (eventListenerExecutor == null || events.isEmpty()) {
+            return;
+        }
+
+        for (final WorkflowEngineEvent event : events) {
+            switch (event) {
+                case WorkflowRunsCompletedEvent it -> {
+                    for (final WorkflowRunsCompletedEventListener listener : runsCompletedEventListeners) {
+                        eventListenerExecutor.execute(() -> listener.onEvent(it));
+                    }
+                }
+            }
+        }
     }
 
     public List<WorkflowEvent> getRunInbox(final UUID runId) {

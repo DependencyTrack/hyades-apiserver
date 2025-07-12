@@ -33,6 +33,7 @@ import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
+import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEventListener;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
@@ -53,6 +54,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -797,7 +799,7 @@ class WorkflowEngineImplTest {
         engine.mount(new ActivityGroup("test-group").withActivity("abc"));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -1031,12 +1033,52 @@ class WorkflowEngineImplTest {
     }
 
     @Test
+    void shouldInformEventListenersAboutCompletedRuns() {
+        final var completedRuns = new ArrayList<WorkflowRun>();
+        engine.addEventListener((WorkflowRunsCompletedEventListener) event -> {
+            completedRuns.addAll(event.completedRuns());
+        });
+
+        engine.registerWorkflowInternal("foo", 1, stringConverter, stringConverter, Duration.ofSeconds(5), ctx -> {
+            final boolean shouldFail = Boolean.parseBoolean(ctx.argument());
+            if (shouldFail) {
+                throw new IllegalStateException();
+            }
+
+            return null;
+        });
+
+        engine.mount(new WorkflowGroup("test-group").withWorkflow("foo"));
+        engine.start();
+
+        final UUID succeedingRunId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1).withArgument("false"));
+        final UUID failingRunId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1).withArgument("true"));
+
+        awaitRunStatus(succeedingRunId, WorkflowRunStatus.COMPLETED);
+        awaitRunStatus(failingRunId, WorkflowRunStatus.FAILED);
+
+        await("Run completion events")
+                .atMost(1, TimeUnit.SECONDS)
+                .untilAsserted(() -> assertThat(completedRuns).hasSize(2));
+
+        assertThat(completedRuns).satisfiesExactlyInAnyOrder(
+                run -> {
+                    assertThat(run.id()).isEqualTo(succeedingRunId);
+                    assertThat(run.status()).isEqualTo(WorkflowRunStatus.COMPLETED);
+                },
+                run -> {
+                    assertThat(run.id()).isEqualTo(failingRunId);
+                    assertThat(run.status()).isEqualTo(WorkflowRunStatus.FAILED);
+                });
+    }
+
+    @Test
     void shouldSupportWorkflowVersioning() {
         // TODO
     }
 
     @Test
-    void shouldCreateRuns() {
+    void shouldScheduleRuns() {
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> null);
 
         final List<WorkflowSchedule> createdSchedules = engine.createSchedules(List.of(

@@ -25,6 +25,8 @@ import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.annotation.Activity;
 import org.dependencytrack.workflow.api.annotation.Workflow;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
+import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEvent;
+import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEventListener;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
@@ -117,6 +119,14 @@ public interface WorkflowEngine extends Closeable {
      * @see #register(ActivityExecutor, PayloadConverter, PayloadConverter, Duration)
      */
     void mount(ActivityGroup group);
+
+    /**
+     * Add a listener for {@link WorkflowEngineEvent}s.
+     *
+     * @param listener The {@link WorkflowEngineEventListener} to add
+     * @throws IllegalStateException When the engine was already started.
+     */
+    void addEventListener(WorkflowEngineEventListener<?> listener);
 
     /**
      * Create one or more workflow runs.
