@@ -18,18 +18,14 @@
  */
 package org.dependencytrack.util;
 
-import alpine.model.ConfigProperty;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisState;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ConfigPropertyConstants;
-import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.Policy;
 import org.dependencytrack.model.PolicyCondition;
 import org.dependencytrack.model.PolicyViolation;
@@ -44,7 +40,6 @@ import org.dependencytrack.model.VulnerabilityAnalysisLevel;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
-import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.dependencytrack.notification.vo.AnalysisDecisionChange;
 import org.dependencytrack.notification.vo.BomConsumedOrProcessed;
 import org.dependencytrack.notification.vo.BomProcessingFailed;
@@ -58,10 +53,6 @@ import org.dependencytrack.persistence.QueryManager;
 
 import javax.jdo.FetchPlan;
 import javax.jdo.Query;
-import java.io.File;
-import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -71,8 +62,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class NotificationUtil {
 
@@ -317,39 +306,6 @@ public final class NotificationUtil {
                 .level(NotificationLevel.INFORMATIONAL)
                 .content(generateNotificationContent(violation))
                 .subject(new PolicyViolationIdentified(violation, component, project)));
-    }
-
-    public static void loadDefaultNotificationPublishers(QueryManager qm) throws IOException {
-        for (final DefaultNotificationPublishers publisher : DefaultNotificationPublishers.values()) {
-            File templateFile = new File(URLDecoder.decode(NotificationUtil.class.getResource(publisher.getPublisherTemplateFile()).getFile(), UTF_8.name()));
-            if (qm.isEnabled(ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED)) {
-                ConfigProperty templateBaseDir = qm.getConfigProperty(
-                        ConfigPropertyConstants.NOTIFICATION_TEMPLATE_BASE_DIR.getGroupName(),
-                        ConfigPropertyConstants.NOTIFICATION_TEMPLATE_BASE_DIR.getPropertyName()
-                );
-                File userProvidedTemplateFile = new File(Path.of(templateBaseDir.getPropertyValue(), publisher.getPublisherTemplateFile()).toUri());
-                if (userProvidedTemplateFile.exists()) {
-                    templateFile = userProvidedTemplateFile;
-                }
-            }
-            final String templateContent = FileUtils.readFileToString(templateFile, UTF_8);
-            final NotificationPublisher existingPublisher = qm.getDefaultNotificationPublisherByName(publisher.getPublisherName());
-            if (existingPublisher == null) {
-                qm.createNotificationPublisher(
-                        publisher.getPublisherName(), publisher.getPublisherDescription(),
-                        publisher.getPublisherClass().name(), templateContent, publisher.getTemplateMimeType(),
-                        publisher.isDefaultPublisher()
-                );
-            } else {
-                existingPublisher.setName(publisher.getPublisherName());
-                existingPublisher.setDescription(publisher.getPublisherDescription());
-                existingPublisher.setPublisherClass(publisher.getPublisherClass().name());
-                existingPublisher.setTemplate(templateContent);
-                existingPublisher.setTemplateMimeType(publisher.getTemplateMimeType());
-                existingPublisher.setDefaultPublisher(publisher.isDefaultPublisher());
-                qm.updateNotificationPublisher(existingPublisher);
-            }
-        }
     }
 
     public static String generateNotificationContent(final org.dependencytrack.proto.notification.v1.Vulnerability vulnerability) {
