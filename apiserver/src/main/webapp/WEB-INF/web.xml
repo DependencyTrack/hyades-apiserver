@@ -116,7 +116,12 @@
         <servlet-class>alpine.server.AlpineServlet</servlet-class>
         <init-param>
             <param-name>jersey.config.server.provider.packages</param-name>
-            <param-value>alpine.server.filters,alpine.server.resources,org.dependencytrack.resources,org.dependencytrack.filters</param-value>
+            <param-value>
+                alpine.server.filters,
+                alpine.server.resources,
+                org.dependencytrack.filters,
+                org.dependencytrack.resources.v1
+            </param-value>
         </init-param>
         <init-param>
             <param-name>jersey.config.server.provider.classnames</param-name>
@@ -131,6 +136,19 @@
     <servlet-mapping>
         <servlet-name>DependencyTrack</servlet-name>
         <url-pattern>/api/*</url-pattern>
+    </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>REST-API-v2</servlet-name>
+        <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
+        <init-param>
+            <param-name>jakarta.ws.rs.Application</param-name>
+            <param-value>org.dependencytrack.resources.v2.ResourceConfig</param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>REST-API-v2</servlet-name>
+        <url-pattern>/api/v2/*</url-pattern>
     </servlet-mapping>
 
     <servlet>

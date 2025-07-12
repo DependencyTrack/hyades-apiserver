@@ -16,25 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filters;
+package org.dependencytrack.resources.v2.exception;
 
-import alpine.Config;
-import alpine.common.metrics.Metrics;
-import org.glassfish.jersey.micrometer.server.DefaultJerseyTagsProvider;
-import org.glassfish.jersey.micrometer.server.MetricsApplicationEventListener;
+import org.dependencytrack.api.v2.model.ProblemDetails;
+
+import jakarta.ws.rs.ext.Provider;
 
 /**
- * @since 5.5.0
+ * @since 5.6.0
  */
-public class JerseyMetricsApplicationEventListener extends MetricsApplicationEventListener {
-
-    public JerseyMetricsApplicationEventListener() {
-        super(
-                Metrics.getRegistry(),
-                new DefaultJerseyTagsProvider(),
-                /* metricName */ "http.server.requests",
-                /* autoTimeRequests */ Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)
-        );
-    }
-
+@Provider
+public final class DefaultExceptionMapper extends LoggingProblemDetailsExceptionMapper<Exception, ProblemDetails> {
 }
