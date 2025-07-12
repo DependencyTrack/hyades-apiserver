@@ -22,6 +22,12 @@ import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.TeamsApi;
 import org.dependencytrack.api.v2.model.BulkCreateTeamMembershipsRequest;
 import org.dependencytrack.api.v2.model.BulkCreateTeamMembershipsRequestItem;
@@ -38,8 +44,6 @@ import org.dependencytrack.api.v2.model.ListTeamMembershipsResponse;
 import org.dependencytrack.api.v2.model.ListTeamMembershipsResponseItem;
 import org.dependencytrack.api.v2.model.ListTeamsResponse;
 import org.dependencytrack.api.v2.model.ListTeamsResponseItem;
-import org.dependencytrack.api.v2.model.PaginationLinks;
-import org.dependencytrack.api.v2.model.PaginationMetadata;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.TeamDao;
@@ -50,12 +54,6 @@ import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.ws.rs.BadRequestException;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
-import jakarta.ws.rs.ext.Provider;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -66,6 +64,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 
 @Provider
 public class TeamsResource implements TeamsApi {
@@ -90,7 +89,7 @@ public class TeamsResource implements TeamsApi {
                                         .members(teamRow.members())
                                         .build())
                         .toList())
-                .pagination(createPaginationMetadata(teamsPage))
+                .pagination(createPaginationMetadata(uriInfo, teamsPage))
                 .build();
 
         return Response.ok(response).build();
@@ -223,7 +222,7 @@ public class TeamsResource implements TeamsApi {
                                         .username(membershipRow.username())
                                         .build())
                         .toList())
-                .pagination(createPaginationMetadata(membershipsPage))
+                .pagination(createPaginationMetadata(uriInfo, membershipsPage))
                 .build();
 
         return Response.ok(response).build();
@@ -308,19 +307,4 @@ public class TeamsResource implements TeamsApi {
                 "Team membership deleted: team={}, user={}", team, user);
         return Response.noContent().build();
     }
-
-    // TODO: Move this to a central place so it's reusable.
-    private PaginationMetadata createPaginationMetadata(final Page<?> page) {
-        return PaginationMetadata.builder()
-                .links(PaginationLinks.builder()
-                        .self(uriInfo.getRequestUri())
-                        .next(page.nextPageToken() != null ?
-                                uriInfo.getRequestUriBuilder()
-                                        .queryParam("page_token", page.nextPageToken())
-                                        .build()
-                                : null)
-                        .build())
-                .build();
-    }
-
 }
