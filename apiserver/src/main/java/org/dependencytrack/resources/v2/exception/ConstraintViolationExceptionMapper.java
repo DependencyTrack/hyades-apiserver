@@ -32,7 +32,7 @@ import java.util.Set;
  * @since 5.6.0
  */
 @Provider
-public class ConstraintViolationExceptionMapper extends ProblemDetailsExceptionMapper<ConstraintViolationException, InvalidRequestProblemDetails> {
+public final class ConstraintViolationExceptionMapper extends ProblemDetailsExceptionMapper<ConstraintViolationException, InvalidRequestProblemDetails> {
 
     @Override
     public InvalidRequestProblemDetails map(final ConstraintViolationException exception) {

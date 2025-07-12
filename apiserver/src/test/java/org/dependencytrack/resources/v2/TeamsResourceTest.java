@@ -21,14 +21,10 @@ package org.dependencytrack.resources.v2;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
-import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFeature;
-import alpine.server.filters.AuthorizationFeature;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -44,19 +40,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TeamsResourceTest extends ResourceTest {
 
     @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
-            new ResourceConfig(TeamsResource.class)
-                    .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class)
-                    .register(AuthorizationFeature.class));
+    public static JerseyTestRule jersey = new JerseyTestRule(new ResourceConfig());
 
     @Test
     public void listTeamsShouldReturnPaginatedTeams() {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
 
-        for (int i = 0; i < 2; i++) {
-            qm.createTeam("team" + i);
-        }
+        qm.createTeam("team0");
+        qm.createTeam("team1");
 
         Response response = jersey.target("/teams")
                 .queryParam("limit", 2)

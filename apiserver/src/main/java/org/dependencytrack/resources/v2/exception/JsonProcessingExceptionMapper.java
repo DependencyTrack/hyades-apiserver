@@ -18,6 +18,9 @@
  */
 package org.dependencytrack.resources.v2.exception;
 
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import org.dependencytrack.api.v2.model.ProblemDetails;
 
 import jakarta.ws.rs.ext.Provider;
@@ -26,5 +29,20 @@ import jakarta.ws.rs.ext.Provider;
  * @since 5.6.0
  */
 @Provider
-public final class DefaultExceptionMapper extends LoggingProblemDetailsExceptionMapper<Exception, ProblemDetails> {
+public class JsonProcessingExceptionMapper extends LoggingProblemDetailsExceptionMapper<JsonProcessingException, ProblemDetails> {
+
+    @Override
+    ProblemDetails map(final JsonProcessingException exception) {
+        if (exception instanceof InvalidDefinitionException
+            || exception instanceof JsonGenerationException) {
+            return super.map(exception);
+        }
+
+        return ProblemDetails.builder()
+                .status(400)
+                .title("JSON Processing Failed")
+                .detail("The provided JSON could not be processed.")
+                .build();
+    }
+
 }

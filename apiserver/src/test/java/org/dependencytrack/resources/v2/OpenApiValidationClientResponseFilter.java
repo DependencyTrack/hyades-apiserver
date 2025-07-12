@@ -53,6 +53,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class OpenApiValidationClientResponseFilter implements ClientResponseFilter {
 
+    public static final String DISABLE_OPENAPI_VALIDATION = "disable-openapi-validation";
+
     private static final JsonSchemaFactory SCHEMA_FACTORY =
             JsonSchemaFactory.getInstance(
                     SpecVersion.VersionFlag.V4,
@@ -76,8 +78,7 @@ public class OpenApiValidationClientResponseFilter implements ClientResponseFilt
     public void filter(
             final ClientRequestContext requestContext,
             final ClientResponseContext responseContext) throws IOException {
-        if ("/openapi.yaml".equals(requestContext.getUri().getPath())) {
-            // The spec itself is not part of the API surface.
+        if (requestContext.hasProperty(DISABLE_OPENAPI_VALIDATION)) {
             return;
         }
 

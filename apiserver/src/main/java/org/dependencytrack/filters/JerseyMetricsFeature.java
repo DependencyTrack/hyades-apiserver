@@ -16,15 +16,30 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.resources.v2.exception;
+package org.dependencytrack.filters;
 
-import org.dependencytrack.api.v2.model.ProblemDetails;
+import alpine.Config;
 
+import jakarta.ws.rs.core.Feature;
+import jakarta.ws.rs.core.FeatureContext;
 import jakarta.ws.rs.ext.Provider;
+
+import static alpine.Config.AlpineKey.METRICS_ENABLED;
 
 /**
  * @since 5.6.0
  */
 @Provider
-public final class DefaultExceptionMapper extends LoggingProblemDetailsExceptionMapper<Exception, ProblemDetails> {
+public class JerseyMetricsFeature implements Feature {
+
+    @Override
+    public boolean configure(final FeatureContext context) {
+        if (Config.getInstance().getPropertyAsBoolean(METRICS_ENABLED)) {
+            context.register(JerseyMetricsApplicationEventListener.class);
+            return true;
+        }
+
+        return false;
+    }
+
 }

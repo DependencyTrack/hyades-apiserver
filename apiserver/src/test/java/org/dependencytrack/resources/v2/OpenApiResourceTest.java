@@ -21,7 +21,6 @@ package org.dependencytrack.resources.v2;
 import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import org.dependencytrack.JerseyTestRule;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -29,17 +28,18 @@ import jakarta.ws.rs.core.Response;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.resources.v2.OpenApiValidationClientResponseFilter.DISABLE_OPENAPI_VALIDATION;
 
 public class OpenApiResourceTest {
 
     @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
-            new ResourceConfig(OpenApiResource.class));
+    public static JerseyTestRule jersey = new JerseyTestRule(new ResourceConfig());
 
     @Test
     public void shouldReturnSpecYaml() {
         final Response response = jersey.target("/openapi.yaml")
                 .request()
+                .property(DISABLE_OPENAPI_VALIDATION, "true")
                 .get(Response.class);
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(response.getHeaderString("Content-Type")).isEqualTo("application/yaml");
