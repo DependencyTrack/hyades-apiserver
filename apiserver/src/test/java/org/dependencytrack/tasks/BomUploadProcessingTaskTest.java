@@ -1243,8 +1243,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
         );
 
-        assertThat(qm.getAllComponents(project)).isNotEmpty();
-        assertThat(qm.getAllServiceComponents(project)).isNotEmpty();
+        assertThat(qm.getAllComponents(project.getId())).isNotEmpty();
+        assertThat(qm.getAllServiceComponents(project.getId())).isNotEmpty();
     }
 
     @Test
@@ -1740,7 +1740,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertThat(qm.getAllComponents(project)).satisfiesExactly(component -> {
             assertThat(component.getName()).isEqualTo("-");
         });
-        assertThat(qm.getAllServiceComponents(project)).satisfiesExactly(service -> {
+        assertThat(qm.getAllServiceComponents(project.getId())).satisfiesExactly(service -> {
             assertThat(service.getName()).isEqualTo("-");
         });
     }
