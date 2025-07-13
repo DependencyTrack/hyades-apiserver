@@ -20,6 +20,7 @@ package org.dependencytrack.workflow.engine;
 
 import io.github.resilience4j.core.IntervalFunction;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
@@ -260,6 +261,8 @@ public class WorkflowEngineImplBenchmarkTest {
                         "dtrack.workflow.engine.buffer.flush.latency").timers();
                 final Collection<DistributionSummary> bufferBatchSizes = meterRegistry.get(
                         "dtrack.workflow.engine.buffer.flush.batch.size").summaries();
+                final Collection<FunctionCounter> historyCacheGets = meterRegistry.get(
+                        "cache.gets").tag("cache", "WorkflowEngine-RunHistoryCache").functionCounters();
 
                 for (final Timer timer : taskDispatcherPollLatencies) {
                     LOGGER.info(
@@ -301,6 +304,13 @@ public class WorkflowEngineImplBenchmarkTest {
                             summary.getId().getTag("buffer"),
                             summary.mean(),
                             summary.max());
+                }
+
+                for (final FunctionCounter counter : historyCacheGets) {
+                    LOGGER.info(
+                            "History Cache Gets: result={}, count={}",
+                            counter.getId().getTag("result"),
+                            counter.count());
                 }
             } catch (MeterNotFoundException e) {
                 LOGGER.warn("Meters not ready yet");

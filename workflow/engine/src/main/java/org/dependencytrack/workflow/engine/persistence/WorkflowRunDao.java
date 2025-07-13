@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
-import org.dependencytrack.workflow.engine.api.WorkflowRun;
+import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
@@ -46,7 +46,7 @@ public final class WorkflowRunDao extends AbstractDao {
     record ListRunsPageToken(UUID lastId) {
     }
 
-    public Page<WorkflowRun> listRuns(final ListWorkflowRunsRequest request) {
+    public Page<WorkflowRunMetadata> listRuns(final ListWorkflowRunsRequest request) {
         requireNonNull(request, "request must not be null");
 
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
@@ -104,7 +104,7 @@ public final class WorkflowRunDao extends AbstractDao {
 
         final var decodedPageToken = decodePageToken(request.pageToken(), ListRunsPageToken.class);
 
-        final List<WorkflowRun> rows = query
+        final List<WorkflowRunMetadata> rows = query
                 .bind("workflowNameFilter", request.workflowNameFilter())
                 .bind("workflowVersionFilter", request.workflowVersionFilter())
                 .bind("statusFilter", request.statusFilter())
@@ -117,7 +117,7 @@ public final class WorkflowRunDao extends AbstractDao {
                 .bind("lastId", decodedPageToken != null ? decodedPageToken.lastId() : null)
                 .defineNamedBindings()
                 .mapTo(WorkflowRunRow.class)
-                .map(row -> new WorkflowRun(
+                .map(row -> new WorkflowRunMetadata(
                         row.id(),
                         row.workflowName(),
                         row.workflowVersion(),
@@ -132,7 +132,7 @@ public final class WorkflowRunDao extends AbstractDao {
                         row.completedAt()))
                 .list();
 
-        final List<WorkflowRun> resultItems = rows.size() > 1
+        final List<WorkflowRunMetadata> resultItems = rows.size() > 1
                 ? rows.subList(0, Math.min(rows.size(), request.limit()))
                 : rows;
 

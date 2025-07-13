@@ -24,7 +24,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
-public record WorkflowRun(
+public record WorkflowRunMetadata(
         UUID id,
         String workflowName,
         int workflowVersion,

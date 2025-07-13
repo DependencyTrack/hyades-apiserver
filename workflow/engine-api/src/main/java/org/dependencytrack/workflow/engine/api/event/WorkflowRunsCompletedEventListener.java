@@ -18,5 +18,13 @@
  */
 package org.dependencytrack.workflow.engine.api.event;
 
+import org.dependencytrack.workflow.engine.api.WorkflowEngine;
+
+/**
+ * A {@link WorkflowEngineEventListener} that is notified about completed workflow runs.
+ * <p>
+ * Note that only workflow runs that were completed by the {@link WorkflowEngine} to which
+ * this listener is registered, will be notified about.
+ */
 public non-sealed interface WorkflowRunsCompletedEventListener extends WorkflowEngineEventListener<WorkflowRunsCompletedEvent> {
 }

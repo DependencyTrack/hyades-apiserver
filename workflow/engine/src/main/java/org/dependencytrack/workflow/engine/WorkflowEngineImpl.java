@@ -49,7 +49,7 @@ import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
-import org.dependencytrack.workflow.engine.api.WorkflowRun;
+import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEvent;
@@ -212,19 +212,22 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
         cachedHistoryByRunId = runHistoryCacheBuilder.build();
         if (config.meterRegistry() != null) {
-            new CaffeineCacheMetrics<>(cachedHistoryByRunId, "WorkflowEngine-RunHistoryCache", null);
+            new CaffeineCacheMetrics<>(cachedHistoryByRunId, "WorkflowEngine-RunHistoryCache", null)
+                    .bindTo(config.meterRegistry());
         }
 
-        if (!runsCompletedEventListeners.isEmpty()) {
-            LOGGER.debug("Starting event listener executor");
-            eventListenerExecutor = Executors.newSingleThreadExecutor(
-                    new DefaultThreadFactory("WorkflowEngine-EventListener"));
-            if (config.meterRegistry() != null) {
-                new ExecutorServiceMetrics(eventListenerExecutor, "WorkflowEngine-EventListener", null)
-                        .bindTo(config.meterRegistry());
-            }
-        } else {
-            LOGGER.debug("No event listeners registered");
+        runsCompletedEventListeners.add(
+                event -> cachedHistoryByRunId.invalidateAll(
+                        event.completedRuns().stream()
+                                .map(WorkflowRunMetadata::id)
+                                .collect(Collectors.toSet())));
+
+        LOGGER.debug("Starting event listener executor");
+        eventListenerExecutor = Executors.newSingleThreadExecutor(
+                new DefaultThreadFactory("WorkflowEngine-EventListener"));
+        if (config.meterRegistry() != null) {
+            new ExecutorServiceMetrics(eventListenerExecutor, "WorkflowEngine-EventListener", null)
+                    .bindTo(config.meterRegistry());
         }
 
         LOGGER.debug("Starting external event buffer");
@@ -543,13 +546,13 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Nullable
-    public WorkflowRun getRun(final UUID runId) {
+    public WorkflowRunMetadata getRunMetadata(final UUID runId) {
         final WorkflowRunRow runRow = jdbi.withHandle(handle -> new WorkflowDao(handle).getRun(runId));
         if (runRow == null) {
             return null;
         }
 
-        return new WorkflowRun(
+        return new WorkflowRunMetadata(
                 runRow.id(),
                 runRow.workflowName(),
                 runRow.workflowVersion(),
@@ -565,7 +568,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public Page<WorkflowRun> listRuns(final ListWorkflowRunsRequest request) {
+    public Page<WorkflowRunMetadata> listRuns(final ListWorkflowRunsRequest request) {
         return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRuns(request));
     }
 
@@ -958,11 +961,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var createActivityTaskCommands = new ArrayList<CreateActivityTaskCommand>();
         final var nextRunIdByNewConcurrencyGroupId = new HashMap<String, UUID>();
         final var concurrencyGroupsToUpdate = new HashSet<String>();
-        final var completedRuns = new ArrayList<WorkflowRun>();
+        final var completedRuns = new ArrayList<WorkflowRunMetadata>();
 
         for (final WorkflowRunState run : actionableRuns) {
             if (!runsCompletedEventListeners.isEmpty() && run.status().isTerminal()) {
-                completedRuns.add(new WorkflowRun(
+                completedRuns.add(new WorkflowRunMetadata(
                         run.id(),
                         run.workflowName(),
                         run.workflowVersion(),

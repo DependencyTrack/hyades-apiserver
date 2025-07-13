@@ -150,9 +150,9 @@ public interface WorkflowEngine extends Closeable {
     }
 
     @Nullable
-    WorkflowRun getRun(UUID id);
+    WorkflowRunMetadata getRunMetadata(UUID id);
 
-    Page<WorkflowRun> listRuns(ListWorkflowRunsRequest request);
+    Page<WorkflowRunMetadata> listRuns(ListWorkflowRunsRequest request);
 
     /**
      * Request the cancellation of a workflow run.

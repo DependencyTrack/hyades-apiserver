@@ -18,14 +18,14 @@
  */
 package org.dependencytrack.workflow.engine.api.event;
 
-import org.dependencytrack.workflow.engine.api.WorkflowRun;
+import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 
 import java.util.List;
 
 /**
- * A {@link WorkflowEngineEvent} that informs about one or more {@link WorkflowRun}s having completed.
+ * A {@link WorkflowEngineEvent} that informs about one or more workflow runs having completed.
  *
- * @param completedRuns The completed {@link WorkflowRun}s
+ * @param completedRuns Metadata of the completed runs.
  */
-public record WorkflowRunsCompletedEvent(List<WorkflowRun> completedRuns) implements WorkflowEngineEvent {
+public record WorkflowRunsCompletedEvent(List<WorkflowRunMetadata> completedRuns) implements WorkflowEngineEvent {
 }
