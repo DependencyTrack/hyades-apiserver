@@ -48,9 +48,9 @@ message WorkflowEvent {
     ActivityTaskCompleted activity_task_completed = 76;
     ActivityTaskFailed activity_task_failed = 77;
 
-    SubWorkflowRunScheduled sub_workflow_run_scheduled = 100;
-    SubWorkflowRunCompleted sub_workflow_run_completed = 101;
-    SubWorkflowRunFailed sub_workflow_run_failed = 102;
+    ChildRunScheduled child_run_scheduled = 100;
+    ChildRunCompleted child_run_completed = 101;
+    ChildRunFailed child_run_failed = 102;
 
     TimerScheduled timer_scheduled = 125;
     TimerElapsed timer_elapsed = 126;
@@ -59,13 +59,6 @@ message WorkflowEvent {
 
     ExternalEventReceived external_event_received = 151;
   }
-}
-
-message ParentWorkflowRun {
-  int32 sub_workflow_run_scheduled_event_id = 1;
-  string run_id = 2;
-  string workflow_name = 3;
-  int32 workflow_version = 4;
 }
 
 message ExecutionStarted {
@@ -81,7 +74,14 @@ message RunScheduled {
   optional string concurrency_group_id = 4;
   optional int32 priority = 5;
   map<string, string> labels = 6;
-  optional ParentWorkflowRun parent_run = 7;
+  optional ParentRun parent_run = 7;
+
+  message ParentRun {
+    int32 child_run_scheduled_event_id = 1;
+    string run_id = 2;
+    string workflow_name = 3;
+    int32 workflow_version = 4;
+  }
 }
 
 message RunStarted {
@@ -122,7 +122,7 @@ message ActivityTaskFailed {
   WorkflowFailure failure = 2;
 }
 
-message SubWorkflowRunScheduled {
+message ChildRunScheduled {
   string run_id = 1;
   string workflow_name = 2;
   int32 workflow_version = 3;
@@ -132,12 +132,12 @@ message SubWorkflowRunScheduled {
   optional WorkflowPayload argument = 7;
 }
 
-message SubWorkflowRunCompleted {
+message ChildRunCompleted {
   int32 run_scheduled_event_id = 1;
   optional WorkflowPayload result = 2;
 }
 
-message SubWorkflowRunFailed {
+message ChildRunFailed {
   int32 run_scheduled_event_id = 1;
   WorkflowFailure failure = 2;
 }

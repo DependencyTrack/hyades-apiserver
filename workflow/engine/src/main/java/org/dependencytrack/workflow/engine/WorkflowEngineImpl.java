@@ -1366,16 +1366,16 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
         Stream.concat(run.history().stream(), run.inbox().stream()).forEach(event -> {
             switch (event.getSubjectCase()) {
-                case SUB_WORKFLOW_RUN_SCHEDULED -> {
-                    final String runId = event.getSubWorkflowRunScheduled().getRunId();
+                case CHILD_RUN_SCHEDULED -> {
+                    final String runId = event.getChildRunScheduled().getRunId();
                     runIdByEventId.put(event.getId(), UUID.fromString(runId));
                 }
-                case SUB_WORKFLOW_RUN_COMPLETED -> {
-                    final int scheduledEventId = event.getSubWorkflowRunCompleted().getRunScheduledEventId();
+                case CHILD_RUN_COMPLETED -> {
+                    final int scheduledEventId = event.getChildRunCompleted().getRunScheduledEventId();
                     runIdByEventId.remove(scheduledEventId);
                 }
-                case SUB_WORKFLOW_RUN_FAILED -> {
-                    final int scheduledEventId = event.getSubWorkflowRunFailed().getRunScheduledEventId();
+                case CHILD_RUN_FAILED -> {
+                    final int scheduledEventId = event.getChildRunFailed().getRunScheduledEventId();
                     runIdByEventId.remove(scheduledEventId);
                 }
             }

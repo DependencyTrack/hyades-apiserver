@@ -24,15 +24,15 @@ import io.github.resilience4j.core.IntervalFunction;
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskFailed;
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskScheduled;
+import org.dependencytrack.proto.workflow.api.v1.ChildRunCompleted;
+import org.dependencytrack.proto.workflow.api.v1.ChildRunFailed;
+import org.dependencytrack.proto.workflow.api.v1.ChildRunScheduled;
 import org.dependencytrack.proto.workflow.api.v1.RunCanceled;
 import org.dependencytrack.proto.workflow.api.v1.RunResumed;
 import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
 import org.dependencytrack.proto.workflow.api.v1.RunStarted;
 import org.dependencytrack.proto.workflow.api.v1.RunSuspended;
 import org.dependencytrack.proto.workflow.api.v1.SideEffectExecuted;
-import org.dependencytrack.proto.workflow.api.v1.SubWorkflowRunCompleted;
-import org.dependencytrack.proto.workflow.api.v1.SubWorkflowRunFailed;
-import org.dependencytrack.proto.workflow.api.v1.SubWorkflowRunScheduled;
 import org.dependencytrack.proto.workflow.api.v1.TimerElapsed;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
@@ -485,9 +485,9 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             case ACTIVITY_TASK_SCHEDULED -> onActivityTaskScheduled(event.getId());
             case ACTIVITY_TASK_COMPLETED -> onActivityTaskCompleted(event.getActivityTaskCompleted());
             case ACTIVITY_TASK_FAILED -> onActivityTaskFailed(event.getActivityTaskFailed());
-            case SUB_WORKFLOW_RUN_SCHEDULED -> onSubWorkflowRunScheduled(event.getId());
-            case SUB_WORKFLOW_RUN_COMPLETED -> onSubWorkflowRunCompleted(event.getSubWorkflowRunCompleted());
-            case SUB_WORKFLOW_RUN_FAILED -> onSubWorkflowRunFailed(event.getSubWorkflowRunFailed());
+            case CHILD_RUN_SCHEDULED -> onChildRunScheduled(event.getId());
+            case CHILD_RUN_COMPLETED -> onChildRunCompleted(event.getChildRunCompleted());
+            case CHILD_RUN_FAILED -> onChildRunFailed(event.getChildRunFailed());
             case TIMER_SCHEDULED -> onTimerScheduled(event.getId());
             case TIMER_ELAPSED -> onTimerElapsed(event.getTimerElapsed());
             case SIDE_EFFECT_EXECUTED -> onSideEffectExecuted(event.getSideEffectExecuted());
@@ -628,17 +628,17 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingAwaitableByEventId.remove(scheduledEventId);
     }
 
-    private void onSubWorkflowRunScheduled(final int eventId) {
+    private void onChildRunScheduled(final int eventId) {
         logger().debug("Sub workflow run scheduled for event ID {}", eventId);
 
         final WorkflowCommand command = pendingCommandByEventId.get(eventId);
         if (command == null) {
             throw new NonDeterministicWorkflowException("""
-                    Encountered SubWorkflowRunScheduled event for event ID %d, \
+                    Encountered ChildRunScheduled event for event ID %d, \
                     but no pending command was found for it""".formatted(eventId));
         } else if (!(command instanceof ScheduleSubWorkflowCommand)) {
             throw new NonDeterministicWorkflowException("""
-                    Encountered SubWorkflowRunScheduled event for event ID %d, \
+                    Encountered ChildRunScheduled event for event ID %d, \
                     but the pending command for that number is of type %s\
                     """.formatted(eventId, command.getClass().getSimpleName()));
         }
@@ -646,14 +646,14 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingCommandByEventId.remove(eventId);
     }
 
-    private void onSubWorkflowRunCompleted(final SubWorkflowRunCompleted subject) {
+    private void onChildRunCompleted(final ChildRunCompleted subject) {
         final int eventId = subject.getRunScheduledEventId();
         logger().debug("Sub workflow run failed for event ID {}", eventId);
 
         final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
             throw new NonDeterministicWorkflowException("""
-                    Encountered SubWorkflowRunCompleted event for event ID %d, \
+                    Encountered ChildRunCompleted event for event ID %d, \
                     but no pending awaitable exists for it""".formatted(eventId));
         }
 
@@ -661,16 +661,16 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingAwaitableByEventId.remove(eventId);
     }
 
-    private void onSubWorkflowRunFailed(final SubWorkflowRunFailed subject) {
+    private void onChildRunFailed(final ChildRunFailed subject) {
         final int scheduledEventId = subject.getRunScheduledEventId();
         logger().debug("Sub workflow run failed for event ID {}", scheduledEventId);
 
         final WorkflowEvent scheduledEvent = eventByEventId.get(scheduledEventId);
-        if (scheduledEvent == null || !scheduledEvent.hasSubWorkflowRunScheduled()) {
+        if (scheduledEvent == null || !scheduledEvent.hasChildRunScheduled()) {
             throw new NonDeterministicWorkflowException(
                     "Expected event with ID %d to be of type %s, but got: %s".formatted(
                             scheduledEventId,
-                            SubWorkflowRunScheduled.class.getSimpleName(),
+                            ChildRunScheduled.class.getSimpleName(),
                             scheduledEvent != null ?
                                     DebugFormat.singleLine().toString(scheduledEvent)
                                     : null));
@@ -680,13 +680,13 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         if (awaitable == null) {
             throw new NonDeterministicWorkflowException(
                     "Encountered %s event for event ID %d, but no pending awaitable exists for it".formatted(
-                            SubWorkflowRunFailed.class.getSimpleName(), scheduledEventId));
+                            ChildRunFailed.class.getSimpleName(), scheduledEventId));
         }
 
         final var exception = new SubWorkflowFailureException(
-                UUID.fromString(scheduledEvent.getSubWorkflowRunScheduled().getRunId()),
-                scheduledEvent.getSubWorkflowRunScheduled().getWorkflowName(),
-                scheduledEvent.getSubWorkflowRunScheduled().getWorkflowVersion(),
+                UUID.fromString(scheduledEvent.getChildRunScheduled().getRunId()),
+                scheduledEvent.getChildRunScheduled().getWorkflowName(),
+                scheduledEvent.getChildRunScheduled().getWorkflowVersion(),
                 FailureConverter.toException(subject.getFailure()));
 
         awaitable.completeExceptionally(exception);

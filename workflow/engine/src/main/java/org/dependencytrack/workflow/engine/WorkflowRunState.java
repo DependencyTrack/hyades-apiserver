@@ -21,13 +21,12 @@ package org.dependencytrack.workflow.engine;
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskScheduled;
-import org.dependencytrack.proto.workflow.api.v1.ParentWorkflowRun;
+import org.dependencytrack.proto.workflow.api.v1.ChildRunCompleted;
+import org.dependencytrack.proto.workflow.api.v1.ChildRunFailed;
+import org.dependencytrack.proto.workflow.api.v1.ChildRunScheduled;
 import org.dependencytrack.proto.workflow.api.v1.RunCompleted;
 import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
 import org.dependencytrack.proto.workflow.api.v1.SideEffectExecuted;
-import org.dependencytrack.proto.workflow.api.v1.SubWorkflowRunCompleted;
-import org.dependencytrack.proto.workflow.api.v1.SubWorkflowRunFailed;
-import org.dependencytrack.proto.workflow.api.v1.SubWorkflowRunScheduled;
 import org.dependencytrack.proto.workflow.api.v1.TimerElapsed;
 import org.dependencytrack.proto.workflow.api.v1.TimerScheduled;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
@@ -302,27 +301,27 @@ final class WorkflowRunState {
     private void executeCompleteRunCommand(final CompleteRunCommand command) {
         // If this is a sub-workflow run, ensure the parent run is informed about the outcome.
         if (scheduledEvent.getRunScheduled().hasParentRun()) {
-            final ParentWorkflowRun parentRun = scheduledEvent.getRunScheduled().getParentRun();
+            final RunScheduled.ParentRun parentRun = scheduledEvent.getRunScheduled().getParentRun();
             final var parentRunId = UUID.fromString(parentRun.getRunId());
 
             final var subWorkflowEventBuilder = WorkflowEvent.newBuilder()
                     .setId(-1)
                     .setTimestamp(Timestamps.now());
             if (command.status() == WorkflowRunStatus.COMPLETED) {
-                final var subWorkflowCompletedBuilder = SubWorkflowRunCompleted.newBuilder()
-                        .setRunScheduledEventId(parentRun.getSubWorkflowRunScheduledEventId());
+                final var subWorkflowCompletedBuilder = ChildRunCompleted.newBuilder()
+                        .setRunScheduledEventId(parentRun.getChildRunScheduledEventId());
                 if (command.result() != null) {
                     subWorkflowCompletedBuilder.setResult(command.result());
                 }
-                subWorkflowEventBuilder.setSubWorkflowRunCompleted(
+                subWorkflowEventBuilder.setChildRunCompleted(
                         subWorkflowCompletedBuilder.build());
             } else if (command.status() == WorkflowRunStatus.CANCELED || command.status() == WorkflowRunStatus.FAILED) {
-                final var subWorkflowFailedBuilder = SubWorkflowRunFailed.newBuilder()
-                        .setRunScheduledEventId(parentRun.getSubWorkflowRunScheduledEventId());
+                final var subWorkflowFailedBuilder = ChildRunFailed.newBuilder()
+                        .setRunScheduledEventId(parentRun.getChildRunScheduledEventId());
                 if (command.failure() != null) {
                     subWorkflowFailedBuilder.setFailure(command.failure());
                 }
-                subWorkflowEventBuilder.setSubWorkflowRunFailed(
+                subWorkflowEventBuilder.setChildRunFailed(
                         subWorkflowFailedBuilder.build());
             } else {
                 throw new IllegalStateException("Unexpected command status: " + command.status());
@@ -426,15 +425,15 @@ final class WorkflowRunState {
     private void executeScheduleSubWorkflowCommand(final ScheduleSubWorkflowCommand command) {
         final UUID subWorkflowRunId = timeBasedEpochRandomGenerator().generate();
 
-        final var subWorkflowScheduledBuilder = SubWorkflowRunScheduled.newBuilder()
+        final var subWorkflowScheduledBuilder = ChildRunScheduled.newBuilder()
                 .setRunId(subWorkflowRunId.toString())
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion());
         final var runScheduledBuilder = RunScheduled.newBuilder()
                 .setWorkflowName(command.workflowName())
                 .setWorkflowVersion(command.workflowVersion())
-                .setParentRun(ParentWorkflowRun.newBuilder()
-                        .setSubWorkflowRunScheduledEventId(command.eventId())
+                .setParentRun(RunScheduled.ParentRun.newBuilder()
+                        .setChildRunScheduledEventId(command.eventId())
                         .setRunId(this.id.toString())
                         .setWorkflowName(this.workflowName)
                         .setWorkflowVersion(this.workflowVersion)
@@ -459,7 +458,7 @@ final class WorkflowRunState {
         onEvent(WorkflowEvent.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
-                .setSubWorkflowRunScheduled(subWorkflowScheduledBuilder.build())
+                .setChildRunScheduled(subWorkflowScheduledBuilder.build())
                 .build(), /* isNew */ true);
 
         pendingMessages.add(new WorkflowRunMessage(
