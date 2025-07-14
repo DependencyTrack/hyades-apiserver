@@ -18,21 +18,19 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import alpine.security.crypto.DataEncryption;
-import org.dependencytrack.persistence.pagination.InvalidPageTokenException;
 import org.dependencytrack.persistence.pagination.Page;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
-import org.jdbi.v3.json.JsonConfig;
-import org.jdbi.v3.json.JsonMapper.TypedJsonMapper;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
-import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
+
+import static org.dependencytrack.persistence.pagination.PageUtil.decodePageToken;
+import static org.dependencytrack.persistence.pagination.PageUtil.encodePageToken;
 
 public interface TeamDao extends SqlObject {
 
@@ -43,7 +41,7 @@ public interface TeamDao extends SqlObject {
     }
 
     default Page<ListTeamsRow> listTeams(final int limit, final String pageToken) {
-        final var decodedPageToken = decodePageToken(pageToken, ListTeamsPageToken.class);
+        final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListTeamsPageToken.class);
 
         final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="lastName" type="Boolean" -->
@@ -76,7 +74,7 @@ public interface TeamDao extends SqlObject {
                 ? new ListTeamsPageToken(resultRows.getLast().name())
                 : null;
 
-        return new Page<>(resultRows, encodePageToken(nextPageToken));
+        return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
     }
 
     record ListTeamMembershipsPageToken(String lastTeamName, String lastUsername) {
@@ -90,7 +88,7 @@ public interface TeamDao extends SqlObject {
             final String username,
             final int limit,
             final String pageToken) {
-        final var decodedPageToken = decodePageToken(pageToken, ListTeamMembershipsPageToken.class);
+        final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListTeamMembershipsPageToken.class);
 
         final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="teamName" type="Boolean" -->
@@ -142,7 +140,7 @@ public interface TeamDao extends SqlObject {
                 resultRows.getLast().username())
                 : null;
 
-        return new Page<>(resultRows, encodePageToken(nextPageToken));
+        return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
     }
 
     @SqlUpdate("""
@@ -174,45 +172,4 @@ public interface TeamDao extends SqlObject {
                 .mapTo(String.class)
                 .list();
     }
-
-    // TODO: Move this to a central place so it's reusable.
-    default <T> T decodePageToken(final String encodedToken, final Class<T> tokenClass) {
-        if (encodedToken == null) {
-            return null;
-        }
-
-        final TypedJsonMapper jsonMapper = getHandle()
-                .getConfig(JsonConfig.class)
-                .getJsonMapper()
-                .forType(tokenClass, getHandle().getConfig());
-
-        try {
-            final byte[] encryptedTokenBytes = Base64.getUrlDecoder().decode(encodedToken);
-            final byte[] decryptedToken = DataEncryption.decryptAsBytes(encryptedTokenBytes);
-            return (T) jsonMapper.fromJson(new String(decryptedToken), getHandle().getConfig());
-        } catch (Exception e) {
-            throw new InvalidPageTokenException(e);
-        }
-    }
-
-    // TODO: Move this to a central place so it's reusable.
-    default <T> String encodePageToken(final T pageToken) {
-        if (pageToken == null) {
-            return null;
-        }
-
-        final TypedJsonMapper jsonMapper = getHandle()
-                .getConfig(JsonConfig.class)
-                .getJsonMapper()
-                .forType(Object.class, getHandle().getConfig());
-
-        try {
-            final String tokenJson = jsonMapper.toJson(pageToken, getHandle().getConfig());
-            final byte[] encryptedTokenBytes = DataEncryption.encryptAsBytes(tokenJson);
-            return Base64.getUrlEncoder().encodeToString(encryptedTokenBytes);
-        } catch (Exception e) {
-            throw new InvalidPageTokenException(e);
-        }
-    }
-
 }

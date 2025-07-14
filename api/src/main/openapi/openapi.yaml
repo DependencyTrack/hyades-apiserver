@@ -32,8 +32,12 @@ security:
 servers:
 - url: /api/v2
 tags:
+- name: Metrics
+  description: Endpoints related to metrics
 - name: Teams
   description: Endpoints related to teams
+- name: Workflow
+  description: Endpoints related to workflow states
 
 paths:
   /teams:
@@ -42,6 +46,12 @@ paths:
     $ref: "./paths/teams__name_.yaml"
   /team-memberships:
     $ref: "./paths/team-memberships.yaml"
+  /workflow/token/{uuid}/status:
+    $ref: "./paths/workflow-states__token_.yaml"
+  /metrics/vulnerability:
+    $ref: "./paths/metrics-vulnerability.yaml"
+  /metrics/portfolio/current:
+    $ref: "./paths/metrics-portfolio.yaml"
 
 components:
   securitySchemes:
@@ -54,4 +64,3 @@ components:
       description: Authentication via Bearer token
       type: http
       scheme: Bearer
-
