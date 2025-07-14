@@ -106,11 +106,37 @@ properties:
   policy_violations_operational_unaudited:
     type: integer
     format: int32
-  last_occurrence:
-    $ref: "./Timestamp.yaml"
+  observed_at:
+    $ref: "./timestamp.yaml"
 required:
-  - critical
-  - high
-  - medium
-  - low
-  - last_occurrence
+- components
+- critical
+- findings_audited
+- findings_total
+- findings_unaudited
+- high
+- inherited_risk_score
+- low
+- medium
+- observed_at
+- policy_violations_audited
+- policy_violations_fail
+- policy_violations_info
+- policy_violations_license_audited
+- policy_violations_license_total
+- policy_violations_license_unaudited
+- policy_violations_operational_audited
+- policy_violations_operational_total
+- policy_violations_operational_unaudited
+- policy_violations_security_audited
+- policy_violations_security_total
+- policy_violations_security_unaudited
+- policy_violations_total
+- policy_violations_unaudited
+- policy_violations_warn
+- projects
+- suppressed
+- unassigned
+- vulnerabilities
+- vulnerable_components
+- vulnerable_projects

@@ -15,30 +15,21 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 get:
-  operationId: getWorkflowStates
-  summary: Retrieves workflow states associated with the token received from bom upload.
-  description: Requires permission <strong>BOM_UPLOAD</strong>
+  operationId: getPortfolioCurrentMetrics
+  summary: Returns current metrics for the entire portfolio.
+  description: Requires permission <strong>VIEW_PORTFOLIO</strong>
   tags:
-    - Workflow
-  parameters:
-    - name: uuid
-      in: path
-      description: The UUID of the token to query
-      required: true
-      schema:
-        type: string
+  - Metrics
   responses:
     "200":
-      description: A list of workflow states
+      description: Current metrics for the entire portfolio
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/list-workflow-states-response.yaml"
+            $ref: "../components/schemas/portfolio-metrics-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
       $ref: "../components/responses/generic-forbidden-error.yaml"
-    "404":
-      $ref: "../components/responses/generic-not-found-error.yaml"
     default:
       $ref: "../components/responses/generic-error.yaml"

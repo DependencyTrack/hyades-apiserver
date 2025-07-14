@@ -18,16 +18,19 @@
  */
 package org.dependencytrack.resources.v2;
 
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
+import alpine.server.auth.PermissionRequired;
 import org.dependencytrack.api.v2.MetricsApi;
 import org.dependencytrack.api.v2.model.ListVulnerabilityMetricsResponse;
 import org.dependencytrack.api.v2.model.ListVulnerabilityMetricsResponseItem;
 import org.dependencytrack.api.v2.model.PortfolioMetricsResponse;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.pagination.Page;
+
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -39,6 +42,7 @@ public class MetricsResource implements MetricsApi {
     private UriInfo uriInfo;
 
     @Override
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getPortfolioCurrentMetrics() {
         PortfolioMetrics metrics = withJdbiHandle(handle ->
                 handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
@@ -50,7 +54,7 @@ public class MetricsResource implements MetricsApi {
                 .findingsUnaudited(metrics.getFindingsUnaudited())
                 .high(metrics.getHigh())
                 .inheritedRiskScore(metrics.getInheritedRiskScore())
-                .lastOccurrence(metrics.getLastOccurrence().getTime())
+                .observedAt(metrics.getLastOccurrence().getTime())
                 .low(metrics.getLow())
                 .medium(metrics.getMedium())
                 .policyViolationsAudited(metrics.getPolicyViolationsAudited())
@@ -79,6 +83,7 @@ public class MetricsResource implements MetricsApi {
     }
 
     @Override
+    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getVulnerabilityMetrics(Integer limit, String pageToken) {
         final Page<MetricsDao.ListVulnerabilityMetricsRow> metricsPage = inJdbiTransaction(
                 handle -> handle.attach(MetricsDao.class).getVulnerabilityMetrics(limit, pageToken));
@@ -90,7 +95,7 @@ public class MetricsResource implements MetricsApi {
                                         .year(metricRow.year())
                                         .month(metricRow.month())
                                         .count(metricRow.count())
-                                        .measuredAt(metricRow.measuredAt().getEpochSecond())
+                                        .observedAt(metricRow.measuredAt().getEpochSecond())
                                         .build())
                         .toList())
                 .pagination(createPaginationMetadata(uriInfo, metricsPage))

@@ -19,5 +19,4 @@ properties:
   states:
     type: array
     items:
-      type: object
       $ref: "./list-workflow-states-response-item.yaml"

@@ -15,18 +15,21 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 get:
-  operationId: getPortfolioCurrentMetrics
-  summary: Returns current metrics for the entire portfolio.
+  operationId: getVulnerabilityMetrics
+  summary: Returns the sum of all vulnerabilities in the database by year and month.
   description: Requires permission <strong>VIEW_PORTFOLIO</strong>
   tags:
-    - Metrics
+  - Metrics
+  parameters:
+  - $ref: "../components/parameters/pagination-limit.yaml"
+  - $ref: "../components/parameters/page-token.yaml"
   responses:
     "200":
-      description: Current metrics for the entire portfolio
+      description: The sum of all vulnerabilities in the database by year and month
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/portfolio-metrics-response.yaml"
+            $ref: "../components/schemas/list-vulnerability-metrics-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":

@@ -20,20 +20,18 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
-import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Date;
@@ -49,8 +47,7 @@ public class MetricsResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(MetricsResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class)
-                    .register(MultiPartFeature.class));
+                    .register(AuthenticationFeature.class));
 
     @Test
     public void getPortfolioCurrentMetricsTest() {
@@ -74,7 +71,7 @@ public class MetricsResourceTest extends ResourceTest {
         });
 
         final Supplier<Response> responseSupplier = () -> jersey
-                .target("metrics/portfolio/current")
+                .target("/metrics/portfolio/current")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
@@ -99,7 +96,7 @@ public class MetricsResourceTest extends ResourceTest {
             qm.persist(metrics);
         }
 
-        Response response = jersey.target("metrics/vulnerability")
+        Response response = jersey.target("/metrics/vulnerabilities")
                 .queryParam("limit", 2)
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -111,13 +108,13 @@ public class MetricsResourceTest extends ResourceTest {
                   "metrics" :
                   [
                       {
-                        "measured_at" : "${json-unit.any-number}",
+                        "observed_at" : "${json-unit.any-number}",
                         "year" : 2025,
                         "month" : 1,
                         "count" : 1
                       },
                       {
-                        "measured_at" : "${json-unit.any-number}",
+                        "observed_at" : "${json-unit.any-number}",
                         "year" : 2025,
                         "month" : 2,
                         "count" : 2
@@ -148,7 +145,7 @@ public class MetricsResourceTest extends ResourceTest {
                   "metrics" :
                   [
                       {
-                        "measured_at" : "${json-unit.any-number}",
+                        "observed_at" : "${json-unit.any-number}",
                         "year" : 2025,
                         "month" : 3,
                         "count" : 3

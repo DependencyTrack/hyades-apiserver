@@ -36,22 +36,22 @@ tags:
   description: Endpoints related to metrics
 - name: Teams
   description: Endpoints related to teams
-- name: Workflow
-  description: Endpoints related to workflow states
+- name: Workflows
+  description: Endpoints related to workflows
 
 paths:
+  /metrics/portfolio/current:
+    $ref: "./paths/metrics_portfolio_current.yaml"
+  /metrics/vulnerabilities:
+    $ref: "./paths/metrics_vulnerabilities.yaml"
   /teams:
     $ref: "./paths/teams.yaml"
   /teams/{name}:
     $ref: "./paths/teams__name_.yaml"
   /team-memberships:
     $ref: "./paths/team-memberships.yaml"
-  /workflow/token/{uuid}/status:
-    $ref: "./paths/workflow-states__token_.yaml"
-  /metrics/vulnerability:
-    $ref: "./paths/metrics-vulnerability.yaml"
-  /metrics/portfolio/current:
-    $ref: "./paths/metrics-portfolio.yaml"
+  /workflows/{token}:
+    $ref: "./paths/workflows__token__.yaml"
 
 components:
   securitySchemes:

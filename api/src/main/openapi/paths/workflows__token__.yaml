@@ -15,24 +15,31 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 get:
-  operationId: getVulnerabilityMetrics
-  summary: Returns the sum of all vulnerabilities in the database by year and month.
-  description: Requires permission <strong>VIEW_PORTFOLIO</strong>
+  operationId: getWorkflowStates
+  summary: Retrieves workflow states associated with the token received from bom upload.
+  description: Requires permission <strong>BOM_UPLOAD</strong>
   tags:
-    - Metrics
+  - Workflows
   parameters:
-    - $ref: "../components/parameters/pagination-limit.yaml"
-    - $ref: "../components/parameters/page-token.yaml"
+  - name: token
+    in: path
+    description: The token to query
+    required: true
+    schema:
+      type: string
+      format: uuid
   responses:
     "200":
-      description: The sum of all vulnerabilities in the database by year and month
+      description: A list of workflow states
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/list-vulnerability-metrics-response.yaml"
+            $ref: "../components/schemas/list-workflow-states-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
       $ref: "../components/responses/generic-forbidden-error.yaml"
+    "404":
+      $ref: "../components/responses/generic-not-found-error.yaml"
     default:
       $ref: "../components/responses/generic-error.yaml"

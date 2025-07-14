@@ -18,27 +18,30 @@
  */
 package org.dependencytrack.resources.v2;
 
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.ext.Provider;
-import org.dependencytrack.api.v2.WorkflowApi;
+import alpine.server.auth.PermissionRequired;
+import org.dependencytrack.api.v2.WorkflowsApi;
 import org.dependencytrack.api.v2.model.ListWorkflowStatesResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowStatesResponseItem;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
 
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Provider
-public class WorkflowResource implements WorkflowApi {
+public class WorkflowsResource implements WorkflowsApi {
 
     @Override
-    public Response getWorkflowStates(String uuid) {
+    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
+    public Response getWorkflowStates(final UUID token) {
         List<WorkflowState> workflowStates;
         try (final var qm = new QueryManager()) {
-            workflowStates = qm.getAllWorkflowStatesForAToken(UUID.fromString(uuid));
+            workflowStates = qm.getAllWorkflowStatesForAToken(token);
             if (workflowStates.isEmpty()) {
                 throw new NotFoundException();
             }

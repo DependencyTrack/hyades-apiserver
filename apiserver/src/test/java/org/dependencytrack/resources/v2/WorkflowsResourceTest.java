@@ -20,23 +20,21 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
-import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.WorkflowState;
-import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
-import static net.javacrumbs.jsonunit.assertj.JsonAssertions.json;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
@@ -44,14 +42,13 @@ import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.hamcrest.CoreMatchers.equalTo;
 
-public class WorkflowResourceTest extends ResourceTest {
+public class WorkflowsResourceTest extends ResourceTest {
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
-            new ResourceConfig(WorkflowResource.class)
+            new ResourceConfig(WorkflowsResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class)
-                    .register(MultiPartFeature.class));
+                    .register(AuthenticationFeature.class));
 
     @Test
     public void getWorkflowStatusOk() {
@@ -75,9 +72,9 @@ public class WorkflowResourceTest extends ResourceTest {
         workflowState2.setUpdatedAt(Date.from(Instant.now()));
         qm.persist(workflowState2);
 
-        Response response = jersey.target( "workflow/token/" + uuid + "/status").request()
+        Response response = jersey.target("/workflows/" + uuid).request()
                 .header(X_API_KEY, apiKey)
-                .get(Response.class);
+                .get();
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_OK);
         final String jsonResponse = getPlainTextBody(response);
         assertThatJson(jsonResponse)
@@ -87,24 +84,25 @@ public class WorkflowResourceTest extends ResourceTest {
                 .withMatcher("status1", equalTo("COMPLETED"))
                 .withMatcher("step2", equalTo("BOM_PROCESSING"))
                 .withMatcher("status2", equalTo("PENDING"))
-                .isEqualTo(json("""
-                    {
-                        "states":
-                            [{
-                                "token": "${json-unit.matches:token}",
-                                "step": "${json-unit.matches:step1}",
-                                "status": "${json-unit.matches:status1}",
-                                "updated_at": "${json-unit.any-number}"
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "states": [
+                            {
+                              "token": "${json-unit.matches:token}",
+                              "step": "${json-unit.matches:step1}",
+                              "status": "${json-unit.matches:status1}",
+                              "updated_at": "${json-unit.any-number}"
                             },
                             {
-                                "token": "${json-unit.matches:token}",
-                                "started_at": "${json-unit.any-number}",
-                                "updated_at": "${json-unit.any-number}",
-                                "step": "${json-unit.matches:step2}",
-                                "status": "${json-unit.matches:status2}"
-                            }]
-                    }
-                """));
+                              "token": "${json-unit.matches:token}",
+                              "started_at": "${json-unit.any-number}",
+                              "updated_at": "${json-unit.any-number}",
+                              "step": "${json-unit.matches:step2}",
+                              "status": "${json-unit.matches:status2}"
+                            }
+                          ]
+                        }
+                        """);
     }
 
     @Test
@@ -119,9 +117,9 @@ public class WorkflowResourceTest extends ResourceTest {
         qm.persist(workflowState1);
 
         UUID randomUuid = UUID.randomUUID();
-        Response response = jersey.target("workflow/token/" + randomUuid + "/status").request()
+        Response response = jersey.target("/workflows/" + randomUuid).request()
                 .header(X_API_KEY, apiKey)
-                .get(Response.class);
+                .get();
 
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_NOT_FOUND);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
