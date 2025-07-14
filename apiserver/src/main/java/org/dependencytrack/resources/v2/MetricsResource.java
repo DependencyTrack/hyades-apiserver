@@ -29,8 +29,6 @@ import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.pagination.Page;
 
-import java.time.ZoneOffset;
-
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
@@ -52,7 +50,7 @@ public class MetricsResource implements MetricsApi {
                 .findingsUnaudited(metrics.getFindingsUnaudited())
                 .high(metrics.getHigh())
                 .inheritedRiskScore(metrics.getInheritedRiskScore())
-                .lastOccurrence(metrics.getLastOccurrence().toInstant().atOffset(ZoneOffset.UTC))
+                .lastOccurrence(metrics.getLastOccurrence().getTime())
                 .low(metrics.getLow())
                 .medium(metrics.getMedium())
                 .policyViolationsAudited(metrics.getPolicyViolationsAudited())
@@ -92,7 +90,7 @@ public class MetricsResource implements MetricsApi {
                                         .year(metricRow.year())
                                         .month(metricRow.month())
                                         .count(metricRow.count())
-                                        .measuredAt(metricRow.measuredAt().atOffset(ZoneOffset.UTC))
+                                        .measuredAt(metricRow.measuredAt().getEpochSecond())
                                         .build())
                         .toList())
                 .pagination(createPaginationMetadata(uriInfo, metricsPage))

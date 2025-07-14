@@ -14,18 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-type: object
-properties:
-  year:
-    type: integer
-    format: int32
-  month:
-    type: integer
-    format: int32
-  count:
-    type: integer
-    format: int32
-  measured_at:
-    $ref: "./Timestamp.yaml"
-required:
-- measured_at
+type: integer
+format: int64
+description: Epoch timestamp in milliseconds since January 1, 1970 UTC.
+example: 1752209050377

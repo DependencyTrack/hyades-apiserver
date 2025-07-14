@@ -88,19 +88,22 @@ public class WorkflowResourceTest extends ResourceTest {
                 .withMatcher("step2", equalTo("BOM_PROCESSING"))
                 .withMatcher("status2", equalTo("PENDING"))
                 .isEqualTo(json("""
-                    [{
-                        "token": "${json-unit.matches:token}",
-                        "step": "${json-unit.matches:step1}",
-                        "status": "${json-unit.matches:status1}",
-                        "updated_at": "${json-unit.any-number}"
-                    },
                     {
-                        "token": "${json-unit.matches:token}",
-                        "started_at": "${json-unit.any-number}",
-                        "updated_at": "${json-unit.any-number}",
-                        "step": "${json-unit.matches:step2}",
-                        "status": "${json-unit.matches:status2}"
-                    }]
+                        "states":
+                            [{
+                                "token": "${json-unit.matches:token}",
+                                "step": "${json-unit.matches:step1}",
+                                "status": "${json-unit.matches:status1}",
+                                "updated_at": "${json-unit.any-number}"
+                            },
+                            {
+                                "token": "${json-unit.matches:token}",
+                                "started_at": "${json-unit.any-number}",
+                                "updated_at": "${json-unit.any-number}",
+                                "step": "${json-unit.matches:step2}",
+                                "status": "${json-unit.matches:status2}"
+                            }]
+                    }
                 """));
     }
 
@@ -121,6 +124,13 @@ public class WorkflowResourceTest extends ResourceTest {
                 .get(Response.class);
 
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_NOT_FOUND);
-        assertThat(getPlainTextBody(response)).isEqualTo("Provided token " + randomUuid + " does not exist.");
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type":"about:blank",
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
+                }
+                """);
     }
 }

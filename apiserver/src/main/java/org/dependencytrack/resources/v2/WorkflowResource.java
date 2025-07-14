@@ -18,14 +18,15 @@
  */
 package org.dependencytrack.resources.v2;
 
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.WorkflowApi;
+import org.dependencytrack.api.v2.model.ListWorkflowStatesResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowStatesResponseItem;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
 
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -39,13 +40,13 @@ public class WorkflowResource implements WorkflowApi {
         try (final var qm = new QueryManager()) {
             workflowStates = qm.getAllWorkflowStatesForAToken(UUID.fromString(uuid));
             if (workflowStates.isEmpty()) {
-                return Response.status(Response.Status.NOT_FOUND).entity("Provided token " + uuid + " does not exist.").build();
+                throw new NotFoundException();
             }
         }
         List<ListWorkflowStatesResponseItem> states = workflowStates.stream()
                 .map(this::mapWorkflowStateResponse)
                 .collect(Collectors.toList());
-        return Response.ok(states).build();
+        return Response.ok(ListWorkflowStatesResponse.builder().states(states).build()).build();
     }
 
     private ListWorkflowStatesResponseItem mapWorkflowStateResponse(WorkflowState workflowState) {
@@ -59,10 +60,10 @@ public class WorkflowResource implements WorkflowApi {
             mappedState.setParent(mapWorkflowStateResponse(workflowState.getParent()));
         }
         if (workflowState.getStartedAt() != null) {
-            mappedState.setStartedAt(workflowState.getStartedAt().toInstant().atOffset(ZoneOffset.UTC));
+            mappedState.setStartedAt(workflowState.getStartedAt().getTime());
         }
         if (workflowState.getUpdatedAt() != null) {
-            mappedState.setUpdatedAt(workflowState.getUpdatedAt().toInstant().atOffset(ZoneOffset.UTC));
+            mappedState.setUpdatedAt(workflowState.getUpdatedAt().getTime());
         }
         return mappedState;
     }

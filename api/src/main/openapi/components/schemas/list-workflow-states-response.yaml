@@ -16,16 +16,8 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  year:
-    type: integer
-    format: int32
-  month:
-    type: integer
-    format: int32
-  count:
-    type: integer
-    format: int32
-  measured_at:
-    $ref: "./Timestamp.yaml"
-required:
-- measured_at
+  states:
+    type: array
+    items:
+      type: object
+      $ref: "./list-workflow-states-response-item.yaml"
