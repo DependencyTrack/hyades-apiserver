@@ -20,6 +20,7 @@ package org.dependencytrack.integrations.gitlab;
 
 import alpine.model.IConfigProperty;
 import alpine.model.Permission;
+import alpine.model.Team;
 
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.auth.Permissions;
@@ -33,8 +34,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.dependencytrack.model.ConfigPropertyConstants.ACCESS_MANAGEMENT_ACL_ENABLED;
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_API_KEY;
 import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_SBOM_PUSH_ENABLED;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -67,9 +70,16 @@ public class GitLabIntegrationStateChangerTest extends PersistenceCapableTest {
 
         stateChanger.setQueryManager(qm);
         qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
+                "false",
+                IConfigProperty.PropertyType.BOOLEAN,
+                null);
+
+        qm.createConfigProperty(
                 GITLAB_ENABLED.getGroupName(),
                 GITLAB_ENABLED.getPropertyName(),
-                "true",
+                "false",
                 IConfigProperty.PropertyType.BOOLEAN,
                 null);
 
@@ -82,12 +92,14 @@ public class GitLabIntegrationStateChangerTest extends PersistenceCapableTest {
 
         stateChanger.setState(true);
         roles = qm.getRoles();
-        Assert.assertEquals(roles.size(), GitLabRole.values().length);
+        Assert.assertEquals(GitLabRole.values().length, roles.size());
         for (GitLabRole role : GitLabRole.values()) {
             Assert.assertNotNull(qm.getRoleByName(role.getDescription()));
         }
-        Assert.assertEquals(qm.getTeams().size(), 1);
-        Assert.assertEquals(qm.getTeams().get(0).getName(), "GitLab Users");
+        List<Team> teamsList = qm.getTeams().getList(Team.class);
+
+        Assert.assertEquals(teamsList.size(), 1);
+        Assert.assertEquals(teamsList.get(0).getName(), "GitLab Users");
     }
 
     /**
@@ -102,7 +114,19 @@ public class GitLabIntegrationStateChangerTest extends PersistenceCapableTest {
         qm.createConfigProperty(
                 GITLAB_ENABLED.getGroupName(),
                 GITLAB_ENABLED.getPropertyName(),
+                "true",
+                IConfigProperty.PropertyType.BOOLEAN,
+                null);
+        qm.createConfigProperty(
+                ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
+                ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
                 "false",
+                IConfigProperty.PropertyType.BOOLEAN,
+                null);
+        qm.createConfigProperty(
+                GITLAB_SBOM_PUSH_ENABLED.getGroupName(),
+                GITLAB_SBOM_PUSH_ENABLED.getPropertyName(),
+                "true",
                 IConfigProperty.PropertyType.BOOLEAN,
                 null);
         qm.createConfigProperty(
@@ -115,19 +139,21 @@ public class GitLabIntegrationStateChangerTest extends PersistenceCapableTest {
         // Create roles and team to be removed
         stateChanger.setState(true);
         roles = qm.getRoles();
-        Assert.assertEquals(roles.size(), GitLabRole.values().length);
+        Assert.assertEquals(GitLabRole.values().length, roles.size());
         for (GitLabRole role : GitLabRole.values()) {
             Assert.assertNotNull(qm.getRoleByName(role.getDescription()));
         }
-        Assert.assertEquals(qm.getTeams().size(), 1);
-        Assert.assertEquals(qm.getTeams().get(0).getName(), "GitLab Users");
+        List<Team> teamsList = qm.getTeams().getList(Team.class);
+        Assert.assertEquals(teamsList.size(), 1);
+        Assert.assertEquals(teamsList.get(0).getName(), "GitLab Users");
 
         // Disable the integration
         // and verify that the roles and team are removed
         stateChanger.setState(false);
         roles = qm.getRoles();
-        Assert.assertEquals(roles.size(), 0);
-        Assert.assertEquals(qm.getTeams().size(), 0);
+        teamsList = qm.getTeams().getList(Team.class);
+        Assert.assertEquals(0, roles.size());
+        Assert.assertEquals(0, teamsList.size());
     }
 
     @Test
