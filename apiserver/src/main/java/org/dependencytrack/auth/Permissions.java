@@ -34,19 +34,19 @@ public enum Permissions {
     FINDING_CREATE("Provides the ability to upload supported VEX documents to a project", Scope.PROJECT),
     FINDING_READ("Provides the ability read the VEX document for a project", Scope.PROJECT),
     FINDING_UPDATE("Provides the ability to make analysis decisions on vulnerabilities and upload supported VEX documents for a project", Scope.PROJECT),
-    NOTIFICATION_RULE("Allows configuration of notifications and email settings", Scope.SYSTEM),
+    NOTIFICATION_RULE_MANAGEMENT("Allows configuration of notifications and email settings", Scope.SYSTEM),
+    POLICY_MANAGEMENT("Allows the creation, modification, and deletion of policy", Scope.SYSTEM),
     POLICY_VIOLATION_CREATE("Provides the ability to create policy violations", Scope.PROJECT),
     POLICY_VIOLATION_READ("Provides the ability to view policy violations", Scope.PROJECT),
     POLICY_VIOLATION_UPDATE("Provides the ability to make analysis decisions on policy violations", Scope.PROJECT),
-    POLICY("Allows the creation, modification, and deletion of policy", Scope.SYSTEM),
     PORTFOLIO_ACCESS_CONTROL_BYPASS("Provides the ability to bypass portfolio access control, granting access to all projects", Scope.SYSTEM),
-    PORTFOLIO("Allows the creation, modification, and deletion of data in the portfolio", Scope.SYSTEM),
+    PORTFOLIO_MANAGEMENT("Allows the creation, modification, and deletion of data in the portfolio", Scope.SYSTEM),
     PROJECT_DELETE("Provides the ability to delete resources within a project", Scope.PROJECT),
     PROJECT_READ("Provides the ability to read resources within a project", Scope.PROJECT),
     PROJECT_UPDATE("Provides the ability to update resources within a project", Scope.PROJECT),
     SYSTEM_CONFIGURATION("Allows all access to configuration of the system including notifications, repositories, and email settings", Scope.SYSTEM),
-    TAG("Allows the management of global tag definitions", Scope.SYSTEM),
-    VULNERABILITY("Allows the management of custom vulnerabilities", Scope.SYSTEM);
+    TAG_MANAGEMENT("Allows the management of global tag definitions", Scope.SYSTEM),
+    VULNERABILITY_MANAGEMENT("Allows the management of custom vulnerabilities", Scope.SYSTEM);
     // @formatter:on
 
     enum Scope {
@@ -85,19 +85,19 @@ public enum Permissions {
         public static final String FINDING_CREATE = "FINDING_CREATE";
         public static final String FINDING_READ = "FINDING_READ";
         public static final String FINDING_UPDATE = "FINDING_UPDATE";
-        public static final String NOTIFICATION_RULE = "NOTIFICATION_RULE";
-        public static final String POLICY = "POLICY";
+        public static final String NOTIFICATION_RULE_MANAGEMENT = "NOTIFICATION_RULE_MANAGEMENT";
+        public static final String POLICY_MANAGEMENT = "POLICY_MANAGEMENT";
         public static final String POLICY_VIOLATION_CREATE = "POLICY_VIOLATION_CREATE";
         public static final String POLICY_VIOLATION_READ = "POLICY_VIOLATION_READ";
         public static final String POLICY_VIOLATION_UPDATE = "POLICY_VIOLATION_UPDATE";
         public static final String PORTFOLIO_ACCESS_CONTROL_BYPASS = "PORTFOLIO_ACCESS_CONTROL_BYPASS";
-        public static final String PORTFOLIO = "PORTFOLIO";
+        public static final String PORTFOLIO_MANAGEMENT = "PORTFOLIO_MANAGEMENT";
         public static final String PROJECT_DELETE = "PROJECT_DELETE";
         public static final String PROJECT_READ = "PROJECT_READ";
         public static final String PROJECT_UPDATE = "PROJECT_UPDATE";
         public static final String SYSTEM_CONFIGURATION = "SYSTEM_CONFIGURATION";
-        public static final String TAG = "TAG";
-        public static final String VULNERABILITY = "VULNERABILITY";
+        public static final String TAG_MANAGEMENT = "TAG_MANAGEMENT";
+        public static final String VULNERABILITY_MANAGEMENT = "VULNERABILITY_MANAGEMENT";
     }
 
 }

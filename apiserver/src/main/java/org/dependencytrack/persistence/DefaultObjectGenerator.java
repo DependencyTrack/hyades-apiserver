@@ -49,6 +49,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
@@ -263,16 +265,17 @@ public class DefaultObjectGenerator implements ServletContextListener {
     private void loadDefaultPermissions(final QueryManager qm) {
         LOGGER.info("Synchronizing permissions to datastore");
 
-        List<String> existing = Objects.requireNonNullElse(qm.getPermissions(), Collections.<Permission>emptyList())
-                .stream()
-                .map(Permission::getName)
-                .toList();
+        final List<Permission> allPermissions = Objects.requireNonNullElse(qm.getPermissions(), Collections.emptyList());
+        final Map<String, Permission> existing = allPermissions.stream().collect(
+                Collectors.toMap(Permission::getName, Function.identity()));
 
-        for (final Permissions value : Permissions.values())
-            if (!existing.contains(value.name())) {
-                LOGGER.debug("Creating permission: " + value.name());
-                persistentPermissionByName.put(value.name(), qm.createPermission(value.name(), value.getDescription()));
-            }
+        for (final Permissions value : Permissions.values()) {
+            final String name = value.name();
+
+            LOGGER.debug("Creating permission: " + name);
+            persistentPermissionByName.put(name,
+                    existing.getOrDefault(name, qm.createPermission(name, value.getDescription())));
+        }
     }
 
     @SuppressWarnings("unused")
