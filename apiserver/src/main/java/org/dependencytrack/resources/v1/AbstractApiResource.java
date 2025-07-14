@@ -24,7 +24,6 @@ import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.ApiRequestConfig;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.jdbi.v3.core.Handle;
