@@ -375,7 +375,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 project(s), but the authenticated principal is missing the PORTFOLIO permission."
+                    "bar": "The tag is assigned to 1 project(s), but the authenticated principal is missing the PORTFOLIO_MANAGEMENT permission."
                   }
                 }
                 """);
@@ -490,7 +490,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 policies, but the authenticated principal is missing the POLICY permission."
+                    "bar": "The tag is assigned to 1 policies, but the authenticated principal is missing the POLICY_MANAGEMENT permission."
                   }
                 }
                 """);
@@ -2076,7 +2076,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 vulnerabilities, but the authenticated principal is missing the VULNERABILITY permission."
+                    "bar": "The tag is assigned to 1 vulnerabilities, but the authenticated principal is missing the VULNERABILITY_MANAGEMENT permission."
                   }
                 }
                 """);
