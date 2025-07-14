@@ -149,7 +149,7 @@ public class MetricsResourceTest extends ResourceTest {
 
     @Test
     public void refreshProjectMetricsAclTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -288,7 +288,7 @@ public class MetricsResourceTest extends ResourceTest {
 
     @Test
     public void refreshComponentMetricsAclTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -324,7 +324,7 @@ public class MetricsResourceTest extends ResourceTest {
 
     @Test
     public void getPortfolioMetricsXDaysAclTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         useJdbiHandle(handle -> {
@@ -359,7 +359,7 @@ public class MetricsResourceTest extends ResourceTest {
 
     @Test
     public void getPortfolioMetricsSinceAclTest() {
-        initializeWithPermissions(Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         useJdbiHandle(handle -> {

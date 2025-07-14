@@ -120,7 +120,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void addPermissionToUserDuplicateTest() {
         ManagedUser user = qm.createManagedUser("user1", TEST_USER_PASSWORD_HASH);
         String username = user.getUsername();
-        Permission permission = qm.getPermission(Permissions.PORTFOLIO.name());
+        Permission permission = qm.getPermission(Permissions.PORTFOLIO_MANAGEMENT.name());
         user.getPermissions().add(permission);
         qm.persist(user);
         qm.close();
@@ -135,7 +135,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void removePermissionFromUserTest() {
         ManagedUser user = qm.createManagedUser("user1", TEST_USER_PASSWORD_HASH);
         String username = user.getUsername();
-        Permission permission = qm.getPermission(Permissions.PORTFOLIO.name());
+        Permission permission = qm.getPermission(Permissions.PORTFOLIO_MANAGEMENT.name());
         user.getPermissions().add(permission);
         qm.persist(user);
         qm.close();
@@ -230,7 +230,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void addPermissionToTeamDuplicateTest() {
         Team team = qm.createTeam("team1");
         String teamUuid = team.getUuid().toString();
-        Permission permission = qm.getPermission(Permissions.PORTFOLIO.name());
+        Permission permission = qm.getPermission(Permissions.PORTFOLIO_MANAGEMENT.name());
         team.getPermissions().add(permission);
         qm.persist(team);
         qm.close();
@@ -245,7 +245,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void removePermissionFromTeamTest() {
         Team team = qm.createTeam("team1");
         String teamUuid = team.getUuid().toString();
-        Permission permission = qm.getPermission(Permissions.PORTFOLIO.name());
+        Permission permission = qm.getPermission(Permissions.PORTFOLIO_MANAGEMENT.name());
         team.getPermissions().add(permission);
         qm.persist(team);
         qm.close();

@@ -427,7 +427,7 @@ public class ProjectResource extends AbstractApiResource {
                       principal is a member of can be assigned. Principals with <strong>ACCESS_MANAGEMENT</strong>
                       permission can assign <em>any</em> team.
                     </p>
-                    <p>Requires permission <strong>PORTFOLIO</strong></p>"""
+                    <p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"""
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -447,7 +447,7 @@ public class ProjectResource extends AbstractApiResource {
                       <li>A project with the specified name already exists</li>
                     </ul>""")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response createProject(final Project jsonProject) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -577,7 +577,7 @@ public class ProjectResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Updates a project",
-            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -599,7 +599,7 @@ public class ProjectResource extends AbstractApiResource {
                       <li>A project cannot select itself as a parent</li>
                     </ul>""")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response updateProject(Project jsonProject) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -684,7 +684,7 @@ public class ProjectResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Partially updates a project",
-            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -706,7 +706,7 @@ public class ProjectResource extends AbstractApiResource {
                       <li>A project cannot select itself as a parent</li>
                     </ul>""")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response patchProject(
             @Parameter(description = "The UUID of the project to modify", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -853,7 +853,7 @@ public class ProjectResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a project",
-            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Project removed successfully"),
@@ -865,7 +865,7 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found"),
             @ApiResponse(responseCode = "500", description = "Unable to delete components of the project")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response deleteProject(
             @Parameter(description = "The UUID of the project to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -901,7 +901,7 @@ public class ProjectResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Clones a project",
-            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -916,7 +916,7 @@ public class ProjectResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response cloneProject(CloneProjectRequest jsonRequest) {
         final Validator validator = super.getValidator();
         failOnValidationError(

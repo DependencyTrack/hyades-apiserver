@@ -27,43 +27,48 @@ public class PermissionsTest {
     public void testPermissionEnums() {
         Assert.assertEquals("ACCESS_MANAGEMENT", Permissions.ACCESS_MANAGEMENT.name());
         Assert.assertEquals("BADGES_READ", Permissions.BADGES_READ.name());
-        Assert.assertEquals("BOM_READ", Permissions.BOM_READ.name());
         Assert.assertEquals("BOM_CREATE", Permissions.BOM_CREATE.name());
+        Assert.assertEquals("BOM_READ", Permissions.BOM_READ.name());
+        Assert.assertEquals("FINDING_CREATE", Permissions.FINDING_CREATE.name());
         Assert.assertEquals("FINDING_READ", Permissions.FINDING_READ.name());
         Assert.assertEquals("FINDING_UPDATE", Permissions.FINDING_UPDATE.name());
-        Assert.assertEquals("FINDING_CREATE", Permissions.FINDING_CREATE.name());
-        Assert.assertEquals("NOTIFICATION_RULE", Permissions.NOTIFICATION_RULE.name());
-        Assert.assertEquals("POLICY", Permissions.POLICY.name());
+        Assert.assertEquals("NOTIFICATION_RULE_MANAGEMENT", Permissions.NOTIFICATION_RULE_MANAGEMENT.name());
+        Assert.assertEquals("POLICY_MANAGEMENT", Permissions.POLICY_MANAGEMENT.name());
+        Assert.assertEquals("POLICY_VIOLATION_CREATE", Permissions.POLICY_VIOLATION_CREATE.name());
         Assert.assertEquals("POLICY_VIOLATION_READ", Permissions.POLICY_VIOLATION_READ.name());
         Assert.assertEquals("POLICY_VIOLATION_UPDATE", Permissions.POLICY_VIOLATION_UPDATE.name());
-        Assert.assertEquals("PORTFOLIO", Permissions.PORTFOLIO.name());
+        Assert.assertEquals("PORTFOLIO_ACCESS_CONTROL_BYPASS", Permissions.PORTFOLIO_ACCESS_CONTROL_BYPASS.name());
+        Assert.assertEquals("PORTFOLIO_MANAGEMENT", Permissions.PORTFOLIO_MANAGEMENT.name());
+        Assert.assertEquals("PROJECT_DELETE", Permissions.PROJECT_DELETE.name());
         Assert.assertEquals("PROJECT_READ", Permissions.PROJECT_READ.name());
         Assert.assertEquals("PROJECT_UPDATE", Permissions.PROJECT_UPDATE.name());
-        Assert.assertEquals("PROJECT_DELETE", Permissions.PROJECT_DELETE.name());
         Assert.assertEquals("SYSTEM_CONFIGURATION", Permissions.SYSTEM_CONFIGURATION.name());
-        Assert.assertEquals("TAG", Permissions.TAG.name());
-        Assert.assertEquals("VULNERABILITY", Permissions.VULNERABILITY.name());
+        Assert.assertEquals("TAG_MANAGEMENT", Permissions.TAG_MANAGEMENT.name());
+        Assert.assertEquals("VULNERABILITY_MANAGEMENT", Permissions.VULNERABILITY_MANAGEMENT.name());
     }
 
     @Test
     public void testPermissionConstants() {
         Assert.assertEquals("ACCESS_MANAGEMENT", Permissions.Constants.ACCESS_MANAGEMENT);
         Assert.assertEquals("BADGES_READ", Permissions.Constants.BADGES_READ);
-        Assert.assertEquals("BOM_READ", Permissions.Constants.BOM_READ);
         Assert.assertEquals("BOM_CREATE", Permissions.Constants.BOM_CREATE);
+        Assert.assertEquals("BOM_READ", Permissions.Constants.BOM_READ);
+        Assert.assertEquals("FINDING_CREATE", Permissions.Constants.FINDING_CREATE);
         Assert.assertEquals("FINDING_READ", Permissions.Constants.FINDING_READ);
         Assert.assertEquals("FINDING_UPDATE", Permissions.Constants.FINDING_UPDATE);
-        Assert.assertEquals("FINDING_CREATE", Permissions.Constants.FINDING_CREATE);
-        Assert.assertEquals("NOTIFICATION_RULE", Permissions.Constants.NOTIFICATION_RULE);
-        Assert.assertEquals("POLICY", Permissions.Constants.POLICY);
+        Assert.assertEquals("NOTIFICATION_RULE_MANAGEMENT", Permissions.Constants.NOTIFICATION_RULE_MANAGEMENT);
+        Assert.assertEquals("POLICY_MANAGEMENT", Permissions.Constants.POLICY_MANAGEMENT);
+        Assert.assertEquals("POLICY_VIOLATION_CREATE", Permissions.Constants.POLICY_VIOLATION_CREATE);
         Assert.assertEquals("POLICY_VIOLATION_READ", Permissions.Constants.POLICY_VIOLATION_READ);
         Assert.assertEquals("POLICY_VIOLATION_UPDATE", Permissions.Constants.POLICY_VIOLATION_UPDATE);
-        Assert.assertEquals("PORTFOLIO", Permissions.Constants.PORTFOLIO);
+        Assert.assertEquals("PORTFOLIO_ACCESS_CONTROL_BYPASS", Permissions.Constants.PORTFOLIO_ACCESS_CONTROL_BYPASS);
+        Assert.assertEquals("PORTFOLIO_MANAGEMENT", Permissions.Constants.PORTFOLIO_MANAGEMENT);
+        Assert.assertEquals("PROJECT_DELETE", Permissions.Constants.PROJECT_DELETE);
         Assert.assertEquals("PROJECT_READ", Permissions.Constants.PROJECT_READ);
         Assert.assertEquals("PROJECT_UPDATE", Permissions.Constants.PROJECT_UPDATE);
-        Assert.assertEquals("PROJECT_DELETE", Permissions.Constants.PROJECT_DELETE);
         Assert.assertEquals("SYSTEM_CONFIGURATION", Permissions.Constants.SYSTEM_CONFIGURATION);
-        Assert.assertEquals("TAG", Permissions.Constants.TAG);
-        Assert.assertEquals("VULNERABILITY", Permissions.Constants.VULNERABILITY);
+        Assert.assertEquals("TAG_MANAGEMENT", Permissions.Constants.TAG_MANAGEMENT);
+        Assert.assertEquals("VULNERABILITY_MANAGEMENT", Permissions.Constants.VULNERABILITY_MANAGEMENT);
     }
+
 }

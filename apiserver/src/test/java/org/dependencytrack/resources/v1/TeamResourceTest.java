@@ -191,7 +191,7 @@ public class TeamResourceTest extends ResourceTest {
 
     @Test
     public void getTeamSelfTest() {
-        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO_MANAGEMENT);
         var response = jersey.target(V1_TEAM + "/self").request().header(X_API_KEY, apiKey).get(Response.class);
         Assert.assertEquals(200, response.getStatus());
         final var json = parseJsonObject(response);
@@ -200,7 +200,7 @@ public class TeamResourceTest extends ResourceTest {
         final var permissions = json.getJsonArray("permissions");
         Assert.assertEquals(2, permissions.size());
         Assert.assertEquals(Permissions.BOM_CREATE.toString(), permissions.get(0).asJsonObject().getString("name"));
-        Assert.assertEquals(Permissions.PORTFOLIO.toString(), permissions.get(1).asJsonObject().getString("name"));
+        Assert.assertEquals(Permissions.PORTFOLIO_MANAGEMENT.toString(), permissions.get(1).asJsonObject().getString("name"));
 
         // missing api-key
         response = jersey.target(V1_TEAM + "/self").request().get(Response.class);

@@ -70,8 +70,8 @@ public class DefaultObjectGenerator implements ServletContextListener {
 
     private static final Map<String, List<String>> DEFAULT_TEAM_PERMISSIONS = Map.of(
             "Administrators", Stream.of(Permissions.values()).map(Permissions::name).toList(),
-            "Portfolio Managers", List.of(Permissions.Constants.PORTFOLIO),
-            "Automation", List.of(Permissions.Constants.PORTFOLIO, Permissions.Constants.BOM_CREATE),
+            "Portfolio Managers", List.of(Permissions.Constants.PORTFOLIO_MANAGEMENT),
+            "Automation", List.of(Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.BOM_CREATE),
             "Badge Viewers", List.of(Permissions.Constants.BADGES_READ));
 
     private static final Map<String, List<String>> DEFAULT_ROLE_PERMISSIONS = Map.of(

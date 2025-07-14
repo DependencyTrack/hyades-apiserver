@@ -148,12 +148,12 @@ public class QueryManagerTest extends PersistenceCapableTest {
         };
 
         var team1 = teamCreator.apply("Effective Permissions Test Team 1", List.of(
-                Permissions.PORTFOLIO,
+                Permissions.PORTFOLIO_MANAGEMENT,
                 Permissions.FINDING_UPDATE,
-                Permissions.VULNERABILITY,
+                Permissions.VULNERABILITY_MANAGEMENT,
                 Permissions.ACCESS_MANAGEMENT,
                 Permissions.SYSTEM_CONFIGURATION,
-                Permissions.POLICY));
+                Permissions.POLICY_MANAGEMENT));
 
         var team2 = teamCreator.apply("Effective Permissions Test Team 2", List.of(
                 Permissions.PROJECT_READ,
@@ -162,16 +162,16 @@ public class QueryManagerTest extends PersistenceCapableTest {
                 Permissions.BADGES_READ));
 
         var team3 = teamCreator.apply("Effective Permissions Test Team 3", List.of(
-                Permissions.PORTFOLIO,
+                Permissions.PORTFOLIO_MANAGEMENT,
                 Permissions.FINDING_UPDATE,
-                Permissions.VULNERABILITY,
+                Permissions.VULNERABILITY_MANAGEMENT,
                 Permissions.ACCESS_MANAGEMENT,
                 Permissions.SYSTEM_CONFIGURATION,
-                Permissions.POLICY));
+                Permissions.POLICY_MANAGEMENT));
 
         var noAccessTeam = teamCreator.apply("Effective Permissions Test with No Access", List.of(
                 Permissions.BOM_CREATE,
-                Permissions.TAG));
+                Permissions.TAG_MANAGEMENT));
 
         qm.addUserToTeam(ldapUser, team1);
         qm.addUserToTeam(mgdUser, team2);

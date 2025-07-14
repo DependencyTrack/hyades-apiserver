@@ -969,7 +969,7 @@ public class AnalysisResourceTest extends ResourceTest {
     public void updateAnalysisWithAclTest() {
         enablePortfolioAccessControl();
 
-        initializeWithPermissions(Permissions.VULNERABILITY);
+        initializeWithPermissions(Permissions.VULNERABILITY_MANAGEMENT);
 
         final var project = new Project();
         project.setName("acme-app");

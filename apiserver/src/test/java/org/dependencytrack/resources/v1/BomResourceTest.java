@@ -1157,7 +1157,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO_MANAGEMENT);
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, false, bomString);
@@ -1190,7 +1190,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateTestWithParentTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO_MANAGEMENT);
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         // Upload parent project
@@ -1254,7 +1254,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomInvalidParentTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO_MANAGEMENT);
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         BomSubmitRequest request = new BomSubmitRequest(null, "Acme Example", "1.0", null, true, UUID.randomUUID().toString(), null, null, false, bomString);
@@ -1472,7 +1472,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateWithTagsMultipartTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO_MANAGEMENT);
         final var multiPart = new FormDataMultiPart()
                 .field("bom", resourceToString("/unit/bom-1.xml", StandardCharsets.UTF_8), MediaType.APPLICATION_XML_TYPE)
                 .field("projectName", "Acme Example")
@@ -1505,7 +1505,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomProtobufFormatTest() {
-        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO_MANAGEMENT);
         final var project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
         final var bomProto = Bom.newBuilder().setSpecVersion("1.6").build();
         final var multiPart = new FormDataMultiPart()
@@ -1536,7 +1536,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateWithTagsTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO_MANAGEMENT);
         File file = new File(IOUtils.resourceToURL("/unit/bom-1.xml").toURI());
         String bomString = Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
         List<Tag> tags = Stream.of("tag1", "tag2").map(name -> {
@@ -1817,7 +1817,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateLatestWithAclTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var accessLatestProject = new Project();
@@ -1841,7 +1841,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void uploadBomAutoCreateLatestWithAclNoAccessTest() throws Exception {
-        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO);
+        initializeWithPermissions(Permissions.BOM_CREATE, Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var noAccessLatestProject = new Project();

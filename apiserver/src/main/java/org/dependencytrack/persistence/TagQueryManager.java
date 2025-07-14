@@ -244,15 +244,15 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                 hasSystemConfigurationUpdatePermission = true;
             } else {
                 if (principal instanceof final ApiKey apiKey) {
-                    hasPortfolioManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.PORTFOLIO);
-                    hasPolicyManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.POLICY);
+                    hasPortfolioManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.PORTFOLIO_MANAGEMENT);
+                    hasPolicyManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.POLICY_MANAGEMENT);
                     hasSystemConfigurationUpdatePermission = hasPermission(apiKey, Permissions.Constants.SYSTEM_CONFIGURATION);
-                    hasvulnerabilityManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.VULNERABILITY);
+                    hasvulnerabilityManagementUpdatePermission = hasPermission(apiKey, Permissions.Constants.VULNERABILITY_MANAGEMENT);
                 } else if (principal instanceof final User user) {
-                    hasPortfolioManagementUpdatePermission = hasPermission(user, Permissions.Constants.PORTFOLIO, /* includeTeams */ true);
-                    hasPolicyManagementUpdatePermission = hasPermission(user, Permissions.Constants.POLICY, /* includeTeams */ true);
+                    hasPortfolioManagementUpdatePermission = hasPermission(user, Permissions.Constants.PORTFOLIO_MANAGEMENT, /* includeTeams */ true);
+                    hasPolicyManagementUpdatePermission = hasPermission(user, Permissions.Constants.POLICY_MANAGEMENT, /* includeTeams */ true);
                     hasSystemConfigurationUpdatePermission = hasPermission(user, Permissions.Constants.SYSTEM_CONFIGURATION, /* includeTeams */ true);
-                    hasvulnerabilityManagementUpdatePermission = hasPermission(user, Permissions.Constants.VULNERABILITY, /* includeTeams */ true);
+                    hasvulnerabilityManagementUpdatePermission = hasPermission(user, Permissions.Constants.VULNERABILITY_MANAGEMENT, /* includeTeams */ true);
                 }
             }
 
@@ -261,7 +261,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                     errorByTagName.put(row.name(), """
                             The tag is assigned to %d project(s), but the authenticated principal \
                             is missing the %s permission.""".formatted(row.projectCount(),
-                            Permissions.PORTFOLIO));
+                            Permissions.PORTFOLIO_MANAGEMENT));
                     continue;
                 }
 
@@ -278,7 +278,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                     errorByTagName.put(row.name(), """
                             The tag is assigned to %d policies, but the authenticated principal \
                             is missing the %s permission.""".formatted(row.policyCount(),
-                            Permissions.POLICY));
+                            Permissions.POLICY_MANAGEMENT));
                 }
 
                 if (row.notificationRuleCount() > 0 && !hasSystemConfigurationUpdatePermission) {
@@ -292,7 +292,7 @@ public class TagQueryManager extends QueryManager implements IQueryManager {
                     errorByTagName.put(row.name(), """
                             The tag is assigned to %d vulnerabilities, but the authenticated principal \
                             is missing the %s permission.""".formatted(row.vulnerabilityCount(),
-                            Permissions.VULNERABILITY));
+                            Permissions.VULNERABILITY_MANAGEMENT));
                 }
             }
 

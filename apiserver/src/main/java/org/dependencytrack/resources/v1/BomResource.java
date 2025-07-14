@@ -254,7 +254,7 @@ public class BomResource extends AbstractApiResource {
                       then the <code>projectName</code> and <code>projectVersion</code> must be specified.
                       Optionally, if <code>autoCreate</code> is specified and <code>true</code> and the project does not exist,
                       the project will be created. In this scenario, the principal making the request will
-                      additionally need the <strong>PORTFOLIO</strong> permission.
+                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong> permission.
                     </p>
                     <p>
                       The BOM will be validated against the CycloneDX schema. If schema validation fails,
@@ -316,7 +316,7 @@ public class BomResource extends AbstractApiResource {
                 return qm.callInTransaction(() -> {
                     Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
                     if (project == null && request.isAutoCreate()) {
-                        if (hasPermission(Permissions.Constants.PORTFOLIO)) {
+                        if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT)) {
                             Project parent = null;
                             if (request.getParentUUID() != null || request.getParentName() != null) {
                                 if (request.getParentUUID() != null) {
@@ -370,7 +370,7 @@ public class BomResource extends AbstractApiResource {
                       then the <code>projectName</code> and <code>projectVersion</code> must be specified.
                       Optionally, if <code>autoCreate</code> is specified and <code>true</code> and the project does not exist,
                       the project will be created. In this scenario, the principal making the request will
-                      additionally need the <strong>PORTFOLIO</strong> permission.
+                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong> permission.
                     </p>
                     <p>
                       MediaType supported for BOM artifact is 'application/xml', 'application/json' or 'application/x.vnd.cyclonedx+protobuf'.
@@ -431,7 +431,7 @@ public class BomResource extends AbstractApiResource {
                     final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
                     Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
                     if (project == null && autoCreate) {
-                        if (hasPermission(Permissions.Constants.PORTFOLIO)) {
+                        if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT)) {
                             Project parent = null;
                             if (parentUUID != null || parentName != null) {
                                 if (parentUUID != null) {

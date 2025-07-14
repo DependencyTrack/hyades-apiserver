@@ -394,7 +394,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Creates a new component",
-            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -409,7 +409,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response createComponent(@Parameter(description = "The UUID of the project to create a component for", schema = @Schema(format = "uuid"), required = true)
                                     @PathParam("uuid") @ValidUuid String uuid, Component jsonComponent) {
         final Validator validator = super.getValidator();
@@ -527,7 +527,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Updates a component",
-            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -542,7 +542,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the component could not be found"),
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response updateComponent(Component jsonComponent) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -661,7 +661,7 @@ public class ComponentResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a component",
-            description = "<p>Requires permission <strong>PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Component removed successfully"),
@@ -672,7 +672,7 @@ public class ComponentResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The UUID of the component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response deleteComponent(
             @Parameter(description = "The UUID of the component to delete", schema = @Schema(format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
