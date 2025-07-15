@@ -28,12 +28,8 @@ import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
-import org.dependencytrack.metrics.Metrics;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.persistence.QueryManager;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 
-import javax.jdo.PersistenceManager;
-import javax.jdo.Query;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,6 +38,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
@@ -63,7 +60,7 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
             try {
                 executeWithLock(
                         getLockConfigForTask(PortfolioMetricsUpdateTask.class),
-                        (LockingTaskExecutor.Task)() -> updateMetrics(event.isForceRefresh()));
+                        (LockingTaskExecutor.Task) () -> updateMetrics(event.isForceRefresh()));
             } catch (Throwable ex) {
                 LOGGER.error("Error in acquiring lock and executing portfolio metrics task", ex);
             }
@@ -79,88 +76,97 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 LOGGER.info("Refreshing project metrics");
                 refreshProjectMetrics();
             }
-
-            Metrics.updatePortfolioMetrics();
         } finally {
             LOGGER.info("Completed portfolio metrics update in " + Duration.ofNanos(System.nanoTime() - startTimeNs));
         }
     }
 
     private static void refreshProjectMetrics() throws Exception {
-        try (final var qm = new QueryManager()) {
-            final PersistenceManager pm = qm.getPersistenceManager();
+        LOGGER.debug("Fetching first " + BATCH_SIZE + " projects");
+        LockConfiguration portfolioMetricsTaskConfig = getLockConfigForTask(PortfolioMetricsUpdateTask.class);
+        List<ProjectProjection> activeProjects = fetchNextActiveProjectsPage(/* lastId */ null);
+        long processStartTime = System.currentTimeMillis();
+        while (!activeProjects.isEmpty()) {
+            long startTimeOfBatch = System.currentTimeMillis();
+            final long firstId = activeProjects.getFirst().id();
+            final long lastId = activeProjects.getLast().id();
 
-            LOGGER.debug("Fetching first " + BATCH_SIZE + " projects");
-            LockConfiguration portfolioMetricsTaskConfig = getLockConfigForTask(PortfolioMetricsUpdateTask.class);
-            List<ProjectProjection> activeProjects = fetchNextActiveProjectsPage(pm, null);
-            long processStartTime = System.currentTimeMillis();
-            while (!activeProjects.isEmpty()) {
-                long startTimeOfBatch = System.currentTimeMillis();
-                final long firstId = activeProjects.get(0).id();
-                final long lastId = activeProjects.get(activeProjects.size() - 1).id();
+            // Distribute the batch across at most MAX_CONCURRENCY events, and process them asynchronously.
+            final List<List<ProjectProjection>> partitions = partition(activeProjects, MAX_CONCURRENCY);
+            final var countDownLatch = new CountDownLatch(partitions.size());
 
-                // Distribute the batch across at most MAX_CONCURRENCY events, and process them asynchronously.
-                final List<List<ProjectProjection>> partitions = partition(activeProjects, MAX_CONCURRENCY);
-                final var countDownLatch = new CountDownLatch(partitions.size());
+            for (final List<ProjectProjection> partition : partitions) {
+                final var partitionEvent = new CallbackEvent(() -> {
+                    for (final ProjectProjection project : partition) {
+                        new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.uuid()));
+                    }
+                });
 
-                for (final List<ProjectProjection> partition : partitions) {
-                    final var partitionEvent = new CallbackEvent(() -> {
-                        for (final ProjectProjection project : partition) {
-                            new ProjectMetricsUpdateTask().inform(new ProjectMetricsUpdateEvent(project.uuid()));
-                        }
-                    });
-
-                    final var countDownEvent = new CallbackEvent(countDownLatch::countDown);
-                    Event.dispatch(partitionEvent
-                            .onSuccess(countDownEvent)
-                            .onFailure(countDownEvent));
-                }
-
-                LOGGER.debug("Waiting for metrics updates for projects " + firstId + "-" + lastId + " to complete");
-                if (!countDownLatch.await(15, TimeUnit.MINUTES)) {
-                    // Depending on the system load, it may take a while for the queued events
-                    // to be processed. And depending on how large the projects are, it may take a
-                    // while for the processing of the respective event to complete.
-                    // It is unlikely though that either of these situations causes a block for
-                    // over 15 minutes. If that happens, the system is under-resourced.
-                    LOGGER.warn("Updating metrics for projects " + firstId + "-" + lastId +
-                            " took longer than expected (15m); Proceeding with potentially stale data");
-                }
-                LOGGER.debug("Completed metrics updates for projects " + firstId + "-" + lastId);
-                LOGGER.debug("Fetching next " + BATCH_SIZE + " projects");
-                long now = System.currentTimeMillis();
-                long processDurationInMillis = now - startTimeOfBatch;
-                long cumulativeDurationInMillis = now - processStartTime;
-                //extend the lock for the duration of process
-                //initial duration of portfolio metrics can be set to 20min.
-                //No thread calculating metrics would be executing for more than 15min.
-                //lock can only be extended if lock until is held for time after current db time
-                if(isTaskLockToBeExtended(cumulativeDurationInMillis, PortfolioMetricsUpdateTask.class)) {
-                    Duration extendLockByDuration = Duration.ofMillis(processDurationInMillis).plus(portfolioMetricsTaskConfig.getLockAtLeastFor());
-                    LOGGER.debug("Extending lock duration by ms: " + extendLockByDuration);
-                    LockExtender.extendActiveLock(extendLockByDuration, portfolioMetricsTaskConfig.getLockAtLeastFor());
-                }
-                activeProjects = fetchNextActiveProjectsPage(pm, lastId);
+                final var countDownEvent = new CallbackEvent(countDownLatch::countDown);
+                Event.dispatch(partitionEvent
+                        .onSuccess(countDownEvent)
+                        .onFailure(countDownEvent));
             }
+
+            LOGGER.debug("Waiting for metrics updates for projects " + firstId + "-" + lastId + " to complete");
+            if (!countDownLatch.await(15, TimeUnit.MINUTES)) {
+                // Depending on the system load, it may take a while for the queued events
+                // to be processed. And depending on how large the projects are, it may take a
+                // while for the processing of the respective event to complete.
+                // It is unlikely though that either of these situations causes a block for
+                // over 15 minutes. If that happens, the system is under-resourced.
+                LOGGER.warn("Updating metrics for projects " + firstId + "-" + lastId +
+                            " took longer than expected (15m); Proceeding with potentially stale data");
+            }
+            LOGGER.debug("Completed metrics updates for projects " + firstId + "-" + lastId);
+            LOGGER.debug("Fetching next " + BATCH_SIZE + " projects");
+            long now = System.currentTimeMillis();
+            long processDurationInMillis = now - startTimeOfBatch;
+            long cumulativeDurationInMillis = now - processStartTime;
+            //extend the lock for the duration of process
+            //initial duration of portfolio metrics can be set to 20min.
+            //No thread calculating metrics would be executing for more than 15min.
+            //lock can only be extended if lock until is held for time after current db time
+            if (isTaskLockToBeExtended(cumulativeDurationInMillis, PortfolioMetricsUpdateTask.class)) {
+                Duration extendLockByDuration = Duration.ofMillis(processDurationInMillis).plus(portfolioMetricsTaskConfig.getLockAtLeastFor());
+                LOGGER.debug("Extending lock duration by ms: " + extendLockByDuration);
+                LockExtender.extendActiveLock(extendLockByDuration, portfolioMetricsTaskConfig.getLockAtLeastFor());
+            }
+            activeProjects = fetchNextActiveProjectsPage(lastId);
         }
     }
 
     public record ProjectProjection(long id, UUID uuid) {
     }
 
-    private static List<ProjectProjection> fetchNextActiveProjectsPage(final PersistenceManager pm, final Long lastId) throws Exception {
-        try (final Query<Project> query = pm.newQuery(Project.class)) {
-            if (lastId == null) {
-                query.setFilter("inactiveSince == null");
-            } else {
-                query.setFilter("inactiveSince == null && id < :lastId");
-                query.setParameters(lastId);
-            }
-            query.setOrdering("id DESC");
-            query.range(0, BATCH_SIZE);
-            query.setResult("id, uuid");
-            return List.copyOf(query.executeResultList(ProjectProjection.class));
-        }
+    private static List<ProjectProjection> fetchNextActiveProjectsPage(final Long lastId) {
+        return withJdbiHandle(handle -> {
+            final org.jdbi.v3.core.statement.Query query = handle.createQuery("""
+                    SELECT "ID"
+                         , "UUID"
+                      FROM "PROJECT"
+                     WHERE "INACTIVE_SINCE" IS NULL
+                       AND NOT EXISTS(
+                         SELECT 1
+                           FROM "PROJECTMETRICS"
+                          WHERE "PROJECT_ID" = "PROJECT"."ID"
+                            AND "LAST_OCCURRENCE" >= CURRENT_DATE
+                            AND "LAST_OCCURRENCE" < CURRENT_DATE + INTERVAL '1 day'
+                       )
+                    <#if lastId>
+                       AND "ID" > :lastId
+                    </#if>
+                     ORDER BY "ID"
+                     LIMIT :batchSize
+                    """);
+
+            return query
+                    .bind("lastId", lastId)
+                    .bind("batchSize", BATCH_SIZE)
+                    .defineNamedBindings()
+                    .map(ConstructorMapper.of(ProjectProjection.class))
+                    .list();
+        });
     }
 
     static <T> List<List<T>> partition(final List<T> list, int numPartitions) {
