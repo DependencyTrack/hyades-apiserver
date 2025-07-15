@@ -70,7 +70,7 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         JsonArray json = parseJsonArray(response);
         Assert.assertNotNull(json);
-        Assert.assertEquals(39, json.size());
+        Assert.assertEquals(20, json.size());
         Assert.assertEquals("ACCESS_MANAGEMENT", json.getJsonObject(0).getString("name"));
         Assert.assertEquals("Allows the management of users, teams, and API keys", json.getJsonObject(0).getString("description"));
     }
@@ -88,7 +88,7 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("user1", json.getString("username"));
         Assert.assertEquals(1, json.getJsonArray("permissions").size());
-        Assert.assertEquals("PORTFOLIO_MANAGEMENT", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
+        Assert.assertEquals("PORTFOLIO", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -178,7 +178,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void removePermissionFromUserNoChangesTest() {
         ManagedUser user = qm.createManagedUser("user1", TEST_USER_PASSWORD_HASH);
         String username = user.getUsername();
-        Response response = jersey.target(V1_PERMISSION + "/BOM_UPLOAD/user/" + username).request()
+        Response response = jersey.target(V1_PERMISSION + "/BOM_CREATE/user/" + username).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
         Assert.assertEquals(304, response.getStatus(), 0);
@@ -198,7 +198,7 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("team1", json.getString("name"));
         Assert.assertEquals(1, json.getJsonArray("permissions").size());
-        Assert.assertEquals("PORTFOLIO_MANAGEMENT", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
+        Assert.assertEquals("PORTFOLIO", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -288,7 +288,7 @@ public class PermissionResourceTest extends ResourceTest {
     public void removePermissionFromTeamNoChangesTest() {
         Team team = qm.createTeam("team1");
         String teamUuid = team.getUuid().toString();
-        Response response = jersey.target(V1_PERMISSION + "/BOM_UPLOAD/team/" + teamUuid).request()
+        Response response = jersey.target(V1_PERMISSION + "/BOM_CREATE/team/" + teamUuid).request()
                 .header(X_API_KEY, apiKey)
                 .delete();
         Assert.assertEquals(304, response.getStatus(), 0);
@@ -302,14 +302,14 @@ public class PermissionResourceTest extends ResourceTest {
 
         List<Permission> permissionSet1 = List.of(
                 qm.getPermission("ACCESS_MANAGEMENT"),
-                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
-                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
+                qm.getPermission("SYSTEM_CONFIGURATION"),
+                qm.getPermission("VULNERABILITY_MANAGEMENT"));
 
         List<Permission> permissionSet2 = List.of(
-                qm.getPermission("BOM_UPLOAD"),
-                qm.getPermission("VIEW_PORTFOLIO"),
+                qm.getPermission("BOM_CREATE"),
+                qm.getPermission("POLICY_MANAGEMENT"),
                 qm.getPermission("PORTFOLIO_MANAGEMENT"),
-                qm.getPermission("PORTFOLIO_MANAGEMENT_CREATE"));
+                qm.getPermission("TAG_MANAGEMENT"));
 
         JsonObject permissionRequest1 = Json.createObjectBuilder()
                 .add("username", username)
@@ -397,14 +397,14 @@ public class PermissionResourceTest extends ResourceTest {
 
         List<Permission> permissionSet1 = List.of(
                 qm.getPermission("ACCESS_MANAGEMENT"),
-                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
-                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
+                qm.getPermission("SYSTEM_CONFIGURATION"),
+                qm.getPermission("VULNERABILITY_MANAGEMENT"));
 
         List<Permission> permissionSet2 = List.of(
-                qm.getPermission("BOM_UPLOAD"),
-                qm.getPermission("VIEW_PORTFOLIO"),
+                qm.getPermission("BOM_CREATE"),
+                qm.getPermission("POLICY_MANAGEMENT"),
                 qm.getPermission("PORTFOLIO_MANAGEMENT"),
-                qm.getPermission("PORTFOLIO_MANAGEMENT_CREATE"));
+                qm.getPermission("TAG_MANAGEMENT"));
 
         JsonObject permissionRequet1 = Json.createObjectBuilder()
                 .add("team", teamUuid.toString())
@@ -465,7 +465,7 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("Test Role", json.getString("name"));
         Assert.assertEquals(1, json.getJsonArray("permissions").size());
-        Assert.assertEquals("PORTFOLIO_MANAGEMENT",
+        Assert.assertEquals("PORTFOLIO",
                 json.getJsonArray("permissions").getJsonObject(0).getString("name"));
     }
 

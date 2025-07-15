@@ -432,12 +432,12 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                                    ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
                                 WHERE ph."CHILD_PROJECT_ID" = "PROJECT"."ID"
                                   AND upep."USER_ID" = :projectAclUserId
-                                  AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                                  AND upep."PERMISSION_NAME" = ALL(:projectAclPermissions)
                              )
                             """);
 
-                    assertThat(ctx.getBinding())
-                            .hasToString("{named:{projectAclUserId:%d}}".formatted(managedUser.getId()));
+                    assertThat(ctx.getBinding()).hasToString(
+                            "{named:{projectAclUserId:%d,projectAclPermissions:[]}}".formatted(managedUser.getId()));
                 }))
                 .createQuery(TEST_QUERY_TEMPLATE)
                 .mapTo(Integer.class)
@@ -705,7 +705,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                                   ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
                                WHERE ph."CHILD_PROJECT_ID" = "PROJECT"."PARENT_PROJECT_ID"
                                  AND upep."USER_ID" = :projectAclUserId
-                                 AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                                 AND upep."PERMISSION_NAME" = ALL(:projectAclPermissions)
                              )
                             """);
 

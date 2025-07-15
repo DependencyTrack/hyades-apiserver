@@ -49,6 +49,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
@@ -67,53 +69,45 @@ public class DefaultObjectGenerator implements ServletContextListener {
     private static final Logger LOGGER = Logger.getLogger(DefaultObjectGenerator.class);
 
     private static final Map<String, List<String>> DEFAULT_TEAM_PERMISSIONS = Map.of(
-            "Administrators", Stream.of(Permissions.values())
-                    .map(Permissions::name)
-                    .toList(),
-            "Portfolio Managers", List.of(
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE),
-            "Automation", List.of(
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.BOM_UPLOAD),
-            "Badge Viewers", List.of(
-                    Permissions.Constants.VIEW_BADGES));
+            "Administrators", Stream.of(Permissions.values()).map(Permissions::name).toList(),
+            "Portfolio Managers", List.of(Permissions.Constants.PORTFOLIO_MANAGEMENT),
+            "Automation", List.of(Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.BOM_CREATE),
+            "Badge Viewers", List.of(Permissions.Constants.BADGES_READ));
 
     private static final Map<String, List<String>> DEFAULT_ROLE_PERMISSIONS = Map.of(
             "Project Admin", List.of(
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_CREATE,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE,
-                    Permissions.Constants.POLICY_MANAGEMENT,
-                    Permissions.Constants.POLICY_MANAGEMENT_CREATE,
-                    Permissions.Constants.POLICY_MANAGEMENT_READ,
-                    Permissions.Constants.POLICY_MANAGEMENT_UPDATE,
-                    Permissions.Constants.POLICY_MANAGEMENT_DELETE),
+                    Permissions.Constants.BADGES_READ,
+                    Permissions.Constants.BOM_READ,
+                    Permissions.Constants.BOM_CREATE,
+                    Permissions.Constants.FINDING_CREATE,
+                    Permissions.Constants.FINDING_READ,
+                    Permissions.Constants.FINDING_UPDATE,
+                    Permissions.Constants.POLICY_VIOLATION_CREATE,
+                    Permissions.Constants.POLICY_VIOLATION_READ,
+                    Permissions.Constants.POLICY_VIOLATION_UPDATE,
+                    Permissions.Constants.PROJECT_READ,
+                    Permissions.Constants.PROJECT_UPDATE,
+                    Permissions.Constants.PROJECT_DELETE),
             "Project Auditor", List.of(
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.VIEW_VULNERABILITY,
-                    Permissions.Constants.VIEW_POLICY_VIOLATION,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ),
+                    Permissions.Constants.BADGES_READ,
+                    Permissions.Constants.BOM_READ,
+                    Permissions.Constants.FINDING_READ,
+                    Permissions.Constants.POLICY_VIOLATION_READ,
+                    Permissions.Constants.PROJECT_READ),
             "Project Editor", List.of(
-                    Permissions.Constants.BOM_UPLOAD,
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-                    Permissions.Constants.VIEW_VULNERABILITY,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
-                    Permissions.Constants.PROJECT_CREATION_UPLOAD),
+                    Permissions.Constants.BOM_CREATE,
+                    Permissions.Constants.BOM_READ,
+                    Permissions.Constants.FINDING_READ,
+                    Permissions.Constants.FINDING_UPDATE,
+                    Permissions.Constants.POLICY_VIOLATION_CREATE,
+                    Permissions.Constants.POLICY_VIOLATION_READ,
+                    Permissions.Constants.POLICY_VIOLATION_UPDATE,
+                    Permissions.Constants.PROJECT_READ,
+                    Permissions.Constants.PROJECT_UPDATE),
             "Project Viewer", List.of(
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.VIEW_VULNERABILITY,
-                    Permissions.Constants.VIEW_BADGES));
+                    Permissions.Constants.BADGES_READ,
+                    Permissions.Constants.BOM_READ,
+                    Permissions.Constants.PROJECT_READ));
 
     private final Map<String, Permission> persistentPermissionByName = new HashMap<>();
 
@@ -271,16 +265,17 @@ public class DefaultObjectGenerator implements ServletContextListener {
     private void loadDefaultPermissions(final QueryManager qm) {
         LOGGER.info("Synchronizing permissions to datastore");
 
-        List<String> existing = Objects.requireNonNullElse(qm.getPermissions(), Collections.<Permission>emptyList())
-                .stream()
-                .map(Permission::getName)
-                .toList();
+        final List<Permission> allPermissions = Objects.requireNonNullElse(qm.getPermissions(), Collections.emptyList());
+        final Map<String, Permission> existing = allPermissions.stream().collect(
+                Collectors.toMap(Permission::getName, Function.identity()));
 
-        for (final Permissions value : Permissions.values())
-            if (!existing.contains(value.name())) {
-                LOGGER.debug("Creating permission: " + value.name());
-                persistentPermissionByName.put(value.name(), qm.createPermission(value.name(), value.getDescription()));
-            }
+        for (final Permissions value : Permissions.values()) {
+            final String name = value.name();
+
+            LOGGER.debug("Creating permission: " + name);
+            persistentPermissionByName.put(name,
+                    existing.getOrDefault(name, qm.createPermission(name, value.getDescription())));
+        }
     }
 
     @SuppressWarnings("unused")
