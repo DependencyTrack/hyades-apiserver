@@ -54,7 +54,7 @@ public interface MetricsDao extends SqlObject {
                 FROM GENERATE_SERIES(0, GREATEST(:days - 1, 0)) day
             ),
             projects_in_scope AS(
-              SELECT DISTINCT "ID"
+              SELECT "ID"
                 FROM "PROJECT"
                WHERE "INACTIVE_SINCE" IS NULL
                  AND ${apiProjectAclCondition}
