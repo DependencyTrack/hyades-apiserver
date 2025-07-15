@@ -44,6 +44,6 @@ properties:
     type: string
     format: uuid
   started_at:
-    $ref: "./Timestamp.yaml"
+    $ref: "./timestamp.yaml"
   updated_at:
-    $ref: "./Timestamp.yaml"
+    $ref: "./timestamp.yaml"
