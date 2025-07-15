@@ -22,23 +22,9 @@ import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
-import jakarta.ws.rs.BadRequestException;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
-import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.TeamsApi;
-import org.dependencytrack.api.v2.model.BulkCreateTeamMembershipsRequest;
-import org.dependencytrack.api.v2.model.BulkCreateTeamMembershipsRequestItem;
-import org.dependencytrack.api.v2.model.BulkCreateTeamMembershipsResponse;
-import org.dependencytrack.api.v2.model.BulkCreateTeamMembershipsResponseItem;
-import org.dependencytrack.api.v2.model.BulkCreateTeamsRequest;
-import org.dependencytrack.api.v2.model.BulkCreateTeamsRequestItem;
-import org.dependencytrack.api.v2.model.BulkCreateTeamsResponse;
-import org.dependencytrack.api.v2.model.BulkCreateTeamsResponseItem;
-import org.dependencytrack.api.v2.model.BulkDeleteTeamResult;
-import org.dependencytrack.api.v2.model.BulkDeleteTeamsResponse;
+import org.dependencytrack.api.v2.model.CreateTeamMembershipRequest;
+import org.dependencytrack.api.v2.model.CreateTeamRequest;
 import org.dependencytrack.api.v2.model.GetTeamResponse;
 import org.dependencytrack.api.v2.model.ListTeamMembershipsResponse;
 import org.dependencytrack.api.v2.model.ListTeamMembershipsResponseItem;
@@ -54,17 +40,17 @@ import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.HashSet;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+import jakarta.ws.rs.ext.Provider;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
+import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
 @Provider
 public class TeamsResource implements TeamsApi {
@@ -119,94 +105,47 @@ public class TeamsResource implements TeamsApi {
 
     @Override
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
-    public Response createTeams(final BulkCreateTeamsRequest bulkRequest) {
-        final long uniqueBulksRequestItemIds = bulkRequest.getTeams().stream()
-                .map(BulkCreateTeamsRequestItem::getId)
-                .distinct()
-                .count();
-        if (uniqueBulksRequestItemIds < bulkRequest.getTeams().size()) {
-            throw new BadRequestException("Bulk request item IDs are not unique.");
-        }
-
-        final Set<String> allPermissionNames =
-                bulkRequest.getTeams().stream()
-                        .flatMap(team -> team.getPermissions().stream())
-                        .collect(Collectors.toSet());
-
-        final var statusByBulkItemId = new HashMap<String, String>(bulkRequest.getTeams().size());
-
+    public Response createTeam(final CreateTeamRequest request) {
         try (final var qm = new QueryManager()) {
             qm.runInTransaction(() -> {
-                final Map<String, Permission> permissionByName =
-                        qm.getPermissionsByName(allPermissionNames).stream()
-                                .collect(Collectors.toMap(Permission::getName, Function.identity()));
+                final List<Permission> permissions =
+                        qm.getPermissionsByName(request.getPermissions());
 
-                for (final BulkCreateTeamsRequestItem bulkItem : bulkRequest.getTeams()) {
-                    final List<Permission> permissions = bulkItem.getPermissions().stream()
-                            .map(permissionByName::get)
-                            .filter(Objects::nonNull)
-                            .toList();
-
-                    Team team = qm.getTeam(bulkItem.getName());
-                    if (team != null) {
-                        statusByBulkItemId.put(bulkItem.getId(), "ALREADY_EXISTS");
-                        continue;
-                    }
-
-                    team = qm.createTeam(bulkItem.getName());
-                    team.setPermissions(permissions);
-                    statusByBulkItemId.put(bulkItem.getId(), "CREATED");
-                }
+                final var team = new Team();
+                team.setName(request.getName());
+                team.setPermissions(permissions);
+                qm.persist(team);
             });
+        } catch (RuntimeException e) {
+            if (isUniqueConstraintViolation(e)) {
+                throw new ClientErrorException(Response.Status.CONFLICT);
+            }
+
+            throw e;
         }
 
-        final var response = BulkCreateTeamsResponse.builder()
-                .teams(statusByBulkItemId.entrySet().stream()
-                        .<BulkCreateTeamsResponseItem>map(
-                                entry -> BulkCreateTeamsResponseItem.builder()
-                                        .id(entry.getKey())
-                                        .status(entry.getValue())
-                                        .build())
-                        .toList())
-                .build();
-
+        LOGGER.info(
+                SecurityMarkers.SECURITY_AUDIT,
+                "Team created: {}", request.getName());
         return Response
-                .status(207)
-                .entity(response)
+                .created(uriInfo.getBaseUriBuilder()
+                        .path("/teams")
+                        .path(request.getName())
+                        .build())
                 .build();
     }
 
     @Override
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
-    public Response deleteTeams(final List<String> names) {
-        final Set<String> uniqueNames = Set.copyOf(names);
-
+    public Response deleteTeam(final String name) {
         final List<String> deletedTeamNames = inJdbiTransaction(
-                handle -> handle.attach(TeamDao.class).deleteTeamsByName(uniqueNames));
+                handle -> handle.attach(TeamDao.class).deleteTeamsByName(List.of(name)));
+        if (deletedTeamNames.isEmpty()) {
+            throw new NotFoundException();
+        }
 
-        final var response = BulkDeleteTeamsResponse.builder()
-                .teams(uniqueNames.stream()
-                        .<BulkDeleteTeamResult>map(
-                                teamName -> BulkDeleteTeamResult.builder()
-                                        .name(teamName)
-                                        .status(deletedTeamNames.contains(teamName)
-                                                ? "DELETED"
-                                                : "DOES_NOT_EXIST")
-                                        .build())
-                        .peek(teamStatus -> {
-                            if ("DELETED".equals(teamStatus.getStatus())) {
-                                LOGGER.info(
-                                        SecurityMarkers.SECURITY_AUDIT,
-                                        "Team deleted: {}", teamStatus.getName());
-                            }
-                        })
-                        .toList())
-                .build();
-
-        return Response
-                .status(207)
-                .entity(response)
-                .build();
+        LOGGER.info(SecurityMarkers.SECURITY_AUDIT, "Team deleted: {}", name);
+        return Response.noContent().build();
     }
 
     @Override
@@ -229,69 +168,36 @@ public class TeamsResource implements TeamsApi {
     }
 
     @Override
-    public Response createTeamMemberships(final BulkCreateTeamMembershipsRequest bulkRequest) {
-        final long uniqueBulksRequestItemIds = bulkRequest.getMemberships().stream()
-                .map(BulkCreateTeamMembershipsRequestItem::getId)
-                .distinct()
-                .count();
-        if (uniqueBulksRequestItemIds < bulkRequest.getMemberships().size()) {
-            throw new BadRequestException("Bulk request item IDs are not unique.");
-        }
-
-        final var statusByBulkItemId = new HashMap<String, String>(bulkRequest.getMemberships().size());
-
-        final var allTeamNames = new HashSet<String>();
-        final var allUsernames = new HashSet<String>();
-
-        for (final BulkCreateTeamMembershipsRequestItem bulkItem : bulkRequest.getMemberships()) {
-            allTeamNames.add(bulkItem.getTeamName());
-            allUsernames.add(bulkItem.getUsername());
-        }
-
+    public Response createTeamMembership(final CreateTeamMembershipRequest request) {
         try (final var qm = new QueryManager()) {
             qm.runInTransaction(() -> {
-                final Map<String, Team> teamByName =
-                        qm.getTeamsByName(allTeamNames).stream()
-                                .collect(Collectors.toMap(Team::getName, Function.identity()));
-                final Map<String, User> userByName =
-                        qm.getUsersByName(allUsernames).stream()
-                                .collect(Collectors.toMap(User::getUsername, Function.identity()));
-
-                for (final BulkCreateTeamMembershipsRequestItem bulkItem : bulkRequest.getMemberships()) {
-                    final Team team = teamByName.get(bulkItem.getTeamName());
-                    final User user = userByName.get(bulkItem.getUsername());
-
-                    if (team == null) {
-                        statusByBulkItemId.put(bulkItem.getId(), "TEAM_DOES_NOT_EXIST");
-                        continue;
-                    } else if (user == null) {
-                        statusByBulkItemId.put(bulkItem.getId(), "USER_DOES_NOT_EXIST");
-                        continue;
-                    } else if (team.getUsers().contains(user)) {
-                        statusByBulkItemId.put(bulkItem.getId(), "ALREADY_EXISTS");
-                        continue;
-                    }
-
-                    team.getUsers().add(user);
-                    statusByBulkItemId.put(bulkItem.getId(), "CREATED");
+                final Team team = qm.getTeam(request.getTeamName());
+                if (team == null) {
+                    throw new NotFoundException();
                 }
+
+                final User user = qm.getUser(request.getUsername());
+                if (user == null) {
+                    throw new NotFoundException();
+                }
+
+                team.getUsers().add(user);
+                user.getTeams().add(team);
             });
+        } catch (RuntimeException e) {
+            if (isUniqueConstraintViolation(e)) {
+                throw new ClientErrorException(Response.Status.CONFLICT);
+            }
+
+            throw e;
         }
 
-        final var response = BulkCreateTeamMembershipsResponse.builder()
-                .memberships(statusByBulkItemId.entrySet().stream()
-                        .<BulkCreateTeamMembershipsResponseItem>map(
-                                entry -> BulkCreateTeamMembershipsResponseItem.builder()
-                                        .id(entry.getKey())
-                                        .status(entry.getValue())
-                                        .build())
-                        .toList())
-                .build();
-
-        return Response
-                .status(207)
-                .entity(response)
-                .build();
+        LOGGER.info(
+                SecurityMarkers.SECURITY_AUDIT,
+                "Team membership created: team={}, user={}",
+                request.getTeamName(),
+                request.getUsername());
+        return Response.created(null).build();
     }
 
     @Override

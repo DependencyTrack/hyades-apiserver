@@ -16,15 +16,14 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  id:
+  team_name:
     type: string
-    description: ID of the bulk item
-  status:
+    description: Name of the team
+    maxLength: 255
+  username:
     type: string
-    x-extensible-enum:
-    - CREATED
-    - ALREADY_EXISTS
-    description: Creation status of the team
+    description: Name of the user
+    maxLength: 255
 required:
-- id
-- status
+- team_name
+- username

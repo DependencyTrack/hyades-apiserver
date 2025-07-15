@@ -33,7 +33,8 @@ public final class ClientErrorExceptionMapper extends ProblemDetailsExceptionMap
     private static final Map<Integer, String> DETAIL_BY_STATUS = Map.ofEntries(
             Map.entry(401, "Not authorized to access the requested resource."),
             Map.entry(403, "Not permitted to access the requested resource."),
-            Map.entry(404, "The requested resource could not be found."));
+            Map.entry(404, "The requested resource could not be found."),
+            Map.entry(409, "The resource already exists."));
 
     @Override
     public ProblemDetails map(final ClientErrorException exception) {

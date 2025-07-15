@@ -16,9 +16,16 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  memberships:
+  name:
+    type: string
+    description: Name of the team to create
+    maxLength: 255
+  permissions:
     type: array
     items:
-      $ref: "./bulk-create-team-memberships-response-item.yaml"
+      type: string
+      maxLength: 255
+    uniqueItems: true
+    description: Permissions to assign to the team
 required:
-- memberships
+- name

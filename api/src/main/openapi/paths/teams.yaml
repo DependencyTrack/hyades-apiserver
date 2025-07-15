@@ -40,9 +40,9 @@ get:
       $ref: "../components/responses/generic-error.yaml"
 
 post:
-  operationId: createTeams
-  summary: Create teams
-  description: Create one or more teams
+  operationId: createTeam
+  summary: Create team
+  description: Create a team
   tags:
   - Teams
   requestBody:
@@ -50,14 +50,10 @@ post:
     content:
       application/json:
         schema:
-          $ref: "../components/schemas/bulk-create-teams-request.yaml"
+          $ref: "../components/schemas/create-team-request.yaml"
   responses:
-    "207":
-      description: Team creation results
-      content:
-        application/json:
-          schema:
-            $ref: "../components/schemas/bulk-create-teams-response.yaml"
+    "201":
+      description: Team Created
     "400":
       description: Bad Request
       content:
@@ -70,38 +66,7 @@ post:
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
       $ref: "../components/responses/generic-forbidden-error.yaml"
-    default:
-      $ref: "../components/responses/generic-error.yaml"
-
-delete:
-  operationId: deleteTeams
-  summary: Delete teams
-  description: Delete one or more teams
-  tags:
-  - Teams
-  parameters:
-  - name: names
-    description: Names of teams to delete
-    in: query
-    schema:
-      type: array
-      items:
-        type: string
-        maxLength: 255
-      minItems: 1
-      maxItems: 100
-  responses:
-    "207":
-      description: Team deletion results
-      content:
-        application/json:
-          schema:
-            $ref: "../components/schemas/bulk-delete-teams-response.yaml"
-    "400":
-      $ref: "../components/responses/invalid-request-error.yaml"
-    "401":
-      $ref: "../components/responses/generic-unauthorized-error.yaml"
-    "403":
-      $ref: "../components/responses/generic-forbidden-error.yaml"
+    "409":
+      $ref: "../components/responses/generic-conflict-error.yaml"
     default:
       $ref: "../components/responses/generic-error.yaml"

@@ -14,22 +14,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-type: object
-properties:
-  id:
-    type: string
-    description: ID of the bulk item. Must be unique in the bulk.
-  name:
-    type: string
-    description: Name of the team to create
-    maxLength: 255
-  permissions:
-    type: array
-    items:
-      type: string
-      maxLength: 255
-    uniqueItems: true
-    description: Permissions to assign to the team
-required:
-- id
-- name
+description: Forbidden
+content:
+  application/problem+json:
+    schema:
+      $ref: "../schemas/problem-details.yaml"
+    example:
+      type: about:blank
+      status: 409
+      title: Conflict
+      detail: The resource already exists.

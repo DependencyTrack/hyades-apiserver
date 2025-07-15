@@ -54,9 +54,9 @@ get:
       $ref: "../components/responses/generic-error.yaml"
 
 post:
-  operationId: createTeamMemberships
-  summary: Create team memberships
-  description: Create one or more team memberships
+  operationId: createTeamMembership
+  summary: Create team membership
+  description: Create a team membership
   tags:
   - Teams
   requestBody:
@@ -64,14 +64,10 @@ post:
     content:
       application/json:
         schema:
-          $ref: "../components/schemas/bulk-create-team-memberships-request.yaml"
+          $ref: "../components/schemas/create-team-membership-request.yaml"
   responses:
-    "207":
-      description: Team membership creation results
-      content:
-        application/json:
-          schema:
-            $ref: "../components/schemas/bulk-create-team-memberships-response.yaml"
+    "201":
+      description: Team membership created
     "400":
       description: Bad Request
       content:
@@ -86,12 +82,14 @@ post:
       $ref: "../components/responses/generic-forbidden-error.yaml"
     "404":
       $ref: "../components/responses/generic-not-found-error.yaml"
+    "409":
+      $ref: "../components/responses/generic-conflict-error.yaml"
     default:
       $ref: "../components/responses/generic-error.yaml"
 
 delete:
   operationId: deleteTeamMembership
-  summary: Delete a team membership
+  summary: Delete team membership
   description: Delete a team membership
   tags:
   - Teams

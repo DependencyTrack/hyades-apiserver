@@ -21,7 +21,6 @@ package org.dependencytrack.resources.v2;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
-import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -109,10 +108,9 @@ public class TeamsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createTeamsShouldCreateMultipleTeams() {
+    public void createTeamShouldCreateTeam() {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
 
-        qm.createTeam("foo");
         qm.createPermission(
                 Permissions.VIEW_PORTFOLIO.name(),
                 Permissions.VIEW_PORTFOLIO.getDescription());
@@ -122,96 +120,55 @@ public class TeamsResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(/* language=JSON */ """
                         {
-                          "teams": [
-                            {
-                              "id": "bulk-item-1",
-                              "name": "foo",
-                              "permissions": [
-                                "VIEW_PORTFOLIO"
-                              ]
-                            },
-                            {
-                              "id": "bulk-item-2",
-                              "name": "bar",
-                              "permissions": [
-                                "DOES_NOT_EXIST",
-                                "VIEW_PORTFOLIO"
-                              ]
-                            },
-                            {
-                              "id": "bulk-item-3",
-                              "name": "baz"
-                            }
+                          "name": "foo",
+                          "permissions": [
+                            "VIEW_PORTFOLIO"
                           ]
                         }
                         """));
-        assertThat(response.getStatus()).isEqualTo(207);
-        assertThatJson(getPlainTextBody(response))
-                .withOptions(Option.IGNORING_ARRAY_ORDER)
-                .isEqualTo(/* language=JSON */ """
-                        {
-                          "teams": [
-                            {
-                              "id": "bulk-item-1",
-                              "status": "ALREADY_EXISTS"
-                            },
-                            {
-                              "id": "bulk-item-2",
-                              "status": "CREATED"
-                            },
-                            {
-                              "id": "bulk-item-3",
-                              "status": "CREATED"
-                            }
-                          ]
-                        }
-                        """);
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThat(response.getLocation()).hasPath("/teams/foo");
+        assertThat(getPlainTextBody(response)).isEmpty();
 
         qm.getPersistenceManager().evictAll();
 
-        final Team teamFoo = qm.getTeam("foo");
-        assertThat(teamFoo).isNotNull();
-        assertThat(teamFoo.getPermissions()).isEmpty();
-
-        final Team teamBar = qm.getTeam("bar");
-        assertThat(teamBar).isNotNull();
-        assertThat(teamBar.getPermissions()).extracting(Permission::getName).containsOnly("VIEW_PORTFOLIO");
-
-        final Team teamBaz = qm.getTeam("baz");
-        assertThat(teamBaz).isNotNull();
-        assertThat(teamBaz.getPermissions()).isEmpty();
+        final Team team = qm.getTeam("foo");
+        assertThat(team).isNotNull();
+        assertThat(team.getPermissions()).extracting(Permission::getName).containsOnly("VIEW_PORTFOLIO");
     }
 
     @Test
-    public void createTeamsShouldReturnBadRequestForNonUniqueBulkRequestItemIds() {
+    public void createTeamShouldReturnConflictWhenAlreadyExists() {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        qm.createTeam("foo");
 
         final Response response = jersey.target("/teams")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(/* language=JSON */ """
                         {
-                          "teams": [
-                            {
-                              "id": "bulk-item-1",
-                              "name": "foo"
-                            },
-                            {
-                              "id": "bulk-item-1",
-                              "name": "bar"
-                            }
+                          "name": "foo",
+                          "permissions": [
+                            "VIEW_PORTFOLIO"
                           ]
                         }
                         """));
-        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getStatus()).isEqualTo(409);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "type": "about:blank",
-                  "status": 400,
-                  "title": "Bad Request",
-                  "detail": "Bulk request item IDs are not unique."
+                  "type":"about:blank",
+                  "status":409,
+                  "title": "Conflict",
+                  "detail": "The resource already exists."
                 }
                 """);
+
+        qm.getPersistenceManager().evictAll();
+
+        final Team team = qm.getTeam("foo");
+        assertThat(team).isNotNull();
+        assertThat(team.getPermissions()).isEmpty();
     }
 
     @Test
@@ -263,68 +220,38 @@ public class TeamsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void deleteTeamsShouldDeleteMultipleTeams() {
+    public void deleteTeamShouldDeleteTeam() {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
 
-        for (int i = 0; i < 5; i++) {
-            qm.createTeam("team" + i);
-        }
+        qm.createTeam("foo");
 
-        final Response response = jersey.target("/teams")
-                .queryParam("names", "team0", "team1", "team666")
+        final Response response = jersey.target("/teams/foo")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        assertThat(response.getStatus()).isEqualTo(207);
-        assertThatJson(getPlainTextBody(response))
-                .withOptions(Option.IGNORING_ARRAY_ORDER)
-                .isEqualTo(/* language=JSON */ """
-                        {
-                          "teams": [
-                            {
-                              "name": "team0",
-                              "status": "DELETED"
-                            },
-                            {
-                              "name": "team1",
-                              "status": "DELETED"
-                            },
-                            {
-                              "name": "team666",
-                              "status": "DOES_NOT_EXIST"
-                            }
-                          ]
-                        }
-                        """);
-        assertThat(qm.getTeams().getList(Team.class)).satisfiesExactlyInAnyOrder(
-                team -> assertThat(team.getName()).isEqualTo("team2"),
-                team -> assertThat(team.getName()).isEqualTo("team3"),
-                team -> assertThat(team.getName()).isEqualTo("team4"),
-                team -> assertThat(team.getName()).isEqualTo("Test Users"));
+        assertThat(response.getStatus()).isEqualTo(204);
+        assertThat(getPlainTextBody(response)).isEmpty();
+
+        qm.getPersistenceManager().evictAll();
+
+        assertThat(qm.getTeam("foo")).isNull();
     }
 
     @Test
-    public void deleteTeamsShouldReturnBadRequestWhenNoNamesProvided() {
+    public void deleteTeamsShouldReturnNotFoundWhenNotExists() {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
 
-        final Response response = jersey.target("/teams")
+        final Response response = jersey.target("/teams/does-not-exist")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .delete();
-        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getStatus()).isEqualTo(404);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "type": "about:blank",
-                  "status": 400,
-                  "title": "Bad Request",
-                  "detail": "The request could not be processed because it failed validation.",
-                  "errors": [
-                    {
-                      "path": "deleteTeams.names",
-                      "value": "[]",
-                      "message": "size must be between 1 and 100"
-                    }
-                  ]
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
                 }
                 """);
     }
@@ -463,100 +390,108 @@ public class TeamsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void createTeamMembershipsShouldCreateTeamMemberships() {
+    public void createTeamMembershipShouldCreateTeamMembership() {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
 
-        qm.createTeam("team-a");
-        final Team teamB = qm.createTeam("team-b");
-        final User userA = qm.createManagedUser("user-a", "password");
-        qm.addUserToTeam(userA, teamB);
+        qm.createTeam("team-foo");
+        qm.createManagedUser("user-bar", "password");
 
         final Response response = jersey.target("/team-memberships")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(/* language=JSON */ """
                         {
-                          "memberships": [
-                            {
-                              "id": "bulk-item-1",
-                              "team_name": "team-a",
-                              "username": "user-a"
-                            },
-                            {
-                              "id": "bulk-item-2",
-                              "team_name": "does-not-exist",
-                              "username": "user-a"
-                            },
-                            {
-                              "id": "bulk-item-3",
-                              "team_name": "team-a",
-                              "username": "does-not-exist"
-                            },
-                            {
-                              "id": "bulk-item-4",
-                              "team_name": "team-b",
-                              "username": "user-a"
-                            }
-                          ]
+                          "team_name": "team-foo",
+                          "username": "user-bar"
                         }
                         """));
-        assertThat(response.getStatus()).isEqualTo(207);
-        assertThatJson(getPlainTextBody(response))
-                .withOptions(Option.IGNORING_ARRAY_ORDER)
-                .isEqualTo(/* language=JSON */ """
-                        {
-                          "memberships": [
-                            {
-                              "id": "bulk-item-1",
-                              "status": "CREATED"
-                            },
-                            {
-                              "id": "bulk-item-2",
-                              "status": "TEAM_DOES_NOT_EXIST"
-                            },
-                            {
-                              "id": "bulk-item-3",
-                              "status": "USER_DOES_NOT_EXIST"
-                            },
-                            {
-                              "id": "bulk-item-4",
-                              "status": "ALREADY_EXISTS"
-                            }
-                          ]
-                        }
-                        """);
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThat(response.getLocation()).isNull();
+        assertThat(getPlainTextBody(response)).isEmpty();
+
+        qm.getPersistenceManager().evictAll();
+
+        assertThat(qm.getTeam("team-foo").getUsers())
+                .extracting(User::getUsername)
+                .contains("user-bar");
     }
 
     @Test
-    public void createTeamMembershipsShouldReturnBadRequestForNonUniqueBulkRequestItemIds() {
+    public void createTeamMembershipShouldReturnConflictWhenAlreadyExists() {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        final Team team = qm.createTeam("team-foo");
+        final User user = qm.createManagedUser("user-bar", "password");
+        qm.addUserToTeam(user, team);
 
         final Response response = jersey.target("/team-memberships")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json(/* language=JSON */ """
                         {
-                          "memberships": [
-                            {
-                              "id": "bulk-item-1",
-                              "team_name": "team-a",
-                              "username": "user-a"
-                            },
-                            {
-                              "id": "bulk-item-1",
-                              "team_name": "team-b",
-                              "username": "user-b"
-                            }
-                          ]
+                          "team_name": "team-foo",
+                          "username": "user-bar"
                         }
                         """));
-        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getStatus()).isEqualTo(409);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "type": "about:blank",
-                  "status": 400,
-                  "title": "Bad Request",
-                  "detail": "Bulk request item IDs are not unique."
+                  "type":"about:blank",
+                  "status":409,
+                  "title": "Conflict",
+                  "detail": "The resource already exists."
+                }
+                """);
+    }
+
+    @Test
+    public void createTeamMembershipShouldReturnNotFoundWhenTeamNotExists() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        qm.createManagedUser("user-bar", "password");
+
+        final Response response = jersey.target("/team-memberships")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "team_name": "team-foo",
+                          "username": "user-bar"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type":"about:blank",
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
+                }
+                """);
+    }
+
+    @Test
+    public void createTeamMembershipShouldReturnNotFoundWhenUserNotExists() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        qm.createTeam("team-foo");
+
+        final Response response = jersey.target("/team-memberships")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "team_name": "team-foo",
+                          "username": "user-bar"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type":"about:blank",
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
                 }
                 """);
     }

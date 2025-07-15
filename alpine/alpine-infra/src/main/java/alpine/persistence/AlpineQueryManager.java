@@ -546,13 +546,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         return executeAndCloseUnique(query);
     }
 
-    public List<User> getUsersByName(final Collection<String> names) {
-        final Query<User> query = pm.newQuery(User.class);
-        query.setFilter(":names.contains(username)");
-        query.setParameters(names);
-        return executeAndCloseList(query);
-    }
-
     /**
      * Creates a new Team with the specified name. If createApiKey is true,
      * then {@link #createApiKey} is invoked and a cryptographically secure
@@ -611,13 +604,6 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         final Query<Team> query = pm.newQuery(Team.class, "name == :name");
         query.setParameters(name);
         return executeAndCloseUnique(query);
-    }
-
-    public List<Team> getTeamsByName(final Collection<String> names) {
-        final Query<Team> query = pm.newQuery(Team.class);
-        query.setFilter(":names.contains(name)");
-        query.setParameters(names);
-        return executeAndCloseList(query);
     }
 
     /**

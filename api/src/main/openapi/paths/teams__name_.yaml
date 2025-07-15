@@ -43,3 +43,31 @@ get:
       $ref: "../components/responses/generic-not-found-error.yaml"
     default:
       $ref: "../components/responses/generic-error.yaml"
+
+delete:
+  operationId: deleteTeam
+  summary: Delete team
+  description: Delete a team
+  tags:
+  - Teams
+  parameters:
+  - name: name
+    description: Name of the team
+    in: path
+    required: true
+    schema:
+      type: string
+      maxLength: 255
+  responses:
+    "204":
+      description: Team Deleted
+    "400":
+      $ref: "../components/responses/invalid-request-error.yaml"
+    "401":
+      $ref: "../components/responses/generic-unauthorized-error.yaml"
+    "403":
+      $ref: "../components/responses/generic-forbidden-error.yaml"
+    "404":
+      $ref: "../components/responses/generic-not-found-error.yaml"
+    default:
+      $ref: "../components/responses/generic-error.yaml"
