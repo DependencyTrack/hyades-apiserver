@@ -19,6 +19,7 @@
 package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
+import alpine.server.resources.AlpineResource;
 import org.dependencytrack.api.v2.MetricsApi;
 import org.dependencytrack.api.v2.model.ListVulnerabilityMetricsResponse;
 import org.dependencytrack.api.v2.model.ListVulnerabilityMetricsResponseItem;
@@ -36,7 +37,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 
-public class MetricsResource implements MetricsApi {
+public class MetricsResource extends AlpineResource implements MetricsApi {
 
     @Context
     private UriInfo uriInfo;
@@ -44,8 +45,9 @@ public class MetricsResource implements MetricsApi {
     @Override
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getPortfolioCurrentMetrics() {
-        PortfolioMetrics metrics = withJdbiHandle(handle ->
-                handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
+        PortfolioMetrics metrics = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
         final var response = PortfolioMetricsResponse.builder()
                 .components(metrics.getComponents())
                 .critical(metrics.getCritical())
@@ -86,6 +88,7 @@ public class MetricsResource implements MetricsApi {
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response getVulnerabilityMetrics(Integer limit, String pageToken) {
         final Page<MetricsDao.ListVulnerabilityMetricsRow> metricsPage = inJdbiTransaction(
+                getAlpineRequest(),
                 handle -> handle.attach(MetricsDao.class).getVulnerabilityMetrics(limit, pageToken));
 
         final var response = ListVulnerabilityMetricsResponse.builder()

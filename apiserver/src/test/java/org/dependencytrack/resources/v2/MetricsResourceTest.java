@@ -20,10 +20,12 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.PortfolioMetrics;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -34,8 +36,9 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
-import java.util.function.Supplier;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,36 +53,144 @@ public class MetricsResourceTest extends ResourceTest {
                     .register(AuthenticationFeature.class));
 
     @Test
-    public void getPortfolioCurrentMetricsTest() {
+    public void getCurrentPortfolioMetricsEmptyTest() {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
         enablePortfolioAccessControl();
 
-        useJdbiHandle(handle -> {
-            var dao = handle.attach(MetricsTestDao.class);
-            var metrics = new PortfolioMetrics();
-            metrics.setVulnerabilities(3);
-            metrics.setFirstOccurrence(Date.from(Instant.now()));
-            metrics.setLastOccurrence(Date.from(Instant.now().plusSeconds(10)));
-            dao.createPortfolioMetrics(metrics);
-
-            dao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 20);
-            metrics = new PortfolioMetrics();
-            metrics.setVulnerabilities(2);
-            metrics.setFirstOccurrence(Date.from(Instant.now()));
-            metrics.setLastOccurrence(Date.from(Instant.now().plusSeconds(20)));
-            dao.createPortfolioMetrics(metrics);
-        });
-
-        final Supplier<Response> responseSupplier = () -> jersey
+        final Response response = jersey
                 .target("/metrics/portfolio/current")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
-
-        Response response = responseSupplier.get();
         assertThat(response.getStatus()).isEqualTo(200);
-        JsonObject json = parseJsonObject(response);
-        assertThat(json.getInt("vulnerabilities")).isEqualTo(2);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "components": 0,
+                          "critical": 0,
+                          "findings_audited": 0,
+                          "findings_total": 0,
+                          "findings_unaudited": 0,
+                          "high": 0,
+                          "inherited_risk_score": 0.0,
+                          "low": 0,
+                          "medium": 0,
+                          "observed_at": "${json-unit.any-number}",
+                          "policy_violations_audited": 0,
+                          "policy_violations_fail": 0,
+                          "policy_violations_info": 0,
+                          "policy_violations_license_audited": 0,
+                          "policy_violations_license_total": 0,
+                          "policy_violations_license_unaudited": 0,
+                          "policy_violations_operational_audited": 0,
+                          "policy_violations_operational_total": 0,
+                          "policy_violations_operational_unaudited": 0,
+                          "policy_violations_security_audited": 0,
+                          "policy_violations_security_total": 0,
+                          "policy_violations_security_unaudited": 0,
+                          "policy_violations_total": 0,
+                          "policy_violations_unaudited": 0,
+                          "policy_violations_warn": 0,
+                          "projects": 0,
+                          "suppressed": 0,
+                          "unassigned": 0,
+                          "vulnerabilities": 0,
+                          "vulnerable_components": 0,
+                          "vulnerable_projects": 0
+                        }
+                        """);
+    }
+
+    @Test
+    public void getCurrentPortfolioMetricsAclTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        enablePortfolioAccessControl();
+
+        final var accessibleProjectA = new Project();
+        accessibleProjectA.setName("acme-app-a");
+        accessibleProjectA.addAccessTeam(super.team);
+        qm.persist(accessibleProjectA);
+
+        final var accessibleProjectB = new Project();
+        accessibleProjectB.setName("acme-app-b");
+        accessibleProjectB.addAccessTeam(super.team);
+        qm.persist(accessibleProjectB);
+
+        final var inactiveAccessibleProject = new Project();
+        inactiveAccessibleProject.setName("acme-app-inactive");
+        inactiveAccessibleProject.setInactiveSince(new Date());
+        inactiveAccessibleProject.addAccessTeam(super.team);
+        qm.persist(inactiveAccessibleProject);
+
+        final var inaccessibleProject = new Project();
+        inaccessibleProject.setName("acme-app-inaccessible");
+        qm.persist(inaccessibleProject);
+
+        final var today = LocalDate.now();
+
+        useJdbiHandle(handle -> {
+            var dao = handle.attach(MetricsTestDao.class);
+
+            dao.createMetricsPartitionsForDate("PROJECTMETRICS", today);
+            dao.createMetricsPartitionsForDate("PROJECTMETRICS", today.minusDays(1));
+            dao.createMetricsPartitionsForDate("PROJECTMETRICS", today.minusDays(2));
+
+            {
+                // Create metrics for "yesterday".
+
+                var accessibleProjectAMetrics = new ProjectMetrics();
+                accessibleProjectAMetrics.setProjectId(accessibleProjectA.getId());
+                accessibleProjectAMetrics.setComponents(2);
+                accessibleProjectAMetrics.setFirstOccurrence(Date.from(today.minusDays(1).atTime(1, 1).atZone(ZoneId.systemDefault()).toInstant()));
+                accessibleProjectAMetrics.setLastOccurrence(accessibleProjectAMetrics.getFirstOccurrence());
+                dao.createProjectMetrics(accessibleProjectAMetrics);
+            }
+
+            {
+                // Create metrics for "today".
+
+                // Do not create metrics for accessibleProjectA.
+                // Its metrics from "yesterday" are supposed to carry over to "today".
+
+                var accessibleProjectBMetrics = new ProjectMetrics();
+                accessibleProjectBMetrics.setProjectId(accessibleProjectB.getId());
+                accessibleProjectBMetrics.setComponents(1);
+                accessibleProjectBMetrics.setFirstOccurrence(Date.from(today.atTime(1, 1).atZone(ZoneId.systemDefault()).toInstant()));
+                accessibleProjectBMetrics.setLastOccurrence(accessibleProjectBMetrics.getFirstOccurrence());
+                dao.createProjectMetrics(accessibleProjectBMetrics);
+
+                // Metrics of inactive projects must not be considered.
+                var inactiveAccessibleProjectMetrics = new ProjectMetrics();
+                inactiveAccessibleProjectMetrics.setProjectId(inactiveAccessibleProject.getId());
+                inactiveAccessibleProjectMetrics.setComponents(111);
+                inactiveAccessibleProjectMetrics.setFirstOccurrence(Date.from(today.atTime(2, 2).atZone(ZoneId.systemDefault()).toInstant()));
+                inactiveAccessibleProjectMetrics.setLastOccurrence(inactiveAccessibleProjectMetrics.getFirstOccurrence());
+                dao.createProjectMetrics(inactiveAccessibleProjectMetrics);
+
+                // Metrics of inaccessible projects must not be considered.
+                var inaccessibleProjectMetrics = new ProjectMetrics();
+                inaccessibleProjectMetrics.setProjectId(inaccessibleProject.getId());
+                inaccessibleProjectMetrics.setComponents(666);
+                inaccessibleProjectMetrics.setFirstOccurrence(Date.from(today.atTime(3, 3).atZone(ZoneId.systemDefault()).toInstant()));
+                inaccessibleProjectMetrics.setLastOccurrence(inaccessibleProjectMetrics.getFirstOccurrence());
+                dao.createProjectMetrics(inaccessibleProjectMetrics);
+            }
+        });
+
+        final Response response = jersey
+                .target("/metrics/portfolio/current")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .withOptions(Option.IGNORING_EXTRA_FIELDS)
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "projects": 2,
+                          "components": 3
+                        }
+                        """);
     }
 
     @Test
