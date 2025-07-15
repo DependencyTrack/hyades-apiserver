@@ -19,7 +19,6 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.DependencyMetrics;
-import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.ProjectMetrics;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
@@ -31,25 +30,72 @@ import java.time.format.DateTimeFormatter;
 
 public interface MetricsTestDao extends SqlObject {
 
-
-    @SqlQuery("""
-            INSERT INTO "PORTFOLIOMETRICS"(
-                "PROJECTS", "COMPONENTS", "FIRST_OCCURRENCE", "LAST_OCCURRENCE", "CRITICAL", "HIGH", "MEDIUM", "LOW", "RISKSCORE",
-                "SUPPRESSED", "VULNERABILITIES", "VULNERABLEPROJECTS", "VULNERABLECOMPONENTS")
-            VALUES (:projects, :components, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :inheritedRiskScore,
-                 :suppressed, :vulnerabilities, :vulnerableProjects, :vulnerableComponents)
-            RETURNING *
-            """)
-    @RegisterBeanMapper(PortfolioMetrics.class)
-    PortfolioMetrics createPortfolioMetrics(@BindBean PortfolioMetrics portfolioMetrics);
-
-
     @SqlQuery("""
             INSERT INTO "PROJECTMETRICS"(
-                "PROJECT_ID", "COMPONENTS", "FIRST_OCCURRENCE", "LAST_OCCURRENCE", "CRITICAL", "HIGH", "MEDIUM", "LOW", "RISKSCORE",
-                "SUPPRESSED", "VULNERABILITIES", "VULNERABLECOMPONENTS")
-            VALUES (:projectId, :components, :firstOccurrence, :lastOccurrence, :critical, :high, :medium, :low, :inheritedRiskScore,
-                 :suppressed, :vulnerabilities, :vulnerableComponents)
+              "COMPONENTS"
+            , "CRITICAL"
+            , "FINDINGS_AUDITED"
+            , "FINDINGS_TOTAL"
+            , "FINDINGS_UNAUDITED"
+            , "FIRST_OCCURRENCE"
+            , "HIGH"
+            , "LAST_OCCURRENCE"
+            , "LOW"
+            , "MEDIUM"
+            , "POLICYVIOLATIONS_AUDITED"
+            , "POLICYVIOLATIONS_FAIL"
+            , "POLICYVIOLATIONS_INFO"
+            , "POLICYVIOLATIONS_LICENSE_AUDITED"
+            , "POLICYVIOLATIONS_LICENSE_TOTAL"
+            , "POLICYVIOLATIONS_LICENSE_UNAUDITED"
+            , "POLICYVIOLATIONS_OPERATIONAL_AUDITED"
+            , "POLICYVIOLATIONS_OPERATIONAL_TOTAL"
+            , "POLICYVIOLATIONS_OPERATIONAL_UNAUDITED"
+            , "POLICYVIOLATIONS_SECURITY_AUDITED"
+            , "POLICYVIOLATIONS_SECURITY_TOTAL"
+            , "POLICYVIOLATIONS_SECURITY_UNAUDITED"
+            , "POLICYVIOLATIONS_TOTAL"
+            , "POLICYVIOLATIONS_UNAUDITED"
+            , "POLICYVIOLATIONS_WARN"
+            , "PROJECT_ID"
+            , "RISKSCORE"
+            , "SUPPRESSED"
+            , "UNASSIGNED_SEVERITY"
+            , "VULNERABILITIES"
+            , "VULNERABLECOMPONENTS"
+            ) VALUES (
+              :components
+            , :critical
+            , :findingsAudited
+            , :findingsTotal
+            , :findingsUnaudited
+            , :firstOccurrence
+            , :high
+            , :lastOccurrence
+            , :low
+            , :medium
+            , :policyViolationsAudited
+            , :policyViolationsFail
+            , :policyViolationsInfo
+            , :policyViolationsLicenseAudited
+            , :policyViolationsLicenseTotal
+            , :policyViolationsLicenseUnaudited
+            , :policyViolationsOperationalAudited
+            , :policyViolationsOperationalTotal
+            , :policyViolationsOperationalUnaudited
+            , :policyViolationsSecurityAudited
+            , :policyViolationsSecurityTotal
+            , :policyViolationsSecurityUnaudited
+            , :policyViolationsTotal
+            , :policyViolationsUnaudited
+            , :policyViolationsWarn
+            , :projectId
+            , :inheritedRiskScore
+            , :suppressed
+            , :unassigned
+            , :vulnerabilities
+            , :vulnerableComponents
+            )
             RETURNING *
             """)
     @RegisterBeanMapper(ProjectMetrics.class)

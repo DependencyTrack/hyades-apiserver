@@ -71,8 +71,7 @@ public class MetricsMaintenanceTask implements Subscriber {
     private record Statistics(
             Duration retentionDuration,
             int deletedComponentMetrics,
-            int deletedProjectMetrics,
-            int deletedPortfolioMetrics) {
+            int deletedProjectMetrics) {
     }
 
     private Statistics informLocked(final Handle jdbiHandle) {
@@ -97,8 +96,7 @@ public class MetricsMaintenanceTask implements Subscriber {
 
         final int numDeletedComponent = metricsDao.deleteComponentMetricsForRetentionDuration(retentionDuration);
         final int numDeletedProject = metricsDao.deleteProjectMetricsForRetentionDuration(retentionDuration);
-        final int numDeletedPortfolio = metricsDao.deletePortfolioMetricsForRetentionDuration(retentionDuration);
 
-        return new Statistics(retentionDuration, numDeletedComponent, numDeletedProject, numDeletedPortfolio);
+        return new Statistics(retentionDuration, numDeletedComponent, numDeletedProject);
     }
 }
