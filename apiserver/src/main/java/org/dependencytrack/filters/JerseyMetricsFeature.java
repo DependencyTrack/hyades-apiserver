@@ -19,22 +19,27 @@
 package org.dependencytrack.filters;
 
 import alpine.Config;
-import alpine.common.metrics.Metrics;
-import org.glassfish.jersey.micrometer.server.DefaultJerseyTagsProvider;
-import org.glassfish.jersey.micrometer.server.MetricsApplicationEventListener;
+
+import jakarta.ws.rs.core.Feature;
+import jakarta.ws.rs.core.FeatureContext;
+import jakarta.ws.rs.ext.Provider;
+
+import static alpine.Config.AlpineKey.METRICS_ENABLED;
 
 /**
- * @since 5.5.0
+ * @since 5.6.0
  */
-public class JerseyMetricsApplicationEventListener extends MetricsApplicationEventListener {
+@Provider
+public class JerseyMetricsFeature implements Feature {
 
-    public JerseyMetricsApplicationEventListener() {
-        super(
-                Metrics.getRegistry(),
-                new DefaultJerseyTagsProvider(),
-                /* metricName */ "http.server.requests",
-                /* autoTimeRequests */ Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)
-        );
+    @Override
+    public boolean configure(final FeatureContext context) {
+        if (Config.getInstance().getPropertyAsBoolean(METRICS_ENABLED)) {
+            context.register(JerseyMetricsApplicationEventListener.class);
+            return true;
+        }
+
+        return false;
     }
 
 }

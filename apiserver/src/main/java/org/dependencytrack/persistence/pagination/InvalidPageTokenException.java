@@ -16,25 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filters;
+package org.dependencytrack.persistence.pagination;
 
-import alpine.Config;
-import alpine.common.metrics.Metrics;
-import org.glassfish.jersey.micrometer.server.DefaultJerseyTagsProvider;
-import org.glassfish.jersey.micrometer.server.MetricsApplicationEventListener;
+public class InvalidPageTokenException extends IllegalArgumentException {
 
-/**
- * @since 5.5.0
- */
-public class JerseyMetricsApplicationEventListener extends MetricsApplicationEventListener {
-
-    public JerseyMetricsApplicationEventListener() {
-        super(
-                Metrics.getRegistry(),
-                new DefaultJerseyTagsProvider(),
-                /* metricName */ "http.server.requests",
-                /* autoTimeRequests */ Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)
-        );
+    public InvalidPageTokenException(final Throwable cause) {
+        super(cause);
     }
 
 }

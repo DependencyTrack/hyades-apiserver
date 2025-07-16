@@ -21,6 +21,9 @@ package org.dependencytrack.persistence.jdbi;
 import org.dependencytrack.model.DependencyMetrics;
 import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.persistence.pagination.Page;
+import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
@@ -35,10 +38,58 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
 
+import static org.dependencytrack.persistence.pagination.PageUtil.decodePageToken;
+import static org.dependencytrack.persistence.pagination.PageUtil.encodePageToken;
+
 /**
  * @since 5.6.0
  */
 public interface MetricsDao extends SqlObject {
+
+    record ListVulnerabilityMetricsPageToken(int year, int month) {
+    }
+
+    record ListVulnerabilityMetricsRow(int year, int month, int count, Instant measuredAt) {
+    }
+
+    default Page<ListVulnerabilityMetricsRow> getVulnerabilityMetrics(final int limit, final String pageToken) {
+        final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListVulnerabilityMetricsPageToken.class);
+
+        final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
+                <#-- @ftlvariable name="year" type="Boolean" -->
+                <#-- @ftlvariable name="month" type="Boolean" -->
+                SELECT *
+                FROM "VULNERABILITYMETRICS"
+                WHERE TRUE
+                <#if year && month>
+                    AND ("YEAR", "MONTH") > (:year, :month)
+                </#if>
+                ORDER BY "YEAR" ASC, "MONTH" ASC
+                LIMIT :limit
+            """);
+
+        final List<ListVulnerabilityMetricsRow> rows = query
+                .bind("year", decodedPageToken != null
+                        ? decodedPageToken.year()
+                        : null)
+                .bind("month", decodedPageToken != null
+                        ? decodedPageToken.month()
+                        : null)
+                .bind("limit", limit + 1)
+                .defineNamedBindings()
+                .map(ConstructorMapper.of(ListVulnerabilityMetricsRow.class))
+                .list();
+
+        final List<ListVulnerabilityMetricsRow> resultRows = rows.size() > 1
+                ? rows.subList(0, Math.min(rows.size(), limit))
+                : rows;
+
+        final ListVulnerabilityMetricsPageToken nextPageToken = rows.size() > limit
+                ? new ListVulnerabilityMetricsPageToken(resultRows.getLast().year, resultRows.getLast().month)
+                : null;
+
+        return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
+    }
 
     /**
      * Note that <code>generate_series</code> is invoked with integers rather
