@@ -166,7 +166,7 @@ public final class WorkflowScheduleDao extends AbstractDao {
                 ? new ListSchedulesPageToken(resultItems.getLast().name())
                 : null;
 
-        return new Page<>(resultItems, request.pageToken(), encodePageToken(nextPageToken));
+        return new Page<>(resultItems, encodePageToken(nextPageToken));
     }
 
     public List<WorkflowSchedule> getDueSchedulesForUpdate() {

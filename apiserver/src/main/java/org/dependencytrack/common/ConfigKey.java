@@ -66,7 +66,9 @@ public enum ConfigKey implements Config.Key {
     DEV_SERVICES_IMAGE_POSTGRES("dev.services.image.postgres", "postgres:13-alpine"),
     DEV_SERVICES_PORT_FRONTEND("dev.services.port.frontend", 8081),
     DEV_SERVICES_PORT_KAFKA("dev.services.port.kafka", 9092),
-    DEV_SERVICES_PORT_POSTGRES("dev.services.port.postgres", 5432);
+    DEV_SERVICES_PORT_POSTGRES("dev.services.port.postgres", 5432),
+
+    WORKFLOW_ENGINE_ENABLED("workflow.engine.enabled", false);
 
     private final String propertyName;
     private final Object defaultValue;

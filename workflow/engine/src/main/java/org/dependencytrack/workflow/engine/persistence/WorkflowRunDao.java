@@ -140,7 +140,7 @@ public final class WorkflowRunDao extends AbstractDao {
                 ? new ListRunsPageToken(resultItems.getLast().id())
                 : null;
 
-        return new Page<>(resultItems, request.pageToken(), encodePageToken(nextPageToken));
+        return new Page<>(resultItems, encodePageToken(nextPageToken));
     }
 
     record ListRunHistoryPageToken(int lastSequenceNumber) {
@@ -177,7 +177,6 @@ public final class WorkflowRunDao extends AbstractDao {
 
         return new Page<>(
                 resultRows.stream().map(WorkflowRunHistoryRow::event).toList(),
-                request.pageToken(),
                 encodePageToken(nextPageToken));
     }
 

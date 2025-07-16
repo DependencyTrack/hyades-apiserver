@@ -16,11 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.api.pagination;
+package org.dependencytrack.workflow;
 
-import org.jspecify.annotations.Nullable;
+import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 
-import java.util.List;
+public final class WorkflowEngineHolder {
 
-public record Page<T>(List<T> items, @Nullable String nextPageToken) {
+    private static WorkflowEngine INSTANCE;
+
+    private WorkflowEngineHolder() {
+    }
+
+    static void set(final WorkflowEngine engine) {
+        INSTANCE = engine;
+    }
+
+    public static WorkflowEngine get() {
+        return INSTANCE;
+    }
+
 }
