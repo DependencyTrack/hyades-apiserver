@@ -836,6 +836,50 @@ public class ProjectResourceTest extends ResourceTest {
     }
 
     @Test
+    public void getProjectsConciseFilterByVersionTest() {
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        projectA.setVersion("1.0");
+        qm.persist(projectA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        projectB.setVersion("2.0");
+        qm.persist(projectB);
+
+        // Should not return results for partial matches.
+        Response response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("version", "0")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Should return results for exact matches.
+        response = jersey.target(V1_PROJECT + "/concise")
+                .queryParam("version", "2.0")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-app-b",
+                    "version": "2.0",
+                    "active": true,
+                    "isLatest": false,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
     public void getProjectsConciseFilterByTagTest() {
         final var projectA = new Project();
         projectA.setName("acme-app-a");
@@ -1438,6 +1482,56 @@ public class ProjectResourceTest extends ResourceTest {
                     "uuid": "${json-unit.any-string}",
                     "name": "acme-child-app-b",
                     "active": false,
+                    "isLatest": false,
+                    "hasChildren": false
+                  }
+                ]
+                """);
+    }
+
+    @Test
+    public void getProjectChildrenConciseFilterByVersionTest() {
+        final var parentProject = new Project();
+        parentProject.setName("acme-app");
+        qm.persist(parentProject);
+
+        final var childProjectA = new Project();
+        childProjectA.setParent(parentProject);
+        childProjectA.setName("acme-child-app-a");
+        childProjectA.setVersion("1.0");
+        qm.persist(childProjectA);
+
+        final var childProjectB = new Project();
+        childProjectB.setParent(parentProject);
+        childProjectB.setName("acme-child-app-b");
+        childProjectB.setVersion("2.0");
+        qm.persist(childProjectB);
+
+        // Should not return results for partial matches.
+        Response response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("version", "0")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("0");
+        assertThat(getPlainTextBody(response)).isEqualTo("[]");
+
+        // Should return results for exact matches.
+        response = jersey.target(V1_PROJECT + "/concise/" + parentProject.getUuid() + "/children")
+                .queryParam("version", "1.0")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString(TOTAL_COUNT_HEADER)).isEqualTo("1");
+        assertThatJson(getPlainTextBody(response)).isEqualTo("""
+                [
+                  {
+                    "uuid": "${json-unit.any-string}",
+                    "name": "acme-child-app-a",
+                    "version": "1.0",
+                    "active": true,
                     "isLatest": false,
                     "hasChildren": false
                   }
