@@ -48,7 +48,7 @@ final class WorkflowClientImpl<A, R> implements WorkflowClient<A, R> {
 
     @Override
     public Awaitable<R> call(final WorkflowCallOptions<A> options) {
-        return workflowContext.callSubWorkflow(
+        return workflowContext.callChildWorkflow(
                 this.workflowName,
                 this.workflowVersion,
                 options.concurrencyGroupId(),

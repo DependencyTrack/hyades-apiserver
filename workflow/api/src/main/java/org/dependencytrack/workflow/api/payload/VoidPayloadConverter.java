@@ -21,7 +21,9 @@ package org.dependencytrack.workflow.api.payload;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.jspecify.annotations.Nullable;
 
-public class VoidPayloadConverter implements PayloadConverter<Void> {
+final class VoidPayloadConverter implements PayloadConverter<Void> {
+
+    static final VoidPayloadConverter INSTANCE = new VoidPayloadConverter();
 
     @Nullable
     @Override

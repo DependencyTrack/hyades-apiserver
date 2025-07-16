@@ -24,7 +24,7 @@ import com.google.protobuf.Message;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.jspecify.annotations.Nullable;
 
-public class ProtobufPayloadConverter<T extends Message> implements PayloadConverter<T> {
+final class ProtobufPayloadConverter<T extends Message> implements PayloadConverter<T> {
 
     private final Class<T> clazz;
 

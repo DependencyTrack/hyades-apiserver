@@ -20,14 +20,21 @@ package org.dependencytrack.workflow.api.payload;
 
 import com.google.protobuf.Message;
 
-public class PayloadConverters {
+public final class PayloadConverters {
+
+    private PayloadConverters() {
+    }
 
     public static <T extends Message> PayloadConverter<T> protoConverter(final Class<T> clazz) {
         return new ProtobufPayloadConverter<>(clazz);
     }
 
+    public static PayloadConverter<String> stringConverter() {
+        return StringPayloadConverter.INSTANCE;
+    }
+
     public static PayloadConverter<Void> voidConverter() {
-        return new VoidPayloadConverter();
+        return VoidPayloadConverter.INSTANCE;
     }
 
 }

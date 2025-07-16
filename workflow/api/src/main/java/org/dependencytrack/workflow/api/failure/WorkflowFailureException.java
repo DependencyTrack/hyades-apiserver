@@ -25,7 +25,7 @@ public sealed class WorkflowFailureException extends RuntimeException permits
         ApplicationFailureException,
         CancellationFailureException,
         SideEffectFailureException,
-        SubWorkflowFailureException {
+        ChildWorkflowFailureException {
 
     @Nullable
     private final String originalMessage;

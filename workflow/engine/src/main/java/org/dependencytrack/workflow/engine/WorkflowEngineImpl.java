@@ -742,11 +742,12 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             throw new IllegalStateException("Workflow group %s is already registered".formatted(group.name()));
         }
 
-        final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual()
-                        .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
-                        .name(executorName, 0)
-                        .factory());
+        final ExecutorService executorService =
+                Executors.newThreadPerTaskExecutor(
+                        Thread.ofVirtual()
+                                .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
+                                .name(executorName, 0)
+                                .factory());
         if (config.meterRegistry() != null) {
             new ExecutorServiceMetrics(executorService, executorName, null)
                     .bindTo(config.meterRegistry());
@@ -774,11 +775,12 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             throw new IllegalStateException("Activity group %s is already mounted".formatted(group.name()));
         }
 
-        final ExecutorService executorService = Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual()
-                        .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
-                        .name(executorName, 0)
-                        .factory());
+        final ExecutorService executorService =
+                Executors.newThreadPerTaskExecutor(
+                        Thread.ofVirtual()
+                                .uncaughtExceptionHandler(new LoggingUncaughtExceptionHandler())
+                                .name(executorName, 0)
+                                .factory());
         if (config.meterRegistry() != null) {
             new ExecutorServiceMetrics(executorService, executorName, null)
                     .bindTo(config.meterRegistry());
@@ -1047,10 +1049,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
             // If there are pending sub workflow runs, make sure those are canceled, too.
             if (run.status() == WorkflowRunStatus.CANCELED) {
-                for (final UUID subWorkflowRunId : getPendingSubWorkflowRunIds(run)) {
+                for (final UUID childRunId : getPendingChildRunIds(run)) {
                     createInboxEntryCommands.add(
                             new CreateWorkflowRunInboxEntryCommand(
-                                    subWorkflowRunId,
+                                    childRunId,
                                     /* visibleFrom */ null,
                                     WorkflowEvent.newBuilder()
                                             .setId(-1)
@@ -1361,7 +1363,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         return metadataRegistry;
     }
 
-    private Set<UUID> getPendingSubWorkflowRunIds(final WorkflowRunState run) {
+    private Set<UUID> getPendingChildRunIds(final WorkflowRunState run) {
         final var runIdByEventId = new HashMap<Integer, UUID>();
 
         Stream.concat(run.history().stream(), run.inbox().stream()).forEach(event -> {

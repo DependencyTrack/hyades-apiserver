@@ -16,20 +16,21 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.payload;
+package org.dependencytrack.workflow.api.payload;
 
 import com.google.protobuf.ByteString;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload.BinaryContent;
-import org.dependencytrack.workflow.api.payload.PayloadConversionException;
-import org.dependencytrack.workflow.api.payload.PayloadConverter;
+import org.jspecify.annotations.Nullable;
 
-public class StringPayloadConverter implements PayloadConverter<String> {
+final class StringPayloadConverter implements PayloadConverter<String> {
 
     private static final String MEDIA_TYPE = "text/plain";
+    static final StringPayloadConverter INSTANCE = new StringPayloadConverter();
 
+    @Nullable
     @Override
-    public WorkflowPayload convertToPayload(final String value) {
+    public WorkflowPayload convertToPayload(@Nullable final String value) {
         if (value == null) {
             return null;
         }
@@ -42,8 +43,9 @@ public class StringPayloadConverter implements PayloadConverter<String> {
                 .build();
     }
 
+    @Nullable
     @Override
-    public String convertFromPayload(final WorkflowPayload payload) {
+    public String convertFromPayload(@Nullable final WorkflowPayload payload) {
         if (payload == null || !payload.hasBinaryContent()) {
             return null;
         }

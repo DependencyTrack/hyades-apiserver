@@ -22,14 +22,14 @@ import com.google.protobuf.DebugFormat;
 import org.dependencytrack.proto.workflow.api.v1.ActivityFailureDetails;
 import org.dependencytrack.proto.workflow.api.v1.ApplicationFailureDetails;
 import org.dependencytrack.proto.workflow.api.v1.CancellationFailureDetails;
+import org.dependencytrack.proto.workflow.api.v1.ChildWorkflowFailureDetails;
 import org.dependencytrack.proto.workflow.api.v1.SideEffectFailureDetails;
-import org.dependencytrack.proto.workflow.api.v1.SubWorkflowFailureDetails;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowFailure;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
+import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
 import org.dependencytrack.workflow.api.failure.SideEffectFailureException;
-import org.dependencytrack.workflow.api.failure.SubWorkflowFailureException;
 import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
 import org.jspecify.annotations.Nullable;
 
@@ -65,9 +65,9 @@ final class FailureConverter {
                 final SideEffectFailureDetails details = failure.getSideEffectFailureDetails();
                 yield new SideEffectFailureException(details.getSideEffectName(), cause);
             }
-            case SUB_WORKFLOW_FAILURE_DETAILS -> {
-                final SubWorkflowFailureDetails details = failure.getSubWorkflowFailureDetails();
-                yield new SubWorkflowFailureException(
+            case CHILD_WORKFLOW_FAILURE_DETAILS -> {
+                final ChildWorkflowFailureDetails details = failure.getChildWorkflowFailureDetails();
+                yield new ChildWorkflowFailureException(
                         UUID.fromString(details.getWorkflowRunId()),
                         details.getWorkflowName(),
                         details.getWorkflowVersion(),
@@ -113,12 +113,12 @@ final class FailureConverter {
                             SideEffectFailureDetails.newBuilder()
                                     .setSideEffectName(sideEffectException.getSideEffectName())
                                     .build());
-            case final SubWorkflowFailureException subWorkflowException -> failureBuilder
-                    .setSubWorkflowFailureDetails(
-                            SubWorkflowFailureDetails.newBuilder()
-                                    .setWorkflowRunId(subWorkflowException.getRunId().toString())
-                                    .setWorkflowName(subWorkflowException.getWorkflowName())
-                                    .setWorkflowVersion(subWorkflowException.getWorkflowVersion())
+            case final ChildWorkflowFailureException childWorkflowException -> failureBuilder
+                    .setChildWorkflowFailureDetails(
+                            ChildWorkflowFailureDetails.newBuilder()
+                                    .setWorkflowRunId(childWorkflowException.getRunId().toString())
+                                    .setWorkflowName(childWorkflowException.getWorkflowName())
+                                    .setWorkflowVersion(childWorkflowException.getWorkflowVersion())
                                     .build());
             default -> {
                 if (throwable.getMessage() != null) {

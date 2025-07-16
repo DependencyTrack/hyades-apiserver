@@ -32,7 +32,7 @@ message WorkflowFailure {
     ApplicationFailureDetails application_failure_details = 26;
     CancellationFailureDetails cancellation_failure_details = 27;
     SideEffectFailureDetails side_effect_failure_details = 28;
-    SubWorkflowFailureDetails sub_workflow_failure_details = 29;
+    ChildWorkflowFailureDetails child_workflow_failure_details = 29;
   }
 }
 
@@ -52,7 +52,7 @@ message SideEffectFailureDetails {
   string side_effect_name = 1;
 }
 
-message SubWorkflowFailureDetails {
+message ChildWorkflowFailureDetails {
   string workflow_run_id = 1;
   string workflow_name = 2;
   int32 workflow_version = 3;

@@ -22,13 +22,13 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
-public final class SubWorkflowFailureException extends WorkflowFailureException {
+public final class ChildWorkflowFailureException extends WorkflowFailureException {
 
     private final UUID runId;
     private final String workflowName;
     private final int workflowVersion;
 
-    public SubWorkflowFailureException(
+    public ChildWorkflowFailureException(
             final UUID runId,
             final String workflowName,
             final int workflowVersion,

@@ -47,17 +47,16 @@ import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
+import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
 import org.dependencytrack.workflow.api.failure.SideEffectFailureException;
-import org.dependencytrack.workflow.api.failure.SubWorkflowFailureException;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
-import org.dependencytrack.workflow.api.payload.VoidPayloadConverter;
 import org.dependencytrack.workflow.engine.MetadataRegistry.ActivityMetadata;
 import org.dependencytrack.workflow.engine.MetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ContinueRunAsNewCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResultCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleActivityCommand;
-import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleSubWorkflowCommand;
+import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleChildRunCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleTimerCommand;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.jspecify.annotations.Nullable;
@@ -78,6 +77,7 @@ import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
+import static org.dependencytrack.workflow.api.payload.PayloadConverters.voidConverter;
 import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toInstant;
 
 final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
@@ -290,19 +290,19 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return awaitable;
     }
 
-    <WA, WR> Awaitable<WR> callSubWorkflow(
+    <WA, WR> Awaitable<WR> callChildWorkflow(
             final String name,
             final int version,
             @Nullable final String concurrencyGroupId,
             @Nullable final WA argument,
             final PayloadConverter<WA> argumentConverter,
             final PayloadConverter<WR> resultConverter) {
-        assertNotInSideEffect("Sub workflows can not be called from within a side effect");
+        assertNotInSideEffect("Child workflows can not be called from within a side effect");
 
         final WorkflowPayload convertedArgument = argumentConverter.convertToPayload(argument);
 
         final int eventId = currentEventId++;
-        pendingCommandByEventId.put(eventId, new ScheduleSubWorkflowCommand(
+        pendingCommandByEventId.put(eventId, new ScheduleChildRunCommand(
                 eventId, name, version, concurrencyGroupId, this.priority, this.labels, convertedArgument));
 
         final var awaitable = new AwaitableImpl<>(this, resultConverter);
@@ -321,7 +321,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId, new ScheduleTimerCommand(eventId, name, currentTime.plus(delay)));
 
-        final var awaitable = new AwaitableImpl<>(this, new VoidPayloadConverter());
+        final var awaitable = new AwaitableImpl<>(this, voidConverter());
         pendingAwaitableByEventId.put(eventId, awaitable);
         return awaitable;
     }
@@ -636,7 +636,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             throw new NonDeterministicWorkflowException("""
                     Encountered ChildRunScheduled event for event ID %d, \
                     but no pending command was found for it""".formatted(eventId));
-        } else if (!(command instanceof ScheduleSubWorkflowCommand)) {
+        } else if (!(command instanceof ScheduleChildRunCommand)) {
             throw new NonDeterministicWorkflowException("""
                     Encountered ChildRunScheduled event for event ID %d, \
                     but the pending command for that number is of type %s\
@@ -683,7 +683,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                             ChildRunFailed.class.getSimpleName(), scheduledEventId));
         }
 
-        final var exception = new SubWorkflowFailureException(
+        final var exception = new ChildWorkflowFailureException(
                 UUID.fromString(scheduledEvent.getChildRunScheduled().getRunId()),
                 scheduledEvent.getChildRunScheduled().getWorkflowName(),
                 scheduledEvent.getChildRunScheduled().getWorkflowVersion(),

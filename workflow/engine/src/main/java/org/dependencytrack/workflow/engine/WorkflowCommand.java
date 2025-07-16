@@ -32,7 +32,7 @@ sealed interface WorkflowCommand permits
         WorkflowCommand.ContinueRunAsNewCommand,
         WorkflowCommand.RecordSideEffectResultCommand,
         WorkflowCommand.ScheduleActivityCommand,
-        WorkflowCommand.ScheduleSubWorkflowCommand,
+        WorkflowCommand.ScheduleChildRunCommand,
         WorkflowCommand.ScheduleTimerCommand {
 
     record CancelRunCommand(
@@ -68,7 +68,7 @@ sealed interface WorkflowCommand permits
             @Nullable Instant scheduleFor) implements WorkflowCommand {
     }
 
-    record ScheduleSubWorkflowCommand(
+    record ScheduleChildRunCommand(
             int eventId,
             String workflowName,
             int workflowVersion,

@@ -24,9 +24,8 @@ import org.dependencytrack.workflow.api.Awaitable;
 import org.dependencytrack.workflow.api.ContinueAsNewOptions;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
-import org.dependencytrack.workflow.api.failure.SubWorkflowFailureException;
+import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
 import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
-import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
@@ -40,7 +39,6 @@ import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleReq
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
-import org.dependencytrack.workflow.engine.payload.StringPayloadConverter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,6 +64,7 @@ import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFL
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 import static org.dependencytrack.workflow.api.RetryPolicy.defaultRetryPolicy;
+import static org.dependencytrack.workflow.api.payload.PayloadConverters.stringConverter;
 import static org.dependencytrack.workflow.api.payload.PayloadConverters.voidConverter;
 
 @Testcontainers
@@ -74,7 +73,6 @@ class WorkflowEngineImplTest {
     @Container
     private static final PostgresTestContainer postgresContainer = new PostgresTestContainer();
 
-    private final PayloadConverter<String> stringConverter = new StringPayloadConverter();
     private WorkflowEngineImpl engine;
 
     @BeforeEach
@@ -107,7 +105,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldRunWorkflowWithArgumentAndResult() {
-        engine.registerWorkflowInternal("test", 1, stringConverter, stringConverter, Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
             ctx.setStatus("someCustomStatus");
             return "someResult";
         });
@@ -331,15 +329,15 @@ class WorkflowEngineImplTest {
     }
 
     @Test
-    void shouldWaitForSubWorkflowRun() {
+    void shouldWaitForChildRun() {
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            final String subWorkflowResult = ((WorkflowContextImpl<?, ?>) ctx).callSubWorkflow(
-                    "bar", 1, null, "inputValue", stringConverter, stringConverter).await();
-            assertThat(subWorkflowResult).contains("inputValue-outputValue");
+            final String childWorkflowResult = ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow(
+                    "bar", 1, null, "inputValue", stringConverter(), stringConverter()).await();
+            assertThat(childWorkflowResult).contains("inputValue-outputValue");
             return null;
         });
 
-        engine.registerWorkflowInternal("bar", 1, stringConverter, stringConverter, Duration.ofSeconds(5),
+        engine.registerWorkflowInternal("bar", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5),
                 ctx -> ctx.argument() + "-outputValue");
 
         engine.mount(new WorkflowGroup("test-group")
@@ -365,9 +363,9 @@ class WorkflowEngineImplTest {
     }
 
     @Test
-    void shouldFailWhenSubWorkflowRunFails() {
+    void shouldFailWhenChildRunFails() {
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            ((WorkflowContextImpl<?, ?>) ctx).callSubWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
@@ -406,18 +404,18 @@ class WorkflowEngineImplTest {
     }
 
     @Test
-    void shouldCancelSubWorkflowRunsRecursivelyWhenParentRunIsCancelled() {
+    void shouldCancelChildRunsRecursivelyWhenParentRunIsCancelled() {
         final var childRunIdReference = new AtomicReference<UUID>();
         final var grandChildRunIdReference = new AtomicReference<UUID>();
 
         engine.registerWorkflowInternal("parent", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            ((WorkflowContextImpl<?, ?>) ctx).callSubWorkflow("child", 1, null, null, voidConverter(), voidConverter()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("child", 1, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
         engine.registerWorkflowInternal("child", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             childRunIdReference.set(ctx.runId());
-            ((WorkflowContextImpl<?, ?>) ctx).callSubWorkflow("grand-child", 1, null, null, voidConverter(), voidConverter()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("grand-child", 1, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
@@ -717,11 +715,11 @@ class WorkflowEngineImplTest {
     void shouldCallActivity() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                    "abc", null, voidConverter(), stringConverter, defaultRetryPolicy()).await();
+                    "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
-        engine.registerActivityInternal("abc", voidConverter(), stringConverter, Duration.ofSeconds(5), false, ctx -> "123");
+        engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, ctx -> "123");
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.mount(new ActivityGroup("test-group").withActivity("abc"));
@@ -745,17 +743,17 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldScheduleMultipleActivitiesConcurrently() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), stringConverter, Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
             final List<Awaitable<String>> awaitables = List.of(
-                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", "first", stringConverter, stringConverter, defaultRetryPolicy()),
-                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", "second", stringConverter, stringConverter, defaultRetryPolicy()));
+                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", "first", stringConverter(), stringConverter(), defaultRetryPolicy()),
+                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", "second", stringConverter(), stringConverter(), defaultRetryPolicy()));
 
             return awaitables.stream()
                     .map(Awaitable::await)
                     .collect(Collectors.joining(", "));
         });
 
-        engine.registerActivityInternal("abc", stringConverter, stringConverter, Duration.ofSeconds(5), false, ActivityContext::argument);
+        engine.registerActivityInternal("abc", stringConverter(), stringConverter(), Duration.ofSeconds(5), false, ActivityContext::argument);
 
         engine.mount(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.mount(new ActivityGroup("test-group").withActivity("abc").withMaxConcurrency(2));
@@ -787,11 +785,11 @@ class WorkflowEngineImplTest {
 
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                    "abc", null, voidConverter(), stringConverter, retryPolicy).await();
+                    "abc", null, voidConverter(), stringConverter(), retryPolicy).await();
             return null;
         });
 
-        engine.registerActivityInternal("abc", voidConverter(), stringConverter, Duration.ofSeconds(5), false, ctx -> {
+        engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, ctx -> {
             throw new IllegalStateException();
         });
 
@@ -827,11 +825,11 @@ class WorkflowEngineImplTest {
     void shouldNotRetryActivityFailingWithTerminalException() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                    "abc", null, voidConverter(), stringConverter, defaultRetryPolicy()).await();
+                    "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
-        engine.registerActivityInternal("abc", voidConverter(), stringConverter, Duration.ofSeconds(5), false, ctx -> {
+        engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, ctx -> {
             throw new ApplicationFailureException("Ouch!", null, true);
         });
 
@@ -866,7 +864,7 @@ class WorkflowEngineImplTest {
 
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             try {
-                ((WorkflowContextImpl<?, ?>) ctx).callSubWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
+                ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             } catch (WorkflowFailureException e) {
                 exceptionReference.set(e);
                 throw e;
@@ -876,7 +874,7 @@ class WorkflowEngineImplTest {
         });
 
         engine.registerWorkflowInternal("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
-            ((WorkflowContextImpl<?, ?>) ctx).callSubWorkflow("baz", 1, null, null, voidConverter(), voidConverter()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("baz", 1, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
@@ -903,24 +901,24 @@ class WorkflowEngineImplTest {
         awaitRunStatus(runId, WorkflowRunStatus.FAILED, Duration.ofSeconds(15));
 
         assertThat(exceptionReference.get()).satisfies(e -> {
-            assertThat(e).isInstanceOf(SubWorkflowFailureException.class);
+            assertThat(e).isInstanceOf(ChildWorkflowFailureException.class);
             assertThat(e.getMessage()).matches("Run .+ of workflow bar v1 failed");
             assertThat(e.getStackTrace()).isNotEmpty();
 
             {
-                final var failure = (SubWorkflowFailureException) e;
+                final var failure = (ChildWorkflowFailureException) e;
                 assertThat(failure.getRunId()).isNotNull();
                 assertThat(failure.getWorkflowName()).isEqualTo("bar");
                 assertThat(failure.getWorkflowVersion()).isEqualTo(1);
             }
 
             assertThat(e.getCause()).satisfies(firstCause -> {
-                assertThat(firstCause).isInstanceOf(SubWorkflowFailureException.class);
+                assertThat(firstCause).isInstanceOf(ChildWorkflowFailureException.class);
                 assertThat(firstCause.getMessage()).matches("Run .+ of workflow baz v1 failed");
                 assertThat(firstCause.getStackTrace()).isNotEmpty();
 
                 {
-                    final var failure = (SubWorkflowFailureException) firstCause;
+                    final var failure = (ChildWorkflowFailureException) firstCause;
                     assertThat(failure.getRunId()).isNotNull();
                     assertThat(failure.getWorkflowName()).isEqualTo("baz");
                     assertThat(failure.getWorkflowVersion()).isEqualTo(1);
@@ -956,7 +954,7 @@ class WorkflowEngineImplTest {
     void shouldPropagateLabels() {
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
             assertThat(ctx.labels()).containsOnlyKeys("oof", "rab");
-            ((WorkflowContextImpl<?, ?>) ctx).callSubWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
@@ -996,9 +994,9 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldContinueAsNew() {
-        engine.registerWorkflowInternal("foo", 1, stringConverter, stringConverter, Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("foo", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
             final int iteration = Integer.parseInt(ctx.argument());
-            ctx.sideEffect("abc-" + iteration, null, stringConverter, ignored -> "def-" + iteration).await();
+            ctx.sideEffect("abc-" + iteration, null, stringConverter(), ignored -> "def-" + iteration).await();
             if (iteration < 3) {
                 ctx.continueAsNew(
                         new ContinueAsNewOptions<String>()
@@ -1021,13 +1019,13 @@ class WorkflowEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_STARTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_SCHEDULED);
-                    assertThat(stringConverter.convertFromPayload(entry.getRunScheduled().getArgument())).isEqualTo("3");
+                    assertThat(stringConverter().convertFromPayload(entry.getRunScheduled().getArgument())).isEqualTo("3");
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.SIDE_EFFECT_EXECUTED),
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.RUN_COMPLETED);
-                    assertThat(stringConverter.convertFromPayload(entry.getRunCompleted().getResult())).isEqualTo("3");
+                    assertThat(stringConverter().convertFromPayload(entry.getRunCompleted().getResult())).isEqualTo("3");
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(WorkflowEvent.SubjectCase.EXECUTION_COMPLETED));
     }
@@ -1039,7 +1037,7 @@ class WorkflowEngineImplTest {
             completedRuns.addAll(event.completedRuns());
         });
 
-        engine.registerWorkflowInternal("foo", 1, stringConverter, stringConverter, Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("foo", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
             final boolean shouldFail = Boolean.parseBoolean(ctx.argument());
             if (shouldFail) {
                 throw new IllegalStateException();
