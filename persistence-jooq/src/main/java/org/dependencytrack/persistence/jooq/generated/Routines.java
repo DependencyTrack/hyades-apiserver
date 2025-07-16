@@ -13,7 +13,6 @@ import org.dependencytrack.persistence.jooq.generated.routines.HasUserProjectAcc
 import org.dependencytrack.persistence.jooq.generated.routines.JsonbVulnAliases;
 import org.dependencytrack.persistence.jooq.generated.routines.RecalcUserProjectEffectivePermissions;
 import org.dependencytrack.persistence.jooq.generated.routines.UpdateComponentMetrics;
-import org.dependencytrack.persistence.jooq.generated.routines.UpdatePortfolioMetrics;
 import org.dependencytrack.persistence.jooq.generated.routines.UpdateProjectMetrics;
 import org.jooq.Configuration;
 import org.jooq.Field;
@@ -243,17 +242,6 @@ public class Routines {
     ) {
         UpdateComponentMetrics p = new UpdateComponentMetrics();
         p.setComponentUuid(componentUuid);
-
-        p.execute(configuration);
-    }
-
-    /**
-     * Call <code>UPDATE_PORTFOLIO_METRICS</code>
-     */
-    public static void updatePortfolioMetrics(
-          Configuration configuration
-    ) {
-        UpdatePortfolioMetrics p = new UpdatePortfolioMetrics();
 
         p.execute(configuration);
     }

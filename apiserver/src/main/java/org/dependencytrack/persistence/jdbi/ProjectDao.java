@@ -66,6 +66,7 @@ public interface ProjectDao {
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="nameFilter" type="Boolean" -->
+            <#-- @ftlvariable name="versionFilter" type="Boolean" -->
             <#-- @ftlvariable name="classifierFilter" type="Boolean" -->
             <#-- @ftlvariable name="tagFilter" type="Boolean" -->
             <#-- @ftlvariable name="teamFilter" type="Boolean" -->
@@ -134,6 +135,9 @@ public interface ProjectDao {
             <#if nameFilter>
                AND "PROJECT"."NAME" = :nameFilter
             </#if>
+            <#if versionFilter>
+               AND "PROJECT"."VERSION" = :versionFilter
+            </#if>
             <#if classifierFilter>
                AND "PROJECT"."CLASSIFIER" = :classifierFilter
             </#if>
@@ -201,6 +205,7 @@ public interface ProjectDao {
     })
     List<ConciseProjectListRow> getPageConcise(
             @Bind String nameFilter,
+            @Bind String versionFilter,
             @Bind String classifierFilter,
             @Bind String tagFilter,
             @Bind String teamFilter,

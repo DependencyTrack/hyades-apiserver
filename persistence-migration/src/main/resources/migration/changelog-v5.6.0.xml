@@ -2648,4 +2648,11 @@
                 ON CONFLICT ("USER_ID", "PERMISSION_ID") DO NOTHING;
         </sql>
     </changeSet>
+
+    <changeSet id="v5.6.0-32" author="nscuro">
+        <sql splitStatements="true">
+            DROP TABLE "PORTFOLIOMETRICS";
+            DROP PROCEDURE IF EXISTS "UPDATE_PORTFOLIO_METRICS";
+        </sql>
+    </changeSet>
 </databaseChangeLog>

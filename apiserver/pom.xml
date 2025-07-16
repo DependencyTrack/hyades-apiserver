@@ -19,7 +19,7 @@
 
         <!-- Dependency Versions -->
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.25.1</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.25.2</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
@@ -73,6 +73,10 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>api</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>datanucleus-plugin</artifactId>
