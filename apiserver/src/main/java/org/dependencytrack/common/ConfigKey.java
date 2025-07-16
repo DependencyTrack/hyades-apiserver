@@ -62,7 +62,7 @@ public enum ConfigKey implements Config.Key {
 
     DEV_SERVICES_ENABLED("dev.services.enabled", false),
     DEV_SERVICES_IMAGE_FRONTEND("dev.services.image.frontend", "ghcr.io/dependencytrack/hyades-frontend:snapshot"),
-    DEV_SERVICES_IMAGE_KAFKA("dev.services.image.kafka", "apache/kafka-native:3.9.0"),
+    DEV_SERVICES_IMAGE_KAFKA("dev.services.image.kafka", "apache/kafka-native:3.9.1"),
     DEV_SERVICES_IMAGE_POSTGRES("dev.services.image.postgres", "postgres:13-alpine"),
     DEV_SERVICES_PORT_FRONTEND("dev.services.port.frontend", 8081),
     DEV_SERVICES_PORT_KAFKA("dev.services.port.kafka", 9092),
