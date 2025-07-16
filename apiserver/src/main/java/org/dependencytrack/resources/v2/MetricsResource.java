@@ -32,11 +32,13 @@ import org.dependencytrack.persistence.pagination.Page;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
+import jakarta.ws.rs.ext.Provider;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 
+@Provider
 public class MetricsResource extends AlpineResource implements MetricsApi {
 
     @Context

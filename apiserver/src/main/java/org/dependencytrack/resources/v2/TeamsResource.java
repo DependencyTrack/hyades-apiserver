@@ -149,6 +149,7 @@ public class TeamsResource implements TeamsApi {
     }
 
     @Override
+    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response listTeamMemberships(final String team, final String user, final Integer limit, final String pageToken) {
         final Page<ListTeamMembershipsRow> membershipsPage = inJdbiTransaction(
                 handle -> handle.attach(TeamDao.class).listTeamMembers(team, user, limit, pageToken));
@@ -168,6 +169,7 @@ public class TeamsResource implements TeamsApi {
     }
 
     @Override
+    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response createTeamMembership(final CreateTeamMembershipRequest request) {
         try (final var qm = new QueryManager()) {
             qm.runInTransaction(() -> {
@@ -201,6 +203,7 @@ public class TeamsResource implements TeamsApi {
     }
 
     @Override
+    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
     public Response deleteTeamMembership(final String team, final String user) {
         final boolean deleted = inJdbiTransaction(
                 handle -> handle.attach(TeamDao.class).deleteTeamMembership(team, user));

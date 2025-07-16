@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.resources.v2;
 
-import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFeature;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -28,7 +26,6 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -47,10 +44,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 public class MetricsResourceTest extends ResourceTest {
 
     @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
-            new ResourceConfig(MetricsResource.class)
-                    .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+    public static JerseyTestRule jersey = new JerseyTestRule(new ResourceConfig());
 
     @Test
     public void getCurrentPortfolioMetricsEmptyTest() {
