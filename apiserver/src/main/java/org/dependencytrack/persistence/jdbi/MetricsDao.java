@@ -104,32 +104,30 @@ public interface MetricsDao extends SqlObject {
               SELECT DATE_TRUNC('day', CURRENT_DATE - (INTERVAL '1 day' * day)) AS metrics_date
                 FROM GENERATE_SERIES(0, GREATEST(:days - 1, 0)) day
             ),
-            projects_in_scope AS(
-              SELECT "ID"
-                FROM "PROJECT"
-               WHERE "INACTIVE_SINCE" IS NULL
-                 AND ${apiProjectAclCondition}
+            date_range_bounds AS(
+              SELECT DATE_TRUNC('day', CURRENT_DATE - (INTERVAL '1 day' * GREATEST(:days - 1, 0))) AS lower
+                   , DATE_TRUNC('day', CURRENT_DATE) AS upper
             ),
-            latest_daily_project_metrics AS(
-              SELECT date_range.metrics_date
-                   , latest_metrics.*
-               FROM date_range
-               LEFT JOIN LATERAL (
-                 SELECT DISTINCT ON (pm."PROJECT_ID")
-                        pm.*
-                   FROM projects_in_scope
-                  INNER JOIN "PROJECTMETRICS" pm
-                     ON pm."PROJECT_ID" = projects_in_scope."ID"
-                  WHERE pm."LAST_OCCURRENCE" < date_range.metrics_date + INTERVAL '1 day'
-                    AND pm."LAST_OCCURRENCE" >= DATE_TRUNC('day', CURRENT_DATE - (INTERVAL '1 day' * GREATEST(:days - 1, 0)))
-                  ORDER BY pm."PROJECT_ID", pm."LAST_OCCURRENCE" DESC
-               ) AS latest_metrics ON TRUE
+            ranked_daily_project_metrics AS(
+              SELECT pm.*
+                   , ROW_NUMBER() OVER(
+                       PARTITION BY pm."PROJECT_ID", DATE_TRUNC('day', pm."LAST_OCCURRENCE")
+                       ORDER BY pm."LAST_OCCURRENCE" DESC
+                     ) AS rn
+               FROM "PROJECTMETRICS" AS pm
+              INNER JOIN "PROJECT" AS p
+                 ON p."ID" = pm."PROJECT_ID"
+              CROSS JOIN date_range_bounds
+              WHERE ${apiProjectAclCondition}
+                AND p."INACTIVE_SINCE" IS NULL
+                AND pm."LAST_OCCURRENCE" >= date_range_bounds.lower
+                AND pm."LAST_OCCURRENCE" < date_range_bounds.upper + INTERVAL '1 day'
             ),
             daily_metrics AS(
               SELECT COUNT(DISTINCT "PROJECT_ID") AS projects
                    , SUM("COMPONENTS") AS components
                    , SUM("CRITICAL") AS critical
-                   , metrics_date
+                   , DATE_TRUNC('day', "LAST_OCCURRENCE") AS metrics_date
                    , SUM("FINDINGS_AUDITED") AS findings_audited
                    , SUM("FINDINGS_TOTAL") AS findings_total
                    , SUM("FINDINGS_UNAUDITED") AS findings_unaudited
@@ -157,7 +155,8 @@ public interface MetricsDao extends SqlObject {
                    , SUM("VULNERABILITIES") AS vulnerabilities
                    , SUM("VULNERABLECOMPONENTS") AS vulnerable_components
                    , SUM(CASE WHEN "VULNERABLECOMPONENTS" > 0 THEN 1 ELSE 0 END) AS vulnerable_projects
-                FROM latest_daily_project_metrics
+                FROM ranked_daily_project_metrics
+               WHERE rn = 1
                GROUP BY metrics_date
             )
             SELECT COALESCE(dm.components, 0) AS components
@@ -198,6 +197,7 @@ public interface MetricsDao extends SqlObject {
              ORDER BY date_range.metrics_date;
             """)
     @RegisterBeanMapper(PortfolioMetrics.class)
+    @DefineApiProjectAclCondition(projectIdColumn = "p.\"ID\"")
     List<PortfolioMetrics> getPortfolioMetricsForDays(@Bind int days);
 
     @SqlQuery("""
