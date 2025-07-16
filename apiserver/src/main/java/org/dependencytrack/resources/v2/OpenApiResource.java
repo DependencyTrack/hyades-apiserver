@@ -20,17 +20,12 @@ package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.AuthenticationNotRequired;
 import io.swagger.v3.oas.annotations.Operation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.ServerErrorException;
-import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -39,7 +34,6 @@ import static java.util.Objects.requireNonNull;
 @Path("/openapi.yaml")
 public class OpenApiResource {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(OpenApiResource.class);
     private static final ReadWriteLock LOCK = new ReentrantReadWriteLock();
     private static String OPENAPI_YAML;
 
@@ -47,7 +41,7 @@ public class OpenApiResource {
     @Produces("application/yaml")
     @Operation(hidden = true)
     @AuthenticationNotRequired
-    public String getOpenApi() {
+    public String getOpenApi() throws IOException {
         LOCK.readLock().lock();
         try {
             if (OPENAPI_YAML == null) {
@@ -60,9 +54,6 @@ public class OpenApiResource {
                     }
 
                     LOCK.readLock().lock();
-                } catch (URISyntaxException | IOException e) {
-                    LOGGER.error("Failed to load OpenAPI spec YAML", e);
-                    throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
                 } finally {
                     LOCK.writeLock().unlock();
                 }
@@ -74,7 +65,7 @@ public class OpenApiResource {
         }
     }
 
-    private static String loadOpenapiYaml() throws URISyntaxException, IOException {
+    private static String loadOpenapiYaml() throws IOException {
         try (final InputStream inputStream =
                      OpenApiResource.class.getResourceAsStream(
                              "/org/dependencytrack/api/v2/openapi.yaml")) {

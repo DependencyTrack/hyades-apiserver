@@ -18,14 +18,12 @@
  */
 package org.dependencytrack.resources.v2;
 
-import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFeature;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -45,13 +43,12 @@ import static org.hamcrest.CoreMatchers.equalTo;
 public class WorkflowsResourceTest extends ResourceTest {
 
     @ClassRule
-    public static JerseyTestRule jersey = new JerseyTestRule(
-            new ResourceConfig(WorkflowsResource.class)
-                    .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+    public static JerseyTestRule jersey = new JerseyTestRule(new ResourceConfig());
 
     @Test
     public void getWorkflowStatusOk() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
         UUID uuid = UUID.randomUUID();
         WorkflowState workflowState1 = new WorkflowState();
         workflowState1.setParent(null);
@@ -107,6 +104,8 @@ public class WorkflowsResourceTest extends ResourceTest {
 
     @Test
     public void getWorkflowStatusNotFound() {
+        initializeWithPermissions(Permissions.BOM_UPLOAD);
+
         WorkflowState workflowState1 = new WorkflowState();
         workflowState1.setParent(null);
         workflowState1.setFailureReason(null);
