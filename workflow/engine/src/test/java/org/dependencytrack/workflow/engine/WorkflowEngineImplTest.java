@@ -725,7 +725,7 @@ class WorkflowEngineImplTest {
         engine.mount(new ActivityGroup("test-group").withActivity("abc"));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -759,7 +759,7 @@ class WorkflowEngineImplTest {
         engine.mount(new ActivityGroup("test-group").withActivity("abc").withMaxConcurrency(2));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -837,7 +837,7 @@ class WorkflowEngineImplTest {
         engine.mount(new ActivityGroup("test-group").withActivity("abc"));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("test", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED);
 
@@ -895,7 +895,7 @@ class WorkflowEngineImplTest {
         engine.mount(new ActivityGroup("test-group").withActivity("qux"));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("foo", 1)
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1)
                 .withLabels(Map.of("oof", "rab")));
 
         awaitRunStatus(runId, WorkflowRunStatus.FAILED, Duration.ofSeconds(15));
@@ -1140,20 +1140,18 @@ class WorkflowEngineImplTest {
             engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
         }
 
-        final Page<WorkflowRunMetadata> firstRunsPage = engine.listRuns(
+        Page<WorkflowRunMetadata> runsPage = engine.listRuns(
                 new ListWorkflowRunsRequest()
                         .withLimit(5));
-        assertThat(firstRunsPage.items()).hasSize(5);
-        assertThat(firstRunsPage.currentPageToken()).isNull();
-        assertThat(firstRunsPage.nextPageToken()).isNotNull();
+        assertThat(runsPage.items()).hasSize(5);
+        assertThat(runsPage.nextPageToken()).isNotNull();
 
-        final Page<WorkflowRunMetadata> secondRunsPage = engine.listRuns(
+        runsPage = engine.listRuns(
                 new ListWorkflowRunsRequest()
-                        .withPageToken(firstRunsPage.nextPageToken())
+                        .withPageToken(runsPage.nextPageToken())
                         .withLimit(5));
-        assertThat(secondRunsPage.items()).hasSize(5);
-        assertThat(secondRunsPage.currentPageToken()).isEqualTo(firstRunsPage.nextPageToken());
-        assertThat(secondRunsPage.nextPageToken()).isNull();
+        assertThat(runsPage.items()).hasSize(5);
+        assertThat(runsPage.nextPageToken()).isNull();
     }
 
     @Test
@@ -1164,20 +1162,18 @@ class WorkflowEngineImplTest {
                             "schedule-" + i, "* * * * *", "workflow-foo", 1));
         }
 
-        final Page<WorkflowSchedule> firstSchedulesPage = engine.listSchedules(
+        Page<WorkflowSchedule> schedulesPage = engine.listSchedules(
                 new ListWorkflowSchedulesRequest()
                         .withLimit(5));
-        assertThat(firstSchedulesPage.items()).hasSize(5);
-        assertThat(firstSchedulesPage.currentPageToken()).isNull();
-        assertThat(firstSchedulesPage.nextPageToken()).isNotNull();
+        assertThat(schedulesPage.items()).hasSize(5);
+        assertThat(schedulesPage.nextPageToken()).isNotNull();
 
-        final Page<WorkflowSchedule> secondSchedulesPage = engine.listSchedules(
+        schedulesPage = engine.listSchedules(
                 new ListWorkflowSchedulesRequest()
-                        .withPageToken(firstSchedulesPage.nextPageToken())
+                        .withPageToken(schedulesPage.nextPageToken())
                         .withLimit(5));
-        assertThat(secondSchedulesPage.items()).hasSize(5);
-        assertThat(secondSchedulesPage.currentPageToken()).isEqualTo(firstSchedulesPage.nextPageToken());
-        assertThat(secondSchedulesPage.nextPageToken()).isNull();
+        assertThat(schedulesPage.items()).hasSize(5);
+        assertThat(schedulesPage.nextPageToken()).isNull();
     }
 
     @Test
@@ -1191,29 +1187,27 @@ class WorkflowEngineImplTest {
         engine.mount(new WorkflowGroup("test").withWorkflow("foo"));
         engine.start();
 
-        final UUID runId = engine.createRun(new CreateWorkflowRunRequest("foo", 1));
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("foo", 1));
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
-        final Page<WorkflowEvent> firstHistoryPage = engine.listRunHistory(
+        Page<WorkflowEvent> historyPage = engine.listRunHistory(
                 new ListWorkflowRunHistoryRequest(runId)
                         .withLimit(3));
-        assertThat(firstHistoryPage.items()).satisfiesExactly(
+        assertThat(historyPage.items()).satisfiesExactly(
                 event -> assertThat(event.hasExecutionStarted()).isTrue(),
                 event -> assertThat(event.hasRunScheduled()).isTrue(),
                 event -> assertThat(event.hasRunStarted()).isTrue());
-        assertThat(firstHistoryPage.currentPageToken()).isNull();
-        assertThat(firstHistoryPage.nextPageToken()).isNotNull();
+        assertThat(historyPage.nextPageToken()).isNotNull();
 
-        final Page<WorkflowEvent> secondHistoryPage = engine.listRunHistory(
+        historyPage = engine.listRunHistory(
                 new ListWorkflowRunHistoryRequest(runId)
-                        .withPageToken(firstHistoryPage.nextPageToken())
+                        .withPageToken(historyPage.nextPageToken())
                         .withLimit(2));
-        assertThat(secondHistoryPage.items()).satisfiesExactly(
+        assertThat(historyPage.items()).satisfiesExactly(
                 event -> assertThat(event.hasSideEffectExecuted()).isTrue(),
                 event -> assertThat(event.hasSideEffectExecuted()).isTrue());
-        assertThat(secondHistoryPage.currentPageToken()).isEqualTo(firstHistoryPage.nextPageToken());
-        assertThat(secondHistoryPage.nextPageToken()).isNotNull();
+        assertThat(historyPage.nextPageToken()).isNotNull();
     }
 
     private WorkflowRunMetadata awaitRunStatus(

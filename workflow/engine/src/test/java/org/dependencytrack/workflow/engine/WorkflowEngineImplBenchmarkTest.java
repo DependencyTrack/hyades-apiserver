@@ -176,8 +176,6 @@ public class WorkflowEngineImplBenchmarkTest {
                 .withActivity(TestActivityBar.class)
                 .withActivity(TestActivityBaz.class)
                 .withMaxConcurrency(150));
-
-        engine.start();
     }
 
     @AfterEach
@@ -196,20 +194,41 @@ public class WorkflowEngineImplBenchmarkTest {
     }
 
     @Test
-    void test() {
+    void test() throws Exception {
         final int numRuns = 100_000;
+
+        // Whether to use concurrency groups for *all* workflow runs.
+        // Disabling this will significantly improve throughput.
+        // Note that realistic workloads will have a balance between
+        // runs that use concurrency groups, and runs that don't.
+        final boolean withConcurrencyGroups = true;
 
         final var scheduleOptions = new ArrayList<CreateWorkflowRunRequest<?>>(numRuns);
         for (int i = 0; i < numRuns; i++) {
-            final String concurrencyGroupId = (i % 2 == 0 && i != 0) ? "test-" + (i - 1) : "test-" + i;
+            final String concurrencyGroupId = withConcurrencyGroups
+                    ? ((i % 2 == 0 && i != 0) ? "test-" + (i - 1) : "test-" + i)
+                    : null;
+
             final Map<String, String> labels = (i % 5 == 0) ? Map.of("foo", "test-" + i) : null;
-            scheduleOptions.add(new CreateWorkflowRunRequest<>("test", 1)
-                    .withConcurrencyGroupId(concurrencyGroupId)
-                    .withLabels(labels));
+
+            scheduleOptions.add(
+                    new CreateWorkflowRunRequest<>("test", 1)
+                            .withConcurrencyGroupId(concurrencyGroupId)
+                            .withLabels(labels));
         }
 
+        LOGGER.info("Creating {} runs", numRuns);
         engine.createRuns(scheduleOptions);
-        LOGGER.info("All workflows started");
+
+        // Ensure table statistics are up to date.
+        // Under normal circumstances, there would never be bulk inserts of that many runs at once.
+        LOGGER.info("Running ANALYZE");
+        try (final Connection connection = postgresContainer.createConnection("")) {
+            connection.createStatement().execute("ANALYZE");
+        }
+
+        LOGGER.info("Starting engine");
+        engine.start();
 
         await("Workflow completion")
                 .atMost(Duration.ofMinutes(10))
