@@ -155,9 +155,6 @@ public class WorkflowsResource implements WorkflowsApi {
                 .step(ListWorkflowStatesResponseItem.StepEnum.fromString(workflowState.getStep().name()))
                 .failureReason(workflowState.getFailureReason())
                 .build();
-        if (workflowState.getParent() != null) {
-            mappedState.setParent(mapWorkflowStateResponse(workflowState.getParent()));
-        }
         if (workflowState.getStartedAt() != null) {
             mappedState.setStartedAt(workflowState.getStartedAt().getTime());
         }

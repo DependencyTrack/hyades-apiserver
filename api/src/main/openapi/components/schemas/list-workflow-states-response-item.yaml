@@ -16,8 +16,6 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  parent:
-    $ref: './list-workflow-states-response-item.yaml'
   step:
     type: string
     enum:

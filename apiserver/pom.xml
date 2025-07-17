@@ -28,7 +28,7 @@
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
-        <lib.kafka.version>3.9.0</lib.kafka.version>
+        <lib.kafka.version>3.9.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.17</lib.minio.version>
         <lib.kotlin-stdlib.version>2.2.0</lib.kotlin-stdlib.version>
