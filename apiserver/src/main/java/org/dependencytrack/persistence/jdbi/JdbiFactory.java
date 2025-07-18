@@ -154,6 +154,10 @@ public class JdbiFactory {
         return createLocalJdbi(qm.getPersistenceManager());
     }
 
+    public static Jdbi createLocalJdbi(final DataSource dataSource) {
+        return customizeJdbi(Jdbi.create(dataSource));
+    }
+
     private static Jdbi createLocalJdbi(final PersistenceManager pm) {
         if (!pm.currentTransaction().isActive()) {
             throw new IllegalStateException("""

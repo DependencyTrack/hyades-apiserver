@@ -48,7 +48,7 @@ import org.dependencytrack.model.Tools;
 import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
@@ -73,6 +73,7 @@ import java.util.UUID;
 import static org.apache.commons.io.IOUtils.resourceToURL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 public class CelPolicyEngineTest extends PersistenceCapableTest {
 
@@ -1949,8 +1950,10 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
     @Test
     @Ignore  // Un-ignore for manual profiling purposes.
     public void testWithBloatedBom() throws Exception {
-        // Import all default objects (includes licenses and license groups).
-        new DefaultObjectGenerator().contextInitialized(null);
+        useJdbiTransaction(handle -> {
+            DatabaseSeedingInitTask.seedDefaultLicenses(handle);
+            DatabaseSeedingInitTask.seedDefaultLicenseGroups(handle);
+        });
 
         final var project = new Project();
         project.setName("acme-app");
