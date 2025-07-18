@@ -52,6 +52,8 @@ paths:
     $ref: "./paths/team-memberships.yaml"
   /workflows/{token}:
     $ref: "./paths/workflows__token__.yaml"
+  /workflow-runs:
+    $ref: "./paths/workflow-runs.yaml"
 
 components:
   securitySchemes:

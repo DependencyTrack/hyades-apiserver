@@ -97,6 +97,11 @@
             <groupId>org.dependencytrack</groupId>
             <artifactId>proto</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>workflow-engine</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Alpine -->
         <dependency>
