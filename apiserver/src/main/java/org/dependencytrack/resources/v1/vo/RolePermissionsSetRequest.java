@@ -22,27 +22,18 @@ package org.dependencytrack.resources.v1.vo;
 import java.util.Set;
 
 import org.dependencytrack.auth.Permissions;
-
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-
-import alpine.common.validation.RegexSequence;
-import alpine.server.json.TrimmedStringDeserializer;
+import org.dependencytrack.model.validation.ValidUuid;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 
-public record UserPermissionsSetRequest(
-        @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-        String userType,
-
+public record RolePermissionsSetRequest(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank
-        @JsonDeserialize(using = TrimmedStringDeserializer.class)
-        @Pattern(regexp = RegexSequence.Definition.PRINTABLE_CHARS_PLUS, message = "The username may only contain printable characters")
-        String username,
+        @ValidUuid
+        String role,
 
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         @NotNull
