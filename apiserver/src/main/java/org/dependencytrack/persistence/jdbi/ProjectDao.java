@@ -24,16 +24,21 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.annotation.Nullable;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.model.ProjectProperty;
+import org.dependencytrack.model.ProjectVersion;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.persistence.jdbi.mapping.ExternalReferenceMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalContactMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalEntityMapper;
+import org.dependencytrack.persistence.jdbi.mapping.ProjectRowMapper;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
 import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.json.Json;
+import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.config.RegisterColumnMapper;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
@@ -41,12 +46,14 @@ import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
+import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -386,16 +393,7 @@ public interface ProjectDao {
                 .map(ProjectListRow::project)
                 .toList();
         if (includeMetrics) {
-            final Map<Long, Project> projectById = projects.stream()
-                    .collect(Collectors.toMap(Project::getId, Function.identity()));
-            final List<ProjectMetrics> metricsList = withJdbiHandle(
-                    handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(projectById.keySet()));
-            for (final ProjectMetrics metrics : metricsList) {
-                final Project project = projectById.get(metrics.getProjectId());
-                if (project != null) {
-                    project.setMetrics(metrics);
-                }
-            }
+            populateMetrics(projects);
         }
         return (new PaginatedResult()).objects(projects).total(totalCount);
     }
@@ -420,13 +418,13 @@ public interface ProjectDao {
              WHERE "ID" IN (SELECT "ID" FROM "CTE")
              RETURNING "NAME", "VERSION", "INACTIVE_SINCE", "UUID"
            """)
-    @RegisterConstructorMapper(DeletedProject.class)
-    List<DeletedProject> deleteInactiveProjectsForRetentionDuration(@Bind final Instant retentionCutOff, @Bind final int batchSize);
+    @RegisterConstructorMapper(ProjectVersionRow.class)
+    List<ProjectVersionRow> deleteInactiveProjectsForRetentionDuration(@Bind final Instant retentionCutOff, @Bind final int batchSize);
 
-    record DeletedProject(@ColumnName("NAME") String name,
-                          @ColumnName("VERSION") String version,
-                          @ColumnName("INACTIVE_SINCE") Instant inactiveSince,
-                          @ColumnName("UUID") UUID uuid) {
+    record ProjectVersionRow(@ColumnName("NAME") String name,
+                             @ColumnName("VERSION") String version,
+                             @ColumnName("INACTIVE_SINCE") Instant inactiveSince,
+                             @ColumnName("UUID") UUID uuid) {
     }
 
     @SqlQuery("""
@@ -444,8 +442,8 @@ public interface ProjectDao {
                 )
             RETURNING "NAME", "VERSION", "INACTIVE_SINCE", "UUID"
             """)
-    @RegisterConstructorMapper(DeletedProject.class)
-    List<DeletedProject> retainLastXInactiveProjects(@Bind final String projectName, @Bind final int versionCountThreshold);
+    @RegisterConstructorMapper(ProjectVersionRow.class)
+    List<ProjectVersionRow> retainLastXInactiveProjects(@Bind final String projectName, @Bind final int versionCountThreshold);
 
     @SqlQuery("""
             SELECT "PROJECT"."NAME"
@@ -470,6 +468,214 @@ public interface ProjectDao {
             """)
     Boolean isAccessible(@Bind UUID projectUuid);
 
+    @SqlQuery(/* language=InjectedFreeMarker */ """
+            <#-- @ftlvariable name="apiFilterParameter" type="String" -->
+            <#-- @ftlvariable name="apiOrderByClause" type="String" -->
+            <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
+            <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
+            SELECT "PROJECT"."ID" AS "id"
+                 , "PROJECT"."CLASSIFIER"
+                 , "PROJECT"."CPE"
+                 , "PROJECT"."DESCRIPTION"
+                 , "PROJECT"."DIRECT_DEPENDENCIES" AS "directDependencies"
+                 , "PROJECT"."EXTERNAL_REFERENCES" AS "externalReferences"
+                 , "PROJECT"."GROUP"
+                 , "PROJECT"."LAST_BOM_IMPORTED" AS "lastBomImport"
+                 , "PROJECT"."LAST_BOM_IMPORTED_FORMAT" AS "lastBomImportFormat"
+                 , "PROJECT"."LAST_RISKSCORE" AS "lastInheritedRiskScore"
+                 , "PROJECT"."NAME" AS "name"
+                 , "PROJECT"."PUBLISHER"
+                 , "PROJECT"."PURL" AS "projectPurl"
+                 , "PROJECT"."SWIDTAGID"
+                 , "PROJECT"."UUID"
+                 , "PROJECT"."VERSION" AS "version"
+                 , "PROJECT"."SUPPLIER"
+                 , "PROJECT"."MANUFACTURER"
+                 , "PROJECT"."AUTHORS"
+                 , "PROJECT"."IS_LATEST" AS "isLatest"
+                 , "PROJECT"."INACTIVE_SINCE" AS "inactiveSince"
+                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
+                        FROM "TAG"
+                        INNER JOIN "PROJECTS_TAGS"
+                            ON "PROJECTS_TAGS"."PROJECT_ID" = "PROJECT"."ID"
+                        WHERE "TAG"."ID" = "PROJECTS_TAGS"."TAG_ID"
+                    ) AS "tagsJson"
+                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
+                        FROM "TEAM"
+                        INNER JOIN "PROJECT_ACCESS_TEAMS"
+                            ON "PROJECT_ACCESS_TEAMS"."TEAM_ID" = "TEAM"."ID"
+                        WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
+                    ) AS "teamsJson"
+                 , COUNT(*) OVER() AS "totalCount"
+              FROM "PROJECT"
+             WHERE ${apiProjectAclCondition}
+             AND "PROJECT"."PARENT_PROJECT_ID" = :parentProjectId
+            <#if excludeInactive>
+                AND "PROJECT"."INACTIVE_SINCE" IS NULL
+            </#if>
+            <#if apiFilterParameter??>
+               AND (LOWER("PROJECT"."NAME") LIKE ('%' || LOWER(${apiFilterParameter}) || '%')
+                    OR EXISTS (SELECT 1 FROM "TAG" WHERE "TAG"."NAME" = ${apiFilterParameter}))
+            </#if>
+            <#if apiOrderByClause??>
+                ${apiOrderByClause}
+            <#else>
+                ORDER BY "name" ASC, "version" DESC
+            </#if>
+            ${apiOffsetLimitClause!}
+            """)
+    @DefineNamedBindings
+    @AllowApiOrdering(alwaysBy = "id", by = {
+            @AllowApiOrdering.Column(name = "id"),
+            @AllowApiOrdering.Column(name = "name"),
+            @AllowApiOrdering.Column(name = "version")
+    })
+    @RegisterColumnMapper(ExternalReferenceMapper.class)
+    @RegisterColumnMapper(OrganizationalEntityMapper.class)
+    @RegisterColumnMapper(OrganizationalContactMapper.class)
+    @RegisterRowMapper(ProjectListRowMapper.class)
+    List<ProjectListRow> getChildrenProjects(
+            @Bind long parentProjectId,
+            @Define boolean excludeInactive
+    );
+
+    default PaginatedResult getChildrenProjects(final long parentProjectId, final boolean includeMetrics, final boolean excludeInactive) {
+        final List<ProjectListRow> projectListRows = getChildrenProjects(parentProjectId, excludeInactive);
+        final long totalCount = projectListRows.isEmpty() ? 0 : projectListRows.getFirst().totalCount();
+        final List<Project> projects = projectListRows.stream()
+                .map(ProjectListRow::project)
+                .toList();
+        if (includeMetrics) {
+            populateMetrics(projects);
+        }
+        return (new PaginatedResult()).objects(projects).total(totalCount);
+    }
+
+    @SqlQuery("""
+            SELECT "PROJECT"."ID"
+                 , "PROJECT"."CLASSIFIER"
+                 , "PROJECT"."CPE"
+                 , "PROJECT"."DESCRIPTION"
+                 , "PROJECT"."DIRECT_DEPENDENCIES" AS "directDependencies"
+                 , "PROJECT"."EXTERNAL_REFERENCES" AS "externalReferences"
+                 , "PROJECT"."GROUP"
+                 , "PROJECT"."LAST_BOM_IMPORTED" AS "lastBomImport"
+                 , "PROJECT"."LAST_BOM_IMPORTED_FORMAT" AS "lastBomImportFormat"
+                 , "PROJECT"."LAST_RISKSCORE" AS "lastInheritedRiskScore"
+                 , "PROJECT"."NAME"
+                 , "PROJECT"."PUBLISHER"
+                 , "PROJECT"."PURL" AS "projectPurl"
+                 , "PROJECT"."SWIDTAGID"
+                 , "PROJECT"."UUID"
+                 , "PROJECT"."VERSION"
+                 , "PROJECT"."SUPPLIER"
+                 , "PROJECT"."MANUFACTURER"
+                 , "PROJECT"."AUTHORS"
+                 , "PROJECT"."IS_LATEST" AS "isLatest"
+                 , "PROJECT"."INACTIVE_SINCE" AS "inactiveSince"
+                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
+                        FROM "TAG"
+                        INNER JOIN "PROJECTS_TAGS"
+                            ON "PROJECTS_TAGS"."PROJECT_ID" = "PROJECT"."ID"
+                        WHERE "TAG"."ID" = "PROJECTS_TAGS"."TAG_ID"
+                    ) AS "tagsJson"
+                 , (SELECT JSONB_AGG(JSONB_BUILD_OBJECT('id', "ID", 'name', "NAME"))
+                        FROM "TEAM"
+                        INNER JOIN "PROJECT_ACCESS_TEAMS"
+                            ON "PROJECT_ACCESS_TEAMS"."TEAM_ID" = "TEAM"."ID"
+                        WHERE "PROJECT_ACCESS_TEAMS"."PROJECT_ID" = "PROJECT"."ID"
+                    ) AS "teamsJson"
+                 , "PP"."NAME" AS "parentName"
+                 , "PP"."VERSION" AS "parentVersion"
+                 , "PP"."UUID" AS "parentUuid"
+              FROM "PROJECT"
+              LEFT JOIN "PROJECT" AS "PP"
+                 ON "PP"."ID" = "PROJECT"."PARENT_PROJECT_ID"
+              <#if uuid?? && uuid>
+                WHERE "PROJECT"."UUID" = :uuid
+              <#else>
+                WHERE "PROJECT"."NAME" = :name
+                AND "PROJECT"."VERSION" = :version
+              </#if>
+            """)
+    @AllowUnusedBindings
+    @RegisterColumnMapper(ExternalReferenceMapper.class)
+    @RegisterColumnMapper(OrganizationalEntityMapper.class)
+    @RegisterColumnMapper(OrganizationalContactMapper.class)
+    @RegisterRowMapper(ProjectRowMapper.class)
+    Project getProject(@Define("uuid") boolean hasUuid, @Bind UUID uuid, @Bind String name, @Bind String version);
+
+    default Project getProjectByUuid(final UUID uuid) {
+        Project project = this.getProject(true, uuid, null, null);
+        if (project != null) {
+            populateProjectData(project);
+        }
+        return project;
+    }
+
+    default Project getProjectByNameAndVersion(final String name, final String version) {
+        Project project = this.getProject(false, null, name, version);
+        if (project != null) {
+            populateProjectData(project);
+        }
+        return project;
+    }
+
+    @SqlQuery("""
+            SELECT "UUID"
+                , "NAME"
+                , "VERSION"
+                , "INACTIVE_SINCE"
+              FROM "PROJECT"
+              WHERE "NAME" = :name
+              ORDER BY "ID" ASC
+            """)
+    @RegisterConstructorMapper(ProjectVersionRow.class)
+    List<ProjectVersionRow> getProjectVersions(@Bind String name);
+
+    @SqlQuery("""
+            SELECT EXISTS (
+                  SELECT 1
+                    FROM "PROJECT_HIERARCHY" AS hierarchy
+                   INNER JOIN "PROJECT" AS child_project
+                      ON child_project."ID" = hierarchy."CHILD_PROJECT_ID"
+                   WHERE hierarchy."PARENT_PROJECT_ID" = :projectId
+                     AND hierarchy."DEPTH" > 0
+                     AND child_project."INACTIVE_SINCE" IS NULL
+            """)
+    boolean hasActiveChild(@Bind long projectId);
+
+    @SqlQuery("""
+            SELECT EXISTS (
+                  SELECT 1
+                   FROM "PROJECT"
+                   WHERE PROJECT."NAME" = :name
+                     AND hierarchy."VERSION" = :version
+                     AND child_project."INACTIVE_SINCE" IS NULL
+            """)
+    boolean doesProjectExist(final String name, final String version);
+
+    @SqlQuery("""
+            SELECT *
+              FROM "PROJECT_PROPERTY"
+              WHERE "PROJECT_ID" = :projectId
+              ORDER BY "GROUPNAME" ASC, "PROPERTYNAME" ASC
+            """)
+    @GetGeneratedKeys("*")
+    @RegisterBeanMapper(ProjectProperty.class)
+    List<ProjectProperty> getProjectProperties(final long projectId);
+
+    @SqlQuery("""
+            SELECT *
+              FROM "PROJECT_METADATA"
+              WHERE "PROJECT_ID" = :projectId
+            """)
+    @GetGeneratedKeys("*")
+    @RegisterColumnMapper(OrganizationalEntityMapper.class)
+    @RegisterColumnMapper(OrganizationalContactMapper.class)
+    @RegisterBeanMapper(ProjectMetadata.class)
+    ProjectMetadata getProjectMetadata(final long projectId);
+
     class ProjectListRowMapper implements RowMapper<ProjectListRow> {
 
         private static final TypeReference<Set<Tag>> TAGS_TYPE_REF = new TypeReference<>() {};
@@ -487,6 +693,43 @@ public interface ProjectDao {
                     deserializeJson(rs, columnName, TAGS_TYPE_REF), project::setTags);
             final ProjectListRow projectListRow = new ProjectListRow(project, rs.getInt("totalCount"));
             return projectListRow;
+        }
+    }
+
+    private void populateProjectData(Project project) {
+        // set Metrics to minimize the number of round trips a client needs to make
+        project.setMetrics(withJdbiHandle(handle ->
+                handle.attach(MetricsDao.class).getMostRecentProjectMetrics(project.getId())));
+        // set ProjectVersions to minimize the number of round trips a client needs to make
+        project.setVersions(
+                getProjectVersions(project.getName()).stream()
+                        .map(projectVersionRow -> new ProjectVersion(
+                                projectVersionRow.uuid(), projectVersionRow.version(), projectVersionRow.inactiveSince() == null))
+                        .toList()
+        );
+        // set Project's metadata
+        project.setMetadata(getProjectMetadata(project.getId()));
+        // set project's children
+        final var childrenProjectList = getChildrenProjects(project.getId(), false);
+        final List<Project> childrenProjects = childrenProjectList.stream()
+                .map(ProjectListRow::project)
+                .toList();
+
+        if (!childrenProjects.isEmpty()) {
+            project.setChildren(childrenProjects);
+        }
+    }
+
+    private void populateMetrics(final Collection<Project> projects) {
+        final Map<Long, Project> projectById = projects.stream()
+                .collect(Collectors.toMap(Project::getId, Function.identity()));
+        final List<ProjectMetrics> metricsList = withJdbiHandle(
+                handle -> handle.attach(MetricsDao.class).getMostRecentProjectMetrics(projectById.keySet()));
+        for (final ProjectMetrics metrics : metricsList) {
+            final Project project = projectById.get(metrics.getProjectId());
+            if (project != null) {
+                project.setMetrics(metrics);
+            }
         }
     }
 }

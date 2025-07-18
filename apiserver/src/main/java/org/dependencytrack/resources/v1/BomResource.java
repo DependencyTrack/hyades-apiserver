@@ -73,6 +73,7 @@ import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
@@ -98,6 +99,7 @@ import static java.util.function.Predicate.not;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_MODE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_EXCLUSIVE;
 import static org.dependencytrack.model.ConfigPropertyConstants.BOM_VALIDATION_TAGS_INCLUSIVE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing bill-of-material (bom) documents.
@@ -315,7 +317,8 @@ public class BomResource extends AbstractApiResource {
             );
             try (final var qm = new QueryManager()) {
                 return qm.callInTransaction(() -> {
-                    Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
+                    Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                            handle.attach(ProjectDao.class).getProjectByNameAndVersion(request.getProjectName(), request.getProjectVersion()));
                     if (project == null && request.isAutoCreate()) {
                         if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
                             Project parent = null;
@@ -330,12 +333,13 @@ public class BomResource extends AbstractApiResource {
                                     );
                                     final String trimmedParentName = StringUtils.trimToNull(request.getParentName());
                                     final String trimmedParentVersion = StringUtils.trimToNull(request.getParentVersion());
-                                    parent = qm.getProject(trimmedParentName, trimmedParentVersion);
+                                    parent = withJdbiHandle(getAlpineRequest(), handle ->
+                                            handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedParentName, trimmedParentVersion));
                                 }
-
                                 if (parent == null) { // if parent project is specified but not found
                                     return Response.status(Response.Status.NOT_FOUND).entity("The parent project could not be found.").build();
                                 }
+                                parent = qm.getObjectByUuid(Project.class, parent.getUuid());
                                 requireAccess(qm, parent, "Access to the specified parent project is forbidden");
                             }
                             final String trimmedProjectName = StringUtils.trimToNull(request.getProjectName());
@@ -430,7 +434,8 @@ public class BomResource extends AbstractApiResource {
                 return qm.callInTransaction(() -> {
                     final String trimmedProjectName = StringUtils.trimToNull(projectName);
                     final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
-                    Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
+                    Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                            handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedProjectName, trimmedProjectVersion));
                     if (project == null && autoCreate) {
                         if (hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT) || hasPermission(Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE) || hasPermission(Permissions.Constants.PROJECT_CREATION_UPLOAD)) {
                             Project parent = null;
@@ -441,7 +446,9 @@ public class BomResource extends AbstractApiResource {
                                 } else {
                                     final String trimmedParentName = StringUtils.trimToNull(parentName);
                                     final String trimmedParentVersion = StringUtils.trimToNull(parentVersion);
-                                    parent = qm.getProject(trimmedParentName, trimmedParentVersion);
+                                    parent = withJdbiHandle(getAlpineRequest(), handle ->
+                                            handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedParentName, trimmedParentVersion));
+                                    parent = qm.getObjectByUuid(Project.class, parent.getUuid());
                                 }
 
                                 if (parent == null) { // if parent project is specified but not found

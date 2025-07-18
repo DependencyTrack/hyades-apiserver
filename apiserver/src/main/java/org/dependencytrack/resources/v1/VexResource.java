@@ -30,25 +30,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.input.BOMInputStream;
-import org.apache.commons.lang3.StringUtils;
-import org.cyclonedx.CycloneDxMediaType;
-import org.cyclonedx.exception.GeneratorException;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.VexUploadEvent;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.dependencytrack.resources.v1.vo.BomUploadResponse;
-import org.dependencytrack.resources.v1.vo.VexSubmitRequest;
-import org.glassfish.jersey.media.multipart.BodyPartEntity;
-import org.glassfish.jersey.media.multipart.FormDataBodyPart;
-import org.glassfish.jersey.media.multipart.FormDataParam;
-
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -60,11 +41,33 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.BOMInputStream;
+import org.apache.commons.lang3.StringUtils;
+import org.cyclonedx.CycloneDxMediaType;
+import org.cyclonedx.exception.GeneratorException;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.VexUploadEvent;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.dependencytrack.resources.v1.vo.BomUploadResponse;
+import org.dependencytrack.resources.v1.vo.VexSubmitRequest;
+import org.glassfish.jersey.media.multipart.BodyPartEntity;
+import org.glassfish.jersey.media.multipart.FormDataBodyPart;
+import org.glassfish.jersey.media.multipart.FormDataParam;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
  * JAX-RS resources for processing VEX documents.
@@ -197,7 +200,8 @@ public class VexResource extends AbstractApiResource {
             );
             try (QueryManager qm = new QueryManager()) {
                 return qm.callInTransaction(() -> {
-                    Project project = qm.getProject(request.getProjectName(), request.getProjectVersion());
+                    Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                            handle.attach(ProjectDao.class).getProjectByNameAndVersion(request.getProjectName(), request.getProjectVersion()));
                     return process(qm, project, request.getVex());
                 });
             }
@@ -259,7 +263,8 @@ public class VexResource extends AbstractApiResource {
                 return qm.callInTransaction(() -> {
                     final String trimmedProjectName = StringUtils.trimToNull(projectName);
                     final String trimmedProjectVersion = StringUtils.trimToNull(projectVersion);
-                    Project project = qm.getProject(trimmedProjectName, trimmedProjectVersion);
+                    Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                            handle.attach(ProjectDao.class).getProjectByNameAndVersion(trimmedProjectName, trimmedProjectVersion));
                     return process(qm, project, artifactParts);
                 });
             }

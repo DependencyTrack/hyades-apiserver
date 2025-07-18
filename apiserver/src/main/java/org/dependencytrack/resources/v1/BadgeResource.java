@@ -37,23 +37,24 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Project;
-import org.dependencytrack.model.ProjectMetrics;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.MetricsDao;
-import org.dependencytrack.resources.v1.misc.Badger;
-import org.dependencytrack.resources.v1.problems.ProblemDetails;
-import org.glassfish.jersey.server.ContainerRequest;
-import org.owasp.security.logging.SecurityMarkers;
-
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HttpMethod;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Response;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.ProjectMetrics;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.resources.v1.misc.Badger;
+import org.dependencytrack.resources.v1.problems.ProblemDetails;
+import org.glassfish.jersey.server.ContainerRequest;
+import org.owasp.security.logging.SecurityMarkers;
+
 import javax.naming.AuthenticationException;
 import java.security.Principal;
 
@@ -243,7 +244,8 @@ public class BadgeResource extends AbstractApiResource {
             if (!shouldBypassAuth && !passesAuthorization(qm)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
-            final Project project = qm.getProject(name, version);
+            final Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                    handle.attach(ProjectDao.class).getProjectByNameAndVersion(name, version));
             if (project != null) {
                 if (!shouldBypassAuth) {
                     requireAccess(qm, project);
@@ -339,7 +341,8 @@ public class BadgeResource extends AbstractApiResource {
             if (!shouldBypassAuth && !passesAuthorization(qm)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
-            final Project project = qm.getProject(name, version);
+            final Project project = withJdbiHandle(getAlpineRequest(), handle ->
+                    handle.attach(ProjectDao.class).getProjectByNameAndVersion(name, version));
             if (project != null) {
                 if (!shouldBypassAuth) {
                     requireAccess(qm, project);

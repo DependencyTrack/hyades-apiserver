@@ -61,7 +61,7 @@ public class CycloneDXExporter {
 
     public Bom create(final Project project) {
         final List<Component> components = qm.getAllComponents(project);
-        final List<ServiceComponent> services = qm.getAllServiceComponents(project);
+        final List<ServiceComponent> services = qm.getAllServiceComponents(project.getId());
         final List<Finding> findings = switch (variant) {
             case INVENTORY_WITH_VULNERABILITIES, VDR, VEX -> withJdbiHandle(handle ->
                     handle.attach(FindingDao.class).getFindings(project.getId(), true));

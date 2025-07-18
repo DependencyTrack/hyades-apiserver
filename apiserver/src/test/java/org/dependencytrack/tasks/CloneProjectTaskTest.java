@@ -21,6 +21,7 @@ package org.dependencytrack.tasks;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.CloneProjectEvent;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.junit.Test;
 
@@ -32,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.FAILED;
 import static org.dependencytrack.model.WorkflowStep.PROJECT_CLONE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class CloneProjectTaskTest extends PersistenceCapableTest {
 
@@ -41,7 +43,8 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
         CloneProjectRequest request = new CloneProjectRequest(project.getUuid().toString(), "1.1", false, false, false, false, false, false, false, false, false);
         final var cloneProjectEvent = new CloneProjectEvent(request);
         new CloneProjectTask().inform(cloneProjectEvent);
-        var clonedProject = qm.getProject("Acme Example", "1.1");
+        var clonedProject = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("Acme Example", "1.1"));
         assertThat(clonedProject).isNotNull();
         assertThat(qm.getAllWorkflowStatesForAToken(cloneProjectEvent.getChainIdentifier())).satisfiesExactly(
                 state -> {
@@ -59,7 +62,8 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
         CloneProjectRequest request = new CloneProjectRequest(uuid.toString(), "1.1", false, false, false, false, false, false, false, false, false);
         final var cloneProjectEvent = new CloneProjectEvent(request);
         new CloneProjectTask().inform(cloneProjectEvent);
-        var clonedProject = qm.getProject("Acme Example", "1.1");
+        var clonedProject = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("Acme Example", "1.1"));
         assertThat(clonedProject).isNull();
         assertThat(qm.getAllWorkflowStatesForAToken(cloneProjectEvent.getChainIdentifier())).satisfiesExactly(
                 state -> {

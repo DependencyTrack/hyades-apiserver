@@ -66,6 +66,7 @@ import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
 import org.dependencytrack.persistence.jdbi.MetricsTestDao;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityPolicyDao;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicy;
 import org.dependencytrack.policy.vulnerability.VulnerabilityPolicyAnalysis;
@@ -1762,6 +1763,12 @@ public class ProjectResourceTest extends ResourceTest {
         project.setName("acme-app");
         project.setVersion("1.0.0");
         project.setParent(parentProject);
+
+        var tag = new Tag();
+        tag.setName("projectTag");
+        qm.persist(tag);
+
+        project.setTags(Set.of(tag));
         qm.persist(project);
 
         final var childProject = new Project();
@@ -1796,14 +1803,20 @@ public class ProjectResourceTest extends ResourceTest {
                               "name": "acme-app-child",
                               "version": "1.0.0",
                               "uuid": "${json-unit.matches:childUuid}",
+                              "externalReferences": [],
                               "isLatest": false,
                               "active": false,
                               "inactiveSince": "${json-unit.any-number}"
                             }
                           ],
-                          "tags": [],
+                          "tags": [
+                            {
+                                "name": "projectTag"
+                            }
+                          ],
                           "isLatest": false,
                           "active":true,
+                          "externalReferences":[],
                           "versions": [
                             {
                               "uuid": "${json-unit.matches:projectUuid}",
@@ -2939,14 +2952,17 @@ public class ProjectResourceTest extends ResourceTest {
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(50))
                 .untilAsserted(() -> {
-                    final Project clonedProject = qm.getProject("acme-app", "1.1.0");
+                    final Project clonedProject = withJdbiHandle(handle ->
+                            handle.attach(ProjectDao.class).getProjectByNameAndVersion("acme-app", "1.1.0"));
                     assertThat(clonedProject).isNotNull();
                     assertThat(clonedProject.getUuid()).isNotEqualTo(project.getUuid());
                     assertThat(clonedProject.getSupplier()).isNotNull();
                     assertThat(clonedProject.getSupplier().getName()).isEqualTo("projectSupplier");
                     assertThat(clonedProject.getManufacturer()).isNotNull();
                     assertThat(clonedProject.getManufacturer().getName()).isEqualTo("projectManufacturer");
-                    assertThat(clonedProject.getAccessTeams()).containsOnly(team);
+                    assertThat(clonedProject.getAccessTeams())
+                            .extracting(Team::getName)
+                            .containsOnly(team.getName());
                     assertThatJson(clonedProject.getDirectDependencies())
                             .withMatcher("notSourceComponentUuid", not(equalTo(componentA.getUuid().toString())))
                             .isEqualTo(/* language=JSON */ """
@@ -2961,7 +2977,8 @@ public class ProjectResourceTest extends ResourceTest {
                                     ]
                                     """);
 
-                    final List<ProjectProperty> clonedProperties = qm.getProjectProperties(clonedProject);
+                    final List<ProjectProperty> clonedProperties = withJdbiHandle(handle ->
+                            handle.attach(ProjectDao.class).getProjectProperties(clonedProject.getId()));
                     assertThat(clonedProperties).satisfiesExactly(clonedProperty -> {
                         assertThat(clonedProperty.getId()).isNotEqualTo(projectProperty.getId());
                         assertThat(clonedProperty.getGroupName()).isEqualTo("group");
@@ -2981,7 +2998,7 @@ public class ProjectResourceTest extends ResourceTest {
                     assertThat(clonedMetadata.getSupplier())
                             .satisfies(entity -> assertThat(entity.getName()).isEqualTo("metadataSupplier"));
 
-                    assertThat(qm.getAllComponents(clonedProject)).satisfiesExactlyInAnyOrder(
+                    assertThat(qm.getAllComponents(clonedProject.getId())).satisfiesExactlyInAnyOrder(
                             clonedComponent -> {
                                 assertThat(clonedComponent.getUuid()).isNotEqualTo(componentA.getUuid());
                                 assertThat(clonedComponent.getName()).isEqualTo("acme-lib-a");
@@ -3022,7 +3039,7 @@ public class ProjectResourceTest extends ResourceTest {
                                 assertThat(clonedComponent.getVersion()).isEqualTo("2.1.0");
                             });
 
-                    assertThat(qm.getAllServiceComponents(clonedProject)).satisfiesExactly(clonedService -> {
+                    assertThat(qm.getAllServiceComponents(clonedProject.getId())).satisfiesExactly(clonedService -> {
                         assertThat(clonedService.getUuid()).isNotEqualTo(service.getUuid());
                         assertThat(clonedService.getName()).isEqualTo("acme-service");
                         assertThat(clonedService.getVersion()).isEqualTo("3.0.0");
@@ -3232,15 +3249,17 @@ public class ProjectResourceTest extends ResourceTest {
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(50))
                 .untilAsserted(() -> {
-                    final Project clonedProject = qm.getProject("acme-app", "1.1.0");
+                    final Project clonedProject = withJdbiHandle(handle ->
+                            handle.attach(ProjectDao.class).getProjectByNameAndVersion("acme-app", "1.1.0"));
                     assertThat(clonedProject).isNotNull();
                 });
 
-        final Project clonedProject = qm.getProject("acme-app", "1.1.0");
+        final Project clonedProject = withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion("acme-app", "1.1.0"));
         assertThat(clonedProject.getDirectDependencies()).isEqualTo(
                 "[{\"uuid\": \"d6b6f140-f547-4fe2-a98c-f4942ad51f86\"}]");
 
-        assertThat(qm.getAllComponents(clonedProject).getFirst().getDirectDependencies()).isEqualTo(
+        assertThat(qm.getAllComponents(clonedProject.getId()).getFirst().getDirectDependencies()).isEqualTo(
                 "[{\"uuid\": \"61503628-d2a2-447b-b99c-701b9d492cbd\"}]");
     }
 
@@ -3290,11 +3309,12 @@ public class ProjectResourceTest extends ResourceTest {
                       "version": "1.0.0",
                       "classifier": "APPLICATION",
                       "uuid": "${json-unit.any-string}",
+                      "externalReferences": [],
                       "isLatest": false,
                       "active": true
                     }
                   ],
-                  "tags": [],
+                  "externalReferences": [],
                   "isLatest": false,
                   "active": true,
                   "versions": [
@@ -3323,8 +3343,7 @@ public class ProjectResourceTest extends ResourceTest {
                     "version": "1.0.0",
                     "uuid": "${json-unit.any-string}"
                   },
-                  "children": [],
-                  "tags": [],
+                  "externalReferences": [],
                   "isLatest": false,
                   "active": true,
                   "versions": [
@@ -3374,7 +3393,8 @@ public class ProjectResourceTest extends ResourceTest {
         // ensure value of latest version is true when specified
         Assert.assertTrue(json.getBoolean("isLatest"));
         // ensure v2.0 is no longer latest
-        Assert.assertFalse(qm.getProject(v20uuid).isLatest());
+        var projectV20 = withJdbiHandle(handle -> handle.attach(ProjectDao.class).getProjectByUuid(UUID.fromString(v20uuid)));
+        Assert.assertFalse(projectV20.isLatest());
     }
 
     @Test
@@ -3473,7 +3493,8 @@ public class ProjectResourceTest extends ResourceTest {
         // ensure is now latest
         Assert.assertTrue(json.getBoolean("isLatest"));
         // ensure old is no longer latest
-        Assert.assertFalse(qm.getProject(project.getName(), project.getVersion()).isLatest());
+        Assert.assertFalse(withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion(project.getName(), project.getVersion())).isLatest());
     }
 
     @Test
@@ -3507,7 +3528,8 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertTrue(json.getBoolean("isLatest"));
         // ensure old is no longer latest (bypass db cache)
         qm.getPersistenceManager().refreshAll();
-        Assert.assertFalse(qm.getProject(accessLatestProject.getName(), accessLatestProject.getVersion()).isLatest());
+        Assert.assertFalse(withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion(accessLatestProject.getName(), accessLatestProject.getVersion())).isLatest());
     }
 
     @Test
@@ -3536,7 +3558,8 @@ public class ProjectResourceTest extends ResourceTest {
                 .post(Entity.entity(jsonProject, MediaType.APPLICATION_JSON));
         Assert.assertEquals(403, response.getStatus(), 0);
         // ensure old is still latest
-        Assert.assertTrue(qm.getProject(noAccessLatestProject.getName(), noAccessLatestProject.getVersion()).isLatest());
+        Assert.assertTrue(withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion(noAccessLatestProject.getName(), noAccessLatestProject.getVersion())).isLatest());
     }
 
     @Test
@@ -3573,7 +3596,8 @@ public class ProjectResourceTest extends ResourceTest {
         // ensure is now latest
         Assert.assertTrue(json.getBoolean("isLatest"));
         // ensure old is no longer latest
-        Assert.assertFalse(qm.getProject(project.getName(), project.getVersion()).isLatest());
+        Assert.assertFalse(withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion(project.getName(), project.getVersion())).isLatest());
     }
 
     @Test
@@ -3608,7 +3632,8 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertTrue(json.getBoolean("isLatest"));
         // ensure old is no longer latest (bypass db cache)
         qm.getPersistenceManager().refreshAll();
-        Assert.assertFalse(qm.getProject(accessLatestProject.getName(), accessLatestProject.getVersion()).isLatest());
+        Assert.assertFalse(withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion(accessLatestProject.getName(), accessLatestProject.getVersion())).isLatest());
     }
 
     @Test
@@ -3639,7 +3664,8 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertEquals(403, response.getStatus(), 0);
         // ensure old is still latest
         qm.getPersistenceManager().refreshAll();
-        Assert.assertTrue(qm.getProject(noAccessLatestProject.getName(), noAccessLatestProject.getVersion()).isLatest());
+        Assert.assertTrue(withJdbiHandle(handle ->
+                handle.attach(ProjectDao.class).getProjectByNameAndVersion(noAccessLatestProject.getName(), noAccessLatestProject.getVersion())).isLatest());
     }
 
     @Test
@@ -3671,7 +3697,8 @@ public class ProjectResourceTest extends ResourceTest {
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(50))
                 .untilAsserted(() -> {
-                    final Project clonedProject = qm.getProject("acme-app-a", "1.1.0");
+                    final Project clonedProject = withJdbiHandle(handle ->
+                                    handle.attach(ProjectDao.class).getProjectByNameAndVersion("acme-app-a", "1.1.0"));
                     assertThat(clonedProject).isNotNull();
                     assertThat(clonedProject.isLatest()).isTrue();
 
