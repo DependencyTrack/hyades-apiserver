@@ -21,6 +21,13 @@ get:
   tags:
   - Teams
   parameters:
+  - name: name_contains
+    description: Name substring to filter on. Case insensitive.
+    in: query
+    schema:
+      type: string
+      minLength: 1
+      maxLength: 255
   - $ref: "../components/parameters/pagination-limit.yaml"
   - $ref: "../components/parameters/page-token.yaml"
   responses:

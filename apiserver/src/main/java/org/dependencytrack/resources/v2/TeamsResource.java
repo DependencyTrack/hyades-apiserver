@@ -62,9 +62,12 @@ public class TeamsResource implements TeamsApi {
 
     @Override
     @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
-    public Response listTeams(final Integer limit, final String pageToken) {
+    public Response listTeams(
+            final String nameContains,
+            final Integer limit,
+            final String pageToken) {
         final Page<ListTeamsRow> teamsPage = inJdbiTransaction(
-                handle -> handle.attach(TeamDao.class).listTeams(limit, pageToken));
+                handle -> handle.attach(TeamDao.class).listTeams(nameContains, limit, pageToken));
 
         final var response = ListTeamsResponse.builder()
                 .teams(teamsPage.items().stream()

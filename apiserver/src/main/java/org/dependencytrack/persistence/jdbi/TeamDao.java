@@ -40,16 +40,23 @@ public interface TeamDao extends SqlObject {
     record ListTeamsRow(String name, int apiKeys, int members) {
     }
 
-    default Page<ListTeamsRow> listTeams(final int limit, final String pageToken) {
+    default Page<ListTeamsRow> listTeams(
+            final String nameContains,
+            final int limit,
+            final String pageToken) {
         final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListTeamsPageToken.class);
 
         final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
+                <#-- @ftlvariable name="nameContains" type="Boolean" -->
                 <#-- @ftlvariable name="lastName" type="Boolean" -->
                 SELECT "NAME" AS name
                      , (SELECT COUNT(*) FROM "APIKEYS_TEAMS" WHERE "TEAM_ID" = "TEAM"."ID") AS api_keys
                      , (SELECT COUNT(*) FROM "USERS_TEAMS" WHERE "TEAM_ID" = "TEAM"."ID") AS members
                   FROM "TEAM"
                  WHERE TRUE
+                <#if nameContains>
+                   AND "NAME" ~~* ('%' || :nameContains || '%')
+                </#if>
                 <#if lastName>
                    AND "NAME" > :lastName
                 </#if>
@@ -58,6 +65,7 @@ public interface TeamDao extends SqlObject {
                 """);
 
         final List<ListTeamsRow> rows = query
+                .bind("nameContains", nameContains)
                 .bind("lastName", decodedPageToken != null
                         ? decodedPageToken.lastName()
                         : null)
