@@ -102,13 +102,13 @@
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
-        <lib.jackson.version>2.19.1</lib.jackson.version>
+        <lib.jackson.version>2.19.2</lib.jackson.version>
         <lib.jdbi.version>3.49.5</lib.jdbi.version>
         <lib.jersey.version>3.1.10</lib.jersey.version>
         <lib.jetty.version>12.0.23</lib.jetty.version>
         <lib.jooq.version>3.20.5</lib.jooq.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
-        <lib.junit-jupiter.version>5.13.3</lib.junit-jupiter.version>
+        <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.postgresql.version>42.7.7</lib.postgresql.version>
         <lib.protobuf-java.version>4.31.1</lib.protobuf-java.version>
