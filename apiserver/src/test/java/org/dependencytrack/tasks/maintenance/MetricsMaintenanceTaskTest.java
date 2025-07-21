@@ -135,6 +135,13 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testCreateMetricsPartitions() {
+        qm.createConfigProperty(
+                MAINTENANCE_METRICS_RETENTION_DAYS.getGroupName(),
+                MAINTENANCE_METRICS_RETENTION_DAYS.getPropertyName(),
+                MAINTENANCE_METRICS_RETENTION_DAYS.getDefaultPropertyValue(),
+                MAINTENANCE_METRICS_RETENTION_DAYS.getPropertyType(),
+                MAINTENANCE_METRICS_RETENTION_DAYS.getDescription());
+
         new MetricsMaintenanceTask().inform(new MetricsMaintenanceEvent());
         var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         var tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);

@@ -275,14 +275,16 @@ public interface MetricsDao extends SqlObject {
     @SqlQuery("""
             SELECT inhrelid::regclass AS partition_name
             FROM pg_inherits
-            WHERE inhparent = '"PROJECTMETRICS"'::regclass;
+            WHERE inhparent = '"PROJECTMETRICS"'::regclass
+            ORDER BY partition_name;
             """)
     List<String> getProjectMetricsPartitions();
 
     @SqlQuery("""
             SELECT inhrelid::regclass AS partition_name
             FROM pg_inherits
-            WHERE inhparent = '"DEPENDENCYMETRICS"'::regclass;
+            WHERE inhparent = '"DEPENDENCYMETRICS"'::regclass
+            ORDER BY partition_name;
             """)
     List<String> getDependencyMetricsPartitions();
 
