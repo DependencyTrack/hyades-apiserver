@@ -39,7 +39,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
     - name: Lint OpenAPI Spec
-      uses: stoplightio/spectral-action@577bade2d6e0eeb50528c94182a5588bf961ae8f # tag=v0.8.12
+      uses: stoplightio/spectral-action@6416fd018ae38e60136775066eb3e98172143141 # tag=v0.8.13
       with:
         spectral_ruleset: "api/src/main/spectral/ruleset.yaml"
         file_glob: "api/src/main/openapi/openapi.yaml"
