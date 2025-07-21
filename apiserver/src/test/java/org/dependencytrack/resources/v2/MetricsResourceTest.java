@@ -48,7 +48,7 @@ public class MetricsResourceTest extends ResourceTest {
 
     @Test
     public void getCurrentPortfolioMetricsEmptyTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final Response response = jersey
@@ -97,7 +97,7 @@ public class MetricsResourceTest extends ResourceTest {
 
     @Test
     public void getCurrentPortfolioMetricsAclTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var accessibleProjectA = new Project();
@@ -189,7 +189,7 @@ public class MetricsResourceTest extends ResourceTest {
 
     @Test
     public void getVulnerabilityMetricsPaginated() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         enablePortfolioAccessControl();
 
         for (int i = 1; i < 4; i++) {
