@@ -599,7 +599,8 @@ public class ProjectResource extends AbstractApiResource {
                       <li>A project cannot select itself as a parent</li>
                     </ul>""")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired(Permissions.Constants.PROJECT_UPDATE)
+    @ResourceAccessRequired
     public Response updateProject(Project jsonProject) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -706,7 +707,8 @@ public class ProjectResource extends AbstractApiResource {
                       <li>A project cannot select itself as a parent</li>
                     </ul>""")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired(Permissions.Constants.PROJECT_UPDATE)
+    @ResourceAccessRequired
     public Response patchProject(
             @Parameter(description = "The UUID of the project to modify", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -865,7 +867,8 @@ public class ProjectResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The UUID of the project could not be found"),
             @ApiResponse(responseCode = "500", description = "Unable to delete components of the project")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired(Permissions.Constants.PROJECT_DELETE)
+    @ResourceAccessRequired
     public Response deleteProject(
             @Parameter(description = "The UUID of the project to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

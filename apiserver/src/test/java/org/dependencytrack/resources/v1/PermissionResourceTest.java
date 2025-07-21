@@ -88,7 +88,7 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("user1", json.getString("username"));
         Assert.assertEquals(1, json.getJsonArray("permissions").size());
-        Assert.assertEquals("PORTFOLIO", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
+        Assert.assertEquals("PORTFOLIO_MANAGEMENT", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -198,7 +198,7 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("team1", json.getString("name"));
         Assert.assertEquals(1, json.getJsonArray("permissions").size());
-        Assert.assertEquals("PORTFOLIO", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
+        Assert.assertEquals("PORTFOLIO_MANAGEMENT", json.getJsonArray("permissions").getJsonObject(0).getString("name"));
     }
 
     @Test
@@ -465,7 +465,7 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertNotNull(json);
         Assert.assertEquals("Test Role", json.getString("name"));
         Assert.assertEquals(1, json.getJsonArray("permissions").size());
-        Assert.assertEquals("PORTFOLIO",
+        Assert.assertEquals("PORTFOLIO_MANAGEMENT",
                 json.getJsonArray("permissions").getJsonObject(0).getString("name"));
     }
 

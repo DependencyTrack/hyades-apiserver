@@ -709,7 +709,7 @@ public class ApiRequestStatementCustomizerTest extends PersistenceCapableTest {
                              )
                             """);
 
-                    assertThat(ctx.getBinding()).hasToString("{named:{projectAclUserId:%s}}".formatted(user.getId()));
+                    assertThat(ctx.getBinding()).hasToString("{named:{projectAclUserId:%s,projectAclPermissions:[]}}".formatted(user.getId()));
                 }))
                 .addCustomizer(new DefineApiProjectAclCondition.StatementCustomizer(
                         JdbiAttributes.ATTRIBUTE_API_PROJECT_ACL_CONDITION,
