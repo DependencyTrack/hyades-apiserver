@@ -1,0 +1,59 @@
+# This file is part of Dependency-Track.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) OWASP Foundation. All Rights Reserved.
+name: OpenAPI
+
+on:
+  pull_request:
+    paths:
+    - api/src/main/openapi/**
+    - api/src/main/spectral/**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions: { }
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+    timeout-minutes: 5
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    - name: Lint OpenAPI Spec
+      uses: stoplightio/spectral-action@577bade2d6e0eeb50528c94182a5588bf961ae8f # tag=v0.8.12
+      with:
+        spectral_ruleset: "api/src/main/spectral/ruleset.yaml"
+        file_glob: "api/src/main/openapi/openapi.yaml"
+
+  breaking-changes:
+    name: Breaking Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    - name: Detect Breaking Changes
+      uses: oasdiff/oasdiff-action/breaking@1c611ffb1253a72924624aa4fb662e302b3565d3 # tag=v0.0.21
+      with:
+        base: https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/main/api/src/main/openapi/openapi.yaml
+        revision: api/src/main/openapi/openapi.yaml
+        fail-on: ERR

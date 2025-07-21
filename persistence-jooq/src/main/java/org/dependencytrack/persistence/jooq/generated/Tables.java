@@ -37,7 +37,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyProjects;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyTags;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation;
-import org.dependencytrack.persistence.jooq.generated.tables.PortfolioMetrics;
 import org.dependencytrack.persistence.jooq.generated.tables.Project;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectAccessTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectHierarchy;
@@ -244,11 +243,6 @@ public class Tables {
      * The table <code>POLICYVIOLATION</code>.
      */
     public static final PolicyViolation POLICYVIOLATION = PolicyViolation.POLICYVIOLATION;
-
-    /**
-     * The table <code>PORTFOLIOMETRICS</code>.
-     */
-    public static final PortfolioMetrics PORTFOLIOMETRICS = PortfolioMetrics.PORTFOLIOMETRICS;
 
     /**
      * The table <code>PROJECT</code>.

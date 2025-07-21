@@ -171,6 +171,8 @@ public class ProjectResource extends AbstractApiResource {
     public Response getProjectsConcise(
             @Parameter(description = "Name to filter on. Must be exact match.")
             @QueryParam("name") final String nameFilter,
+            @Parameter(description = "Version to filter on. Must be exact match.")
+            @QueryParam("version") final String versionFilter,
             @Parameter(description = "Classifier to filter on. Must be exact match.")
             @QueryParam("classifier") final String classifierFilter,
             @Parameter(description = "Tag to filter on. Must be exact match.")
@@ -185,7 +187,7 @@ public class ProjectResource extends AbstractApiResource {
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
         final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
+                .getPageConcise(nameFilter, versionFilter, classifierFilter, tagFilter, teamFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
@@ -216,6 +218,8 @@ public class ProjectResource extends AbstractApiResource {
             @PathParam("uuid") final String parentUuid,
             @Parameter(description = "Name to filter on. Must be exact match.")
             @QueryParam("name") final String nameFilter,
+            @Parameter(description = "Version to filter on. Must be exact match.")
+            @QueryParam("version") final String versionFilter,
             @Parameter(description = "Classifier to filter on. Must be exact match.")
             @QueryParam("classifier") final String classifierFilter,
             @Parameter(description = "Tag to filter on. Must be exact match.")
@@ -228,7 +232,7 @@ public class ProjectResource extends AbstractApiResource {
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
         final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
+                .getPageConcise(nameFilter, versionFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();

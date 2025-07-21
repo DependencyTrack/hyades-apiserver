@@ -19,7 +19,7 @@
 
         <!-- Dependency Versions -->
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.25.1</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.25.2</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
@@ -28,7 +28,7 @@
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.json-unit.version>4.1.0</lib.json-unit.version>
         <lib.junit.version>4.13.2</lib.junit.version>
-        <lib.kafka.version>3.9.0</lib.kafka.version>
+        <lib.kafka.version>3.9.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.17</lib.minio.version>
         <lib.kotlin-stdlib.version>2.2.0</lib.kotlin-stdlib.version>
@@ -73,6 +73,10 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>api</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>datanucleus-plugin</artifactId>
@@ -309,7 +313,7 @@
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-artifact</artifactId>
-            <version>3.9.10</version>
+            <version>3.9.11</version>
         </dependency>
 
         <dependency>

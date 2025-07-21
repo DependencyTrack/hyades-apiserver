@@ -31,13 +31,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import org.apache.commons.lang3.time.DateUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.ComponentMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
@@ -51,15 +44,28 @@ import org.dependencytrack.model.VulnerabilityMetrics;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
+import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.DateUtil;
 
+import jakarta.validation.constraints.Positive;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import static org.apache.commons.lang3.time.DateUtils.addDays;
+import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_METRICS_RETENTION_DAYS;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
@@ -117,8 +123,9 @@ public class MetricsResource extends AbstractApiResource {
     })
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response getPortfolioCurrentMetrics() {
-        PortfolioMetrics metrics = withJdbiHandle(handle ->
-                handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
+        PortfolioMetrics metrics = withJdbiHandle(
+                getAlpineRequest(),
+                handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
         return Response.ok(metrics).build();
     }
 
@@ -142,13 +149,25 @@ public class MetricsResource extends AbstractApiResource {
     public Response getPortfolioMetricsSince(
             @Parameter(description = "The start date to retrieve metrics for", required = true)
             @PathParam("date") String date) {
-
-        final Date since = DateUtil.parseShortDate(date);
-        if (since == null) {
+        final LocalDate since;
+        try {
+            since = LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyyMMdd"));
+        } catch (DateTimeParseException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The specified date format is incorrect.").build();
         }
-        List<PortfolioMetrics> metrics = withJdbiHandle(handle ->
-                handle.attach(MetricsDao.class).getPortfolioMetricsSince(since.toInstant()));
+        List<PortfolioMetrics> metrics = withJdbiHandle(getAlpineRequest(), handle -> {
+            final int retentionDays = handle.attach(ConfigPropertyDao.class)
+                    .getOptionalValue(MAINTENANCE_METRICS_RETENTION_DAYS, Integer.class)
+                    .orElseGet(() -> Integer.parseInt(MAINTENANCE_METRICS_RETENTION_DAYS.getDefaultPropertyValue()));
+
+            // NB: Calculate days between the given date and *tomorrow*,
+            // because LocalDate#until's end date is exclusive,
+            // and we want to include data for *today*.
+            final var sincePeriod = since.until(LocalDate.now().plusDays(1));
+            final int sinceDays = sincePeriod.getDays();
+
+            return handle.attach(MetricsDao.class).getPortfolioMetricsForDays(Math.min(retentionDays, sinceDays));
+        });
         return Response.ok(metrics).build();
     }
 
@@ -170,10 +189,14 @@ public class MetricsResource extends AbstractApiResource {
     @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response getPortfolioMetricsXDays(
             @Parameter(description = "The number of days back to retrieve metrics for", required = true)
-            @PathParam("days") int days) {
-        final Date since = DateUtils.addDays(new Date(), -days);
-        List<PortfolioMetrics> metrics = withJdbiHandle(handle ->
-                handle.attach(MetricsDao.class).getPortfolioMetricsSince(since.toInstant()));
+            @PathParam("days") @Positive int days) {
+        List<PortfolioMetrics> metrics = withJdbiHandle(getAlpineRequest(), handle -> {
+            final int retentionDays = handle.attach(ConfigPropertyDao.class)
+                    .getOptionalValue(MAINTENANCE_METRICS_RETENTION_DAYS, Integer.class)
+                    .orElseGet(() -> Integer.parseInt(MAINTENANCE_METRICS_RETENTION_DAYS.getDefaultPropertyValue()));
+
+            return handle.attach(MetricsDao.class).getPortfolioMetricsForDays(Math.min(days, retentionDays));
+        });
         return Response.ok(metrics).build();
     }
 
@@ -290,7 +313,7 @@ public class MetricsResource extends AbstractApiResource {
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "The number of days back to retrieve metrics for", required = true)
             @PathParam("days") int days) {
-        final Date since = DateUtils.addDays(new Date(), -days);
+        final Date since = addDays(new Date(), -days);
         return getProjectMetrics(uuid, since);
     }
 
@@ -425,7 +448,7 @@ public class MetricsResource extends AbstractApiResource {
             @PathParam("uuid") @ValidUuid String uuid,
             @Parameter(description = "The number of days back to retrieve metrics for", required = true)
             @PathParam("days") int days) {
-        final Date since = DateUtils.addDays(new Date(), -days);
+        final Date since = addDays(new Date(), -days);
         return getComponentMetrics(uuid, since);
     }
 

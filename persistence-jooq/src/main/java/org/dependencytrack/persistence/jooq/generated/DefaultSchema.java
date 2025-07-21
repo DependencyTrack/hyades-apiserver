@@ -40,7 +40,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyProjects;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyTags;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation;
-import org.dependencytrack.persistence.jooq.generated.tables.PortfolioMetrics;
 import org.dependencytrack.persistence.jooq.generated.tables.Project;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectAccessTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectHierarchy;
@@ -87,7 +86,7 @@ import org.jooq.impl.SchemaImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class DefaultSchema extends SchemaImpl {
 
-    private static final long serialVersionUID = 359281095;
+    private static final long serialVersionUID = -569524980;
 
     /**
      * The reference instance of <code>DEFAULT_SCHEMA</code>
@@ -258,11 +257,6 @@ public class DefaultSchema extends SchemaImpl {
      * The table <code>POLICYVIOLATION</code>.
      */
     public final PolicyViolation POLICYVIOLATION = PolicyViolation.POLICYVIOLATION;
-
-    /**
-     * The table <code>PORTFOLIOMETRICS</code>.
-     */
-    public final PortfolioMetrics PORTFOLIOMETRICS = PortfolioMetrics.PORTFOLIOMETRICS;
 
     /**
      * The table <code>PROJECT</code>.
@@ -483,7 +477,6 @@ public class DefaultSchema extends SchemaImpl {
             PolicyTags.POLICY_TAGS,
             PolicyCondition.POLICYCONDITION,
             PolicyViolation.POLICYVIOLATION,
-            PortfolioMetrics.PORTFOLIOMETRICS,
             Project.PROJECT,
             ProjectAccessTeams.PROJECT_ACCESS_TEAMS,
             ProjectHierarchy.PROJECT_HIERARCHY,

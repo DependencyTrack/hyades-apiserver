@@ -42,14 +42,12 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.tasks.metrics.PortfolioMetricsUpdateTask.partition;
 
@@ -108,49 +106,6 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
     }
 
     @Test
-    public void testUpdateMetricsUnchanged() throws Exception {
-        // Create risk score configproperties
-        createTestConfigProperties();
-
-        // Record initial portfolio metrics
-        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-        final PortfolioMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
-        assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
-
-        //sleep for the least duration lock held for, so lock could be released
-        Thread.sleep(2000);
-
-        // Run the task a second time, without any metric being changed
-        final var beforeSecondRun = new Date();
-        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-
-        // Two records should be created in today's partition since it's append-only
-        var totalMetricsForToday = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getPortfolioMetricsSince(Instant.now().minus(Duration.ofDays(1))));
-        assertThat(totalMetricsForToday.size()).isEqualTo(2);
-        var recentMetrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
-        assertThat(recentMetrics.getLastOccurrence()).isNotEqualTo(metrics.getFirstOccurrence());
-        assertThat(recentMetrics.getLastOccurrence()).isAfterOrEqualTo(beforeSecondRun);
-    }
-
-    @Test
-    public void testUpdateMetricsDidNotExecuteWhenLockWasHeld() throws Exception {
-        // Create risk score configproperties
-        createTestConfigProperties();
-
-        // Record initial portfolio metrics
-        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-        PortfolioMetrics metrics = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getMostRecentPortfolioMetrics());
-        assertThat(metrics.getLastOccurrence()).isEqualTo(metrics.getFirstOccurrence());
-
-        // Run the task a second time, without any metric being changed
-        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
-
-        // Ensure no new record of metrics is appended
-        var totalMetricsForToday = withJdbiHandle(handle -> handle.attach(MetricsDao.class).getPortfolioMetricsSince(Instant.now().minus(Duration.ofDays(1))));
-        assertThat(totalMetricsForToday.size()).isEqualTo(1);
-    }
-
-    @Test
     public void testUpdateMetricsVulnerabilities() {
         var vuln = new Vulnerability();
         vuln.setVulnId("INTERNAL-001");
@@ -173,7 +128,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
         qm.createProject(projectAudited, List.of(), false);
-        
+
         // Create risk score configproperties
         createTestConfigProperties();
 
@@ -189,7 +144,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
         qm.createProject(projectSuppressed, List.of(), false);
-        
+
         var componentSuppressed = new Component();
         componentSuppressed.setProject(projectSuppressed);
         componentSuppressed.setName("acme-lib-c");
@@ -197,34 +152,6 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         qm.addVulnerability(vuln, componentSuppressed, AnalyzerIdentity.NONE);
         withJdbiHandle(handle -> handle.attach(AnalysisDao.class)
                 .makeAnalysis(projectSuppressed.getId(), componentSuppressed.getId(), vuln.getId(), AnalysisState.FALSE_POSITIVE, null, null, null, true));
-
-        // Create "old" metrics data points for all three projects.
-        // When the calculating portfolio metrics, only the latest data point for each project
-        // must be considered. Because the update task calculates new project metrics data points,
-        // the ones created below must be ignored.
-        useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsTestDao.class);
-            final var projectUnauditedOldMetrics = new ProjectMetrics();
-            projectUnauditedOldMetrics.setProjectId(projectUnaudited.getId());
-            projectUnauditedOldMetrics.setCritical(666);
-            projectUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
-            projectUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-            dao.createProjectMetrics(projectUnauditedOldMetrics);
-
-            final var projectAuditedOldMetrics = new ProjectMetrics();
-            projectAuditedOldMetrics.setProjectId(projectAudited.getId());
-            projectAuditedOldMetrics.setHigh(666);
-            projectAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
-            projectAuditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-            dao.createProjectMetrics(projectAuditedOldMetrics);
-
-            final var projectSuppressedOldMetrics = new ProjectMetrics();
-            projectSuppressedOldMetrics.setProjectId(projectSuppressed.getId());
-            projectSuppressedOldMetrics.setMedium(666);
-            projectSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
-            projectSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-            dao.createProjectMetrics(projectSuppressedOldMetrics);
-        });
 
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
 
@@ -276,10 +203,10 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectUnaudited = new Project();
         projectUnaudited.setName("acme-app-a");
         qm.createProject(projectUnaudited, List.of(), false);
-        
+
         // Create risk score configproperties
         createTestConfigProperties();
-        
+
         var componentUnaudited = new Component();
         componentUnaudited.setProject(projectUnaudited);
         componentUnaudited.setName("acme-lib-a");
@@ -290,7 +217,7 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectAudited = new Project();
         projectAudited.setName("acme-app-b");
         qm.createProject(projectAudited, List.of(), false);
-        
+
         var componentAudited = new Component();
         componentAudited.setProject(projectAudited);
         componentAudited.setName("acme-lib-b");
@@ -302,41 +229,13 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         var projectSuppressed = new Project();
         projectSuppressed.setName("acme-app-c");
         qm.createProject(projectSuppressed, List.of(), false);
-        
+
         var componentSuppressed = new Component();
         componentSuppressed.setProject(projectSuppressed);
         componentSuppressed.setName("acme-lib-c");
         qm.createComponent(componentSuppressed, false);
         final var violationSuppressed = createPolicyViolation(componentSuppressed, Policy.ViolationState.INFO, PolicyViolation.Type.SECURITY);
         qm.makeViolationAnalysis(componentSuppressed, violationSuppressed, ViolationAnalysisState.REJECTED, true);
-
-        // Create "old" metrics data points for all three projects.
-        // When the calculating portfolio metrics, only the latest data point for each project
-        // must be considered. Because the update task calculates new project metrics data points,
-        // the ones created below must be ignored.
-        useJdbiHandle(handle ->  {
-            var dao = handle.attach(MetricsTestDao.class);
-            final var projectUnauditedOldMetrics = new ProjectMetrics();
-            projectUnauditedOldMetrics.setProjectId(projectUnaudited.getId());
-            projectUnauditedOldMetrics.setPolicyViolationsFail(666);
-            projectUnauditedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
-            projectUnauditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-            dao.createProjectMetrics(projectUnauditedOldMetrics);
-
-            final var projectAuditedOldMetrics = new ProjectMetrics();
-            projectAuditedOldMetrics.setProjectId(projectAudited.getId());
-            projectAuditedOldMetrics.setPolicyViolationsWarn(666);
-            projectAuditedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
-            projectAuditedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-            dao.createProjectMetrics(projectAuditedOldMetrics);
-
-            final var projectSuppressedOldMetrics = new ProjectMetrics();
-            projectSuppressedOldMetrics.setProjectId(projectSuppressed.getId());
-            projectSuppressedOldMetrics.setPolicyViolationsInfo(666);
-            projectSuppressedOldMetrics.setFirstOccurrence(Date.from(Instant.now()));
-            projectSuppressedOldMetrics.setLastOccurrence(Date.from(Instant.now()));
-            dao.createProjectMetrics(projectSuppressedOldMetrics);
-        });
 
         new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
 
@@ -380,6 +279,64 @@ public class PortfolioMetricsUpdateTaskTest extends AbstractMetricsUpdateTaskTes
         assertThat(componentUnaudited.getLastInheritedRiskScore()).isZero();
         assertThat(componentAudited.getLastInheritedRiskScore()).isZero();
         assertThat(componentSuppressed.getLastInheritedRiskScore()).isZero();
+    }
+
+    @Test
+    public void shouldNotUpdateMetricsForProjectsWithRecentMetrics() {
+        createTestConfigProperties();
+
+        final var projectA = new Project();
+        projectA.setName("acme-app-a");
+        qm.persist(projectA);
+        final var componentA = new Component();
+        componentA.setProject(projectA);
+        componentA.setName("acme-lib-a");
+        qm.persist(componentA);
+
+        final var projectB = new Project();
+        projectB.setName("acme-app-b");
+        qm.persist(projectB);
+        final var componentB = new Component();
+        componentB.setProject(projectB);
+        componentB.setName("acme-lib-b");
+        qm.persist(componentB);
+
+        final var inactiveProject = new Project();
+        inactiveProject.setName("inactive-project");
+        inactiveProject.setInactiveSince(new Date());
+        qm.persist(inactiveProject);
+
+        // Create a metrics data point for projectA, where it has no components.
+        // Despite this difference, we expect no metrics refresh to be performed
+        // for it, because a data point for the current day is already present.
+        useJdbiTransaction(handle -> {
+            var dao = handle.attach(MetricsTestDao.class);
+            final var projectAMetrics = new ProjectMetrics();
+            projectAMetrics.setProjectId(projectA.getId());
+            projectAMetrics.setComponents(0);
+            projectAMetrics.setFirstOccurrence(new Date());
+            projectAMetrics.setLastOccurrence(new Date());
+            dao.createProjectMetrics(projectAMetrics);
+        });
+
+        new PortfolioMetricsUpdateTask().inform(new PortfolioMetricsUpdateEvent());
+
+        final List<ProjectMetrics> recentProjectMetrics = withJdbiHandle(
+                handle -> handle.attach(MetricsDao.class)
+                        .getMostRecentProjectMetrics(
+                                List.of(projectA.getId(), projectB.getId(), inactiveProject.getId())));
+
+        assertThat(recentProjectMetrics).satisfiesExactlyInAnyOrder(
+                metrics -> {
+                    assertThat(metrics.getProjectId()).isEqualTo(projectA.getId());
+                    assertThat(metrics.getComponents()).isEqualTo(0); // Old value.
+                },
+                metrics -> {
+                    assertThat(metrics.getProjectId()).isEqualTo(projectB.getId());
+                    assertThat(metrics.getComponents()).isEqualTo(1);
+                }
+                // No metrics for inactiveProject.
+        );
     }
 
     @Test

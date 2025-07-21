@@ -23,12 +23,9 @@ import alpine.common.metrics.Metrics;
 import org.glassfish.jersey.micrometer.server.DefaultJerseyTagsProvider;
 import org.glassfish.jersey.micrometer.server.MetricsApplicationEventListener;
 
-import jakarta.ws.rs.ext.Provider;
-
 /**
  * @since 5.5.0
  */
-@Provider
 public class JerseyMetricsApplicationEventListener extends MetricsApplicationEventListener {
 
     public JerseyMetricsApplicationEventListener() {

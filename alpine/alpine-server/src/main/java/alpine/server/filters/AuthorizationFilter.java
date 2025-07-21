@@ -27,6 +27,7 @@ import alpine.server.auth.PermissionRequired;
 import org.owasp.security.logging.SecurityMarkers;
 
 import jakarta.annotation.Priority;
+import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
@@ -62,8 +63,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
         final Principal principal = (Principal) requestContext.getProperty("Principal");
         if (principal == null) {
             LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "A request was made without the assertion of a valid user principal");
-            requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
-            return;
+            throw new ForbiddenException(Response.status(Response.Status.FORBIDDEN).build());
         }
 
         final Set<String> effectivePermissions;
@@ -97,7 +97,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
             LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by %s to %s"
                     .formatted(requestPrincipal, requestUri));
 
-            requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
+            throw new ForbiddenException(Response.status(Response.Status.FORBIDDEN).build());
         } else {
             requestContext.setProperty(EFFECTIVE_PERMISSIONS_PROPERTY, effectivePermissions);
         }
