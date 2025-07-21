@@ -22,7 +22,6 @@ import alpine.model.Team;
 import alpine.persistence.PaginatedResult;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.core.type.TypeReference;
-import jakarta.annotation.Nullable;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Tag;
@@ -44,6 +43,7 @@ import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
+import jakarta.annotation.Nullable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -104,33 +104,32 @@ public interface ProjectDao {
                        FROM "PROJECT" AS "CHILD_PROJECT"
                       WHERE "CHILD_PROJECT"."PARENT_PROJECT_ID" = "PROJECT"."ID")) AS "hasChildren"
             <#if includeMetrics>
-                 , TO_JSONB("metrics") AS "metrics"
+                 , (SELECT TO_JSONB(m)
+                      FROM (
+                        SELECT "COMPONENTS"
+                             , "CRITICAL"
+                             , "HIGH"
+                             , "LOW"
+                             , "MEDIUM"
+                             , "POLICYVIOLATIONS_FAIL"
+                             , "POLICYVIOLATIONS_INFO"
+                             , "POLICYVIOLATIONS_LICENSE_TOTAL"
+                             , "POLICYVIOLATIONS_OPERATIONAL_TOTAL"
+                             , "POLICYVIOLATIONS_SECURITY_TOTAL"
+                             , "POLICYVIOLATIONS_TOTAL"
+                             , "POLICYVIOLATIONS_WARN"
+                             , "RISKSCORE"
+                             , "UNASSIGNED_SEVERITY"
+                             , "VULNERABILITIES"
+                          FROM "PROJECTMETRICS"
+                         WHERE "PROJECTMETRICS"."PROJECT_ID" = "PROJECT"."ID"
+                         ORDER BY "PROJECTMETRICS"."LAST_OCCURRENCE" DESC
+                         LIMIT 1
+                      ) AS m
+                   ) AS "metrics"
             </#if>
                  , COUNT(*) OVER() AS "totalCount"
               FROM "PROJECT"
-            <#if includeMetrics>
-              LEFT JOIN LATERAL (
-                SELECT "COMPONENTS"
-                     , "CRITICAL"
-                     , "HIGH"
-                     , "LOW"
-                     , "MEDIUM"
-                     , "POLICYVIOLATIONS_FAIL"
-                     , "POLICYVIOLATIONS_INFO"
-                     , "POLICYVIOLATIONS_LICENSE_TOTAL"
-                     , "POLICYVIOLATIONS_OPERATIONAL_TOTAL"
-                     , "POLICYVIOLATIONS_SECURITY_TOTAL"
-                     , "POLICYVIOLATIONS_TOTAL"
-                     , "POLICYVIOLATIONS_WARN"
-                     , "RISKSCORE"
-                     , "UNASSIGNED_SEVERITY"
-                     , "VULNERABILITIES"
-                  FROM "PROJECTMETRICS"
-                 WHERE "PROJECTMETRICS"."PROJECT_ID" = "PROJECT"."ID"
-                 ORDER BY "PROJECTMETRICS"."LAST_OCCURRENCE" DESC
-                 LIMIT 1
-              ) AS "metrics" ON TRUE
-            </#if>
              WHERE ${apiProjectAclCondition}
             <#if nameFilter>
                AND "PROJECT"."NAME" = :nameFilter
@@ -198,10 +197,6 @@ public interface ProjectDao {
             @AllowApiOrdering.Column(name = "isLatest"),
             @AllowApiOrdering.Column(name = "lastBomImport"),
             @AllowApiOrdering.Column(name = "lastBomImportFormat"),
-            @AllowApiOrdering.Column(name = "metrics.components", queryName = "\"metrics\".\"COMPONENTS\""),
-            @AllowApiOrdering.Column(name = "metrics.inheritedRiskScore", queryName = "\"metrics\".\"RISKSCORE\""),
-            @AllowApiOrdering.Column(name = "metrics.policyViolationsTotal", queryName = "\"metrics\".\"POLICYVIOLATIONS_TOTAL\""),
-            @AllowApiOrdering.Column(name = "metrics.vulnerabilities", queryName = "\"metrics\".\"VULNERABILITIES\"")
     })
     List<ConciseProjectListRow> getPageConcise(
             @Bind String nameFilter,
