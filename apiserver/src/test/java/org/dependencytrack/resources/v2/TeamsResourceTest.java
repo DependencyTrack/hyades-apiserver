@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.resources.v2;
 
+import alpine.model.ApiKey;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
@@ -31,10 +32,12 @@ import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
+import java.util.Date;
 import java.util.List;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class TeamsResourceTest extends ResourceTest {
 
@@ -575,6 +578,154 @@ public class TeamsResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .delete();
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type":"about:blank",
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
+                }
+                """);
+    }
+
+    @Test
+    public void listTeamApiKeysShouldReturnPaginatedApiKeys() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        final Team team = qm.createTeam("foo");
+        final ApiKey apiKeyA = qm.createApiKey(team);
+        final ApiKey apiKeyB = qm.createApiKey(team);
+        apiKeyB.setComment("Comment on Key B");
+        final ApiKey apiKeyC = qm.createApiKey(team);
+        apiKeyC.setLastUsed(new Date());
+
+        Response response = jersey.target("/teams/foo/api-keys")
+                .queryParam("limit", 2)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString())
+                .withMatcher("apiKeyPublicIdA", equalTo(apiKeyA.getPublicId()))
+                .withMatcher("apiKeyPublicIdB", equalTo(apiKeyB.getPublicId()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "api_keys": [
+                            {
+                              "public_id": "${json-unit.matches:apiKeyPublicIdA}",
+                              "is_legacy": false,
+                              "created_at": "${json-unit.any-number}"
+                            },
+                            {
+                              "public_id": "${json-unit.matches:apiKeyPublicIdB}",
+                              "comment": "Comment on Key B",
+                              "is_legacy": false,
+                              "created_at": "${json-unit.any-number}"
+                            }
+                          ],
+                          "_pagination": {
+                              "links": {
+                                "self": "${json-unit.any-string}",
+                                "next": "${json-unit.any-string}"
+                              }
+                          }
+                        }
+                        """);
+
+        final var nextPageUri = URI.create(
+                responseJson
+                        .getJsonObject("_pagination")
+                        .getJsonObject("links")
+                        .getString("next"));
+
+        response = jersey.target(nextPageUri)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .withMatcher("apiKeyPublicIdC", equalTo(apiKeyC.getPublicId()))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "api_keys": [
+                            {
+                              "public_id": "${json-unit.matches:apiKeyPublicIdC}",
+                              "is_legacy": false,
+                              "created_at": "${json-unit.any-number}",
+                              "last_used_at": "${json-unit.any-number}"
+                            }
+                          ],
+                          "_pagination": {
+                            "links": {
+                              "self": "${json-unit.any-string}"
+                            }
+                          }
+                        }
+                        """);
+    }
+
+    @Test
+    public void listTeamApiKeysShouldReturnNotFoundWhenTeamNotExists() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        final Response response = jersey.target("/teams/does-not-exist")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type":"about:blank",
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
+                }
+                """);
+    }
+
+    @Test
+    public void createApiKeyShouldReturnCreatedApiKeyDetails() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        final Team team = qm.createTeam("foo");
+
+        final Response response = jersey.target("/teams/foo/api-keys")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "comment": "some comment"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
+                {
+                  "key": "${json-unit.any-string}",
+                  "public_id": "${json-unit.any-string}",
+                  "created_at": "${json-unit.any-number}"
+                }
+                """);
+
+        final ApiKey createdApiKey = qm.getApiKeyByPublicId(responseJson.getString("public_id"));
+        assertThat(createdApiKey).isNotNull();
+        assertThat(createdApiKey.getComment()).isEqualTo("some comment");
+        assertThat(createdApiKey.getCreated()).isNotNull();
+        assertThat(createdApiKey.getLastUsed()).isNull();
+        assertThat(createdApiKey.getTeams()).containsOnly(team);
+    }
+
+    @Test
+    public void createApiKeyShouldReturnNotFoundWhenTeamDoesNotExist() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        final Response response = jersey.target("/teams/does-not-exist/api-keys")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json("{}"));
         assertThat(response.getStatus()).isEqualTo(404);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {

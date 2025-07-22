@@ -24,8 +24,10 @@ import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.customizer.Bind;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -84,6 +86,15 @@ public interface TeamDao extends SqlObject {
 
         return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
     }
+
+    @SqlQuery("""
+            SELECT EXISTS(
+              SELECT 1
+                FROM "TEAM"
+               WHERE "NAME" = :name
+            )
+            """)
+    boolean doesTeamExist(@Bind String name);
 
     record ListTeamMembershipsPageToken(String lastTeamName, String lastUsername) {
     }
@@ -180,4 +191,63 @@ public interface TeamDao extends SqlObject {
                 .mapTo(String.class)
                 .list();
     }
+
+    record ListTeamApiKeysPageToken(Instant lastCreatedAt, long lastId) {
+    }
+
+    record ListTeamApiKeysRow(long id, String publicId, String comment, boolean isLegacy, Instant createdAt, Instant lastUsedAt) {
+    }
+
+    default Page<ListTeamApiKeysRow> listTeamApiKeys(final String teamName, final Integer limit, final String pageToken) {
+        final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListTeamApiKeysPageToken.class);
+
+        final Query query = getHandle().createQuery(/* language=InjectedFreeMarker */ """
+                <#-- @ftlvariable name="teamName" type="Boolean" -->
+                <#-- @ftlvariable name="lastCreatedAt" type="Boolean" -->
+                <#-- @ftlvariable name="lastId" type="Boolean" -->
+                SELECT a."ID"
+                     , a."PUBLIC_ID"
+                     , a."COMMENT"
+                     , a."IS_LEGACY"
+                     , a."CREATED" AS created_at
+                     , a."LAST_USED" AS last_used_at
+                  FROM "TEAM" AS t
+                 INNER JOIN "APIKEYS_TEAMS" AS at
+                    ON at."TEAM_ID" = t."ID"
+                 INNER JOIN "APIKEY" AS a
+                    ON a."ID" = at."APIKEY_ID"
+                 WHERE t."NAME" = :teamName
+                <#if lastCreatedAt && lastId>
+                   AND (a."CREATED", a."ID") > (:lastCreatedAt, :lastId)
+                </#if>
+                 ORDER BY a."CREATED", a."ID"
+                 LIMIT :limit
+                """);
+
+        final List<ListTeamApiKeysRow> rows = query
+                .bind("teamName", teamName)
+                .bind("lastCreatedAt", decodedPageToken != null
+                        ? decodedPageToken.lastCreatedAt()
+                        : null)
+                .bind("lastId", decodedPageToken != null
+                        ? decodedPageToken.lastId()
+                        : null)
+                .bind("limit", limit + 1)
+                .defineNamedBindings()
+                .map(ConstructorMapper.of(ListTeamApiKeysRow.class))
+                .list();
+
+        final List<ListTeamApiKeysRow> resultRows = rows.size() > 1
+                ? rows.subList(0, Math.min(rows.size(), limit))
+                : rows;
+
+        final ListTeamApiKeysPageToken nextPageToken = rows.size() > limit
+                ? new ListTeamApiKeysPageToken(
+                resultRows.getLast().createdAt(),
+                resultRows.getLast().id())
+                : null;
+
+        return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
+    }
+
 }

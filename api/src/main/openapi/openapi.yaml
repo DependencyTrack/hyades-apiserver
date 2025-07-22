@@ -48,6 +48,10 @@ paths:
     $ref: "./paths/teams.yaml"
   /teams/{name}:
     $ref: "./paths/teams__name_.yaml"
+  /teams/{name}/api-keys:
+    $ref: "./paths/teams__name__api-keys.yaml"
+  /teams/{name}/api-keys/{public_id}:
+    $ref: "./paths/teams__name__api-keys__public-id_.yaml"
   /team-memberships:
     $ref: "./paths/team-memberships.yaml"
   /workflows/{token}:

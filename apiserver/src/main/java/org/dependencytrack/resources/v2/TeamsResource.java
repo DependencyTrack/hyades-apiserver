@@ -18,14 +18,19 @@
  */
 package org.dependencytrack.resources.v2;
 
+import alpine.model.ApiKey;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
 import org.dependencytrack.api.v2.TeamsApi;
+import org.dependencytrack.api.v2.model.CreateApiKeyRequest;
+import org.dependencytrack.api.v2.model.CreateApiKeyResponse;
 import org.dependencytrack.api.v2.model.CreateTeamMembershipRequest;
 import org.dependencytrack.api.v2.model.CreateTeamRequest;
 import org.dependencytrack.api.v2.model.GetTeamResponse;
+import org.dependencytrack.api.v2.model.ListTeamApiKeysResponse;
+import org.dependencytrack.api.v2.model.ListTeamApiKeysResponseItem;
 import org.dependencytrack.api.v2.model.ListTeamMembershipsResponse;
 import org.dependencytrack.api.v2.model.ListTeamMembershipsResponseItem;
 import org.dependencytrack.api.v2.model.ListTeamsResponse;
@@ -33,6 +38,7 @@ import org.dependencytrack.api.v2.model.ListTeamsResponseItem;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.TeamDao;
+import org.dependencytrack.persistence.jdbi.TeamDao.ListTeamApiKeysRow;
 import org.dependencytrack.persistence.jdbi.TeamDao.ListTeamMembershipsRow;
 import org.dependencytrack.persistence.jdbi.TeamDao.ListTeamsRow;
 import org.dependencytrack.persistence.pagination.Page;
@@ -40,6 +46,7 @@ import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Context;
@@ -49,6 +56,7 @@ import jakarta.ws.rs.ext.Provider;
 import java.util.List;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.persistence.pagination.PageUtil.createPaginationMetadata;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
@@ -219,4 +227,94 @@ public class TeamsResource implements TeamsApi {
                 "Team membership deleted: team={}, user={}", team, user);
         return Response.noContent().build();
     }
+
+    @Override
+    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    public Response listTeamApiKeys(final String name, final Integer limit, final String pageToken) {
+        final Page<ListTeamApiKeysRow> apiKeysPage = withJdbiHandle(handle -> {
+            final var teamDao = handle.attach(TeamDao.class);
+            if (!teamDao.doesTeamExist(name)) {
+                throw new NotFoundException();
+            }
+
+            return teamDao.listTeamApiKeys(name, limit, pageToken);
+        });
+
+        final var response = ListTeamApiKeysResponse.builder()
+                .apiKeys(apiKeysPage.items().stream()
+                        .<ListTeamApiKeysResponseItem>map(
+                                row -> ListTeamApiKeysResponseItem.builder()
+                                        .publicId(row.publicId())
+                                        .comment(row.comment())
+                                        .isLegacy(row.isLegacy())
+                                        .createdAt(row.createdAt().toEpochMilli())
+                                        .lastUsedAt(row.lastUsedAt() != null ? row.lastUsedAt().toEpochMilli() : null)
+                                        .build())
+                        .toList())
+                .pagination(createPaginationMetadata(uriInfo, apiKeysPage))
+                .build();
+
+        return Response.ok(response).build();
+    }
+
+    @Override
+    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    public Response createTeamApiKey(final String teamName, final CreateApiKeyRequest createApiKeyRequest) {
+        final ApiKey createdApiKey;
+        try (final var qm = new QueryManager()) {
+            createdApiKey = qm.callInTransaction(() -> {
+                final Team team = qm.getTeam(teamName);
+                if (team == null) {
+                    throw new NotFoundException();
+                }
+
+                final ApiKey apiKey = qm.createApiKey(team);
+                if (createApiKeyRequest.getComment() != null) {
+                    apiKey.setComment(createApiKeyRequest.getComment());
+                }
+
+                return apiKey;
+            });
+        }
+
+        LOGGER.info(
+                SecurityMarkers.SECURITY_AUDIT,
+                "API key created: team={}, publicId={}",
+                teamName, createdApiKey.getPublicId());
+
+        final var response = CreateApiKeyResponse.builder()
+                .key(createdApiKey.getKey())
+                .publicId(createdApiKey.getPublicId())
+                .createdAt(createdApiKey.getCreated().getTime())
+                .build();
+
+        return Response.ok(response).build();
+    }
+
+    @Override
+    @PermissionRequired(Permissions.Constants.ACCESS_MANAGEMENT)
+    public Response deleteTeamApiKey(final String teamName, final String publicId) {
+        try (final var qm = new QueryManager()) {
+            qm.runInTransaction(() -> {
+                final ApiKey apiKey = qm.getApiKeyByPublicId(publicId);
+                if (apiKey == null) {
+                    throw new NotFoundException();
+                }
+
+                if (apiKey.getTeams().isEmpty() || teamName.equals(apiKey.getTeams().getFirst().getName())) {
+                    throw new BadRequestException("The API key does not belong to this team.");
+                }
+
+                qm.delete(apiKey);
+            });
+        }
+
+        LOGGER.info(
+                SecurityMarkers.SECURITY_AUDIT,
+                "API key deleted: team={}, publicId={}",
+                teamName, publicId);
+
+        return Response.noContent().build();
+    }
+
 }
