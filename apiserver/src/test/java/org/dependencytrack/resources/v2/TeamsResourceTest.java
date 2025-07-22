@@ -22,6 +22,7 @@ import alpine.model.ApiKey;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
+import alpine.security.ApiKeyGenerator;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -726,6 +727,69 @@ public class TeamsResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .post(Entity.json("{}"));
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type":"about:blank",
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
+                }
+                """);
+    }
+
+    @Test
+    public void deleteTeamApiKeyShouldReturnNoContent() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        final Team team = qm.createTeam("foo");
+        final String apiKeyPublicId = qm.createApiKey(team).getPublicId();
+
+        final Response response = jersey.target("/teams/foo/api-keys/" + apiKeyPublicId)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .delete();
+        assertThat(response.getStatus()).isEqualTo(204);
+        assertThat(getPlainTextBody(response)).isEmpty();
+
+        assertThat(qm.getApiKeyByPublicId(apiKeyPublicId)).isNull();
+    }
+
+    @Test
+    public void deleteTeamApiKeyShouldReturnBadRequestWhenKeyDoesNotBelongToTeam() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        final Team teamA = qm.createTeam("foo");
+        final String apiKeyPublicId = qm.createApiKey(teamA).getPublicId();
+
+        qm.createTeam("bar");
+
+        final Response response = jersey.target("/teams/bar/api-keys/" + apiKeyPublicId)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .delete();
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type":"about:blank",
+                  "status": 400,
+                  "title": "Bad Request",
+                  "detail": "The API key does not belong to this team."
+                }
+                """);
+    }
+
+    @Test
+    public void deleteTeamApiKeyShouldReturnNotFoundWhenKeyDoesNotExist() {
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
+
+        qm.createTeam("foo");
+        final String apiKeyPublicId = ApiKeyGenerator.generate().getPublicId();
+
+        final Response response = jersey.target("/teams/foo/api-keys/" + apiKeyPublicId)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .delete();
         assertThat(response.getStatus()).isEqualTo(404);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {

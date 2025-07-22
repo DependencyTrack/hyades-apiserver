@@ -301,7 +301,7 @@ public class TeamsResource implements TeamsApi {
                     throw new NotFoundException();
                 }
 
-                if (apiKey.getTeams().isEmpty() || teamName.equals(apiKey.getTeams().getFirst().getName())) {
+                if (apiKey.getTeams().stream().map(Team::getName).noneMatch(teamName::equals)) {
                     throw new BadRequestException("The API key does not belong to this team.");
                 }
 
