@@ -25,6 +25,7 @@ import alpine.persistence.IPersistenceManagerFactory;
 import alpine.persistence.JdoProperties;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
 import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.Gauge;
 import org.datanucleus.PropertyNames;
@@ -347,7 +348,7 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
         hikariConfig.setPassword(Config.getInstance().getPropertyOrFile(Config.AlpineKey.DATABASE_PASSWORD));
 
         if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.METRICS_ENABLED)) {
-            hikariConfig.setMetricRegistry(Metrics.getRegistry());
+            hikariConfig.setMetricsTrackerFactory(new MicrometerMetricsTrackerFactory(Metrics.getRegistry()));
         }
 
         return hikariConfig;
