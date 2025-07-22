@@ -39,6 +39,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -50,6 +51,7 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
@@ -89,7 +91,11 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all teams",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
+            description = """
+                    <p><strong>Deprecated</strong>. Use <code>GET /api/v2/teams</code> instead.</p>
+                    <p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>
+                    """,
+            deprecated = true
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -114,7 +120,11 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a specific team",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>"
+            description = """
+                    <p><strong>Deprecated</strong>. Use <code>GET /api/v2/teams/{name}</code> instead.</p>
+                    <p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_READ</strong></p>
+                    """,
+            deprecated = true
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -144,7 +154,11 @@ public class TeamResource extends AlpineResource {
     @Produces({MediaType.APPLICATION_JSON, ProblemDetails.MEDIA_TYPE_JSON})
     @Operation(
             summary = "Creates a new team",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
+            description = """
+                    <p><strong>Deprecated</strong>. Use <code>POST /api/v2/teams</code> instead.</p>
+                    <p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>
+                    """,
+            deprecated = true
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -224,7 +238,11 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a team",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
+            description = """
+                    <p><strong>Deprecated</strong>. Use <code>DELETE /api/v2/teams/{name}</code> instead.</p>
+                    <p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>
+                    """,
+            deprecated = true
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Team removed successfully"),
@@ -287,7 +305,11 @@ public class TeamResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Generates an API key and returns its value",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>"
+            description = """
+                    <p><strong>Deprecated</strong>. Use <code>POST /api/v2/teams/{name}/api-keys</code> instead.</p>
+                    <p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_CREATE</strong></p>
+                    """,
+            deprecated = true
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -403,7 +425,10 @@ public class TeamResource extends AlpineResource {
     @Path("/key/{publicIdOrKey}")
     @Operation(
             summary = "Deletes the specified API key",
-            description = "<p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>"
+            description = """
+                    <p><strong>Deprecated</strong>. Use <code>DELETE /api/v2/teams/{name}/api-keys/{public_id}</code> instead.</p>
+                    <p>Requires permission <strong>ACCESS_MANAGEMENT</strong> or <strong>ACCESS_MANAGEMENT_DELETE</strong></p>
+                    """
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "API key removed successfully"),
