@@ -2167,10 +2167,6 @@ public class ProjectResourceTest extends ResourceTest {
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
 
-        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(
-                List.of(Permissions.Constants.PROJECT_READ)));
-        qm.addRoleToUser(user, role, project);
-
         final Response response = jersey.target(V1_PROJECT)
                 .request()
                 .header("Authorization", "Bearer " + jwt)
