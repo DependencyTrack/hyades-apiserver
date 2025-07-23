@@ -36,7 +36,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @ReportAsSingleViolation
 public @interface ValidRolePermission {
 
-    String message() default "org.dependencytrack.model.validation.ValidRolePermission.message";
+    String message() default "{org.dependencytrack.model.validation.ValidRolePermission.message}";
 
     Class<?>[] groups() default {};
 

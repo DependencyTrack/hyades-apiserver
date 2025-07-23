@@ -31,14 +31,33 @@ import org.dependencytrack.auth.Permissions;
  */
 public class ValidRolePermissionValidator implements ConstraintValidator<ValidRolePermission, String> {
 
-    private static final List<String> VALID_PERMISSIONS = Stream.of(Permissions.values())
+    private static final List<String> PROJECT_PERMISSIONS = Stream.of(Permissions.values())
             .filter(Permissions::isProjectScope)
+            .map(Permissions::name)
+            .toList();
+
+    private static final List<String> SYSTEM_PERMISSIONS = Stream.of(Permissions.values())
+            .filter(Permissions::isSystemScope)
             .map(Permissions::name)
             .toList();
 
     @Override
     public boolean isValid(final String permission, final ConstraintValidatorContext validatorContext) {
-        return VALID_PERMISSIONS.contains(permission);
+        if (SYSTEM_PERMISSIONS.contains(permission)) {
+            validatorContext.buildConstraintViolationWithTemplate("System permissions cannot be assigned to roles")
+                    .addConstraintViolation();
+
+            return false;
+        }
+
+        if (!PROJECT_PERMISSIONS.contains(permission)) {
+            validatorContext.buildConstraintViolationWithTemplate("Invalid permission name")
+                    .addConstraintViolation();
+
+            return false;
+        }
+
+        return true;
     }
 
 }

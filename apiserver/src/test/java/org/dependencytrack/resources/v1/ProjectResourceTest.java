@@ -2113,6 +2113,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
@@ -2121,7 +2122,9 @@ public class ProjectResourceTest extends ResourceTest {
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
 
-        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_UPDATE)));
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
         qm.addRoleToUser(user, role, project);
 
         Response response = jersey.target(V1_PROJECT)
@@ -2154,6 +2157,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectNotPermittedTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -2163,7 +2167,8 @@ public class ProjectResourceTest extends ResourceTest {
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
 
-        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_UPDATE)));
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(
+                List.of(Permissions.Constants.PROJECT_READ)));
         qm.addRoleToUser(user, role, project);
 
         final Response response = jersey.target(V1_PROJECT)
@@ -2391,6 +2396,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectNotModifiedTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
@@ -2399,7 +2405,9 @@ public class ProjectResourceTest extends ResourceTest {
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
 
-        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_UPDATE)));
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
         qm.addRoleToUser(user, role, p1);
 
         final var jsonProject = new Project();
@@ -2415,6 +2423,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectNameVersionConflictTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
@@ -2424,14 +2433,16 @@ public class ProjectResourceTest extends ResourceTest {
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
 
-        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_UPDATE)));
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
         qm.addRoleToUser(user, role, p1);
-        
+
         final var jsonProject = new Project();
         jsonProject.setVersion("0.9");
         final var response = jersey.target(V1_PROJECT + "/" + p1.getUuid())
                 .request()
-                .header("Authorizatio", "Bearer " + jwt)
+                .header("Authorization", "Bearer " + jwt)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(jsonProject));
         Assert.assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
@@ -2477,6 +2488,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
@@ -2486,8 +2498,12 @@ public class ProjectResourceTest extends ResourceTest {
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
 
-        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_UPDATE)));
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
+        qm.addRoleToUser(user, role, parent);
         qm.addRoleToUser(user, role, project);
+        qm.addRoleToUser(user, role, newParent);
 
         final JsonObject jsonProject = Json.createObjectBuilder()
                 .add("parent", Json.createObjectBuilder()
@@ -2529,6 +2545,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectExternalReferencesTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final var project = qm.createProject("referred-project", "ExtRef test project", "1.0", null, null, null, null, false);
@@ -2536,7 +2553,7 @@ public class ProjectResourceTest extends ResourceTest {
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
 
-        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_UPDATE)));
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_READ, Permissions.Constants.PROJECT_UPDATE)));
         qm.addRoleToUser(user, role, project);
 
         final var ref1 = new ExternalReference();
@@ -2571,6 +2588,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentNotFoundTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
@@ -2579,7 +2597,9 @@ public class ProjectResourceTest extends ResourceTest {
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
 
-        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_UPDATE)));
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
         qm.addRoleToUser(user, role, project);
 
         final JsonObject jsonProject = Json.createObjectBuilder()
@@ -2604,6 +2624,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentInaccessibleTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final var parentProject = new Project();
@@ -2618,7 +2639,9 @@ public class ProjectResourceTest extends ResourceTest {
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
 
-        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_UPDATE)));
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
         qm.addRoleToUser(user, role, project);
 
         final Supplier<Response> responseSupplier = () -> jersey
@@ -2647,6 +2670,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectSuccessfullyPatchedTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
@@ -2655,7 +2679,9 @@ public class ProjectResourceTest extends ResourceTest {
         final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
         final String jwt = new JsonWebToken().createToken(user);
 
-        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_UPDATE)));
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
         qm.addRoleToUser(user, role, p1);
 
         final var projectManufacturerContact = new OrganizationalContact();
