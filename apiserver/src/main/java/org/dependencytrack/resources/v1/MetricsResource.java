@@ -86,10 +86,7 @@ public class MetricsResource extends AbstractApiResource {
     @GET
     @Path("/vulnerability")
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = "Returns the sum of all vulnerabilities in the database by year and month",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
-    )
+    @Operation(summary = "Returns the sum of all vulnerabilities in the database by year and month")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -98,7 +95,6 @@ public class MetricsResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response getVulnerabilityMetrics() {
         try (QueryManager qm = new QueryManager()) {
             final List<VulnerabilityMetrics> metrics = qm.getVulnerabilityMetrics();
@@ -111,7 +107,7 @@ public class MetricsResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns current metrics for the entire portfolio",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -121,7 +117,8 @@ public class MetricsResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
+    @ResourceAccessRequired
     public Response getPortfolioCurrentMetrics() {
         PortfolioMetrics metrics = withJdbiHandle(
                 getAlpineRequest(),
@@ -136,7 +133,7 @@ public class MetricsResource extends AbstractApiResource {
             summary = "Returns historical metrics for the entire portfolio from a specific date",
             description = """
                     <p>Date format must be <code>YYYYMMDD</code></p>
-                    <p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>""")
+                    <p>Requires permission <strong>PROJECT_READ</strong></p>""")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -145,7 +142,8 @@ public class MetricsResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
+    @ResourceAccessRequired
     public Response getPortfolioMetricsSince(
             @Parameter(description = "The start date to retrieve metrics for", required = true)
             @PathParam("date") String date) {
@@ -176,7 +174,7 @@ public class MetricsResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns X days of historical metrics for the entire portfolio",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -186,7 +184,8 @@ public class MetricsResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
+    @ResourceAccessRequired
     public Response getPortfolioMetricsXDays(
             @Parameter(description = "The number of days back to retrieve metrics for", required = true)
             @PathParam("days") @Positive int days) {
@@ -205,14 +204,15 @@ public class MetricsResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Requests a refresh of the portfolio metrics",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refresh requested successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
-    public Response RefreshPortfolioMetrics() {
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
+    @ResourceAccessRequired
+    public Response refreshPortfolioMetrics() {
         Event.dispatch(new PortfolioMetricsUpdateEvent());
         return Response.ok().build();
     }
@@ -322,7 +322,7 @@ public class MetricsResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Requests a refresh of a specific projects metrics",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refresh requested successfully"),
@@ -333,8 +333,9 @@ public class MetricsResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
-    public Response RefreshProjectMetrics(
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
+    @ResourceAccessRequired
+    public Response refreshProjectMetrics(
             @Parameter(description = "The UUID of the project to refresh metrics on", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
@@ -457,7 +458,7 @@ public class MetricsResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Requests a refresh of a specific components metrics",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Refresh requested successfully"),
@@ -468,8 +469,9 @@ public class MetricsResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
-    public Response RefreshComponentMetrics(
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
+    @ResourceAccessRequired
+    public Response refreshComponentMetrics(
             @Parameter(description = "The UUID of the component to refresh metrics on", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {

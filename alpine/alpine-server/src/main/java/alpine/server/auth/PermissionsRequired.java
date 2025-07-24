@@ -20,31 +20,25 @@ package alpine.server.auth;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * This annotation is intended to be used in conjunction with JAX-RS resources (methods) to
- * define what permissions are required to access the method.
- * <p>
- * Multiple values in a single annotation represents an OR relationship,
- * while multiple annotations on a method represent an AND relationship.
+ * This annotation represents an implicit array of {@link PermissionRequired} annotations.
  *
- * @author Steve Springett
- * @since 1.0.0
+ * @author Jonathan Howard
+ * @since 5.6.0
  */
 @Retention(value = RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-@Repeatable(PermissionsRequired.class)
 @Documented
-public @interface PermissionRequired {
+public @interface PermissionsRequired {
 
     /**
      * An array of permissions.
      * @return an array of permissions
      */
-    String[] value();
+    PermissionRequired[] value();
 
 }

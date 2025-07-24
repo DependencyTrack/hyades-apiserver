@@ -2787,7 +2787,7 @@
             <column name="DESCRIPTION" value="Provides the ability to make analysis decisions on vulnerabilities and upload supported VEX documents for a project" />
         </insert>
         <insert tableName="PERMISSION_NEW">
-            <column name="NAME"        value="NOTIFICATION_RULE" />
+            <column name="NAME"        value="NOTIFICATION_RULE_MANAGEMENT" />
             <column name="DESCRIPTION" value="Allows configuration of notifications and email settings" />
         </insert>
         <insert tableName="PERMISSION_NEW">
@@ -2803,7 +2803,7 @@
             <column name="DESCRIPTION" value="Provides the ability to make analysis decisions on policy violations" />
         </insert>
         <insert tableName="PERMISSION_NEW">
-            <column name="NAME"        value="POLICY" />
+            <column name="NAME"        value="POLICY_MANAGEMENT" />
             <column name="DESCRIPTION" value="Allows the creation, modification, and deletion of policy" />
         </insert>
         <insert tableName="PERMISSION_NEW">
@@ -2811,7 +2811,7 @@
             <column name="DESCRIPTION" value="Provides the ability to bypass portfolio access control, granting access to all projects" />
         </insert>
         <insert tableName="PERMISSION_NEW">
-            <column name="NAME"        value="PORTFOLIO" />
+            <column name="NAME"        value="PORTFOLIO_MANAGEMENT" />
             <column name="DESCRIPTION" value="Allows the creation, modification, and deletion of data in the portfolio" />
         </insert>
         <insert tableName="PERMISSION_NEW">
@@ -2831,11 +2831,11 @@
             <column name="DESCRIPTION" value="Allows all access to configuration of the system including notifications, repositories, and email settings" />
         </insert>
         <insert tableName="PERMISSION_NEW">
-            <column name="NAME"        value="TAG" />
+            <column name="NAME"        value="TAG_MANAGEMENT" />
             <column name="DESCRIPTION" value="Allows the management of global tag definitions" />
         </insert>
         <insert tableName="PERMISSION_NEW">
-            <column name="NAME"        value="VULNERABILITY" />
+            <column name="NAME"        value="VULNERABILITY_MANAGEMENT" />
             <column name="DESCRIPTION" value="Allows the management of custom vulnerabilities" />
         </insert>
 
@@ -2860,21 +2860,21 @@
                     VALUES
                       ('ACCESS_MANAGEMENT%%', ARRAY['ACCESS_MANAGEMENT']),
                       ('BOM_UPLOAD', ARRAY['BOM_CREATE', 'BOM_READ']),
-                      ('POLICY_MANAGEMENT%%', ARRAY['POLICY', 'POLICY_VIOLATION_CREATE']),
+                      ('POLICY_MANAGEMENT%%', ARRAY['POLICY_MANAGEMENT', 'POLICY_VIOLATION_CREATE']),
                       ('POLICY_VIOLATION_ANALYSIS', ARRAY['POLICY_VIOLATION_UPDATE']),
-                      ('PORTFOLIO_MANAGEMENT%%', ARRAY['PORTFOLIO', 'PROJECT_UPDATE', 'PROJECT_DELETE']),
-                      ('PROJECT_CREATION_UPLOAD', ARRAY['PORTFOLIO', 'BOM_CREATE', 'BOM_READ']),
-                      ('SYSTEM_CONFIGURATION%%', ARRAY['SYSTEM_CONFIGURATION', 'NOTIFICATION_RULE']),
-                      ('TAG_MANAGEMENT%%', ARRAY['TAG']),
+                      ('PORTFOLIO_MANAGEMENT%%', ARRAY['PORTFOLIO_MANAGEMENT', 'PROJECT_UPDATE', 'PROJECT_DELETE']),
+                      ('PROJECT_CREATION_UPLOAD', ARRAY['PORTFOLIO_MANAGEMENT', 'BOM_CREATE', 'BOM_READ']),
+                      ('SYSTEM_CONFIGURATION%%', ARRAY['SYSTEM_CONFIGURATION', 'NOTIFICATION_RULE_MANAGEMENT']),
+                      ('TAG_MANAGEMENT%%', ARRAY['TAG_MANAGEMENT']),
                       ('VIEW_BADGES', ARRAY['BADGES_READ']),
                       ('VIEW_POLICY_VIOLATION', ARRAY['POLICY_VIOLATION_READ']),
                       ('VIEW_PORTFOLIO', ARRAY['PROJECT_READ']),
                       ('VIEW_VULNERABILITY', ARRAY['FINDING_READ']),
-                      ('VULNERABILITY_ANALYSIS', ARRAY['VULNERABILITY']),
+                      ('VULNERABILITY_ANALYSIS', ARRAY['VULNERABILITY_MANAGEMENT']),
                       ('VULNERABILITY_ANALYSIS_CREATE', ARRAY['FINDING_CREATE']),
                       ('VULNERABILITY_ANALYSIS_READ', ARRAY['FINDING_READ']),
                       ('VULNERABILITY_ANALYSIS_UPDATE', ARRAY['FINDING_UPDATE']),
-                      ('VULNERABILITY_MANAGEMENT%%', ARRAY['VULNERABILITY'])
+                      ('VULNERABILITY_MANAGEMENT%%', ARRAY['VULNERABILITY_MANAGEMENT'])
                   ),
                   -- Get IDs of entities mapped to old permissions
                   cte_entities AS (
@@ -3003,6 +3003,8 @@
             BEFORE DELETE OR INSERT OR UPDATE ON "USER_PROJECT_EFFECTIVE_PERMISSIONS"
             FOR EACH STATEMENT
             EXECUTE FUNCTION prevent_direct_effective_permissions_writes();
+
+            DROP FUNCTION IF EXISTS has_user_project_access(BIGINT, BIGINT);
         </sql>
     </changeSet>
 </databaseChangeLog>
