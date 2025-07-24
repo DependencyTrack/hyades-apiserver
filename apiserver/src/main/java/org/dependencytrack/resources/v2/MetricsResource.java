@@ -45,7 +45,7 @@ public class MetricsResource extends AlpineResource implements MetricsApi {
     private UriInfo uriInfo;
 
     @Override
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     public Response getPortfolioCurrentMetrics() {
         PortfolioMetrics metrics = withJdbiHandle(
                 getAlpineRequest(),
@@ -87,7 +87,6 @@ public class MetricsResource extends AlpineResource implements MetricsApi {
     }
 
     @Override
-    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
     public Response getVulnerabilityMetrics(Integer limit, String pageToken) {
         final Page<MetricsDao.ListVulnerabilityMetricsRow> metricsPage = inJdbiTransaction(
                 getAlpineRequest(),
