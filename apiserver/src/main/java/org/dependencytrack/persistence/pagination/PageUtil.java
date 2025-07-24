@@ -79,7 +79,7 @@ public final class PageUtil {
                         .self(uriInfo.getRequestUri())
                         .next(page.nextPageToken() != null ?
                                 uriInfo.getRequestUriBuilder()
-                                        .queryParam("page_token", page.nextPageToken())
+                                        .replaceQueryParam("page_token", page.nextPageToken())
                                         .build()
                                 : null)
                         .build())
