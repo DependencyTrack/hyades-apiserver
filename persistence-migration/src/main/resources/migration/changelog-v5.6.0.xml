@@ -2656,7 +2656,13 @@
         </sql>
     </changeSet>
 
-    <changeSet id="v5.6.0-33" author="sahibamittal">
+    <changeSet id="v5.6.0-33" author="nscuro">
+        <createIndex tableName="NOTIFICATIONPUBLISHER" indexName="NOTIFICATIONPUBLISHER_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.6.0-34" author="sahibamittal">
         <createIndex unique="true" tableName="COMPONENT" indexName="COMPONENT_NAME_VERSION_ID_IDX">
             <column name="NAME" />
             <column name="VERSION" />

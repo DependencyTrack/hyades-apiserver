@@ -38,6 +38,7 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>datanucleus-plugin</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>

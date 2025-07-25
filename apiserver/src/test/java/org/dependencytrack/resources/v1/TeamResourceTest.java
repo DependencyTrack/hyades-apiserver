@@ -27,30 +27,31 @@ import alpine.model.Team;
 import alpine.server.auth.JsonWebToken;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.assertj.core.api.Assertions;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.Project;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 public class TeamResourceTest extends ResourceTest {
@@ -70,8 +71,7 @@ public class TeamResourceTest extends ResourceTest {
         qm.addUserToTeam(testUser, team);
         userNotPartof = qm.createTeam("UserNotPartof");
         if (isAdmin) {
-            final var generator = new DefaultObjectGenerator();
-            generator.loadDefaultPermissions();
+            useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultPermissions);
             List<Permission> permissionsList = new ArrayList<>();
             final Permission adminPermission = qm.getPermission("ACCESS_MANAGEMENT");
             permissionsList.add(adminPermission);
@@ -521,8 +521,7 @@ public class TeamResourceTest extends ResourceTest {
     @Test
     public void getVisibleAdminApiKeyTeams() {
         userNotPartof = qm.createTeam("UserNotPartof");
-        final var generator = new DefaultObjectGenerator();
-        generator.loadDefaultPermissions();
+        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultPermissions);
         List<Permission> permissionsList = new ArrayList<>();
         final Permission adminPermission = qm.getPermission("ACCESS_MANAGEMENT");
         permissionsList.add(adminPermission);

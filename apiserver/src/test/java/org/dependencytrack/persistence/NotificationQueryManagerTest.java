@@ -23,20 +23,22 @@ import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+
 public class NotificationQueryManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetNotificationPublisher() {
-        DefaultObjectGenerator generator = new DefaultObjectGenerator();
-        generator.contextInitialized(null);
+        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultNotificationPublishers);
+
         var publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         Assert.assertEquals("SlackPublisher", publisher.getPublisherClass());
     }
 
     @Test
     public void testGetDefaultNotificationPublisher() {
-        DefaultObjectGenerator generator = new DefaultObjectGenerator();
-        generator.contextInitialized(null);
+        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultNotificationPublishers);
+        
         var publisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.SLACK.getPublisherName());
         Assert.assertEquals("Slack", publisher.getName());
         Assert.assertEquals("SlackPublisher", publisher.getPublisherClass());
