@@ -48,6 +48,7 @@ public class WorkflowEngineInitializer implements ServletContextListener {
             return;
         }
 
+        // TODO: The workflow engine could have a separate database. Construct a new DataSource if needed.
         final DataSource dataSource;
         try (final var qm = new QueryManager()) {
             dataSource = PersistenceUtil.getDataSource(
@@ -55,13 +56,9 @@ public class WorkflowEngineInitializer implements ServletContextListener {
         }
 
         final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
-        engine = ServiceLoader.load(WorkflowEngineFactory.class).findFirst().orElseThrow().create(engineConfig);
-
-        try {
-            engine.migrateDatabase();
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to migrate workflow engine database", ex);
-        }
+        final var engineFactory = ServiceLoader.load(WorkflowEngineFactory.class).findFirst().orElseThrow();
+        engine = engineFactory.create(engineConfig);
+        engine.start();
 
         WorkflowEngineHolder.set(engine);
     }

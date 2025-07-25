@@ -46,10 +46,12 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>liquibase-support</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>proto</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
