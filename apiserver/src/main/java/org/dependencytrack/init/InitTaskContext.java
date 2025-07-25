@@ -16,14 +16,21 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.persistence.defaults;
+package org.dependencytrack.init;
 
-import java.io.IOException;
+import alpine.Config;
 
-public interface IDefaultObjectImporter {
+import javax.sql.DataSource;
 
-    boolean shouldImport();
-
-    void loadDefaults() throws IOException;
-
+/**
+ * Context available to {@link InitTask}s.
+ * <p>
+ * TODO: Introduce a tiny abstraction over {@link Config} such that
+ *  Alpine specifics don't bleed through to {@link InitTask}s.
+ *
+ * @param config     A {@link Config} instance to read application configuration.
+ * @param dataSource A {@link DataSource} which may be used for database interactions.
+ * @since 5.6.0
+ */
+public record InitTaskContext(Config config, DataSource dataSource) {
 }

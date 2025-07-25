@@ -16,32 +16,33 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin;
+package org.dependencytrack.security;
 
-import alpine.common.logging.Logger;
-
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
+import alpine.security.crypto.KeyManager;
+import org.dependencytrack.init.InitTask;
+import org.dependencytrack.init.InitTaskContext;
 
 /**
  * @since 5.6.0
  */
-public class PluginInitializer implements ServletContextListener {
-
-    private static final Logger LOGGER = Logger.getLogger(PluginInitializer.class);
-
-    private final PluginManager pluginManager = PluginManager.getInstance();
+public class KeyGenerationInitTask implements InitTask {
 
     @Override
-    public void contextInitialized(final ServletContextEvent event) {
-        LOGGER.info("Loading plugins");
-        pluginManager.loadPlugins();
+    public int priority() {
+        return PRIORITY_HIGHEST - 5;
     }
 
     @Override
-    public void contextDestroyed(final ServletContextEvent event) {
-        LOGGER.info("Unloading plugins");
-        pluginManager.unloadPlugins();
+    public String name() {
+        return "key.generation";
+    }
+
+    @Override
+    public void execute(final InitTaskContext ctx) throws Exception {
+        // Force initialization of KeyManager, which will cause
+        // the secret, as well as the public-private key pair
+        // to be generated if necessary.
+        final var ignored = KeyManager.getInstance();
     }
 
 }
