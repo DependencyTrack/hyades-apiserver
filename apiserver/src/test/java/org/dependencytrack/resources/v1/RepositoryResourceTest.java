@@ -25,7 +25,7 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.Repository;
 import org.dependencytrack.model.RepositoryMetaComponent;
 import org.dependencytrack.model.RepositoryType;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.persistence.QueryManager;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
@@ -41,6 +41,8 @@ import jakarta.ws.rs.core.Response;
 import java.util.Date;
 import java.util.List;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+
 public class RepositoryResourceTest extends ResourceTest {
 
     @ClassRule
@@ -53,8 +55,8 @@ public class RepositoryResourceTest extends ResourceTest {
     @Override
     public void before() throws Exception {
         super.before();
-        final var generator = new DefaultObjectGenerator();
-        generator.loadDefaultRepositories();
+
+        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultRepositories);
     }
 
     @Test

@@ -24,11 +24,6 @@ import alpine.notification.NotificationLevel;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -39,7 +34,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.notification.NotificationGroup;
 import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.notification.publisher.DefaultNotificationPublishers;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
@@ -47,6 +42,11 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -58,6 +58,7 @@ import java.util.function.Supplier;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.dependencytrack.notification.publisher.PublisherClass.SendMailPublisher;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.hamcrest.Matchers.equalTo;
 
 public class NotificationRuleResourceTest extends ResourceTest {
@@ -72,8 +73,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
     @Before
     public void before() throws Exception {
         super.before();
-        final var generator = new DefaultObjectGenerator();
-        generator.loadDefaultNotificationPublishers();
+
+        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultNotificationPublishers);
     }
 
     @Test

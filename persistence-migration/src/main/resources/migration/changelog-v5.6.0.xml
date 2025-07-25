@@ -2656,7 +2656,13 @@
         </sql>
     </changeSet>
 
-    <changeSet id="v5.6.0-33" author="jhoward-lm">
+    <changeSet id="v5.6.0-33" author="nscuro">
+        <createIndex tableName="NOTIFICATIONPUBLISHER" indexName="NOTIFICATIONPUBLISHER_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.6.0-34" author="jhoward-lm">
         <!-- Create temporary table for permissions -->
         <createTable tableName="PERMISSION_NEW">
             <column autoIncrement="true" name="ID" type="BIGINT">
