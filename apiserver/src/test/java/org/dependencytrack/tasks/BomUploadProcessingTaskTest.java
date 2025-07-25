@@ -47,7 +47,7 @@ import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowStep;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
@@ -99,6 +99,7 @@ import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
 import static org.dependencytrack.model.WorkflowStep.VULN_ANALYSIS;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
 import static org.dependencytrack.proto.notification.v1.Level.LEVEL_ERROR;
@@ -127,7 +128,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     @Test
     public void informTest() throws Exception {
         // Required for license resolution.
-        DefaultObjectGenerator.loadDefaultLicenses();
+        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultLicenses);
 
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -283,7 +284,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     @Test
     public void informTestWithComponentAlreadyExistsForIntegrityCheck() throws Exception {
         // Required for license resolution.
-        DefaultObjectGenerator.loadDefaultLicenses();
+        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultLicenses);
 
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
@@ -1747,7 +1748,7 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
     @Test
     public void informBomWithProtobufFormat() throws Exception {
-        DefaultObjectGenerator.loadDefaultLicenses();
+        useJdbiTransaction(DatabaseSeedingInitTask::seedDefaultLicenses);
 
         Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);
 
