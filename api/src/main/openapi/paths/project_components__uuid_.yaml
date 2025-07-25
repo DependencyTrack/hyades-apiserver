@@ -38,6 +38,8 @@ get:
       description: Optionally exclude transitive dependencies so only direct dependencies are returned
       schema:
         type: boolean
+    - $ref: "../components/parameters/pagination-limit.yaml"
+    - $ref: "../components/parameters/page-token.yaml"
   responses:
     "200":
       description: A list of all components for a given project

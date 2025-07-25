@@ -16,7 +16,7 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  name:
+  type:
     type: string
     enum:
       - VCS

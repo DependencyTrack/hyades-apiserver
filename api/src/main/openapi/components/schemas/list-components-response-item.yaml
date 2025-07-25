@@ -116,7 +116,7 @@ properties:
       $ref: "./external-reference.yaml"
   occurrence_count:
     type: integer
-    format: int32
+    format: int64
     minimum: 0
   last_inherited_risk_score:
     type: number

@@ -93,11 +93,11 @@ public interface ComponentDao extends SqlObject {
             """)
     Long getComponentId(@Bind UUID componentUuid);
 
-    default Page<Component> getComponentsForProject(long projectId, String nameFilter, boolean onlyOutdated,
-                                                               boolean onlyDirect, final int limit, final String pageToken) {
+    default Page<Component> getComponentsForProject(long projectId, boolean onlyOutdated,
+                                                    boolean onlyDirect, final int limit, final String pageToken) {
         final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListComponentPageToken.class);
 
-        final List<Component> rows = getComponentsForProject(projectId, nameFilter, onlyOutdated, onlyDirect,
+        final List<Component> rows = getComponentsForProject(projectId, onlyOutdated, onlyDirect,
                 decodedPageToken != null ? decodedPageToken.lastName() : null,
                 decodedPageToken != null ? decodedPageToken.lastVersion() : null);
 
@@ -116,7 +116,6 @@ public interface ComponentDao extends SqlObject {
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
-            <#-- @ftlvariable name="nameFilter" type="String" -->
             <#-- @ftlvariable name="onlyOutdated" type="Boolean" -->
             <#-- @ftlvariable name="onlyDirect" type="Boolean" -->
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
@@ -168,10 +167,6 @@ public interface ComponentDao extends SqlObject {
                 LEFT OUTER JOIN "LICENSE" "L" ON "C"."LICENSE_ID" = "L"."ID"
                 WHERE ${apiProjectAclCondition}
                 AND "C"."PROJECT_ID" = :projectId
-                <#if nameFilter>
-                   AND (LOWER("C"."NAME") LIKE ('%' || LOWER(:nameFilter) || '%')
-                    OR LOWER("C"."GROUP") LIKE ('%' || LOWER(:nameFilter) || '%'))
-                </#if>
                 <#if lastName && lastVersion>
                    AND ("C"."NAME", "C"."VERSION") > (:lastName, :lastVersion)
                 </#if>
@@ -197,7 +192,6 @@ public interface ComponentDao extends SqlObject {
     @RegisterRowMapper(ComponentListRowMapper.class)
     List<Component> getComponentsForProject(
             @Bind long projectId,
-            @Bind String nameFilter,
             @Define boolean onlyOutdated,
             @Define boolean onlyDirect,
             @Bind String lastName,
