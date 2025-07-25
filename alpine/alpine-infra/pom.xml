@@ -31,10 +31,12 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-common</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-model</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

@@ -30,10 +30,7 @@
         <listener-class>alpine.server.metrics.MetricsInitializer</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.common.KeyManagerInitializer</listener-class>
-    </listener>
-    <listener>
-        <listener-class>org.dependencytrack.persistence.MigrationInitializer</listener-class>
+        <listener-class>org.dependencytrack.init.InitTaskServletContextListener</listener-class>
     </listener>
     <listener>
         <listener-class>alpine.server.persistence.PersistenceManagerFactory</listener-class>
@@ -46,9 +43,6 @@
     </listener>
     <listener>
         <listener-class>org.dependencytrack.health.HealthCheckInitializer</listener-class>
-    </listener>
-    <listener>
-        <listener-class>org.dependencytrack.persistence.DefaultObjectGenerator</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.event.kafka.KafkaProducerInitializer</listener-class>
