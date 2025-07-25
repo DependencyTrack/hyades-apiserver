@@ -32,10 +32,10 @@ security:
 servers:
 - url: /api/v2
 tags:
-- name: Projects
-  description: Endpoints related to projects
 - name: Metrics
   description: Endpoints related to metrics
+- name: Projects
+  description: Endpoints related to projects
 - name: Teams
   description: Endpoints related to teams
 - name: Workflows

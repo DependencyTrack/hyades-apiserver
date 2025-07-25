@@ -28,12 +28,12 @@ get:
       schema:
         type: string
         format: uuid
-    - name: onlyOutdated
+    - name: only_outdated
       in: query
       description: Optionally exclude recent components so only outdated components are returned
       schema:
         type: boolean
-    - name: onlyDirect
+    - name: only_direct
       in: query
       description: Optionally exclude transitive dependencies so only direct dependencies are returned
       schema:
