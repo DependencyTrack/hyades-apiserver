@@ -65,53 +65,45 @@ public final class DatabaseSeedingInitTask implements InitTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseSeedingInitTask.class);
 
     private static final Map<String, List<String>> DEFAULT_TEAM_PERMISSIONS = Map.of(
-            "Administrators", Stream.of(Permissions.values())
-                    .map(Permissions::name)
-                    .toList(),
-            "Portfolio Managers", List.of(
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE),
-            "Automation", List.of(
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.BOM_UPLOAD),
-            "Badge Viewers", List.of(
-                    Permissions.Constants.VIEW_BADGES));
+            "Administrators", Stream.of(Permissions.values()).map(Permissions::name).toList(),
+            "Portfolio Managers", List.of(Permissions.Constants.PORTFOLIO_MANAGEMENT),
+            "Automation", List.of(Permissions.Constants.PORTFOLIO_MANAGEMENT, Permissions.Constants.BOM_CREATE),
+            "Badge Viewers", List.of(Permissions.Constants.BADGES_READ));
 
     private static final Map<String, List<String>> DEFAULT_ROLE_PERMISSIONS = Map.of(
             "Project Admin", List.of(
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_CREATE,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE,
-                    Permissions.Constants.POLICY_MANAGEMENT,
-                    Permissions.Constants.POLICY_MANAGEMENT_CREATE,
-                    Permissions.Constants.POLICY_MANAGEMENT_READ,
-                    Permissions.Constants.POLICY_MANAGEMENT_UPDATE,
-                    Permissions.Constants.POLICY_MANAGEMENT_DELETE),
+                    Permissions.Constants.BADGES_READ,
+                    Permissions.Constants.BOM_READ,
+                    Permissions.Constants.BOM_CREATE,
+                    Permissions.Constants.FINDING_CREATE,
+                    Permissions.Constants.FINDING_READ,
+                    Permissions.Constants.FINDING_UPDATE,
+                    Permissions.Constants.POLICY_VIOLATION_CREATE,
+                    Permissions.Constants.POLICY_VIOLATION_READ,
+                    Permissions.Constants.POLICY_VIOLATION_UPDATE,
+                    Permissions.Constants.PROJECT_READ,
+                    Permissions.Constants.PROJECT_UPDATE,
+                    Permissions.Constants.PROJECT_DELETE),
             "Project Auditor", List.of(
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.VIEW_VULNERABILITY,
-                    Permissions.Constants.VIEW_POLICY_VIOLATION,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ),
+                    Permissions.Constants.BADGES_READ,
+                    Permissions.Constants.BOM_READ,
+                    Permissions.Constants.FINDING_READ,
+                    Permissions.Constants.POLICY_VIOLATION_READ,
+                    Permissions.Constants.PROJECT_READ),
             "Project Editor", List.of(
-                    Permissions.Constants.BOM_UPLOAD,
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-                    Permissions.Constants.VIEW_VULNERABILITY,
-                    Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
-                    Permissions.Constants.PROJECT_CREATION_UPLOAD),
+                    Permissions.Constants.BOM_CREATE,
+                    Permissions.Constants.BOM_READ,
+                    Permissions.Constants.FINDING_READ,
+                    Permissions.Constants.FINDING_UPDATE,
+                    Permissions.Constants.POLICY_VIOLATION_CREATE,
+                    Permissions.Constants.POLICY_VIOLATION_READ,
+                    Permissions.Constants.POLICY_VIOLATION_UPDATE,
+                    Permissions.Constants.PROJECT_READ,
+                    Permissions.Constants.PROJECT_UPDATE),
             "Project Viewer", List.of(
-                    Permissions.Constants.VIEW_PORTFOLIO,
-                    Permissions.Constants.VIEW_VULNERABILITY,
-                    Permissions.Constants.VIEW_BADGES));
+                    Permissions.Constants.BADGES_READ,
+                    Permissions.Constants.BOM_READ,
+                    Permissions.Constants.PROJECT_READ));
 
     @Override
     public int priority() {

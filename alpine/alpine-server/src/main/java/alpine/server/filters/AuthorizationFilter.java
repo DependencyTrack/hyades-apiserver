@@ -35,7 +35,6 @@ import jakarta.ws.rs.container.ResourceInfo;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import java.security.Principal;
-import java.util.Collections;
 import java.util.Set;
 
 /**
@@ -80,11 +79,15 @@ public class AuthorizationFilter implements ContainerRequestFilter {
             return;
         }
 
-        final PermissionRequired annotation = resourceInfo.getResourceMethod().getDeclaredAnnotation(PermissionRequired.class);
-        final Set<String> permissions = Set.of(annotation.value());
+        final PermissionRequired[] annotations = resourceInfo.getResourceMethod()
+                .getAnnotationsByType(PermissionRequired.class);
 
-        final boolean hasNoRequiredPermission = Collections.disjoint(permissions, effectivePermissions);
-        if (hasNoRequiredPermission) {
+        for (final PermissionRequired annotation : annotations) {
+            final Set<String> permissions = Set.of(annotation.value());
+
+            if (permissions.stream().anyMatch(effectivePermissions::contains))
+                continue;
+
             final String requestUri = requestContext.getUriInfo().getRequestUri().toString();
             final String requestPrincipal;
 
@@ -98,9 +101,9 @@ public class AuthorizationFilter implements ContainerRequestFilter {
                     .formatted(requestPrincipal, requestUri));
 
             throw new ForbiddenException(Response.status(Response.Status.FORBIDDEN).build());
-        } else {
-            requestContext.setProperty(EFFECTIVE_PERMISSIONS_PROPERTY, effectivePermissions);
         }
+
+        requestContext.setProperty(EFFECTIVE_PERMISSIONS_PROPERTY, effectivePermissions);
     }
 
 }

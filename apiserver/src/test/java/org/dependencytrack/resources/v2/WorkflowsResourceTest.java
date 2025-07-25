@@ -47,7 +47,7 @@ public class WorkflowsResourceTest extends ResourceTest {
 
     @Test
     public void getWorkflowStatusOk() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.BOM_CREATE);
 
         UUID uuid = UUID.randomUUID();
         WorkflowState workflowState1 = new WorkflowState();
@@ -104,7 +104,7 @@ public class WorkflowsResourceTest extends ResourceTest {
 
     @Test
     public void getWorkflowStatusNotFound() {
-        initializeWithPermissions(Permissions.BOM_UPLOAD);
+        initializeWithPermissions(Permissions.BOM_CREATE);
 
         WorkflowState workflowState1 = new WorkflowState();
         workflowState1.setParent(null);

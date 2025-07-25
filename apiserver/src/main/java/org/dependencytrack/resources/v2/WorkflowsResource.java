@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 public class WorkflowsResource implements WorkflowsApi {
 
     @Override
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
+    @PermissionRequired(Permissions.Constants.BOM_CREATE)
     public Response getWorkflowStates(final UUID token) {
         List<WorkflowState> workflowStates;
         try (final var qm = new QueryManager()) {

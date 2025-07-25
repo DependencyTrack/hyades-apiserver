@@ -112,8 +112,8 @@ public class TeamsResourceTest extends ResourceTest {
         initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
 
         qm.createPermission(
-                Permissions.VIEW_PORTFOLIO.name(),
-                Permissions.VIEW_PORTFOLIO.getDescription());
+                Permissions.PORTFOLIO_MANAGEMENT.name(),
+                Permissions.PORTFOLIO_MANAGEMENT.getDescription());
 
         final Response response = jersey.target("/teams")
                 .request()
@@ -122,7 +122,7 @@ public class TeamsResourceTest extends ResourceTest {
                         {
                           "name": "foo",
                           "permissions": [
-                            "VIEW_PORTFOLIO"
+                            "PORTFOLIO_MANAGEMENT"
                           ]
                         }
                         """));
@@ -134,7 +134,7 @@ public class TeamsResourceTest extends ResourceTest {
 
         final Team team = qm.getTeam("foo");
         assertThat(team).isNotNull();
-        assertThat(team.getPermissions()).extracting(Permission::getName).containsOnly("VIEW_PORTFOLIO");
+        assertThat(team.getPermissions()).extracting(Permission::getName).containsOnly("PORTFOLIO_MANAGEMENT");
     }
 
     @Test
@@ -150,7 +150,7 @@ public class TeamsResourceTest extends ResourceTest {
                         {
                           "name": "foo",
                           "permissions": [
-                            "VIEW_PORTFOLIO"
+                            "PORTFOLIO_MANAGEMENT"
                           ]
                         }
                         """));
@@ -178,11 +178,11 @@ public class TeamsResourceTest extends ResourceTest {
         final Team team = qm.createTeam("foo");
         team.setPermissions(List.of(
                 qm.createPermission(
-                        Permissions.VIEW_PORTFOLIO.name(),
-                        Permissions.VIEW_PORTFOLIO.getDescription()),
+                        Permissions.PORTFOLIO_MANAGEMENT.name(),
+                        Permissions.PORTFOLIO_MANAGEMENT.getDescription()),
                 qm.createPermission(
-                        Permissions.VIEW_VULNERABILITY.name(),
-                        Permissions.VIEW_VULNERABILITY.getDescription())));
+                        Permissions.VULNERABILITY_MANAGEMENT.name(),
+                        Permissions.VULNERABILITY_MANAGEMENT.getDescription())));
 
         final Response response = jersey.target("/teams/foo")
                 .request()
@@ -193,8 +193,8 @@ public class TeamsResourceTest extends ResourceTest {
                 {
                   "name": "foo",
                   "permissions": [
-                    "VIEW_PORTFOLIO",
-                    "VIEW_VULNERABILITY"
+                    "PORTFOLIO_MANAGEMENT",
+                    "VULNERABILITY_MANAGEMENT"
                   ]
                 }
                 """);

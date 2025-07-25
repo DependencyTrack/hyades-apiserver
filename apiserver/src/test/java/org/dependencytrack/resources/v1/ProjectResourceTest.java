@@ -58,6 +58,7 @@ import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.model.Role;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
@@ -2112,11 +2113,23 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectTest() {
-        Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
+        enablePortfolioAccessControl();
+
+        final Project project = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         project.setDescription("Test project");
+
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
+
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
+        qm.addRoleToUser(user, role, project);
+
         Response response = jersey.target(V1_PROJECT)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .post(Entity.entity(project, MediaType.APPLICATION_JSON));
         Assert.assertEquals(200, response.getStatus(), 0);
         JsonObject json = parseJsonObject(response);
@@ -2144,15 +2157,19 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void updateProjectNotPermittedTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final var project = new Project();
         project.setName("acme-app");
         qm.persist(project);
 
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
+
         final Response response = jersey.target(V1_PROJECT)
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .post(Entity.json(/* language=JSON */ """
                         {
                           "uuid": "%s",
@@ -2375,14 +2392,25 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectNotModifiedTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
+        enablePortfolioAccessControl();
+
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
         final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
+
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
+
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
+        qm.addRoleToUser(user, role, p1);
 
         final var jsonProject = new Project();
         jsonProject.setDescription(p1.getDescription());
         final var response = jersey.target(V1_PROJECT + "/" + p1.getUuid())
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(jsonProject));
         Assert.assertEquals(Response.Status.NOT_MODIFIED.getStatusCode(), response.getStatus());
@@ -2391,14 +2419,26 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectNameVersionConflictTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
+        enablePortfolioAccessControl();
+
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
         final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
         qm.createProject("ABC", "Test project", "0.9", null, null, null, null, false);
+
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
+
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
+        qm.addRoleToUser(user, role, p1);
+
         final var jsonProject = new Project();
         jsonProject.setVersion("0.9");
         final var response = jersey.target(V1_PROJECT + "/" + p1.getUuid())
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(jsonProject));
         Assert.assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
@@ -2444,9 +2484,22 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
+        enablePortfolioAccessControl();
+
         final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         final Project project = qm.createProject("DEF", null, "2.0", null, parent, null, null, false);
         final Project newParent = qm.createProject("GHI", null, "3.0", null, null, null, null, false);
+
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
+
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
+        qm.addRoleToUser(user, role, parent);
+        qm.addRoleToUser(user, role, project);
+        qm.addRoleToUser(user, role, newParent);
 
         final JsonObject jsonProject = Json.createObjectBuilder()
                 .add("parent", Json.createObjectBuilder()
@@ -2455,7 +2508,7 @@ public class ProjectResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method(HttpMethod.PATCH, Entity.json(jsonProject.toString()));
 
@@ -2488,7 +2541,17 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectExternalReferencesTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
+        enablePortfolioAccessControl();
+
         final var project = qm.createProject("referred-project", "ExtRef test project", "1.0", null, null, null, null, false);
+
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
+
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(Permissions.Constants.PROJECT_READ, Permissions.Constants.PROJECT_UPDATE)));
+        qm.addRoleToUser(user, role, project);
+
         final var ref1 = new ExternalReference();
         ref1.setType(org.cyclonedx.model.ExternalReference.Type.VCS);
         ref1.setUrl("https://github.com/DependencyTrack/awesomeness");
@@ -2502,7 +2565,7 @@ public class ProjectResourceTest extends ResourceTest {
 
         final var response = jersey.target(V1_PROJECT + "/" + project.getUuid())
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(jsonProject));
 
@@ -2521,8 +2584,19 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentNotFoundTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
+        enablePortfolioAccessControl();
+
         final Project parent = qm.createProject("ABC", null, "1.0", null, null, null, null, false);
         final Project project = qm.createProject("DEF", null, "2.0", null, parent, null, null, false);
+
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
+
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
+        qm.addRoleToUser(user, role, project);
 
         final JsonObject jsonProject = Json.createObjectBuilder()
                 .add("parent", Json.createObjectBuilder()
@@ -2531,7 +2605,7 @@ public class ProjectResourceTest extends ResourceTest {
 
         final Response response = jersey.target(V1_PROJECT + "/" + project.getUuid())
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method(HttpMethod.PATCH, Entity.json(jsonProject.toString()));
 
@@ -2546,6 +2620,7 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectParentInaccessibleTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
         enablePortfolioAccessControl();
 
         final var parentProject = new Project();
@@ -2557,10 +2632,18 @@ public class ProjectResourceTest extends ResourceTest {
         project.addAccessTeam(super.team);
         qm.persist(project);
 
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
+
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
+        qm.addRoleToUser(user, role, project);
+
         final Supplier<Response> responseSupplier = () -> jersey
                 .target(V1_PROJECT + "/" + project.getUuid())
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method(HttpMethod.PATCH, Entity.json(/* language=JSON */ """
                         {
@@ -2583,8 +2666,20 @@ public class ProjectResourceTest extends ResourceTest {
 
     @Test
     public void patchProjectSuccessfullyPatchedTest() {
+        initializeWithPermissions(Permissions.PROJECT_READ, Permissions.PROJECT_UPDATE);
+        enablePortfolioAccessControl();
+
         final var tags = Stream.of("tag1", "tag2").map(qm::createTag).collect(Collectors.toUnmodifiableList());
         final var p1 = qm.createProject("ABC", "Test project", "1.0", tags, null, null, null, false);
+
+        final ManagedUser user = qm.createManagedUser("testuser", TEST_USER_PASSWORD_HASH);
+        final String jwt = new JsonWebToken().createToken(user);
+
+        final Role role = qm.createRole("Test Role", qm.getPermissionsByName(List.of(
+                Permissions.Constants.PROJECT_READ,
+                Permissions.Constants.PROJECT_UPDATE)));
+        qm.addRoleToUser(user, role, p1);
+
         final var projectManufacturerContact = new OrganizationalContact();
         projectManufacturerContact.setName("manufacturerContactName");
         final var projectManufacturer = new OrganizationalEntity();
@@ -2625,7 +2720,7 @@ public class ProjectResourceTest extends ResourceTest {
         jsonProject.setSupplier(jsonProjectSupplier);
         final var response = jersey.target(V1_PROJECT + "/" + p1.getUuid())
                 .request()
-                .header(X_API_KEY, apiKey)
+                .header("Authorization", "Bearer " + jwt)
                 .property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, true)
                 .method("PATCH", Entity.json(jsonProject));
         Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
