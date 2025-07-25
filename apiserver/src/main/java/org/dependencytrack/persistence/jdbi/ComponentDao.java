@@ -19,11 +19,11 @@
 package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.Component;
-import org.dependencytrack.model.ComponentMetaInformation;
 import org.dependencytrack.model.ComponentOccurrence;
-import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.License;
 import org.dependencytrack.persistence.jdbi.mapping.ExternalReferenceMapper;
+import org.dependencytrack.persistence.jdbi.mapping.OrganizationalContactMapper;
+import org.dependencytrack.persistence.jdbi.mapping.OrganizationalEntityMapper;
 import org.dependencytrack.persistence.pagination.Page;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.BeanMapper;
@@ -120,67 +120,60 @@ public interface ComponentDao extends SqlObject {
             <#-- @ftlvariable name="onlyOutdated" type="Boolean" -->
             <#-- @ftlvariable name="onlyDirect" type="Boolean" -->
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
-            SELECT "C"."ID" AS "id",
-                        "C"."NAME" AS "name",
-                        "C"."AUTHORS" AS "authors",
-                        "C"."BLAKE2B_256" AS "blake2b_256",
-                        "C"."BLAKE2B_384" AS "blake2b_384",
-                        "C"."BLAKE2B_512" AS "blake2b_512",
-                        "C"."BLAKE3" AS "blake3",
-                        "C"."CLASSIFIER" AS "classifier",
-                        "C"."COPYRIGHT" AS "copyright",
-                        "C"."CPE" AS "cpe",
-                        "C"."PUBLISHER" AS "publisher",
-                        "C"."PURL" AS "purl",
-                        "C"."PURLCOORDINATES" AS "purlCoordinates",
-                        "C"."DESCRIPTION" AS "description",
+            SELECT "C"."ID",
+                        "C"."NAME",
+                        "C"."AUTHORS",
+                        "C"."BLAKE2B_256",
+                        "C"."BLAKE2B_384",
+                        "C"."BLAKE2B_512",
+                        "C"."BLAKE3",
+                        "C"."CLASSIFIER",
+                        "C"."COPYRIGHT",
+                        "C"."CPE",
+                        "C"."PUBLISHER",
+                        "C"."PURL",
+                        "C"."PURLCOORDINATES",
+                        "C"."DESCRIPTION",
                         "C"."DIRECT_DEPENDENCIES" AS "directDependencies",
-                        "C"."EXTENSION" AS "extension",
+                        "C"."EXTENSION",
                         "C"."EXTERNAL_REFERENCES" AS "externalReferences",
-                        "C"."FILENAME" AS "filename",
-                        "C"."GROUP" AS "group",
-                        "C"."INTERNAL" AS "internal",
+                        "C"."FILENAME",
+                        "C"."GROUP",
+                        "C"."INTERNAL",
                         "C"."LAST_RISKSCORE" AS "lastInheritedRiskScore",
                         "C"."LICENSE" AS "componentLicenseName",
                         "C"."LICENSE_EXPRESSION" AS "licenseExpression",
                         "C"."LICENSE_URL" AS "licenseUrl",
-                        "C"."TEXT" AS "text",
-                        "C"."MD5" AS "md5",
-                        "C"."SHA1" AS "sha1",
+                        "C"."TEXT",
+                        "C"."MD5",
+                        "C"."SHA1",
                         "C"."SHA_256" AS "sha256",
                         "C"."SHA_384" AS "sha384",
                         "C"."SHA_512" AS "sha512",
-                        "C"."SHA3_256" AS "sha3_256",
-                        "C"."SHA3_384" AS "sha3_384",
-                        "C"."SHA3_512" AS "sha3_512",
-                        "C"."SWIDTAGID" AS "swidTagId",
-                        "C"."UUID" AS "uuid",
-                        "C"."VERSION" AS "version",
-                        "L"."ISCUSTOMLICENSE" AS "isCustomLicense",
+                        "C"."SHA3_256",
+                        "C"."SHA3_384",
+                        "C"."SHA3_512",
+                        "C"."SWIDTAGID",
+                        "C"."UUID",
+                        "C"."VERSION",
+                        "L"."ISCUSTOMLICENSE",
                         "L"."FSFLIBRE" AS "isFsfLibre",
-                        "L"."LICENSEID" AS "licenseId",
-                        "L"."ISOSIAPPROVED" AS "isOsiApproved",
+                        "L"."LICENSEID",
+                        "L"."ISOSIAPPROVED",
                         "L"."UUID" AS "licenseUuid",
                         "L"."NAME" AS "licenseName",
-                        "IMA"."LAST_FETCH" AS "lastFetch",
-                        "IMA"."PUBLISHED_AT" AS "publishedAt",
-                        "IA"."INTEGRITY_CHECK_STATUS" AS "integrityCheckStatus",
-                        "IMA"."REPOSITORY_URL" AS "integrityRepoUrl",
-                        (SELECT COUNT(*) FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = "C"."ID") AS "occurrenceCount",
-                        COUNT(*) OVER() AS "totalCount"
+                        (SELECT COUNT(*) FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = "C"."ID") AS "occurrenceCount"
                 FROM "COMPONENT" "C"
                 INNER JOIN "PROJECT" ON "C"."PROJECT_ID" = "PROJECT"."ID"
-                LEFT JOIN "INTEGRITY_META_COMPONENT" "IMA" ON "C"."PURL" = "IMA"."PURL"
-                LEFT JOIN "INTEGRITY_ANALYSIS" "IA" ON "C"."ID" = "IA"."COMPONENT_ID"
                 LEFT OUTER JOIN "LICENSE" "L" ON "C"."LICENSE_ID" = "L"."ID"
                 WHERE ${apiProjectAclCondition}
                 AND "C"."PROJECT_ID" = :projectId
                 <#if nameFilter>
-                   AND (LOWER("name"") LIKE ('%' || LOWER(:nameFilter) || '%')
-                    OR LOWER("group") LIKE ('%' || LOWER(:nameFilter) || '%'))
+                   AND (LOWER("C"."NAME") LIKE ('%' || LOWER(:nameFilter) || '%')
+                    OR LOWER("C"."GROUP") LIKE ('%' || LOWER(:nameFilter) || '%'))
                 </#if>
                 <#if lastName && lastVersion>
-                   AND ("name"", "version") > (:lastName, :lastVersion)
+                   AND ("C"."NAME", "C"."VERSION") > (:lastName, :lastVersion)
                 </#if>
                 <#if onlyOutdated>
                     AND NOT (NOT EXISTS (
@@ -193,12 +186,14 @@ public interface ComponentDao extends SqlObject {
                 <#if onlyDirect>
                     AND "PROJECT"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "C"."UUID"))
                 </#if>
-                ORDER BY "name" ASC, "version" DESC, "ID" ASC
+                ORDER BY "NAME" ASC, "VERSION" DESC, "ID" ASC
                 LIMIT :limit
             """)
     @DefineNamedBindings
     @DefineApiProjectAclCondition(projectIdColumn = "\"PROJECT_ID\"")
     @RegisterColumnMapper(ExternalReferenceMapper.class)
+    @RegisterColumnMapper(OrganizationalContactMapper.class)
+    @RegisterColumnMapper(OrganizationalEntityMapper.class)
     @RegisterRowMapper(ComponentListRowMapper.class)
     List<Component> getComponentsForProject(
             @Bind long projectId,
@@ -226,16 +221,7 @@ public interface ComponentDao extends SqlObject {
                 maybeSet(rs, "isOsiApproved", ResultSet::getBoolean, license::setOsiApproved);
                 component.setResolvedLicense(license);
             }
-            if (rs.getDate("publishedAt") != null
-                    || rs.getString("integrityCheckStatus") != null
-                    || rs.getDate("lastFetch") != null
-                    || rs.getString("integrityRepoUrl") != null) {
-                component.setComponentMetaInformation(new ComponentMetaInformation(
-                        rs.getDate("publishedAt"),
-                        rs.getString("integrityCheckStatus") != null ? IntegrityMatchStatus.valueOf(rs.getString("integrityCheckStatus")) : null,
-                        rs.getDate("lastFetch"),
-                        rs.getString("integrityRepoUrl")));
-            }
+            maybeSet(rs, "occurrenceCount", ResultSet::getLong, component::setOccurrenceCount);
             return component;
         }
     }
