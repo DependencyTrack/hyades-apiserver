@@ -2940,6 +2940,10 @@
             ALTER TABLE "ROLES_PERMISSIONS" RENAME CONSTRAINT "ROLES_PERMISSIONS_NEW_PERMISSION_FK" TO "ROLES_PERMISSIONS_PERMISSION_FK";
         </sql>
 
+        <createIndex tableName="PERMISSION" indexName="PERMISSION_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+
         <!-- Recreate triggers -->
         <sql splitStatements="true">
             DROP TRIGGER IF EXISTS trigger_effective_permissions_mx_on_teams_permissions_insert ON "TEAMS_PERMISSIONS";
