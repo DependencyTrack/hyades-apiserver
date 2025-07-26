@@ -69,7 +69,7 @@ public interface WorkflowEngine extends Closeable {
      * @param <R>               Type of the workflow's result.
      * @throws IllegalStateException When the engine was already started.
      */
-    <A, R> void register(
+    <A, R> void registerWorkflow(
             WorkflowExecutor<A, R> executor,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
@@ -88,7 +88,7 @@ public interface WorkflowEngine extends Closeable {
      * @param <R>               Type of the activity's result.
      * @throws IllegalStateException When the engine was already started.
      */
-    <A, R> void register(
+    <A, R> void registerActivity(
             ActivityExecutor<A, R> executor,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
@@ -103,9 +103,9 @@ public interface WorkflowEngine extends Closeable {
      * @throws IllegalStateException When any of the workflows within the group have not been registered,
      *                               or another group with the same name is already mounted.
      * @throws IllegalStateException When the engine was already started.
-     * @see #register(WorkflowExecutor, PayloadConverter, PayloadConverter, Duration)
+     * @see #registerWorkflow(WorkflowExecutor, PayloadConverter, PayloadConverter, Duration)
      */
-    void mount(WorkflowGroup group);
+    void mountWorkflows(WorkflowGroup group);
 
     /**
      * Mount an {@link ActivityGroup}.
@@ -116,9 +116,9 @@ public interface WorkflowEngine extends Closeable {
      * @throws IllegalStateException When any of the activities within the group have not been registered,
      *                               or another group with the same name is already mounted.
      * @throws IllegalStateException When the engine was already started.
-     * @see #register(ActivityExecutor, PayloadConverter, PayloadConverter, Duration)
+     * @see #registerActivity(ActivityExecutor, PayloadConverter, PayloadConverter, Duration)
      */
-    void mount(ActivityGroup group);
+    void mountActivities(ActivityGroup group);
 
     /**
      * Add a listener for {@link WorkflowEngineEvent}s.

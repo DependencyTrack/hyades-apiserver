@@ -163,15 +163,15 @@ public class WorkflowEngineImplBenchmarkTest {
         engineConfig.setMeterRegistry(meterRegistry);
 
         engine = new WorkflowEngineImpl(engineConfig);
-        engine.register(new TestWorkflow(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
-        engine.register(new TestActivityFoo(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
-        engine.register(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
-        engine.register(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+        engine.registerWorkflow(new TestWorkflow(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+        engine.registerActivity(new TestActivityFoo(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+        engine.registerActivity(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+        engine.registerActivity(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
 
-        engine.mount(new WorkflowGroup("test")
+        engine.mountWorkflows(new WorkflowGroup("test")
                 .withWorkflow(TestWorkflow.class)
                 .withMaxConcurrency(100));
-        engine.mount(new ActivityGroup("test")
+        engine.mountActivities(new ActivityGroup("test")
                 .withActivity(TestActivityFoo.class)
                 .withActivity(TestActivityBar.class)
                 .withActivity(TestActivityBaz.class)

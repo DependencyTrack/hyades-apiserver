@@ -129,7 +129,7 @@ import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toTimesta
 // TODO: Buffer schedule commands for ~5ms.
 final class WorkflowEngineImpl implements WorkflowEngine {
 
-    public enum Status {
+    enum Status {
 
         CREATED(1, 3), // 0
         STARTING(2),   // 1
@@ -157,9 +157,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
     }
 
-    private record CachedWorkflowRunHistory(List<WorkflowEvent> events, int maxSequenceNumber) {
-    }
-
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineImpl.class);
 
     private final WorkflowEngineConfig config;
@@ -169,6 +166,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private final Set<WorkflowGroup> workflowGroups = new HashSet<>();
     private final Set<ActivityGroup> activityGroups = new HashSet<>();
     private final List<WorkflowRunsCompletedEventListener> runsCompletedEventListeners = new ArrayList<>();
+
     private Status status = Status.CREATED;
     @Nullable private ExecutorService taskDispatcherExecutor;
     @Nullable private Map<String, ExecutorService> executorServiceByName;
@@ -368,7 +366,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public <A, R> void register(
+    public <A, R> void registerWorkflow(
             final WorkflowExecutor<A, R> workflowExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
@@ -389,7 +387,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public <A, R> void register(
+    public <A, R> void registerActivity(
             final ActivityExecutor<A, R> activityExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
@@ -410,7 +408,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public void mount(final WorkflowGroup group) {
+    public void mountWorkflows(final WorkflowGroup group) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         requireNonNull(group, "group must not be null");
 
@@ -426,7 +424,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public void mount(final ActivityGroup group) {
+    public void mountActivities(final ActivityGroup group) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
         requireNonNull(group, "group must not be null");
 

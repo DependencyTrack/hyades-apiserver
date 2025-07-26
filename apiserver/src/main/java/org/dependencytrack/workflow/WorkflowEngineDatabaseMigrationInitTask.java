@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow;
 
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.init.InitTask;
 import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
@@ -41,6 +42,10 @@ public class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
 
     @Override
     public void execute(final InitTaskContext ctx) throws Exception {
+        if (!ctx.config().getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+            return;
+        }
+
         // TODO: The workflow engine could have a separate database. Construct a new DataSource if needed.
         final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), ctx.dataSource());
         final var engineFactory = ServiceLoader.load(WorkflowEngineFactory.class).findFirst().orElseThrow();
