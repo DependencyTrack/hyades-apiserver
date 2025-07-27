@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
-import java.time.Duration;
+import java.util.UUID;
 
-public record PollActivityTaskCommand(String activityName, Duration lockTimeout) {
+public record WorkflowConcurrencyGroup(String id, UUID nextRunId) {
 }

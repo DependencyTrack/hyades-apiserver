@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
-import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTaskRow;
+import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTask;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -28,11 +28,11 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.UUID;
 
-public class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTaskRow> {
+public class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask> {
 
     @Override
-    public PolledActivityTaskRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
-        return new PolledActivityTaskRow(
+    public PolledActivityTask map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        return new PolledActivityTask(
                 rs.getObject("workflow_run_id", UUID.class),
                 rs.getInt("scheduled_event_id"),
                 rs.getString("activity_name"),

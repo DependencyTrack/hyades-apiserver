@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.model;
+package org.dependencytrack.workflow.engine.persistence.command;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.jspecify.annotations.Nullable;

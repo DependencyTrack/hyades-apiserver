@@ -19,10 +19,10 @@
 package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.workflow.engine.persistence.command.CreateActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
-import org.dependencytrack.workflow.engine.persistence.model.CreateActivityTaskCommand;
-import org.dependencytrack.workflow.engine.persistence.model.PollActivityTaskCommand;
-import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTaskRow;
+import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTask;
+import org.dependencytrack.workflow.engine.persistence.request.PollActivityTaskRequest;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Update;
 import org.jspecify.annotations.Nullable;
@@ -87,13 +87,13 @@ public final class WorkflowActivityDao extends AbstractDao {
                 .execute();
     }
 
-    public List<PolledActivityTaskRow> pollAndLockActivityTasks(
+    public List<PolledActivityTask> pollAndLockActivityTasks(
             final UUID workerInstanceId,
-            final Collection<PollActivityTaskCommand> pollCommands,
+            final Collection<PollActivityTaskRequest> pollRequests,
             final int limit) {
         final Update update = jdbiHandle.createUpdate("""
                 with
-                cte_poll_cmd as (
+                cte_poll_req as (
                     select *
                       from unnest(:activityNames, :lockTimeouts) as t(activity_name, lock_timeout)
                 ),
@@ -101,7 +101,7 @@ public final class WorkflowActivityDao extends AbstractDao {
                     select workflow_run_id
                          , scheduled_event_id
                       from workflow_activity_task
-                     where activity_name in (select activity_name from cte_poll_cmd)
+                     where activity_name in (select activity_name from cte_poll_req)
                        and (visible_from is null or visible_from <= now())
                        and (locked_until is null or locked_until <= now())
                      order by priority desc nulls last
@@ -111,13 +111,13 @@ public final class WorkflowActivityDao extends AbstractDao {
                      limit :limit)
                 update workflow_activity_task as wat
                    set locked_by = :workerInstanceId
-                     , locked_until = now() + cte_poll_cmd.lock_timeout
+                     , locked_until = now() + cte_poll_req.lock_timeout
                      , updated_at = now()
                   from cte_poll
-                     , cte_poll_cmd
+                     , cte_poll_req
                  where cte_poll.workflow_run_id = wat.workflow_run_id
                    and cte_poll.scheduled_event_id = wat.scheduled_event_id
-                   and cte_poll_cmd.activity_name = wat.activity_name
+                   and cte_poll_req.activity_name = wat.activity_name
                 returning wat.workflow_run_id
                         , wat.scheduled_event_id
                         , wat.activity_name
@@ -126,12 +126,12 @@ public final class WorkflowActivityDao extends AbstractDao {
                         , wat.locked_until
                 """);
 
-        final var activityNames = new ArrayList<String>(pollCommands.size());
-        final var lockTimeouts = new ArrayList<Duration>(pollCommands.size());
+        final var activityNames = new ArrayList<String>(pollRequests.size());
+        final var lockTimeouts = new ArrayList<Duration>(pollRequests.size());
 
-        for (final PollActivityTaskCommand command : pollCommands) {
-            activityNames.add(command.activityName());
-            lockTimeouts.add(command.lockTimeout());
+        for (final PollActivityTaskRequest pollRequest : pollRequests) {
+            activityNames.add(pollRequest.activityName());
+            lockTimeouts.add(pollRequest.lockTimeout());
         }
 
         return update
@@ -146,7 +146,7 @@ public final class WorkflowActivityDao extends AbstractDao {
                         "priority",
                         "argument",
                         "locked_until")
-                .mapTo(PolledActivityTaskRow.class)
+                .mapTo(PolledActivityTask.class)
                 .list();
     }
 

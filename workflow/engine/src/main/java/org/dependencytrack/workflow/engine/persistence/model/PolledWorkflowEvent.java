@@ -18,7 +18,20 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+
 import java.util.UUID;
 
-public record DeleteInboxEventsCommand(UUID workflowRunId, boolean onlyLocked) {
+public record PolledWorkflowEvent(
+        EventType eventType,
+        UUID workflowRunId,
+        WorkflowEvent event,
+        int historySequenceNumber,
+        int inboxDequeueCount) {
+
+    public enum EventType {
+        HISTORY,
+        INBOX
+    }
+
 }

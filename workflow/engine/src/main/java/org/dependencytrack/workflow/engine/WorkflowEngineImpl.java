@@ -67,23 +67,23 @@ import org.dependencytrack.workflow.engine.persistence.WorkflowActivityDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowRunDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowScheduleDao;
+import org.dependencytrack.workflow.engine.persistence.command.CreateActivityTaskCommand;
+import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunCommand;
+import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
+import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
+import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowScheduleCommand;
+import org.dependencytrack.workflow.engine.persistence.command.DeleteInboxEventsCommand;
+import org.dependencytrack.workflow.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
+import org.dependencytrack.workflow.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
-import org.dependencytrack.workflow.engine.persistence.model.CreateActivityTaskCommand;
-import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunCommand;
-import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunHistoryEntryCommand;
-import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunInboxEntryCommand;
-import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowScheduleCommand;
-import org.dependencytrack.workflow.engine.persistence.model.DeleteInboxEventsCommand;
-import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunHistoryRequest;
-import org.dependencytrack.workflow.engine.persistence.model.PollActivityTaskCommand;
-import org.dependencytrack.workflow.engine.persistence.model.PollWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvents;
-import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRunRow;
-import org.dependencytrack.workflow.engine.persistence.model.UnlockWorkflowRunInboxEventsCommand;
-import org.dependencytrack.workflow.engine.persistence.model.UpdateAndUnlockRunCommand;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrencyGroupRow;
+import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrencyGroup;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
+import org.dependencytrack.workflow.engine.persistence.request.GetWorkflowRunHistoryRequest;
+import org.dependencytrack.workflow.engine.persistence.request.PollActivityTaskRequest;
+import org.dependencytrack.workflow.engine.persistence.request.PollWorkflowTaskRequest;
 import org.dependencytrack.workflow.engine.support.Buffer;
 import org.dependencytrack.workflow.engine.support.DefaultThreadFactory;
 import org.dependencytrack.workflow.engine.support.LoggingUncaughtExceptionHandler;
@@ -515,9 +515,9 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
         }
 
-        final List<WorkflowConcurrencyGroupRow> newConcurrencyGroupRows =
+        final List<WorkflowConcurrencyGroup> newConcurrencyGroups =
                 nextRunIdByConcurrencyGroupId.entrySet().stream()
-                        .map(entry -> new WorkflowConcurrencyGroupRow(
+                        .map(entry -> new WorkflowConcurrencyGroup(
                                 /* id */ entry.getKey(),
                                 /* nextRunId */ entry.getValue()))
                         .toList();
@@ -535,8 +535,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     : "Created inbox events: actual=%d, expected=%d".formatted(
                     createdInboxEvents, createInboxEntryCommand.size());
 
-            if (!newConcurrencyGroupRows.isEmpty()) {
-                dao.maybeCreateConcurrencyGroups(newConcurrencyGroupRows);
+            if (!newConcurrencyGroups.isEmpty()) {
+                dao.maybeCreateConcurrencyGroups(newConcurrencyGroups);
             }
 
             return createdRunIds;
@@ -545,7 +545,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
     @Nullable
     public WorkflowRunMetadata getRunMetadata(final UUID runId) {
-        final WorkflowRunRow runRow = jdbi.withHandle(handle -> new WorkflowDao(handle).getRun(runId));
+        final WorkflowRun runRow = jdbi.withHandle(handle -> new WorkflowDao(handle).getRunById(runId));
         if (runRow == null) {
             return null;
         }
@@ -583,14 +583,14 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunRow run = dao.getRun(runId);
+            final WorkflowRun run = dao.getRunById(runId);
             if (run == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
             } else if (run.status().isTerminal()) {
                 throw new IllegalStateException("Workflow run %s is already in terminal status".formatted(runId));
             }
 
-            final boolean hasPendingCancellation = dao.getRunInbox(runId).stream()
+            final boolean hasPendingCancellation = dao.getRunInboxByRunId(runId).stream()
                     .anyMatch(WorkflowEvent::hasRunCanceled);
             if (hasPendingCancellation) {
                 throw new IllegalStateException("Cancellation of workflow run %s already pending".formatted(runId));
@@ -613,7 +613,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunRow run = dao.getRun(runId);
+            final WorkflowRun run = dao.getRunById(runId);
             if (run == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
             } else if (run.status().isTerminal()) {
@@ -622,7 +622,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 throw new IllegalStateException("Workflow run %s is already suspended".formatted(runId));
             }
 
-            final boolean hasPendingSuspension = dao.getRunInbox(runId).stream()
+            final boolean hasPendingSuspension = dao.getRunInboxByRunId(runId).stream()
                     .anyMatch(WorkflowEvent::hasRunSuspended);
             if (hasPendingSuspension) {
                 throw new IllegalStateException("Suspension of workflow run %s is already pending".formatted(runId));
@@ -645,7 +645,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRunRow run = dao.getRun(runId);
+            final WorkflowRun run = dao.getRunById(runId);
             if (run == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
             } else if (run.status().isTerminal()) {
@@ -654,7 +654,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 throw new IllegalStateException("Workflow run %s can not be resumed because it is not suspended".formatted(runId));
             }
 
-            final boolean hasPendingResumption = dao.getRunInbox(runId).stream()
+            final boolean hasPendingResumption = dao.getRunInboxByRunId(runId).stream()
                     .anyMatch(WorkflowEvent::hasRunResumed);
             if (hasPendingResumption) {
                 throw new IllegalStateException("Resumption of workflow run %s is already pending".formatted(runId));
@@ -819,7 +819,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         });
     }
 
-    List<WorkflowTask> pollWorkflowTasks(final Collection<PollWorkflowTaskCommand> pollCommands, final int limit) {
+    List<WorkflowTask> pollWorkflowTasks(final Collection<PollWorkflowTaskRequest> pollRequests, final int limit) {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
@@ -828,8 +828,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             //  This would makes caches more efficient. Currently each instance collaborating on processing
             //  a given workflow run will maintain its own cache.
 
-            final Map<UUID, PolledWorkflowRunRow> polledRunById =
-                    dao.pollAndLockRuns(this.config.instanceId(), pollCommands, limit);
+            final Map<UUID, PolledWorkflowRun> polledRunById =
+                    dao.pollAndLockRuns(this.config.instanceId(), pollRequests, limit);
             if (polledRunById.isEmpty()) {
                 return Collections.emptyList();
             }
@@ -1134,9 +1134,9 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 deletedInboxEvents, updatedRunIds.size());
 
         if (!nextRunIdByNewConcurrencyGroupId.isEmpty()) {
-            final List<WorkflowConcurrencyGroupRow> newConcurrencyGroupRows =
+            final List<WorkflowConcurrencyGroup> newConcurrencyGroupRows =
                     nextRunIdByNewConcurrencyGroupId.entrySet().stream()
-                            .map(entry -> new WorkflowConcurrencyGroupRow(
+                            .map(entry -> new WorkflowConcurrencyGroup(
                                     /* id */ entry.getKey(),
                                     /* nextRunId */ entry.getValue()))
                             .toList();
@@ -1161,11 +1161,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
     }
 
-    List<ActivityTask> pollActivityTasks(final Collection<PollActivityTaskCommand> pollCommands, final int limit) {
+    List<ActivityTask> pollActivityTasks(final Collection<PollActivityTaskRequest> pollRequests, final int limit) {
         return jdbi.inTransaction(handle -> {
             final var activityDao = new WorkflowActivityDao(handle);
 
-            return activityDao.pollAndLockActivityTasks(this.config.instanceId(), pollCommands, limit).stream()
+            return activityDao.pollAndLockActivityTasks(this.config.instanceId(), pollRequests, limit).stream()
                     .map(polledTask -> new ActivityTask(
                             polledTask.workflowRunId(),
                             polledTask.scheduledEventId(),
@@ -1350,7 +1350,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     public List<WorkflowEvent> getRunInbox(final UUID runId) {
-        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunInbox(runId));
+        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunInboxByRunId(runId));
     }
 
     public List<WorkflowRunCountByNameAndStatusRow> getRunStats() {

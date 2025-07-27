@@ -16,18 +16,21 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.model;
+package org.dependencytrack.workflow.engine.persistence.command;
 
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Map;
+import java.time.Instant;
 import java.util.UUID;
 
-public record PolledWorkflowRunRow(
+public record UpdateAndUnlockRunCommand(
         UUID id,
-        String workflowName,
-        int workflowVersion,
-        @Nullable String concurrencyGroupId,
-        @Nullable Integer priority,
-        @Nullable Map<String, String> labels) {
+        WorkflowRunStatus status,
+        @Nullable String customStatus,
+        @Nullable Instant createdAt,
+        @Nullable Instant updatedAt,
+        @Nullable Instant startedAt,
+        @Nullable Instant completedAt) {
+
 }

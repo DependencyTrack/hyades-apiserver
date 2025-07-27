@@ -22,7 +22,7 @@ import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
-import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowScheduleCommand;
+import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowScheduleCommand;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;

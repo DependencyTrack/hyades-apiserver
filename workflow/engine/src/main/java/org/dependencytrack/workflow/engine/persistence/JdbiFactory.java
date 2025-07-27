@@ -30,12 +30,12 @@ import org.dependencytrack.workflow.engine.persistence.mapping.WorkflowEventArgu
 import org.dependencytrack.workflow.engine.persistence.mapping.WorkflowEventSqlArrayType;
 import org.dependencytrack.workflow.engine.persistence.mapping.WorkflowPayloadSqlArrayType;
 import org.dependencytrack.workflow.engine.persistence.mapping.WorkflowScheduleRowMapper;
-import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTaskRow;
-import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEventRow;
-import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRunRow;
+import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTask;
+import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvent;
+import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunHistoryRow;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunHistoryEntry;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.freemarker.FreemarkerEngine;
@@ -77,20 +77,20 @@ public final class JdbiFactory {
                         WorkflowRunCountByNameAndStatusRow.class,
                         ConstructorMapper.of(WorkflowRunCountByNameAndStatusRow.class))
                 .registerRowMapper(
-                        WorkflowRunRow.class,
-                        ConstructorMapper.of(WorkflowRunRow.class))
+                        WorkflowRun.class,
+                        ConstructorMapper.of(WorkflowRun.class))
                 .registerRowMapper(
-                        PolledActivityTaskRow.class,
+                        PolledActivityTask.class,
                         new PolledActivityTaskRowMapper())
                 .registerRowMapper(
-                        PolledWorkflowEventRow.class,
+                        PolledWorkflowEvent.class,
                         new PolledWorkflowEventRowMapper())
                 .registerRowMapper(
-                        PolledWorkflowRunRow.class,
+                        PolledWorkflowRun.class,
                         new PolledWorkflowRunRowMapper())
                 .registerRowMapper(
-                        WorkflowRunHistoryRow.class,
-                        ConstructorMapper.of(WorkflowRunHistoryRow.class))
+                        WorkflowRunHistoryEntry.class,
+                        ConstructorMapper.of(WorkflowRunHistoryEntry.class))
                 .registerRowMapper(
                         WorkflowSchedule.class,
                         new WorkflowScheduleRowMapper());

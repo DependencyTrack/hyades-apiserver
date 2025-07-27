@@ -16,9 +16,19 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.model;
+package org.dependencytrack.workflow.engine.persistence.command;
 
+import org.jspecify.annotations.Nullable;
+
+import java.util.Map;
 import java.util.UUID;
 
-public record WorkflowConcurrencyGroupRow(String id, UUID nextRunId) {
+public record CreateWorkflowRunCommand(
+        UUID id,
+        @Nullable UUID parentId,
+        String workflowName,
+        int workflowVersion,
+        @Nullable String concurrencyGroupId,
+        @Nullable Integer priority,
+        @Nullable Map<String, String> labels) {
 }

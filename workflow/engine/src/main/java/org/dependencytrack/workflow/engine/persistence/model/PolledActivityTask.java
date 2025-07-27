@@ -18,20 +18,17 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.jspecify.annotations.Nullable;
 
+import java.time.Instant;
 import java.util.UUID;
 
-public record PolledWorkflowEventRow(
-        EventType eventType,
+public record PolledActivityTask(
         UUID workflowRunId,
-        WorkflowEvent event,
-        int historySequenceNumber,
-        int inboxDequeueCount) {
-
-    public enum EventType {
-        HISTORY,
-        INBOX
-    }
-
+        int scheduledEventId,
+        String activityName,
+        @Nullable Integer priority,
+        @Nullable WorkflowPayload argument,
+        Instant lockedUntil) {
 }

@@ -18,17 +18,12 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
-import org.jspecify.annotations.Nullable;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 
-import java.util.Map;
 import java.util.UUID;
 
-public record CreateWorkflowRunCommand(
-        UUID id,
-        @Nullable UUID parentId,
-        String workflowName,
-        int workflowVersion,
-        @Nullable String concurrencyGroupId,
-        @Nullable Integer priority,
-        @Nullable Map<String, String> labels) {
+public record WorkflowRunHistoryEntry(
+        UUID workflowRunId,
+        int sequenceNumber,
+        WorkflowEvent event) {
 }

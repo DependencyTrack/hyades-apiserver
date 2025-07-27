@@ -18,12 +18,27 @@
  */
 package org.dependencytrack.workflow.engine.persistence.model;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
+import org.jdbi.v3.json.Json;
+import org.jspecify.annotations.Nullable;
 
+import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
-public record WorkflowRunHistoryRow(
-        UUID workflowRunId,
-        int sequenceNumber,
-        WorkflowEvent event) {
+public record WorkflowRun(
+        UUID id,
+        String workflowName,
+        int workflowVersion,
+        WorkflowRunStatus status,
+        @Nullable String customStatus,
+        @Nullable String concurrencyGroupId,
+        @Nullable Integer priority,
+        @Nullable @Json Map<String, String> labels,
+        @Nullable String lockedBy,
+        @Nullable Instant lockedUntil,
+        Instant createdAt,
+        @Nullable Instant updatedAt,
+        @Nullable Instant startedAt,
+        @Nullable Instant completedAt) {
 }

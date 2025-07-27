@@ -16,9 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.model;
+package org.dependencytrack.workflow.engine.persistence.request;
 
-import java.util.UUID;
+import java.time.Duration;
 
-public record GetWorkflowRunHistoryRequest(UUID runId, int offset) {
+public record PollActivityTaskRequest(String activityName, Duration lockTimeout) {
 }

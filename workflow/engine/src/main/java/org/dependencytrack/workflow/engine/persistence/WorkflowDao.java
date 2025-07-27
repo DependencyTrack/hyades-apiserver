@@ -20,20 +20,20 @@ package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
-import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunCommand;
-import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunHistoryEntryCommand;
-import org.dependencytrack.workflow.engine.persistence.model.CreateWorkflowRunInboxEntryCommand;
-import org.dependencytrack.workflow.engine.persistence.model.DeleteInboxEventsCommand;
-import org.dependencytrack.workflow.engine.persistence.model.GetWorkflowRunHistoryRequest;
-import org.dependencytrack.workflow.engine.persistence.model.PollWorkflowTaskCommand;
-import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEventRow;
+import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunCommand;
+import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
+import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
+import org.dependencytrack.workflow.engine.persistence.command.DeleteInboxEventsCommand;
+import org.dependencytrack.workflow.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
+import org.dependencytrack.workflow.engine.persistence.command.UpdateAndUnlockRunCommand;
+import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvents;
-import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRunRow;
-import org.dependencytrack.workflow.engine.persistence.model.UnlockWorkflowRunInboxEventsCommand;
-import org.dependencytrack.workflow.engine.persistence.model.UpdateAndUnlockRunCommand;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrencyGroupRow;
+import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrencyGroup;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
+import org.dependencytrack.workflow.engine.persistence.request.GetWorkflowRunHistoryRequest;
+import org.dependencytrack.workflow.engine.persistence.request.PollWorkflowTaskRequest;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -127,7 +127,7 @@ public final class WorkflowDao extends AbstractDao {
                 .list();
     }
 
-    public int maybeCreateConcurrencyGroups(final Collection<WorkflowConcurrencyGroupRow> concurrencyGroups) {
+    public int maybeCreateConcurrencyGroups(final Collection<WorkflowConcurrencyGroup> concurrencyGroups) {
         // NB: We must *not* use ON CONFLICT DO UPDATE here, since we have to assume that the
         // existing NEXT_RUN_ID is already being worked on, even if it technically orders
         // *after* the run ID we're trying to insert here.
@@ -142,7 +142,7 @@ public final class WorkflowDao extends AbstractDao {
 
         final var groupIds = new ArrayList<String>(concurrencyGroups.size());
         final var nextRunIds = new ArrayList<UUID>(concurrencyGroups.size());
-        for (final WorkflowConcurrencyGroupRow concurrencyGroup : concurrencyGroups) {
+        for (final WorkflowConcurrencyGroup concurrencyGroup : concurrencyGroups) {
             groupIds.add(concurrencyGroup.id());
             nextRunIds.add(concurrencyGroup.nextRunId());
         }
@@ -275,7 +275,7 @@ public final class WorkflowDao extends AbstractDao {
     }
 
     @Nullable
-    public WorkflowRunRow getRun(final UUID id) {
+    public WorkflowRun getRunById(final UUID id) {
         final Query query = jdbiHandle.createQuery("""
                 select *
                   from workflow_run
@@ -284,14 +284,14 @@ public final class WorkflowDao extends AbstractDao {
 
         return query
                 .bind("id", id)
-                .mapTo(WorkflowRunRow.class)
+                .mapTo(WorkflowRun.class)
                 .findOne()
                 .orElse(null);
     }
 
-    public Map<UUID, PolledWorkflowRunRow> pollAndLockRuns(
+    public Map<UUID, PolledWorkflowRun> pollAndLockRuns(
             final UUID workerInstanceId,
-            final Collection<PollWorkflowTaskCommand> pollCommands,
+            final Collection<PollWorkflowTaskRequest> pollRequests,
             final int limit) {
         final Update update = jdbiHandle.createUpdate("""
                 with cte_poll as (
@@ -338,12 +338,12 @@ public final class WorkflowDao extends AbstractDao {
                         , workflow_run.labels
                 """);
 
-        final var workflowNames = new ArrayList<String>(pollCommands.size());
-        final var lockTimeouts = new ArrayList<Duration>(pollCommands.size());
+        final var workflowNames = new ArrayList<String>(pollRequests.size());
+        final var lockTimeouts = new ArrayList<Duration>(pollRequests.size());
 
-        for (final PollWorkflowTaskCommand pollCommand : pollCommands) {
-            workflowNames.add(pollCommand.workflowName());
-            lockTimeouts.add(pollCommand.lockTimeout());
+        for (final PollWorkflowTaskRequest pollRequest : pollRequests) {
+            workflowNames.add(pollRequest.workflowName());
+            lockTimeouts.add(pollRequest.lockTimeout());
         }
 
         return update
@@ -358,8 +358,8 @@ public final class WorkflowDao extends AbstractDao {
                         "concurrency_group_id",
                         "priority",
                         "labels")
-                .mapTo(PolledWorkflowRunRow.class)
-                .collectToMap(PolledWorkflowRunRow::id, Function.identity());
+                .mapTo(PolledWorkflowRun.class)
+                .collectToMap(PolledWorkflowRun::id, Function.identity());
     }
 
     public int unlockRuns(final UUID workerInstanceId, final Collection<UUID> runIds) {
@@ -374,26 +374,6 @@ public final class WorkflowDao extends AbstractDao {
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("runIds", UUID.class, runIds)
-                .execute();
-    }
-
-    public int deleteExpiredRuns(final Instant cutoff, final int limit) {
-        final Update update = jdbiHandle.createUpdate("""
-                with cte_candidates as (
-                  select id
-                    from workflow_run
-                   where completed_at < :cutoff
-                   order by completed_at
-                   limit :limit
-                )
-                delete
-                  from workflow_run
-                 where id in (select id from cte_candidates)
-                """);
-
-        return update
-                .bind("cutoff", cutoff)
-                .bind("limit", limit)
                 .execute();
     }
 
@@ -480,11 +460,11 @@ public final class WorkflowDao extends AbstractDao {
             historyRequestOffsets.add(request.offset());
         }
 
-        final List<PolledWorkflowEventRow> polledEventRows = query
+        final List<PolledWorkflowEvent> polledEvents = query
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("historyRequestRunIds", UUID.class, historyRequestRunIds)
                 .bindArray("historyRequestOffsets", Integer.class, historyRequestOffsets)
-                .mapTo(PolledWorkflowEventRow.class)
+                .mapTo(PolledWorkflowEvent.class)
                 .list();
 
         final var historyByRunId = new HashMap<UUID, List<WorkflowEvent>>(requests.size());
@@ -492,26 +472,26 @@ public final class WorkflowDao extends AbstractDao {
         final var maxHistoryEventSequenceNumberByRunId = new HashMap<UUID, Integer>(requests.size());
         final var maxInboxEventDequeueCountByRunId = new HashMap<UUID, Integer>(requests.size());
 
-        for (final PolledWorkflowEventRow row : polledEventRows) {
-            switch (row.eventType()) {
+        for (final PolledWorkflowEvent polledEvent : polledEvents) {
+            switch (polledEvent.eventType()) {
                 case HISTORY -> {
                     historyByRunId.computeIfAbsent(
-                            row.workflowRunId(), ignored -> new ArrayList<>()).add(row.event());
+                            polledEvent.workflowRunId(), ignored -> new ArrayList<>()).add(polledEvent.event());
 
                     maxHistoryEventSequenceNumberByRunId.compute(
-                            row.workflowRunId(),
-                            (ignored, previousMax) -> (previousMax == null || previousMax < row.historySequenceNumber())
-                                    ? row.historySequenceNumber()
+                            polledEvent.workflowRunId(),
+                            (ignored, previousMax) -> (previousMax == null || previousMax < polledEvent.historySequenceNumber())
+                                    ? polledEvent.historySequenceNumber()
                                     : previousMax);
                 }
                 case INBOX -> {
                     inboxByRunId.computeIfAbsent(
-                            row.workflowRunId(), ignored -> new ArrayList<>()).add(row.event());
+                            polledEvent.workflowRunId(), ignored -> new ArrayList<>()).add(polledEvent.event());
 
                     maxInboxEventDequeueCountByRunId.compute(
-                            row.workflowRunId(),
-                            (ignored, previousMax) -> (previousMax == null || previousMax < row.inboxDequeueCount())
-                                    ? row.inboxDequeueCount()
+                            polledEvent.workflowRunId(),
+                            (ignored, previousMax) -> (previousMax == null || previousMax < polledEvent.inboxDequeueCount())
+                                    ? polledEvent.inboxDequeueCount()
                                     : previousMax);
                 }
             }
@@ -529,16 +509,16 @@ public final class WorkflowDao extends AbstractDao {
         return polledEventsByRunId;
     }
 
-    public List<WorkflowEvent> getRunInbox(final UUID workflowRunId) {
+    public List<WorkflowEvent> getRunInboxByRunId(final UUID runId) {
         final Query query = jdbiHandle.createQuery("""
                 select event
                   from workflow_run_inbox
-                 where workflow_run_id = :workflowRunId
+                 where workflow_run_id = :runId
                  order by id
                 """);
 
         return query
-                .bind("workflowRunId", workflowRunId)
+                .bind("runId", runId)
                 .mapTo(WorkflowEvent.class)
                 .list();
     }

@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
-import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEventRow;
+import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvent;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -27,12 +27,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 
-public class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEventRow> {
+public class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEvent> {
 
     @Override
-    public PolledWorkflowEventRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
-        return new PolledWorkflowEventRow(
-                PolledWorkflowEventRow.EventType.valueOf(rs.getString("event_type")),
+    public PolledWorkflowEvent map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        return new PolledWorkflowEvent(
+                PolledWorkflowEvent.EventType.valueOf(rs.getString("event_type")),
                 rs.getObject("workflow_run_id", UUID.class),
                 ctx.findColumnMapperFor(WorkflowEvent.class).orElseThrow().map(rs, "event", ctx),
                 rs.getInt("sequence_number"),

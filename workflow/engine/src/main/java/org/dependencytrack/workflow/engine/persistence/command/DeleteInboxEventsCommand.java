@@ -16,10 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.model;
+package org.dependencytrack.workflow.engine.persistence.command;
 
-import java.time.Duration;
 import java.util.UUID;
 
-public record UnlockWorkflowRunInboxEventsCommand(UUID workflowRunId, Duration visibilityDelay) {
+public record DeleteInboxEventsCommand(UUID workflowRunId, boolean onlyLocked) {
 }

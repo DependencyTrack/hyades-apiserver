@@ -23,8 +23,8 @@ import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunHistoryRow;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunRow;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunHistoryEntry;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -116,7 +116,7 @@ public final class WorkflowRunDao extends AbstractDao {
                 .bind("limit", request.limit() + 1)
                 .bind("lastId", decodedPageToken != null ? decodedPageToken.lastId() : null)
                 .defineNamedBindings()
-                .mapTo(WorkflowRunRow.class)
+                .mapTo(WorkflowRun.class)
                 .map(row -> new WorkflowRunMetadata(
                         row.id(),
                         row.workflowName(),
@@ -160,14 +160,14 @@ public final class WorkflowRunDao extends AbstractDao {
 
         final var decodedPageToken = decodePageToken(request.pageToken(), ListRunHistoryPageToken.class);
 
-        final List<WorkflowRunHistoryRow> rows = query
+        final List<WorkflowRunHistoryEntry> rows = query
                 .bind("runId", request.runId())
                 .bind("lastSequenceNumber", decodedPageToken != null ? decodedPageToken.lastSequenceNumber() : -1)
                 .bind("limit", request.limit() + 1)
-                .mapTo(WorkflowRunHistoryRow.class)
+                .mapTo(WorkflowRunHistoryEntry.class)
                 .list();
 
-        final List<WorkflowRunHistoryRow> resultRows = rows.size() > 1
+        final List<WorkflowRunHistoryEntry> resultRows = rows.size() > 1
                 ? rows.subList(0, Math.min(rows.size(), request.limit()))
                 : rows;
 
@@ -176,7 +176,7 @@ public final class WorkflowRunDao extends AbstractDao {
                 : null;
 
         return new Page<>(
-                resultRows.stream().map(WorkflowRunHistoryRow::event).toList(),
+                resultRows.stream().map(WorkflowRunHistoryEntry::event).toList(),
                 encodePageToken(nextPageToken));
     }
 

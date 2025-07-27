@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
-import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRunRow;
+import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -31,11 +31,11 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
-public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRunRow> {
+public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRun> {
 
     @Override
-    public PolledWorkflowRunRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
-        return new PolledWorkflowRunRow(
+    public PolledWorkflowRun map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        return new PolledWorkflowRun(
                 rs.getObject("id", UUID.class),
                 rs.getString("workflow_name"),
                 rs.getInt("workflow_version"),
