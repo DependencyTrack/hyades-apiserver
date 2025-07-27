@@ -29,6 +29,7 @@
     <modules>
         <module>support/datanucleus-plugin</module>
         <module>support/liquibase</module>
+        <module>api</module>
         <module>alpine</module>
         <module>proto</module>
         <module>persistence-migration</module>
@@ -100,13 +101,13 @@
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
-        <lib.jackson.version>2.19.1</lib.jackson.version>
+        <lib.jackson.version>2.19.2</lib.jackson.version>
         <lib.jdbi.version>3.49.5</lib.jdbi.version>
         <lib.jersey.version>3.1.10</lib.jersey.version>
         <lib.jetty.version>12.0.23</lib.jetty.version>
         <lib.jooq.version>3.20.5</lib.jooq.version>
-        <lib.junit-jupiter.version>5.13.3</lib.junit-jupiter.version>
-        <lib.liquibase.version>4.32.0</lib.liquibase.version>
+        <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
+        <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.postgresql.version>42.7.7</lib.postgresql.version>
         <lib.protobuf-java.version>4.31.1</lib.protobuf-java.version>
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
@@ -121,64 +122,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>alpine-common</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>alpine-model</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>alpine-infra</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>alpine-server</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>alpine-executable-war</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>apiserver</artifactId>
-                <classifier>classes</classifier>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>datanucleus-plugin</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>liquibase-support</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>persistence-migration</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>persistence-jooq</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.dependencytrack</groupId>
-                <artifactId>proto</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>

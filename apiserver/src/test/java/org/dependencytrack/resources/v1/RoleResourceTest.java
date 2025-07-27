@@ -18,33 +18,34 @@
  */
 package org.dependencytrack.resources.v1;
 
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
+import alpine.common.util.UuidUtil;
+import alpine.model.ManagedUser;
+import alpine.model.Permission;
+import alpine.server.filters.ApiFilter;
+import alpine.server.filters.AuthenticationFeature;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
-import org.dependencytrack.persistence.DefaultObjectGenerator;
+import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import alpine.common.util.UuidUtil;
-import alpine.model.ManagedUser;
-import alpine.model.Permission;
-import alpine.server.filters.ApiFilter;
-import alpine.server.filters.AuthenticationFeature;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 
 public class RoleResourceTest extends ResourceTest {
 
@@ -58,9 +59,11 @@ public class RoleResourceTest extends ResourceTest {
     @Override
     public void before() throws Exception {
         super.before();
-        final var generator = new DefaultObjectGenerator();
-        generator.loadDefaultPermissions();
-        generator.loadDefaultRoles();
+
+        useJdbiTransaction(handle -> {
+            DatabaseSeedingInitTask.seedDefaultPermissions(handle);
+            DatabaseSeedingInitTask.seedDefaultRoles(handle);
+        });
     }
 
     @Test

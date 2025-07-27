@@ -2,11 +2,8 @@
 <databaseChangeLog
         objectQuotingStrategy="QUOTE_ALL_OBJECTS"
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext
-            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
-            http://www.liquibase.org/xml/ns/dbchangelog
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet id="function_calc-risk-score" author="nscuro@protonmail.com" runOnChange="true">
         <createProcedure path="procedures/function_calc-risk-score.sql" relativeToChangelogFile="true"/>
@@ -19,9 +16,6 @@
     </changeSet>
     <changeSet id="procedure_update-project-metrics" author="nscuro@protonmail.com" runOnChange="true">
         <createProcedure path="procedures/procedure_update-project-metrics.sql" relativeToChangelogFile="true"/>
-    </changeSet>
-    <changeSet id="procedure_update-portfolio-metrics" author="nscuro@protonmail.com" runOnChange="true">
-        <createProcedure path="procedures/procedure_update-portfolio-metrics.sql" relativeToChangelogFile="true"/>
     </changeSet>
     <changeSet id="function_has-project-access" author="nscuro" runOnChange="true">
         <createProcedure path="procedures/function_has-project-access.sql" relativeToChangelogFile="true"/>

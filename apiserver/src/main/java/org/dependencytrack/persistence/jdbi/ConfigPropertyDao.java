@@ -21,8 +21,10 @@ package org.dependencytrack.persistence.jdbi;
 import alpine.model.IConfigProperty;
 import alpine.security.crypto.DataEncryption;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindBean;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -81,5 +83,13 @@ public interface ConfigPropertyDao {
     default <T> T getValue(final ConfigPropertyConstants property, final Class<T> clazz) {
         return getOptionalValue(property, clazz).orElseThrow(NoSuchElementException::new);
     }
+
+    @SqlUpdate("""
+            UPDATE "CONFIGPROPERTY"
+               SET "PROPERTYVALUE" = :value
+             WHERE "GROUPNAME" = :groupName
+               AND "PROPERTYNAME" = :propertyName
+            """)
+    void setValue(@BindBean ConfigPropertyConstants property, @Bind String value);
 
 }
