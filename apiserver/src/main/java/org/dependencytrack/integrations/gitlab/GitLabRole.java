@@ -27,6 +27,8 @@ import org.dependencytrack.auth.Permissions;
 
 /**
  * Definitions of access levels/roles as defined by GitLab.
+ *
+ * @see <a href="https://docs.gitlab.com/user/permissions/#roles">GitLab Roles</a>
  */
 public enum GitLabRole {
 

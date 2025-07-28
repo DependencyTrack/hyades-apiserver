@@ -73,9 +73,7 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
 
     @Override
     public boolean isEnabled() {
-        final ConfigProperty enabled = qm.getConfigProperty(INTEGRATIONS_GROUP, GITLAB_ENABLED.getPropertyName());
-
-        return enabled != null && Boolean.parseBoolean(enabled.getPropertyValue());
+        return qm.isEnabled(GITLAB_ENABLED);
     }
 
     @Override

@@ -273,7 +273,7 @@ public class BomResource extends AbstractApiResource {
                       then the <code>projectName</code> and <code>projectVersion</code> must be specified.
                       Optionally, if <code>autoCreate</code> is specified and <code>true</code> and the project does not exist,
                       the project will be created. In this scenario, the principal making the request will
-                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>, 
+                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>,
                       or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
                     </p>
                     <p>
@@ -400,13 +400,10 @@ public class BomResource extends AbstractApiResource {
                     cpc.getGroupName(),
                     cpc.getPropertyName());
 
-            ConfigProperty gitLabIntegrationConfigProperty = propertyGetter.apply(GITLAB_ENABLED);
-            if (gitLabIntegrationConfigProperty == null
-                    || !Boolean.parseBoolean(gitLabIntegrationConfigProperty.getPropertyValue()))
+            if (qm.isEnabled(GITLAB_ENABLED))
                 return Response.notModified("GitLab integration not enabled").build();
 
-            ConfigProperty sbomPushConfigProperty = propertyGetter.apply(GITLAB_SBOM_PUSH_ENABLED);
-            if (sbomPushConfigProperty == null || !Boolean.parseBoolean(sbomPushConfigProperty.getPropertyValue()))
+            if (qm.isEnabled(GITLAB_SBOM_PUSH_ENABLED))
                 return Response.notModified("GitLab SBOM push functionality not enabled").build();
 
             Boolean autoCreateProject = Boolean
@@ -473,21 +470,21 @@ public class BomResource extends AbstractApiResource {
 
             return uploadBom(bomSubmitRequest);
         } catch (SignatureException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+            return Response.status(Response.Status.BAD_REQUEST)
                     .entity("Received token that did not pass signature verification").build();
         } catch (ExpiredJwtException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Received expired token").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Received expired token").build();
         } catch (MalformedJwtException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Received malformed token").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Received malformed token").build();
         } catch (UnsupportedJwtException | IllegalArgumentException e) {
             LOGGER.error(SecurityMarkers.SECURITY_FAILURE, e.getMessage());
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Received unsupported JWT").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Received unsupported JWT").build();
         } catch (IOException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("Error reading or parsing the JWT header or JWKS: " + e.getMessage()).build();
+            LOGGER.error(SecurityMarkers.EVENT_FAILURE, "Error reading or parsing the JWT header or JWKS: " + e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("An error occured in uploadBomGitLab: " + e.getMessage()).build();
+            LOGGER.error(SecurityMarkers.EVENT_FAILURE, "An error occured in uploadBomGitLab: " + e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -502,7 +499,7 @@ public class BomResource extends AbstractApiResource {
                       then the <code>projectName</code> and <code>projectVersion</code> must be specified.
                       Optionally, if <code>autoCreate</code> is specified and <code>true</code> and the project does not exist,
                       the project will be created. In this scenario, the principal making the request will
-                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>, 
+                      additionally need the <strong>PORTFOLIO_MANAGEMENT</strong>, <strong>PORTFOLIO_MANAGEMENT_CREATE</strong>,
                       or <strong>PROJECT_CREATION_UPLOAD</strong> permission.
                     </p>
                     <p>
