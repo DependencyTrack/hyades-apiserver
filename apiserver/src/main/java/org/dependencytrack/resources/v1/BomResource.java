@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.model.ConfigProperty;
@@ -414,6 +415,8 @@ public class BomResource extends AbstractApiResource {
                         .build();
 
             ConfigProperty gitLabUrlProperty = propertyGetter.apply(GITLAB_URL);
+            String alpineIssuerProperty = Config.getInstance().getProperty(Config.AlpineKey.OIDC_ISSUER);
+            String gitlabUrl = StringUtils.defaultIfBlank(alpineIssuerProperty, gitLabUrlProperty.getPropertyValue());
             ConfigProperty gitLabJwksPathProperty = propertyGetter.apply(GITLAB_JWKS_PATH);
 
             // Get the key id (kid) from the JWT header
@@ -421,8 +424,7 @@ public class BomResource extends AbstractApiResource {
             String kid = (String) new ObjectMapper().readValue(headerJson, Map.class).get("kid");
 
             Claims claims = Jwts.parser()
-                    .verifyWith(GitLabClient.getPublicKeyFromJwks(gitLabUrlProperty.getPropertyValue(),
-                            gitLabJwksPathProperty.getPropertyValue(), kid))
+                    .verifyWith(GitLabClient.getPublicKeyFromJwks(gitlabUrl, gitLabJwksPathProperty.getPropertyValue(), kid))
                     .build()
                     .parseSignedClaims(idToken)
                     .getPayload();
