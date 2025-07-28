@@ -109,7 +109,9 @@ public class AnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ },
+            operator = PermissionRequired.Operator.AND)
     @ResourceAccessRequired
     public Response retrieveAnalysis(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"))
                                      @QueryParam("project") @ValidUuid String projectUuid,
@@ -166,7 +168,9 @@ public class AnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project, component, or vulnerability could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_UPDATE })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_UPDATE },
+            operator = PermissionRequired.Operator.AND)
     @ResourceAccessRequired
     public Response updateAnalysis(AnalysisRequest request) {
         final Validator validator = getValidator();

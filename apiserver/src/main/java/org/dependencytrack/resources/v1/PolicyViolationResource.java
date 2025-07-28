@@ -84,7 +84,9 @@ public class PolicyViolationResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ },
+            operator = PermissionRequired.Operator.AND)
     @ResourceAccessRequired
     public Response getViolations(@Parameter(description = "Optionally includes suppressed violations")
                                       @QueryParam("suppressed") boolean suppressed,
@@ -145,7 +147,9 @@ public class PolicyViolationResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ },
+            operator = PermissionRequired.Operator.AND)
     @ResourceAccessRequired
     public Response getViolationsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                            @PathParam("uuid") @ValidUuid String uuid,
@@ -187,7 +191,9 @@ public class PolicyViolationResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ },
+            operator = PermissionRequired.Operator.AND)
     @ResourceAccessRequired
     public Response getViolationsByComponent(@Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
                                              @PathParam("uuid") @ValidUuid String uuid,

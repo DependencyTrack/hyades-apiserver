@@ -87,7 +87,9 @@ public class ViolationAnalysisResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component or policy violation could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ },
+            operator = PermissionRequired.Operator.AND)
     @ResourceAccessRequired
     public Response retrieveAnalysis(@Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
                                      @QueryParam("component") @ValidUuid String componentUuid,

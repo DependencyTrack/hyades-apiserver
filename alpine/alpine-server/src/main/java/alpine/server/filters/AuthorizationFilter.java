@@ -79,31 +79,33 @@ public class AuthorizationFilter implements ContainerRequestFilter {
             return;
         }
 
-        final PermissionRequired[] annotations = resourceInfo.getResourceMethod()
-                .getAnnotationsByType(PermissionRequired.class);
+        final PermissionRequired annotation = resourceInfo.getResourceMethod().getDeclaredAnnotation(PermissionRequired.class);
+        final Set<String> permissions = Set.of(annotation.value());
 
-        for (final PermissionRequired annotation : annotations) {
-            final Set<String> permissions = Set.of(annotation.value());
+        final boolean hasRequiredPermission = switch (annotation.operator()) {
+            case AND -> permissions.stream().allMatch(effectivePermissions::contains);
+            case OR -> permissions.stream().anyMatch(effectivePermissions::contains);
+            default -> false;
+        };
 
-            if (permissions.stream().anyMatch(effectivePermissions::contains))
-                continue;
-
-            final String requestUri = requestContext.getUriInfo().getRequestUri().toString();
-            final String requestPrincipal;
-
-            switch (principal) {
-                case ApiKey apiKey -> requestPrincipal = "API Key " + apiKey.getMaskedKey();
-                case User user -> requestPrincipal = user.getUsername();
-                default -> throw new IllegalStateException("Unexpected principal type: " + principal.getClass().getName());
-            }
-
-            LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by %s to %s"
-                    .formatted(requestPrincipal, requestUri));
-
-            throw new ForbiddenException(Response.status(Response.Status.FORBIDDEN).build());
+        if (hasRequiredPermission) {
+            requestContext.setProperty(EFFECTIVE_PERMISSIONS_PROPERTY, effectivePermissions);
+            return;
         }
 
-        requestContext.setProperty(EFFECTIVE_PERMISSIONS_PROPERTY, effectivePermissions);
+        final String requestUri = requestContext.getUriInfo().getRequestUri().toString();
+        final String requestPrincipal;
+
+        switch (principal) {
+            case ApiKey apiKey -> requestPrincipal = "API Key " + apiKey.getMaskedKey();
+            case User user -> requestPrincipal = user.getUsername();
+            default -> throw new IllegalStateException("Unexpected principal type: " + principal.getClass().getName());
+        }
+
+        LOGGER.info(SecurityMarkers.SECURITY_FAILURE, "Unauthorized access attempt made by %s to %s"
+                .formatted(requestPrincipal, requestUri));
+
+        throw new ForbiddenException(Response.status(Response.Status.FORBIDDEN).build());
     }
 
 }

@@ -122,7 +122,9 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
     @PaginatedApi
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ },
+            operator = PermissionRequired.Operator.AND)
     public Response getFindingsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                          @PathParam("uuid") @ValidUuid String uuid,
                                          @Parameter(description = "Optionally includes suppressed findings")
@@ -181,7 +183,9 @@ public class FindingResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ },
+            operator = PermissionRequired.Operator.AND)
     public Response exportFindingsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                             @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
@@ -243,7 +247,9 @@ public class FindingResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ },
+            operator = PermissionRequired.Operator.AND)
     public Response analyzeProject(
             @Parameter(description = "The UUID of the project to analyze", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid) {
@@ -283,7 +289,9 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
     })
     @PaginatedApi
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ },
+            operator = PermissionRequired.Operator.AND)
     public Response getAllFindings(@Parameter(description = "Show inactive projects")
                                    @QueryParam("showInactive") boolean showInactive,
                                    @Parameter(description = "Show suppressed findings")
@@ -353,7 +361,9 @@ public class FindingResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PaginatedApi
-    @PermissionRequired({ Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ })
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ },
+            operator = PermissionRequired.Operator.AND)
     public Response getAllFindings(@Parameter(description = "Show inactive projects")
                                    @QueryParam("showInactive") boolean showInactive,
                                    @Parameter(description = "Filter by severity")
