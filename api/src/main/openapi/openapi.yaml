@@ -43,7 +43,7 @@ tags:
 
 paths:
   /projects/{uuid}/components:
-    $ref: "./paths/project_components__uuid_.yaml"
+    $ref: "./paths/projects_uuid_components.yaml"
   /metrics/portfolio/current:
     $ref: "./paths/metrics_portfolio_current.yaml"
   /metrics/vulnerabilities:

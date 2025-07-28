@@ -33,7 +33,6 @@ import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.config.RegisterColumnMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
@@ -93,11 +92,11 @@ public interface ComponentDao extends SqlObject {
             """)
     Long getComponentId(@Bind UUID componentUuid);
 
-    default Page<Component> getComponentsForProject(long projectId, boolean onlyOutdated,
-                                                    boolean onlyDirect, final int limit, final String pageToken) {
+    default Page<Component> getComponentsForProject(final long projectId, final Boolean onlyOutdated,
+                                                    final Boolean onlyDirect, final int limit, final String pageToken) {
         final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListComponentPageToken.class);
 
-        final List<Component> rows = getComponentsForProject(projectId, onlyOutdated, onlyDirect,
+        final List<Component> rows = getComponentsForProject(projectId, limit + 1, onlyOutdated, onlyDirect,
                 decodedPageToken != null ? decodedPageToken.lastName() : null,
                 decodedPageToken != null ? decodedPageToken.lastVersion() : null);
 
@@ -130,7 +129,7 @@ public interface ComponentDao extends SqlObject {
                         "C"."COPYRIGHT",
                         "C"."CPE",
                         "C"."PUBLISHER",
-                        "C"."PURL",
+                        "C"."PURL" AS "componentPurl",
                         "C"."PURLCOORDINATES",
                         "C"."DESCRIPTION",
                         "C"."DIRECT_DEPENDENCIES" AS "directDependencies",
@@ -168,9 +167,9 @@ public interface ComponentDao extends SqlObject {
                 WHERE ${apiProjectAclCondition}
                 AND "C"."PROJECT_ID" = :projectId
                 <#if lastName && lastVersion>
-                   AND ("C"."NAME", "C"."VERSION") > (:lastName, :lastVersion)
+                   AND ("C"."NAME", "C"."VERSION") < (:lastName, :lastVersion)
                 </#if>
-                <#if onlyOutdated>
+                <#if onlyOutdated && onlyOutdated == true>
                     AND NOT (NOT EXISTS (
                         SELECT "R"."ID"
                         FROM "REPOSITORY_META_COMPONENT" "R" WHERE "R"."NAME" = "C"."NAME"
@@ -178,7 +177,7 @@ public interface ComponentDao extends SqlObject {
                         AND "R"."LATEST_VERSION" <> "C"."VERSION"
                         AND "C"."PURL" LIKE (('pkg:' || LOWER("R"."REPOSITORY_TYPE")) || '/%') ESCAPE E'\\\\'))
                 </#if>
-                <#if onlyDirect>
+                <#if onlyDirect && onlyDirect == true>
                     AND "PROJECT"."DIRECT_DEPENDENCIES" @> JSONB_BUILD_ARRAY(JSONB_BUILD_OBJECT('uuid', "C"."UUID"))
                 </#if>
                 ORDER BY "NAME" ASC, "VERSION" DESC, "ID" ASC
@@ -192,8 +191,9 @@ public interface ComponentDao extends SqlObject {
     @RegisterRowMapper(ComponentListRowMapper.class)
     List<Component> getComponentsForProject(
             @Bind long projectId,
-            @Define boolean onlyOutdated,
-            @Define boolean onlyDirect,
+            @Bind int limit,
+            @Bind Boolean onlyOutdated,
+            @Bind Boolean onlyDirect,
             @Bind String lastName,
             @Bind String lastVersion
     );
@@ -205,6 +205,7 @@ public interface ComponentDao extends SqlObject {
         @Override
         public Component map(final ResultSet rs, final StatementContext ctx) throws SQLException {
             final Component component = componentRowMapper.map(rs, ctx);
+            maybeSet(rs, "componentPurl", ResultSet::getString, component::setPurl);
             if (rs.getString("licenseUuid") != null) {
                 final var license = new License();
                 license.setUuid(UUID.fromString(rs.getString("licenseUuid")));
