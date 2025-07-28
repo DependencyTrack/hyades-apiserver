@@ -40,7 +40,6 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Role;
 
 import alpine.common.logging.Logger;
-import alpine.model.ConfigProperty;
 import alpine.model.OidcUser;
 
 public class GitLabSyncer extends AbstractIntegrationPoint implements PermissionsSyncer {
