@@ -24,7 +24,9 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.License;
 import org.dependencytrack.model.OrganizationalContact;
+import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -60,6 +62,13 @@ public class ProjectsResourceTest extends ResourceTest {
                         "authors" : [ ],
                         "version" : "3.0",
                         "group" : "component-group",
+                        "supplier" : {
+                              "name" : "foo",
+                              "urls" : [ "https://example.com" ],
+                              "contacts" : [ {
+                                "name" : "author"
+                              } ]
+                        },
                         "purl" : "pkg:maven/foo/bar@3.0",
                         "internal" : false,
                         "external_references" : [ ],
@@ -72,6 +81,14 @@ public class ProjectsResourceTest extends ResourceTest {
                         "group" : "component-group",
                         "purl" : "pkg:maven/foo/bar@2.0",
                         "internal" : false,
+                        "resolved_license" : {
+                              "name" : "MIT License",
+                              "license_id" : "MIT",
+                              "uuid" : "${json-unit.any-string}",
+                              "osi_approved" : false,
+                              "fsf_libre" : false,
+                              "custom_license" : false
+                        },
                         "external_references" : [ ],
                         "occurrence_count" : 0,
                         "uuid" : "${json-unit.any-string}"
@@ -128,6 +145,16 @@ public class ProjectsResourceTest extends ResourceTest {
         final var author = new OrganizationalContact();
         author.setName("author");
 
+        final var license = new License();
+        license.setLicenseId("MIT");
+        license.setName("MIT License");
+        qm.persist(license);
+
+        final var supplier = new OrganizationalEntity();
+        supplier.setName("foo");
+        supplier.setUrls(new String[]{"https://example.com"});
+        supplier.setContacts(List.of(author));
+
         Component component = new Component();
         component.setProject(project);
         component.setAuthors(List.of(author));
@@ -143,6 +170,7 @@ public class ProjectsResourceTest extends ResourceTest {
         component.setName("component-name");
         component.setVersion("2.0");
         component.setPurl("pkg:maven/foo/bar@2.0");
+        component.setResolvedLicense(license);
         qm.createComponent(component, false);
 
         component = new Component();
@@ -151,6 +179,7 @@ public class ProjectsResourceTest extends ResourceTest {
         component.setName("component-name");
         component.setVersion("3.0");
         component.setPurl("pkg:maven/foo/bar@3.0");
+        component.setSupplier(supplier);
         qm.createComponent(component, false);
 
         return project;

@@ -151,6 +151,7 @@ public interface ComponentDao extends SqlObject {
                         "C"."SHA3_256",
                         "C"."SHA3_384",
                         "C"."SHA3_512",
+                        "C"."SUPPLIER",
                         "C"."SWIDTAGID",
                         "C"."UUID",
                         "C"."VERSION",
