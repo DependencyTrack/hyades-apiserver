@@ -18,9 +18,7 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
-import org.dependencytrack.common.ConfigKey;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -36,12 +34,6 @@ public class PluginInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (Config.getInstance().getPropertyAsBoolean(ConfigKey.INIT_AND_EXIT)) {
-            LOGGER.debug("Not loading plugins because %s is enabled"
-                    .formatted(ConfigKey.INIT_AND_EXIT.getPropertyName()));
-            return;
-        }
-
         LOGGER.info("Loading plugins");
         pluginManager.loadPlugins();
     }

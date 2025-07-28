@@ -37,7 +37,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.PolicyCondition;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyProjects;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyTags;
 import org.dependencytrack.persistence.jooq.generated.tables.PolicyViolation;
-import org.dependencytrack.persistence.jooq.generated.tables.PortfolioMetrics;
 import org.dependencytrack.persistence.jooq.generated.tables.Project;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectAccessTeams;
 import org.dependencytrack.persistence.jooq.generated.tables.ProjectHierarchy;
@@ -105,7 +104,6 @@ import org.dependencytrack.persistence.jooq.generated.tables.records.PolicyProje
 import org.dependencytrack.persistence.jooq.generated.tables.records.PolicyRecord;
 import org.dependencytrack.persistence.jooq.generated.tables.records.PolicyTagsRecord;
 import org.dependencytrack.persistence.jooq.generated.tables.records.PolicyViolationRecord;
-import org.dependencytrack.persistence.jooq.generated.tables.records.PortfolioMetricsRecord;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectAccessTeamsRecord;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectHierarchyRecord;
 import org.dependencytrack.persistence.jooq.generated.tables.records.ProjectMetadataRecord;
@@ -208,7 +206,6 @@ public class Keys {
     public static final UniqueKey<PolicyConditionRecord> POLICYCONDITION_UUID_IDX = Internal.createUniqueKey(PolicyCondition.POLICYCONDITION, DSL.name("POLICYCONDITION_UUID_IDX"), new TableField[] { PolicyCondition.POLICYCONDITION.uuid }, true);
     public static final UniqueKey<PolicyViolationRecord> POLICYVIOLATION_PK = Internal.createUniqueKey(PolicyViolation.POLICYVIOLATION, DSL.name("POLICYVIOLATION_PK"), new TableField[] { PolicyViolation.POLICYVIOLATION.id }, true);
     public static final UniqueKey<PolicyViolationRecord> POLICYVIOLATION_UUID_IDX = Internal.createUniqueKey(PolicyViolation.POLICYVIOLATION, DSL.name("POLICYVIOLATION_UUID_IDX"), new TableField[] { PolicyViolation.POLICYVIOLATION.uuid }, true);
-    public static final UniqueKey<PortfolioMetricsRecord> PORTFOLIOMETRICS_PK = Internal.createUniqueKey(PortfolioMetrics.PORTFOLIOMETRICS, DSL.name("PORTFOLIOMETRICS_PK"), new TableField[] { PortfolioMetrics.PORTFOLIOMETRICS.lastOccurrence }, true);
     public static final UniqueKey<ProjectRecord> PROJECT_PK = Internal.createUniqueKey(Project.PROJECT, DSL.name("PROJECT_PK"), new TableField[] { Project.PROJECT.id }, true);
     public static final UniqueKey<ProjectRecord> PROJECT_UUID_IDX = Internal.createUniqueKey(Project.PROJECT, DSL.name("PROJECT_UUID_IDX"), new TableField[] { Project.PROJECT.uuid }, true);
     public static final UniqueKey<ProjectAccessTeamsRecord> PROJECT_ACCESS_TEAMS_PK = Internal.createUniqueKey(ProjectAccessTeams.PROJECT_ACCESS_TEAMS, DSL.name("PROJECT_ACCESS_TEAMS_PK"), new TableField[] { ProjectAccessTeams.PROJECT_ACCESS_TEAMS.projectId, ProjectAccessTeams.PROJECT_ACCESS_TEAMS.teamId }, true);

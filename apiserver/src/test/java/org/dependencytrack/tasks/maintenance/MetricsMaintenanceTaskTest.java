@@ -22,7 +22,6 @@ import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.maintenance.MetricsMaintenanceEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.DependencyMetrics;
-import org.dependencytrack.model.PortfolioMetrics;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
@@ -104,14 +103,6 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
             metricsTestDao.createProjectMetrics(metrics);
         };
 
-        final BiConsumer<Instant, Integer> createPortfolioMetricsForLastOccurrence = (lastOccurrence, vulns) -> {
-            var metrics = new PortfolioMetrics();
-            metrics.setVulnerabilities(vulns);
-            metrics.setFirstOccurrence(Date.from(lastOccurrence));
-            metrics.setLastOccurrence(Date.from(lastOccurrence));
-            metricsTestDao.createPortfolioMetrics(metrics);
-        };
-
         final Instant now = Instant.now();
 
         // Create component metrics partitions for dates required
@@ -132,15 +123,6 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
         createProjectMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
         createProjectMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
 
-        // Create portfolio metrics partitions for dates required
-        metricsTestDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 91);
-        metricsTestDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 90);
-        metricsTestDao.createPartitionForDaysAgo("PORTFOLIOMETRICS", 89);
-
-        createPortfolioMetricsForLastOccurrence.accept(now.minus(91, ChronoUnit.DAYS), 91);
-        createPortfolioMetricsForLastOccurrence.accept(now.minus(90, ChronoUnit.DAYS), 90);
-        createPortfolioMetricsForLastOccurrence.accept(now.minus(89, ChronoUnit.DAYS), 89);
-
         final var task = new MetricsMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new MetricsMaintenanceEvent()));
 
@@ -149,21 +131,22 @@ public class MetricsMaintenanceTaskTest extends PersistenceCapableTest {
 
         assertThat(metricsDao.getProjectMetricsSince(project.getId(), now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(
                 metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
-
-        assertThat(metricsDao.getPortfolioMetricsSince(now.minus(91, ChronoUnit.DAYS))).satisfiesExactly(
-                metrics -> assertThat(metrics.getVulnerabilities()).isEqualTo(89));
     }
 
     @Test
     public void testCreateMetricsPartitions() {
+        qm.createConfigProperty(
+                MAINTENANCE_METRICS_RETENTION_DAYS.getGroupName(),
+                MAINTENANCE_METRICS_RETENTION_DAYS.getPropertyName(),
+                MAINTENANCE_METRICS_RETENTION_DAYS.getDefaultPropertyValue(),
+                MAINTENANCE_METRICS_RETENTION_DAYS.getPropertyType(),
+                MAINTENANCE_METRICS_RETENTION_DAYS.getDescription());
+
         new MetricsMaintenanceTask().inform(new MetricsMaintenanceEvent());
         var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         var tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
-        var metricsPartitions = metricsDao.getPortfolioMetricsPartitions();
-        assertThat(metricsPartitions.getFirst()).isEqualTo("\"PORTFOLIOMETRICS_%s\"".formatted(today));
-        assertThat(metricsPartitions.getLast()).isEqualTo("\"PORTFOLIOMETRICS_%s\"".formatted(tomorrow));
 
-        metricsPartitions = metricsDao.getProjectMetricsPartitions();
+        var metricsPartitions = metricsDao.getProjectMetricsPartitions();
         assertThat(metricsPartitions.getFirst()).isEqualTo("\"PROJECTMETRICS_%s\"".formatted(today));
         assertThat(metricsPartitions.getLast()).isEqualTo("\"PROJECTMETRICS_%s\"".formatted(tomorrow));
 

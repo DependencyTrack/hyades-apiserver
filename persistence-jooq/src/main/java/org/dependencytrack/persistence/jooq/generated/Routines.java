@@ -4,20 +4,19 @@
 package org.dependencytrack.persistence.jooq.generated;
 
 
-import java.math.BigDecimal;
-import java.util.UUID;
-
 import org.dependencytrack.persistence.jooq.generated.routines.CalcRiskScore;
 import org.dependencytrack.persistence.jooq.generated.routines.HasProjectAccess;
 import org.dependencytrack.persistence.jooq.generated.routines.HasUserProjectAccess;
 import org.dependencytrack.persistence.jooq.generated.routines.JsonbVulnAliases;
 import org.dependencytrack.persistence.jooq.generated.routines.RecalcUserProjectEffectivePermissions;
 import org.dependencytrack.persistence.jooq.generated.routines.UpdateComponentMetrics;
-import org.dependencytrack.persistence.jooq.generated.routines.UpdatePortfolioMetrics;
 import org.dependencytrack.persistence.jooq.generated.routines.UpdateProjectMetrics;
 import org.jooq.Configuration;
 import org.jooq.Field;
 import org.jooq.JSONB;
+
+import java.math.BigDecimal;
+import java.util.UUID;
 
 
 /**
@@ -243,17 +242,6 @@ public class Routines {
     ) {
         UpdateComponentMetrics p = new UpdateComponentMetrics();
         p.setComponentUuid(componentUuid);
-
-        p.execute(configuration);
-    }
-
-    /**
-     * Call <code>UPDATE_PORTFOLIO_METRICS</code>
-     */
-    public static void updatePortfolioMetrics(
-          Configuration configuration
-    ) {
-        UpdatePortfolioMetrics p = new UpdatePortfolioMetrics();
 
         p.execute(configuration);
     }

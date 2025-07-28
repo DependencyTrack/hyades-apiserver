@@ -37,21 +37,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.ClientErrorException;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.PATCH;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.ServerErrorException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
@@ -72,6 +57,21 @@ import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.dependencytrack.resources.v1.vo.ConciseProject;
 import org.jdbi.v3.core.Handle;
 
+import jakarta.validation.Validator;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.ServerErrorException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import javax.jdo.FetchGroup;
 import java.security.Principal;
 import java.util.Collection;
@@ -171,6 +171,8 @@ public class ProjectResource extends AbstractApiResource {
     public Response getProjectsConcise(
             @Parameter(description = "Name to filter on. Must be exact match.")
             @QueryParam("name") final String nameFilter,
+            @Parameter(description = "Version to filter on. Must be exact match.")
+            @QueryParam("version") final String versionFilter,
             @Parameter(description = "Classifier to filter on. Must be exact match.")
             @QueryParam("classifier") final String classifierFilter,
             @Parameter(description = "Tag to filter on. Must be exact match.")
@@ -185,7 +187,7 @@ public class ProjectResource extends AbstractApiResource {
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
         final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
+                .getPageConcise(nameFilter, versionFilter, classifierFilter, tagFilter, teamFilter, activeFilter, onlyRootFilter, /* parentUuidFilter */ null, includeMetrics));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
@@ -216,6 +218,8 @@ public class ProjectResource extends AbstractApiResource {
             @PathParam("uuid") final String parentUuid,
             @Parameter(description = "Name to filter on. Must be exact match.")
             @QueryParam("name") final String nameFilter,
+            @Parameter(description = "Version to filter on. Must be exact match.")
+            @QueryParam("version") final String versionFilter,
             @Parameter(description = "Classifier to filter on. Must be exact match.")
             @QueryParam("classifier") final String classifierFilter,
             @Parameter(description = "Tag to filter on. Must be exact match.")
@@ -228,7 +232,7 @@ public class ProjectResource extends AbstractApiResource {
             @QueryParam("includeMetrics") final boolean includeMetrics
     ) {
         final List<ConciseProjectListRow> projectRows = withJdbiHandle(getAlpineRequest(), handle -> handle.attach(ProjectDao.class)
-                .getPageConcise(nameFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
+                .getPageConcise(nameFilter, versionFilter, classifierFilter, tagFilter, teamFilter, activeFilter, /* onlyRootFilter */ null, UUID.fromString(parentUuid), includeMetrics));
 
         final long totalCount = projectRows.isEmpty() ? 0 : projectRows.getFirst().totalCount();
         final List<ConciseProject> projects = projectRows.stream().map(ConciseProject::new).toList();
