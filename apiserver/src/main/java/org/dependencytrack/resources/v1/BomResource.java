@@ -437,8 +437,13 @@ public class BomResource extends AbstractApiResource {
                             : GitLabClient.REF_PATH_CLAIM, String.class);
             Project project = qm.getProject(projectName, projectVersion);
 
-            final GitLabRole gitLabRole = GitLabRole
-                    .valueOf(claims.get(GitLabClient.USER_ACCESS_LEVEL_CLAIM, String.class).toUpperCase());
+            String accessLevel = claims.get(GitLabClient.USER_ACCESS_LEVEL_CLAIM, String.class);
+            if (accessLevel == null) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("Missing user_access_level claim in token").build();
+            }
+
+            final GitLabRole gitLabRole = GitLabRole.valueOf(accessLevel.toUpperCase());
             Role role = (gitLabRole != null)
                     ? qm.getRoleByName(gitLabRole.getDescription())
                     : null;
