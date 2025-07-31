@@ -107,7 +107,7 @@ public class IntegrationResource extends AlpineResource {
     @POST
     @Path("gitlab/{state}")
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Set state of gitlab integration", description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>")
+    @Operation(summary = "Enable or disable GitLab integration", description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "GitLab state set successfully"),
             @ApiResponse(responseCode = "304", description = "The GitLab integration is already in the desired state"),
@@ -115,22 +115,29 @@ public class IntegrationResource extends AlpineResource {
     })
     @PermissionRequired({ Permissions.Constants.SYSTEM_CONFIGURATION,
             Permissions.Constants.SYSTEM_CONFIGURATION_CREATE }) // Require admin privileges due to system impact
-    public Response handleGitLabStateChange(
+    public Response setGitLabEnabledState(
             @Parameter(description = "A valid boolean", required = true) @PathParam("state") String state) {
-        try (QueryManager qm = new QueryManager()) {
-            final ConfigProperty property = qm.getConfigProperty(GITLAB_ENABLED.getGroupName(),
-                    GITLAB_ENABLED.getPropertyName());
+        try (final QueryManager qm = new QueryManager()) {
+            final Response response = qm.callInTransaction(() -> {
+                final ConfigProperty property = qm.getConfigProperty(GITLAB_ENABLED.getGroupName(),
+                        GITLAB_ENABLED.getPropertyName());
 
-            if (!property.getPropertyValue().equals(state)) {
-                if (!state.equalsIgnoreCase("true") && !state.equalsIgnoreCase("false")) {
+                if (property.getPropertyValue().equals(state))
+                    return Response.notModified().build();
+
+                if (!state.equalsIgnoreCase("true") && !state.equalsIgnoreCase("false"))
                     return Response.status(Response.Status.BAD_REQUEST).build();
-                }
-                property.setPropertyValue(state);
-                qm.persist(property);
-                Event.dispatch(new GitLabIntegrationStateEvent());
-            }
-        }
 
-        return Response.ok().build();
+                property.setPropertyValue(state);
+
+                return Response.ok().entity(qm.persist(property)).build();
+            });
+
+            if (response.getStatus() == Response.Status.OK.getStatusCode())
+                Event.dispatch(new GitLabIntegrationStateEvent());
+
+            return response;
+        }
     }
+
 }

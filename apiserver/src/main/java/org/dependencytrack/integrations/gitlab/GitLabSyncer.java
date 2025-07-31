@@ -28,11 +28,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.locks.Lock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import com.google.common.util.concurrent.Striped;
 
 import org.dependencytrack.integrations.AbstractIntegrationPoint;
 import org.dependencytrack.integrations.PermissionsSyncer;
@@ -50,12 +47,10 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
     private static final String ROLE_CLAIM_PREFIX = "https://gitlab.org/claims/groups/";
 
     private final OidcUser user;
-    private final Striped<Lock> locks;
 
     private GitLabClient gitLabClient;
 
     public GitLabSyncer(final OidcUser user, final GitLabClient gitlabClient) {
-        this.locks = Striped.lock(128);
         this.user = user;
         this.gitLabClient = gitlabClient;
     }
@@ -87,17 +82,19 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
         }
     }
 
-    private List<Project> createProjects(List<GitLabProject> gitLabProjects) {
-        List<Project> projects = new ArrayList<>();
+    private List<Project> createProjects(final List<GitLabProject> gitLabProjects) {
+        final List<Project> projects = new ArrayList<>();
 
-        Map<GitLabRole, Role> roleMap = Arrays.stream(GitLabRole.values())
+        final Map<GitLabRole, Role> roleMap = Arrays.stream(GitLabRole.values())
                 .collect(Collectors.toMap(Function.identity(), role -> qm.getRoleByName(role.getDescription())));
 
         for (var gitLabProject : gitLabProjects) {
-            final Lock lock = locks.get(gitLabProject.getFullPath());
-            lock.lock();
+            qm.runInTransaction(() -> {
+                if (!qm.tryAcquireAdvisoryLock(gitLabProject.getFullPath()))
+                    throw new IllegalStateException("Failed to acquire advisory lock for GitLab project %s, " +
+                            "likely because another sync for this project is already in progress"
+                                    .formatted(gitLabProject.getFullPath()));
 
-            try {
                 Project project = qm.getProject(gitLabProject.getFullPath(), null);
 
                 if (project == null) {
@@ -114,9 +111,7 @@ public class GitLabSyncer extends AbstractIntegrationPoint implements Permission
 
                 qm.addRoleToUser(user, roleMap.get(gitLabProject.getMaxAccessLevel().stringValue()), project);
                 projects.add(qm.updateProject(project, false));
-            } finally {
-                lock.unlock();
-            }
+            });
         }
 
         return projects;

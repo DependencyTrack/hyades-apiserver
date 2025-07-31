@@ -496,27 +496,30 @@ public class PermissionResource extends AlpineResource {
     @PermissionRequired({ Permissions.Constants.ACCESS_MANAGEMENT, Permissions.Constants.ACCESS_MANAGEMENT_UPDATE })
     public Response setRolePermissions(@Parameter(description = "Role UUID and requested permissions") @Valid final RolePermissionsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
-            Role role = qm.getObjectByUuid(Role.class, request.role(), Role.FetchGroup.ALL.name());
-            if (role == null)
-                return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
+            return qm.callInTransaction(() -> {
+                Role role = qm.getObjectByUuid(Role.class, request.role(), Role.FetchGroup.ALL.name());
+                if (role == null)
+                    return Response.status(Response.Status.NOT_FOUND).entity("The role could not be found.").build();
 
-            final List<String> permissionNames = request.permissions()
-                    .stream()
-                    .map(Permissions::name)
-                    .toList();
+                final List<String> permissionNames = request.permissions()
+                        .stream()
+                        .map(Permissions::name)
+                        .toList();
 
-            final Set<Permission> requestedPermissions = Set.copyOf(qm.getPermissionsByName(permissionNames));
+                final Set<Permission> requestedPermissions = Set.copyOf(qm.getPermissionsByName(permissionNames));
 
-            if (role.getPermissions().equals(requestedPermissions))
-                return Response.notModified().entity("Role already has selected permission(s).").build();
+                if (role.getPermissions().equals(requestedPermissions))
+                    return Response.notModified().entity("Role already has selected permission(s).").build();
 
-            role.setPermissions(requestedPermissions);
-            role = qm.persist(role);
+                role.setPermissions(requestedPermissions);
+                role = qm.persist(role);
 
-            super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
-                    "Set permissions for role: %s / permissions: %s"
-                            .formatted(role.getName(), permissionNames));
-            return Response.ok(role).build();
+                super.logSecurityEvent(LOGGER, SecurityMarkers.SECURITY_AUDIT,
+                        "Set permissions for role: %s / permissions: %s"
+                                .formatted(role.getName(), permissionNames));
+
+                return Response.ok(role).build();
+            });
         }
     }
 

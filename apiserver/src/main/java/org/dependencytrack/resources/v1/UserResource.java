@@ -28,6 +28,7 @@ import alpine.model.Team;
 import alpine.model.User;
 import alpine.notification.Notification;
 import alpine.notification.NotificationLevel;
+import alpine.persistence.PaginatedResult;
 import alpine.security.crypto.KeyManager;
 import alpine.server.auth.AlpineAuthenticationException;
 import alpine.server.auth.AuthenticationNotRequired;
@@ -299,10 +300,10 @@ public class UserResource extends AlpineResource {
             @QueryParam("userType") String type,
             @QueryParam("username") String username) {
         try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-            final List<User> users;
+            final PaginatedResult result;
             if (type == null) {
-                users = qm.getAllUsers();
-                return Response.ok(users).header(TOTAL_COUNT_HEADER, users.size()).build();
+                result = qm.getAllUsers();
+                return Response.ok(result).header(TOTAL_COUNT_HEADER, result.getTotal()).build();
             }
 
             Query<? extends User> query = qm.getPersistenceManager()

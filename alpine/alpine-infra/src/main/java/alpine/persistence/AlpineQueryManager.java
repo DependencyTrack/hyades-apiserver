@@ -348,10 +348,20 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
      * @return a list of all Users
      * @since 1.0.0
      */
-    public List<User> getAllUsers() {
-        final Query<User> query = pm.newQuery(User.class);
+    public PaginatedResult getAllUsers() {
+        final Extent<User> extent = pm.getExtent(User.class, true);
+        final Query<User> query = pm.newQuery(extent)
+                .orderBy("username ASC");
+
+        if (filter != null) {
+            query.setFilter("username.toLowerCase().matches(:filter)");
+            final String filterString = ".*" + filter.toLowerCase() + ".*";
+            return execute(query, filterString);
+        }
+
         query.setOrdering("username asc");
-        return executeAndCloseList(query);
+
+        return execute(query);
     }
 
     /**
