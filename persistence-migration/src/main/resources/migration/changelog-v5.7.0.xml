@@ -1,0 +1,364 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        objectQuotingStrategy="QUOTE_ALL_OBJECTS"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="v5.7.0-1" author="jhoward-lm">
+        <!-- Create temporary table for permissions -->
+        <createTable tableName="PERMISSION_NEW">
+            <column autoIncrement="true" name="ID" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PERMISSION_NEW_PK" />
+            </column>
+
+            <column name="DESCRIPTION" type="TEXT" />
+
+            <column name="NAME" type="TEXT">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+
+        <!-- Create temporary table for user permissions -->
+        <createTable ifNotExists="true" tableName="USERS_PERMISSIONS_NEW">
+            <column name="USER_ID" type="BIGINT">
+                <constraints
+                        nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="USERS_PERMISSIONS_NEW_PK"
+                        foreignKeyName="USERS_PERMISSIONS_NEW_USER_FK"
+                        referencedTableName="USER"
+                        referencedColumnNames="ID"
+                        validateNullable="true"
+                        validateForeignKey="true"
+                        deleteCascade="true" />
+            </column>
+
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints
+                        nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="USERS_PERMISSIONS_NEW_PK"
+                        foreignKeyName="USERS_PERMISSIONS_NEW_PERMISSION_FK"
+                        referencedTableName="PERMISSION_NEW"
+                        referencedColumnNames="ID"
+                        validateNullable="true"
+                        validateForeignKey="true"
+                        deleteCascade="true" />
+            </column>
+        </createTable>
+
+        <!-- Create temporary table for team permissions -->
+        <createTable ifNotExists="true" tableName="TEAMS_PERMISSIONS_NEW">
+            <column name="TEAM_ID" type="BIGINT">
+                <constraints
+                        nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="TEAMS_PERMISSIONS_NEW_PK"
+                        foreignKeyName="TEAMS_PERMISSIONS_NEW_TEAM_FK"
+                        referencedTableName="TEAM"
+                        referencedColumnNames="ID"
+                        validateNullable="true"
+                        validateForeignKey="true"
+                        deleteCascade="true" />
+            </column>
+
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints
+                        nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="TEAMS_PERMISSIONS_NEW_PK"
+                        foreignKeyName="TEAMS_PERMISSIONS_NEW_PERMISSION_FK"
+                        referencedTableName="PERMISSION_NEW"
+                        referencedColumnNames="ID"
+                        validateNullable="true"
+                        validateForeignKey="true"
+                        deleteCascade="true" />
+            </column>
+        </createTable>
+
+        <!-- Create temporary table for role permissions -->
+         <createTable ifNotExists="true" tableName="ROLES_PERMISSIONS_NEW">
+            <column name="ROLE_ID" type="BIGINT">
+                <constraints
+                        nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="ROLES_PERMISSIONS_NEW_PK"
+                        foreignKeyName="ROLES_PERMISSIONS_NEW_ROLE_FK"
+                        referencedTableName="ROLE"
+                        referencedColumnNames="ID"
+                        validateNullable="true"
+                        validateForeignKey="true"
+                        deleteCascade="true" />
+            </column>
+
+            <column name="PERMISSION_ID" type="BIGINT">
+                <constraints
+                        nullable="false"
+                        primaryKey="true"
+                        primaryKeyName="ROLES_PERMISSIONS_NEW_PK"
+                        foreignKeyName="ROLES_PERMISSIONS_NEW_PERMISSION_FK"
+                        referencedTableName="PERMISSION_NEW"
+                        referencedColumnNames="ID"
+                        validateNullable="true"
+                        validateForeignKey="true"
+                        deleteCascade="true" />
+            </column>
+        </createTable>
+
+        <!-- Populate new permissions table -->
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="ACCESS_MANAGEMENT" />
+            <column name="DESCRIPTION" value="Allows the management of users, teams, and API keys" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="BADGES_READ" />
+            <column name="DESCRIPTION" value="Provides the ability to view badges" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="BOM_CREATE" />
+            <column name="DESCRIPTION" value="Allows the ability to upload CycloneDX Software Bill of Materials (SBOM)" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="BOM_READ" />
+            <column name="DESCRIPTION" value="Allows the ability to view CycloneDX Software Bill of Materials (SBOM)" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="FINDING_CREATE" />
+            <column name="DESCRIPTION" value="Provides the ability to upload supported VEX documents to a project" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="FINDING_READ" />
+            <column name="DESCRIPTION" value="Provides the ability read the VEX document for a project" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="FINDING_UPDATE" />
+            <column name="DESCRIPTION" value="Provides the ability to make analysis decisions on vulnerabilities and upload supported VEX documents for a project" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="NOTIFICATION_RULE_MANAGEMENT" />
+            <column name="DESCRIPTION" value="Allows configuration of notifications and email settings" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="POLICY_VIOLATION_CREATE" />
+            <column name="DESCRIPTION" value="Provides the ability to create policy violations" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="POLICY_VIOLATION_READ" />
+            <column name="DESCRIPTION" value="Provides the ability to view policy violations" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="POLICY_VIOLATION_UPDATE" />
+            <column name="DESCRIPTION" value="Provides the ability to make analysis decisions on policy violations" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="POLICY_MANAGEMENT" />
+            <column name="DESCRIPTION" value="Allows the creation, modification, and deletion of policy" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="PORTFOLIO_ACCESS_CONTROL_BYPASS" />
+            <column name="DESCRIPTION" value="Provides the ability to bypass portfolio access control, granting access to all projects" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="PORTFOLIO_MANAGEMENT" />
+            <column name="DESCRIPTION" value="Allows the creation, modification, and deletion of data in the portfolio" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="PROJECT_DELETE" />
+            <column name="DESCRIPTION" value="Provides the ability to delete resources within a project" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="PROJECT_READ" />
+            <column name="DESCRIPTION" value="Provides the ability to read resources within a project" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="PROJECT_UPDATE" />
+            <column name="DESCRIPTION" value="Provides the ability to update resources within a project" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="SYSTEM_CONFIGURATION" />
+            <column name="DESCRIPTION" value="Allows all access to configuration of the system including notifications, repositories, and email settings" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="TAG_MANAGEMENT" />
+            <column name="DESCRIPTION" value="Allows the management of global tag definitions" />
+        </insert>
+        <insert tableName="PERMISSION_NEW">
+            <column name="NAME"        value="VULNERABILITY_MANAGEMENT" />
+            <column name="DESCRIPTION" value="Allows the management of custom vulnerabilities" />
+        </insert>
+
+        <!-- Reassign any existing permissions to their new counterparts -->
+        <sql splitStatements="false">
+            DO $$
+            DECLARE
+              -- List of tables to update
+              referencing_tables TEXT[] := ARRAY['TEAMS_PERMISSIONS', 'USERS_PERMISSIONS', 'ROLES_PERMISSIONS'];
+              tbl_name           TEXT;
+              id_col             TEXT;
+            BEGIN
+              -- Loop through our arrays by index
+              FOREACH tbl_name IN ARRAY referencing_tables
+              LOOP
+                id_col := regexp_replace(tbl_name, '([A-Z]+?)S_PERMISSIONS', '\1') || '_ID';
+
+                -- Build dynamic INSERT statement
+                EXECUTE format($fmt$
+                  -- Input mapping of old permission names to their updated counterparts
+                  WITH cte_permission_map (old_names, new_names) AS (
+                    VALUES
+                      ('ACCESS_MANAGEMENT%%', ARRAY['ACCESS_MANAGEMENT']),
+                      ('BOM_UPLOAD', ARRAY['BOM_CREATE', 'BOM_READ']),
+                      ('POLICY_MANAGEMENT%%', ARRAY['POLICY_MANAGEMENT', 'POLICY_VIOLATION_CREATE']),
+                      ('POLICY_VIOLATION_ANALYSIS', ARRAY['POLICY_VIOLATION_UPDATE']),
+                      ('PORTFOLIO_MANAGEMENT%%', ARRAY['PORTFOLIO_MANAGEMENT', 'PROJECT_UPDATE', 'PROJECT_DELETE']),
+                      ('PROJECT_CREATION_UPLOAD', ARRAY['PORTFOLIO_MANAGEMENT', 'BOM_CREATE', 'BOM_READ']),
+                      ('SYSTEM_CONFIGURATION%%', ARRAY['SYSTEM_CONFIGURATION', 'NOTIFICATION_RULE_MANAGEMENT']),
+                      ('TAG_MANAGEMENT%%', ARRAY['TAG_MANAGEMENT']),
+                      ('VIEW_BADGES', ARRAY['BADGES_READ']),
+                      ('VIEW_POLICY_VIOLATION', ARRAY['POLICY_VIOLATION_READ']),
+                      ('VIEW_PORTFOLIO', ARRAY['PROJECT_READ']),
+                      ('VIEW_VULNERABILITY', ARRAY['FINDING_READ']),
+                      ('VULNERABILITY_ANALYSIS', ARRAY['VULNERABILITY_MANAGEMENT']),
+                      ('VULNERABILITY_ANALYSIS_CREATE', ARRAY['FINDING_CREATE']),
+                      ('VULNERABILITY_ANALYSIS_READ', ARRAY['FINDING_READ']),
+                      ('VULNERABILITY_ANALYSIS_UPDATE', ARRAY['FINDING_UPDATE']),
+                      ('VULNERABILITY_MANAGEMENT%%', ARRAY['VULNERABILITY_MANAGEMENT'])
+                  ),
+                  -- Get IDs of entities mapped to old permissions
+                  cte_entities AS (
+                    SELECT t.%I AS id
+                      FROM %I AS t
+                     INNER JOIN "PERMISSION" AS p
+                        ON p."ID" = t."PERMISSION_ID"
+                     INNER JOIN cte_permission_map
+                        ON p."NAME" LIKE cte_permission_map.old_names
+                  ),
+                  -- Get IDs of new permissions
+                  cte_new_permissions AS (
+                    SELECT p_new."ID" AS id
+                      FROM cte_permission_map
+                     INNER JOIN "PERMISSION_NEW" AS p_new
+                        ON p_new."NAME" = ANY(cte_permission_map.new_names)
+                  )
+                  INSERT INTO %I (%I, "PERMISSION_ID")
+                  SELECT cte_entities.id, cte_new_permissions.id
+                    FROM cte_entities, cte_new_permissions
+                  ON CONFLICT DO NOTHING;
+                  $fmt$, id_col, tbl_name, tbl_name || '_NEW', id_col
+                );
+
+                RAISE NOTICE 'Updated table "%" on column "%" → new permission', tbl_name, id_col;
+              END LOOP;
+            END $$
+            LANGUAGE plpgsql;
+        </sql>
+
+        <!-- Drop old tables -->
+        <dropTable tableName="PERMISSION"        cascadeConstraints="true" />
+        <dropTable tableName="USERS_PERMISSIONS" cascadeConstraints="true" />
+        <dropTable tableName="TEAMS_PERMISSIONS" cascadeConstraints="true" />
+        <dropTable tableName="ROLES_PERMISSIONS" cascadeConstraints="true" />
+
+        <!-- Rename new tables to original names -->
+        <renameTable oldTableName="PERMISSION_NEW"        newTableName="PERMISSION" />
+        <renameTable oldTableName="USERS_PERMISSIONS_NEW" newTableName="USERS_PERMISSIONS" />
+        <renameTable oldTableName="TEAMS_PERMISSIONS_NEW" newTableName="TEAMS_PERMISSIONS" />
+        <renameTable oldTableName="ROLES_PERMISSIONS_NEW" newTableName="ROLES_PERMISSIONS" />
+
+        <!-- Rename constraints to remove `_NEW` -->
+        <sql splitStatements="true">
+            ALTER TABLE "PERMISSION" RENAME CONSTRAINT "PERMISSION_NEW_PK" TO "PERMISSION_PK";
+
+            ALTER TABLE "USERS_PERMISSIONS" RENAME CONSTRAINT "USERS_PERMISSIONS_NEW_PK" TO "USERS_PERMISSIONS_PK";
+            ALTER TABLE "USERS_PERMISSIONS" RENAME CONSTRAINT "USERS_PERMISSIONS_NEW_USER_FK" TO "USERS_PERMISSIONS_USER_FK";
+            ALTER TABLE "USERS_PERMISSIONS" RENAME CONSTRAINT "USERS_PERMISSIONS_NEW_PERMISSION_FK" TO "USERS_PERMISSIONS_PERMISSION_FK";
+
+            ALTER TABLE "TEAMS_PERMISSIONS" RENAME CONSTRAINT "TEAMS_PERMISSIONS_NEW_PK" TO "TEAMS_PERMISSIONS_PK";
+            ALTER TABLE "TEAMS_PERMISSIONS" RENAME CONSTRAINT "TEAMS_PERMISSIONS_NEW_TEAM_FK" TO "TEAMS_PERMISSIONS_TEAM_FK";
+            ALTER TABLE "TEAMS_PERMISSIONS" RENAME CONSTRAINT "TEAMS_PERMISSIONS_NEW_PERMISSION_FK" TO "TEAMS_PERMISSIONS_PERMISSION_FK";
+
+            ALTER TABLE "ROLES_PERMISSIONS" RENAME CONSTRAINT "ROLES_PERMISSIONS_NEW_PK" TO "ROLES_PERMISSIONS_PK";
+            ALTER TABLE "ROLES_PERMISSIONS" RENAME CONSTRAINT "ROLES_PERMISSIONS_NEW_ROLE_FK" TO "ROLES_PERMISSIONS_ROLE_FK";
+            ALTER TABLE "ROLES_PERMISSIONS" RENAME CONSTRAINT "ROLES_PERMISSIONS_NEW_PERMISSION_FK" TO "ROLES_PERMISSIONS_PERMISSION_FK";
+        </sql>
+
+        <createIndex tableName="PERMISSION" indexName="PERMISSION_NAME_IDX" unique="true">
+            <column name="NAME"/>
+        </createIndex>
+
+        <!-- Recreate triggers -->
+        <sql splitStatements="true">
+            DROP TRIGGER IF EXISTS trigger_effective_permissions_mx_on_teams_permissions_insert ON "TEAMS_PERMISSIONS";
+            DROP TRIGGER IF EXISTS trigger_effective_permissions_mx_on_teams_permissions_delete ON "TEAMS_PERMISSIONS";
+            DROP TRIGGER IF EXISTS trigger_effective_permissions_mx_on_teams_permissions_update ON "TEAMS_PERMISSIONS";
+
+            -- INSERT trigger for TEAMS_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_insert
+            AFTER INSERT ON "TEAMS_PERMISSIONS"
+            REFERENCING NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_insert();
+
+            -- DELETE trigger for TEAMS_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_delete
+            AFTER DELETE ON "TEAMS_PERMISSIONS"
+            REFERENCING OLD TABLE AS old_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_delete();
+
+            -- UPDATE trigger for TEAMS_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_teams_permissions_update
+            AFTER UPDATE ON "TEAMS_PERMISSIONS"
+            REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION effective_permissions_mx_on_update();
+
+            DROP TRIGGER IF EXISTS trigger_effective_permissions_mx_on_roles_permissions_insert ON "ROLES_PERMISSIONS";
+            DROP TRIGGER IF EXISTS trigger_effective_permissions_mx_on_roles_permissions_delete ON "ROLES_PERMISSIONS";
+            DROP TRIGGER IF EXISTS trigger_effective_permissions_mx_on_roles_permissions_update ON "ROLES_PERMISSIONS";
+
+            -- INSERT trigger for ROLES_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_roles_permissions_insert
+            AFTER INSERT ON "ROLES_PERMISSIONS"
+            REFERENCING NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION role_effective_permissions_mx_on_insert();
+
+            -- DELETE trigger for ROLES_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_roles_permissions_delete
+            AFTER DELETE ON "ROLES_PERMISSIONS"
+            REFERENCING OLD TABLE AS old_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION role_effective_permissions_mx_on_delete();
+
+            -- UPDATE trigger for ROLES_PERMISSIONS
+            CREATE TRIGGER trigger_effective_permissions_mx_on_roles_permissions_update
+            AFTER UPDATE ON "ROLES_PERMISSIONS"
+            REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION role_effective_permissions_mx_on_update();
+        </sql>
+
+        <!-- Repopulate the USER_PROJECT_EFFECTIVE_PERMISSIONS table -->
+        <sql splitStatements="false">
+            DROP TRIGGER IF EXISTS trigger_prevent_direct_effective_permissions_writes ON "USER_PROJECT_EFFECTIVE_PERMISSIONS";
+
+            -- Backfill the USER_PROJECT_EFFECTIVE_PERMISSIONS table for existing PROJECT_ACCESS_TEAMS entries
+            DO $$
+            BEGIN
+              PERFORM recalc_user_project_effective_permissions((SELECT ARRAY_AGG("ID") FROM "PROJECT"));
+            END $$
+            LANGUAGE plpgsql;
+
+            -- Prevent direct inserts/updates/writes to USER_PROJECT_EFFECTIVE_PERMISSIONS
+            CREATE TRIGGER trigger_prevent_direct_effective_permissions_writes
+            BEFORE DELETE OR INSERT OR UPDATE ON "USER_PROJECT_EFFECTIVE_PERMISSIONS"
+            FOR EACH STATEMENT
+            EXECUTE FUNCTION prevent_direct_effective_permissions_writes();
+
+            DROP FUNCTION IF EXISTS has_user_project_access(BIGINT, BIGINT);
+        </sql>
+    </changeSet>
+</databaseChangeLog>
