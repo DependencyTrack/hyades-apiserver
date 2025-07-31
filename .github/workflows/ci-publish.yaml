@@ -79,7 +79,7 @@ jobs:
 
       - name: Create Checksums and SBOM
         run: |-
-          pushd apiserver/target
+          pushd target
           echo "# SHA1" >> checksums.txt
           sha1sum dependency-track-apiserver.jar >> checksums.txt
           echo "# SHA256" >> checksums.txt
@@ -94,6 +94,6 @@ jobs:
         run: |-
           gh release upload ${{ needs.read-version.outputs.version }} \
             --clobber \
-            apiserver/target/dependency-track-apiserver.jar \
-            apiserver/target/checksums.txt \
-            apiserver/target/bom.json
+            target/dependency-track-apiserver.jar \
+            target/checksums.txt \
+            target/bom.json

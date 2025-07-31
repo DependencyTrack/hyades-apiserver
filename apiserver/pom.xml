@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>dependency-track-parent</artifactId>
-        <version>5.6.0-SNAPSHOT</version>
+        <version>5.7.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>apiserver</artifactId>
@@ -76,44 +76,54 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>api</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>datanucleus-plugin</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>liquibase-support</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>persistence-jooq</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>persistence-migration</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>proto</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- Alpine -->
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-common</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-model</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-infra</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-server</artifactId>
+            <version>${project.version}</version>
             <exclusions>
                 <!-- this exclusion done to get rid of vulnerability in the project as this transitive dependency is not being used in the project
                 Vulnerability : CVE-2022-1471 (https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-1471 ) -->
@@ -130,6 +140,7 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-executable-war</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <!-- Common Expression Language (CEL) -->

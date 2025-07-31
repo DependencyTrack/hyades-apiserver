@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>dependency-track-parent</artifactId>
-        <version>5.6.0-SNAPSHOT</version>
+        <version>5.7.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>coverage-report</artifactId>
@@ -25,33 +25,39 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-common</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-model</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-infra</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>alpine-server</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>apiserver</artifactId>
+            <version>${project.version}</version>
             <classifier>classes</classifier>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>datanucleus-plugin</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -62,11 +68,13 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>liquibase-support</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>persistence-migration</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

@@ -103,7 +103,7 @@ public class ProcessorManagerTest {
             processorManager.registerProcessor("foo", inputTopic, processor);
 
             for (int i = 0; i < 100; i++) {
-                producer.send(new ProducerRecord<>("input", "foo" + i, "bar" + i));
+                producer.send(new ProducerRecord<>("input", "foo" + i, "bar" + i)).get();
             }
 
             processorManager.startAll();
@@ -172,7 +172,7 @@ public class ProcessorManagerTest {
             processorManager.registerBatchProcessor("foo", inputTopic, recordProcessor);
 
             for (int i = 0; i < 1_000; i++) {
-                producer.send(new ProducerRecord<>("input", "foo" + i, "bar" + i));
+                producer.send(new ProducerRecord<>("input", "foo" + i, "bar" + i)).get();
             }
 
             processorManager.startAll();
@@ -203,7 +203,7 @@ public class ProcessorManagerTest {
             processorManager.registerProcessor("foo", inputTopic, processor);
 
             for (int i = 0; i < 100; i++) {
-                producer.send(new ProducerRecord<>("input", "foo" + i, "bar" + i));
+                producer.send(new ProducerRecord<>("input", "foo" + i, "bar" + i)).get();
             }
 
             processorManager.startAll();
