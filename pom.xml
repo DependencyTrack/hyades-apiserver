@@ -24,7 +24,7 @@
     <groupId>org.dependencytrack</groupId>
     <artifactId>dependency-track-parent</artifactId>
     <packaging>pom</packaging>
-    <version>5.6.0</version>
+    <version>5.6.1-SNAPSHOT</version>
 
     <modules>
         <module>support/datanucleus-plugin</module>
