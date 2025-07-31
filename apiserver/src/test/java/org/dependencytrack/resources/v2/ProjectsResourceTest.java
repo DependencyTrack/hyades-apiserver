@@ -25,14 +25,13 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.License;
-import org.dependencytrack.model.OrganizationalContact;
-import org.dependencytrack.model.OrganizationalEntity;
 import org.dependencytrack.model.Project;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.net.URI;
-import java.util.List;
+import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +42,7 @@ public class ProjectsResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(new ResourceConfig());
 
     @Test
-    public void getProjectComponents() {
+    public void listProjectComponents() {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
 
         var project = prepareProject();
@@ -59,24 +58,14 @@ public class ProjectsResourceTest extends ResourceTest {
                 {
                   "components" : [ {
                         "name" : "component-name",
-                        "authors" : [ ],
                         "version" : "3.0",
                         "group" : "component-group",
-                        "supplier" : {
-                              "name" : "foo",
-                              "urls" : [ "https://example.com" ],
-                              "contacts" : [ {
-                                "name" : "author"
-                              } ]
-                        },
                         "purl" : "pkg:maven/foo/bar@3.0",
                         "internal" : false,
-                        "external_references" : [ ],
                         "occurrence_count" : 0,
                         "uuid" : "${json-unit.any-string}"
                       }, {
                         "name" : "component-name",
-                        "authors" : [ ],
                         "version" : "2.0",
                         "group" : "component-group",
                         "purl" : "pkg:maven/foo/bar@2.0",
@@ -89,7 +78,6 @@ public class ProjectsResourceTest extends ResourceTest {
                               "fsf_libre" : false,
                               "custom_license" : false
                         },
-                        "external_references" : [ ],
                         "occurrence_count" : 0,
                         "uuid" : "${json-unit.any-string}"
                       }
@@ -118,15 +106,14 @@ public class ProjectsResourceTest extends ResourceTest {
                 {
                   "components" : [ {
                        "name" : "component-name",
-                       "authors" : [ {
-                         "name" : "author"
-                       } ],
                        "version" : "1.0",
                        "group" : "component-group",
                        "purl" : "pkg:maven/foo/bar@1.0",
                        "internal" : false,
-                       "external_references" : [ ],
                        "occurrence_count" : 0,
+                       "hashes": {
+                            "md5": "hash-md5"
+                       },
                        "uuid" : "${json-unit.any-string}"
                       }
                   ],
@@ -139,29 +126,73 @@ public class ProjectsResourceTest extends ResourceTest {
                 """);
     }
 
+    @Test
+    public void listProjectComponentsWithAclEnabledTest() {
+        enablePortfolioAccessControl();
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        // Create project and give access to current principal's team.
+        final Project accessProject = qm.createProject("acme-app-a", null, "1.0.0", null, null, null, null, false);
+        accessProject.addAccessTeam(team);
+
+        // Create a second project that the current principal has no access to.
+        final Project noAccessProject = qm.createProject("acme-app-b", null, "2.0.0", null, null, null, null, false);
+
+        Response response = jersey.target("/projects/" + accessProject.getUuid() + "/components")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assert.assertEquals(200, response.getStatus(), 0);
+
+        response = jersey.target("/projects/" + noAccessProject.getUuid() + "/components")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assert.assertEquals(401, response.getStatus(), 0);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "title" : "Unauthorized",
+                  "detail" : "Not authorized to access the requested resource.",
+                  "type" : "about:blank",
+                  "status" : 401
+                }
+                """);
+    }
+
+    @Test
+    public void listComponentsForProjectNotFoundTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        Response response = jersey.target("/projects/" + UUID.randomUUID() + "/components")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        Assert.assertEquals(404, response.getStatus(), 0);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type":"about:blank",
+                  "status": 404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
+                }
+                """);
+    }
+
     private Project prepareProject() {
         final Project project = qm.createProject("Acme Application", null, null, null, null, null, null, false);
-
-        final var author = new OrganizationalContact();
-        author.setName("author");
 
         final var license = new License();
         license.setLicenseId("MIT");
         license.setName("MIT License");
         qm.persist(license);
 
-        final var supplier = new OrganizationalEntity();
-        supplier.setName("foo");
-        supplier.setUrls(new String[]{"https://example.com"});
-        supplier.setContacts(List.of(author));
-
         Component component = new Component();
         component.setProject(project);
-        component.setAuthors(List.of(author));
         component.setGroup("component-group");
         component.setName("component-name");
         component.setVersion("1.0");
         component.setPurl("pkg:maven/foo/bar@1.0");
+        component.setMd5("hash-md5");
         qm.createComponent(component, false);
 
         component = new Component();
@@ -179,7 +210,6 @@ public class ProjectsResourceTest extends ResourceTest {
         component.setName("component-name");
         component.setVersion("3.0");
         component.setPurl("pkg:maven/foo/bar@3.0");
-        component.setSupplier(supplier);
         qm.createComponent(component, false);
 
         return project;

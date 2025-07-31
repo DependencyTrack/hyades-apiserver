@@ -19,10 +19,6 @@ properties:
   name:
     type: string
     maxLength: 255
-  authors:
-    type: array
-    items:
-      $ref: "./organizational-contact.yaml"
   version:
     type: string
     maxLength: 255
@@ -32,57 +28,12 @@ properties:
   classifier:
     type: string
     maxLength: 255
-  publisher:
-    type: string
-    maxLength: 255
-  supplier:
-    $ref: "./organizational-entity.yaml"
-  filename:
-    type: string
-    maxLength: 255
-  extension:
-    type: string
-    maxLength: 255
-  sha1:
-    type: string
-    maxLength: 255
-  sha256:
-    type: string
-    maxLength: 255
-  sha384:
-    type: string
-    maxLength: 255
-  sha512:
-    type: string
-    maxLength: 255
-  sha3_256:
-    type: string
-    maxLength: 255
-  sha3_384:
-    type: string
-    maxLength: 255
-  sha3_512:
-    type: string
-    maxLength: 255
-  blake2b_256:
-    type: string
-    maxLength: 255
-  blake2b_384:
-    type: string
-    maxLength: 255
-  blake2b_512:
-    type: string
-    maxLength: 255
-  blake3:
-    type: string
-    maxLength: 255
+  hashes:
+    $ref: "./hashes.yaml"
   cpe:
     type: string
     maxLength: 255
   purl:
-    type: string
-    maxLength: 255
-  purl_coordinates:
     type: string
     maxLength: 255
   swid_tag_id:
@@ -90,9 +41,6 @@ properties:
     maxLength: 255
   internal:
     type: boolean
-  description:
-    type: string
-    maxLength: 255
   copyright:
     type: string
     maxLength: 255
@@ -107,13 +55,6 @@ properties:
     maxLength: 255
   resolved_license:
     $ref: "./license.yaml"
-  direct_dependencies:
-    type: string
-    maxLength: 255
-  external_references:
-    type: array
-    items:
-      $ref: "./external-reference.yaml"
   occurrence_count:
     type: integer
     format: int64
@@ -124,6 +65,3 @@ properties:
   uuid:
     type: string
     format: uuid
-required:
-- name
-- members

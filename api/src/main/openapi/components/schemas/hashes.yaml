@@ -16,15 +16,39 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  name:
+  sha1:
     type: string
-    description: Name of the organizational contact
-    maxLength: 255
-  email:
+    maxLength: 40
+  sha256:
     type: string
-    description: Email of the organizational contact
-    maxLength: 255
-  phone:
+    maxLength: 64
+  sha384:
     type: string
-    description: Phone of the organizational contact
+    maxLength: 96
+  sha512:
+    type: string
+    maxLength: 128
+  sha3_256:
+    type: string
+    maxLength: 64
+  sha3_384:
+    type: string
+    maxLength: 96
+  sha3_512:
+    type: string
+    maxLength: 128
+  blake2b_256:
+    type: string
+    maxLength: 64
+  blake2b_384:
+    type: string
+    maxLength: 96
+  blake2b_512:
+    type: string
+    maxLength: 128
+  blake3:
+    type: string
     maxLength: 255
+  md5:
+    type: string
+    maxLength: 32

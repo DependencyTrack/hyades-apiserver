@@ -21,16 +21,12 @@ package org.dependencytrack.persistence.jdbi;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.License;
-import org.dependencytrack.persistence.jdbi.mapping.ExternalReferenceMapper;
-import org.dependencytrack.persistence.jdbi.mapping.OrganizationalContactMapper;
-import org.dependencytrack.persistence.jdbi.mapping.OrganizationalEntityMapper;
 import org.dependencytrack.persistence.pagination.Page;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
-import org.jdbi.v3.sqlobject.config.RegisterColumnMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
@@ -92,26 +88,27 @@ public interface ComponentDao extends SqlObject {
             """)
     Long getComponentId(@Bind UUID componentUuid);
 
-    default Page<Component> getComponentsForProject(final long projectId, final Boolean onlyOutdated,
+    default Page<Component> listProjectComponents(final long projectId, final Boolean onlyOutdated,
                                                     final Boolean onlyDirect, final int limit, final String pageToken) {
         final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListComponentPageToken.class);
 
-        final List<Component> rows = getComponentsForProject(projectId, limit + 1, onlyOutdated, onlyDirect,
+        final List<Component> rows = listProjectComponents(projectId, limit + 1, onlyOutdated, onlyDirect,
                 decodedPageToken != null ? decodedPageToken.lastName() : null,
-                decodedPageToken != null ? decodedPageToken.lastVersion() : null);
+                decodedPageToken != null ? decodedPageToken.lastVersion() : null,
+                decodedPageToken != null ? decodedPageToken.lastId() : null);
 
         final List<Component> resultRows = rows.size() > 1
                 ? rows.subList(0, Math.min(rows.size(), limit))
                 : rows;
 
         final ListComponentPageToken nextPageToken = rows.size() > limit
-                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion())
+                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId())
                 : null;
 
         return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
     }
 
-    record ListComponentPageToken(String lastName, String lastVersion) {
+    record ListComponentPageToken(String lastName, String lastVersion, Long lastId) {
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
@@ -120,7 +117,6 @@ public interface ComponentDao extends SqlObject {
             <#-- @ftlvariable name="apiProjectAclCondition" type="String" -->
             SELECT "C"."ID",
                         "C"."NAME",
-                        "C"."AUTHORS",
                         "C"."BLAKE2B_256",
                         "C"."BLAKE2B_384",
                         "C"."BLAKE2B_512",
@@ -128,14 +124,7 @@ public interface ComponentDao extends SqlObject {
                         "C"."CLASSIFIER",
                         "C"."COPYRIGHT",
                         "C"."CPE",
-                        "C"."PUBLISHER",
                         "C"."PURL" AS "componentPurl",
-                        "C"."PURLCOORDINATES",
-                        "C"."DESCRIPTION",
-                        "C"."DIRECT_DEPENDENCIES" AS "directDependencies",
-                        "C"."EXTENSION",
-                        "C"."EXTERNAL_REFERENCES" AS "externalReferences",
-                        "C"."FILENAME",
                         "C"."GROUP",
                         "C"."INTERNAL",
                         "C"."LAST_RISKSCORE" AS "lastInheritedRiskScore",
@@ -151,7 +140,6 @@ public interface ComponentDao extends SqlObject {
                         "C"."SHA3_256",
                         "C"."SHA3_384",
                         "C"."SHA3_512",
-                        "C"."SUPPLIER",
                         "C"."SWIDTAGID",
                         "C"."UUID",
                         "C"."VERSION",
@@ -167,8 +155,10 @@ public interface ComponentDao extends SqlObject {
                 LEFT OUTER JOIN "LICENSE" "L" ON "C"."LICENSE_ID" = "L"."ID"
                 WHERE ${apiProjectAclCondition}
                 AND "C"."PROJECT_ID" = :projectId
-                <#if lastName && lastVersion>
-                   AND ("C"."NAME", "C"."VERSION") < (:lastName, :lastVersion)
+                <#if lastName && lastVersion && lastId>
+                    AND ("C"."NAME" > :lastName
+                            OR ("C"."NAME" = :lastName AND "C"."VERSION" < :lastVersion)
+                            OR ("C"."NAME" = :lastName AND "C"."VERSION" = :lastVersion AND "C"."ID" > :lastId))
                 </#if>
                 <#if onlyOutdated && onlyOutdated == true>
                     AND NOT (NOT EXISTS (
@@ -186,17 +176,15 @@ public interface ComponentDao extends SqlObject {
             """)
     @DefineNamedBindings
     @DefineApiProjectAclCondition(projectIdColumn = "\"PROJECT_ID\"")
-    @RegisterColumnMapper(ExternalReferenceMapper.class)
-    @RegisterColumnMapper(OrganizationalContactMapper.class)
-    @RegisterColumnMapper(OrganizationalEntityMapper.class)
     @RegisterRowMapper(ComponentListRowMapper.class)
-    List<Component> getComponentsForProject(
+    List<Component> listProjectComponents(
             @Bind long projectId,
             @Bind int limit,
             @Bind Boolean onlyOutdated,
             @Bind Boolean onlyDirect,
             @Bind String lastName,
-            @Bind String lastVersion
+            @Bind String lastVersion,
+            @Bind Long lastId
     );
 
     class ComponentListRowMapper implements RowMapper<Component> {

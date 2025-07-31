@@ -42,7 +42,7 @@ import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_VERSION;
 /**
  * @since 5.6.0
  */
-abstract class AbstractApiResource extends AlpineResource {
+public abstract class AbstractApiResource extends AlpineResource {
 
     private final Logger logger = Logger.getLogger(this.getClass());
 
@@ -114,7 +114,7 @@ abstract class AbstractApiResource extends AlpineResource {
      * @throws ProjectAccessDeniedException When the authenticated {@link java.security.Principal}
      *                                      does not have access to the given {@link Project}.
      */
-    void requireProjectAccess(final Handle jdbiHandle, final UUID projectUuid) {
+    protected void requireProjectAccess(final Handle jdbiHandle, final UUID projectUuid) {
         final var dao = jdbiHandle.attach(ProjectDao.class);
         final Boolean isAccessible = dao.isAccessible(projectUuid);
         if (!isAccessible) {

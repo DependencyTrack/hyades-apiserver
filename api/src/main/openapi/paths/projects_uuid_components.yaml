@@ -15,7 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 get:
-  operationId: getProjectComponents
+  operationId: listProjectComponents
   summary: Retrieves a list of all components for a given project.
   description: Requires permission <strong>VIEW_PORTFOLIO</strong>
   tags:
