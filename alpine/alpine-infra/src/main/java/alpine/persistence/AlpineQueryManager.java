@@ -39,6 +39,7 @@ import alpine.resources.AlpineRequest;
 import alpine.security.ApiKeyGenerator;
 import org.datanucleus.store.rdbms.query.JDOQLQuery;
 
+import javax.jdo.Extent;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.security.Principal;
