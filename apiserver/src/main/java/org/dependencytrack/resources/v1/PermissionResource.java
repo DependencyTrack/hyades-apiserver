@@ -19,9 +19,6 @@
 package org.dependencytrack.resources.v1;
 
 import alpine.common.logging.Logger;
-import alpine.model.LdapUser;
-import alpine.model.ManagedUser;
-import alpine.model.OidcUser;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
@@ -37,7 +34,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Role;
 import org.dependencytrack.model.validation.ValidUuid;
@@ -174,13 +170,7 @@ public class PermissionResource extends AlpineResource {
             @PathParam("permission") String permissionName) {
         try (QueryManager qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
-                User user = qm.getUser(username, (Class<? extends User>) switch (StringUtils.defaultString(type).toLowerCase()) {
-                    case "managed" -> ManagedUser.class;
-                    case "ldap" -> LdapUser.class;
-                    case "oidc" -> OidcUser.class;
-                    default -> User.class;
-                });
-
+                User user = qm.getUser(username);
                 if (user == null) {
                     return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
                 }
@@ -401,13 +391,7 @@ public class PermissionResource extends AlpineResource {
             @Parameter(description = "A username and valid list permission") @Valid final UserPermissionsSetRequest request) {
         try (QueryManager qm = new QueryManager()) {
             return qm.callInTransaction(() -> {
-                User user = qm.getUser(request.username(), (Class<? extends User>) switch (StringUtils.defaultString(request.userType()).toLowerCase()) {
-                    case "managed" -> ManagedUser.class;
-                    case "ldap" -> LdapUser.class;
-                    case "oidc" -> OidcUser.class;
-                    default -> User.class;
-                });
-
+                User user = qm.getUser(request.username());
                 if (user == null)
                     return Response.status(Response.Status.NOT_FOUND).entity("The user could not be found.").build();
 
