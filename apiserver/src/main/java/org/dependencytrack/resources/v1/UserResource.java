@@ -317,23 +317,20 @@ public class UserResource extends AlpineResource {
             if (username != null)
                 query.filter("username == :username").setParameters(username);
 
-            try {
-                users = List.copyOf(query.executeList());
-            } finally {
-                query.closeAll();
-            }
+            result = qm.execute(query);
+            final List<User> users = result.getList(User.class);
+            final long totalCount = result.getTotal();
 
-            if (users == null)
+            if (result == null || totalCount == 0)
                 return Response.status(Response.Status.NOT_FOUND)
                         .entity("No user(s) found for the given criteria [type=%s, username=%s]"
                                 .formatted(type, username))
                         .build();
 
-            if (username != null && users.size() == 1)
+            if (username != null && totalCount == 1)
                 return Response.ok(users.get(0)).build();
 
-            return Response.ok(users).header(TOTAL_COUNT_HEADER, users.size()).build();
-
+            return Response.ok(users).header(TOTAL_COUNT_HEADER, totalCount).build();
         }
     }
 

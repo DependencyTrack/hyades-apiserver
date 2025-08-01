@@ -42,7 +42,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.http.HttpHeaders;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.kafka.KafkaProducerInitializer;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -154,15 +153,6 @@ public class GitLabClientTest {
         Assert.assertEquals(1, gitLabProjects.size());
 
         Assert.assertEquals("project/with/topic", gitLabProjects.get(0).getFullPath());
-    }
-
-    @Test
-    public void testGetRolePermissions() {
-        String accessToken = "my-access-token";
-        GitLabClient client = new GitLabClient(accessToken);
-        List<Permissions> permissions = client.getRolePermissions(GitLabRole.DEVELOPER);
-        Assert.assertNotNull(permissions);
-        Assert.assertEquals(6, permissions.size()); // assume some permissions are returned
     }
 
     @Test

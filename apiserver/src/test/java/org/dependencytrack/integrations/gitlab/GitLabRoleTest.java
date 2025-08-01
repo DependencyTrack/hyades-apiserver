@@ -48,13 +48,13 @@ public class GitLabRoleTest {
     @Test
     public void testGetPermissionsForGuest() {
         Set<String> permissions = GitLabRole.GUEST.getPermissions();
-        Assert.assertEquals(3, permissions.size());
+        Assert.assertEquals(2, permissions.size());
     }
 
     @Test
     public void testGetPermissionsForPlanner() {
         Set<String> permissions = GitLabRole.PLANNER.getPermissions();
-        Assert.assertEquals(4, permissions.size());
+        Assert.assertEquals(3, permissions.size());
     }
 
     @Test
@@ -72,12 +72,12 @@ public class GitLabRoleTest {
     @Test
     public void testGetPermissionsForMaintainer() {
         Set<String> permissions = GitLabRole.MAINTAINER.getPermissions();
-        Assert.assertEquals(20, permissions.size());
+        Assert.assertEquals(12, permissions.size());
     }
 
     @Test
     public void testGetPermissionsForOwner() {
         Set<String> permissions = GitLabRole.OWNER.getPermissions();
-        Assert.assertEquals(32, permissions.size());
+        Assert.assertEquals(13, permissions.size());
     }
 }

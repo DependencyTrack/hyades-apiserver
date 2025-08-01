@@ -33,44 +33,24 @@ import org.dependencytrack.auth.Permissions;
 public enum GitLabRole {
 
     GUEST(10, "GitLab Project Guest", Set.of( // Applies to private and internal projects only
-            Permissions.Constants.VIEW_PORTFOLIO,
-            Permissions.Constants.VIEW_VULNERABILITY,
-            Permissions.Constants.VIEW_BADGES)),
+            Permissions.Constants.VIEW_BADGES,
+            Permissions.Constants.VIEW_PORTFOLIO)),
     PLANNER(15, "GitLab Project Planner", Set.of(
-            Permissions.Constants.VIEW_POLICY_VIOLATION)),
+            Permissions.Constants.VIEW_VULNERABILITY)),
     REPORTER(20, "GitLab Project Reporter", Set.of(
             Permissions.Constants.VIEW_POLICY_VIOLATION)),
     DEVELOPER(30, "GitLab Project Developer", Set.of(
             Permissions.Constants.BOM_UPLOAD,
             Permissions.Constants.PORTFOLIO_MANAGEMENT_READ,
-            Permissions.Constants.VULNERABILITY_ANALYSIS_READ,
-            Permissions.Constants.PROJECT_CREATION_UPLOAD)),
+            Permissions.Constants.PROJECT_CREATION_UPLOAD,
+            Permissions.Constants.VULNERABILITY_ANALYSIS_READ)),
     MAINTAINER(40, "GitLab Project Maintainer", Set.of(
-            Permissions.Constants.PORTFOLIO_MANAGEMENT,
-            Permissions.Constants.PORTFOLIO_MANAGEMENT_CREATE,
+            Permissions.Constants.POLICY_VIOLATION_ANALYSIS,
             Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE,
-            Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE,
-            Permissions.Constants.VULNERABILITY_ANALYSIS,
             Permissions.Constants.VULNERABILITY_ANALYSIS_CREATE,
-            Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE,
-            Permissions.Constants.POLICY_MANAGEMENT,
-            Permissions.Constants.POLICY_MANAGEMENT_CREATE,
-            Permissions.Constants.POLICY_MANAGEMENT_READ,
-            Permissions.Constants.POLICY_MANAGEMENT_UPDATE,
-            Permissions.Constants.POLICY_MANAGEMENT_DELETE)),
+            Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE)),
     OWNER(50, "GitLab Project Owner", Set.of(
-            Permissions.Constants.ACCESS_MANAGEMENT,
-            Permissions.Constants.ACCESS_MANAGEMENT_CREATE,
-            Permissions.Constants.ACCESS_MANAGEMENT_READ,
-            Permissions.Constants.ACCESS_MANAGEMENT_UPDATE,
-            Permissions.Constants.ACCESS_MANAGEMENT_DELETE,
-            Permissions.Constants.SYSTEM_CONFIGURATION,
-            Permissions.Constants.SYSTEM_CONFIGURATION_CREATE,
-            Permissions.Constants.SYSTEM_CONFIGURATION_READ,
-            Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE,
-            Permissions.Constants.SYSTEM_CONFIGURATION_DELETE,
-            Permissions.Constants.TAG_MANAGEMENT,
-            Permissions.Constants.TAG_MANAGEMENT_DELETE));
+            Permissions.Constants.PORTFOLIO_MANAGEMENT_DELETE));
 
     private final int accessLevel;
     private final String description;
@@ -96,10 +76,10 @@ public enum GitLabRole {
      *
      * @return A sorted set of permissions for this role.
      */
-public Set<String> getPermissions() {
-    return Stream.of(GitLabRole.values())
-            .filter(value -> value.accessLevel <= this.accessLevel) // Include current and lower access levels
-            .flatMap(value -> value.permissions.stream()) // Flatten permissions from all roles
-            .collect(Collectors.toCollection(LinkedHashSet::new)); // Collect into a LinkedHashSet to maintain order
-}
+    public Set<String> getPermissions() {
+        return Stream.of(GitLabRole.values())
+                .filter(value -> value.accessLevel <= this.accessLevel) // Include current and lower access levels
+                .flatMap(value -> value.permissions.stream())           // Flatten permissions from all roles
+                .collect(Collectors.toCollection(LinkedHashSet::new));  // Collect into a LinkedHashSet to maintain order
+    }
 }

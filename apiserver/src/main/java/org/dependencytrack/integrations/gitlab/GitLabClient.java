@@ -43,7 +43,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
-import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.common.HttpClientPool;
 
 import alpine.Config;
@@ -69,58 +68,6 @@ public class GitLabClient {
     public static final String REF_PATH_CLAIM = "ref_path";
     public static final String REF_TYPE_CLAIM = "ref_type";
     public static final String USER_ACCESS_LEVEL_CLAIM = "user_access_level";
-
-    private final Map<GitLabRole, List<Permissions>> rolePermissions = Map.of(
-            GitLabRole.GUEST, List.of(
-                    Permissions.VIEW_PORTFOLIO,
-                    Permissions.VIEW_VULNERABILITY,
-                    Permissions.VIEW_BADGES),
-            GitLabRole.PLANNER, List.of(
-                    Permissions.VIEW_PORTFOLIO,
-                    Permissions.VIEW_VULNERABILITY,
-                    Permissions.VIEW_POLICY_VIOLATION,
-                    Permissions.VIEW_BADGES),
-            GitLabRole.REPORTER, List.of(
-                    Permissions.VIEW_PORTFOLIO,
-                    Permissions.VIEW_VULNERABILITY,
-                    Permissions.VIEW_POLICY_VIOLATION,
-                    Permissions.VIEW_BADGES),
-            GitLabRole.DEVELOPER, List.of(
-                    Permissions.BOM_UPLOAD,
-                    Permissions.VIEW_PORTFOLIO,
-                    Permissions.PORTFOLIO_MANAGEMENT_READ,
-                    Permissions.VIEW_VULNERABILITY,
-                    Permissions.VULNERABILITY_ANALYSIS_READ,
-                    Permissions.PROJECT_CREATION_UPLOAD),
-            GitLabRole.MAINTAINER, List.of(
-                    Permissions.BOM_UPLOAD,
-                    Permissions.PORTFOLIO_MANAGEMENT,
-                    Permissions.PORTFOLIO_MANAGEMENT_CREATE,
-                    Permissions.PORTFOLIO_MANAGEMENT_READ,
-                    Permissions.PORTFOLIO_MANAGEMENT_UPDATE,
-                    Permissions.PORTFOLIO_MANAGEMENT_DELETE,
-                    Permissions.VULNERABILITY_ANALYSIS,
-                    Permissions.VULNERABILITY_ANALYSIS_CREATE,
-                    Permissions.VULNERABILITY_ANALYSIS_READ,
-                    Permissions.VULNERABILITY_ANALYSIS_UPDATE,
-                    Permissions.POLICY_MANAGEMENT,
-                    Permissions.POLICY_MANAGEMENT_CREATE,
-                    Permissions.POLICY_MANAGEMENT_READ,
-                    Permissions.POLICY_MANAGEMENT_UPDATE,
-                    Permissions.POLICY_MANAGEMENT_DELETE),
-            GitLabRole.OWNER, List.of(
-                    Permissions.ACCESS_MANAGEMENT,
-                    Permissions.ACCESS_MANAGEMENT_CREATE,
-                    Permissions.ACCESS_MANAGEMENT_READ,
-                    Permissions.ACCESS_MANAGEMENT_UPDATE,
-                    Permissions.ACCESS_MANAGEMENT_DELETE,
-                    Permissions.SYSTEM_CONFIGURATION,
-                    Permissions.SYSTEM_CONFIGURATION_CREATE,
-                    Permissions.SYSTEM_CONFIGURATION_READ,
-                    Permissions.SYSTEM_CONFIGURATION_UPDATE,
-                    Permissions.SYSTEM_CONFIGURATION_DELETE,
-                    Permissions.TAG_MANAGEMENT,
-                    Permissions.TAG_MANAGEMENT_DELETE));
 
     public GitLabClient(final String accessToken) {
         this(accessToken, Config.getInstance(), null, false);
@@ -211,19 +158,19 @@ public class GitLabClient {
         return projects;
     }
 
-    private static JSONObject getJwks(String jwksUrl) throws IOException, InterruptedException, URISyntaxException {        
+    private static JSONObject getJwks(String jwksUrl) throws IOException, InterruptedException, URISyntaxException {
         URIBuilder builder = new URIBuilder(jwksUrl);
         HttpGet request = new HttpGet(builder.build());
         request.setHeader("Accept", "application/json");
-        
+
         try (CloseableHttpResponse response = HttpClientPool.getClient().execute(request)) {
             String jsonResponse = EntityUtils.toString(response.getEntity());
-            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) 
+            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK)
                 throw new IOException("Failed to fetch JWKS from URL: %s. Status code: %d".formatted(jwksUrl, response.getStatusLine().getStatusCode()));
-    
+
             if (!jsonResponse.trim().startsWith("{"))
                 throw new IOException("Unexpected response: " + response.getEntity());
-            
+
             return JSONValue.parse(jsonResponse, JSONObject.class);
         }
     }
@@ -244,24 +191,21 @@ public class GitLabClient {
             jsonKey.put("kid", keyMap.get("kid"));
             jsonKey.put("n", keyMap.get("n"));
             jsonKey.put("e", keyMap.get("e"));
-            
+
             if (jsonKey.get("kid").equals(kid)) {
                 if (!jsonKey.containsKey("n") || !jsonKey.containsKey("e"))
                     throw new IllegalArgumentException("Missing modulus 'n' or exponent 'e' in JWKS key: " + jsonKey);
-                
+
                 RSAPublicKeySpec spec = new RSAPublicKeySpec(
-                    new BigInteger(1, Base64.getUrlDecoder().decode(jsonKey.get("n").toString())), 
+                    new BigInteger(1, Base64.getUrlDecoder().decode(jsonKey.get("n").toString())),
                     new BigInteger(1, Base64.getUrlDecoder().decode(jsonKey.get("e").toString()))
                     );
-                
+
                 return KeyFactory.getInstance("RSA").generatePublic(spec);
             }
         }
-        throw new IllegalArgumentException("Public key not found for kid: " + kid);
-    }
 
-    public List<Permissions> getRolePermissions(final GitLabRole role) {
-        return rolePermissions.get(role);
+        throw new IllegalArgumentException("Public key not found for kid: " + kid);
     }
 
     // JSONArray to ArrayList simple converter
