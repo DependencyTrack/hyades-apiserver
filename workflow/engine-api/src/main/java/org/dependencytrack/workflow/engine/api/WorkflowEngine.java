@@ -56,6 +56,8 @@ public interface WorkflowEngine extends Closeable {
 
     void start();
 
+    WorkflowEngineHealthProbeResult probeHealth();
+
     /**
      * Register a workflow.
      * <p>

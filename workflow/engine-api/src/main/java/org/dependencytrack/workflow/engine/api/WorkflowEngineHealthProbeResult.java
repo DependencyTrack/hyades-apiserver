@@ -16,29 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow;
+package org.dependencytrack.workflow.engine.api;
 
-import org.dependencytrack.workflow.engine.api.WorkflowEngine;
-import org.glassfish.hk2.api.Factory;
-import org.glassfish.hk2.utilities.binding.AbstractBinder;
+import java.util.Map;
 
-/**
- * @since 5.7.0
- */
-public class WorkflowEngineBinder extends AbstractBinder {
-
-    @Override
-    protected void configure() {
-        bindFactory(new Factory<WorkflowEngine>() {
-            @Override
-            public WorkflowEngine provide() {
-                return WorkflowEngineHolder.get();
-            }
-
-            @Override
-            public void dispose(final WorkflowEngine instance) {
-            }
-        }).to(WorkflowEngine.class);
-    }
-
+public record WorkflowEngineHealthProbeResult(boolean isUp, Map<String, String> data) {
 }

@@ -56,6 +56,9 @@ import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_COMMAND_
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_MAX_SIZE;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_WORKFLOW_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS;
 
+/**
+ * @since 5.7.0
+ */
 public class WorkflowEngineInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineInitializer.class);

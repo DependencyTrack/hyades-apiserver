@@ -48,6 +48,7 @@ import org.dependencytrack.workflow.engine.TaskCommand.FailActivityTaskCommand;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
+import org.dependencytrack.workflow.engine.api.WorkflowEngineHealthProbeResult;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
@@ -363,6 +364,14 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
         setStatus(Status.STOPPED);
         LOGGER.debug("Stopped");
+    }
+
+    @Override
+    public WorkflowEngineHealthProbeResult probeHealth() {
+        // TODO: Check database, buffers, task dispatchers.
+        return new WorkflowEngineHealthProbeResult(
+                this.status == Status.RUNNING,
+                Map.of("internalStatus", this.status.name()));
     }
 
     @Override

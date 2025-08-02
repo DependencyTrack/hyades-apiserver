@@ -37,6 +37,9 @@ import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_PASS
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_URL;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_USERNAME;
 
+/**
+ * @since 5.7.0
+ */
 public class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
 
     @Override

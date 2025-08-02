@@ -20,6 +20,9 @@ package org.dependencytrack.workflow;
 
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 
+/**
+ * @since 5.7.0
+ */
 public final class WorkflowEngineHolder {
 
     private static WorkflowEngine INSTANCE;
