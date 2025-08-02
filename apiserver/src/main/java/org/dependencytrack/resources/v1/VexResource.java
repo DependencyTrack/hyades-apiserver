@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v1;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.filters.ResourceAccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -87,7 +88,7 @@ public class VexResource extends AbstractApiResource {
     @Produces({CycloneDxMediaType.APPLICATION_CYCLONEDX_JSON, MediaType.APPLICATION_OCTET_STREAM})
     @Operation(
             summary = "Returns a VEX for a project in CycloneDX format",
-            description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong> or <strong>VULNERABILITY_ANALYSIS_READ</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>FINDING_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -102,7 +103,10 @@ public class VexResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_READ})
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_READ },
+            operator = PermissionRequired.Operator.AND)
+    @ResourceAccessRequired
     public Response exportProjectAsCycloneDx(
             @Parameter(description = "The UUID of the project to export", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,
@@ -152,7 +156,7 @@ public class VexResource extends AbstractApiResource {
                       When uploading large VEX files, the <code>POST</code> endpoint is preferred,
                       as it does not have this limit.
                     </p>
-                    <p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong> or <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>"""
+                    <p>Requires permission <strong>PROJECT_READ</strong> and <strong>FINDING_UPDATE</strong></p>"""
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -175,7 +179,10 @@ public class VexResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
+    @PermissionRequired(
+            value = {Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_UPDATE},
+            operator = PermissionRequired.Operator.AND)
+    @ResourceAccessRequired
     public Response uploadVex(VexSubmitRequest request) {
         final Validator validator = getValidator();
         if (request.getProject() != null) {
@@ -219,7 +226,7 @@ public class VexResource extends AbstractApiResource {
                       a response with problem details in RFC 9457 format will be returned. In this case,
                       the response's content type will be <code>application/problem+json</code>.
                     </p>
-                    <p>Requires permission <strong>VULNERABILITY_ANALYSIS</strong> or <strong>VULNERABILITY_ANALYSIS_UPDATE</strong></p>"""
+                    <p>Requires permission <strong>PROJECT_READ</strong> and <strong>FINDING_UPDATE</strong></p>"""
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -242,7 +249,10 @@ public class VexResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_UPDATE})
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.FINDING_UPDATE },
+            operator = PermissionRequired.Operator.AND)
+    @ResourceAccessRequired
     public Response uploadVex(@FormDataParam("project") String projectUuid,
                               @FormDataParam("projectName") String projectName,
                               @FormDataParam("projectVersion") String projectVersion,

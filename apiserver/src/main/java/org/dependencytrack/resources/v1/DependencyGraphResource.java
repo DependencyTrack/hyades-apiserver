@@ -79,7 +79,7 @@ public class DependencyGraphResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of specific components and services from project UUID",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -94,7 +94,7 @@ public class DependencyGraphResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "Any component can be found"),
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getComponentsAndServicesByProjectUuid(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true) final @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {
@@ -123,7 +123,7 @@ public class DependencyGraphResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of specific components and services from component UUID",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -138,7 +138,7 @@ public class DependencyGraphResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "Any component can be found"),
     })
-    @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
+    @PermissionRequired(Permissions.Constants.PROJECT_READ)
     @ResourceAccessRequired
     public Response getComponentsAndServicesByComponentUuid(@Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true) final @PathParam("uuid") @ValidUuid String uuid) {
         try (QueryManager qm = new QueryManager()) {

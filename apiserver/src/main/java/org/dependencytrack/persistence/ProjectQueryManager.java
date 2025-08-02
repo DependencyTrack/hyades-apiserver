@@ -764,7 +764,7 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                                       ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
                                    WHERE ph."CHILD_PROJECT_ID" = ?
                                      AND upep."USER_ID" = ?
-                                     AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                                     AND upep."PERMISSION_NAME" = 'PROJECT_READ'
                                 )
                                 """)
                         .setParameters(project.getId(), user.getId());

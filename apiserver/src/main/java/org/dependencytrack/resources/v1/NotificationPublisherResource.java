@@ -81,7 +81,7 @@ public class NotificationPublisherResource extends AlpineResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Returns a list of all notification publishers",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_READ</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -91,7 +91,7 @@ public class NotificationPublisherResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response getAllNotificationPublishers() {
         try (QueryManager qm = new QueryManager()) {
             final List<NotificationPublisher> publishers = qm.getAllNotificationPublishers();
@@ -104,7 +104,7 @@ public class NotificationPublisherResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Creates a new notification publisher",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -116,7 +116,7 @@ public class NotificationPublisherResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "409", description = "Conflict with an existing publisher's name")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response createNotificationPublisher(NotificationPublisher jsonNotificationPublisher) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -157,7 +157,7 @@ public class NotificationPublisherResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Updates a notification publisher",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_UPDATE</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -170,7 +170,7 @@ public class NotificationPublisherResource extends AlpineResource {
             @ApiResponse(responseCode = "404", description = "The notification publisher could not be found"),
             @ApiResponse(responseCode = "409", description = "Conflict with an existing publisher's name")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_UPDATE})
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response updateNotificationPublisher(NotificationPublisher jsonNotificationPublisher) {
         final Validator validator = super.getValidator();
         failOnValidationError(
@@ -223,7 +223,7 @@ public class NotificationPublisherResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Deletes a notification publisher and all related notification rules",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_DELETE</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Notification publisher removed successfully"),
@@ -231,8 +231,7 @@ public class NotificationPublisherResource extends AlpineResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "The UUID of the notification publisher could not be found")
     })
-    @PermissionRequired({ Permissions.Constants.SYSTEM_CONFIGURATION,
-            Permissions.Constants.SYSTEM_CONFIGURATION_DELETE })
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response deleteNotificationPublisher(@Parameter(description = "The UUID of the notification publisher to delete", schema = @Schema(type = "string", format = "uuid"), required = true)
                                                 @PathParam("notificationPublisherUuid") @ValidUuid String notificationPublisherUuid) {
         try (QueryManager qm = new QueryManager()) {
@@ -258,13 +257,13 @@ public class NotificationPublisherResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Restore the default notification publisher templates using the ones in the solution classpath",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Default templates restored successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response restoreDefaultTemplates() {
         useJdbiTransaction(handle -> {
             handle.attach(ConfigPropertyDao.class).setValue(
