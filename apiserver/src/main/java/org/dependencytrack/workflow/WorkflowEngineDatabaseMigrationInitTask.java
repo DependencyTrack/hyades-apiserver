@@ -24,9 +24,18 @@ import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineFactory;
+import org.postgresql.ds.PGSimpleDataSource;
 
+import javax.sql.DataSource;
 import java.util.ServiceLoader;
 import java.util.UUID;
+
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_MIGRATION_PASSWORD;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_MIGRATION_URL;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_MIGRATION_USERNAME;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_PASSWORD;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_URL;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_USERNAME;
 
 public class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
 
@@ -46,13 +55,34 @@ public class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
             return;
         }
 
-        // TODO: The workflow engine could have a separate database. Construct a new DataSource if needed.
-        final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), ctx.dataSource());
+        final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), getDataSource(ctx));
         final var engineFactory = ServiceLoader.load(WorkflowEngineFactory.class).findFirst().orElseThrow();
 
         try (final WorkflowEngine engine = engineFactory.create(engineConfig)) {
             engine.migrateDatabase();
         }
+    }
+
+    private DataSource getDataSource(final InitTaskContext ctx) {
+        String engineDbUrl = ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_MIGRATION_URL);
+        if (engineDbUrl != null) {
+            final var dataSource = new PGSimpleDataSource();
+            dataSource.setUrl(engineDbUrl);
+            dataSource.setUser(ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_MIGRATION_USERNAME));
+            dataSource.setPassword(ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_MIGRATION_PASSWORD));
+            return dataSource;
+        }
+
+        engineDbUrl = ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_URL);
+        if (engineDbUrl != null) {
+            final var dataSource = new PGSimpleDataSource();
+            dataSource.setUrl(engineDbUrl);
+            dataSource.setUser(ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_USERNAME));
+            dataSource.setPassword(ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_PASSWORD));
+            return dataSource;
+        }
+
+        return ctx.dataSource();
     }
 
 }

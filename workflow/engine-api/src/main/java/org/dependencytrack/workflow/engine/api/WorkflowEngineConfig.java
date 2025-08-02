@@ -86,7 +86,7 @@ public class WorkflowEngineConfig {
 
     public static class RetentionConfig {
 
-        private int days;
+        private int days = 3;
         private boolean workerEnabled = true;
         private Duration workerInitialDelay = Duration.ofMinutes(1);
         private Duration workerInterval = Duration.ofMinutes(30);

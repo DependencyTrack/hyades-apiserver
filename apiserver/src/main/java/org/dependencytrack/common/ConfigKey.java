@@ -66,7 +66,21 @@ public enum ConfigKey implements Config.Key {
     DEV_SERVICES_PORT_KAFKA("dev.services.port.kafka", 9092),
     DEV_SERVICES_PORT_POSTGRES("dev.services.port.postgres", 5432),
 
-    WORKFLOW_ENGINE_ENABLED("workflow.engine.enabled", false);
+    WORKFLOW_ENGINE_ENABLED("workflow.engine.enabled", true),
+    WORKFLOW_ENGINE_DATABASE_URL("workflow.engine.database.url", null),
+    WORKFLOW_ENGINE_DATABASE_USERNAME("workflow.engine.database.username", null),
+    WORKFLOW_ENGINE_DATABASE_PASSWORD("workflow.engine.database.password", null),
+    WORKFLOW_ENGINE_DATABASE_POOL_ENABLED("workflow.engine.database.pool.enabled", true),
+    WORKFLOW_ENGINE_DATABASE_POOL_MAX_SIZE("workflow.engine.database.pool.max.size", 10),
+    WORKFLOW_ENGINE_DATABASE_POOL_MIN_IDLE("workflow.engine.database.pool.min.idle", 5),
+    WORKFLOW_ENGINE_DATABASE_MIGRATION_URL("workflow.engine.database.migration.url", null),
+    WORKFLOW_ENGINE_DATABASE_MIGRATION_USERNAME("workflow.engine.database.migration.username", null),
+    WORKFLOW_ENGINE_DATABASE_MIGRATION_PASSWORD("workflow.engine.database.migration.password", null),
+    WORKFLOW_ENGINE_ACTIVITY_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS("workflow.engine.activity.task.dispatcher.min.poll.interval.ms", 5),
+    WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_FLUSH_INTERVAL_MS("workflow.engine.task.command.buffer.flush.interval.ms", 5),
+    WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_MAX_SIZE("workflow.engine.task.command.buffer.max.size", 100),
+    WORKFLOW_ENGINE_RETENTION_DAYS("workflow.engine.retention.days", 3),
+    WORKFLOW_ENGINE_WORKFLOW_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS("workflow.engine.task.dispatcher.min.poll.interval.ms", 5);
 
     private final String propertyName;
     private final Object defaultValue;

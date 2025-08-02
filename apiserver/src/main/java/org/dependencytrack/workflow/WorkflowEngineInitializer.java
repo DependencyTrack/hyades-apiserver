@@ -19,12 +19,15 @@
 package org.dependencytrack.workflow;
 
 import alpine.Config;
+import alpine.common.metrics.Metrics;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
 import org.dependencytrack.common.ConfigKey;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.util.PersistenceUtil;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineFactory;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,8 +35,26 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ServiceLoader;
 import java.util.UUID;
+
+import static alpine.Config.AlpineKey.DATABASE_PASSWORD;
+import static alpine.Config.AlpineKey.DATABASE_URL;
+import static alpine.Config.AlpineKey.DATABASE_USERNAME;
+import static alpine.Config.AlpineKey.METRICS_ENABLED;
+import static java.util.Objects.requireNonNullElseGet;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_ACTIVITY_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_PASSWORD;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_POOL_ENABLED;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_POOL_MAX_SIZE;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_POOL_MIN_IDLE;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_URL;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_USERNAME;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_RETENTION_DAYS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_FLUSH_INTERVAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_MAX_SIZE;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_WORKFLOW_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS;
 
 public class WorkflowEngineInitializer implements ServletContextListener {
 
@@ -48,14 +69,11 @@ public class WorkflowEngineInitializer implements ServletContextListener {
             return;
         }
 
-        // TODO: The workflow engine could have a separate database. Construct a new DataSource if needed.
-        final DataSource dataSource;
-        try (final var qm = new QueryManager()) {
-            dataSource = PersistenceUtil.getDataSource(
-                    qm.getPersistenceManager().getPersistenceManagerFactory());
+        final WorkflowEngineConfig engineConfig = createEngineConfig(config);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Effective configuration: {}", engineConfig);
         }
 
-        final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
         final var engineFactory = ServiceLoader.load(WorkflowEngineFactory.class).findFirst().orElseThrow();
         engine = engineFactory.create(engineConfig);
         engine.start();
@@ -74,6 +92,71 @@ public class WorkflowEngineInitializer implements ServletContextListener {
         } catch (IOException e) {
             LOGGER.error("Failed to stop engine", e);
         }
+    }
+
+    private static WorkflowEngineConfig createEngineConfig(final Config config) {
+        final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), createDataSource(config));
+
+        engineConfig.activityTaskDispatcher().setMinPollInterval(
+                Duration.ofMillis(config.getPropertyAsInt(
+                        WORKFLOW_ENGINE_ACTIVITY_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS)));
+        // TODO: Backoff config
+
+        if (config.getPropertyAsBoolean(METRICS_ENABLED)) {
+            engineConfig.setMeterRegistry(Metrics.getRegistry());
+        }
+
+        engineConfig.retention().setDays(config.getPropertyAsInt(
+                WORKFLOW_ENGINE_RETENTION_DAYS));
+
+        engineConfig.taskCommandBuffer().setFlushInterval(
+                Duration.ofMillis(config.getPropertyAsInt(
+                        WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_FLUSH_INTERVAL_MS)));
+        engineConfig.taskCommandBuffer().setMaxBatchSize(config.getPropertyAsInt(
+                WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_MAX_SIZE));
+
+        engineConfig.workflowTaskDispatcher().setMinPollInterval(
+                Duration.ofMillis(config.getPropertyAsInt(
+                        WORKFLOW_ENGINE_WORKFLOW_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS)));
+        // TODO: Backoff config
+
+        return engineConfig;
+    }
+
+    private static DataSource createDataSource(final Config config) {
+        final String url = requireNonNullElseGet(
+                config.getProperty(WORKFLOW_ENGINE_DATABASE_URL),
+                () -> config.getProperty(DATABASE_URL));
+        final String username = requireNonNullElseGet(
+                config.getProperty(WORKFLOW_ENGINE_DATABASE_USERNAME),
+                () -> config.getProperty(DATABASE_USERNAME));
+        final String password = requireNonNullElseGet(
+                config.getProperty(WORKFLOW_ENGINE_DATABASE_PASSWORD),
+                () -> config.getProperty(DATABASE_PASSWORD));
+
+        if (config.getPropertyAsBoolean(WORKFLOW_ENGINE_DATABASE_POOL_ENABLED)) {
+            final var hikariConfig = new HikariConfig();
+            hikariConfig.setPoolName("workflow-engine");
+            hikariConfig.setJdbcUrl(url);
+            hikariConfig.setDriverClassName(org.postgresql.Driver.class.getName());
+            hikariConfig.setUsername(username);
+            hikariConfig.setPassword(password);
+            hikariConfig.setMaximumPoolSize(config.getPropertyAsInt(WORKFLOW_ENGINE_DATABASE_POOL_MAX_SIZE));
+            hikariConfig.setMinimumIdle(config.getPropertyAsInt(WORKFLOW_ENGINE_DATABASE_POOL_MIN_IDLE));
+
+            if (config.getPropertyAsBoolean(METRICS_ENABLED)) {
+                hikariConfig.setMetricsTrackerFactory(
+                        new MicrometerMetricsTrackerFactory(Metrics.getRegistry()));
+            }
+
+            return new HikariDataSource(hikariConfig);
+        }
+
+        final var dataSource = new PGSimpleDataSource();
+        dataSource.setUrl(url);
+        dataSource.setUser(username);
+        dataSource.setPassword(password);
+        return dataSource;
     }
 
 }

@@ -1396,6 +1396,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             if (this.status.canTransitionTo(newStatus)) {
+                LOGGER.info("Transitioning from status {} to {}", this.status, newStatus);
                 this.status = newStatus;
                 return;
             }
