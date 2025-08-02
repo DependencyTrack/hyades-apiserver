@@ -67,7 +67,7 @@ public final class PostgresTestContainer extends PostgreSQLContainer<PostgresTes
 
         try {
             final var migrationExecutor = new MigrationExecutor(
-                    dataSource, "/org/dependencytrack/workflow/engine/persistence/migration/changelog.xml");
+                    dataSource, "/org/dependencytrack/workflow/engine/persistence/migration/changelog-main.xml");
             migrationExecutor.executeMigration();
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);

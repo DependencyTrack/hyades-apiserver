@@ -66,7 +66,7 @@ public enum ConfigKey implements Config.Key {
     DEV_SERVICES_PORT_KAFKA("dev.services.port.kafka", 9092),
     DEV_SERVICES_PORT_POSTGRES("dev.services.port.postgres", 5432),
 
-    WORKFLOW_ENGINE_ENABLED("workflow.engine.enabled", true),
+    WORKFLOW_ENGINE_ENABLED("workflow.engine.enabled", false),
     WORKFLOW_ENGINE_DATABASE_URL("workflow.engine.database.url", null),
     WORKFLOW_ENGINE_DATABASE_USERNAME("workflow.engine.database.username", null),
     WORKFLOW_ENGINE_DATABASE_PASSWORD("workflow.engine.database.password", null),

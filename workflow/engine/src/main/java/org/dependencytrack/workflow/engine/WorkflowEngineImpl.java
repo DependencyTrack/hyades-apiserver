@@ -188,7 +188,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
         new MigrationExecutor(
                 config.dataSource(),
-                "/org/dependencytrack/workflow/engine/persistence/migration/changelog.xml")
+                "/org/dependencytrack/workflow/engine/persistence/migration/changelog-main.xml")
                 .withChangeLogTableName("workflow_engine_database_changelog")
                 .withChangeLogLockTableName("workflow_engine_database_changelog_lock")
                 .executeMigration();

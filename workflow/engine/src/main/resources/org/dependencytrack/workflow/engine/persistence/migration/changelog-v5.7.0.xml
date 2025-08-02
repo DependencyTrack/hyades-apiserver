@@ -1,10 +1,28 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ This file is part of Dependency-Track.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~ Copyright (c) OWASP Foundation. All Rights Reserved.
+  -->
 <databaseChangeLog
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-    <changeSet id="1" author="nscuro">
+    <changeSet id="v5.7.0-1" author="nscuro">
         <sql>
             create type workflow_run_status as enum (
               'PENDING'
@@ -35,15 +53,6 @@
             , constraint workflow_run_parent_fk foreign key (parent_id) references workflow_run (id) on delete cascade
             ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
-            <!--
-              For workflow runs with concurrency group, maintain a sequence for the next run.
-              This adds additional overhead to creation and completion of workflow runs,
-              but performs magnitudes better than using a PARTITION BY window function
-              in the poll query.
-
-              https://docs.hatchet.run/blog/multi-tenant-queues#first-attempt-partition-by
-              https://blog.sequinstream.com/build-your-own-sqs-or-kafka-with-postgres/
-            -->
             create table workflow_concurrency_group (
               id text
             , next_run_id uuid not null
@@ -100,25 +109,19 @@
             , constraint workflow_schedule_pk primary key (name)
             );
 
-            <!--
-              NB: A covering index (enabling index-only scans) doesn't yield any benefit here.
-              Since the table has such a high churn, the query planner ends up having to check
-              the visibility map all the time.
-              https://www.pgmustard.com/blog/2019/03/04/index-only-scans-in-postgres
-            -->
             create index workflow_run_poll_idx
                 on workflow_run (priority desc nulls last, id, workflow_name);
 
             create index workflow_run_labels_idx
                 on workflow_run using gin (labels jsonb_path_ops)
-             where labels is not null;
+                where labels is not null;
 
             create index workflow_run_created_at_idx
                 on workflow_run (created_at);
 
             create index workflow_run_completed_at_idx
                 on workflow_run (completed_at)
-             where completed_at is not null;
+                where completed_at is not null;
 
             create index workflow_run_inbox_workflow_run_id_idx
                 on workflow_run_inbox (workflow_run_id);
