@@ -78,7 +78,7 @@ public class WorkflowsResource implements WorkflowsApi {
 
     @Override
     @AuthenticationNotRequired // TODO
-    public Response listRuns(
+    public Response listWorkflowRuns(
             final String workflowName,
             final Integer workflowVersion,
             final WorkflowRunStatus status,

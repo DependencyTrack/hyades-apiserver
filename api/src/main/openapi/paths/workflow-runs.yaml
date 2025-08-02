@@ -15,7 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 get:
-  operationId: listRuns
+  operationId: listWorkflowRuns
   summary: List all workflow runs
   description: Returns a paginated list of workflow runs
   tags:
