@@ -4,9 +4,6 @@
 package org.dependencytrack.persistence.jooq.generated;
 
 
-import java.util.Arrays;
-import java.util.List;
-
 import org.dependencytrack.persistence.jooq.generated.tables.AffectedVersionAttribution;
 import org.dependencytrack.persistence.jooq.generated.tables.Analysis;
 import org.dependencytrack.persistence.jooq.generated.tables.AnalysisComment;
@@ -78,6 +75,9 @@ import org.jooq.Catalog;
 import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SchemaImpl;
+
+import java.util.Arrays;
+import java.util.List;
 
 
 /**

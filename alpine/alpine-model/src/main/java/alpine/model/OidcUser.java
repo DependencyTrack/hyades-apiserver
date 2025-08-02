@@ -38,9 +38,9 @@ import javax.jdo.annotations.Persistent;
  */
 @PersistenceCapable
 @Inheritance(strategy = InheritanceStrategy.SUPERCLASS_TABLE)
-@Discriminator(value = "OIDC")
+@Discriminator("OIDC")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder(value = { "username", "subjectIdentifier", "email", "teams", "permissions" })
+@JsonPropertyOrder({ "username", "subjectIdentifier", "email", "teams", "permissions" })
 public class OidcUser extends User {
 
     private static final long serialVersionUID = -6852825148699565269L;
