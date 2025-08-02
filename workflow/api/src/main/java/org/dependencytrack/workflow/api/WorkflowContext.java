@@ -66,18 +66,18 @@ public interface WorkflowContext<A> {
      */
     Logger logger();
 
-    <AA, AR> ActivityClient<AA, AR> activityClient(Class<? extends ActivityExecutor<AA, AR>> activityClass);
+    <AA, AR> ActivityHandle<AA, AR> activity(Class<? extends ActivityExecutor<AA, AR>> activityClass);
 
-    <WA, WR> WorkflowClient<WA, WR> workflowClient(Class<? extends WorkflowExecutor<WA, WR>> workflowClass);
+    <WA, WR> WorkflowHandle<WA, WR> workflow(Class<? extends WorkflowExecutor<WA, WR>> workflowClass);
 
     /**
-     * Schedules a durable timer.
+     * Creates a durable timer.
      *
      * @param name  Name of the timer. Purely descriptive to make it recognizable in the history.
      * @param delay {@link Duration} for how far in the future the timer shall elapse.
      * @return An {@link Awaitable} for when the timer elapses.
      */
-    Awaitable<Void> scheduleTimer(String name, Duration delay);
+    Awaitable<Void> createTimer(String name, Duration delay);
 
     /**
      * Sets a custom status for the workflow run.
@@ -105,7 +105,7 @@ public interface WorkflowContext<A> {
      * @param <SR>               Type of the side effect's result.
      * @return An {@link Awaitable} wrapping the side effect's result, if any.
      */
-    <SA, SR> Awaitable<SR> sideEffect(
+    <SA, SR> Awaitable<SR> executeSideEffect(
             String name,
             @Nullable SA argument,
             PayloadConverter<SR> resultConverter,

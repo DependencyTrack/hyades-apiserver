@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.api;
 
-public interface ActivityClient<A, R> {
+public interface WorkflowHandle<A, R> {
 
-    Awaitable<R> call(ActivityCallOptions<A> options);
+    Awaitable<R> call(WorkflowCallOptions<A> options);
 
 }

@@ -18,43 +18,37 @@
  */
 package org.dependencytrack.workflow.engine;
 
+import org.dependencytrack.workflow.api.ActivityCallOptions;
+import org.dependencytrack.workflow.api.ActivityHandle;
 import org.dependencytrack.workflow.api.Awaitable;
-import org.dependencytrack.workflow.api.WorkflowCallOptions;
-import org.dependencytrack.workflow.api.WorkflowClient;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 
-import static java.util.Objects.requireNonNull;
-
-final class WorkflowClientImpl<A, R> implements WorkflowClient<A, R> {
+final class ActivityHandleImpl<A, R> implements ActivityHandle<A, R> {
 
     private final WorkflowContextImpl<?, ?> workflowContext;
-    private final String workflowName;
-    private final int workflowVersion;
+    private final String activityName;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
 
-    WorkflowClientImpl(
+    ActivityHandleImpl(
             final WorkflowContextImpl<?, ?> workflowContext,
-            final String workflowName,
-            final int workflowVersion,
+            final String activityName,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter) {
-        this.workflowContext = requireNonNull(workflowContext);
-        this.workflowName = workflowName;
-        this.workflowVersion = workflowVersion;
+        this.workflowContext = workflowContext;
+        this.activityName = activityName;
         this.argumentConverter = argumentConverter;
         this.resultConverter = resultConverter;
     }
 
     @Override
-    public Awaitable<R> call(final WorkflowCallOptions<A> options) {
-        return workflowContext.callChildWorkflow(
-                this.workflowName,
-                this.workflowVersion,
-                options.concurrencyGroupId(),
+    public Awaitable<R> call(final ActivityCallOptions<A> options) {
+        return workflowContext.callActivity(
+                this.activityName,
                 options.argument(),
-                argumentConverter,
-                resultConverter);
+                this.argumentConverter,
+                this.resultConverter,
+                options.retryPolicy());
     }
 
 }

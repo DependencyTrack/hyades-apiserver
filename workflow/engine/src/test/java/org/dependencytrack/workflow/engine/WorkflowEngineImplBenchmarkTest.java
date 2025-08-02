@@ -126,9 +126,9 @@ public class WorkflowEngineImplBenchmarkTest {
 
         @Override
         public Void execute(final WorkflowContext<Void> ctx) {
-            ctx.activityClient(TestActivityFoo.class).call(new ActivityCallOptions<>()).await();
-            ctx.activityClient(TestActivityBar.class).call(new ActivityCallOptions<>()).await();
-            ctx.activityClient(TestActivityBaz.class).call(new ActivityCallOptions<>()).await();
+            ctx.activity(TestActivityFoo.class).call(new ActivityCallOptions<>()).await();
+            ctx.activity(TestActivityBar.class).call(new ActivityCallOptions<>()).await();
+            ctx.activity(TestActivityBaz.class).call(new ActivityCallOptions<>()).await();
             return null;
         }
 

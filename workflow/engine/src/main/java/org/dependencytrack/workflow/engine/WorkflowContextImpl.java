@@ -36,14 +36,14 @@ import org.dependencytrack.proto.workflow.api.v1.SideEffectExecuted;
 import org.dependencytrack.proto.workflow.api.v1.TimerElapsed;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
-import org.dependencytrack.workflow.api.ActivityClient;
 import org.dependencytrack.workflow.api.ActivityExecutor;
+import org.dependencytrack.workflow.api.ActivityHandle;
 import org.dependencytrack.workflow.api.Awaitable;
 import org.dependencytrack.workflow.api.ContinueAsNewOptions;
 import org.dependencytrack.workflow.api.RetryPolicy;
-import org.dependencytrack.workflow.api.WorkflowClient;
 import org.dependencytrack.workflow.api.WorkflowContext;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
+import org.dependencytrack.workflow.api.WorkflowHandle;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
@@ -189,11 +189,11 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Override
-    public <AA, AR> ActivityClient<AA, AR> activityClient(
+    public <AA, AR> ActivityHandle<AA, AR> activity(
             final Class<? extends ActivityExecutor<AA, AR>> activityClass) {
         final ActivityMetadata<AA, AR> activityMetadata =
                 metadataRegistry.getActivityMetadata(activityClass);
-        return new ActivityClientImpl<>(
+        return new ActivityHandleImpl<>(
                 this,
                 activityMetadata.name(),
                 activityMetadata.argumentConverter(),
@@ -201,11 +201,11 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Override
-    public <WA, WR> WorkflowClient<WA, WR> workflowClient(
+    public <WA, WR> WorkflowHandle<WA, WR> workflow(
             final Class<? extends WorkflowExecutor<WA, WR>> workflowClass) {
         final WorkflowMetadata<WA, WR> workflowMetadata =
                 metadataRegistry.getWorkflowMetadata(workflowClass);
-        return new WorkflowClientImpl<>(
+        return new WorkflowHandleImpl<>(
                 this,
                 workflowMetadata.name(),
                 workflowMetadata.version(),
@@ -311,7 +311,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Override
-    public Awaitable<Void> scheduleTimer(final String name, final Duration delay) {
+    public Awaitable<Void> createTimer(final String name, final Duration delay) {
         return scheduleTimerInternal(name, delay);
     }
 
@@ -332,7 +332,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Override
-    public <SA, SR> Awaitable<SR> sideEffect(
+    public <SA, SR> Awaitable<SR> executeSideEffect(
             final String name,
             @Nullable final SA argument,
             final PayloadConverter<SR> resultConverter,
