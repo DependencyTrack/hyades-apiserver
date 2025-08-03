@@ -16,17 +16,30 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin;
-
-import java.util.NoSuchElementException;
+package org.dependencytrack.plugin.api;
 
 /**
+ * Specification of an {@link ExtensionPoint}.
+ *
  * @since 5.6.0
  */
-public class NoSuchExtensionException extends NoSuchElementException {
+public interface ExtensionPointSpec<T extends ExtensionPoint> {
 
-    NoSuchExtensionException(final String message) {
-        super(message);
-    }
+    /**
+     * @return The name of the extension point.
+     * Can contain lowercase letters, numbers, and periods.
+     */
+    String name();
+
+    /**
+     * @return Whether the extension point is required.
+     * Required extension points must have at least one active extension.
+     */
+    boolean required();
+
+    /**
+     * @return The {@link Class} of the {@link ExtensionPoint}.
+     */
+    Class<T> extensionPointClass();
 
 }

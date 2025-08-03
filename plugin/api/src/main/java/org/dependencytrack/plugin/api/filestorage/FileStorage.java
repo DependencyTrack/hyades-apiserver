@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.plugin.api.filestorage;
 
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
@@ -37,7 +37,7 @@ public interface FileStorage extends ExtensionPoint {
     /**
      * Persist data to a file in storage.
      * <p>
-     * Storage providers may transparently perform additional steps,
+     * Implementations may transparently perform additional steps,
      * such as encryption and compression.
      *
      * @param fileName  Name of the file. This fileName is not guaranteed to be reflected
@@ -62,10 +62,10 @@ public interface FileStorage extends ExtensionPoint {
     /**
      * Retrieves a file from storage.
      * <p>
-     * Storage providers may transparently perform additional steps,
+     * Implementations may transparently perform additional steps,
      * such as integrity verification, decryption and decompression.
      * <p>
-     * Trying to retrieve a file from a different storage provider
+     * Trying to retrieve a file from a different storage implementation
      * is an illegal operation and yields an exception.
      *
      * @param fileMetadata Metadata of the file to retrieve.
@@ -78,7 +78,7 @@ public interface FileStorage extends ExtensionPoint {
     /**
      * Deletes a file from storage.
      * <p>
-     * Trying to delete a file from a different storage provider
+     * Trying to delete a file from a different storage implementation
      * is an illegal operation and yields an exception.
      *
      * @param fileMetadata Metadata of the file to delete.
@@ -96,25 +96,6 @@ public interface FileStorage extends ExtensionPoint {
         if (!VALID_NAME_PATTERN.matcher(fileName).matches()) {
             throw new IllegalArgumentException("fileName must match pattern: " + VALID_NAME_PATTERN.pattern());
         }
-    }
-
-    class ExtensionPointMetadata implements org.dependencytrack.plugin.api.ExtensionPointMetadata<FileStorage> {
-
-        @Override
-        public String name() {
-            return "file.storage";
-        }
-
-        @Override
-        public boolean required() {
-            return true;
-        }
-
-        @Override
-        public Class<FileStorage> extensionPointClass() {
-            return FileStorage.class;
-        }
-
     }
 
 }

@@ -22,7 +22,8 @@ import alpine.Config;
 import org.dependencytrack.plugin.api.ConfigDefinition;
 import org.dependencytrack.plugin.api.ConfigRegistry;
 import org.dependencytrack.plugin.api.ConfigSource;
-import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.filestorage.FileStorage;
+import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +35,7 @@ import java.nio.file.Paths;
 /**
  * @since 5.6.0
  */
-public final class LocalFileStorageFactory implements ExtensionFactory<FileStorage> {
+public final class LocalFileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorageFactory.class);
 

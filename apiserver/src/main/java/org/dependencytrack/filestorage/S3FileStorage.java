@@ -27,9 +27,8 @@ import io.minio.RemoveObjectArgs;
 import io.minio.errors.ErrorResponseException;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.client.utils.URIBuilder;
+import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -40,14 +39,13 @@ import java.util.Arrays;
 import java.util.HexFormat;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.filestorage.FileStorage.requireValidFileName;
+import static org.dependencytrack.plugin.api.filestorage.FileStorage.requireValidFileName;
 
 /**
  * @since 5.6.0
  */
 final class S3FileStorage implements FileStorage {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(S3FileStorage.class);
     static final String EXTENSION_NAME = "s3";
 
     private final MinioClient s3Client;
