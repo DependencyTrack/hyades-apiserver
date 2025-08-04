@@ -37,17 +37,11 @@
         <lib.caffeine.version>3.2.0</lib.caffeine.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
-        <lib.liquibase.version>4.30.0</lib.liquibase.version>
         <lib.micrometer.version>1.14.6</lib.micrometer.version>
         <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>liquibase-support</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>proto</artifactId>
@@ -61,6 +55,11 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>workflow-engine-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>workflow-engine-migration</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -120,11 +119,6 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.liquibase</groupId>
-            <artifactId>liquibase-core</artifactId>
         </dependency>
 
         <dependency>

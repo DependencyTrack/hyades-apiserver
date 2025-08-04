@@ -46,14 +46,6 @@ import java.util.concurrent.CompletableFuture;
 
 public interface WorkflowEngine extends Closeable {
 
-    /**
-     * Execute any required database migrations.
-     *
-     * @throws Exception             When migration execution failed.
-     * @throws IllegalStateException When the engine was already started.
-     */
-    void migrateDatabase() throws Exception;
-
     void start();
 
     WorkflowEngineHealthProbeResult probeHealth();

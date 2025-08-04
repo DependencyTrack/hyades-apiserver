@@ -16,21 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
+package org.dependencytrack.workflow.engine.migration;
 
-import org.jspecify.annotations.NullMarked;
+import javax.sql.DataSource;
 
-@NullMarked
-module org.dependencytrack.workflow.engine.api {
-    exports org.dependencytrack.workflow.engine.api;
-    exports org.dependencytrack.workflow.engine.api.event;
-    exports org.dependencytrack.workflow.engine.api.pagination;
-    exports org.dependencytrack.workflow.engine.api.request;
+public final class MigrationExecutor extends org.dependencytrack.support.liquibase.MigrationExecutor {
 
-    requires io.github.resilience4j.core;
-    requires java.sql;
-    requires micrometer.core;
-    requires transitive org.dependencytrack.proto;
-    requires transitive org.dependencytrack.workflow.api;
+    public MigrationExecutor(final DataSource dataSource) {
+        super(dataSource, "/org/dependencytrack/workflow/engine/migration/changelog-main.xml");
+        withChangeLogTableName("workflow_engine_database_changelog");
+        withChangeLogLockTableName("workflow_engine_database_changelog_lock");
+    }
 
-    requires static org.jspecify;
 }

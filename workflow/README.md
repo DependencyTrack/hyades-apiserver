@@ -9,6 +9,7 @@ and [Temporal](https://github.com/temporalio/temporal).
 
 * [`api`](api) contains the public API for authoring durable workflows.
 * [`engine-api`](engine-api) contains the public API for interacting with the engine.
+* [`engine-migration`](engine-migration) contains database migrations of the engine.
 * [`engine`](engine) contains the actual engine implementation.
 
 `api` and `engine-api` have been separated from the core engine to make the respective

@@ -32,10 +32,10 @@ module org.dependencytrack.workflow.engine {
     requires java.sql;
     requires javacron;
     requires micrometer.core;
-    requires org.dependencytrack.proto;
-    requires org.dependencytrack.support.liquibase;
-    requires org.dependencytrack.workflow.api;
-    requires org.dependencytrack.workflow.engine.api;
+    requires transitive org.dependencytrack.proto;
+    requires transitive org.dependencytrack.workflow.api;
+    requires transitive org.dependencytrack.workflow.engine.api;
+    requires transitive org.dependencytrack.workflow.engine.migration;
     requires org.jdbi.v3.core;
     requires org.jdbi.v3.freemarker;
     requires org.jdbi.v3.jackson2;

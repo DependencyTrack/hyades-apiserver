@@ -35,7 +35,6 @@ import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
 import org.dependencytrack.proto.workflow.api.v1.RunSuspended;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
-import org.dependencytrack.support.liquibase.MigrationExecutor;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
@@ -181,18 +180,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     WorkflowEngineImpl(final WorkflowEngineConfig config) {
         this.config = requireNonNull(config);
         this.jdbi = JdbiFactory.create(config.dataSource());
-    }
-
-    @Override
-    public void migrateDatabase() throws Exception {
-        requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-
-        new MigrationExecutor(
-                config.dataSource(),
-                "/org/dependencytrack/workflow/engine/persistence/migration/changelog-main.xml")
-                .withChangeLogTableName("workflow_engine_database_changelog")
-                .withChangeLogLockTableName("workflow_engine_database_changelog_lock")
-                .executeMigration();
     }
 
     @Override

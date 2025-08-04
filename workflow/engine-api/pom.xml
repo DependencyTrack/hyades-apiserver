@@ -28,6 +28,7 @@
     </parent>
 
     <artifactId>workflow-engine-api</artifactId>
+    <packaging>jar</packaging>
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>

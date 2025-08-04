@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.engine;
 
 import com.github.dockerjava.api.command.InspectContainerResponse;
-import org.dependencytrack.support.liquibase.MigrationExecutor;
+import org.dependencytrack.workflow.engine.migration.MigrationExecutor;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -66,9 +66,7 @@ public final class PostgresTestContainer extends PostgreSQLContainer<PostgresTes
         dataSource.setPassword(getPassword());
 
         try {
-            final var migrationExecutor = new MigrationExecutor(
-                    dataSource, "/org/dependencytrack/workflow/engine/persistence/migration/changelog-main.xml");
-            migrationExecutor.executeMigration();
+            new MigrationExecutor(dataSource).executeMigration();
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute migrations", e);
         }

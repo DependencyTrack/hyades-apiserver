@@ -37,6 +37,7 @@ public class WorkflowEngineBinder extends AbstractBinder {
 
             @Override
             public void dispose(final WorkflowEngine instance) {
+                // Engine lifecycle is managed elsewhere.
             }
         }).to(WorkflowEngine.class);
     }

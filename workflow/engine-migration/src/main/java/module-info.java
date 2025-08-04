@@ -20,17 +20,9 @@
 import org.jspecify.annotations.NullMarked;
 
 @NullMarked
-module org.dependencytrack.workflow.engine.api {
-    exports org.dependencytrack.workflow.engine.api;
-    exports org.dependencytrack.workflow.engine.api.event;
-    exports org.dependencytrack.workflow.engine.api.pagination;
-    exports org.dependencytrack.workflow.engine.api.request;
+module org.dependencytrack.workflow.engine.migration {
+    exports org.dependencytrack.workflow.engine.migration;
 
-    requires io.github.resilience4j.core;
-    requires java.sql;
-    requires micrometer.core;
-    requires transitive org.dependencytrack.proto;
-    requires transitive org.dependencytrack.workflow.api;
-
-    requires static org.jspecify;
+    requires org.dependencytrack.support.liquibase;
+    requires org.jspecify;
 }
