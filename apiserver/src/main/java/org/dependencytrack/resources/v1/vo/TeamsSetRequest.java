@@ -35,6 +35,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 public record TeamsSetRequest(
+        @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+        String userType,
+
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank
         @JsonDeserialize(using = TrimmedStringDeserializer.class)

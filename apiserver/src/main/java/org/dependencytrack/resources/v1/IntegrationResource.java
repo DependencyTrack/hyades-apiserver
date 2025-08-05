@@ -18,9 +18,12 @@
  */
 package org.dependencytrack.resources.v1;
 
+import alpine.event.framework.Event;
+import alpine.model.ConfigProperty;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.resources.AlpineResource;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,12 +33,18 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.event.GitLabIntegrationStateEvent;
+import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.tasks.OsvMirrorTask;
+
+import static org.dependencytrack.model.ConfigPropertyConstants.GITLAB_ENABLED;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -94,4 +103,41 @@ public class IntegrationResource extends AlpineResource {
                 .collect(Collectors.toList());
         return Response.ok(ecosystems).build();
     }
+
+    @POST
+    @Path("gitlab/{state}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Enable or disable GitLab integration", description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "GitLab state set successfully"),
+            @ApiResponse(responseCode = "304", description = "The GitLab integration is already in the desired state"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PermissionRequired({ Permissions.Constants.SYSTEM_CONFIGURATION,
+            Permissions.Constants.SYSTEM_CONFIGURATION_CREATE }) // Require admin privileges due to system impact
+    public Response setGitLabEnabledState(
+            @Parameter(description = "A valid boolean", required = true) @PathParam("state") String state) {
+        try (final QueryManager qm = new QueryManager()) {
+            final Response response = qm.callInTransaction(() -> {
+                final ConfigProperty property = qm.getConfigProperty(GITLAB_ENABLED.getGroupName(),
+                        GITLAB_ENABLED.getPropertyName());
+
+                if (property.getPropertyValue().equals(state))
+                    return Response.notModified().build();
+
+                if (!state.equalsIgnoreCase("true") && !state.equalsIgnoreCase("false"))
+                    return Response.status(Response.Status.BAD_REQUEST).build();
+
+                property.setPropertyValue(state);
+
+                return Response.ok().entity(qm.persist(property)).build();
+            });
+
+            if (response.getStatus() == Response.Status.OK.getStatusCode())
+                Event.dispatch(new GitLabIntegrationStateEvent());
+
+            return response;
+        }
+    }
+
 }

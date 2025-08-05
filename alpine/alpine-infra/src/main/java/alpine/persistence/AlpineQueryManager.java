@@ -39,6 +39,7 @@ import alpine.resources.AlpineRequest;
 import alpine.security.ApiKeyGenerator;
 import org.datanucleus.store.rdbms.query.JDOQLQuery;
 
+import javax.jdo.Extent;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.security.Principal;
@@ -344,6 +345,20 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
+     * Returns a complete list of all subclasses extending User.class, in ascending order by username.
+     * @return a list of all Users
+     * @since 1.0.0
+     */
+    public PaginatedResult getAllUsers() {
+        final Query<User> query = pm.newQuery(User.class).orderBy("username ASC");
+        final PaginatedResult result = execute(query);
+
+        pm.refreshAll(result.getObjects());
+
+        return result;
+    }
+
+    /**
      * Retrieves an LdapUser containing the specified username. If the username
      * does not exist, returns null.
      * @param username The username to retrieve
@@ -547,6 +562,22 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
+     * Resolves a type of User.
+     * @param cls the class of the principal to retrieve
+     * @param username the username of the principal to retrieve
+     * @return a User if found, null if not found
+     * @since 1.0.0
+     */
+    public <T extends User> T getUser(String username, Class<T> cls) {
+        final Query<T> query = pm.newQuery(cls)
+                .filter("username == :username")
+                .setNamedParameters(Map.of("username", username))
+                .extension(JDOQLQuery.EXTENSION_CANDIDATE_DONT_RESTRICT_DISCRIMINATOR, true);
+
+        return (T) executeAndCloseUnique(query);
+    }
+
+    /**
      * Creates a new Team with the specified name. If createApiKey is true,
      * then {@link #createApiKey} is invoked and a cryptographically secure
      * API key is generated.
@@ -561,7 +592,7 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
     }
 
     /**
-     * Creates a new Team with the specified name.
+     * Creates a new {@link Team} with the specified name.
      * @param name The name of the team
      * @return a Team
      * @since 3.2.0
@@ -570,7 +601,22 @@ public class AlpineQueryManager extends AbstractAlpineQueryManager {
         return callInTransaction(() -> {
             final var team = new Team();
             team.setName(name);
-            //todo assign permissions
+            pm.makePersistent(team);
+            return team;
+        });
+    }
+
+    /**
+     * Creates a new {@link Team} with the specified name and initial {@link Permission}s.
+     * @param name The name of the team
+     * @return a Team
+     * @since 5.6.0
+     */
+    public Team createTeam(final String name, final List<Permission> permissions) {
+        return callInTransaction(() -> {
+            final var team = new Team();
+            team.setName(name);
+            team.setPermissions(permissions);
             pm.makePersistent(team);
             return team;
         });

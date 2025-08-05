@@ -39,9 +39,9 @@ import javax.jdo.annotations.Persistent;
  */
 @PersistenceCapable
 @Inheritance(strategy = InheritanceStrategy.SUPERCLASS_TABLE)
-@Discriminator(value = "LDAP")
+@Discriminator("LDAP")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder(value = { "username", "dn", "email", "teams", "permissions" })
+@JsonPropertyOrder({ "username", "dn", "email", "teams", "permissions" })
 public class LdapUser extends User {
 
     private static final long serialVersionUID = 261924579887470488L;
