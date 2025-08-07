@@ -94,7 +94,7 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
-        <lib.assertj.version>3.27.3</lib.assertj.version>
+        <lib.assertj.version>3.27.4</lib.assertj.version>
         <lib.cel-java.version>0.5.3</lib.cel-java.version>
         <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
