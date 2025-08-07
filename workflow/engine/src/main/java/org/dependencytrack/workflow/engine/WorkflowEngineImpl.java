@@ -24,6 +24,8 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.protobuf.util.Timestamps;
 import io.github.resilience4j.core.IntervalFunction;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.dependencytrack.proto.workflow.api.v1.ActivityTaskCompleted;
@@ -122,11 +124,9 @@ import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toInstant
 import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toTimestamp;
 
 // TODO: Add metrics for:
-//   - Workflow runs scheduled
-//   - Workflow runs completed/failed
-//   - Activities scheduled
+//   - Workflow runs created
+//   - Activities created
 //   - Activities completed/failed
-// TODO: Buffer schedule commands for ~5ms.
 final class WorkflowEngineImpl implements WorkflowEngine {
 
     enum Status {
@@ -202,11 +202,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     .bindTo(config.meterRegistry());
         }
 
-        runsCompletedEventListeners.add(
-                event -> cachedHistoryByRunId.invalidateAll(
-                        event.completedRuns().stream()
-                                .map(WorkflowRunMetadata::id)
-                                .collect(Collectors.toSet())));
+        LOGGER.debug("Registering default event listeners");
+        runsCompletedEventListeners.add(this::invalidateCompletedRunsHistoryCache);
+        if (config.meterRegistry() != null) {
+            runsCompletedEventListeners.add(this::recordCompletedRunsMetrics);
+        }
 
         LOGGER.debug("Starting event listener executor");
         eventListenerExecutor = Executors.newSingleThreadExecutor(
@@ -808,6 +808,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                                     .setExternalEventReceived(
                                             ExternalEventReceived.newBuilder()
                                                     .setId(externalEvent.eventId())
+                                                    .setContent(externalEvent.content())
                                                     .build())
                                     .build()
                     ))
@@ -1378,6 +1379,33 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         });
 
         return Set.copyOf(runIdByEventId.values());
+    }
+
+    private void invalidateCompletedRunsHistoryCache(final WorkflowRunsCompletedEvent event) {
+        if (cachedHistoryByRunId == null) {
+            return;
+        }
+
+        cachedHistoryByRunId.invalidateAll(
+                event.completedRuns().stream()
+                        .map(WorkflowRunMetadata::id)
+                        .collect(Collectors.toSet()));
+    }
+
+    private void recordCompletedRunsMetrics(final WorkflowRunsCompletedEvent event) {
+        final MeterRegistry meterRegistry = config.meterRegistry();
+        if (meterRegistry == null) {
+            return;
+        }
+
+        for (final WorkflowRunMetadata completedRun : event.completedRuns()) {
+            final var tags = List.of(
+                    Tag.of("workflowName", completedRun.workflowName()),
+                    Tag.of("workflowVersion", String.valueOf(completedRun.workflowVersion())),
+                    Tag.of("status", completedRun.status().toString()));
+
+            meterRegistry.counter("dtrack.workflow.engine.runs.completed", tags).increment();
+        }
     }
 
     public Status status() {
