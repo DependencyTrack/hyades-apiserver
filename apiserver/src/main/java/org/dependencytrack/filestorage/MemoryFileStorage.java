@@ -20,6 +20,7 @@ package org.dependencytrack.filestorage;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.client.utils.URIBuilder;
+import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 
 import java.io.IOException;
@@ -32,7 +33,7 @@ import java.util.HexFormat;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.filestorage.FileStorage.requireValidFileName;
+import static org.dependencytrack.plugin.api.filestorage.FileStorage.requireValidFileName;
 
 /**
  * @since 5.6.0

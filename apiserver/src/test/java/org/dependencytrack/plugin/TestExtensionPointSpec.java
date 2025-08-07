@@ -16,19 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api;
+package org.dependencytrack.plugin;
 
-/**
- * @param name       Name of the configuration.
- * @param source     Where the configuration shall be loaded from.
- * @param isRequired Whether the configuration is mandatory.
- * @param isSecret   Whether the configuration is confidential.
- * @since 5.6.0
- */
-public record ConfigDefinition(
-        String name,
-        ConfigSource source,
-        boolean isRequired,
-        boolean isSecret
-) {
+import org.dependencytrack.plugin.api.ExtensionPointSpec;
+
+public class TestExtensionPointSpec implements ExtensionPointSpec<TestExtensionPoint> {
+
+    @Override
+    public String name() {
+        return "test";
+    }
+
+    @Override
+    public boolean required() {
+        return false;
+    }
+
+    @Override
+    public Class<TestExtensionPoint> extensionPointClass() {
+        return TestExtensionPoint.class;
+    }
+
 }

@@ -19,7 +19,8 @@
 package org.dependencytrack.filestorage;
 
 import org.dependencytrack.plugin.api.ConfigRegistry;
-import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.filestorage.FileStorage;
+import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * @since 5.6.0
  */
-public final class MemoryFileStorageFactory implements ExtensionFactory<FileStorage> {
+public final class MemoryFileStorageFactory implements FileStorageFactory {
 
     private Map<String, byte[]> fileContentByKey;
 

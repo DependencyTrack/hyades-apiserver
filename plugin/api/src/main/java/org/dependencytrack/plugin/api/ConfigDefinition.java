@@ -16,17 +16,18 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin;
-
-import java.util.NoSuchElementException;
+package org.dependencytrack.plugin.api;
 
 /**
+ * @param name       Name of the configuration.
+ * @param source     Where the configuration shall be loaded from.
+ * @param isRequired Whether the configuration is mandatory.
+ * @param isSecret   Whether the configuration is confidential.
  * @since 5.6.0
  */
-public class NoSuchExtensionException extends NoSuchElementException {
-
-    NoSuchExtensionException(final String message) {
-        super(message);
-    }
-
+public record ConfigDefinition(
+        String name,
+        ConfigSource source,
+        boolean isRequired,
+        boolean isSecret) {
 }

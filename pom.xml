@@ -32,6 +32,7 @@
         <module>api</module>
         <module>alpine</module>
         <module>proto</module>
+        <module>plugin/api</module>
         <module>persistence-migration</module>
         <module>persistence-jooq</module>
         <module>apiserver</module>
