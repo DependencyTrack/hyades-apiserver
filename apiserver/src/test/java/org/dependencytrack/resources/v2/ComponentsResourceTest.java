@@ -51,6 +51,14 @@ public class ComponentsResourceTest extends ResourceTest {
                           "hashes": {
                             "sha1": "640ab2bae07bedc4c163f679a746f7ab7fb5d1fa",
                             "sha3_512": "301bb421c971fbb7ed01dcc3a9976ce53df034022ba982b97d0f27d48c4f03883aabf7c6bc778aa7c383062f6823045a6d41b8a720afbb8a9607690f89fbe1a7"
+                          },
+                          "supplier": {
+                            "name": "supplier",
+                            "contacts": [
+                                {
+                                  "name": "author"
+                                }
+                            ]
                           }
                         }
                         """));
@@ -60,8 +68,33 @@ public class ComponentsResourceTest extends ResourceTest {
 
         qm.getPersistenceManager().evictAll();
 
-        final var component = qm.getComponents(project, false, false, false);
-        assertThat(component).isNotNull();
+        final var componentsPage = qm.getComponents(project, false, false, false);
+        assertThatJson(componentsPage).isEqualTo("""
+                {
+                  "total" : 1,
+                  "objects" : [ {
+                    "authors" : [ ],
+                    "name" : "foo",
+                    "sha1" : "640ab2bae07bedc4c163f679a746f7ab7fb5d1fa",
+                    "sha3_512" : "301bb421c971fbb7ed01dcc3a9976ce53df034022ba982b97d0f27d48c4f03883aabf7c6bc778aa7c383062f6823045a6d41b8a720afbb8a9607690f89fbe1a7",
+                    "purl" : "pkg:maven/org.acme/abc",
+                    "purlCoordinates" : "pkg:maven/org.acme/abc",
+                    "project" : {
+                      "name" : "acme",
+                      "uuid" : "${json-unit.any-string}",
+                      "isLatest" : false,
+                      "active" : true
+                    },
+                    "uuid" : "${json-unit.any-string}",
+                    "componentMetaInformation" : {
+                      "lastFetched" : "${json-unit.any-number}"
+                    },
+                    "expandDependencyGraph" : false,
+                    "occurrenceCount" : 0,
+                    "isInternal" : false
+                  } ]
+                }
+                """);
     }
 
     @Test
