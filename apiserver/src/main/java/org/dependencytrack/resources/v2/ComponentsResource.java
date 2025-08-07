@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v2;
 import alpine.server.auth.PermissionRequired;
 import com.github.packageurl.MalformedPackageURLException;
 import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
@@ -35,6 +36,7 @@ import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.ComponentProjection;
 import org.dependencytrack.event.kafka.componentmeta.Handler;
 import org.dependencytrack.event.kafka.componentmeta.HandlerFactory;
+import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.IntegrityMetaComponent;
@@ -85,7 +87,11 @@ public class ComponentsResource extends AbstractApiResource implements Component
                 if (project == null) {
                     throw new NotFoundException();
                 }
-                requireProjectAccess(handle, uuid);
+                try {
+                    requireProjectAccess(handle, uuid);
+                } catch (ProjectAccessDeniedException ex) {
+                    throw new NotAuthorizedException(Response.Status.UNAUTHORIZED);
+                }
                 final License resolvedLicense = qm.getLicense(request.getLicense());
                 final Component component = new Component();
                 component.setProject(project);
@@ -98,21 +104,25 @@ public class ComponentsResource extends AbstractApiResource implements Component
                 component.setGroup(StringUtils.trimToNull(request.getGroup()));
                 component.setDescription(StringUtils.trimToNull(request.getDescription()));
                 component.setFilename(StringUtils.trimToNull(request.getFilename()));
-                component.setClassifier(Classifier.valueOf(request.getClassifier().name()));
+                if (request.getClassifier() != null) {
+                    component.setClassifier(Classifier.valueOf(request.getClassifier().name()));
+                }
                 component.setPurl(request.getPurl());
                 component.setPurlCoordinates(PurlUtil.silentPurlCoordinatesOnly(component.getPurl()));
                 component.setInternal(new InternalComponentIdentifier().isInternal(component));
                 component.setCpe(StringUtils.trimToNull(request.getCpe()));
                 component.setSwidTagId(StringUtils.trimToNull(request.getSwidTagId()));
                 component.setCopyright(StringUtils.trimToNull(request.getCopyright()));
-                component.setMd5(StringUtils.trimToNull(request.getHashes().getMd5()));
-                component.setSha1(StringUtils.trimToNull(request.getHashes().getSha1()));
-                component.setSha256(StringUtils.trimToNull(request.getHashes().getSha256()));
-                component.setSha384(StringUtils.trimToNull(request.getHashes().getSha384()));
-                component.setSha512(StringUtils.trimToNull(request.getHashes().getSha512()));
-                component.setSha3_256(StringUtils.trimToNull(request.getHashes().getSha3256()));
-                component.setSha3_384(StringUtils.trimToNull(request.getHashes().getSha3384()));
-                component.setSha3_512(StringUtils.trimToNull(request.getHashes().getSha3512()));
+                if (request.getHashes() != null) {
+                    component.setMd5(StringUtils.trimToNull(request.getHashes().getMd5()));
+                    component.setSha1(StringUtils.trimToNull(request.getHashes().getSha1()));
+                    component.setSha256(StringUtils.trimToNull(request.getHashes().getSha256()));
+                    component.setSha384(StringUtils.trimToNull(request.getHashes().getSha384()));
+                    component.setSha512(StringUtils.trimToNull(request.getHashes().getSha512()));
+                    component.setSha3_256(StringUtils.trimToNull(request.getHashes().getSha3256()));
+                    component.setSha3_384(StringUtils.trimToNull(request.getHashes().getSha3384()));
+                    component.setSha3_512(StringUtils.trimToNull(request.getHashes().getSha3512()));
+                }
                 if (resolvedLicense != null) {
                     component.setLicense(null);
                     component.setLicenseExpression(null);
