@@ -16,25 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin;
+package org.dependencytrack.plugin.api.filestorage;
 
-import org.dependencytrack.plugin.api.ExtensionPointMetadata;
+import org.dependencytrack.plugin.api.ExtensionFactory;
 
-public class TestExtensionPointMetadata implements ExtensionPointMetadata<TestExtensionPoint> {
-
-    @Override
-    public String name() {
-        return "test";
-    }
-
-    @Override
-    public boolean required() {
-        return false;
-    }
-
-    @Override
-    public Class<TestExtensionPoint> extensionPointClass() {
-        return TestExtensionPoint.class;
-    }
-
+/**
+ * @since 5.6.0
+ */
+public interface FileStorageFactory extends ExtensionFactory<FileStorage> {
 }

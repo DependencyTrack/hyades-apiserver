@@ -18,15 +18,12 @@
  */
 package org.dependencytrack.plugin;
 
-import java.util.NoSuchElementException;
+import org.dependencytrack.plugin.api.ExtensionPoint;
 
 /**
+ * @param extensionPointClass The {@link Class} of the {@link ExtensionPoint}.
+ * @param name                The name of the extension.
  * @since 5.6.0
  */
-public class NoSuchExtensionException extends NoSuchElementException {
-
-    NoSuchExtensionException(final String message) {
-        super(message);
-    }
-
+record ExtensionIdentity(Class<? extends ExtensionPoint> extensionPointClass, String name) {
 }

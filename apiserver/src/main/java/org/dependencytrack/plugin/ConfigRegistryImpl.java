@@ -24,36 +24,18 @@ import alpine.model.IConfigProperty.PropertyType;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.plugin.api.ConfigDefinition;
 import org.dependencytrack.plugin.api.ConfigRegistry;
-import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.util.DebugDataEncryption;
 import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 
-import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
- * A read-only registry for accessing application configuration.
- * <p>
- * The registry enforces namespacing of property names,
- * to prevent {@link ExtensionPoint}s from accessing values
- * belonging to the core application, or other extension points.
- * <p>
- * Namespacing is based on the extension point's, and the extension's name.
- * Extension {@code bar} of extension point {@code foo} can access:
- * <ul>
- *     <li>Runtime properties with {@code groupName} of {@code foo} and {@code propertyName} prefixed with {@code extension.bar}</li>
- *     <li>Deployment properties prefixed with {@code foo.extension.bar}</li>
- * </ul>
- * <p>
- * Runtime properties are sourced from the {@code CONFIGPROPERTY} database table.
- * Deployment properties are sourced from environment variables, and the {@code application.properties} file.
- *
  * @since 5.6.0
  */
-class ConfigRegistryImpl implements ConfigRegistry {
+final class ConfigRegistryImpl implements ConfigRegistry {
 
     private final String extensionPointName;
     private final String extensionName;
@@ -81,7 +63,7 @@ class ConfigRegistryImpl implements ConfigRegistry {
      * @return A {@link ConfigRegistryImpl} scoped to {@code extensionPointName} and {@code extensionName}.
      */
     static ConfigRegistryImpl forExtension(final String extensionPointName, final String extensionName) {
-        return new ConfigRegistryImpl(requireNonNull(extensionPointName), Objects.requireNonNull(extensionName));
+        return new ConfigRegistryImpl(requireNonNull(extensionPointName), requireNonNull(extensionName));
     }
 
     @Override
