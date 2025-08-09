@@ -23,7 +23,6 @@ import alpine.common.metrics.Metrics;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
-import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineFactory;
@@ -43,18 +42,30 @@ import static alpine.Config.AlpineKey.DATABASE_PASSWORD;
 import static alpine.Config.AlpineKey.DATABASE_URL;
 import static alpine.Config.AlpineKey.DATABASE_USERNAME;
 import static alpine.Config.AlpineKey.METRICS_ENABLED;
+import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
 import static java.util.Objects.requireNonNullElseGet;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_ACTIVITY_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_COMMAND_FLUSH_INTERVAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_COMMAND_MAX_SIZE;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_CACHE_RUN_HISTORY_MAX_SIZE;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_CACHE_RUN_HISTORY_TTL_MS;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_PASSWORD;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_POOL_ENABLED;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_POOL_MAX_SIZE;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_POOL_MIN_IDLE;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_URL;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_USERNAME;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_ENABLED;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_RETENTION_DAYS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_FLUSH_INTERVAL_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_MAX_SIZE;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_WORKFLOW_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_MIN_POLL_INTERVAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_INITIAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_MAX_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_MULTIPLIER;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_RANDOMIZATION_FACTOR;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_MIN_POLL_INTERVAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_INITIAL_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_MAX_MS;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_MULTIPLIER;
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_RANDOMIZATION_FACTOR;
 
 /**
  * @since 5.7.0
@@ -68,7 +79,7 @@ public class WorkflowEngineInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!config.getPropertyAsBoolean(ConfigKey.WORKFLOW_ENGINE_ENABLED)) {
+        if (!config.getPropertyAsBoolean(WORKFLOW_ENGINE_ENABLED)) {
             return;
         }
 
@@ -79,9 +90,10 @@ public class WorkflowEngineInitializer implements ServletContextListener {
 
         final var engineFactory = ServiceLoader.load(WorkflowEngineFactory.class).findFirst().orElseThrow();
         engine = engineFactory.create(engineConfig);
-        engine.start();
-
         WorkflowEngineHolder.set(engine);
+
+        LOGGER.info("Starting workflow engine");
+        engine.start();
     }
 
     @Override
@@ -90,6 +102,7 @@ public class WorkflowEngineInitializer implements ServletContextListener {
             return;
         }
 
+        LOGGER.info("Stopping workflow engine");
         try {
             engine.close();
         } catch (IOException e) {
@@ -100,28 +113,38 @@ public class WorkflowEngineInitializer implements ServletContextListener {
     private static WorkflowEngineConfig createEngineConfig(final Config config) {
         final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), createDataSource(config));
 
-        engineConfig.activityTaskDispatcher().setMinPollInterval(
-                Duration.ofMillis(config.getPropertyAsInt(
-                        WORKFLOW_ENGINE_ACTIVITY_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS)));
-        // TODO: Backoff config
+        engineConfig.retention().setDays(
+                config.getPropertyAsInt(WORKFLOW_ENGINE_RETENTION_DAYS));
+
+        engineConfig.runHistoryCache().setMaxSize(
+                config.getPropertyAsInt(WORKFLOW_ENGINE_CACHE_RUN_HISTORY_MAX_SIZE));
+        engineConfig.runHistoryCache().setEvictAfterAccess(Duration.ofMillis(
+                config.getPropertyAsInt(WORKFLOW_ENGINE_CACHE_RUN_HISTORY_TTL_MS)));
+
+        engineConfig.taskCommandBuffer().setFlushInterval(Duration.ofMillis(
+                config.getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_TASK_COMMAND_FLUSH_INTERVAL_MS)));
+        engineConfig.taskCommandBuffer().setMaxBatchSize(
+                config.getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_TASK_COMMAND_MAX_SIZE));
+
+        engineConfig.activityTaskDispatcher().setMinPollInterval(Duration.ofMillis(
+                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_MIN_POLL_INTERVAL_MS)));
+        engineConfig.activityTaskDispatcher().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
+                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_INITIAL_MS),
+                config.getPropertyAsDouble(WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_MULTIPLIER),
+                config.getPropertyAsDouble(WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_RANDOMIZATION_FACTOR),
+                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_MAX_MS)));
+
+        engineConfig.workflowTaskDispatcher().setMinPollInterval(Duration.ofMillis(
+                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_MIN_POLL_INTERVAL_MS)));
+        engineConfig.activityTaskDispatcher().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
+                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_INITIAL_MS),
+                config.getPropertyAsDouble(WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_MULTIPLIER),
+                config.getPropertyAsDouble(WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_RANDOMIZATION_FACTOR),
+                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_MAX_MS)));
 
         if (config.getPropertyAsBoolean(METRICS_ENABLED)) {
             engineConfig.setMeterRegistry(Metrics.getRegistry());
         }
-
-        engineConfig.retention().setDays(config.getPropertyAsInt(
-                WORKFLOW_ENGINE_RETENTION_DAYS));
-
-        engineConfig.taskCommandBuffer().setFlushInterval(
-                Duration.ofMillis(config.getPropertyAsInt(
-                        WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_FLUSH_INTERVAL_MS)));
-        engineConfig.taskCommandBuffer().setMaxBatchSize(config.getPropertyAsInt(
-                WORKFLOW_ENGINE_TASK_COMMAND_BUFFER_MAX_SIZE));
-
-        engineConfig.workflowTaskDispatcher().setMinPollInterval(
-                Duration.ofMillis(config.getPropertyAsInt(
-                        WORKFLOW_ENGINE_WORKFLOW_TASK_DISPATCHER_MIN_POLL_INTERVAL_MS)));
-        // TODO: Backoff config
 
         return engineConfig;
     }
