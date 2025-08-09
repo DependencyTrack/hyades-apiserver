@@ -34,12 +34,16 @@ servers:
 tags:
 - name: Metrics
   description: Endpoints related to metrics
+- name: Projects
+  description: Endpoints related to projects
 - name: Teams
   description: Endpoints related to teams
 - name: Workflows
   description: Endpoints related to workflows
 
 paths:
+  /projects/{uuid}/components:
+    $ref: "./paths/projects_uuid_components.yaml"
   /metrics/portfolio/current:
     $ref: "./paths/metrics_portfolio_current.yaml"
   /metrics/vulnerabilities:
