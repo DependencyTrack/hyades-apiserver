@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.api.failure;
 
 import org.jspecify.annotations.Nullable;
 
-public final class ApplicationFailureException extends WorkflowFailureException {
+public non-sealed class ApplicationFailureException extends WorkflowFailureException {
 
     private final boolean isTerminal;
 
@@ -30,6 +30,12 @@ public final class ApplicationFailureException extends WorkflowFailureException 
             final boolean isTerminal) {
         super(message, null, cause);
         this.isTerminal = isTerminal;
+    }
+
+    public ApplicationFailureException(
+            @Nullable final String message,
+            @Nullable final Throwable cause) {
+        this(message, cause, false);
     }
 
     public boolean isTerminal() {

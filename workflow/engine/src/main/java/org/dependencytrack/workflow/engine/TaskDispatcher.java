@@ -33,6 +33,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
@@ -124,11 +125,14 @@ final class TaskDispatcher<T extends Task> implements Runnable {
             }
 
             if (taskPollDistributionProvider != null) {
-                final Map<String, Long> taskCountByName = polledTasks.stream()
-                                .collect(Collectors.groupingBy(Task::name, Collectors.counting()));
-                for (final Map.Entry<String, Long> entry : taskCountByName.entrySet()) {
+                final Map<Set<Tag>, Long> taskCountByMeterTags =
+                        polledTasks.stream()
+                                .collect(Collectors.groupingBy(
+                                        Task::meterTags,
+                                        Collectors.counting()));
+                for (final Map.Entry<Set<Tag>, Long> entry : taskCountByMeterTags.entrySet()) {
                     taskPollDistributionProvider
-                            .withTag("taskName", entry.getKey())
+                            .withTags(entry.getKey())
                             .record(entry.getValue());
                 }
             }
@@ -180,14 +184,14 @@ final class TaskDispatcher<T extends Task> implements Runnable {
 
                 if (tasksProcessedCounterProvider != null) {
                     tasksProcessedCounterProvider
-                            .withTag("taskName", task.name())
+                            .withTags(task.meterTags())
                             .increment();
                 }
             } finally {
                 if (taskProcessLatencyTimerProvider != null) {
                     taskProcessingLatencySample.stop(
                             taskProcessLatencyTimerProvider
-                                    .withTag("taskName", task.name()));
+                                    .withTags(task.meterTags()));
                 }
             }
         } catch (InterruptedException e) {

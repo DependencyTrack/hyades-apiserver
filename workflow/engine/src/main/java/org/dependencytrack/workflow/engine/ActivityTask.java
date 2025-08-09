@@ -18,10 +18,12 @@
  */
 package org.dependencytrack.workflow.engine;
 
+import io.micrometer.core.instrument.Tag;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -41,8 +43,8 @@ record ActivityTask(
         Instant lockedUntil) implements Task {
 
     @Override
-    public String name() {
-        return activityName;
+    public Set<Tag> meterTags() {
+        return Set.of(Tag.of("activityName", activityName));
     }
 
 }

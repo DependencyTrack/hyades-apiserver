@@ -19,7 +19,6 @@
 package org.dependencytrack.workflow.engine.api;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.annotation.Activity;
@@ -199,14 +198,12 @@ public interface WorkflowEngine extends Closeable {
     /**
      * Send an external event to a workflow run.
      *
-     * @param runId   ID of the workflow run that shall receive the event.
-     * @param eventId ID of the event that the workflow run may use for correlation.
-     * @param payload Payload of the event.
+     * @param externalEvent The {@link ExternalEvent} to send.
      * @return A {@link CompletableFuture} that will complete when the event was successfully
      * recorded in the recipient workflow run's message inbox.
      * @throws IllegalStateException When the engine is not running.
      */
-    CompletableFuture<Void> sendExternalEvent(UUID runId, String eventId, @Nullable WorkflowPayload payload);
+    CompletableFuture<Void> sendExternalEvent(ExternalEvent externalEvent);
 
     List<WorkflowSchedule> createSchedules(Collection<CreateWorkflowScheduleRequest> requests);
 

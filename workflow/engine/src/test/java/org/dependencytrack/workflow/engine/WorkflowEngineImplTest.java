@@ -25,8 +25,10 @@ import org.dependencytrack.workflow.api.ContinueAsNewOptions;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
+import org.dependencytrack.workflow.api.failure.TerminalApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
+import org.dependencytrack.workflow.engine.api.ExternalEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
@@ -595,7 +597,7 @@ class WorkflowEngineImplTest {
                     assertThat(run.updatedAt()).isNotNull();
                 });
 
-        engine.sendExternalEvent(runId, "foo-123", null).join();
+        engine.sendExternalEvent(new ExternalEvent(runId, "foo-123", null)).join();
 
         awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
 
@@ -831,7 +833,7 @@ class WorkflowEngineImplTest {
         });
 
         engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, ctx -> {
-            throw new ApplicationFailureException("Ouch!", null, true);
+            throw new TerminalApplicationFailureException("Ouch!", null);
         });
 
         engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
@@ -885,7 +887,7 @@ class WorkflowEngineImplTest {
         });
 
         engine.registerActivityInternal("qux", voidConverter(), voidConverter(), Duration.ofSeconds(5), false, ctx -> {
-            throw new ApplicationFailureException("Ouch!", null, true);
+            throw new TerminalApplicationFailureException("Ouch!", null);
         });
 
         engine.mountWorkflows(new WorkflowGroup("test-group")

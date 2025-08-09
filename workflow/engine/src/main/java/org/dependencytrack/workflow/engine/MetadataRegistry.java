@@ -67,7 +67,7 @@ final class MetadataRegistry {
     @SuppressWarnings("rawtypes")
     private final Map<String, ActivityMetadata> activityMetadataByName = new HashMap<>();
 
-    <A, R> void register(
+    <A, R> void registerWorkflow(
             final WorkflowExecutor<A, R> executor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
@@ -82,7 +82,7 @@ final class MetadataRegistry {
             throw new IllegalArgumentException("Executor class must be annotated with @Workflow");
         }
 
-        register(
+        registerWorkflow(
                 workflowAnnotation.name(),
                 workflowAnnotation.version(),
                 argumentConverter,
@@ -91,7 +91,7 @@ final class MetadataRegistry {
                 executor);
     }
 
-    <A, R> void register(
+    <A, R> void registerWorkflow(
             final String name,
             final int version,
             final PayloadConverter<A> argumentConverter,
@@ -121,7 +121,7 @@ final class MetadataRegistry {
         workflowMetadataByName.put(name, metadata);
     }
 
-    <A, R> void register(
+    <A, R> void registerActivity(
             final ActivityExecutor<A, R> executor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
@@ -136,10 +136,10 @@ final class MetadataRegistry {
             throw new IllegalArgumentException("Executor class must be annotated with @Activity");
         }
 
-        register(activityAnnotation.name(), argumentConverter, resultConverter, lockTimeout, activityAnnotation.heartbeat(), executor);
+        registerActivity(activityAnnotation.name(), argumentConverter, resultConverter, lockTimeout, activityAnnotation.heartbeat(), executor);
     }
 
-    <A, R> void register(
+    <A, R> void registerActivity(
             final String name,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,

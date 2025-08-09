@@ -376,8 +376,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         final Queue<WorkflowEvent> bufferedEvents = bufferedExternalEvents.get(externalEventId);
         if (bufferedEvents != null && !bufferedEvents.isEmpty()) {
             final WorkflowEvent event = bufferedEvents.poll();
-            awaitable.complete(event.getExternalEventReceived().hasContent()
-                    ? event.getExternalEventReceived().getContent()
+            awaitable.complete(event.getExternalEventReceived().hasPayload()
+                    ? event.getExternalEventReceived().getPayload()
                     : null);
             return awaitable;
         }
@@ -747,8 +747,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         final String externalEventId = event.getExternalEventReceived().getId();
         logger().debug("External event received for ID {}", externalEventId);
 
-        final WorkflowPayload externalEventContent = event.getExternalEventReceived().hasContent()
-                ? event.getExternalEventReceived().getContent()
+        final WorkflowPayload externalEventContent = event.getExternalEventReceived().hasPayload()
+                ? event.getExternalEventReceived().getPayload()
                 : null;
 
         final Queue<AwaitableImpl<?>> pendingAwaitables = pendingAwaitablesByExternalEventId.get(externalEventId);

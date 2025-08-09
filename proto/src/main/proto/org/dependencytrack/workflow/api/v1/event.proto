@@ -160,5 +160,5 @@ message SideEffectExecuted {
 
 message ExternalEventReceived {
   string id = 1;
-  optional WorkflowPayload content = 2;
+  optional WorkflowPayload payload = 2;
 }

@@ -47,6 +47,7 @@ import org.dependencytrack.workflow.engine.TaskCommand.CompleteActivityTaskComma
 import org.dependencytrack.workflow.engine.TaskCommand.CompleteWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.TaskCommand.FailActivityTaskCommand;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
+import org.dependencytrack.workflow.engine.api.ExternalEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineHealthProbeResult;
@@ -173,7 +174,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     @Nullable private ScheduledExecutorService schedulerExecutor;
     @Nullable private ScheduledExecutorService retentionExecutor;
     @Nullable private ExecutorService eventListenerExecutor;
-    @Nullable private Buffer<NewExternalEvent> externalEventBuffer;
+    @Nullable private Buffer<ExternalEvent> externalEventBuffer;
     @Nullable private Buffer<TaskCommand> taskCommandBuffer;
     @Nullable private Cache<UUID, CachedWorkflowRunHistory> cachedHistoryByRunId;
 
@@ -368,7 +369,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.register(workflowExecutor, argumentConverter, resultConverter, lockTimeout);
+        metadataRegistry.registerWorkflow(workflowExecutor, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerWorkflowInternal(
@@ -379,7 +380,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final Duration lockTimeout,
             final WorkflowExecutor<A, R> workflowExecutor) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.register(workflowName, workflowVersion, argumentConverter, resultConverter, lockTimeout, workflowExecutor);
+        metadataRegistry.registerWorkflow(workflowName, workflowVersion, argumentConverter, resultConverter, lockTimeout, workflowExecutor);
     }
 
     @Override
@@ -389,7 +390,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final PayloadConverter<R> resultConverter,
             final Duration lockTimeout) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.register(activityExecutor, argumentConverter, resultConverter, lockTimeout);
+        metadataRegistry.registerActivity(activityExecutor, argumentConverter, resultConverter, lockTimeout);
     }
 
     <A, R> void registerActivityInternal(
@@ -400,7 +401,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final boolean heartbeatEnabled,
             final ActivityExecutor<A, R> activityExecutor) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.register(activityName, argumentConverter, resultConverter, lockTimeout, heartbeatEnabled, activityExecutor);
+        metadataRegistry.registerActivity(activityName, argumentConverter, resultConverter, lockTimeout, heartbeatEnabled, activityExecutor);
     }
 
     @Override
@@ -668,14 +669,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public CompletableFuture<Void> sendExternalEvent(
-            final UUID workflowRunId,
-            final String eventId,
-            final WorkflowPayload content) {
+    public CompletableFuture<Void> sendExternalEvent(final ExternalEvent externalEvent) {
         requireStatusAnyOf(Status.RUNNING);
 
         try {
-            return externalEventBuffer.add(new NewExternalEvent(workflowRunId, eventId, content));
+            return externalEventBuffer.add(externalEvent);
         } catch (InterruptedException | TimeoutException e) {
             throw new RuntimeException(e);
         }
@@ -793,17 +791,17 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         taskDispatcherExecutor.execute(taskDispatcher);
     }
 
-    private void flushExternalEvents(final List<NewExternalEvent> externalEvents) {
+    private void flushExternalEvents(final List<ExternalEvent> externalEvents) {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
             final var now = Timestamps.now();
 
             final var createCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(externalEvents.size());
-            for (final NewExternalEvent externalEvent : externalEvents) {
+            for (final ExternalEvent externalEvent : externalEvents) {
                 final var subjectBuilder = ExternalEventReceived.newBuilder()
                         .setId(externalEvent.eventId());
-                if (externalEvent.content() != null) {
-                    subjectBuilder.setContent(externalEvent.content());
+                if (externalEvent.payload() != null) {
+                    subjectBuilder.setPayload(externalEvent.payload());
                 }
 
                 createCommands.add(

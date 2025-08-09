@@ -18,11 +18,13 @@
  */
 package org.dependencytrack.workflow.engine;
 
+import io.micrometer.core.instrument.Tag;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 record WorkflowTask(
@@ -37,8 +39,10 @@ record WorkflowTask(
         List<WorkflowEvent> inbox) implements Task {
 
     @Override
-    public String name() {
-        return "%s-v%d".formatted(workflowName, workflowVersion);
+    public Set<Tag> meterTags() {
+        return Set.of(
+                Tag.of("workflowName", workflowName),
+                Tag.of("workflowVersion", String.valueOf(workflowVersion)));
     }
 
 }
