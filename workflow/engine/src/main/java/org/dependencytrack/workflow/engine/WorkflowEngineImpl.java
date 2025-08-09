@@ -796,23 +796,28 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private void flushExternalEvents(final List<NewExternalEvent> externalEvents) {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
-
             final var now = Timestamps.now();
-            dao.createRunInboxEvents(externalEvents.stream()
-                    .map(externalEvent -> new CreateWorkflowRunInboxEntryCommand(
-                            externalEvent.workflowRunId(),
-                            null,
-                            WorkflowEvent.newBuilder()
-                                    .setId(-1)
-                                    .setTimestamp(now)
-                                    .setExternalEventReceived(
-                                            ExternalEventReceived.newBuilder()
-                                                    .setId(externalEvent.eventId())
-                                                    .setContent(externalEvent.content())
-                                                    .build())
-                                    .build()
-                    ))
-                    .toList());
+
+            final var createCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(externalEvents.size());
+            for (final NewExternalEvent externalEvent : externalEvents) {
+                final var subjectBuilder = ExternalEventReceived.newBuilder()
+                        .setId(externalEvent.eventId());
+                if (externalEvent.content() != null) {
+                    subjectBuilder.setContent(externalEvent.content());
+                }
+
+                createCommands.add(
+                        new CreateWorkflowRunInboxEntryCommand(
+                                externalEvent.workflowRunId(),
+                                null,
+                                WorkflowEvent.newBuilder()
+                                        .setId(-1)
+                                        .setTimestamp(now)
+                                        .setExternalEventReceived(subjectBuilder)
+                                        .build()));
+            }
+
+            dao.createRunInboxEvents(createCommands);
         });
     }
 
