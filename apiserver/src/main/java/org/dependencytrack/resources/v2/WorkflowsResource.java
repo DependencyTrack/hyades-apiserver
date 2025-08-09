@@ -21,6 +21,7 @@ package org.dependencytrack.resources.v2;
 import alpine.server.auth.AuthenticationNotRequired;
 import alpine.server.auth.PermissionRequired;
 import org.dependencytrack.api.v2.WorkflowsApi;
+import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
 import org.dependencytrack.api.v2.model.ListWorkflowStatesResponse;
@@ -31,9 +32,11 @@ import org.dependencytrack.api.v2.model.WorkflowRunStatus;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 
 import jakarta.inject.Inject;
@@ -139,6 +142,41 @@ public class WorkflowsResource implements WorkflowsApi {
                                 .next(runsPage.nextPageToken() != null
                                         ? uriInfo.getRequestUriBuilder()
                                         .queryParam("page_token", runsPage.nextPageToken())
+                                        .build()
+                                        : null)
+                                .build())
+                        .build())
+                .build();
+
+        return Response.ok(response).build();
+    }
+
+    @Override
+    public Response listWorkflowRunEvents(final UUID runId, final Integer limit, final String pageToken) {
+        if (workflowEngine == null) {
+            throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
+        }
+
+        final WorkflowRunMetadata runMetadata = workflowEngine.getRunMetadata(runId);
+        if (runMetadata == null) {
+            throw new NotFoundException();
+        }
+
+        final Page<WorkflowEvent> eventsPage = workflowEngine.listRunEvents(
+                new ListWorkflowRunEventsRequest(runId)
+                        .withLimit(limit)
+                        .withPageToken(pageToken));
+
+        final var response = ListWorkflowRunEventsResponse.builder()
+                .events(eventsPage.items().stream()
+                        .map(event -> (Object) event)
+                        .toList())
+                .pagination(PaginationMetadata.builder()
+                        .links(PaginationLinks.builder()
+                                .self(uriInfo.getRequestUri())
+                                .next(eventsPage.nextPageToken() != null
+                                        ? uriInfo.getRequestUriBuilder()
+                                        .queryParam("page_token", eventsPage.nextPageToken())
                                         .build()
                                         : null)
                                 .build())

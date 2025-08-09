@@ -62,7 +62,7 @@ import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEventL
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
-import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunHistoryRequest;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
 import org.dependencytrack.workflow.engine.persistence.JdbiFactory;
@@ -664,8 +664,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public Page<WorkflowEvent> listRunHistory(final ListWorkflowRunHistoryRequest request) {
-        return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRunHistory(request));
+    public Page<WorkflowEvent> listRunEvents(final ListWorkflowRunEventsRequest request) {
+        return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRunEvents(request));
     }
 
     @Override

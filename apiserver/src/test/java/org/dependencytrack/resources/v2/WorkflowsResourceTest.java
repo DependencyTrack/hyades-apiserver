@@ -18,18 +18,23 @@
  */
 package org.dependencytrack.resources.v2;
 
+import com.google.protobuf.util.Timestamps;
 import net.javacrumbs.jsonunit.core.Option;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
+import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -46,10 +51,13 @@ import static org.dependencytrack.model.WorkflowStatus.COMPLETED;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
+import static org.dependencytrack.workflow.api.payload.PayloadConverters.stringConverter;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 
 public class WorkflowsResourceTest extends ResourceTest {
 
@@ -64,6 +72,13 @@ public class WorkflowsResourceTest extends ResourceTest {
                             bind(WORKFLOW_ENGINE_MOCK).to(WorkflowEngine.class);
                         }
                     }));
+
+    @After
+    @Override
+    public void after() {
+        reset(WORKFLOW_ENGINE_MOCK);
+        super.after();
+    }
 
     @Test
     public void getWorkflowStatusOk() {
@@ -152,7 +167,7 @@ public class WorkflowsResourceTest extends ResourceTest {
     }
 
     @Test
-    public void listWorkflowRunsTest() {
+    public void listWorkflowRunsShouldReturnWorkflowRunMetadata() {
         final var workflowRunMetadata = new WorkflowRunMetadata(
                 UUID.fromString("724c0700-4eeb-45f0-8ff4-8bba369c0174"),
                 "workflowName",
@@ -197,6 +212,90 @@ public class WorkflowsResourceTest extends ResourceTest {
                           }
                         }
                         """);
+    }
+
+    @Test
+    public void listWorkflowRunEventsShouldReturnWorkflowRunEvents() {
+        final var runId = UUID.fromString("a81df43d-bd7f-4997-9d7a-d735d5101d52");
+
+        final var runMetadata = new WorkflowRunMetadata(
+                runId,
+                "workflowName",
+                666,
+                WorkflowRunStatus.PENDING,
+                null,
+                null,
+                null,
+                null,
+                Instant.ofEpochMilli(666666),
+                null,
+                null,
+                null);
+
+        final var event = WorkflowEvent.newBuilder()
+                .setId(1)
+                .setTimestamp(Timestamps.fromMillis(666666))
+                .setRunScheduled(RunScheduled.newBuilder()
+                        .setWorkflowName("workflowName")
+                        .setWorkflowVersion(123)
+                        .setArgument(stringConverter().convertToPayload("argument"))
+                        .build())
+                .build();
+
+        doReturn(runMetadata)
+                .when(WORKFLOW_ENGINE_MOCK).getRunMetadata(eq(runId));
+        doReturn(new Page<>(List.of(event), null))
+                .when(WORKFLOW_ENGINE_MOCK).listRunEvents(any(ListWorkflowRunEventsRequest.class));
+
+        final Response response = jersey.target("/workflow-runs/%s/events".formatted(runId)).request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "events": [
+                            {
+                              "id": 1,
+                              "timestamp": "1970-01-01T00:11:06.666Z",
+                              "runScheduled": {
+                                "workflowName": "workflowName",
+                                "workflowVersion": 123,
+                                "argument": {
+                                  "binaryContent": {
+                                    "mediaType": "text/plain",
+                                    "data": "YXJndW1lbnQ="
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "_pagination": {
+                            "links": {
+                              "self": "${json-unit.any-string}"
+                            }
+                          }
+                        }
+                        """);
+    }
+
+    @Test
+    public void listWorkflowRunEventsShouldReturnNotFoundWhenRunDoesNotExist() {
+        doReturn(null)
+                .when(WORKFLOW_ENGINE_MOCK).getRunMetadata(any(UUID.class));
+
+        final Response response = jersey.target("/workflow-runs/a81df43d-bd7f-4997-9d7a-d735d5101d52/events").request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type": "about:blank",
+                  "status":404,
+                  "title": "Not Found",
+                  "detail": "The requested resource could not be found."
+                }
+                """);
     }
 
 }

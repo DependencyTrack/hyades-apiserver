@@ -16,15 +16,19 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.api;
+package org.dependencytrack.workflow.serialization;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
-import org.jspecify.annotations.Nullable;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 
-import java.util.UUID;
+/**
+ * @since 5.7.0
+ */
+public final class WorkflowJacksonModule extends SimpleModule {
 
-public record ExternalEvent(
-        UUID workflowRunId,
-        String eventId,
-        @Nullable WorkflowPayload payload) {
+    public WorkflowJacksonModule() {
+        super(WorkflowJacksonModule.class.getName());
+        addSerializer(WorkflowEvent.class, new WorkflowEventJacksonSerializer());
+    }
+
 }
