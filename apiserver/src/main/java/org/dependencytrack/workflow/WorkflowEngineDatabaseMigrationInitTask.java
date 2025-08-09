@@ -38,7 +38,7 @@ import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_ENABLED;
 /**
  * @since 5.7.0
  */
-public class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
+public final class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineDatabaseMigrationInitTask.class);
 

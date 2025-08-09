@@ -70,12 +70,21 @@ import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCH
 /**
  * @since 5.7.0
  */
-public class WorkflowEngineInitializer implements ServletContextListener {
+public final class WorkflowEngineInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineInitializer.class);
 
-    private final Config config = Config.getInstance();
+    private final Config config;
     private WorkflowEngine engine;
+
+    WorkflowEngineInitializer(final Config config) {
+        this.config = config;
+    }
+
+    @SuppressWarnings("unused") // Used by servlet context.
+    public WorkflowEngineInitializer() {
+        this(Config.getInstance());
+    }
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
@@ -108,6 +117,10 @@ public class WorkflowEngineInitializer implements ServletContextListener {
         } catch (IOException e) {
             LOGGER.error("Failed to stop engine", e);
         }
+    }
+
+    WorkflowEngine getEngine() {
+        return engine;
     }
 
     private static WorkflowEngineConfig createEngineConfig(final Config config) {

@@ -26,19 +26,30 @@ import org.eclipse.microprofile.health.HealthCheckResponseBuilder;
 import org.eclipse.microprofile.health.Readiness;
 
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * @since 5.7.0
  */
 @Readiness
-public class WorkflowEngineHealthCheck implements HealthCheck {
+public final class WorkflowEngineHealthCheck implements HealthCheck {
+
+    private final Supplier<WorkflowEngine> engineSupplier;
+
+    WorkflowEngineHealthCheck(final Supplier<WorkflowEngine> engineSupplier) {
+        this.engineSupplier = engineSupplier;
+    }
+
+    public WorkflowEngineHealthCheck() {
+        this(WorkflowEngineHolder::get);
+    }
 
     @Override
     public HealthCheckResponse call() {
         final HealthCheckResponseBuilder responseBuilder =
                 HealthCheckResponse.named("workflow-engine");
 
-        final WorkflowEngine engine = WorkflowEngineHolder.get();
+        final WorkflowEngine engine = engineSupplier.get();
         if (engine == null) {
             return responseBuilder.down().build();
         }

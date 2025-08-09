@@ -25,6 +25,10 @@ import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
+import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
+import org.dependencytrack.workflow.engine.api.pagination.Page;
+import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -32,6 +36,8 @@ import org.junit.Test;
 import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
@@ -41,6 +47,8 @@ import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 public class WorkflowsResourceTest extends ResourceTest {
@@ -142,4 +150,53 @@ public class WorkflowsResourceTest extends ResourceTest {
                 }
                 """);
     }
+
+    @Test
+    public void listWorkflowRunsTest() {
+        final var workflowRunMetadata = new WorkflowRunMetadata(
+                UUID.fromString("724c0700-4eeb-45f0-8ff4-8bba369c0174"),
+                "workflowName",
+                666,
+                WorkflowRunStatus.RUNNING,
+                "customStatus",
+                123,
+                "concurrencyGroupId",
+                Map.of("foo", "bar"),
+                Instant.ofEpochMilli(666666),
+                Instant.ofEpochMilli(777777),
+                Instant.ofEpochMilli(888888),
+                null);
+
+        doReturn(new Page<>(List.of(workflowRunMetadata), null))
+                .when(WORKFLOW_ENGINE_MOCK).listRuns(any(ListWorkflowRunsRequest.class));
+
+        final Response response = jersey.target("/workflow-runs").request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response))
+                .isEqualTo(/* language=JSON */ """
+                        {
+                          "workflow_runs": [
+                            {
+                              "id": "724c0700-4eeb-45f0-8ff4-8bba369c0174",
+                              "workflow_name": "workflowName",
+                              "workflow_version": 666,
+                              "status": "RUNNING",
+                              "created_at": 666666,
+                              "priority": 123,
+                              "concurrency_group_id": "concurrencyGroupId",
+                              "updated_at": 777777,
+                              "started_at": 888888
+                            }
+                          ],
+                          "_pagination": {
+                            "links": {
+                              "self": "${json-unit.any-string}"
+                            }
+                          }
+                        }
+                        """);
+    }
+
 }

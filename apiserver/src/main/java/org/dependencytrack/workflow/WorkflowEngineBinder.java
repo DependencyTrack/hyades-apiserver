@@ -25,7 +25,7 @@ import org.glassfish.hk2.utilities.binding.AbstractBinder;
 /**
  * @since 5.7.0
  */
-public class WorkflowEngineBinder extends AbstractBinder {
+public final class WorkflowEngineBinder extends AbstractBinder {
 
     @Override
     protected void configure() {
