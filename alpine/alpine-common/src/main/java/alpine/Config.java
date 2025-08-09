@@ -499,6 +499,10 @@ public class Config {
         }
     }
 
+    public double getPropertyAsDouble(Key key) {
+        return Double.parseDouble(getProperty(key));
+    }
+
     /**
      * Return the configured value for the specified Key.
      * @param key The Key to return the configuration for

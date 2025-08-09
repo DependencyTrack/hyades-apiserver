@@ -18,13 +18,17 @@
  */
 package org.dependencytrack.health;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.server.health.HealthCheckRegistry;
 import alpine.server.health.checks.DatabaseHealthCheck;
 import org.dependencytrack.event.kafka.processor.ProcessorsHealthCheck;
+import org.dependencytrack.workflow.WorkflowEngineHealthCheck;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+
+import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_ENABLED;
 
 public class HealthCheckInitializer implements ServletContextListener {
 
@@ -35,6 +39,10 @@ public class HealthCheckInitializer implements ServletContextListener {
         LOGGER.info("Registering health checks");
         HealthCheckRegistry.getInstance().register("database", new DatabaseHealthCheck());
         HealthCheckRegistry.getInstance().register("kafka-processors", new ProcessorsHealthCheck());
+
+        if (Config.getInstance().getPropertyAsBoolean(WORKFLOW_ENGINE_ENABLED)) {
+            HealthCheckRegistry.getInstance().register("workflow-engine", new WorkflowEngineHealthCheck());
+        }
     }
 
 }
