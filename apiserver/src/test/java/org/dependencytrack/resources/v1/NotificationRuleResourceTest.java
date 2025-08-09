@@ -23,9 +23,11 @@ import alpine.model.Team;
 import alpine.notification.NotificationLevel;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import alpine.server.filters.AuthorizationFeature;
 import net.javacrumbs.jsonunit.core.Option;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
+import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.Project;
@@ -65,7 +67,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(NotificationRuleResource.class)
                     .register(ApiFilter.class)
-                    .register(AuthenticationFeature.class));
+                    .register(AuthenticationFeature.class)
+                    .register(AuthorizationFeature.class));
 
     @Before
     public void before() throws Exception {
@@ -76,6 +79,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void getAllNotificationRulesTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         qm.createNotificationRule("Rule 2", NotificationScope.PORTFOLIO, NotificationLevel.WARNING, publisher);
@@ -99,6 +104,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void createNotificationRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = new NotificationRule();
         rule.setName("Example Rule");
@@ -125,6 +132,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void createNotificationRuleInvalidPublisherTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         NotificationPublisher publisher = new NotificationPublisher();
         publisher.setUuid(UUID.randomUUID());
         NotificationRule rule = new NotificationRule();
@@ -146,6 +155,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void updateNotificationRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         rule.setName("Example Rule");
@@ -167,6 +178,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void updateNotificationRuleInvalidTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         rule = qm.detach(NotificationRule.class, rule.getId());
@@ -182,6 +195,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void deleteNotificationRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         rule.setName("Example Rule");
@@ -195,6 +210,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -212,6 +229,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToRuleInvalidRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/project/" + project.getUuid().toString()).request()
@@ -225,6 +244,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToRuleInvalidScopeTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.SYSTEM, NotificationLevel.INFORMATIONAL, publisher);
@@ -239,6 +260,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToRuleInvalidProjectTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + UUID.randomUUID().toString()).request()
@@ -252,6 +275,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToRuleDuplicateProjectTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -268,6 +293,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addProjectToRuleAclTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -302,6 +328,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -318,6 +346,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromRuleInvalidRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/project/" + project.getUuid().toString()).request()
@@ -331,6 +361,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromRuleInvalidScopeTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.SYSTEM, NotificationLevel.INFORMATIONAL, publisher);
@@ -345,6 +377,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromRuleInvalidProjectTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/project/" + UUID.randomUUID().toString()).request()
@@ -358,6 +392,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromRuleDuplicateProjectTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Project project = qm.createProject("Acme Example", null, null, null, null, null, null, false);
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -370,6 +406,7 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeProjectFromRuleAclTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
         enablePortfolioAccessControl();
 
         final var project = new Project();
@@ -404,7 +441,9 @@ public class NotificationRuleResourceTest extends ResourceTest {
     }
 
     @Test
-    public void addTeamToRuleTest(){
+    public void addTeamToRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -421,7 +460,9 @@ public class NotificationRuleResourceTest extends ResourceTest {
     }
 
     @Test
-    public void addTeamToRuleInvalidRuleTest(){
+    public void addTeamToRuleInvalidRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/team/" + team.getUuid().toString()).request()
@@ -435,6 +476,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addTeamToRuleInvalidTeamTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + UUID.randomUUID().toString()).request()
@@ -449,6 +492,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addTeamToRuleDuplicateTeamTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -464,7 +509,9 @@ public class NotificationRuleResourceTest extends ResourceTest {
     }
 
     @Test
-    public void addTeamToRuleInvalidPublisherTest(){
+    public void addTeamToRuleInvalidPublisherTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -479,6 +526,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void addTeamToRuleWithCustomEmailPublisherTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         final Team team = qm.createTeam("Team Example");
         final NotificationPublisher publisher = qm.createNotificationPublisher("foo", "description", SendMailPublisher.name(), "template", "templateMimeType", false);
         final NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -523,6 +572,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeTeamFromRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -539,6 +590,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeTeamFromRuleInvalidRuleTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + UUID.randomUUID().toString() + "/team/" + team.getUuid().toString()).request()
@@ -552,6 +605,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeTeamFromRuleInvalidTeamTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
         Response response = jersey.target(V1_NOTIFICATION_RULE + "/" + rule.getUuid().toString() + "/team/" + UUID.randomUUID().toString()).request()
@@ -565,6 +620,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void removeTeamFromRuleDuplicateTeamTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.EMAIL.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -576,7 +633,9 @@ public class NotificationRuleResourceTest extends ResourceTest {
     }
 
     @Test
-    public void removeTeamToRuleInvalidPublisherTest(){
+    public void removeTeamToRuleInvalidPublisherTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         Team team = qm.createTeam("Team Example");
         NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         NotificationRule rule = qm.createNotificationRule("Example Rule", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
@@ -591,6 +650,8 @@ public class NotificationRuleResourceTest extends ResourceTest {
 
     @Test
     public void updateNotificationRuleWithTagsTest() {
+        initializeWithPermissions(Permissions.NOTIFICATION_RULE_MANAGEMENT);
+
         final NotificationPublisher publisher = qm.getNotificationPublisher(DefaultNotificationPublishers.SLACK.getPublisherName());
         final NotificationRule rule = qm.createNotificationRule("Rule 1", NotificationScope.PORTFOLIO, NotificationLevel.INFORMATIONAL, publisher);
 

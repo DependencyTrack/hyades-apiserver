@@ -58,7 +58,7 @@ public class WorkflowResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Retrieves workflow states associated with the token received from bom upload .",
-            description = "<p>Requires permission <strong>BOM_UPLOAD</strong></p>"
+            description = "<p>Requires permission <strong>BOM_CREATE</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -69,7 +69,7 @@ public class WorkflowResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
             @ApiResponse(responseCode = "404", description = "Workflow does not exist")
     })
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD) // TODO: Should be a more generic permission.
+    @PermissionRequired(Permissions.Constants.BOM_CREATE) // TODO: Should be a more generic permission.
     public Response getWorkflowStates(
             @Parameter(description = "The UUID of the token to query", required = true)
             @PathParam("uuid") @ValidUuid String uuid) {

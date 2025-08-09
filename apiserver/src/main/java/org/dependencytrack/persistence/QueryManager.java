@@ -1210,9 +1210,9 @@ public class QueryManager extends AlpineQueryManager {
 
         List<UserProjectRole> userRoles = getUserRoles(user.getUsername());
 
-        // If a user has a role on any project, grant VIEW_PORTFOLIO permission
+        // If a user has a role on any project, grant PROJECT_READ permission
         if (userRoles != null && !userRoles.isEmpty())
-            permissions.add(Permissions.Constants.VIEW_PORTFOLIO);
+            permissions.add(Permissions.Constants.PROJECT_READ);
 
         return permissions;
     }
@@ -1701,7 +1701,7 @@ public class QueryManager extends AlpineQueryManager {
                               ON ph."PARENT_PROJECT_ID" = upep."PROJECT_ID"
                            WHERE ph."CHILD_PROJECT_ID" = "%s"."ID"
                              AND upep."USER_ID" = :projectAclUserId
-                             AND upep."PERMISSION_NAME" = 'VIEW_PORTFOLIO'
+                             AND upep."PERMISSION_NAME" = 'PROJECT_READ'
                         )
                         """;
             }

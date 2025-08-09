@@ -106,7 +106,7 @@ public class RoleResourceTest extends ResourceTest {
 
     @Test
     public void createRoleTest() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
 
         Response response = jersey.target(V1_ROLE).request()
                 .header(X_API_KEY, apiKey)
@@ -125,7 +125,7 @@ public class RoleResourceTest extends ResourceTest {
 
     @Test
     public void testCreateRoleAlreadyExists() {
-        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT_CREATE);
+        initializeWithPermissions(Permissions.ACCESS_MANAGEMENT);
 
         Response response = jersey.target(V1_ROLE).request()
                 .header(X_API_KEY, apiKey)

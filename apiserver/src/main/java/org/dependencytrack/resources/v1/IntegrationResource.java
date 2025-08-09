@@ -53,7 +53,7 @@ public class IntegrationResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all ecosystems in OSV",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_READ</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -63,7 +63,7 @@ public class IntegrationResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response getAllEcosystems() {
         OsvMirrorTask osvMirrorTask = new OsvMirrorTask();
         final List<String> ecosystems = osvMirrorTask.getEcosystems();
@@ -75,7 +75,7 @@ public class IntegrationResource extends AlpineResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of available inactive ecosystems in OSV to be selected by user",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_READ</strong></p>"
+            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong></p>"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -85,7 +85,7 @@ public class IntegrationResource extends AlpineResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_READ})
+    @PermissionRequired(Permissions.Constants.SYSTEM_CONFIGURATION)
     public Response getInactiveEcosystems() {
         OsvMirrorTask osvMirrorTask = new OsvMirrorTask();
         var selectedEcosystems = osvMirrorTask.getEnabledEcosystems();

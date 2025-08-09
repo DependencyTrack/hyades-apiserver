@@ -20,6 +20,7 @@ package org.dependencytrack.resources.v1;
 
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
+import alpine.server.filters.ResourceAccessRequired;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -71,7 +72,7 @@ public class PolicyViolationResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all policy violations for the entire portfolio",
-            description = "<p>Requires permission <strong>VIEW_POLICY_VIOLATION</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>POLICY_VIOLATION_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -83,7 +84,10 @@ public class PolicyViolationResource extends AbstractApiResource {
             ),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ },
+            operator = PermissionRequired.Operator.AND)
+    @ResourceAccessRequired
     public Response getViolations(@Parameter(description = "Optionally includes suppressed violations")
                                       @QueryParam("suppressed") boolean suppressed,
                                   @Parameter(description = "Optionally includes inactive projects")
@@ -126,7 +130,7 @@ public class PolicyViolationResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all policy violations for a specific project",
-            description = "<p>Requires permission <strong>VIEW_POLICY_VIOLATION</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>POLICY_VIOLATION_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -143,7 +147,10 @@ public class PolicyViolationResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ },
+            operator = PermissionRequired.Operator.AND)
+    @ResourceAccessRequired
     public Response getViolationsByProject(@Parameter(description = "The UUID of the project", schema = @Schema(type = "string", format = "uuid"), required = true)
                                            @PathParam("uuid") @ValidUuid String uuid,
                                            @Parameter(description = "Optionally includes suppressed violations")
@@ -167,7 +174,7 @@ public class PolicyViolationResource extends AbstractApiResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Returns a list of all policy violations for a specific component",
-            description = "<p>Requires permission <strong>VIEW_POLICY_VIOLATION</strong></p>"
+            description = "<p>Requires permission <strong>PROJECT_READ</strong> and <strong>POLICY_VIOLATION_READ</strong></p>"
     )
     @PaginatedApi
     @ApiResponses(value = {
@@ -184,7 +191,10 @@ public class PolicyViolationResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The component could not be found")
     })
-    @PermissionRequired(Permissions.Constants.VIEW_POLICY_VIOLATION)
+    @PermissionRequired(
+            value = { Permissions.Constants.PROJECT_READ, Permissions.Constants.POLICY_VIOLATION_READ },
+            operator = PermissionRequired.Operator.AND)
+    @ResourceAccessRequired
     public Response getViolationsByComponent(@Parameter(description = "The UUID of the component", schema = @Schema(type = "string", format = "uuid"), required = true)
                                              @PathParam("uuid") @ValidUuid String uuid,
                                              @Parameter(description = "Optionally includes suppressed violations")

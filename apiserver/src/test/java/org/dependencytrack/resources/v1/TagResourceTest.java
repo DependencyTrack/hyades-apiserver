@@ -61,7 +61,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -147,7 +147,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsWithPaginationTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
         for (int i = 0; i < 5; i++) {
             qm.createTag("tag-" + (i + 1));
         }
@@ -216,7 +216,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsWithFilterTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
         qm.createTag("foo");
         qm.createTag("bar");
 
@@ -242,7 +242,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsSortByProjectCountTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
         final var projectA = new Project();
         projectA.setName("acme-app-a");
         qm.persist(projectA);
@@ -375,7 +375,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 project(s), but the authenticated principal is missing the PORTFOLIO_MANAGEMENT or PORTFOLIO_MANAGEMENT_UPDATE permission."
+                    "bar": "The tag is assigned to 1 project(s), but the authenticated principal is missing the PORTFOLIO_MANAGEMENT permission."
                   }
                 }
                 """);
@@ -490,7 +490,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 policies, but the authenticated principal is missing the POLICY_MANAGEMENT or POLICY_MANAGEMENT_UPDATE permission."
+                    "bar": "The tag is assigned to 1 policies, but the authenticated principal is missing the POLICY_MANAGEMENT permission."
                   }
                 }
                 """);
@@ -502,7 +502,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         qm.createConfigProperty(
                 ACCESS_MANAGEMENT_ACL_ENABLED.getGroupName(),
                 ACCESS_MANAGEMENT_ACL_ENABLED.getPropertyName(),
@@ -559,7 +559,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithPaginationTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         final Tag tag = qm.createTag("foo");
 
         for (int i = 0; i < 5; i++) {
@@ -619,7 +619,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithTagNotExistsTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         qm.createTag("foo");
         final Response response = jersey.target(V1_TAG + "/foo/project")
                 .request()
@@ -632,7 +632,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTaggedProjectsWithNonLowerCaseTagNameTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
         final Response response = jersey.target(V1_TAG + "/Foo/project")
                 .request()
                 .header(X_API_KEY, apiKey)
@@ -1284,7 +1284,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsForPolicyWithOrderingTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT, Permissions.POLICY_MANAGEMENT);
         for (int i = 1; i < 5; i++) {
             qm.createTag("Tag " + i);
         }
@@ -1307,7 +1307,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagsForPolicyWithPolicyProjectsFilterTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT, Permissions.POLICY_MANAGEMENT);
         for (int i = 1; i < 5; i++) {
             qm.createTag("Tag " + i);
         }
@@ -1333,7 +1333,7 @@ public class TagResourceTest extends ResourceTest {
 
     @Test
     public void getTagWithNonUuidNameTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.TAG_MANAGEMENT);
         // NB: This is just to ensure that requests to /api/v1/tag/<value>
         // are not matched with the deprecated "getTagsForPolicy" endpoint.
         // Once we implement an endpoint to request individual tags,
@@ -1400,7 +1400,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 notification rules, but the authenticated principal is missing the SYSTEM_CONFIGURATION or SYSTEM_CONFIGURATION_UPDATE permission."
+                    "bar": "The tag is assigned to 1 notification rules, but the authenticated principal is missing the SYSTEM_CONFIGURATION permission."
                   }
                 }
                 """);
@@ -2076,7 +2076,7 @@ public class TagResourceTest extends ResourceTest {
                   "title": "Tag operation failed",
                   "detail": "The tag(s) bar could not be deleted",
                   "errors": {
-                    "bar": "The tag is assigned to 1 vulnerabilities, but the authenticated principal is missing the VULNERABILITY_MANAGEMENT or VULNERABILITY_MANAGEMENT_UPDATE permission."
+                    "bar": "The tag is assigned to 1 vulnerabilities, but the authenticated principal is missing the VULNERABILITY_MANAGEMENT permission."
                   }
                 }
                 """);

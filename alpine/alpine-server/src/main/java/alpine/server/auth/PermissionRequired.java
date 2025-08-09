@@ -36,10 +36,16 @@ import java.lang.annotation.Target;
 @Documented
 public @interface PermissionRequired {
 
+     public enum Operator {
+        AND, OR
+    }
+
     /**
      * An array of permissions.
      * @return an array of permissions
      */
     String[] value();
+
+    Operator operator() default Operator.OR;
 
 }
