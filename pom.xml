@@ -95,7 +95,7 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
-        <lib.assertj.version>3.27.3</lib.assertj.version>
+        <lib.assertj.version>3.27.4</lib.assertj.version>
         <lib.cel-java.version>0.5.3</lib.cel-java.version>
         <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
@@ -105,8 +105,8 @@
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
         <lib.jackson.version>2.19.2</lib.jackson.version>
         <lib.jdbi.version>3.49.5</lib.jdbi.version>
-        <lib.jersey.version>3.1.10</lib.jersey.version>
-        <lib.jetty.version>12.0.23</lib.jetty.version>
+        <lib.jersey.version>3.1.11</lib.jersey.version>
+        <lib.jetty.version>12.0.24</lib.jetty.version>
         <lib.jooq.version>3.20.5</lib.jooq.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
@@ -376,7 +376,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>10.26.1</version>
+                        <version>11.0.0</version>
                     </dependency>
                 </dependencies>
             </plugin>
