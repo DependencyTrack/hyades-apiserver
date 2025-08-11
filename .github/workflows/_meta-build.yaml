@@ -45,7 +45,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
 
       - name: Set up JDK
         uses: actions/setup-java@v4.7.1
@@ -91,7 +91,7 @@ jobs:
       - build-java
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4.3.0
