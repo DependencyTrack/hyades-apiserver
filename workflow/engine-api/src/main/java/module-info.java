@@ -31,6 +31,5 @@ module org.dependencytrack.workflow.engine.api {
     requires micrometer.core;
     requires transitive org.dependencytrack.proto;
     requires transitive org.dependencytrack.workflow.api;
-
-    requires static org.jspecify;
+    requires transitive org.jspecify;
 }

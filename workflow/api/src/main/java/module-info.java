@@ -28,7 +28,6 @@ module org.dependencytrack.workflow.api {
 
     requires com.google.protobuf;
     requires transitive org.dependencytrack.proto;
+    requires transitive org.jspecify;
     requires org.slf4j;
-
-    requires static org.jspecify;
 }

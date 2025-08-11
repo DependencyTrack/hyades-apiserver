@@ -41,8 +41,7 @@ module org.dependencytrack.workflow.engine {
     requires org.jdbi.v3.jackson2;
     requires org.jdbi.v3.json;
     requires org.jdbi.v3.postgres;
+    requires transitive org.jspecify;
     requires org.postgresql.jdbc;
     requires org.slf4j;
-
-    requires static org.jspecify;
 }
