@@ -8,8 +8,8 @@
 
     <changeSet id="v5.7.0-1" author="sahibamittal">
         <sql>
-            CREATE UNIQUE INDEX COMPONENT_NAME_VERSION_ID_IDX
-            ON COMPONENT ("NAME" ASC, "VERSION" DESC, "ID" ASC);
+            CREATE UNIQUE INDEX "COMPONENT_NAME_VERSION_ID_IDX"
+            ON "COMPONENT" ("NAME" ASC, "VERSION" DESC, "ID" ASC);
         </sql>
     </changeSet>
 </databaseChangeLog>
