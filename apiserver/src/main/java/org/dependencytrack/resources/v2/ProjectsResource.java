@@ -19,7 +19,6 @@
 package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
-import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
@@ -29,7 +28,6 @@ import org.dependencytrack.api.v2.ProjectsApi;
 import org.dependencytrack.api.v2.model.ListComponentsResponse;
 import org.dependencytrack.api.v2.model.ListComponentsResponseItem;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.exception.ProjectAccessDeniedException;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
@@ -53,15 +51,11 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
     @PermissionRequired(Permissions.Constants.VIEW_PORTFOLIO)
     public Response listProjectComponents(UUID uuid, Boolean onlyOutdated, Boolean onlyDirect, Integer limit, String pageToken) {
         return inJdbiTransaction(getAlpineRequest(), handle -> {
-            var projectId = handle.attach(ProjectDao.class).getProjectId(UUID.fromString(String.valueOf(uuid)));
+            var projectId = handle.attach(ProjectDao.class).getProjectId(uuid);
             if (projectId == null) {
                 throw new NotFoundException();
             }
-            try {
-                requireProjectAccess(handle, UUID.fromString(String.valueOf(uuid)));
-            } catch (ProjectAccessDeniedException ex) {
-                throw new NotAuthorizedException(Response.Status.UNAUTHORIZED);
-            }
+            requireProjectAccess(handle, UUID.fromString(String.valueOf(uuid)));
             final Page<Component> componentsPage = handle.attach(ComponentDao.class)
                     .listProjectComponents(projectId, onlyOutdated, onlyDirect, limit, pageToken);
 

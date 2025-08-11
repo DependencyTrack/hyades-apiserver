@@ -148,13 +148,13 @@ public class ProjectsResourceTest extends ResourceTest {
                 .request()
                 .header(X_API_KEY, apiKey)
                 .get();
-        Assert.assertEquals(401, response.getStatus(), 0);
+        Assert.assertEquals(403, response.getStatus(), 0);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
-                  "title" : "Unauthorized",
-                  "detail" : "Not authorized to access the requested resource.",
+                  "title" : "Project access denied",
+                  "detail" : "Access to the requested project is forbidden",
                   "type" : "about:blank",
-                  "status" : 401
+                  "status" : 403
                 }
                 """);
     }
