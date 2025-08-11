@@ -351,9 +351,4 @@ public interface MetricsDao extends SqlObject {
         }
         return deletedCount;
     }
-
-    @SqlUpdate("""
-        DELETE FROM "DEPENDENCYMETRICS" WHERE "COMPONENT_ID" = ANY(:componentIds);
-        """)
-    int deleteDependencyMetricsByComponentIds(@Bind List<Long> componentIds);
 }

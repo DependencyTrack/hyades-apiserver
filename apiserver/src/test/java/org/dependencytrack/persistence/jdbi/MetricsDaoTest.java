@@ -33,7 +33,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Date;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
@@ -155,39 +154,5 @@ public class MetricsDaoTest extends PersistenceCapableTest {
         metricsDao.createMetricsPartitionsForDate(LocalDate.now().toString(), LocalDate.now().plusDays(1).toString());
         assertThat(Collections.frequency(metricsDao.getProjectMetricsPartitions(), "\"PROJECTMETRICS_%s\"".formatted(today))).isEqualTo(1);
         assertThat(Collections.frequency(metricsDao.getDependencyMetricsPartitions(), "\"DEPENDENCYMETRICS_%s\"".formatted(today))).isEqualTo(1);
-    }
-
-    @Test
-    public void testDeleteDependencyMetricsByComponentIds() {
-        final var project = qm.createProject("acme-app", null, "1.0.0", null, null, null, null, false);
-        var component1 = new Component();
-        component1.setProject(project);
-        component1.setName("Acme Component");
-        component1.setVersion("1.0");
-        qm.createComponent(component1, false);
-        var component2 = new Component();
-        component2.setProject(project);
-        component2.setName("Acme Component");
-        component2.setVersion("2.0");
-        qm.createComponent(component2, false);
-
-        var metrics = new DependencyMetrics();
-        metrics.setProjectId(project.getId());
-        metrics.setComponentId(component1.getId());
-        metrics.setVulnerabilities(4);
-        metrics.setFirstOccurrence(Date.from(Instant.now()));
-        metrics.setLastOccurrence(Date.from(Instant.now()));
-        metricsTestDao.createDependencyMetrics(metrics);
-
-        metrics = new DependencyMetrics();
-        metrics.setProjectId(project.getId());
-        metrics.setComponentId(component2.getId());
-        metrics.setVulnerabilities(4);
-        metrics.setFirstOccurrence(Date.from(Instant.now()));
-        metrics.setLastOccurrence(Date.from(Instant.now()));
-        metricsTestDao.createDependencyMetrics(metrics);
-
-        var deleted = metricsDao.deleteDependencyMetricsByComponentIds(List.of(component1.getId()));
-        assertThat(deleted).isEqualTo(1);
     }
 }
