@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.dependencytrack</groupId>
         <artifactId>dependency-track-parent</artifactId>
-        <version>5.6.0-SNAPSHOT</version>
+        <version>5.7.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>coverage-report</artifactId>
@@ -74,6 +74,12 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>persistence-migration</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>plugin-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>

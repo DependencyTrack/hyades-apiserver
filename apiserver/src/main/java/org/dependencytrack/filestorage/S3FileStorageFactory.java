@@ -24,7 +24,8 @@ import io.minio.MinioClient;
 import org.dependencytrack.plugin.api.ConfigDefinition;
 import org.dependencytrack.plugin.api.ConfigRegistry;
 import org.dependencytrack.plugin.api.ConfigSource;
-import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.filestorage.FileStorage;
+import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +34,7 @@ import java.util.Optional;
 /**
  * @since 5.6.0
  */
-public final class S3FileStorageFactory implements ExtensionFactory<FileStorage> {
+public final class S3FileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3FileStorageFactory.class);
 

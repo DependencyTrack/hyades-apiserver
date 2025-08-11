@@ -16,27 +16,28 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api;
+package org.dependencytrack.plugin.api.filestorage;
+
+import org.dependencytrack.plugin.api.ExtensionPointSpec;
 
 /**
  * @since 5.6.0
  */
-public interface ExtensionPointMetadata<T extends ExtensionPoint> {
+public final class FileStorageSpec implements ExtensionPointSpec<FileStorage> {
 
-    /**
-     * @return The name of the {@link ExtensionPoint}. Can contain lowercase letters, numbers, and periods.
-     */
-    String name();
+    @Override
+    public String name() {
+        return "file.storage";
+    }
 
-    /**
-     * @return Whether the {@link ExtensionPoint} is required.
-     * Required extension points must have at least one active implementation.
-     */
-    boolean required();
+    @Override
+    public boolean required() {
+        return true;
+    }
 
-    /**
-     * @return The {@link Class} of the {@link ExtensionPoint}.
-     */
-    Class<T> extensionPointClass();
+    @Override
+    public Class<FileStorage> extensionPointClass() {
+        return FileStorage.class;
+    }
 
 }
