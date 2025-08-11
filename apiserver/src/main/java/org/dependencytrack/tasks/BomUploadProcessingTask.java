@@ -876,14 +876,6 @@ public class BomUploadProcessingTask implements Subscriber {
 
         final PersistenceManager pm = qm.getPersistenceManager();
         LOGGER.info("Deleting %d component(s) that are no longer part of the project".formatted(componentIds.size()));
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.AnalysisComment WHERE :ids.contains(analysis.component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Analysis WHERE :ids.contains(component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysisComment WHERE :ids.contains(violationAnalysis.component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysis WHERE :ids.contains(component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE :ids.contains(component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE :ids.contains(component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE :ids.contains(component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE :ids.contains(component.id)").execute(componentIds);
         return pm.newQuery(Component.class, ":ids.contains(id)").deletePersistentAll(componentIds);
     }
 

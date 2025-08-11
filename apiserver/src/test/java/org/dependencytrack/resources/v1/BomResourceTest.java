@@ -27,11 +27,6 @@ import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
 import alpine.server.filters.AuthorizationFeature;
 import com.fasterxml.jackson.core.StreamReadConstraints;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.ClientBuilder;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import net.javacrumbs.jsonunit.core.Option;
@@ -79,6 +74,11 @@ import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runner.RunWith;
 
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -551,7 +551,7 @@ public class BomResourceTest extends ResourceTest {
 
     @Test
     public void exportProjectAsCycloneDxInventoryWithVulnerabilitiesTest() {
-        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO, Permissions.VIEW_VULNERABILITY);
 
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
@@ -748,8 +748,25 @@ public class BomResourceTest extends ResourceTest {
     }
 
     @Test
-    public void exportProjectAsCycloneDxVdrTest() {
+    public void exportProjectAsCycloneDxInventoryWithVulnerabilitiesWithInsufficientPermissionsTest() {
         initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setClassifier(Classifier.APPLICATION);
+        qm.createProject(project, null, false);
+
+        final Response response = jersey.target(V1_BOM + "/cyclonedx/project/" + project.getUuid())
+                .queryParam("variant", "withVulnerabilities")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(403);
+    }
+
+    @Test
+    public void exportProjectAsCycloneDxVdrTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO, Permissions.VIEW_VULNERABILITY);
 
         var vulnerability = new Vulnerability();
         vulnerability.setVulnId("INT-001");
@@ -936,6 +953,23 @@ public class BomResourceTest extends ResourceTest {
         assertThat(componentWithoutVuln.getDirectDependencies()).isNotNull();
         assertThat(componentWithVuln.getDirectDependencies()).isNotNull();
         assertThat(componentWithVulnAndAnalysis.getDirectDependencies()).isNotNull();
+    }
+
+    @Test
+    public void exportProjectAsCycloneDxVdrWithInsufficientPermissionsTest() {
+        initializeWithPermissions(Permissions.VIEW_PORTFOLIO);
+
+        var project = new Project();
+        project.setName("acme-app");
+        project.setClassifier(Classifier.APPLICATION);
+        qm.createProject(project, null, false);
+
+        final Response response = jersey.target(V1_BOM + "/cyclonedx/project/" + project.getUuid())
+                .queryParam("variant", "vdr")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get(Response.class);
+        assertThat(response.getStatus()).isEqualTo(403);
     }
 
     @Test
