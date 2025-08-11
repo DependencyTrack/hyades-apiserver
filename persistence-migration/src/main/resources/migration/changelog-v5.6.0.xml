@@ -2661,12 +2661,4 @@
             <column name="NAME"/>
         </createIndex>
     </changeSet>
-
-    <changeSet id="v5.6.0-34" author="sahibamittal">
-        <createIndex unique="true" tableName="COMPONENT" indexName="COMPONENT_NAME_VERSION_ID_IDX">
-            <column name="NAME" />
-            <column name="VERSION" />
-            <column name="ID" />
-        </createIndex>
-    </changeSet>
 </databaseChangeLog>
