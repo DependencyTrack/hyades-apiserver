@@ -54,8 +54,6 @@ paths:
     $ref: "./paths/teams__name_.yaml"
   /team-memberships:
     $ref: "./paths/team-memberships.yaml"
-  /workflows/{token}:
-    $ref: "./paths/workflows__token__.yaml"
   /workflow-runs:
     $ref: "./paths/workflow-runs.yaml"
   /workflow-runs/{id}/events:

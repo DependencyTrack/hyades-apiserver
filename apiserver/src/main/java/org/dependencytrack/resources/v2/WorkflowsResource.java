@@ -19,19 +19,13 @@
 package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.AuthenticationNotRequired;
-import alpine.server.auth.PermissionRequired;
 import org.dependencytrack.api.v2.WorkflowsApi;
 import org.dependencytrack.api.v2.model.ListWorkflowRunEventsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponse;
 import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
-import org.dependencytrack.api.v2.model.ListWorkflowStatesResponse;
-import org.dependencytrack.api.v2.model.ListWorkflowStatesResponseItem;
 import org.dependencytrack.api.v2.model.PaginationLinks;
 import org.dependencytrack.api.v2.model.PaginationMetadata;
 import org.dependencytrack.api.v2.model.WorkflowRunStatus;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
@@ -46,9 +40,7 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import jakarta.ws.rs.ext.Provider;
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Provider
 public class WorkflowsResource implements WorkflowsApi {
@@ -56,28 +48,8 @@ public class WorkflowsResource implements WorkflowsApi {
     @Context
     private UriInfo uriInfo;
 
-    private final WorkflowEngine workflowEngine;
-
     @Inject
-    WorkflowsResource(final WorkflowEngine workflowEngine) {
-        this.workflowEngine = workflowEngine;
-    }
-
-    @Override
-    @PermissionRequired(Permissions.Constants.BOM_UPLOAD)
-    public Response getWorkflowStates(final UUID token) {
-        List<WorkflowState> workflowStates;
-        try (final var qm = new QueryManager()) {
-            workflowStates = qm.getAllWorkflowStatesForAToken(token);
-            if (workflowStates.isEmpty()) {
-                throw new NotFoundException();
-            }
-        }
-        List<ListWorkflowStatesResponseItem> states = workflowStates.stream()
-                .map(this::mapWorkflowStateResponse)
-                .collect(Collectors.toList());
-        return Response.ok(ListWorkflowStatesResponse.builder().states(states).build()).build();
-    }
+    private WorkflowEngine workflowEngine;
 
     @Override
     @AuthenticationNotRequired // TODO
@@ -186,19 +158,4 @@ public class WorkflowsResource implements WorkflowsApi {
         return Response.ok(response).build();
     }
 
-    private ListWorkflowStatesResponseItem mapWorkflowStateResponse(WorkflowState workflowState) {
-        var mappedState = ListWorkflowStatesResponseItem.builder()
-                .token(workflowState.getToken())
-                .status(ListWorkflowStatesResponseItem.StatusEnum.fromString(workflowState.getStatus().name()))
-                .step(ListWorkflowStatesResponseItem.StepEnum.fromString(workflowState.getStep().name()))
-                .failureReason(workflowState.getFailureReason())
-                .build();
-        if (workflowState.getStartedAt() != null) {
-            mappedState.setStartedAt(workflowState.getStartedAt().getTime());
-        }
-        if (workflowState.getUpdatedAt() != null) {
-            mappedState.setUpdatedAt(workflowState.getUpdatedAt().getTime());
-        }
-        return mappedState;
-    }
 }
