@@ -113,27 +113,11 @@ public class Config {
         DATABASE_PASSWORD                      ("alpine.database.password",          ""),
         DATABASE_PASSWORD_FILE                 ("alpine.database.password.file",     null),
         DATABASE_POOL_ENABLED                  ("alpine.database.pool.enabled",      true),
-        DATABASE_POOL_TX_ONLY                  ("alpine.database.pool.tx.only",      false),
-        @Deprecated
         DATABASE_POOL_MAX_SIZE                 ("alpine.database.pool.max.size",     20),
-        DATABASE_POOL_TX_MAX_SIZE              ("alpine.database.pool.tx.max.size", null),        // null for backward compatibility
-        DATABASE_POOL_NONTX_MAX_SIZE           ("alpine.database.pool.nontx.max.size", null),     // null for backward compatibility
-        @Deprecated
         DATABASE_POOL_IDLE_TIMEOUT             ("alpine.database.pool.idle.timeout", 300000),
-        DATABASE_POOL_TX_IDLE_TIMEOUT          ("alpine.database.pool.tx.idle.timeout", null),    // null for backward compatibility
-        DATABASE_POOL_NONTX_IDLE_TIMEOUT       ("alpine.database.pool.nontx.idle.timeout", null), // null for backward compatibility
-        @Deprecated
         DATABASE_POOL_MIN_IDLE                 ("alpine.database.pool.min.idle",     10),
-        DATABASE_POOL_TX_MIN_IDLE              ("alpine.database.pool.tx.min.idle", null),        // null for backward compatibility
-        DATABASE_POOL_NONTX_MIN_IDLE           ("alpine.database.pool.nontx.min.idle", null),     // null for backward compatibility
-        @Deprecated
         DATABASE_POOL_MAX_LIFETIME             ("alpine.database.pool.max.lifetime", 600000),
-        DATABASE_POOL_TX_MAX_LIFETIME          ("alpine.database.pool.tx.max.lifetime", null),    // null for backward compatibility
-        DATABASE_POOL_NONTX_MAX_LIFETIME       ("alpine.database.pool.nontx.max.lifetime", null), // null for backward compatibility
-        @Deprecated
         DATABASE_POOL_KEEPALIVE_INTERVAL       ("alpine.database.pool.keepalive.interval", 0),
-        DATABASE_POOL_TX_KEEPALIVE_INTERVAL    ("alpine.database.pool.tx.keepalive.interval", null),
-        DATABASE_POOL_NONTX_KEEPALIVE_INTERVAL ("alpine.database.pool.nontx.keepalive.interval", null),
         ENFORCE_AUTHENTICATION                 ("alpine.enforce.authentication",     true),
         ENFORCE_AUTHORIZATION                  ("alpine.enforce.authorization",      true),
         BCRYPT_ROUNDS                          ("alpine.bcrypt.rounds",              14),

@@ -14,19 +14,20 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-name: Dependency Review
-on:
-  pull_request:
-
-permissions: { }
-
-jobs:
-  dependency-review:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5.0.0
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+type: object
+properties:
+  name:
+    type: string
+    maxLength: 255
+  license_id:
+    type: string
+    maxLength: 255
+  uuid:
+    type: string
+    format: uuid
+  osi_approved:
+    type: boolean
+  fsf_libre:
+    type: boolean
+  custom_license:
+    type: boolean

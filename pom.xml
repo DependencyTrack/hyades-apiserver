@@ -107,7 +107,7 @@
         <lib.jdbi.version>3.49.5</lib.jdbi.version>
         <lib.jersey.version>3.1.11</lib.jersey.version>
         <lib.jetty.version>12.0.24</lib.jetty.version>
-        <lib.jooq.version>3.20.5</lib.jooq.version>
+        <lib.jooq.version>3.20.6</lib.jooq.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>

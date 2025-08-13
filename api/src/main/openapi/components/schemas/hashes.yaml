@@ -14,19 +14,41 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-name: Dependency Review
-on:
-  pull_request:
-
-permissions: { }
-
-jobs:
-  dependency-review:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5.0.0
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+type: object
+properties:
+  sha1:
+    type: string
+    maxLength: 40
+  sha256:
+    type: string
+    maxLength: 64
+  sha384:
+    type: string
+    maxLength: 96
+  sha512:
+    type: string
+    maxLength: 128
+  sha3_256:
+    type: string
+    maxLength: 64
+  sha3_384:
+    type: string
+    maxLength: 96
+  sha3_512:
+    type: string
+    maxLength: 128
+  blake2b_256:
+    type: string
+    maxLength: 64
+  blake2b_384:
+    type: string
+    maxLength: 96
+  blake2b_512:
+    type: string
+    maxLength: 128
+  blake3:
+    type: string
+    maxLength: 255
+  md5:
+    type: string
+    maxLength: 32

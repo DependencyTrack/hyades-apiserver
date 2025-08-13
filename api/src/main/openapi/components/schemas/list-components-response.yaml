@@ -14,19 +14,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
-name: Dependency Review
-on:
-  pull_request:
-
-permissions: { }
-
-jobs:
-  dependency-review:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5.0.0
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+type: object
+allOf:
+- $ref: "./paginated-response.yaml"
+properties:
+  components:
+    type: array
+    items:
+      $ref: "./list-components-response-item.yaml"
+required:
+- _pagination
+- components
