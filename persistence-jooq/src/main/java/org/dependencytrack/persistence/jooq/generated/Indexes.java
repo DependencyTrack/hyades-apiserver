@@ -22,6 +22,7 @@ import org.dependencytrack.persistence.jooq.generated.tables.License;
 import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroup;
 import org.dependencytrack.persistence.jooq.generated.tables.LicenseGroupLicense;
 import org.dependencytrack.persistence.jooq.generated.tables.MappedOidcGroup;
+import org.dependencytrack.persistence.jooq.generated.tables.NotificationPublisher;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRuleProjects;
 import org.dependencytrack.persistence.jooq.generated.tables.OidcGroup;
@@ -81,6 +82,7 @@ public class Indexes {
     public static final Index COMPONENT_LICENSE_ID_IDX = Internal.createIndex(DSL.name("COMPONENT_LICENSE_ID_IDX"), Component.COMPONENT, new OrderField[] { Component.COMPONENT.licenseId }, false);
     public static final Index COMPONENT_MD5_IDX = Internal.createIndex(DSL.name("COMPONENT_MD5_IDX"), Component.COMPONENT, new OrderField[] { Component.COMPONENT.md5 }, false);
     public static final Index COMPONENT_NAME_IDX = Internal.createIndex(DSL.name("COMPONENT_NAME_IDX"), Component.COMPONENT, new OrderField[] { Component.COMPONENT.name }, false);
+    public static final Index COMPONENT_NAME_VERSION_ID_IDX = Internal.createIndex(DSL.name("COMPONENT_NAME_VERSION_ID_IDX"), Component.COMPONENT, new OrderField[] { Component.COMPONENT.name, Component.COMPONENT.version.desc(), Component.COMPONENT.id }, true);
     public static final Index COMPONENT_OCCURRENCE_COMPONENT_ID_IDX = Internal.createIndex(DSL.name("COMPONENT_OCCURRENCE_COMPONENT_ID_IDX"), ComponentOccurrence.COMPONENT_OCCURRENCE, new OrderField[] { ComponentOccurrence.COMPONENT_OCCURRENCE.componentId }, false);
     public static final Index COMPONENT_PARENT_COMPONENT_ID_IDX = Internal.createIndex(DSL.name("COMPONENT_PARENT_COMPONENT_ID_IDX"), Component.COMPONENT, new OrderField[] { Component.COMPONENT.parentComponentId }, false);
     public static final Index COMPONENT_PROJECT_ID_IDX = Internal.createIndex(DSL.name("COMPONENT_PROJECT_ID_IDX"), Component.COMPONENT, new OrderField[] { Component.COMPONENT.projectId }, false);
@@ -111,6 +113,7 @@ public class Indexes {
     public static final Index LICENSEGROUP_LICENSE_LICENSEGROUP_ID_IDX = Internal.createIndex(DSL.name("LICENSEGROUP_LICENSE_LICENSEGROUP_ID_IDX"), LicenseGroupLicense.LICENSEGROUP_LICENSE, new OrderField[] { LicenseGroupLicense.LICENSEGROUP_LICENSE.licenseGroupId }, false);
     public static final Index LICENSEGROUP_NAME_IDX = Internal.createIndex(DSL.name("LICENSEGROUP_NAME_IDX"), LicenseGroup.LICENSEGROUP, new OrderField[] { LicenseGroup.LICENSEGROUP.name }, false);
     public static final Index MAPPEDOIDCGROUP_GROUP_ID_IDX = Internal.createIndex(DSL.name("MAPPEDOIDCGROUP_GROUP_ID_IDX"), MappedOidcGroup.MAPPEDOIDCGROUP, new OrderField[] { MappedOidcGroup.MAPPEDOIDCGROUP.groupId }, false);
+    public static final Index NOTIFICATIONPUBLISHER_NAME_IDX = Internal.createIndex(DSL.name("NOTIFICATIONPUBLISHER_NAME_IDX"), NotificationPublisher.NOTIFICATIONPUBLISHER, new OrderField[] { NotificationPublisher.NOTIFICATIONPUBLISHER.name }, true);
     public static final Index NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_ID_IDX = Internal.createIndex(DSL.name("NOTIFICATIONRULE_PROJECTS_NOTIFICATIONRULE_ID_IDX"), NotificationRuleProjects.NOTIFICATIONRULE_PROJECTS, new OrderField[] { NotificationRuleProjects.NOTIFICATIONRULE_PROJECTS.notificationRuleId }, false);
     public static final Index NOTIFICATIONRULE_PROJECTS_PROJECT_ID_IDX = Internal.createIndex(DSL.name("NOTIFICATIONRULE_PROJECTS_PROJECT_ID_IDX"), NotificationRuleProjects.NOTIFICATIONRULE_PROJECTS, new OrderField[] { NotificationRuleProjects.NOTIFICATIONRULE_PROJECTS.projectId }, false);
     public static final Index NOTIFICATIONRULE_PUBLISHER_IDX = Internal.createIndex(DSL.name("NOTIFICATIONRULE_PUBLISHER_IDX"), NotificationRule.NOTIFICATIONRULE, new OrderField[] { NotificationRule.NOTIFICATIONRULE.publisher }, false);
