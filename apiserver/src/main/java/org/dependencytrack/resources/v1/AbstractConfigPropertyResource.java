@@ -27,6 +27,7 @@ import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.ConfigPropertyAccessMode;
 import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.owasp.security.logging.SecurityMarkers;
 
 import jakarta.json.Json;

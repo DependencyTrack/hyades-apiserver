@@ -44,7 +44,7 @@ public class ComponentsResourceTest extends ResourceTest {
         final Response response = jersey.target("/components")
                 .request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.json(/* language=JSON */ """
+                .post(Entity.json(/* language=JSON */ """
                         {
                           "project_uuid": "%s",
                           "name": "foo",
@@ -64,7 +64,7 @@ public class ComponentsResourceTest extends ResourceTest {
                         }
                         """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(201);
-        assertThat(response.getLocation()).hasPath("/components/project/" + project.getUuid());
+        assertThat(response.getLocation()).hasPath("/components");
         assertThat(getPlainTextBody(response)).isEmpty();
 
         qm.getPersistenceManager().evictAll();
@@ -108,7 +108,7 @@ public class ComponentsResourceTest extends ResourceTest {
         Response response = jersey.target("/components")
                 .request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.json(/* language=JSON */ """
+                .post(Entity.json(/* language=JSON */ """
                         {
                           "project_uuid": "%s",
                           "name": "foo"
@@ -128,7 +128,7 @@ public class ComponentsResourceTest extends ResourceTest {
         response = jersey.target("/components")
                 .request()
                 .header(X_API_KEY, apiKey)
-                .put(Entity.json(/* language=JSON */ """
+                .post(Entity.json(/* language=JSON */ """
                         {
                           "project_uuid": "%s",
                           "name": "foo"

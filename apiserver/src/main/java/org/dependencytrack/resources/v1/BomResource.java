@@ -58,6 +58,7 @@ import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;

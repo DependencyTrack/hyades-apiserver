@@ -41,6 +41,7 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.parser.cyclonedx.CycloneDXExporter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;

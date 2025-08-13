@@ -62,6 +62,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.RepositoryQueryManager;
 import org.dependencytrack.persistence.jdbi.FindingDao;
 import org.dependencytrack.persistence.jdbi.RepositoryMetaDao;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;

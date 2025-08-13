@@ -47,6 +47,7 @@ import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.DateUtil;
 

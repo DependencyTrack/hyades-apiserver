@@ -31,9 +31,6 @@ properties:
   version:
     type: string
     maxLength: 255
-  parent_uuid:
-    type: string
-    format: uuid
   classifier:
     $ref: "./classifier.yaml"
   filename:
@@ -74,12 +71,6 @@ properties:
     type: string
     maxLength: 255
   license_url:
-    type: string
-    maxLength: 255
-  last_inherited_risk_score:
-    type: number
-    format: double
-  direct_dependencies:
     type: string
     maxLength: 255
   notes:

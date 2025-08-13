@@ -65,6 +65,7 @@ import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
