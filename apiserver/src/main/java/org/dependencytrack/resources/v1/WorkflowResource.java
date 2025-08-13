@@ -29,6 +29,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.workflow.engine.api.WorkflowEngine;
+import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -37,13 +44,7 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.WorkflowState;
-import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.workflow.engine.api.WorkflowEngine;
-import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
-
+import java.sql.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -83,13 +84,27 @@ public class WorkflowResource {
         if (workflowEngine != null) {
             final WorkflowRunMetadata runMetadata =
                     workflowEngine.getRunMetadata(UUID.fromString(uuid));
-            if (runMetadata != null) {
-                // TODO: Check if workflow was previously implemented using legacy
-                //  state tracking. If yes, map the new run metadata to legacy
-                //  WorkflowState object(s) to allow smooth transition for clients.
 
-                // Other workflows must be queried via /api/v2/workflow-runs/{id}.
-                return Response.status(Response.Status.BAD_REQUEST).build();
+            if (runMetadata != null) {
+                if ("clone-project".equals(runMetadata.workflowName())) {
+                    final var workflowState = new WorkflowState();
+                    workflowState.setToken(runMetadata.id());
+                    workflowState.setStartedAt(Date.from(runMetadata.createdAt()));
+                    workflowState.setUpdatedAt(
+                            runMetadata.updatedAt() != null
+                                    ? Date.from(runMetadata.updatedAt())
+                                    : null);
+                    workflowState.setStatus(switch (runMetadata.status()) {
+                        case CANCELED -> WorkflowStatus.CANCELLED;
+                        case COMPLETED -> WorkflowStatus.COMPLETED;
+                        case FAILED -> WorkflowStatus.FAILED;
+                        case CREATED, RUNNING, SUSPENDED ->  WorkflowStatus.PENDING;
+                    });
+                    return Response.ok(List.of(workflowState)).build();
+                } else {
+                    // Other workflows must be queried via /api/v2/workflow-runs/{id}.
+                    return Response.status(Response.Status.BAD_REQUEST).build();
+                }
             }
 
             // For the transitional period, workflows can exist in either the dedicated
