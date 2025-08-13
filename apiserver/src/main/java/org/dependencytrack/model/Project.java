@@ -221,7 +221,7 @@ public class Project implements Serializable {
     @Persistent
     @Index(name = "PROJECT_PURL_IDX")
     @Column(name = "PURL")
-    @Size(max = 255)
+    @Size(max = 1024)
     @com.github.packageurl.validator.PackageURL
     @JsonDeserialize(using = TrimmedStringDeserializer.class)
     @Schema(type = "string")

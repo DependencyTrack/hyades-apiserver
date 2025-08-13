@@ -5,11 +5,22 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-
     <changeSet id="v5.7.0-1" author="sahibamittal">
         <sql>
             CREATE UNIQUE INDEX "COMPONENT_NAME_VERSION_ID_IDX"
             ON "COMPONENT" ("NAME" ASC, "VERSION" DESC, "ID" ASC);
         </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-2" author="nscuro">
+        <modifyDataType tableName="PROJECT" columnName="PURL" newDataType="VARCHAR(1024)"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-3" author="nscuro">
+        <modifyDataType tableName="COMPONENT" columnName="PURLCOORDINATES" newDataType="VARCHAR(1024)"/>
+    </changeSet>
+
+    <changeSet id="v5.7.0-4" author="nscuro">
+        <modifyDataType tableName="VULNERABLESOFTWARE" columnName="PURL" newDataType="VARCHAR(1024)"/>
     </changeSet>
 </databaseChangeLog>
