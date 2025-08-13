@@ -23,11 +23,11 @@ WITH "CUSTOM_SCORES" AS (
    WHERE "GROUPNAME" = 'risk-score'
      AND "PROPERTYTYPE" = 'INTEGER'
 )
-SELECT (
+SELECT COALESCE((
   ("critical" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'weight.critical'))
   + ("high" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'weight.high'))
   + ("medium" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'weight.medium'))
   + ("low" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'weight.low'))
   + ("unassigned" * (SELECT "value" FROM "CUSTOM_SCORES" WHERE "name" = 'weight.unassigned'))
-)::NUMERIC;
+)::NUMERIC, 0);
 $$;

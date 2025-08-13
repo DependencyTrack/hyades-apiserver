@@ -37,21 +37,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.ClientErrorException;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.PATCH;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.ServerErrorException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
@@ -71,8 +56,27 @@ import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.resources.v1.vo.BomUploadResponse;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.dependencytrack.resources.v1.vo.ConciseProject;
+import org.dependencytrack.workflow.CloneProjectWorkflow;
+import org.dependencytrack.workflow.engine.api.WorkflowEngine;
+import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.jdbi.v3.core.Handle;
 
+import jakarta.inject.Inject;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.ServerErrorException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import javax.jdo.FetchGroup;
 import java.security.Principal;
 import java.util.Collection;
@@ -91,6 +95,8 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.PersistenceUtil.isPersistent;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
+import static org.dependencytrack.workflow.WorkflowLabels.LABEL_PROJECT_UUID;
+import static org.dependencytrack.workflow.mapping.PayloadModelConverter.convertToCloneProjectArgs;
 
 /**
  * JAX-RS resources for processing projects.
@@ -107,6 +113,9 @@ import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolati
 public class ProjectResource extends AbstractApiResource {
 
     private static final Logger LOGGER = Logger.getLogger(ProjectResource.class);
+
+    @Inject
+    WorkflowEngine workflowEngine;
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -928,46 +937,51 @@ public class ProjectResource extends AbstractApiResource {
                 validator.validateProperty(jsonRequest, "version")
         );
         try (final var qm = new QueryManager()) {
-            final CloneProjectEvent cloneEvent = qm.callInTransaction(() -> {
-                final Project sourceProject = qm.getObjectByUuid(Project.class, jsonRequest.getProject(), Project.FetchGroup.ALL.name());
-                if (sourceProject == null) {
-                    throw new ClientErrorException(Response
-                            .status(Response.Status.NOT_FOUND)
-                            .entity("The UUID of the project could not be found.")
-                            .build());
+            final Project sourceProject = qm.getObjectByUuid(Project.class, jsonRequest.getProject(), Project.FetchGroup.ALL.name());
+            if (sourceProject == null) {
+                throw new ClientErrorException(Response
+                        .status(Response.Status.NOT_FOUND)
+                        .entity("The UUID of the project could not be found.")
+                        .build());
+            }
+            requireAccess(qm, sourceProject);
+            if (qm.doesProjectExist(sourceProject.getName(), StringUtils.trimToNull(jsonRequest.getVersion()))) {
+                throw new ClientErrorException(Response
+                        .status(Response.Status.CONFLICT)
+                        .entity("A project with the specified name and version already exists.")
+                        .build());
+            }
+            // if project is newly set to latest, ensure user has access to current latest version to modify it
+            if (jsonRequest.makeCloneLatest() && !sourceProject.isLatest()) {
+                final Project oldLatest = qm.getLatestProjectVersion(sourceProject.getName());
+                if (oldLatest != null) {
+                    requireAccess(qm, oldLatest);
                 }
-                requireAccess(qm, sourceProject);
-                if (qm.doesProjectExist(sourceProject.getName(), StringUtils.trimToNull(jsonRequest.getVersion()))) {
-                    throw new ClientErrorException(Response
-                            .status(Response.Status.CONFLICT)
-                            .entity("A project with the specified name and version already exists.")
-                            .build());
-                }
-                // if project is newly set to latest, ensure user has access to current latest version to modify it
-                if (jsonRequest.makeCloneLatest() && !sourceProject.isLatest()) {
-                    final Project oldLatest = qm.getLatestProjectVersion(sourceProject.getName());
-                    if(oldLatest != null) {
-                        requireAccess(qm, oldLatest);
-                    }
-                }
+            }
 
-                LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
-                final var event = new CloneProjectEvent(jsonRequest);
-                final var workflowState = new WorkflowState();
-                workflowState.setStep(WorkflowStep.PROJECT_CLONE);
-                workflowState.setStatus(WorkflowStatus.PENDING);
-                workflowState.setToken(event.getChainIdentifier());
-                workflowState.setUpdatedAt(new Date());
-                qm.persist(workflowState);
+            LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
+            if (workflowEngine != null) {
+                final UUID runId = workflowEngine.createRun(
+                        new CreateWorkflowRunRequest<>(CloneProjectWorkflow.class)
+                                .withConcurrencyGroupId("clone-project::%s::%s".formatted(
+                                        jsonRequest.getProject(), jsonRequest.getVersion()))
+                                .withLabels(Map.of(LABEL_PROJECT_UUID, jsonRequest.getProject()))
+                                .withArgument(convertToCloneProjectArgs(jsonRequest, sourceProject)));
+                return Response.accepted(Map.of("token", runId)).build();
+            }
 
-                return event;
-            });
+            final var event = new CloneProjectEvent(jsonRequest);
+            final var workflowState = new WorkflowState();
+            workflowState.setStep(WorkflowStep.PROJECT_CLONE);
+            workflowState.setStatus(WorkflowStatus.PENDING);
+            workflowState.setToken(event.getChainIdentifier());
+            workflowState.setUpdatedAt(new Date());
+            qm.persist(workflowState);
 
-            Event.dispatch(cloneEvent);
-            return Response.accepted(Map.of("token", cloneEvent.getChainIdentifier())).build();
+            Event.dispatch(event);
+            return Response.accepted(Map.of("token", event.getChainIdentifier())).build();
         }
     }
-
 
     @GET
     @Path("/{uuid}/children")

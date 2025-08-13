@@ -177,4 +177,41 @@ public class WorkflowResourceTest extends ResourceTest {
         assertThat(response.getLocation().getPath()).isEqualTo("/api/v2/workflow-runs/f5cd00be-417d-4df5-b351-0499d498c9c1");
     }
 
+    @Test
+    public void shouldMapCloneProjectWorkflowToLegacyWorkflowStatesFormat() {
+        final WorkflowRunMetadata runMetadata = new WorkflowRunMetadata(
+                UUID.fromString("f5cd00be-417d-4df5-b351-0499d498c9c1"),
+                "clone-project",
+                1,
+                WorkflowRunStatus.RUNNING,
+                null,
+                null,
+                null,
+                null,
+                Instant.ofEpochMilli(666666),
+                Instant.ofEpochMilli(777777),
+                Instant.ofEpochMilli(777777),
+                null);
+
+        doReturn(runMetadata).when(WORKFLOW_ENGINE_MOCK).getRunMetadata(
+                eq(UUID.fromString("f5cd00be-417d-4df5-b351-0499d498c9c1")));
+
+        final Response response = jersey.target(V1_WORKFLOW + "/token/f5cd00be-417d-4df5-b351-0499d498c9c1/status")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                [
+                  {
+                    "token": "f5cd00be-417d-4df5-b351-0499d498c9c1",
+                    "step": "PROJECT_CLONE",
+                    "status": "PENDING",
+                    "startedAt": 666666,
+                    "updatedAt": 777777
+                  }
+                ]
+                """);
+    }
+
 }
