@@ -51,10 +51,10 @@ public final class WorkflowRunDao extends AbstractDao {
 
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="lastId" type="boolean" -->
-                <#-- @ftlvariable name="workflowNameFilter" type="boolean" -->
-                <#-- @ftlvariable name="workflowVersionFilter" type="boolean" -->
-                <#-- @ftlvariable name="statusFilter" type="boolean" -->
-                <#-- @ftlvariable name="labelFilter" type="boolean" -->
+                <#-- @ftlvariable name="workflowName" type="boolean" -->
+                <#-- @ftlvariable name="workflowVersion" type="boolean" -->
+                <#-- @ftlvariable name="status" type="boolean" -->
+                <#-- @ftlvariable name="labels" type="boolean" -->
                 <#-- @ftlvariable name="createdAtFrom" type="boolean" -->
                 <#-- @ftlvariable name="createdAtTo" type="boolean" -->
                 <#-- @ftlvariable name="completedAtFrom" type="boolean" -->
@@ -65,17 +65,17 @@ public final class WorkflowRunDao extends AbstractDao {
                 <#if lastId>
                    and id < :lastId
                 </#if>
-                <#if workflowNameFilter>
-                   and workflow_name = :workflowNameFilter
+                <#if workflowName>
+                   and workflow_name = :workflowName
                 </#if>
-                <#if workflowVersionFilter>
-                   and workflow_version = :workflowVersionFilter
+                <#if workflowVersion>
+                   and workflow_version = :workflowVersion
                 </#if>
-                <#if statusFilter>
-                   and status = :statusFilter
+                <#if status>
+                   and status = :status
                 </#if>
-                <#if labelFilter>
-                   and labels @> cast(:labelFilter as jsonb)
+                <#if labels>
+                   and labels @> cast(:labels as jsonb)
                 </#if>
                 <#if createdAtFrom>
                    and created_at >= :createdAtFrom
@@ -94,21 +94,21 @@ public final class WorkflowRunDao extends AbstractDao {
                 """);
 
         String labelsJson = null;
-        if (request.labelFilter() != null && !request.labelFilter().isEmpty()) {
+        if (request.labels() != null && !request.labels().isEmpty()) {
             final JsonMapper.TypedJsonMapper jsonMapper = jdbiHandle
                     .getConfig(JsonConfig.class).getJsonMapper()
                     .forType(new GenericType<Map<String, String>>() {
                     }.getType(), jdbiHandle.getConfig());
-            labelsJson = jsonMapper.toJson(request.labelFilter(), jdbiHandle.getConfig());
+            labelsJson = jsonMapper.toJson(request.labels(), jdbiHandle.getConfig());
         }
 
         final var decodedPageToken = decodePageToken(request.pageToken(), ListRunsPageToken.class);
 
         final List<WorkflowRunMetadata> rows = query
-                .bind("workflowNameFilter", request.workflowNameFilter())
-                .bind("workflowVersionFilter", request.workflowVersionFilter())
-                .bind("statusFilter", request.statusFilter())
-                .bindByType("labelFilter", labelsJson, String.class)
+                .bind("workflowName", request.workflowName())
+                .bind("workflowVersion", request.workflowVersion())
+                .bind("status", request.status())
+                .bindByType("labels", labelsJson, String.class)
                 .bind("createdAtFrom", request.createdAtFrom())
                 .bind("createdAtTo", request.createdAtTo())
                 .bind("completedAtFrom", request.completedAtFrom())

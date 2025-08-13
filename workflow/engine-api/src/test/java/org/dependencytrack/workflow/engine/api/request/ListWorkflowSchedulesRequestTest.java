@@ -27,11 +27,11 @@ class ListWorkflowSchedulesRequestTest {
     @Test
     void shouldPopulateFieldsUsingWithers() {
         final var request = new ListWorkflowSchedulesRequest()
-                .withWorkflowNameFilter("workflowName")
+                .withWorkflowName("workflowName")
                 .withPageToken("pageToken")
                 .withLimit(666);
 
-        assertThat(request.workflowNameFilter()).isEqualTo("workflowName");
+        assertThat(request.workflowName()).isEqualTo("workflowName");
         assertThat(request.pageToken()).isEqualTo("pageToken");
         assertThat(request.limit()).isEqualTo(666);
     }

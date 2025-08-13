@@ -32,6 +32,7 @@ import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
+import org.jspecify.annotations.NonNull;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
@@ -63,15 +64,15 @@ public class WorkflowsResource implements WorkflowsApi {
             throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
         }
 
-        final Page<WorkflowRunMetadata> runsPage = workflowEngine.listRuns(
+        final Page<@NonNull WorkflowRunMetadata> runsPage = workflowEngine.listRuns(
                 new ListWorkflowRunsRequest()
-                        .withWorkflowNameFilter(workflowName)
-                        .withWorkflowVersionFilter(workflowVersion)
-                        .withStatusFilter(switch (status) {
+                        .withWorkflowName(workflowName)
+                        .withWorkflowVersion(workflowVersion)
+                        .withStatus(switch (status) {
                             case CANCELLED -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.CANCELED;
                             case COMPLETED -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.COMPLETED;
                             case FAILED -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.FAILED;
-                            case PENDING -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.PENDING;
+                            case CREATED -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.CREATED;
                             case RUNNING -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.RUNNING;
                             case SUSPENDED -> org.dependencytrack.workflow.engine.api.WorkflowRunStatus.SUSPENDED;
                             case null -> null;
@@ -90,12 +91,13 @@ public class WorkflowsResource implements WorkflowsApi {
                                             case CANCELED -> WorkflowRunStatus.CANCELLED;
                                             case COMPLETED -> WorkflowRunStatus.COMPLETED;
                                             case FAILED -> WorkflowRunStatus.FAILED;
-                                            case PENDING -> WorkflowRunStatus.PENDING;
+                                            case CREATED -> WorkflowRunStatus.CREATED;
                                             case RUNNING -> WorkflowRunStatus.RUNNING;
                                             case SUSPENDED -> WorkflowRunStatus.SUSPENDED;
                                         })
                                         .priority(runMetadata.priority())
                                         .concurrencyGroupId(runMetadata.concurrencyGroupId())
+                                        .labels(runMetadata.labels())
                                         .createdAt(runMetadata.createdAt().toEpochMilli())
                                         .updatedAt(runMetadata.updatedAt() != null
                                                 ? runMetadata.updatedAt().toEpochMilli()
@@ -134,7 +136,7 @@ public class WorkflowsResource implements WorkflowsApi {
             throw new NotFoundException();
         }
 
-        final Page<WorkflowEvent> eventsPage = workflowEngine.listRunEvents(
+        final Page<@NonNull WorkflowEvent> eventsPage = workflowEngine.listRunEvents(
                 new ListWorkflowRunEventsRequest(runId)
                         .withLimit(limit)
                         .withPageToken(pageToken));

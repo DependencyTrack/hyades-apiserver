@@ -76,6 +76,8 @@ import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRun
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowScheduleCommand;
 import org.dependencytrack.workflow.engine.persistence.command.DeleteInboxEventsCommand;
+import org.dependencytrack.workflow.engine.persistence.command.PollActivityTaskCommand;
+import org.dependencytrack.workflow.engine.persistence.command.PollWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
 import org.dependencytrack.workflow.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
@@ -85,8 +87,6 @@ import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrency
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.request.GetWorkflowRunHistoryRequest;
-import org.dependencytrack.workflow.engine.persistence.request.PollActivityTaskRequest;
-import org.dependencytrack.workflow.engine.persistence.request.PollWorkflowTaskRequest;
 import org.dependencytrack.workflow.engine.support.Buffer;
 import org.dependencytrack.workflow.engine.support.DefaultThreadFactory;
 import org.dependencytrack.workflow.engine.support.LoggingUncaughtExceptionHandler;
@@ -176,7 +176,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     @Nullable private ExecutorService eventListenerExecutor;
     @Nullable private Buffer<ExternalEvent> externalEventBuffer;
     @Nullable private Buffer<TaskCommand> taskCommandBuffer;
-    @Nullable private Cache<UUID, CachedWorkflowRunHistory> cachedHistoryByRunId;
+    @Nullable private Cache<UUID, CachedWorkflowRunHistory> runHistoryCache;
 
     WorkflowEngineImpl(final WorkflowEngineConfig config) {
         this.config = requireNonNull(config);
@@ -197,9 +197,9 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         if (config.meterRegistry() != null) {
             runHistoryCacheBuilder.recordStats();
         }
-        cachedHistoryByRunId = runHistoryCacheBuilder.build();
+        runHistoryCache = runHistoryCacheBuilder.build();
         if (config.meterRegistry() != null) {
-            new CaffeineCacheMetrics<>(cachedHistoryByRunId, "WorkflowEngine-RunHistoryCache", null)
+            new CaffeineCacheMetrics<>(runHistoryCache, "WorkflowEngine-RunHistoryCache", null)
                     .bindTo(config.meterRegistry());
         }
 
@@ -345,9 +345,9 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             runsCompletedEventListeners.clear();
         }
 
-        if (cachedHistoryByRunId != null) {
-            cachedHistoryByRunId.invalidateAll();
-            cachedHistoryByRunId = null;
+        if (runHistoryCache != null) {
+            runHistoryCache.invalidateAll();
+            runHistoryCache = null;
         }
 
         setStatus(Status.STOPPED);
@@ -819,7 +819,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         });
     }
 
-    List<WorkflowTask> pollWorkflowTasks(final Collection<PollWorkflowTaskRequest> pollRequests, final int limit) {
+    List<WorkflowTask> pollWorkflowTasks(final Collection<PollWorkflowTaskCommand> commands, final int limit) {
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
@@ -829,40 +829,47 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             //  a given workflow run will maintain its own cache.
 
             final Map<UUID, PolledWorkflowRun> polledRunById =
-                    dao.pollAndLockRuns(this.config.instanceId(), pollRequests, limit);
+                    dao.pollAndLockRuns(this.config.instanceId(), commands, limit);
             if (polledRunById.isEmpty()) {
                 return Collections.emptyList();
             }
 
             final var historyRequests = new ArrayList<GetWorkflowRunHistoryRequest>(polledRunById.size());
             final var cachedHistoryByRunId = new HashMap<UUID, List<WorkflowEvent>>(polledRunById.size());
+
+            // Try to populate event histories from cache first.
             for (final UUID runId : polledRunById.keySet()) {
-                final CachedWorkflowRunHistory cachedHistory = this.cachedHistoryByRunId.getIfPresent(runId);
+                final CachedWorkflowRunHistory cachedHistory = runHistoryCache.getIfPresent(runId);
                 if (cachedHistory == null) {
+                    // Cache miss; Load the entire history.
                     historyRequests.add(new GetWorkflowRunHistoryRequest(runId, -1));
                 } else {
+                    // Cache hit; Only load new history events.
                     cachedHistoryByRunId.put(runId, cachedHistory.events());
                     historyRequests.add(new GetWorkflowRunHistoryRequest(runId, cachedHistory.maxSequenceNumber()));
                 }
             }
 
             final Map<UUID, PolledWorkflowEvents> polledEventsByRunId =
-                    dao.pollRunEvents(this.config.instanceId(), historyRequests);
+                    dao.pollRunEvents(config.instanceId(), historyRequests);
 
             return polledRunById.values().stream()
                     .map(polledRun -> {
                         final PolledWorkflowEvents polledEvents = polledEventsByRunId.get(polledRun.id());
                         final List<WorkflowEvent> cachedHistoryEvents = cachedHistoryByRunId.get(polledRun.id());
 
-                        final var history = new ArrayList<WorkflowEvent>(
-                                polledEvents.history().size()
-                                + (cachedHistoryEvents != null ? cachedHistoryEvents.size() : 0));
+                        var historySize = polledEvents.history().size();
+                        if (cachedHistoryEvents != null) {
+                            historySize += cachedHistoryEvents.size();
+                        }
+
+                        final var history = new ArrayList<WorkflowEvent>(historySize);
                         if (cachedHistoryEvents != null) {
                             history.addAll(cachedHistoryEvents);
                         }
                         history.addAll(polledEvents.history());
 
-                        this.cachedHistoryByRunId.put(polledRun.id(), new CachedWorkflowRunHistory(
+                        runHistoryCache.put(polledRun.id(), new CachedWorkflowRunHistory(
                                 history, polledEvents.maxHistoryEventSequenceNumber()));
 
                         return new WorkflowTask(
@@ -946,8 +953,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     .map(WorkflowRunState::id)
                     .filter(runId -> !updatedRunIds.contains(runId))
                     .collect(Collectors.toSet());
-            LOGGER.warn("{}/{} workflow runs were not updated, indicating modification by another worker instance: {}",
-                    notUpdatedRunIds.size(), commands.size(), notUpdatedRunIds);
+            for (final UUID runId : notUpdatedRunIds) {
+                LOGGER.warn("""
+                        Workflow run {} was not updated, indicating modification \
+                        by another worker instance""", runId);
+            }
 
             // Since we lost the lock on these runs, we can't act upon them anymore.
             // Note that this is expected behavior and not necessarily reason for concern.
@@ -980,6 +990,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                         run.completedAt()));
             }
 
+            // Write all processed events to history.
             int sequenceNumber = run.history().size();
             for (final WorkflowEvent newEvent : run.inbox()) {
                 createHistoryEntryCommands.add(
@@ -1161,11 +1172,12 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
     }
 
-    List<ActivityTask> pollActivityTasks(final Collection<PollActivityTaskRequest> pollRequests, final int limit) {
+    List<ActivityTask> pollActivityTasks(final Collection<PollActivityTaskCommand> commands, final int limit) {
         return jdbi.inTransaction(handle -> {
             final var activityDao = new WorkflowActivityDao(handle);
 
-            return activityDao.pollAndLockActivityTasks(this.config.instanceId(), pollRequests, limit).stream()
+            return activityDao.pollAndLockActivityTasks(
+                            this.config.instanceId(), commands, limit).stream()
                     .map(polledTask -> new ActivityTask(
                             polledTask.workflowRunId(),
                             polledTask.scheduledEventId(),
@@ -1385,11 +1397,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     private void invalidateCompletedRunsHistoryCache(final WorkflowRunsCompletedEvent event) {
-        if (cachedHistoryByRunId == null) {
+        if (runHistoryCache == null) {
             return;
         }
 
-        cachedHistoryByRunId.invalidateAll(
+        runHistoryCache.invalidateAll(
                 event.completedRuns().stream()
                         .map(WorkflowRunMetadata::id)
                         .collect(Collectors.toSet()));

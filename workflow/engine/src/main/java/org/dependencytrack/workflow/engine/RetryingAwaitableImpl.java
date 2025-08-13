@@ -32,11 +32,11 @@ final class RetryingAwaitableImpl<T> extends AwaitableImpl<T> {
     private final Function<WorkflowFailureException, AwaitableImpl<T>> retryAwaitableFunction;
 
     RetryingAwaitableImpl(
-            final WorkflowContextImpl<?, ?> executionContext,
+            final WorkflowContextImpl<?, ?> workflowContext,
             final PayloadConverter<T> resultConverter,
             final AwaitableImpl<T> initialAwaitable,
             final Function<WorkflowFailureException, AwaitableImpl<T>> retryAwaitableFunction) {
-        super(executionContext, resultConverter);
+        super(workflowContext, resultConverter);
         this.initialAwaitable = requireNonNull(initialAwaitable, "initialAwaitable must not be null");
         this.retryAwaitableFunction = requireNonNull(retryAwaitableFunction, "retryAwaitableFunction must not be null");
     }

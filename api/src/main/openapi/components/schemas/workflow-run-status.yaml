@@ -16,7 +16,7 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: string
 enum:
-- PENDING
+- CREATED
 - RUNNING
 - SUSPENDED
 - FAILED

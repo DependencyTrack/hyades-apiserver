@@ -25,10 +25,10 @@ import java.time.Instant;
 import java.util.Map;
 
 public record ListWorkflowRunsRequest(
-        @Nullable String workflowNameFilter,
-        @Nullable Integer workflowVersionFilter,
-        @Nullable WorkflowRunStatus statusFilter,
-        @Nullable Map<String, String> labelFilter,
+        @Nullable String workflowName,
+        @Nullable Integer workflowVersion,
+        @Nullable WorkflowRunStatus status,
+        @Nullable Map<String, String> labels,
         @Nullable Instant createdAtFrom,
         @Nullable Instant createdAtTo,
         @Nullable Instant completedAtFrom,
@@ -40,12 +40,12 @@ public record ListWorkflowRunsRequest(
         this(null, null, null, null, null, null, null, null, null, 10);
     }
 
-    public ListWorkflowRunsRequest withWorkflowNameFilter(@Nullable final String workflowNameFilter) {
+    public ListWorkflowRunsRequest withWorkflowName(@Nullable final String workflowName) {
         return new ListWorkflowRunsRequest(
-                workflowNameFilter,
-                this.workflowVersionFilter,
-                this.statusFilter,
-                this.labelFilter,
+                workflowName,
+                this.workflowVersion,
+                this.status,
+                this.labels,
                 this.createdAtFrom,
                 this.createdAtTo,
                 this.completedAtFrom,
@@ -54,12 +54,12 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withWorkflowVersionFilter(@Nullable final Integer workflowVersionFilter) {
+    public ListWorkflowRunsRequest withWorkflowVersion(@Nullable final Integer workflowVersion) {
         return new ListWorkflowRunsRequest(
-                this.workflowNameFilter,
-                workflowVersionFilter,
-                this.statusFilter,
-                this.labelFilter,
+                this.workflowName,
+                workflowVersion,
+                this.status,
+                this.labels,
                 this.createdAtFrom,
                 this.createdAtTo,
                 this.completedAtFrom,
@@ -68,12 +68,12 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withStatusFilter(@Nullable final WorkflowRunStatus statusFilter) {
+    public ListWorkflowRunsRequest withStatus(@Nullable final WorkflowRunStatus status) {
         return new ListWorkflowRunsRequest(
-                this.workflowNameFilter,
-                this.workflowVersionFilter,
-                statusFilter,
-                this.labelFilter,
+                this.workflowName,
+                this.workflowVersion,
+                status,
+                this.labels,
                 this.createdAtFrom,
                 this.createdAtTo,
                 this.completedAtFrom,
@@ -82,11 +82,11 @@ public record ListWorkflowRunsRequest(
                 this.limit);
     }
 
-    public ListWorkflowRunsRequest withLabelFilter(@Nullable final Map<String, String> labelFilter) {
+    public ListWorkflowRunsRequest withLabels(@Nullable final Map<String, String> labelFilter) {
         return new ListWorkflowRunsRequest(
-                this.workflowNameFilter,
-                this.workflowVersionFilter,
-                this.statusFilter,
+                this.workflowName,
+                this.workflowVersion,
+                this.status,
                 labelFilter,
                 this.createdAtFrom,
                 this.createdAtTo,
@@ -98,10 +98,10 @@ public record ListWorkflowRunsRequest(
 
     public ListWorkflowRunsRequest withCreatedAtFrom(@Nullable final Instant createdAtFrom) {
         return new ListWorkflowRunsRequest(
-                this.workflowNameFilter,
-                this.workflowVersionFilter,
-                this.statusFilter,
-                this.labelFilter,
+                this.workflowName,
+                this.workflowVersion,
+                this.status,
+                this.labels,
                 createdAtFrom,
                 this.createdAtTo,
                 this.completedAtFrom,
@@ -112,10 +112,10 @@ public record ListWorkflowRunsRequest(
 
     public ListWorkflowRunsRequest withCreatedAtTo(@Nullable final Instant createdAtTo) {
         return new ListWorkflowRunsRequest(
-                this.workflowNameFilter,
-                this.workflowVersionFilter,
-                this.statusFilter,
-                this.labelFilter,
+                this.workflowName,
+                this.workflowVersion,
+                this.status,
+                this.labels,
                 this.createdAtFrom,
                 createdAtTo,
                 this.completedAtFrom,
@@ -126,10 +126,10 @@ public record ListWorkflowRunsRequest(
 
     public ListWorkflowRunsRequest withCompletedAtFrom(@Nullable final Instant completedAtFrom) {
         return new ListWorkflowRunsRequest(
-                this.workflowNameFilter,
-                this.workflowVersionFilter,
-                this.statusFilter,
-                this.labelFilter,
+                this.workflowName,
+                this.workflowVersion,
+                this.status,
+                this.labels,
                 this.createdAtFrom,
                 this.createdAtTo,
                 completedAtFrom,
@@ -140,10 +140,10 @@ public record ListWorkflowRunsRequest(
 
     public ListWorkflowRunsRequest withCompletedAtTo(@Nullable final Instant completedAtTo) {
         return new ListWorkflowRunsRequest(
-                this.workflowNameFilter,
-                this.workflowVersionFilter,
-                this.statusFilter,
-                this.labelFilter,
+                this.workflowName,
+                this.workflowVersion,
+                this.status,
+                this.labels,
                 this.createdAtFrom,
                 this.createdAtTo,
                 this.completedAtFrom,
@@ -154,10 +154,10 @@ public record ListWorkflowRunsRequest(
 
     public ListWorkflowRunsRequest withPageToken(@Nullable final String pageToken) {
         return new ListWorkflowRunsRequest(
-                this.workflowNameFilter,
-                this.workflowVersionFilter,
-                this.statusFilter,
-                this.labelFilter,
+                this.workflowName,
+                this.workflowVersion,
+                this.status,
+                this.labels,
                 this.createdAtFrom,
                 this.createdAtTo,
                 this.completedAtFrom,
@@ -168,10 +168,10 @@ public record ListWorkflowRunsRequest(
 
     public ListWorkflowRunsRequest withLimit(final int limit) {
         return new ListWorkflowRunsRequest(
-                this.workflowNameFilter,
-                this.workflowVersionFilter,
-                this.statusFilter,
-                this.labelFilter,
+                this.workflowName,
+                this.workflowVersion,
+                this.status,
+                this.labels,
                 this.createdAtFrom,
                 this.createdAtTo,
                 this.completedAtFrom,

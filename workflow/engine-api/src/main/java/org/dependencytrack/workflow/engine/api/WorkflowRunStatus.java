@@ -22,14 +22,14 @@ import java.util.Set;
 
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELED;
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
+import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CREATED;
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
-import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_PENDING;
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_RUNNING;
 import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_SUSPENDED;
 
 public enum WorkflowRunStatus {
 
-    PENDING(1, 3),       // 0
+    CREATED(1, 3),       // 0
     RUNNING(2, 3, 4, 5), // 1
     SUSPENDED(1, 3),     // 2
     CANCELED,            // 3
@@ -47,13 +47,13 @@ public enum WorkflowRunStatus {
     }
 
     public boolean isTerminal() {
-        return !equals(PENDING) && !equals(RUNNING) && !equals(SUSPENDED);
+        return !equals(CREATED) && !equals(RUNNING) && !equals(SUSPENDED);
     }
 
     public static WorkflowRunStatus fromProto(
             final org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus protoStatus) {
         return switch (protoStatus) {
-            case WORKFLOW_RUN_STATUS_PENDING -> PENDING;
+            case WORKFLOW_RUN_STATUS_CREATED -> CREATED;
             case WORKFLOW_RUN_STATUS_RUNNING -> RUNNING;
             case WORKFLOW_RUN_STATUS_SUSPENDED -> SUSPENDED;
             case WORKFLOW_RUN_STATUS_CANCELED -> CANCELED;
@@ -65,7 +65,7 @@ public enum WorkflowRunStatus {
 
     public org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus toProto() {
         return switch (this) {
-            case PENDING -> WORKFLOW_RUN_STATUS_PENDING;
+            case CREATED -> WORKFLOW_RUN_STATUS_CREATED;
             case RUNNING -> WORKFLOW_RUN_STATUS_RUNNING;
             case SUSPENDED -> WORKFLOW_RUN_STATUS_SUSPENDED;
             case CANCELED -> WORKFLOW_RUN_STATUS_CANCELED;

@@ -75,7 +75,7 @@ final class WorkflowRunState {
     @Nullable private WorkflowPayload argument;
     @Nullable private WorkflowPayload result;
     @Nullable private WorkflowFailure failure;
-    private WorkflowRunStatus status = WorkflowRunStatus.PENDING;
+    private WorkflowRunStatus status = WorkflowRunStatus.CREATED;
     @Nullable private String customStatus;
     @Nullable private Integer priority;
     @Nullable private Map<String, String> labels;
@@ -349,7 +349,7 @@ final class WorkflowRunState {
                 .build(), /* isNew */ true);
     }
 
-    private void executeContinueAsNewCommand(ContinueRunAsNewCommand command) {
+    private void executeContinueAsNewCommand(final ContinueRunAsNewCommand command) {
         final var newRunScheduledBuilder = RunScheduled.newBuilder()
                 .setWorkflowName(this.workflowName)
                 .setWorkflowVersion(this.workflowVersion);

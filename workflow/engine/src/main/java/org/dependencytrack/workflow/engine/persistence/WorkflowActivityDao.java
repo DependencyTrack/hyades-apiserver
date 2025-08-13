@@ -20,9 +20,9 @@ package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.persistence.command.CreateActivityTaskCommand;
+import org.dependencytrack.workflow.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTask;
-import org.dependencytrack.workflow.engine.persistence.request.PollActivityTaskRequest;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Update;
 import org.jspecify.annotations.Nullable;
@@ -40,7 +40,7 @@ public final class WorkflowActivityDao extends AbstractDao {
         super(jdbiHandle);
     }
 
-    public int createActivityTasks(final Collection<CreateActivityTaskCommand> newTasks) {
+    public int createActivityTasks(final Collection<CreateActivityTaskCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into workflow_activity_task (
                   workflow_run_id
@@ -62,19 +62,20 @@ public final class WorkflowActivityDao extends AbstractDao {
                        , :visibleFroms)
                 """);
 
-        final var runIds = new ArrayList<UUID>(newTasks.size());
-        final var scheduledEventIds = new ArrayList<Integer>(newTasks.size());
-        final var activityNames = new ArrayList<String>(newTasks.size());
-        final var priorities = new ArrayList<Integer>(newTasks.size());
-        final var arguments = new ArrayList<WorkflowPayload>(newTasks.size());
-        final var visibleFroms = new ArrayList<Instant>(newTasks.size());
-        for (final CreateActivityTaskCommand newTask : newTasks) {
-            runIds.add(newTask.workflowRunId());
-            scheduledEventIds.add(newTask.scheduledEventId());
-            activityNames.add(newTask.activityName());
-            priorities.add(newTask.priority());
-            arguments.add(newTask.argument());
-            visibleFroms.add(newTask.visibleFrom());
+        final var runIds = new ArrayList<UUID>(commands.size());
+        final var scheduledEventIds = new ArrayList<Integer>(commands.size());
+        final var activityNames = new ArrayList<String>(commands.size());
+        final var priorities = new ArrayList<@Nullable Integer>(commands.size());
+        final var arguments = new ArrayList<@Nullable WorkflowPayload>(commands.size());
+        final var visibleFroms = new ArrayList<@Nullable Instant>(commands.size());
+
+        for (final CreateActivityTaskCommand command : commands) {
+            runIds.add(command.workflowRunId());
+            scheduledEventIds.add(command.scheduledEventId());
+            activityNames.add(command.activityName());
+            priorities.add(command.priority());
+            arguments.add(command.argument());
+            visibleFroms.add(command.visibleFrom());
         }
 
         return update
@@ -89,7 +90,7 @@ public final class WorkflowActivityDao extends AbstractDao {
 
     public List<PolledActivityTask> pollAndLockActivityTasks(
             final UUID workerInstanceId,
-            final Collection<PollActivityTaskRequest> pollRequests,
+            final Collection<PollActivityTaskCommand> commands,
             final int limit) {
         final Update update = jdbiHandle.createUpdate("""
                 with
@@ -126,12 +127,12 @@ public final class WorkflowActivityDao extends AbstractDao {
                         , wat.locked_until
                 """);
 
-        final var activityNames = new ArrayList<String>(pollRequests.size());
-        final var lockTimeouts = new ArrayList<Duration>(pollRequests.size());
+        final var activityNames = new ArrayList<String>(commands.size());
+        final var lockTimeouts = new ArrayList<Duration>(commands.size());
 
-        for (final PollActivityTaskRequest pollRequest : pollRequests) {
-            activityNames.add(pollRequest.activityName());
-            lockTimeouts.add(pollRequest.lockTimeout());
+        for (final PollActivityTaskCommand command : commands) {
+            activityNames.add(command.activityName());
+            lockTimeouts.add(command.lockTimeout());
         }
 
         return update

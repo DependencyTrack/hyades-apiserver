@@ -31,6 +31,10 @@ properties:
     format: int32
   concurrency_group_id:
     type: string
+  labels:
+    type: object
+    additionalProperties:
+      type: string
   created_at:
     $ref: "./timestamp.yaml"
   updated_at:

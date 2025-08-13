@@ -119,6 +119,16 @@ public class WorkflowsResourceTest extends ResourceTest {
     }
 
     @Test
+    public void listWorkflowRunsShouldReturnBadRequestWhenLabelsIsInvalidJson() {
+        final Response response = jersey.target("/workflow-runs")
+                .queryParam("labels", "not-json")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(400);
+    }
+
+    @Test
     public void listWorkflowRunEventsShouldReturnWorkflowRunEvents() {
         final var runId = UUID.fromString("a81df43d-bd7f-4997-9d7a-d735d5101d52");
 
@@ -126,7 +136,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                 runId,
                 "workflowName",
                 666,
-                WorkflowRunStatus.PENDING,
+                WorkflowRunStatus.CREATED,
                 null,
                 null,
                 null,

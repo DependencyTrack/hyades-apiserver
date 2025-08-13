@@ -29,6 +29,7 @@ import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;
 import org.jdbi.v3.json.JsonConfig;
 import org.jdbi.v3.json.JsonMapper;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public final class WorkflowScheduleDao extends AbstractDao {
         super(jdbiHandle);
     }
 
-    public List<WorkflowSchedule> createSchedules(final Collection<CreateWorkflowScheduleCommand> newSchedules) {
+    public List<WorkflowSchedule> createSchedules(final Collection<CreateWorkflowScheduleCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into workflow_schedule (
                   name
@@ -73,38 +74,38 @@ public final class WorkflowScheduleDao extends AbstractDao {
                 returning *
                 """);
 
-        final var names = new ArrayList<String>(newSchedules.size());
-        final var crons = new ArrayList<String>(newSchedules.size());
-        final var workflowNames = new ArrayList<String>(newSchedules.size());
-        final var workflowVersions = new ArrayList<Integer>(newSchedules.size());
-        final var concurrencyGroupIds = new ArrayList<String>(newSchedules.size());
-        final var priorities = new ArrayList<Integer>(newSchedules.size());
-        final var labelsJsons = new ArrayList<String>(newSchedules.size());
-        final var arguments = new ArrayList<WorkflowPayload>(newSchedules.size());
-        final var nextFireAts = new ArrayList<Instant>(newSchedules.size());
+        final var names = new ArrayList<String>(commands.size());
+        final var crons = new ArrayList<String>(commands.size());
+        final var workflowNames = new ArrayList<String>(commands.size());
+        final var workflowVersions = new ArrayList<Integer>(commands.size());
+        final var concurrencyGroupIds = new ArrayList<@Nullable String>(commands.size());
+        final var priorities = new ArrayList<@Nullable Integer>(commands.size());
+        final var labelsJsons = new ArrayList<@Nullable String>(commands.size());
+        final var arguments = new ArrayList<@Nullable WorkflowPayload>(commands.size());
+        final var nextFireAts = new ArrayList<Instant>(commands.size());
 
         final JsonMapper.TypedJsonMapper jsonMapper = jdbiHandle
                 .getConfig(JsonConfig.class).getJsonMapper()
                 .forType(new GenericType<Map<String, String>>() {
                 }.getType(), jdbiHandle.getConfig());
 
-        for (final CreateWorkflowScheduleCommand newSchedule : newSchedules) {
+        for (final CreateWorkflowScheduleCommand command : commands) {
             final String labelsJson;
-            if (newSchedule.labels() == null || newSchedule.labels().isEmpty()) {
+            if (command.labels() == null || command.labels().isEmpty()) {
                 labelsJson = null;
             } else {
-                labelsJson = jsonMapper.toJson(newSchedule.labels(), jdbiHandle.getConfig());
+                labelsJson = jsonMapper.toJson(command.labels(), jdbiHandle.getConfig());
             }
 
-            names.add(newSchedule.name());
-            crons.add(newSchedule.cron());
-            workflowNames.add(newSchedule.workflowName());
-            workflowVersions.add(newSchedule.workflowVersion());
-            concurrencyGroupIds.add(newSchedule.concurrencyGroupId());
-            priorities.add(newSchedule.priority());
+            names.add(command.name());
+            crons.add(command.cron());
+            workflowNames.add(command.workflowName());
+            workflowVersions.add(command.workflowVersion());
+            concurrencyGroupIds.add(command.concurrencyGroupId());
+            priorities.add(command.priority());
             labelsJsons.add(labelsJson);
-            arguments.add(newSchedule.argument());
-            nextFireAts.add(newSchedule.nextFireAt());
+            arguments.add(command.argument());
+            nextFireAts.add(command.nextFireAt());
         }
 
         return update
@@ -130,15 +131,15 @@ public final class WorkflowScheduleDao extends AbstractDao {
 
         final Query query = jdbiHandle.createQuery(/* language=InjectedFreeMarker */ """
                 <#-- @ftlvariable name="lastName" type="boolean" -->
-                <#-- @ftlvariable name="workflowNameFilter" type="boolean" -->
+                <#-- @ftlvariable name="workflowName" type="boolean" -->
                 select *
                   from workflow_schedule
                  where true
                 <#if lastName>
                    and name > :lastName
                 </#if>
-                <#if workflowNameFilter>
-                   and workflow_name = :workflowNameFilter
+                <#if workflowName>
+                   and workflow_name = :workflowName
                 </#if>
                  order by name
                  limit :limit
@@ -151,7 +152,7 @@ public final class WorkflowScheduleDao extends AbstractDao {
         final int limitWithNext = limit + 1;
 
         final List<WorkflowSchedule> rows = query
-                .bind("workflowNameFilter", request.workflowNameFilter())
+                .bind("workflowName", request.workflowName())
                 .bind("limit", limitWithNext)
                 .bind("lastName", pageTokenValue != null ? pageTokenValue.lastName() : null)
                 .defineNamedBindings()

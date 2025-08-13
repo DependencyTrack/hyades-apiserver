@@ -66,12 +66,29 @@ public interface WorkflowContext<A> {
      */
     Logger logger();
 
+    /**
+     * Get a handle on an activity that can be used for invocations.
+     *
+     * @param activityClass Class of the activity.
+     * @param <AA>          Type of the activity's argument.
+     * @param <AR>          Type of the activity's result.
+     * @return An {@link ActivityHandle}.
+     * @throws java.util.NoSuchElementException When the activity is not known to the engine.
+     */
     <AA, AR> ActivityHandle<AA, AR> activity(Class<? extends ActivityExecutor<AA, AR>> activityClass);
 
+    /**
+     * Get a handle on a workflow that can be used for invocations.
+     *
+     * @param workflowClass Class of the workflow.
+     * @param <WA>          Type of the workflow's argument.
+     * @param <WR>          Type of the workflow's result.
+     * @return A {@link WorkflowHandle}.
+     */
     <WA, WR> WorkflowHandle<WA, WR> workflow(Class<? extends WorkflowExecutor<WA, WR>> workflowClass);
 
     /**
-     * Creates a durable timer.
+     * Create a durable timer.
      *
      * @param name  Name of the timer. Purely descriptive to make it recognizable in the history.
      * @param delay {@link Duration} for how far in the future the timer shall elapse.
@@ -80,7 +97,7 @@ public interface WorkflowContext<A> {
     Awaitable<Void> createTimer(String name, Duration delay);
 
     /**
-     * Sets a custom status for the workflow run.
+     * Set a custom status for the workflow run.
      * <p>
      * Does not overwrite the runtime status of the workflow run.
      * <p>
@@ -92,7 +109,7 @@ public interface WorkflowContext<A> {
     void setStatus(@Nullable String status);
 
     /**
-     * Execute a side effect and record its result in the history.
+     * Execute a side effect and record its result in the event history.
      * <p>
      * Calling {@link Awaitable#await()} on the {@link Awaitable} returned by this method
      * will throw an {@link SideEffectFailureException} if the side effect failed.

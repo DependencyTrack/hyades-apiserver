@@ -22,7 +22,7 @@ import org.dependencytrack.proto.workflow.api.v1.ActivityTaskCompleted;
 import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
 import org.dependencytrack.workflow.engine.MetadataRegistry.ActivityMetadata;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
-import org.dependencytrack.workflow.engine.persistence.request.PollActivityTaskRequest;
+import org.dependencytrack.workflow.engine.persistence.command.PollActivityTaskCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -37,7 +37,7 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
     private final WorkflowEngineImpl engine;
     private final ActivityGroup activityGroup;
     private final MetadataRegistry metadataRegistry;
-    private final List<PollActivityTaskRequest> pollRequests;
+    private final List<PollActivityTaskCommand> pollCmds;
 
     ActivityTaskManager(
             final WorkflowEngineImpl engine,
@@ -46,9 +46,9 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
         this.engine = engine;
         this.activityGroup = activityGroup;
         this.metadataRegistry = metadataRegistry;
-        this.pollRequests = activityGroup.activityNames().stream()
+        this.pollCmds = activityGroup.activityNames().stream()
                 .map(metadataRegistry::getActivityMetadata)
-                .map(metadata -> new PollActivityTaskRequest(metadata.name(), metadata.lockTimeout()))
+                .map(metadata -> new PollActivityTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
     }
 
@@ -59,7 +59,7 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
 
     @Override
     public List<ActivityTask> poll(final int limit) {
-        return engine.pollActivityTasks(pollRequests, limit);
+        return engine.pollActivityTasks(pollCmds, limit);
     }
 
     @Override

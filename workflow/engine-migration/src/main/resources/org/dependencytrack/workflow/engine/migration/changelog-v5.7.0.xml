@@ -25,7 +25,7 @@
     <changeSet id="v5.7.0-1" author="nscuro">
         <sql>
             create type workflow_run_status as enum (
-              'PENDING'
+              'CREATED'
             , 'RUNNING'
             , 'SUSPENDED'
             , 'CANCELED'
@@ -38,7 +38,7 @@
             , parent_id uuid
             , workflow_name text not null
             , workflow_version smallint not null
-            , status workflow_run_status not null default 'PENDING'
+            , status workflow_run_status not null default 'CREATED'
             , custom_status text
             , concurrency_group_id text
             , priority smallint
@@ -110,7 +110,8 @@
             );
 
             create index workflow_run_poll_idx
-                on workflow_run (priority desc nulls last, id, workflow_name);
+                on workflow_run (priority desc nulls last, id, workflow_name)
+             where status = any(cast('{CREATED, RUNNING, SUSPENDED}' as workflow_run_status[]));
 
             create index workflow_run_labels_idx
                 on workflow_run using gin (labels jsonb_path_ops)

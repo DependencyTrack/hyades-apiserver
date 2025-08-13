@@ -1113,7 +1113,7 @@ class WorkflowEngineImplTest {
         assertThat(runsPage.items()).satisfiesExactly(run -> {
             assertThat(run.workflowName()).isEqualTo("foo");
             assertThat(run.workflowVersion()).isEqualTo(1);
-            assertThat(run.status()).isEqualTo(WorkflowRunStatus.PENDING);
+            assertThat(run.status()).isEqualTo(WorkflowRunStatus.CREATED);
             assertThat(run.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
             assertThat(run.priority()).isEqualTo(666);
             assertThat(run.labels()).containsExactlyInAnyOrderEntriesOf(Map.ofEntries(

@@ -31,10 +31,10 @@ class ListWorkflowRunsRequestTest {
     @Test
     void shouldPopulateFieldsUsingWithers() {
         final var request = new ListWorkflowRunsRequest()
-                .withWorkflowNameFilter("workflowName")
-                .withWorkflowVersionFilter(123)
-                .withStatusFilter(WorkflowRunStatus.RUNNING)
-                .withLabelFilter(Map.of("foo", "bar"))
+                .withWorkflowName("workflowName")
+                .withWorkflowVersion(123)
+                .withStatus(WorkflowRunStatus.RUNNING)
+                .withLabels(Map.of("foo", "bar"))
                 .withCreatedAtFrom(Instant.ofEpochSecond(111))
                 .withCreatedAtTo(Instant.ofEpochSecond(222))
                 .withCompletedAtFrom(Instant.ofEpochSecond(333))
@@ -42,10 +42,10 @@ class ListWorkflowRunsRequestTest {
                 .withPageToken("pageToken")
                 .withLimit(666);
 
-        assertThat(request.workflowNameFilter()).isEqualTo("workflowName");
-        assertThat(request.workflowVersionFilter()).isEqualTo(123);
-        assertThat(request.statusFilter()).isEqualTo(WorkflowRunStatus.RUNNING);
-        assertThat(request.labelFilter()).containsEntry("foo", "bar");
+        assertThat(request.workflowName()).isEqualTo("workflowName");
+        assertThat(request.workflowVersion()).isEqualTo(123);
+        assertThat(request.status()).isEqualTo(WorkflowRunStatus.RUNNING);
+        assertThat(request.labels()).containsEntry("foo", "bar");
         assertThat(request.createdAtFrom()).isEqualTo(Instant.ofEpochSecond(111));
         assertThat(request.createdAtTo()).isEqualTo(Instant.ofEpochSecond(222));
         assertThat(request.completedAtFrom()).isEqualTo(Instant.ofEpochSecond(333));

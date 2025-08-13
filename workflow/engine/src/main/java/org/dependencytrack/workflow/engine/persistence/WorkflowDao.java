@@ -24,6 +24,7 @@ import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRun
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
 import org.dependencytrack.workflow.engine.persistence.command.DeleteInboxEventsCommand;
+import org.dependencytrack.workflow.engine.persistence.command.PollWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.command.UnlockWorkflowRunInboxEventsCommand;
 import org.dependencytrack.workflow.engine.persistence.command.UpdateAndUnlockRunCommand;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvent;
@@ -33,7 +34,6 @@ import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrency
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.request.GetWorkflowRunHistoryRequest;
-import org.dependencytrack.workflow.engine.persistence.request.PollWorkflowTaskRequest;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -60,7 +60,7 @@ public final class WorkflowDao extends AbstractDao {
         super(jdbiHandle);
     }
 
-    public List<UUID> createRuns(final Collection<CreateWorkflowRunCommand> newRuns) {
+    public List<UUID> createRuns(final Collection<CreateWorkflowRunCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into workflow_run (
                   id
@@ -84,33 +84,33 @@ public final class WorkflowDao extends AbstractDao {
                 returning id
                 """);
 
-        final var ids = new ArrayList<UUID>(newRuns.size());
-        final var parentIds = new ArrayList<UUID>(newRuns.size());
-        final var workflowNames = new ArrayList<String>(newRuns.size());
-        final var workflowVersions = new ArrayList<Integer>(newRuns.size());
-        final var concurrencyGroupIds = new ArrayList<String>(newRuns.size());
-        final var priorities = new ArrayList<Integer>(newRuns.size());
-        final var labelsJsons = new ArrayList<String>(newRuns.size());
+        final var ids = new ArrayList<UUID>(commands.size());
+        final var parentIds = new ArrayList<@Nullable UUID>(commands.size());
+        final var workflowNames = new ArrayList<String>(commands.size());
+        final var workflowVersions = new ArrayList<Integer>(commands.size());
+        final var concurrencyGroupIds = new ArrayList<@Nullable String>(commands.size());
+        final var priorities = new ArrayList<@Nullable Integer>(commands.size());
+        final var labelsJsons = new ArrayList<@Nullable String>(commands.size());
 
         final TypedJsonMapper jsonMapper = jdbiHandle
                 .getConfig(JsonConfig.class).getJsonMapper()
                 .forType(new GenericType<Map<String, String>>() {
                 }.getType(), jdbiHandle.getConfig());
 
-        for (final CreateWorkflowRunCommand newRun : newRuns) {
+        for (final CreateWorkflowRunCommand command : commands) {
             final String labelsJson;
-            if (newRun.labels() == null || newRun.labels().isEmpty()) {
+            if (command.labels() == null || command.labels().isEmpty()) {
                 labelsJson = null;
             } else {
-                labelsJson = jsonMapper.toJson(newRun.labels(), jdbiHandle.getConfig());
+                labelsJson = jsonMapper.toJson(command.labels(), jdbiHandle.getConfig());
             }
 
-            ids.add(newRun.id());
-            parentIds.add(newRun.parentId());
-            workflowNames.add(newRun.workflowName());
-            workflowVersions.add(newRun.workflowVersion());
-            concurrencyGroupIds.add(newRun.concurrencyGroupId());
-            priorities.add(newRun.priority());
+            ids.add(command.id());
+            parentIds.add(command.parentId());
+            workflowNames.add(command.workflowName());
+            workflowVersions.add(command.workflowVersion());
+            concurrencyGroupIds.add(command.concurrencyGroupId());
+            priorities.add(command.priority());
             labelsJsons.add(labelsJson);
         }
 
@@ -142,6 +142,7 @@ public final class WorkflowDao extends AbstractDao {
 
         final var groupIds = new ArrayList<String>(concurrencyGroups.size());
         final var nextRunIds = new ArrayList<UUID>(concurrencyGroups.size());
+
         for (final WorkflowConcurrencyGroup concurrencyGroup : concurrencyGroups) {
             groupIds.add(concurrencyGroup.id());
             nextRunIds.add(concurrencyGroup.nextRunId());
@@ -162,7 +163,7 @@ public final class WorkflowDao extends AbstractDao {
                          , id
                       from workflow_run
                      where concurrency_group_id = any(:groupIds)
-                       and status = any('{PENDING, RUNNING, SUSPENDED}'::workflow_run_status[])
+                       and status = any('{CREATED, RUNNING, SUSPENDED}'::workflow_run_status[])
                      order by concurrency_group_id
                             , priority desc nulls last
                             , id
@@ -247,10 +248,10 @@ public final class WorkflowDao extends AbstractDao {
 
         final var ids = new ArrayList<UUID>(commands.size());
         final var statuses = new ArrayList<WorkflowRunStatus>(commands.size());
-        final var customStatuses = new ArrayList<String>(commands.size());
-        final var updatedAts = new ArrayList<Instant>(commands.size());
-        final var startedAts = new ArrayList<Instant>(commands.size());
-        final var completedAts = new ArrayList<Instant>(commands.size());
+        final var customStatuses = new ArrayList<@Nullable String>(commands.size());
+        final var updatedAts = new ArrayList<@Nullable Instant>(commands.size());
+        final var startedAts = new ArrayList<@Nullable Instant>(commands.size());
+        final var completedAts = new ArrayList<@Nullable Instant>(commands.size());
 
         for (final UpdateAndUnlockRunCommand command : commands) {
             ids.add(command.id());
@@ -291,14 +292,14 @@ public final class WorkflowDao extends AbstractDao {
 
     public Map<UUID, PolledWorkflowRun> pollAndLockRuns(
             final UUID workerInstanceId,
-            final Collection<PollWorkflowTaskRequest> pollRequests,
+            final Collection<PollWorkflowTaskCommand> commands,
             final int limit) {
         final Update update = jdbiHandle.createUpdate("""
                 with cte_poll as (
                   select id
                     from workflow_run
                    where workflow_name = any(:workflowNames)
-                     and status = any(cast('{PENDING, RUNNING, SUSPENDED}' as workflow_run_status[]))
+                     and status = any(cast('{CREATED, RUNNING, SUSPENDED}' as workflow_run_status[]))
                      and (concurrency_group_id is null
                           or exists (
                                select 1
@@ -338,12 +339,12 @@ public final class WorkflowDao extends AbstractDao {
                         , workflow_run.labels
                 """);
 
-        final var workflowNames = new ArrayList<String>(pollRequests.size());
-        final var lockTimeouts = new ArrayList<Duration>(pollRequests.size());
+        final var workflowNames = new ArrayList<String>(commands.size());
+        final var lockTimeouts = new ArrayList<Duration>(commands.size());
 
-        for (final PollWorkflowTaskRequest pollRequest : pollRequests) {
-            workflowNames.add(pollRequest.workflowName());
-            lockTimeouts.add(pollRequest.lockTimeout());
+        for (final PollWorkflowTaskCommand command : commands) {
+            workflowNames.add(command.workflowName());
+            lockTimeouts.add(command.lockTimeout());
         }
 
         return update
@@ -377,7 +378,7 @@ public final class WorkflowDao extends AbstractDao {
                 .execute();
     }
 
-    public int createRunInboxEvents(final SequencedCollection<CreateWorkflowRunInboxEntryCommand> newEvents) {
+    public int createRunInboxEvents(final SequencedCollection<CreateWorkflowRunInboxEntryCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 insert into workflow_run_inbox (
                   workflow_run_id
@@ -387,13 +388,14 @@ public final class WorkflowDao extends AbstractDao {
                 select * from unnest(:runIds, :visibleFroms, :events)
                 """);
 
-        final var runIds = new ArrayList<UUID>(newEvents.size());
-        final var visibleFroms = new ArrayList<Instant>(newEvents.size());
-        final var events = new ArrayList<WorkflowEvent>(newEvents.size());
-        for (final CreateWorkflowRunInboxEntryCommand newEvent : newEvents) {
-            runIds.add(newEvent.workflowRunId());
-            visibleFroms.add(newEvent.visibleFrom());
-            events.add(newEvent.event());
+        final var runIds = new ArrayList<UUID>(commands.size());
+        final var visibleFroms = new ArrayList<@Nullable Instant>(commands.size());
+        final var events = new ArrayList<WorkflowEvent>(commands.size());
+
+        for (final CreateWorkflowRunInboxEntryCommand command : commands) {
+            runIds.add(command.workflowRunId());
+            visibleFroms.add(command.visibleFrom());
+            events.add(command.event());
         }
 
         return update
@@ -525,7 +527,7 @@ public final class WorkflowDao extends AbstractDao {
 
     public int unlockRunInboxEvents(
             final UUID workerInstanceId,
-            final Collection<UnlockWorkflowRunInboxEventsCommand> unlockCommands) {
+            final Collection<UnlockWorkflowRunInboxEventsCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 update workflow_run_inbox
                    set locked_by = null
@@ -535,10 +537,10 @@ public final class WorkflowDao extends AbstractDao {
                    and locked_by = :workerInstanceId
                 """);
 
-        final var runIds = new ArrayList<UUID>(unlockCommands.size());
-        final var visibilityDelays = new ArrayList<Duration>(unlockCommands.size());
+        final var runIds = new ArrayList<UUID>(commands.size());
+        final var visibilityDelays = new ArrayList<Duration>(commands.size());
 
-        for (final UnlockWorkflowRunInboxEventsCommand command : unlockCommands) {
+        for (final UnlockWorkflowRunInboxEventsCommand command : commands) {
             runIds.add(command.workflowRunId());
             visibilityDelays.add(command.visibilityDelay());
         }
@@ -552,7 +554,7 @@ public final class WorkflowDao extends AbstractDao {
 
     public int deleteRunInboxEvents(
             final UUID workerInstanceId,
-            final Collection<DeleteInboxEventsCommand> deleteCommands) {
+            final Collection<DeleteInboxEventsCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
                 delete
                   from workflow_run_inbox
@@ -562,9 +564,10 @@ public final class WorkflowDao extends AbstractDao {
                          or workflow_run_inbox.locked_by = :workerInstanceId)
                 """);
 
-        final var runIds = new ArrayList<UUID>(deleteCommands.size());
-        final var onlyLockeds = new ArrayList<Boolean>(deleteCommands.size());
-        for (final DeleteInboxEventsCommand command : deleteCommands) {
+        final var runIds = new ArrayList<UUID>(commands.size());
+        final var onlyLockeds = new ArrayList<Boolean>(commands.size());
+
+        for (final DeleteInboxEventsCommand command : commands) {
             runIds.add(command.workflowRunId());
             onlyLockeds.add(command.onlyLocked());
         }
