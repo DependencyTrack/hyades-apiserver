@@ -22,9 +22,13 @@ import alpine.common.metrics.Metrics;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
+import org.dependencytrack.proto.internal.workflow.payload.v1.CloneProjectArgs;
+import org.dependencytrack.proto.internal.workflow.payload.v1.ProjectIdentity;
+import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineFactory;
+import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.postgresql.ds.PGSimpleDataSource;
@@ -40,6 +44,8 @@ import java.util.ServiceLoader;
 import java.util.UUID;
 
 import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
+import static org.dependencytrack.workflow.api.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.api.payload.PayloadConverters.voidConverter;
 
 /**
  * @since 5.7.0
@@ -69,6 +75,46 @@ public final class WorkflowEngineInitializer implements ServletContextListener {
         final var engineFactory = ServiceLoader.load(WorkflowEngineFactory.class).findFirst().orElseThrow();
         engine = engineFactory.create(engineConfig);
         WorkflowEngineHolder.set(engine);
+
+        engine.registerWorkflow(
+                new CloneProjectWorkflow(),
+                protoConverter(CloneProjectArgs.class),
+                protoConverter(ProjectIdentity.class),
+                Duration.ofSeconds(30));
+        engine.mountWorkflows(
+                new WorkflowGroup("all")
+                        .withWorkflow(CloneProjectWorkflow.class)
+                        .withMaxConcurrency(
+                                config.getOptionalValue(
+                                        "workflow-engine.workflow-group.all.max-concurrency",
+                                        int.class).orElse(3)));
+
+        engine.registerActivity(
+                new CloneProjectActivity(),
+                protoConverter(CloneProjectArgs.class),
+                protoConverter(ProjectIdentity.class),
+                Duration.ofSeconds(30),
+                true);
+        engine.registerActivity(
+                new UpdateProjectMetricsActivity(),
+                protoConverter(ProjectIdentity.class),
+                voidConverter(),
+                Duration.ofSeconds(30),
+                true);
+        engine.mountActivities(
+                new ActivityGroup("metrics")
+                        .withActivity(UpdateProjectMetricsActivity.class)
+                        .withMaxConcurrency(
+                                config.getOptionalValue(
+                                        "workflow-engine.activity-group.metrics.max-concurrency",
+                                        int.class).orElse(3)));
+        engine.mountActivities(
+                new ActivityGroup("misc")
+                        .withActivity(CloneProjectActivity.class)
+                        .withMaxConcurrency(
+                                config.getOptionalValue(
+                                        "workflow-engine.activity-group.misc.max-concurrency",
+                                        int.class).orElse(3)));
 
         LOGGER.info("Starting workflow engine");
         engine.start();
