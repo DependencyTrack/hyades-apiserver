@@ -16,23 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.api.failure;
+syntax = "proto3";
 
-import org.jspecify.annotations.Nullable;
+package org.dependencytrack.internal.workflow.payload.v1;
 
-/**
- * A {@link FailureException} indicating a terminal failure in application code that shall not be retried.
- */
-public class TerminalApplicationFailureException extends ApplicationFailureException {
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.internal.workflow.payload.v1";
 
-    public TerminalApplicationFailureException(
-            final @Nullable String message,
-            final @Nullable Throwable cause) {
-        super(message, cause, /* isTerminal */ true);
-    }
-
-    public TerminalApplicationFailureException(final @Nullable String message) {
-        this(message, /* cause */ null);
-    }
-
+message ProjectIdentity {
+  string uuid = 1;
+  optional string group = 2;
+  string name = 3;
+  optional string version = 4;
 }
