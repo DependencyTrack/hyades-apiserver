@@ -35,7 +35,7 @@ jobs:
         && github.event.workflow_run.conclusion == 'success'
     steps:
     - name: Download PR workspace
-      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # tag=v4.3.0
+      uses: actions/download-artifact@de96f4613b77ec03b5cf633e7c350c32bd3c5660 # tag=v4.3.0
       with:
         name: pr-workspace
         github-token: ${{ secrets.GITHUB_TOKEN }}

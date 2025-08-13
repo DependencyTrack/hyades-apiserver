@@ -36,6 +36,8 @@ tags:
   description: Endpoints related to components
 - name: Metrics
   description: Endpoints related to metrics
+- name: Projects
+  description: Endpoints related to projects
 - name: Teams
   description: Endpoints related to teams
 - name: Workflows
@@ -44,6 +46,8 @@ tags:
 paths:
   /components:
     $ref: "./paths/components.yaml"
+  /projects/{uuid}/components:
+    $ref: "./paths/projects_uuid_components.yaml"
   /metrics/portfolio/current:
     $ref: "./paths/metrics_portfolio_current.yaml"
   /metrics/vulnerabilities:

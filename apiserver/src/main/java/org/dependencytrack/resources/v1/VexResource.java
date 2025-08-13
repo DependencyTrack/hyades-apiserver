@@ -103,7 +103,10 @@ public class VexResource extends AbstractApiResource {
                     content = @Content(schema = @Schema(implementation = ProblemDetails.class), mediaType = ProblemDetails.MEDIA_TYPE_JSON)),
             @ApiResponse(responseCode = "404", description = "The project could not be found")
     })
-    @PermissionRequired({Permissions.Constants.VULNERABILITY_ANALYSIS, Permissions.Constants.VULNERABILITY_ANALYSIS_READ})
+    @PermissionRequired({
+            Permissions.Constants.VIEW_VULNERABILITY,
+            Permissions.Constants.VULNERABILITY_ANALYSIS,
+            Permissions.Constants.VULNERABILITY_ANALYSIS_READ})
     public Response exportProjectAsCycloneDx(
             @Parameter(description = "The UUID of the project to export", schema = @Schema(type = "string", format = "uuid"), required = true)
             @PathParam("uuid") @ValidUuid String uuid,

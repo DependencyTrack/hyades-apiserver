@@ -37,7 +37,6 @@ import javax.jdo.JDOHelper;
 import javax.jdo.PersistenceManager;
 import javax.sql.DataSource;
 import java.util.Properties;
-import java.util.function.Function;
 
 /**
  * Initializes the JDO persistence manager on server startup.
@@ -76,28 +75,19 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
             //  - Secondary: Used for operations in non-transactional context, schema generation and value generation
             //
             // When using pooling, DN will thus create two connection pools of equal size.
-            // However, the optimal sizing of these pools depends on how the application makes use of transactions.
-            // When only performing operations within transactions, connections in the secondary pool would remain
-            // mostly idle.
             //
             // See also:
             //  - https://www.datanucleus.org/products/accessplatform_6_0/jdo/persistence.html#datastore_connection
             //  - https://datanucleus.groups.io/g/main/topic/95191894#490
-
-            LOGGER.info("Creating transactional connection pool");
-            final DataSource txPooledDataSource = createTxPooledDataSource();
-            dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY, txPooledDataSource);
-
-            // For some applications, the overhead of maintaining two separate connection pools cannot be justified.
-            // Allow the transactional (primary) connection pool to be reused for non-transactional operations.
+            //
+            // We don't need this separation, and have observed the non-transactional pool
+            // to remain mostly idle. Thus, we explicitly only create one pool.
             // https://groups.io/g/datanucleus/topic/side_effects_of_setting/108286305
-            if (Config.getInstance().getPropertyAsBoolean(Config.AlpineKey.DATABASE_POOL_TX_ONLY)) {
-                LOGGER.info("Reusing transactional connection pool for non-transactional operations");
-                dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY2, txPooledDataSource);
-            } else {
-                LOGGER.info("Creating non-transactional connection pool");
-                dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY2, createNonTxPooledDataSource());
-            }
+
+            LOGGER.info("Creating connection pool");
+            final DataSource pooledDataSource = createPooledDataSource();
+            dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY, pooledDataSource);
+            dnProps.put(PropertyNames.PROPERTY_CONNECTION_FACTORY2, pooledDataSource);
         } else {
             // No connection pooling; Let DataNucleus handle the datasource setup
             dnProps.put(PropertyNames.PROPERTY_CONNECTION_URL, Config.getInstance().getProperty(Config.AlpineKey.DATABASE_URL));
@@ -122,11 +112,12 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
 
     /**
      * Creates a new JDO PersistenceManager.
+     *
      * @return a PersistenceManager
      */
     public static PersistenceManager createPersistenceManager() {
         if (pmf == null && Config.isUnitTestsEnabled()) {
-            pmf = (JDOPersistenceManagerFactory)JDOHelper.getPersistenceManagerFactory(JdoProperties.unit(), "Alpine");
+            pmf = (JDOPersistenceManagerFactory) JDOHelper.getPersistenceManagerFactory(JdoProperties.unit(), "Alpine");
         }
         if (pmf == null) {
             throw new IllegalStateException("Context is not initialized yet.");
@@ -279,69 +270,9 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
                 .register(Metrics.getRegistry());
     }
 
-    private DataSource createTxPooledDataSource() {
-        final var hikariConfig = createBaseHikariConfig("transactional");
-        hikariConfig.setMaximumPoolSize(getConfigPropertyWithFallback(
-                Config.AlpineKey.DATABASE_POOL_TX_MAX_SIZE,
-                Config.AlpineKey.DATABASE_POOL_MAX_SIZE,
-                Config.getInstance()::getPropertyAsInt
-        ));
-        hikariConfig.setMinimumIdle(getConfigPropertyWithFallback(
-                Config.AlpineKey.DATABASE_POOL_TX_MIN_IDLE,
-                Config.AlpineKey.DATABASE_POOL_MIN_IDLE,
-                Config.getInstance()::getPropertyAsInt
-        ));
-        hikariConfig.setMaxLifetime(getConfigPropertyWithFallback(
-                Config.AlpineKey.DATABASE_POOL_TX_MAX_LIFETIME,
-                Config.AlpineKey.DATABASE_POOL_MAX_LIFETIME,
-                Config.getInstance()::getPropertyAsInt
-        ));
-        hikariConfig.setIdleTimeout(getConfigPropertyWithFallback(
-                Config.AlpineKey.DATABASE_POOL_TX_IDLE_TIMEOUT,
-                Config.AlpineKey.DATABASE_POOL_IDLE_TIMEOUT,
-                Config.getInstance()::getPropertyAsInt
-        ));
-        hikariConfig.setKeepaliveTime(getConfigPropertyWithFallback(
-                Config.AlpineKey.DATABASE_POOL_TX_KEEPALIVE_INTERVAL,
-                Config.AlpineKey.DATABASE_POOL_KEEPALIVE_INTERVAL,
-                Config.getInstance()::getPropertyAsInt
-        ));
-        return new HikariDataSource(hikariConfig);
-    }
-
-    private DataSource createNonTxPooledDataSource() {
-        final var hikariConfig = createBaseHikariConfig("non-transactional");
-        hikariConfig.setMaximumPoolSize(getConfigPropertyWithFallback(
-                Config.AlpineKey.DATABASE_POOL_NONTX_MAX_SIZE,
-                Config.AlpineKey.DATABASE_POOL_MAX_SIZE,
-                Config.getInstance()::getPropertyAsInt
-        ));
-        hikariConfig.setMinimumIdle(getConfigPropertyWithFallback(
-                Config.AlpineKey.DATABASE_POOL_NONTX_MIN_IDLE,
-                Config.AlpineKey.DATABASE_POOL_MIN_IDLE,
-                Config.getInstance()::getPropertyAsInt
-        ));
-        hikariConfig.setMaxLifetime(getConfigPropertyWithFallback(
-                Config.AlpineKey.DATABASE_POOL_NONTX_MAX_LIFETIME,
-                Config.AlpineKey.DATABASE_POOL_MAX_LIFETIME,
-                Config.getInstance()::getPropertyAsInt
-        ));
-        hikariConfig.setIdleTimeout(getConfigPropertyWithFallback(
-                Config.AlpineKey.DATABASE_POOL_NONTX_IDLE_TIMEOUT,
-                Config.AlpineKey.DATABASE_POOL_IDLE_TIMEOUT,
-                Config.getInstance()::getPropertyAsInt
-        ));
-        hikariConfig.setKeepaliveTime(getConfigPropertyWithFallback(
-                Config.AlpineKey.DATABASE_POOL_NONTX_KEEPALIVE_INTERVAL,
-                Config.AlpineKey.DATABASE_POOL_KEEPALIVE_INTERVAL,
-                Config.getInstance()::getPropertyAsInt
-        ));
-        return new HikariDataSource(hikariConfig);
-    }
-
-    private HikariConfig createBaseHikariConfig(final String poolName) {
+    private DataSource createPooledDataSource() {
         final var hikariConfig = new HikariConfig();
-        hikariConfig.setPoolName(poolName);
+        hikariConfig.setPoolName("Alpine");
         hikariConfig.setJdbcUrl(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_URL));
         hikariConfig.setDriverClassName(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_DRIVER));
         hikariConfig.setUsername(Config.getInstance().getProperty(Config.AlpineKey.DATABASE_USERNAME));
@@ -351,16 +282,12 @@ public class PersistenceManagerFactory implements IPersistenceManagerFactory, Se
             hikariConfig.setMetricsTrackerFactory(new MicrometerMetricsTrackerFactory(Metrics.getRegistry()));
         }
 
-        return hikariConfig;
-    }
-
-    private <T> T getConfigPropertyWithFallback(final Config.Key key, final Config.Key fallbackKey,
-                                                final Function<Config.Key, T> method) {
-        if (Config.getInstance().getProperty(key) != null) {
-            return method.apply(key);
-        }
-
-        return method.apply(fallbackKey);
+        hikariConfig.setMaximumPoolSize(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MAX_SIZE));
+        hikariConfig.setMinimumIdle(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MIN_IDLE));
+        hikariConfig.setMaxLifetime(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_MAX_LIFETIME));
+        hikariConfig.setIdleTimeout(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_IDLE_TIMEOUT));
+        hikariConfig.setKeepaliveTime(Config.getInstance().getPropertyAsInt(Config.AlpineKey.DATABASE_POOL_KEEPALIVE_INTERVAL));
+        return new HikariDataSource(hikariConfig);
     }
 
 }

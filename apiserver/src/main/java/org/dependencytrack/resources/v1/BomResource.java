@@ -42,7 +42,6 @@ import org.cyclonedx.exception.GeneratorException;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.BomUploadEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.filestorage.FileStorage;
 import org.dependencytrack.model.BomValidationMode;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ConfigPropertyConstants;
@@ -57,6 +56,7 @@ import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.parser.cyclonedx.InvalidBomException;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.problems.InvalidBomProblemDetails;
@@ -74,6 +74,7 @@ import jakarta.json.JsonString;
 import jakarta.validation.Validator;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
@@ -92,6 +93,7 @@ import java.security.Principal;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -122,7 +124,18 @@ public class BomResource extends AbstractApiResource {
     @Produces({CycloneDxMediaType.APPLICATION_CYCLONEDX_XML, CycloneDxMediaType.APPLICATION_CYCLONEDX_JSON, MediaType.APPLICATION_OCTET_STREAM})
     @Operation(
             summary = "Returns dependency metadata for a project in CycloneDX format",
-            description = "<p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>"
+            description = """
+                    <p>Requires permission <strong>VIEW_PORTFOLIO</strong></p>
+                    <p>
+                      The <code>withVulnerabilities</code> and <code>vdr</code> variants
+                      further require any of the following permissions:
+                      <ul>
+                        <li><strong>VIEW_VULNERABILITY</strong></li>
+                        <li><strong>VULNERABILITY_ANALYSIS</strong></li>
+                        <li><strong>VULNERABILITY_ANALYSIS_READ</strong></li>
+                      </ul>
+                    </p>
+                    """
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -159,8 +172,22 @@ public class BomResource extends AbstractApiResource {
             if (StringUtils.trimToNull(variant) == null || variant.equalsIgnoreCase("inventory")) {
                 exporter = new CycloneDXExporter(CycloneDXExporter.Variant.INVENTORY, qm);
             } else if (variant.equalsIgnoreCase("withVulnerabilities")) {
+                final Set<String> permissions = qm.getEffectivePermissions(getPrincipal());
+                if (Collections.disjoint(permissions, Set.of(
+                        Permissions.Constants.VIEW_VULNERABILITY,
+                        Permissions.Constants.VULNERABILITY_ANALYSIS,
+                        Permissions.Constants.VULNERABILITY_ANALYSIS_READ))) {
+                    throw new ForbiddenException();
+                }
                 exporter = new CycloneDXExporter(CycloneDXExporter.Variant.INVENTORY_WITH_VULNERABILITIES, qm);
             } else if (variant.equalsIgnoreCase("vdr")) {
+                final Set<String> permissions = qm.getEffectivePermissions(getPrincipal());
+                if (Collections.disjoint(permissions, Set.of(
+                        Permissions.Constants.VIEW_VULNERABILITY,
+                        Permissions.Constants.VULNERABILITY_ANALYSIS,
+                        Permissions.Constants.VULNERABILITY_ANALYSIS_READ))) {
+                    throw new ForbiddenException();
+                }
                 exporter = new CycloneDXExporter(CycloneDXExporter.Variant.VDR, qm);
             } else {
                 return Response.status(Response.Status.BAD_REQUEST).entity("Invalid BOM variant specified.").build();
