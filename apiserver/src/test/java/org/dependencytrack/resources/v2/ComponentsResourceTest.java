@@ -41,11 +41,12 @@ public class ComponentsResourceTest extends ResourceTest {
 
         Project project = qm.createProject("acme", null, null, null, null, null, null, false);
 
-        final Response response = jersey.target("/components/project/" + project.getUuid())
+        final Response response = jersey.target("/components")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
                         {
+                          "project_uuid": "%s",
                           "name": "foo",
                           "purl": "pkg:maven/org.acme/abc",
                           "hashes": {
@@ -61,7 +62,7 @@ public class ComponentsResourceTest extends ResourceTest {
                             ]
                           }
                         }
-                        """));
+                        """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(201);
         assertThat(response.getLocation()).hasPath("/components/project/" + project.getUuid());
         assertThat(getPlainTextBody(response)).isEmpty();
@@ -104,14 +105,15 @@ public class ComponentsResourceTest extends ResourceTest {
 
         Project project = qm.createProject("acme", null, null, null, null, null, null, false);
 
-        Response response = jersey.target("/components/project/" + project.getUuid())
+        Response response = jersey.target("/components")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
                         {
+                          "project_uuid": "%s",
                           "name": "foo"
                         }
-                        """));
+                        """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(401);
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
@@ -123,14 +125,15 @@ public class ComponentsResourceTest extends ResourceTest {
                 """);
 
         project.addAccessTeam(team);
-        response = jersey.target("/components/project/" + project.getUuid())
+        response = jersey.target("/components")
                 .request()
                 .header(X_API_KEY, apiKey)
                 .put(Entity.json(/* language=JSON */ """
                         {
+                          "project_uuid": "%s",
                           "name": "foo"
                         }
-                        """));
+                        """.formatted(project.getUuid())));
         assertThat(response.getStatus()).isEqualTo(201);
     }
 }

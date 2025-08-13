@@ -42,8 +42,8 @@ tags:
   description: Endpoints related to workflows
 
 paths:
-  /components/project/{uuid}:
-    $ref: "./paths/components_project_uuid.yaml"
+  /components:
+    $ref: "./paths/components.yaml"
   /metrics/portfolio/current:
     $ref: "./paths/metrics_portfolio_current.yaml"
   /metrics/vulnerabilities:

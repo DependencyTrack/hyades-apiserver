@@ -16,6 +16,9 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
+  project_uuid:
+    type: string
+    format: uuid
   name:
     type: string
     maxLength: 255
@@ -32,20 +35,7 @@ properties:
     type: string
     format: uuid
   classifier:
-    type: string
-    enum:
-      - APPLICATION
-      - FRAMEWORK
-      - LIBRARY
-      - CONTAINER
-      - OPERATING_SYSTEM
-      - DEVICE
-      - FIRMWARE
-      - FILE
-      - PLATFORM
-      - DEVICE_DRIVER
-      - MACHINE_LEARNING_MODEL
-      - DATA
+    $ref: "./classifier.yaml"
   filename:
     type: string
     maxLength: 255
@@ -96,4 +86,5 @@ properties:
     type: string
     maxLength: 255
 required:
+- project_uuid
 - name

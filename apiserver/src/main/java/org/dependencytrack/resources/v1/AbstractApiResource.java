@@ -49,7 +49,7 @@ public abstract class AbstractApiResource extends AlpineResource {
     /**
      * @see #requireAccess(QueryManager, Project, String)
      */
-    void requireAccess(final QueryManager qm, final Project project) {
+    protected void requireAccess(final QueryManager qm, final Project project) {
         requireAccess(qm, project, null);
     }
 

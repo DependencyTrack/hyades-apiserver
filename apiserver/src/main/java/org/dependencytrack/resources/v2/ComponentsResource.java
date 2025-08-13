@@ -50,6 +50,7 @@ import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
 import org.dependencytrack.resources.v1.AbstractApiResource;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.dependencytrack.util.PurlUtil;
+import org.jdbi.v3.core.Handle;
 import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +61,7 @@ import java.util.UUID;
 import static org.dependencytrack.event.kafka.componentmeta.IntegrityCheck.calculateIntegrityResult;
 import static org.dependencytrack.model.FetchStatus.NOT_AVAILABLE;
 import static org.dependencytrack.model.FetchStatus.PROCESSED;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapOrganizationalContacts;
 import static org.dependencytrack.util.PersistenceUtil.isUniqueConstraintViolation;
 
@@ -76,22 +77,20 @@ public class ComponentsResource extends AbstractApiResource implements Component
     @Override
     @PermissionRequired({Permissions.Constants.PORTFOLIO_MANAGEMENT,
             Permissions.Constants.PORTFOLIO_MANAGEMENT_UPDATE})
-    public Response createProjectComponent(final UUID uuid, final CreateComponentRequest request) {
+    public Response createComponent(final CreateComponentRequest request) {
+        final UUID projectUuid = request.getProjectUuid();
         try (QueryManager qm = new QueryManager()) {
-            useJdbiTransaction(getAlpineRequest(), handle -> {
-                Component parent = null;
-                if (request.getParentUuid() != null) {
-                    parent = qm.getObjectByUuid(Component.class, request.getParentUuid());
-                }
-                final Project project = qm.getObjectByUuid(Project.class, uuid);
+            return qm.callInTransaction(() -> {
+                final Project project = qm.getObjectByUuid(Project.class, projectUuid);
                 if (project == null) {
                     throw new NotFoundException();
                 }
                 try {
-                    requireProjectAccess(handle, uuid);
+                    requireAccess(qm, project);
                 } catch (ProjectAccessDeniedException ex) {
                     throw new NotAuthorizedException(Response.Status.UNAUTHORIZED);
                 }
+
                 final License resolvedLicense = qm.getLicense(request.getLicense());
                 final Component component = new Component();
                 component.setProject(project);
@@ -139,7 +138,11 @@ public class ComponentsResource extends AbstractApiResource implements Component
                     component.setLicenseUrl(null);
                     component.setResolvedLicense(null);
                 }
-                component.setParent(parent);
+
+                if (request.getParentUuid() != null) {
+                    Component parent = qm.getObjectByUuid(Component.class, request.getParentUuid());
+                    component.setParent(parent);
+                }
                 component.setNotes(StringUtils.trimToNull(request.getNotes()));
 
                 qm.createComponent(component, true);
@@ -159,25 +162,26 @@ public class ComponentsResource extends AbstractApiResource implements Component
                     }
                 }
 
-                final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
-                handle.attach(VulnerabilityScanDao.class).createVulnerabilityScan(
-                        VulnerabilityScan.TargetType.COMPONENT.name(), component.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now());
-                kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
+                try (final Handle jdbiHandle = createLocalJdbi(qm).open()) {
+                    final var vulnAnalysisEvent = new ComponentVulnerabilityAnalysisEvent(UUID.randomUUID(), component, VulnerabilityAnalysisLevel.MANUAL_ANALYSIS, true);
+                    jdbiHandle.attach(VulnerabilityScanDao.class).createVulnerabilityScan(
+                            VulnerabilityScan.TargetType.COMPONENT.name(), component.getUuid(), vulnAnalysisEvent.token(), 1, Instant.now());
+                    kafkaEventDispatcher.dispatchEvent(vulnAnalysisEvent);
+                }
+
+                LOGGER.info(SecurityMarkers.SECURITY_AUDIT, "Component created: {}", request.getName());
+                return Response
+                        .created(uriInfo.getBaseUriBuilder()
+                                .path("/components/project/")
+                                .path(projectUuid.toString())
+                                .build())
+                        .build();
             });
         } catch (RuntimeException e) {
             if (isUniqueConstraintViolation(e)) {
                 throw new ClientErrorException(Response.Status.CONFLICT);
             }
-
             throw e;
         }
-
-        LOGGER.info(SecurityMarkers.SECURITY_AUDIT, "Component created: {}", request.getName());
-        return Response
-                .created(uriInfo.getBaseUriBuilder()
-                        .path("/components/project/")
-                        .path(uuid.toString())
-                        .build())
-                .build();
     }
 }
