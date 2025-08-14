@@ -25,6 +25,8 @@ import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.WorkflowState;
+import org.dependencytrack.workflow.engine.api.WorkflowEngine;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.ClassRule;
@@ -43,15 +45,24 @@ import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.mockito.Mockito.mock;
 
 public class WorkflowResourceTest extends ResourceTest {
+
+    private static final WorkflowEngine WORKFLOW_ENGINE_MOCK = mock(WorkflowEngine.class);
 
     @ClassRule
     public static JerseyTestRule jersey = new JerseyTestRule(
             new ResourceConfig(WorkflowResource.class)
                     .register(ApiFilter.class)
                     .register(AuthenticationFeature.class)
-                    .register(MultiPartFeature.class));
+                    .register(MultiPartFeature.class)
+                    .register(new AbstractBinder() {
+                        @Override
+                        protected void configure() {
+                            bind(WORKFLOW_ENGINE_MOCK).to(WorkflowEngine.class);
+                        }
+                    }));
 
     @Test
     public void getWorkflowStatusOk() {
