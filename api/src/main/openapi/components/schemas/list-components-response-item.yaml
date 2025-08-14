@@ -35,7 +35,7 @@ properties:
     maxLength: 255
   purl:
     type: string
-    maxLength: 255
+    maxLength: 1024
   swid_tag_id:
     type: string
     maxLength: 255

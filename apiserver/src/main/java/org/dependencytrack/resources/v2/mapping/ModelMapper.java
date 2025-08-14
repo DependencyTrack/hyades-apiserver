@@ -20,9 +20,23 @@ package org.dependencytrack.resources.v2.mapping;
 
 import org.dependencytrack.api.v2.model.Hashes;
 import org.dependencytrack.api.v2.model.License;
+import org.dependencytrack.api.v2.model.OrganizationalContact;
 import org.dependencytrack.model.Component;
 
+import java.util.List;
+
 public class ModelMapper {
+
+    public static List<org.dependencytrack.model.OrganizationalContact> mapOrganizationalContacts(final List<OrganizationalContact> contacts) {
+        return contacts.stream()
+                .map(contact -> {
+                    var mappedContact = new org.dependencytrack.model.OrganizationalContact();
+                    mappedContact.setName(contact.getName());
+                    mappedContact.setEmail(contact.getEmail());
+                    mappedContact.setPhone(contact.getPhone());
+                    return mappedContact;
+                }).toList();
+    }
 
     public static License mapLicense(org.dependencytrack.model.License license) {
         if (license == null) {

@@ -69,7 +69,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Project extends TableImpl<ProjectRecord> {
 
-    private static final long serialVersionUID = 1157287883;
+    private static final long serialVersionUID = -878734634;
 
     /**
      * The reference instance of <code>PROJECT</code>
@@ -152,7 +152,7 @@ public class Project extends TableImpl<ProjectRecord> {
     /**
      * The column <code>PROJECT.PURL</code>.
      */
-    public final TableField<ProjectRecord, String> purl = createField(DSL.name("PURL"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ProjectRecord, String> purl = createField(DSL.name("PURL"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
      * The column <code>PROJECT.SWIDTAGID</code>.
@@ -232,7 +232,7 @@ public class Project extends TableImpl<ProjectRecord> {
      */
     public static class ProjectPath extends Project implements Path<ProjectRecord> {
 
-        private static final long serialVersionUID = 1157287883;
+        private static final long serialVersionUID = -878734634;
         public <O extends Record> ProjectPath(Table<O> path, ForeignKey<O, ProjectRecord> childPath, InverseForeignKey<O, ProjectRecord> parentPath) {
             super(path, childPath, parentPath);
         }

@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.resources.v1;
+package org.dependencytrack.resources;
 
 import alpine.common.logging.Logger;
 import alpine.server.resources.AlpineResource;
@@ -49,7 +49,7 @@ public abstract class AbstractApiResource extends AlpineResource {
     /**
      * @see #requireAccess(QueryManager, Project, String)
      */
-    void requireAccess(final QueryManager qm, final Project project) {
+    protected void requireAccess(final QueryManager qm, final Project project) {
         requireAccess(qm, project, null);
     }
 
@@ -62,7 +62,7 @@ public abstract class AbstractApiResource extends AlpineResource {
      * @throws ProjectAccessDeniedException When the authenticated {@link java.security.Principal}
      *                                      does not have access to the given {@link Project}.
      */
-    void requireAccess(final QueryManager qm, final Project project, final String message) {
+    protected void requireAccess(final QueryManager qm, final Project project, final String message) {
         // TODO: Could make sense to cache the result for at least a few seconds.
         //  Frontend and API clients tend to make multiple successive requests targeting
         //  the same project. If we can avoid this overhead for even a few of those
@@ -90,7 +90,7 @@ public abstract class AbstractApiResource extends AlpineResource {
      * @throws ProjectAccessDeniedException When the authenticated {@link java.security.Principal}
      *                                      does not have access to the given {@link Project}.
      */
-    void requireComponentAccess(final Handle jdbiHandle, final UUID componentUuid) {
+    protected void requireComponentAccess(final Handle jdbiHandle, final UUID componentUuid) {
         final var dao = jdbiHandle.attach(ComponentDao.class);
 
         final Boolean isAccessible = dao.isAccessible(componentUuid);

@@ -18,16 +18,16 @@
  */
 package org.dependencytrack.dev;
 
-import alpine.Config;
 import alpine.common.logging.Logger;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.dependencytrack.event.kafka.KafkaTopics;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,13 +60,14 @@ public class DevServicesInitializer implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(DevServicesInitializer.class);
 
+    private final Config config = ConfigProvider.getConfig();
     private AutoCloseable postgresContainer;
     private AutoCloseable kafkaContainer;
     private AutoCloseable frontendContainer;
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!"true".equals(getProperty(DEV_SERVICES_ENABLED))) {
+        if (!config.getValue(DEV_SERVICES_ENABLED.getPropertyName(), Boolean.class)) {
             return;
         }
 
@@ -82,9 +83,9 @@ public class DevServicesInitializer implements ServletContextListener {
         final String postgresUsername;
         final String postgresPassword;
         final String kafkaBootstrapServers;
-        final Integer postgresPort = Integer.parseInt(getProperty(DEV_SERVICES_PORT_POSTGRES));
-        final Integer kafkaPort = Integer.parseInt(getProperty(DEV_SERVICES_PORT_KAFKA));
-        final Integer frontendPort = Integer.parseInt(getProperty(DEV_SERVICES_PORT_FRONTEND));
+        final Integer postgresPort = config.getValue(DEV_SERVICES_PORT_POSTGRES.getPropertyName(), Integer.class);
+        final Integer kafkaPort = config.getValue(DEV_SERVICES_PORT_KAFKA.getPropertyName(), Integer.class);
+        final Integer frontendPort = config.getValue(DEV_SERVICES_PORT_FRONTEND.getPropertyName(), Integer.class);
         try {
             final Class<?> startablesClass = Class.forName("org.testcontainers.lifecycle.Startables");
             final Method deepStartMethod = startablesClass.getDeclaredMethod("deepStart", Collection.class);
@@ -100,7 +101,7 @@ public class DevServicesInitializer implements ServletContextListener {
 
             final Class<?> postgresContainerClass = Class.forName("org.testcontainers.containers.PostgreSQLContainer");
             final Constructor<?> postgresContainerConstructor = postgresContainerClass.getDeclaredConstructor(String.class);
-            postgresContainer = (AutoCloseable) postgresContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_POSTGRES));
+            postgresContainer = (AutoCloseable) postgresContainerConstructor.newInstance(config.getValue(DEV_SERVICES_IMAGE_POSTGRES.getPropertyName(), String.class));
             postgresContainerClass.getMethod("withUsername", String.class).invoke(postgresContainer, "dtrack");
             postgresContainerClass.getMethod("withPassword", String.class).invoke(postgresContainer, "dtrack");
             postgresContainerClass.getMethod("withDatabaseName", String.class).invoke(postgresContainer, "dtrack");
@@ -111,7 +112,7 @@ public class DevServicesInitializer implements ServletContextListener {
             //   and pick the corresponding Testcontainers class accordingly.
             final Class<?> kafkaContainerClass = Class.forName("org.testcontainers.kafka.KafkaContainer");
             final Constructor<?> kafkaContainerConstructor = kafkaContainerClass.getDeclaredConstructor(String.class);
-            kafkaContainer = (AutoCloseable) kafkaContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_KAFKA));
+            kafkaContainer = (AutoCloseable) kafkaContainerConstructor.newInstance(config.getValue(DEV_SERVICES_IMAGE_KAFKA.getPropertyName(), String.class));
             // TODO: Remove this when Kafka >= 3.9.1 is available.
             //   * https://github.com/testcontainers/testcontainers-java/issues/9506#issuecomment-2463504967
             //   * https://issues.apache.org/jira/browse/KAFKA-18281
@@ -119,11 +120,11 @@ public class DevServicesInitializer implements ServletContextListener {
             addFixedExposedPortMethod.invoke(kafkaContainer, /* hostPort */ kafkaPort, /* containerPort */  9092);
 
             final Constructor<?> genericContainerConstructor = genericContainerClass.getDeclaredConstructor(String.class);
-            frontendContainer = (AutoCloseable) genericContainerConstructor.newInstance(getProperty(DEV_SERVICES_IMAGE_FRONTEND));
+            frontendContainer = (AutoCloseable) genericContainerConstructor.newInstance(config.getValue(DEV_SERVICES_IMAGE_FRONTEND.getPropertyName(), String.class));
             genericContainerClass.getMethod("withEnv", String.class, String.class).invoke(frontendContainer, "API_BASE_URL", "http://localhost:8080");
             genericContainerClass.getMethod("withExposedPorts", Integer[].class).invoke(frontendContainer, (Object) new Integer[]{8080});
             addFixedExposedPortMethod.invoke(frontendContainer, /* hostPort */ frontendPort, /* containerPort */ 8080);
-            if (Config.getInstance().getProperty(DEV_SERVICES_IMAGE_FRONTEND).endsWith(":snapshot")) {
+            if (config.getValue(DEV_SERVICES_IMAGE_FRONTEND.getPropertyName(), String.class).endsWith(":snapshot")) {
                 genericContainerClass.getMethod("withImagePullPolicy", imagePullPolicyClass).invoke(frontendContainer, alwaysPullPolicy);
             }
 
@@ -157,11 +158,9 @@ public class DevServicesInitializer implements ServletContextListener {
 
         try {
             LOGGER.info("Applying config overrides: %s".formatted(configOverrides));
-            final Field propertiesField = Config.class.getDeclaredField("properties");
-            propertiesField.setAccessible(true);
-
-            final Properties properties = (Properties) propertiesField.get(Config.getInstance());
-            properties.putAll(configOverrides);
+            final Class<?> memoryConfigSourceClass = Class.forName("org.dependencytrack.support.config.source.memory.MemoryConfigSource");
+            final Method setPropertiesMethod = memoryConfigSourceClass.getDeclaredMethod("setProperties", Map.class);
+            setPropertiesMethod.invoke(null, configOverrides);
         } catch (Exception e) {
             throw new RuntimeException("Failed to update configuration", e);
         }
@@ -228,19 +227,6 @@ public class DevServicesInitializer implements ServletContextListener {
                 LOGGER.error("Failed to stop frontend container", e);
             }
         }
-    }
-
-    private static String getProperty(final Config.Key configKey) {
-        // Allow configs to be set via system properties, and fall
-        // back to the usual Config mechanism otherwise.
-        // Since setting environment variables via Maven profiles is
-        // not possible, system properties provide a better UX over
-        // manually editing application.properties, or manually setting
-        // environment variables.
-        return System.getProperty(
-                configKey.getPropertyName(),
-                Config.getInstance().getProperty(configKey)
-        );
     }
 
 }

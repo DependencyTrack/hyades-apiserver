@@ -32,7 +32,7 @@ import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.pagination.Page;
-import org.dependencytrack.resources.v1.AbstractApiResource;
+import org.dependencytrack.resources.AbstractApiResource;
 
 import java.util.UUID;
 

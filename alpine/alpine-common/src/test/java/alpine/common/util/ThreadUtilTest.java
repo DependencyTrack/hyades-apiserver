@@ -18,6 +18,8 @@
  */
 package alpine.common.util;
 
+import org.dependencytrack.support.config.source.memory.MemoryConfigSource;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.RestoreEnvironmentVariables;
@@ -25,10 +27,15 @@ import org.junitpioneer.jupiter.SetEnvironmentVariable;
 
 class ThreadUtilTest {
 
+    @AfterEach
+    void afterEach() {
+        MemoryConfigSource.clear();
+    }
+
     @Test
-    @RestoreEnvironmentVariables
-    @SetEnvironmentVariable(key = "ALPINE_WORKER_THREADS", value = "10")
     void determineNumberOfWorkerThreadsStaticTest() {
+        MemoryConfigSource.setProperty("alpine.worker.threads", "10");
+
         Assertions.assertEquals(10, ThreadUtil.determineNumberOfWorkerThreads());
     }
 
@@ -36,6 +43,8 @@ class ThreadUtilTest {
     @RestoreEnvironmentVariables
     @SetEnvironmentVariable(key = "ALPINE_WORKER_THREADS", value = "0")
     void determineNumberOfWorkerThreadsDynamicTest() {
+        MemoryConfigSource.setProperty("alpine.worker.threads", "0");
+
         Assertions.assertTrue(ThreadUtil.determineNumberOfWorkerThreads() > 0);
     }
 

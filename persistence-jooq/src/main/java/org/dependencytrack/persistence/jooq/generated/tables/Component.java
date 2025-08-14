@@ -58,7 +58,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Component extends TableImpl<ComponentRecord> {
 
-    private static final long serialVersionUID = 1317872202;
+    private static final long serialVersionUID = 597580869;
 
     /**
      * The reference instance of <code>COMPONENT</code>
@@ -206,7 +206,7 @@ public class Component extends TableImpl<ComponentRecord> {
     /**
      * The column <code>COMPONENT.PURLCOORDINATES</code>.
      */
-    public final TableField<ComponentRecord, String> purlCoordinates = createField(DSL.name("PURLCOORDINATES"), SQLDataType.VARCHAR(255), this, "");
+    public final TableField<ComponentRecord, String> purlCoordinates = createField(DSL.name("PURLCOORDINATES"), SQLDataType.VARCHAR(1024), this, "");
 
     /**
      * The column <code>COMPONENT.LICENSE_ID</code>.
@@ -311,7 +311,7 @@ public class Component extends TableImpl<ComponentRecord> {
      */
     public static class ComponentPath extends Component implements Path<ComponentRecord> {
 
-        private static final long serialVersionUID = 1317872202;
+        private static final long serialVersionUID = 597580869;
         public <O extends Record> ComponentPath(Table<O> path, ForeignKey<O, ComponentRecord> childPath, InverseForeignKey<O, ComponentRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -342,7 +342,7 @@ public class Component extends TableImpl<ComponentRecord> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.COMPONENT_BLAKE2B_256_IDX, Indexes.COMPONENT_BLAKE2B_384_IDX, Indexes.COMPONENT_BLAKE2B_512_IDX, Indexes.COMPONENT_BLAKE3_IDX, Indexes.COMPONENT_CLASSIFIER_IDX, Indexes.COMPONENT_CPE_IDX, Indexes.COMPONENT_DIRECT_DEPENDENCIES_JSONB_IDX, Indexes.COMPONENT_GROUP_IDX, Indexes.COMPONENT_LAST_RISKSCORE_IDX, Indexes.COMPONENT_LICENSE_ID_IDX, Indexes.COMPONENT_MD5_IDX, Indexes.COMPONENT_NAME_IDX, Indexes.COMPONENT_PARENT_COMPONENT_ID_IDX, Indexes.COMPONENT_PROJECT_ID_IDX, Indexes.COMPONENT_PURL_COORDINATES_IDX, Indexes.COMPONENT_PURL_IDX, Indexes.COMPONENT_SHA1_IDX, Indexes.COMPONENT_SHA3_256_IDX, Indexes.COMPONENT_SHA3_384_IDX, Indexes.COMPONENT_SHA3_512_IDX, Indexes.COMPONENT_SHA_256_IDX, Indexes.COMPONENT_SHA_384_IDX, Indexes.COMPONENT_SHA_512_IDX, Indexes.COMPONENT_SWID_TAGID_IDX);
+        return Arrays.asList(Indexes.COMPONENT_BLAKE2B_256_IDX, Indexes.COMPONENT_BLAKE2B_384_IDX, Indexes.COMPONENT_BLAKE2B_512_IDX, Indexes.COMPONENT_BLAKE3_IDX, Indexes.COMPONENT_CLASSIFIER_IDX, Indexes.COMPONENT_CPE_IDX, Indexes.COMPONENT_DIRECT_DEPENDENCIES_JSONB_IDX, Indexes.COMPONENT_GROUP_IDX, Indexes.COMPONENT_LAST_RISKSCORE_IDX, Indexes.COMPONENT_LICENSE_ID_IDX, Indexes.COMPONENT_MD5_IDX, Indexes.COMPONENT_NAME_IDX, Indexes.COMPONENT_NAME_VERSION_ID_IDX, Indexes.COMPONENT_PARENT_COMPONENT_ID_IDX, Indexes.COMPONENT_PROJECT_ID_IDX, Indexes.COMPONENT_PURL_COORDINATES_IDX, Indexes.COMPONENT_PURL_IDX, Indexes.COMPONENT_SHA1_IDX, Indexes.COMPONENT_SHA3_256_IDX, Indexes.COMPONENT_SHA3_384_IDX, Indexes.COMPONENT_SHA3_512_IDX, Indexes.COMPONENT_SHA_256_IDX, Indexes.COMPONENT_SHA_384_IDX, Indexes.COMPONENT_SHA_512_IDX, Indexes.COMPONENT_SWID_TAGID_IDX);
     }
 
     @Override

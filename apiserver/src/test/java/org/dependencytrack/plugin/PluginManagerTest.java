@@ -19,6 +19,8 @@
 package org.dependencytrack.plugin;
 
 import alpine.model.IConfigProperty;
+import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.filestorage.FileStoragePlugin;
 import org.dependencytrack.plugin.api.ExtensionFactory;
@@ -26,7 +28,6 @@ import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.util.List;
 import java.util.SortedSet;
@@ -36,11 +37,11 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class PluginManagerTest extends PersistenceCapableTest {
 
-    @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
-
     interface UnknownExtensionPoint extends ExtensionPoint {
     }
+
+    @Rule
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
 
     @Test
     public void testGetLoadedPlugins() {
@@ -60,6 +61,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
     }
 
     @Test
+    @WithConfigProperty("test.extension.dummy.bar=qux")
     public void testGetExtensionWithConfig() {
         qm.createConfigProperty(
                 /* groupName */ "test",
@@ -68,8 +70,6 @@ public class PluginManagerTest extends PersistenceCapableTest {
                 IConfigProperty.PropertyType.STRING,
                 /* description */ null
         );
-
-        environmentVariables.set("TEST_EXTENSION_DUMMY_BAR", "qux");
 
         final TestExtensionPoint extension =
                 PluginManager.getInstance().getExtension(TestExtensionPoint.class);
@@ -141,12 +141,11 @@ public class PluginManagerTest extends PersistenceCapableTest {
     }
 
     @Test
+    @WithConfigProperty("test.extension.dummy.enabled=false")
     public void testDisabledExtension() {
         final PluginManager pluginManager = PluginManager.getInstance();
 
         pluginManager.unloadPlugins();
-
-        environmentVariables.set("TEST_EXTENSION_DUMMY_ENABLED", "false");
 
         pluginManager.loadPlugins();
 
@@ -163,7 +162,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
         pluginManager.unloadPlugins();
 
-        environmentVariables.set("TEST_DEFAULT_EXTENSION", "does.not.exist");
+        configPropertyRule.setProperty("test.default.extension", "does.not.exist");
 
         assertThatExceptionOfType(NoSuchExtensionException.class)
                 .isThrownBy(pluginManager::loadPlugins)

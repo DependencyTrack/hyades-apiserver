@@ -19,8 +19,8 @@
 
         <!-- Dependency Versions -->
         <lib.awaitility.version>4.3.0</lib.awaitility.version>
-        <lib.cloud-sql-postgres-socket-factory.version>1.25.2</lib.cloud-sql-postgres-socket-factory.version>
-        <lib.commons-compress.version>1.27.1</lib.commons-compress.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.25.3</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.commons-compress.version>1.28.0</lib.commons-compress.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
@@ -31,7 +31,7 @@
         <lib.kafka.version>3.9.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.minio.version>8.5.17</lib.minio.version>
-        <lib.kotlin-stdlib.version>2.2.0</lib.kotlin-stdlib.version>
+        <lib.kotlin-stdlib.version>2.2.10</lib.kotlin-stdlib.version>
         <lib.wiremock.version>3.13.1</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.parallel-consumer.version>0.5.3.2</lib.parallel-consumer.version>
@@ -152,6 +152,12 @@
             <artifactId>alpine-executable-war</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>alpine-test</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
         </dependency>
         <!-- Common Expression Language (CEL) -->
         <dependency>
@@ -394,7 +400,6 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>${lib.junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -755,6 +760,11 @@
             </properties>
             <dependencies>
                 <dependency>
+                    <groupId>org.dependencytrack</groupId>
+                    <artifactId>smallrye-config-source-memory</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+                <dependency>
                     <groupId>org.testcontainers</groupId>
                     <artifactId>postgresql</artifactId>
                     <version>${lib.testcontainers.version}</version>
@@ -792,6 +802,7 @@
                         </executions>
                         <configuration>
                             <systemProperties>
+                                <alpine.config.profile>dev</alpine.config.profile>
                                 <dev.services.enabled>true</dev.services.enabled>
                             </systemProperties>
                             <webApp>
