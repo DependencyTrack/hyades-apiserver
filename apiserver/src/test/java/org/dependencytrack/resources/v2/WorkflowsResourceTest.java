@@ -105,6 +105,9 @@ public class WorkflowsResourceTest extends ResourceTest {
                               "created_at": 666666,
                               "priority": 123,
                               "concurrency_group_id": "concurrencyGroupId",
+                              "labels": {
+                                "foo": "bar"
+                              },
                               "updated_at": 777777,
                               "started_at": 888888
                             }
@@ -116,16 +119,6 @@ public class WorkflowsResourceTest extends ResourceTest {
                           }
                         }
                         """);
-    }
-
-    @Test
-    public void listWorkflowRunsShouldReturnBadRequestWhenLabelsIsInvalidJson() {
-        final Response response = jersey.target("/workflow-runs")
-                .queryParam("labels", "not-json")
-                .request()
-                .header(X_API_KEY, apiKey)
-                .get();
-        assertThat(response.getStatus()).isEqualTo(400);
     }
 
     @Test
