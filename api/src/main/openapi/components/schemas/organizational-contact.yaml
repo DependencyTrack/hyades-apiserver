@@ -18,50 +18,13 @@ type: object
 properties:
   name:
     type: string
+    description: Name of the organizational contact
     maxLength: 255
-  version:
+  email:
     type: string
+    description: Email of the organizational contact
     maxLength: 255
-  group:
+  phone:
     type: string
+    description: Phone of the organizational contact
     maxLength: 255
-  classifier:
-    type: string
-    maxLength: 255
-  hashes:
-    $ref: "./hashes.yaml"
-  cpe:
-    type: string
-    maxLength: 255
-  purl:
-    type: string
-    maxLength: 1024
-  swid_tag_id:
-    type: string
-    maxLength: 255
-  internal:
-    type: boolean
-  copyright:
-    type: string
-    maxLength: 255
-  license:
-    type: string
-    maxLength: 255
-  license_expression:
-    type: string
-    maxLength: 255
-  license_url:
-    type: string
-    maxLength: 255
-  resolved_license:
-    $ref: "./license.yaml"
-  occurrence_count:
-    type: integer
-    format: int64
-    minimum: 0
-  last_inherited_risk_score:
-    type: number
-    format: double
-  uuid:
-    type: string
-    format: uuid

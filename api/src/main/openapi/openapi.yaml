@@ -32,6 +32,8 @@ security:
 servers:
 - url: /api/v2
 tags:
+- name: Components
+  description: Endpoints related to components
 - name: Metrics
   description: Endpoints related to metrics
 - name: Projects
@@ -42,6 +44,8 @@ tags:
   description: Endpoints related to workflows
 
 paths:
+  /components:
+    $ref: "./paths/components.yaml"
   /projects/{uuid}/components:
     $ref: "./paths/projects_uuid_components.yaml"
   /metrics/portfolio/current:

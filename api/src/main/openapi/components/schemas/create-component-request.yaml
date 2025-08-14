@@ -16,16 +16,27 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
+  project_uuid:
+    type: string
+    format: uuid
   name:
     type: string
     maxLength: 255
-  version:
+  description:
     type: string
     maxLength: 255
   group:
     type: string
     maxLength: 255
+  version:
+    type: string
+    maxLength: 255
   classifier:
+    $ref: "./classifier.yaml"
+  filename:
+    type: string
+    maxLength: 255
+  extension:
     type: string
     maxLength: 255
   hashes:
@@ -33,6 +44,15 @@ properties:
   cpe:
     type: string
     maxLength: 255
+  publisher:
+    type: string
+    maxLength: 255
+  supplier:
+    $ref: "./organizational-entity.yaml"
+  authors:
+    type: array
+    items:
+      $ref: "./organizational-contact.yaml"
   purl:
     type: string
     maxLength: 1024
@@ -53,15 +73,9 @@ properties:
   license_url:
     type: string
     maxLength: 255
-  resolved_license:
-    $ref: "./license.yaml"
-  occurrence_count:
-    type: integer
-    format: int64
-    minimum: 0
-  last_inherited_risk_score:
-    type: number
-    format: double
-  uuid:
+  notes:
     type: string
-    format: uuid
+    maxLength: 255
+required:
+- project_uuid
+- name

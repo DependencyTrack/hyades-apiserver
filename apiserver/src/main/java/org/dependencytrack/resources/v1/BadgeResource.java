@@ -43,6 +43,7 @@ import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.misc.Badger;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.glassfish.jersey.server.ContainerRequest;
