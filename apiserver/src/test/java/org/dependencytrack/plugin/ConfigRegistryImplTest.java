@@ -20,13 +20,14 @@ package org.dependencytrack.plugin;
 
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.security.crypto.DataEncryption;
+import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.plugin.api.ConfigDefinition;
 import org.dependencytrack.plugin.api.ConfigRegistry;
 import org.dependencytrack.plugin.api.ConfigSource;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.util.Optional;
 
@@ -36,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class ConfigRegistryImplTest extends PersistenceCapableTest {
 
     @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
 
     @Test
     public void testGetRuntimeConfigValue() {
@@ -105,8 +106,8 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
     }
 
     @Test
+    @WithConfigProperty("foo.extension.bar.baz=qux")
     public void testDeploymentProperty() {
-        environmentVariables.set("FOO_EXTENSION_BAR_BAZ", "qux");
         final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
         final var configDef = new ConfigDefinition("baz", ConfigSource.DEPLOYMENT, false, false);
         final Optional<String> optionalProperty = configRegistry.getOptionalValue(configDef);

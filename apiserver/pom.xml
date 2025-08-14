@@ -148,6 +148,12 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>alpine-test</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
         <!-- Common Expression Language (CEL) -->
         <dependency>
             <groupId>org.projectnessie.cel</groupId>
@@ -389,7 +395,6 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>${lib.junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -750,6 +755,11 @@
             </properties>
             <dependencies>
                 <dependency>
+                    <groupId>org.dependencytrack</groupId>
+                    <artifactId>smallrye-config-source-memory</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+                <dependency>
                     <groupId>org.testcontainers</groupId>
                     <artifactId>postgresql</artifactId>
                     <version>${lib.testcontainers.version}</version>
@@ -787,6 +797,7 @@
                         </executions>
                         <configuration>
                             <systemProperties>
+                                <alpine.config.profile>dev</alpine.config.profile>
                                 <dev.services.enabled>true</dev.services.enabled>
                             </systemProperties>
                             <webApp>

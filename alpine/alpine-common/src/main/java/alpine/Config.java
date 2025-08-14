@@ -18,26 +18,25 @@
  */
 package alpine;
 
+import alpine.common.config.BuildInfoConfig;
 import alpine.common.logging.Logger;
 import alpine.common.util.ByteFormat;
 import alpine.common.util.PathUtil;
 import alpine.common.util.SystemUtil;
 import org.apache.commons.lang3.StringUtils;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import static alpine.common.config.ConfigUtil.getConfigMapping;
 import static java.util.function.Predicate.not;
 
 /**
@@ -45,18 +44,13 @@ import static java.util.function.Predicate.not;
  *
  * @author Steve Springett
  * @since 1.0.0
+ * @deprecated Use {@link org.eclipse.microprofile.config.Config} instead.
  */
+@Deprecated(since = "5.7.0")
 public class Config {
 
     private static final Logger LOGGER = Logger.getLogger(Config.class);
-    private static final String ALPINE_APP_PROP = "alpine.application.properties";
-    private static final String PROP_FILE = "application.properties";
-    private static final String ALPINE_VERSION_PROP_FILE = "alpine.version";
-    private static final String APPLICATION_VERSION_PROP_FILE = "application.version";
     private static final Config INSTANCE;
-    private static Properties properties;
-    private static Properties alpineVersionProperties;
-    private static Properties applicationVersionProperties;
     private static String systemId;
 
     static {
@@ -199,63 +193,10 @@ public class Config {
      * Initialize the Config object. This method should only be called once.
      */
     void init() {
-        if (properties != null) {
-            return;
-        }
-
         LOGGER.info("Initializing Configuration");
-        properties = new Properties();
 
-        final String alpineAppProp = PathUtil.resolve(System.getProperty(ALPINE_APP_PROP));
-        if (StringUtils.isNotBlank(alpineAppProp)) {
-            LOGGER.info("Loading application properties from " + alpineAppProp);
-            try (InputStream fileInputStream = Files.newInputStream((new File(alpineAppProp)).toPath())) {
-                properties.load(fileInputStream);
-            } catch (FileNotFoundException e) {
-                LOGGER.error("Could not find property file " + alpineAppProp);
-            } catch (IOException e) {
-                LOGGER.error("Unable to load " + alpineAppProp);
-            }
-        } else {
-            LOGGER.info("System property " + ALPINE_APP_PROP + " not specified");
-            LOGGER.info("Loading " + PROP_FILE + " from classpath");
-            try (InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(PROP_FILE)) {
-                if (in != null) {
-                    properties.load(in);
-                } else {
-                    LOGGER.error("Unable to load (resourceStream is null) " + PROP_FILE);
-                }
-            } catch (IOException e) {
-                LOGGER.error("Unable to load " + PROP_FILE);
-            }
-        }
-        if (properties.size() == 0) {
-            LOGGER.error("A fatal error occurred loading application properties. Please correct the issue and restart the application.");
-        }
-
-        alpineVersionProperties = new Properties();
-        try (InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(ALPINE_VERSION_PROP_FILE)) {
-            alpineVersionProperties.load(in);
-        } catch (IOException e) {
-            LOGGER.error("Unable to load " + ALPINE_VERSION_PROP_FILE);
-        }
-        if (alpineVersionProperties.size() == 0) {
-            LOGGER.error("A fatal error occurred loading Alpine version information. Please correct the issue and restart the application.");
-        }
-
-        applicationVersionProperties = new Properties();
-        try (InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(APPLICATION_VERSION_PROP_FILE)) {
-            if (in != null) {
-                applicationVersionProperties.load(in);
-            } else {
-                LOGGER.error("Unable to load (resourceStream is null) " + APPLICATION_VERSION_PROP_FILE);
-            }
-        } catch (IOException e) {
-            LOGGER.error("Unable to load " + APPLICATION_VERSION_PROP_FILE);
-        }
-        if (applicationVersionProperties.size() == 0) {
-            LOGGER.error("A fatal error occurred loading application version information. Please correct the issue and restart the application.");
-        }
+        // Force initialization of MicroProfile config.
+        org.eclipse.microprofile.config.Config ignored = ConfigProvider.getConfig();
 
         final File dataDirectory = getDataDirectorty();
         if (!dataDirectory.exists()) {
@@ -318,7 +259,7 @@ public class Config {
      * @since 1.0.0
      */
     public String getFrameworkName() {
-        return alpineVersionProperties.getProperty("name");
+        return getConfigMapping(BuildInfoConfig.class).framework().name();
     }
 
     /**
@@ -327,7 +268,7 @@ public class Config {
      * @since 1.0.0
      */
     public String getFrameworkVersion() {
-        return alpineVersionProperties.getProperty("version");
+        return getConfigMapping(BuildInfoConfig.class).framework().version();
     }
 
     /**
@@ -336,7 +277,7 @@ public class Config {
      * @since 1.0.0
      */
     public String getFrameworkBuildTimestamp() {
-        return alpineVersionProperties.getProperty("timestamp");
+        return getConfigMapping(BuildInfoConfig.class).framework().timestamp();
     }
 
     /**
@@ -345,7 +286,7 @@ public class Config {
      * @since 1.3.0
      */
     public String getFrameworkBuildUuid() {
-        return alpineVersionProperties.getProperty("uuid");
+        return getConfigMapping(BuildInfoConfig.class).framework().uuid();
     }
 
     /**
@@ -354,7 +295,7 @@ public class Config {
      * @since 1.0.0
      */
     public String getApplicationName() {
-        return applicationVersionProperties.getProperty("name", "Unknown Alpine Application");
+        return getConfigMapping(BuildInfoConfig.class).application().name();
     }
 
     /**
@@ -363,7 +304,7 @@ public class Config {
      * @since 1.0.0
      */
     public String getApplicationVersion() {
-        return applicationVersionProperties.getProperty("version", "0.0.0");
+        return getConfigMapping(BuildInfoConfig.class).application().version();
     }
 
     /**
@@ -372,7 +313,7 @@ public class Config {
      * @since 1.0.0
      */
     public String getApplicationBuildTimestamp() {
-        return applicationVersionProperties.getProperty("timestamp", "1970-01-01 00:00:00");
+        return getConfigMapping(BuildInfoConfig.class).application().timestamp();
     }
 
     /**
@@ -381,7 +322,7 @@ public class Config {
      * @since 1.3.0
      */
     public String getApplicationBuildUuid() {
-        return applicationVersionProperties.getProperty("uuid");
+        return getConfigMapping(BuildInfoConfig.class).application().uuid();
     }
 
     /**
@@ -413,15 +354,8 @@ public class Config {
      * @since 1.0.0
      */
     public String getProperty(Key key) {
-        final String envVariable = getPropertyFromEnvironment(key);
-        if (envVariable != null) {
-            return envVariable;
-        }
-        if (key.getDefaultValue() == null) {
-            return properties.getProperty(key.getPropertyName());
-        } else {
-            return properties.getProperty(key.getPropertyName(), String.valueOf(key.getDefaultValue()));
-        }
+        return ConfigProvider.getConfig().getOptionalValue(key.getPropertyName(), String.class).orElseGet(
+                () -> key.getDefaultValue() != null ? String.valueOf(key.getDefaultValue()) : null);
     }
 
     /**
@@ -436,21 +370,17 @@ public class Config {
      * @since 1.7.0
      */
     public String getPropertyOrFile(AlpineKey key) {
-    	final AlpineKey fileKey = AlpineKey.valueOf(key.toString()+"_FILE");
-    	final String filePath = getProperty(fileKey);
-    	final String prop = getProperty(key);
-        if (StringUtils.isNotBlank(filePath)) {
-        	if (prop != null && !prop.equals(String.valueOf(key.getDefaultValue()))) {
-        		LOGGER.warn(fileKey.getPropertyName() + " overrides value from property " + key.getPropertyName());
-        	}
-        	try {
-				return new String(Files.readAllBytes(new File(PathUtil.resolve(filePath)).toPath())).replaceAll("\\s+", "");
-			} catch (IOException e) {
-        		LOGGER.error(filePath + " file doesn't exist or not readable.");
-        		return null;
-			}
-        }
-        return prop;
+        return ConfigProvider.getConfig().getOptionalValue(key.getPropertyName() + ".file", String.class)
+                .map(filePath -> {
+                    try {
+                        return new String(Files.readAllBytes(new File(PathUtil.resolve(filePath)).toPath())).replaceAll("\\s+", "");
+                    } catch (IOException e) {
+                        LOGGER.error(filePath + " file doesn't exist or not readable.", e);
+                        return null;
+                    }
+                })
+                .or(() -> ConfigProvider.getConfig().getOptionalValue(key.getPropertyName(), String.class))
+                .orElse(null);
     }
 
     /**
@@ -501,15 +431,10 @@ public class Config {
      * @since 2.2.5
      */
     public List<String> getPropertyAsList(Key key) {
-        String property = getProperty(key);
-        if (property == null) {
-            return Collections.emptyList();
-        } else {
-            return Arrays.stream(property.split(","))
-                    .map(String::trim)
-                    .filter(not(String::isEmpty))
-                    .toList();
-        }
+        return ConfigProvider.getConfig().getValues(key.getPropertyName(), String.class).stream()
+                .map(String::trim)
+                .filter(not(String::isEmpty))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -532,82 +457,15 @@ public class Config {
      */
     public Map<String, String> getPassThroughProperties(final String prefix) {
         final var passThroughProperties = new HashMap<String, String>();
-        try {
-            for (final Map.Entry<String, String> envVar : System.getenv().entrySet()) {
-                if (envVar.getKey().startsWith("ALPINE_%s_".formatted(prefix.toUpperCase().replace(".", "_")))) {
-                    final String key = envVar.getKey().replaceFirst("^ALPINE_", "").toLowerCase().replace("_", ".");
-                    passThroughProperties.put(key, envVar.getValue());
-                }
+        for (final String propertyName : ConfigProvider.getConfig().getPropertyNames()) {
+            if (!propertyName.startsWith("alpine.%s.".formatted(prefix))) {
+                continue;
             }
-        } catch (SecurityException e) {
-            LOGGER.warn("""
-                    Unable to retrieve pass-through properties for prefix "%s" \
-                    from environment variables. Using defaults.""".formatted(prefix), e);
-        }
-        for (final Map.Entry<Object, Object> property : properties.entrySet()) {
-            if (property.getKey() instanceof String key
-                    && key.startsWith("alpine.%s.".formatted(prefix))
-                    && property.getValue() instanceof final String value) {
-                key = key.replaceFirst("^alpine\\.", "");
-                if (!passThroughProperties.containsKey(key)) { // Environment variables take precedence
-                    passThroughProperties.put(key, value);
-                }
-            }
+
+            final String key = propertyName.replaceFirst("^alpine\\.", "");
+            passThroughProperties.put(key, ConfigProvider.getConfig().getValue(propertyName, String.class));
         }
         return passThroughProperties;
-    }
-
-    static void reset() {
-        properties = null;
-    }
-
-    /**
-     * Return the configured value for the specified Key.
-     * @param key The Key to return the configuration for
-     * @return a String of the value of the configuration
-     * @since 1.0.0
-     * @deprecated use {{@link #getProperty(Key)}}
-     */
-    @Deprecated
-    public String getProperty(String key) {
-        return properties.getProperty(key);
-    }
-
-    /**
-     * Return the configured value for the specified Key.
-     * @param key The String of the key to return the configuration for
-     * @param defaultValue The default value if the key cannot be found
-     * @return a String of the value of the configuration
-     * @since 1.0.0
-     * @deprecated use {{@link #getProperty(Key)}
-     */
-    @Deprecated
-    public String getProperty(String key, String defaultValue) {
-        return properties.getProperty(key, defaultValue);
-    }
-
-    /**
-     * Attempts to retrieve the key via environment variable. Property names are
-     * always upper case with periods replaced with underscores.
-     *
-     * alpine.worker.threads
-     *    becomes
-     * ALPINE_WORKER_THREADS
-     *
-     * @param key the key to retrieve from environment
-     * @return the value of the key (if set), null otherwise.
-     * @since 1.4.3
-     */
-    private String getPropertyFromEnvironment(Key key) {
-        final String envVariable = key.getPropertyName().toUpperCase().replace(".", "_");
-        try {
-            return StringUtils.trimToNull(System.getenv(envVariable));
-        } catch (SecurityException e) {
-            LOGGER.warn("A security exception prevented access to the environment variable. Using defaults.");
-        } catch (NullPointerException e) {
-            // Do nothing. The key was not specified in an environment variable. Continue along.
-        }
-        return null;
     }
 
     /**

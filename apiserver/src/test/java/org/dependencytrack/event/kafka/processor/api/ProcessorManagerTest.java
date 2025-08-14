@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.event.kafka.processor.api;
 
+import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.WithConfigProperty;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -31,7 +33,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
+import org.junit.rules.RuleChain;
 import org.testcontainers.kafka.KafkaContainer;
 
 import java.time.Duration;
@@ -54,11 +56,13 @@ import static org.mockito.Mockito.when;
 
 public class ProcessorManagerTest {
 
-    @Rule
-    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    private final KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:3.9.1");
+
+    private final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule()
+                    .withProperty("kafka.bootstrap.servers", kafkaContainer::getBootstrapServers);
 
     @Rule
-    public KafkaContainer kafkaContainer = new KafkaContainer("apache/kafka-native:3.9.1");
+    public final RuleChain ruleChain = RuleChain.outerRule(kafkaContainer).around(configPropertyRule);
 
     private AdminClient adminClient;
     private Producer<String, String> producer;
@@ -71,8 +75,6 @@ public class ProcessorManagerTest {
                 Map.entry(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class),
                 Map.entry(VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class)
         ));
-
-        environmentVariables.set("KAFKA_BOOTSTRAP_SERVERS", kafkaContainer.getBootstrapServers());
     }
 
     @After
@@ -86,15 +88,16 @@ public class ProcessorManagerTest {
     }
 
     @Test
+    @WithConfigProperty(value = {
+            "kafka.processor.foo.processing.order=key",
+            "kafka.processor.foo.max.concurrency=5",
+            "kafka.processor.foo.consumer.auto.offset.reset=earliest"
+    })
     public void testSingleRecordProcessor() throws Exception {
         final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 3, (short) 1))).all().get();
 
         final var recordsProcessed = new AtomicInteger(0);
-
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_PROCESSING_ORDER", "key");
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_MAX_CONCURRENCY", "5");
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_CONSUMER_AUTO_OFFSET_RESET", "earliest");
 
         final Processor<String, String> processor =
                 record -> recordsProcessed.incrementAndGet();
@@ -115,6 +118,12 @@ public class ProcessorManagerTest {
     }
 
     @Test
+    @WithConfigProperty(value = {
+            "kafka.processor.foo.retry.initial.delay.ms=5",
+            "kafka.processor.foo.retry.multiplier=1",
+            "kafka.processor.foo.retry.max.delay.ms=10",
+            "kafka.processor.foo.consumer.auto.offset.reset=earliest"
+    })
     public void testSingleRecordProcessorRetry() throws Exception {
         final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 3, (short) 1))).all().get();
@@ -133,11 +142,6 @@ public class ProcessorManagerTest {
             var ignored = objectSpy.toString();
         };
 
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_RETRY_INITIAL_DELAY_MS", "5");
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_RETRY_MULTIPLIER", "1");
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_RETRY_MAX_DELAY_MS", "10");
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_CONSUMER_AUTO_OFFSET_RESET", "earliest");
-
         try (final var processorManager = new ProcessorManager()) {
             processorManager.registerProcessor("foo", inputTopic, processor);
 
@@ -152,16 +156,17 @@ public class ProcessorManagerTest {
     }
 
     @Test
+    @WithConfigProperty(value = {
+            "kafka.processor.foo.processing.order=key",
+            "kafka.processor.foo.max.batch.size=100",
+            "kafka.processor.foo.consumer.auto.offset.reset=earliest"
+    })
     public void testBatchProcessor() throws Exception {
         final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 3, (short) 1))).all().get();
 
         final var recordsProcessed = new AtomicInteger(0);
         final var actualBatchSizes = new ConcurrentLinkedQueue<>();
-
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_PROCESSING_ORDER", "key");
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_MAX_BATCH_SIZE", "100");
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_CONSUMER_AUTO_OFFSET_RESET", "earliest");
 
         final BatchProcessor<String, String> recordProcessor = records -> {
             recordsProcessed.addAndGet(records.size());
@@ -186,13 +191,14 @@ public class ProcessorManagerTest {
     }
 
     @Test
+    @WithConfigProperty(value = {
+            "kafka.processor.foo.processing.order=partition",
+            "kafka.processor.foo.max.concurrency=-1",
+            "kafka.processor.foo.consumer.auto.offset.reset=earliest"
+    })
     public void testWithMaxConcurrencyMatchingPartitionCount() throws Exception {
         final var inputTopic = new Topic<>("input", Serdes.String(), Serdes.String());
         adminClient.createTopics(List.of(new NewTopic(inputTopic.name(), 12, (short) 1))).all().get();
-
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_PROCESSING_ORDER", "partition");
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_MAX_CONCURRENCY", "-1");
-        environmentVariables.set("KAFKA_PROCESSOR_FOO_CONSUMER_AUTO_OFFSET_RESET", "earliest");
 
         final var threadNames = new ArrayBlockingQueue<String>(100);
         final Processor<String, String> processor = record -> {
