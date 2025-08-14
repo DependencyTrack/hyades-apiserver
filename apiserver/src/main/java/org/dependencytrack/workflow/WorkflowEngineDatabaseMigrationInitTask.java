@@ -54,7 +54,7 @@ public final class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
 
     @Override
     public void execute(final InitTaskContext ctx) throws Exception {
-        if (!ctx.config().getPropertyAsBoolean(WORKFLOW_ENGINE_ENABLED)) {
+        if (!ctx.config().getOptionalValue(WORKFLOW_ENGINE_ENABLED.getPropertyName(), boolean.class).orElse(false)) {
             LOGGER.info(
                     "Skipping execution because {} is disabled",
                     WORKFLOW_ENGINE_ENABLED.getPropertyName());
@@ -65,21 +65,27 @@ public final class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
     }
 
     private DataSource getDataSource(final InitTaskContext ctx) {
-        String engineDbUrl = ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_MIGRATION_URL);
+        String engineDbUrl = ctx.config().getOptionalValue(
+                WORKFLOW_ENGINE_DATABASE_MIGRATION_URL.getPropertyName(), String.class).orElse(null);
         if (engineDbUrl != null) {
             final var dataSource = new PGSimpleDataSource();
             dataSource.setUrl(engineDbUrl);
-            dataSource.setUser(ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_MIGRATION_USERNAME));
-            dataSource.setPassword(ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_MIGRATION_PASSWORD));
+            dataSource.setUser(ctx.config().getOptionalValue(
+                    WORKFLOW_ENGINE_DATABASE_MIGRATION_USERNAME.getPropertyName(), String.class).orElse(null));
+            dataSource.setPassword(ctx.config().getOptionalValue(
+                    WORKFLOW_ENGINE_DATABASE_MIGRATION_PASSWORD.getPropertyName(), String.class).orElse(null));
             return dataSource;
         }
 
-        engineDbUrl = ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_URL);
+        engineDbUrl = ctx.config().getOptionalValue(
+                WORKFLOW_ENGINE_DATABASE_URL.getPropertyName(), String.class).orElse(null);
         if (engineDbUrl != null) {
             final var dataSource = new PGSimpleDataSource();
             dataSource.setUrl(engineDbUrl);
-            dataSource.setUser(ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_USERNAME));
-            dataSource.setPassword(ctx.config().getProperty(WORKFLOW_ENGINE_DATABASE_PASSWORD));
+            dataSource.setUser(ctx.config().getOptionalValue(
+                    WORKFLOW_ENGINE_DATABASE_USERNAME.getPropertyName(), String.class).orElse(null));
+            dataSource.setPassword(ctx.config().getOptionalValue(
+                    WORKFLOW_ENGINE_DATABASE_PASSWORD.getPropertyName(), String.class).orElse(null));
             return dataSource;
         }
 

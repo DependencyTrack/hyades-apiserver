@@ -18,10 +18,13 @@
  */
 package org.dependencytrack.workflow;
 
-import alpine.Config;
+import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.init.InitTaskContext;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -33,18 +36,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_MIGRATION_PASSWORD;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_MIGRATION_URL;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_MIGRATION_USERNAME;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_PASSWORD;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_URL;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_USERNAME;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_ENABLED;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 
 public class WorkflowEngineDatabaseMigrationInitTaskTest {
+
+    @Rule
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
 
     private PostgreSQLContainer<?> postgresContainer;
     private PGSimpleDataSource dataSource;
@@ -58,6 +54,10 @@ public class WorkflowEngineDatabaseMigrationInitTaskTest {
         dataSource.setUrl(postgresContainer.getJdbcUrl());
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
+
+        configPropertyRule.setProperty("testcontainers.postgresql.jdbc-url", postgresContainer.getJdbcUrl());
+        configPropertyRule.setProperty("testcontainers.postgresql.username", postgresContainer.getUsername());
+        configPropertyRule.setProperty("testcontainers.postgresql.password", postgresContainer.getPassword());
     }
 
     @After
@@ -68,47 +68,47 @@ public class WorkflowEngineDatabaseMigrationInitTaskTest {
     }
 
     @Test
+    @WithConfigProperty("workflow.engine.enabled=false")
     public void shouldNotExecuteWhenWorkflowEngineIsDisabled() throws Exception {
-        final var configMock = mock(Config.class);
-        doReturn(false).when(configMock).getPropertyAsBoolean(eq(WORKFLOW_ENGINE_ENABLED));
-
-        new WorkflowEngineDatabaseMigrationInitTask().execute(new InitTaskContext(configMock, dataSource));
+        new WorkflowEngineDatabaseMigrationInitTask().execute(
+                new InitTaskContext(ConfigProvider.getConfig(), dataSource));
 
         assertMigrationExecuted(false);
     }
 
     @Test
+    @WithConfigProperty({
+            "workflow.engine.enabled=true",
+            "workflow.engine.database.migration.url=${testcontainers.postgresql.jdbc-url}",
+            "workflow.engine.database.migration.username=${testcontainers.postgresql.username}",
+            "workflow.engine.database.migration.password=${testcontainers.postgresql.password}"
+    })
     public void shouldUseEngineMigrationDataSourceWhenConfigured() throws Exception {
-        final var configMock = mock(Config.class);
-        doReturn(true).when(configMock).getPropertyAsBoolean(eq(WORKFLOW_ENGINE_ENABLED));
-        doReturn(postgresContainer.getJdbcUrl()).when(configMock).getProperty(eq(WORKFLOW_ENGINE_DATABASE_MIGRATION_URL));
-        doReturn(postgresContainer.getUsername()).when(configMock).getProperty(eq(WORKFLOW_ENGINE_DATABASE_MIGRATION_USERNAME));
-        doReturn(postgresContainer.getPassword()).when(configMock).getProperty(eq(WORKFLOW_ENGINE_DATABASE_MIGRATION_PASSWORD));
-
-        new WorkflowEngineDatabaseMigrationInitTask().execute(new InitTaskContext(configMock, null));
+        new WorkflowEngineDatabaseMigrationInitTask().execute(
+                new InitTaskContext(ConfigProvider.getConfig(), null));
 
         assertMigrationExecuted(true);
     }
 
     @Test
+    @WithConfigProperty({
+            "workflow.engine.enabled=true",
+            "workflow.engine.database.url=${testcontainers.postgresql.jdbc-url}",
+            "workflow.engine.database.username=${testcontainers.postgresql.username}",
+            "workflow.engine.database.password=${testcontainers.postgresql.password}"
+    })
     public void shouldUseEngineDataSourceWhenConfigured() throws Exception {
-        final var configMock = mock(Config.class);
-        doReturn(true).when(configMock).getPropertyAsBoolean(eq(WORKFLOW_ENGINE_ENABLED));
-        doReturn(postgresContainer.getJdbcUrl()).when(configMock).getProperty(eq(WORKFLOW_ENGINE_DATABASE_URL));
-        doReturn(postgresContainer.getUsername()).when(configMock).getProperty(eq(WORKFLOW_ENGINE_DATABASE_USERNAME));
-        doReturn(postgresContainer.getPassword()).when(configMock).getProperty(eq(WORKFLOW_ENGINE_DATABASE_PASSWORD));
-
-        new WorkflowEngineDatabaseMigrationInitTask().execute(new InitTaskContext(configMock, null));
+        new WorkflowEngineDatabaseMigrationInitTask().execute(
+                new InitTaskContext(ConfigProvider.getConfig(), null));
 
         assertMigrationExecuted(true);
     }
 
     @Test
+    @WithConfigProperty("workflow.engine.enabled=true")
     public void shouldUseInitTaskDataSourceAsFallback() throws Exception {
-        final var configMock = mock(Config.class);
-        doReturn(true).when(configMock).getPropertyAsBoolean(eq(WORKFLOW_ENGINE_ENABLED));
-
-        new WorkflowEngineDatabaseMigrationInitTask().execute(new InitTaskContext(configMock, dataSource));
+        new WorkflowEngineDatabaseMigrationInitTask().execute(
+                new InitTaskContext(ConfigProvider.getConfig(), dataSource));
 
         assertMigrationExecuted(true);
     }
