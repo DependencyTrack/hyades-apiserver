@@ -11,6 +11,7 @@ and [Temporal](https://github.com/temporalio/temporal).
 * [`engine-api`](engine-api) contains the public API for interacting with the engine.
 * [`engine-migration`](engine-migration) contains database migrations of the engine.
 * [`engine`](engine) contains the actual engine implementation.
+* [`proto`](proto) contains Protobuf message definitions.
 
 `api` and `engine-api` have been separated from the core engine to make the respective
 API surfaces more obvious, and prevent internals from leaking into the API. 

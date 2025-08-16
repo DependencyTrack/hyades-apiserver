@@ -18,8 +18,18 @@
  */
 package org.dependencytrack.workflow.api;
 
+import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
+
 public interface WorkflowHandle<A, R> {
 
+    /**
+     * Call the workflow.
+     * <p>
+     * If the workflow fails, {@link Awaitable#await()} will throw a {@link ChildWorkflowFailureException}.
+     *
+     * @param options Options of the call.
+     * @return An {@link Awaitable} wrapping the workflow's result.
+     */
     Awaitable<R> call(WorkflowCallOptions<A> options);
 
 }

@@ -22,6 +22,16 @@ import org.jspecify.annotations.Nullable;
 
 public interface ActivityExecutor<A, R> {
 
+    /**
+     * Execute the activity.
+     * <p>
+     * <strong>This method may be called by multiple threads concurrently and must be thread-safe!</strong>
+     *
+     * @param ctx      Context of the execution.
+     * @param argument Argument of the execution.
+     * @return Result of the execution.
+     * @throws Exception When the execution failed.
+     */
     @Nullable
     R execute(ActivityContext ctx, @Nullable A argument) throws Exception;
 

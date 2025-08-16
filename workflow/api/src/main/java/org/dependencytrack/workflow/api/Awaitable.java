@@ -22,10 +22,15 @@ import org.dependencytrack.workflow.api.failure.CancellationFailureException;
 import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * A deferred result than can be awaited.
+ *
+ * @param <T> Type of the result.
+ */
 public interface Awaitable<T> {
 
     /**
-     * @return The {@link Awaitable}'s result, if any.
+     * @return The result, if any.
      * @throws WorkflowFailureException     If the {@link Awaitable} completed exceptionally.
      * @throws CancellationFailureException When the awaitable was canceled before it could complete.
      */

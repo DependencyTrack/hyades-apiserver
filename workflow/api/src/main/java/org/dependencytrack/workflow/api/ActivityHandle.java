@@ -18,8 +18,18 @@
  */
 package org.dependencytrack.workflow.api;
 
+import org.dependencytrack.workflow.api.failure.ActivityFailureException;
+
 public interface ActivityHandle<A, R> {
 
+    /**
+     * Call the activity.
+     * <p>
+     * If the activity fails, {@link Awaitable#await()} will throw a {@link ActivityFailureException}.
+     *
+     * @param options Options of the call.
+     * @return An {@link Awaitable} wrapping the activity's result.
+     */
     Awaitable<R> call(ActivityCallOptions<A> options);
 
 }
