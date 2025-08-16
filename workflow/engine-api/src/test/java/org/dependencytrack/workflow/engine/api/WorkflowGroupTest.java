@@ -54,7 +54,7 @@ class WorkflowGroupTest {
     static class TestWorkflow implements WorkflowExecutor<Void, Void> {
 
         @Override
-        public Void execute(final WorkflowContext<Void> ctx) {
+        public Void execute(final WorkflowContext<Void> ctx, final Void arg) {
             return null;
         }
 
@@ -71,7 +71,7 @@ class WorkflowGroupTest {
     static class TestWorkflowWithoutAnnotation implements WorkflowExecutor<Void, Void> {
 
         @Override
-        public Void execute(final WorkflowContext<Void> ctx) {
+        public Void execute(final WorkflowContext<Void> ctx, final Void arg) {
             return null;
         }
 

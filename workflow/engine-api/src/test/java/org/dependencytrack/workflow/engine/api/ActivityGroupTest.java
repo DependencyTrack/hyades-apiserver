@@ -54,7 +54,7 @@ class ActivityGroupTest {
     static class TestActivity implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Void execute(final ActivityContext<Void> ctx) {
+        public Void execute(final ActivityContext ctx, final Void arg) {
             return null;
         }
 
@@ -71,7 +71,7 @@ class ActivityGroupTest {
     static class TestActivityWithoutAnnotation implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Void execute(final ActivityContext<Void> ctx) {
+        public Void execute(final ActivityContext ctx, final Void arg) {
             return null;
         }
 
