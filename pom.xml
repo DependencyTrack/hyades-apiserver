@@ -32,6 +32,7 @@
         <module>support/smallrye-config-source-memory</module>
         <module>api</module>
         <module>alpine</module>
+        <module>workflow</module>
         <module>proto</module>
         <module>plugin/api</module>
         <module>persistence-migration</module>
@@ -108,6 +109,7 @@
         <lib.jersey.version>3.1.11</lib.jersey.version>
         <lib.jetty.version>12.0.25</lib.jetty.version>
         <lib.jooq.version>3.20.6</lib.jooq.version>
+        <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
@@ -217,6 +219,12 @@
                 <groupId>org.jooq</groupId>
                 <artifactId>jooq</artifactId>
                 <version>${lib.jooq.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jspecify</groupId>
+                <artifactId>jspecify</artifactId>
+                <version>${lib.jspecify.version}</version>
             </dependency>
 
             <dependency>

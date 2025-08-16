@@ -15,31 +15,42 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 get:
-  operationId: getWorkflowStates
-  summary: Retrieves workflow states associated with the token received from bom upload.
-  description: Requires permission <strong>BOM_UPLOAD</strong>
+  operationId: listWorkflowRuns
+  summary: List all workflow runs
+  description: Returns a paginated list of workflow runs
   tags:
   - Workflows
   parameters:
-  - name: token
-    in: path
-    description: The token to query
-    required: true
+  - name: workflow_name
+    description: Name of the workflow to filter by. Must be an exact match.
+    in: query
     schema:
       type: string
-      format: uuid
+  - name: workflow_version
+    description: Version of the workflow to filter by. Must be an exact match.
+    in: query
+    schema:
+      type: integer
+      format: int32
+  - name: status
+    description: Status to filter by
+    in: query
+    schema:
+      $ref: "../components/schemas/workflow-run-status.yaml"
+  - $ref: "../components/parameters/pagination-limit.yaml"
+  - $ref: "../components/parameters/page-token.yaml"
   responses:
     "200":
-      description: A list of workflow states
+      description: Paginated list of workflow runs
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/list-workflow-states-response.yaml"
+            $ref: "../components/schemas/list-workflow-runs-response.yaml"
+    "400":
+      $ref: "../components/responses/invalid-request-error.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
       $ref: "../components/responses/generic-forbidden-error.yaml"
-    "404":
-      $ref: "../components/responses/generic-not-found-error.yaml"
     default:
       $ref: "../components/responses/generic-error.yaml"
