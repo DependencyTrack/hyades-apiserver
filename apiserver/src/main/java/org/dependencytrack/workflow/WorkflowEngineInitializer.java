@@ -23,9 +23,13 @@ import alpine.common.metrics.Metrics;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
+import org.dependencytrack.proto.workflow.payload.v1.CloneProjectArgs;
+import org.dependencytrack.proto.workflow.payload.v1.ProjectIdentity;
+import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineFactory;
+import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,6 +70,8 @@ import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCH
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_MAX_MS;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_MULTIPLIER;
 import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_RANDOMIZATION_FACTOR;
+import static org.dependencytrack.workflow.api.payload.PayloadConverters.protoConverter;
+import static org.dependencytrack.workflow.api.payload.PayloadConverters.voidConverter;
 
 /**
  * @since 5.7.0
@@ -100,6 +106,35 @@ public final class WorkflowEngineInitializer implements ServletContextListener {
         final var engineFactory = ServiceLoader.load(WorkflowEngineFactory.class).findFirst().orElseThrow();
         engine = engineFactory.create(engineConfig);
         WorkflowEngineHolder.set(engine);
+
+        engine.registerWorkflow(
+                new CloneProjectWorkflow(),
+                protoConverter(CloneProjectArgs.class),
+                protoConverter(ProjectIdentity.class),
+                Duration.ofSeconds(30));
+        engine.mountWorkflows(
+                new WorkflowGroup("misc")
+                        .withWorkflow(CloneProjectWorkflow.class)
+                        .withMaxConcurrency(3)); // TODO: Make configurable.
+
+        engine.registerActivity(
+                new CloneProjectActivity(),
+                protoConverter(CloneProjectArgs.class),
+                protoConverter(ProjectIdentity.class),
+                Duration.ofSeconds(30));
+        engine.registerActivity(
+                new UpdateProjectMetricsActivity(),
+                protoConverter(ProjectIdentity.class),
+                voidConverter(),
+                Duration.ofSeconds(30));
+        engine.mountActivities(
+                new ActivityGroup("metrics")
+                        .withActivity(UpdateProjectMetricsActivity.class)
+                        .withMaxConcurrency(3)); // TODO: Make configurable.
+        engine.mountActivities(
+                new ActivityGroup("misc")
+                        .withActivity(CloneProjectActivity.class)
+                        .withMaxConcurrency(3)); // TODO: Make configurable.
 
         LOGGER.info("Starting workflow engine");
         engine.start();
