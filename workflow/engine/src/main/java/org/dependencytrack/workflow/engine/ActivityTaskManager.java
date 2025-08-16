@@ -100,16 +100,16 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
                 engine,
                 task.workflowRunId(),
                 task.scheduledEventId(),
-                activityMetadata.argumentConverter().convertFromPayload(task.argument()),
                 activityMetadata.executor(),
                 activityMetadata.lockTimeout(),
                 task.lockedUntil(),
                 activityMetadata.heartbeatEnabled());
+        final var arg = activityMetadata.argumentConverter().convertFromPayload(task.argument());
 
         try {
             final WorkflowPayload result;
             try (ctx) {
-                final Object activityResult = activityMetadata.executor().execute(ctx);
+                final Object activityResult = activityMetadata.executor().execute(ctx, arg);
                 result = activityMetadata.resultConverter().convertToPayload(activityResult);
             }
 

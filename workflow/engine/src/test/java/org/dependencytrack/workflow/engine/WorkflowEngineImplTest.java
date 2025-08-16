@@ -19,7 +19,6 @@
 package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
-import org.dependencytrack.workflow.api.ActivityContext;
 import org.dependencytrack.workflow.api.Awaitable;
 import org.dependencytrack.workflow.api.ContinueAsNewOptions;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
@@ -107,7 +106,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldRunWorkflowWithArgumentAndResult() {
-        engine.registerWorkflowInternal("test", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ctx.setStatus("someCustomStatus");
             return "someResult";
         });
@@ -180,7 +179,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldFailWorkflowRunWhenRunnerThrows() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             throw new IllegalStateException("Ouch!");
         });
         engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
@@ -216,7 +215,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldFailWorkflowRunWhenCancelled() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             // Sleep for a moment so we get an opportunity to cancel the run.
             ctx.createTimer("sleep", Duration.ofSeconds(5)).await();
             return null;
@@ -262,7 +261,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldWaitForScheduledTimerToElapse() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             // Sleep for a moment so we get an opportunity to cancel the run.
             ctx.createTimer("Sleep for 3 seconds", Duration.ofSeconds(5)).await();
             return null;
@@ -293,7 +292,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldWaitForMultipleScheduledTimersToElapse() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             final var timers = new ArrayList<Awaitable<Void>>(3);
             for (int i = 0; i < 3; i++) {
                 timers.add(ctx.createTimer("sleep" + i, Duration.ofSeconds(3)));
@@ -332,7 +331,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldWaitForChildRun() {
-        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             final String childWorkflowResult = ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow(
                     "bar", 1, null, "inputValue", stringConverter(), stringConverter()).await();
             assertThat(childWorkflowResult).contains("inputValue-outputValue");
@@ -340,7 +339,7 @@ class WorkflowEngineImplTest {
         });
 
         engine.registerWorkflowInternal("bar", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5),
-                ctx -> ctx.argument() + "-outputValue");
+                (ctx, arg) -> arg + "-outputValue");
 
         engine.mountWorkflows(new WorkflowGroup("test-group")
                 .withWorkflow("foo")
@@ -366,12 +365,12 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldFailWhenChildRunFails() {
-        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
-        engine.registerWorkflowInternal("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             throw new IllegalStateException("Oh no!");
         });
 
@@ -410,18 +409,18 @@ class WorkflowEngineImplTest {
         final var childRunIdReference = new AtomicReference<UUID>();
         final var grandChildRunIdReference = new AtomicReference<UUID>();
 
-        engine.registerWorkflowInternal("parent", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("parent", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("child", 1, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
-        engine.registerWorkflowInternal("child", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("child", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             childRunIdReference.set(ctx.runId());
             ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("grand-child", 1, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
-        engine.registerWorkflowInternal("grand-child", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("grand-child", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             grandChildRunIdReference.set(ctx.runId());
             ctx.createTimer("sleep", Duration.ofSeconds(3)).await();
             return null;
@@ -449,7 +448,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldThrowWhenCancellingRunInTerminalState() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> null);
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
         engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.start();
 
@@ -464,7 +463,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldSuspendAndResumeRunWhenRequested() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             // Sleep for a moment so we get an opportunity to suspend the run.
             ctx.createTimer("sleep", Duration.ofSeconds(3)).await();
             return null;
@@ -486,7 +485,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldCancelSuspendedRunWhenRequested() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             // Sleep for a moment so we get an opportunity to suspend the run.
             ctx.createTimer("sleep", Duration.ofSeconds(3)).await();
             return null;
@@ -508,7 +507,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldThrowWhenSuspendingRunInTerminalState() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> null);
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
         engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.start();
 
@@ -523,7 +522,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldThrowWhenSuspendingRunInSuspendedState() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             // Sleep for a moment so we get an opportunity to suspend the run.
             ctx.createTimer("sleep", Duration.ofSeconds(3)).await();
             return null;
@@ -545,7 +544,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldThrowWhenResumingRunInNonSuspendedState() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             // Sleep for a moment so we get an opportunity to act on the running run.
             ctx.createTimer("sleep", Duration.ofSeconds(3)).await();
             return null;
@@ -565,7 +564,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldThrowWhenResumingRunInTerminalState() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> null);
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
         engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.start();
 
@@ -580,7 +579,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldWaitForExternalEvent() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ctx.waitForExternalEvent("foo-123", voidConverter(), Duration.ofSeconds(30)).await();
             return null;
         });
@@ -615,7 +614,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldFailWhenWaitingForExternalEventTimesOut() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ctx.waitForExternalEvent("foo-123", voidConverter(), Duration.ofMillis(5)).await();
             return null;
         });
@@ -647,7 +646,7 @@ class WorkflowEngineImplTest {
     void shouldRecordSideEffectResult() {
         final var sideEffectInvocationCounter = new AtomicInteger();
 
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ctx.executeSideEffect("sideEffect", null, voidConverter(), ignored -> {
                 sideEffectInvocationCounter.incrementAndGet();
                 return null;
@@ -684,7 +683,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldNotAllowNestedSideEffects() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ctx.executeSideEffect("outerSideEffect", null, voidConverter(), ignored -> {
                 ctx.executeSideEffect("nestedSideEffect", null, voidConverter(), ignored2 -> null).await();
                 return null;
@@ -716,13 +715,13 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldCallActivity() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
                     "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
-        engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, ctx -> "123");
+        engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> "123");
 
         engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.mountActivities(new ActivityGroup("test-group").withActivity("abc"));
@@ -746,7 +745,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldScheduleMultipleActivitiesConcurrently() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             final List<Awaitable<String>> awaitables = List.of(
                     ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", "first", stringConverter(), stringConverter(), defaultRetryPolicy()),
                     ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", "second", stringConverter(), stringConverter(), defaultRetryPolicy()));
@@ -756,7 +755,7 @@ class WorkflowEngineImplTest {
                     .collect(Collectors.joining(", "));
         });
 
-        engine.registerActivityInternal("abc", stringConverter(), stringConverter(), Duration.ofSeconds(5), false, ActivityContext::argument);
+        engine.registerActivityInternal("abc", stringConverter(), stringConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> arg);
 
         engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
         engine.mountActivities(new ActivityGroup("test-group").withActivity("abc").withMaxConcurrency(2));
@@ -786,13 +785,13 @@ class WorkflowEngineImplTest {
                 .withMaxDelay(Duration.ofMillis(10))
                 .withMaxAttempts(3);
 
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
                     "abc", null, voidConverter(), stringConverter(), retryPolicy).await();
             return null;
         });
 
-        engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, ctx -> {
+        engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> {
             throw new IllegalStateException();
         });
 
@@ -826,13 +825,13 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldNotRetryActivityFailingWithTerminalException() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
                     "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
-        engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, ctx -> {
+        engine.registerActivityInternal("abc", voidConverter(), stringConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> {
             throw new TerminalApplicationFailureException("Ouch!", null);
         });
 
@@ -865,7 +864,7 @@ class WorkflowEngineImplTest {
     void shouldPropagateExceptions() {
         final AtomicReference<WorkflowFailureException> exceptionReference = new AtomicReference<>();
 
-        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             try {
                 ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             } catch (WorkflowFailureException e) {
@@ -876,17 +875,17 @@ class WorkflowEngineImplTest {
             return null;
         });
 
-        engine.registerWorkflowInternal("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("baz", 1, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
-        engine.registerWorkflowInternal("baz", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("baz", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity("qux", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
-        engine.registerActivityInternal("qux", voidConverter(), voidConverter(), Duration.ofSeconds(5), false, ctx -> {
+        engine.registerActivityInternal("qux", voidConverter(), voidConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> {
             throw new TerminalApplicationFailureException("Ouch!", null);
         });
 
@@ -955,13 +954,13 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldPropagateLabels() {
-        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             assertThat(ctx.labels()).containsOnlyKeys("oof", "rab");
             ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
             return null;
         });
 
-        engine.registerWorkflowInternal("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("bar", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             assertThat(ctx.labels()).containsOnlyKeys("oof", "rab");
             return null;
         });
@@ -998,8 +997,8 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldContinueAsNew() {
-        engine.registerWorkflowInternal("foo", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
-            final int iteration = Integer.parseInt(ctx.argument());
+        engine.registerWorkflowInternal("foo", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
+            final int iteration = Integer.parseInt(arg);
             ctx.executeSideEffect("abc-" + iteration, null, stringConverter(), ignored -> "def-" + iteration).await();
             if (iteration < 3) {
                 ctx.continueAsNew(
@@ -1041,8 +1040,8 @@ class WorkflowEngineImplTest {
             completedRuns.addAll(event.completedRuns());
         });
 
-        engine.registerWorkflowInternal("foo", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), ctx -> {
-            final boolean shouldFail = Boolean.parseBoolean(ctx.argument());
+        engine.registerWorkflowInternal("foo", 1, stringConverter(), stringConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
+            final boolean shouldFail = Boolean.parseBoolean(arg);
             if (shouldFail) {
                 throw new IllegalStateException();
             }
@@ -1081,7 +1080,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldScheduleRuns() {
-        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> null);
+        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
 
         final List<WorkflowSchedule> createdSchedules = engine.createSchedules(List.of(
                 new CreateWorkflowScheduleRequest("foo-schedule", "* * * * *", "foo", 1)
@@ -1138,7 +1137,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldListRuns() {
-        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> null);
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> null);
 
         for (int i = 0; i < 10; i++) {
             engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
@@ -1182,7 +1181,7 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldListRunEvents() {
-        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), ctx -> {
+        engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ctx.executeSideEffect("a", null, voidConverter(), ignored -> null).await();
             ctx.executeSideEffect("b", null, voidConverter(), ignored -> null).await();
             return null;

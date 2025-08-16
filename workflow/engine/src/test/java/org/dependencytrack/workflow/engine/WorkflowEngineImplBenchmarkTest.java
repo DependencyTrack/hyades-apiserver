@@ -38,6 +38,7 @@ import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -95,7 +96,7 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestActivityFoo implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Void execute(final ActivityContext<Void> ctx) {
+        public Void execute(final ActivityContext ctx, @Nullable final Void argument) {
             return null;
         }
 
@@ -105,7 +106,7 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestActivityBar implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Void execute(final ActivityContext<Void> ctx) {
+        public Void execute(final ActivityContext ctx, @Nullable final Void argument) {
             return null;
         }
 
@@ -115,7 +116,7 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestActivityBaz implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Void execute(final ActivityContext<Void> ctx) {
+        public Void execute(final ActivityContext ctx, @Nullable final Void argument) {
             return null;
         }
 
@@ -125,7 +126,7 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestWorkflow implements WorkflowExecutor<Void, Void> {
 
         @Override
-        public Void execute(final WorkflowContext<Void> ctx) {
+        public Void execute(final WorkflowContext<Void> ctx, @Nullable final Void argument) {
             ctx.activity(TestActivityFoo.class).call(new ActivityCallOptions<>()).await();
             ctx.activity(TestActivityBar.class).call(new ActivityCallOptions<>()).await();
             ctx.activity(TestActivityBaz.class).call(new ActivityCallOptions<>()).await();

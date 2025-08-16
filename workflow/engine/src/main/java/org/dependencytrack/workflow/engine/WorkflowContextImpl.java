@@ -163,12 +163,6 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return requireNonNullElse(labels, Collections.emptyMap());
     }
 
-    @Nullable
-    @Override
-    public A argument() {
-        return argument;
-    }
-
     @Override
     public Instant currentTime() {
         if (currentTime == null) {
@@ -525,7 +519,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final R result;
         try {
-            result = workflowExecutor.execute(this);
+            result = workflowExecutor.execute(this, this.argument);
         } catch (Exception e) {
             if (e instanceof RuntimeException) {
                 throw (RuntimeException) e;

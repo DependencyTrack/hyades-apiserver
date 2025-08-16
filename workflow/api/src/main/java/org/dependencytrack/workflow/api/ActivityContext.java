@@ -18,20 +18,13 @@
  */
 package org.dependencytrack.workflow.api;
 
-import org.jspecify.annotations.Nullable;
-
 import java.util.UUID;
 
 /**
  * Context available to {@link ActivityExecutor}s.
- *
- * @param <T> Type of the activity's argument.
  */
-public interface ActivityContext<T> {
+public interface ActivityContext {
 
     UUID workflowRunId();
-
-    @Nullable
-    T argument();
 
 }

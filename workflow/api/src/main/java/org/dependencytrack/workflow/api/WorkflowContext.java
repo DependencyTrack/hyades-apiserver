@@ -45,9 +45,6 @@ public interface WorkflowContext<A> {
 
     Map<String, String> labels();
 
-    @Nullable
-    A argument();
-
     /**
      * @return The current, deterministic time within the workflow execution.
      */

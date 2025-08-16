@@ -32,12 +32,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-final class ActivityContextImpl<T> implements ActivityContext<T>, Closeable {
+final class ActivityContextImpl<T> implements ActivityContext, Closeable {
 
     private final WorkflowEngineImpl engine;
     private final UUID workflowRunId;
     private final int scheduledEventId;
-    @Nullable private final T argument;
     private final ActivityExecutor<T, ?> activityExecutor;
     private final Duration lockTimeout;
     @Nullable private ScheduledExecutorService heartbeatExecutor;
@@ -47,7 +46,6 @@ final class ActivityContextImpl<T> implements ActivityContext<T>, Closeable {
             final WorkflowEngineImpl engine,
             final UUID workflowRunId,
             final int scheduledEventId,
-            @Nullable final T argument,
             final ActivityExecutor<T, ?> activityExecutor,
             final Duration lockTimeout,
             final Instant lockedUntil,
@@ -55,7 +53,6 @@ final class ActivityContextImpl<T> implements ActivityContext<T>, Closeable {
         this.engine = engine;
         this.workflowRunId = workflowRunId;
         this.scheduledEventId = scheduledEventId;
-        this.argument = argument;
         this.activityExecutor = activityExecutor;
         this.lockTimeout = lockTimeout;
         this.lockedUntil = lockedUntil;
@@ -77,12 +74,6 @@ final class ActivityContextImpl<T> implements ActivityContext<T>, Closeable {
     @Override
     public UUID workflowRunId() {
         return workflowRunId;
-    }
-
-    @Nullable
-    @Override
-    public T argument() {
-        return argument;
     }
 
     private void heartbeat() {

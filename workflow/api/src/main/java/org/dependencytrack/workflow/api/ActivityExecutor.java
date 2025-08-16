@@ -23,6 +23,6 @@ import org.jspecify.annotations.Nullable;
 public interface ActivityExecutor<A, R> {
 
     @Nullable
-    R execute(ActivityContext<A> ctx) throws Exception;
+    R execute(ActivityContext ctx, @Nullable A argument) throws Exception;
 
 }

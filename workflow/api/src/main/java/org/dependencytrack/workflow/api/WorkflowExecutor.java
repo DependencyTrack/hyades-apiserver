@@ -23,6 +23,6 @@ import org.jspecify.annotations.Nullable;
 public interface WorkflowExecutor<A, R> {
 
     @Nullable
-    R execute(WorkflowContext<A> ctx) throws Exception;
+    R execute(WorkflowContext<A> ctx, @Nullable A argument) throws Exception;
 
 }
