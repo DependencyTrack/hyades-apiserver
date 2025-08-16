@@ -19,10 +19,10 @@
 package org.dependencytrack.workflow.engine;
 
 import com.google.protobuf.util.Timestamps;
-import org.dependencytrack.proto.workflow.api.v1.ExecutionCompleted;
-import org.dependencytrack.proto.workflow.api.v1.ExecutionStarted;
-import org.dependencytrack.proto.workflow.api.v1.RunStarted;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
+import org.dependencytrack.proto.workflow.event.v1.ExecutionCompleted;
+import org.dependencytrack.proto.workflow.event.v1.ExecutionStarted;
+import org.dependencytrack.proto.workflow.event.v1.RunStarted;
 import org.dependencytrack.workflow.engine.MetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.persistence.command.PollWorkflowTaskCommand;
@@ -122,14 +122,14 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
 
         // Inject an ExecutionStarted event.
         // Its timestamp will be used as deterministic "now" timestamp while processing new events.
-        workflowRunState.onEvent(WorkflowEvent.newBuilder()
+        workflowRunState.onEvent(Event.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setExecutionStarted(ExecutionStarted.getDefaultInstance())
                 .build());
 
         int eventsAdded = 0;
-        for (final WorkflowEvent newEvent : task.inbox()) {
+        for (final Event newEvent : task.inbox()) {
             workflowRunState.onEvent(newEvent);
             eventsAdded++;
 
@@ -138,7 +138,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
             // so we can differentiate between when a run was scheduled vs.
             // when it was eventually picked up.
             if (newEvent.hasRunScheduled()) {
-                workflowRunState.onEvent(WorkflowEvent.newBuilder()
+                workflowRunState.onEvent(Event.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
                         .setRunStarted(RunStarted.getDefaultInstance())
@@ -168,7 +168,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
 
         workflowRunState.setCustomStatus(executionResult.customStatus());
         workflowRunState.executeCommands(executionResult.commands());
-        workflowRunState.onEvent(WorkflowEvent.newBuilder()
+        workflowRunState.onEvent(Event.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setExecutionCompleted(ExecutionCompleted.getDefaultInstance())

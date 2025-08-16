@@ -19,8 +19,7 @@
 package org.dependencytrack.workflow.api.payload;
 
 import com.google.protobuf.ByteString;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload.BinaryContent;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 final class StringPayloadConverter implements PayloadConverter<String> {
@@ -30,13 +29,13 @@ final class StringPayloadConverter implements PayloadConverter<String> {
 
     @Nullable
     @Override
-    public WorkflowPayload convertToPayload(@Nullable final String value) {
+    public Payload convertToPayload(@Nullable final String value) {
         if (value == null) {
             return null;
         }
 
-        return WorkflowPayload.newBuilder()
-                .setBinaryContent(BinaryContent.newBuilder()
+        return Payload.newBuilder()
+                .setBinaryContent(Payload.BinaryContent.newBuilder()
                         .setMediaType(MEDIA_TYPE)
                         .setData(ByteString.copyFromUtf8(value))
                         .build())
@@ -45,12 +44,12 @@ final class StringPayloadConverter implements PayloadConverter<String> {
 
     @Nullable
     @Override
-    public String convertFromPayload(@Nullable final WorkflowPayload payload) {
+    public String convertFromPayload(@Nullable final Payload payload) {
         if (payload == null || !payload.hasBinaryContent()) {
             return null;
         }
 
-        final BinaryContent binaryContent = payload.getBinaryContent();
+        final Payload.BinaryContent binaryContent = payload.getBinaryContent();
         if (!MEDIA_TYPE.equals(binaryContent.getMediaType())) {
             throw new PayloadConversionException(
                     "Expected binary content of type %s, but got %s".formatted(

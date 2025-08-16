@@ -21,8 +21,8 @@ package org.dependencytrack.resources.v2;
 import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
+import org.dependencytrack.proto.workflow.event.v1.RunScheduled;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
@@ -139,7 +139,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                 null,
                 null);
 
-        final var event = WorkflowEvent.newBuilder()
+        final var event = Event.newBuilder()
                 .setId(1)
                 .setTimestamp(Timestamps.fromMillis(666666))
                 .setRunScheduled(RunScheduled.newBuilder()

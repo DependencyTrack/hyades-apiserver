@@ -18,20 +18,20 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 final class WorkflowRunContinuedAsNewException extends WorkflowEngineException {
 
-    @Nullable private final WorkflowPayload argument;
+    @Nullable private final Payload argument;
 
-    WorkflowRunContinuedAsNewException(@Nullable final WorkflowPayload argument) {
+    WorkflowRunContinuedAsNewException(@Nullable final Payload argument) {
         super(null, null, false, false);
         this.argument = argument;
     }
 
     @Nullable
-    WorkflowPayload getArgument() {
+    Payload getArgument() {
         return argument;
     }
 

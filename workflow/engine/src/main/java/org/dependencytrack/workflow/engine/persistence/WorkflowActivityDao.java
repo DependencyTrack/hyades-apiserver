@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.persistence.command.CreateActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
@@ -66,7 +66,7 @@ public final class WorkflowActivityDao extends AbstractDao {
         final var scheduledEventIds = new ArrayList<Integer>(commands.size());
         final var activityNames = new ArrayList<String>(commands.size());
         final var priorities = new ArrayList<@Nullable Integer>(commands.size());
-        final var arguments = new ArrayList<@Nullable WorkflowPayload>(commands.size());
+        final var arguments = new ArrayList<@Nullable Payload>(commands.size());
         final var visibleFroms = new ArrayList<@Nullable Instant>(commands.size());
 
         for (final CreateActivityTaskCommand command : commands) {
@@ -83,7 +83,7 @@ public final class WorkflowActivityDao extends AbstractDao {
                 .bindArray("scheduledEventIds", Integer.class, scheduledEventIds)
                 .bindArray("activityNames", String.class, activityNames)
                 .bindArray("priorities", Integer.class, priorities)
-                .bindArray("arguments", WorkflowPayload.class, arguments)
+                .bindArray("arguments", Payload.class, arguments)
                 .bindArray("visibleFroms", Instant.class, visibleFroms)
                 .execute();
     }

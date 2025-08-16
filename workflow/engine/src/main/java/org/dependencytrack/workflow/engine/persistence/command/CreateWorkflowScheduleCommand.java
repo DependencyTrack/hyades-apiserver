@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.command;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
@@ -32,6 +32,6 @@ public record CreateWorkflowScheduleCommand(
         @Nullable String concurrencyGroupId,
         @Nullable Integer priority,
         @Nullable Map<String, String> labels,
-        @Nullable WorkflowPayload argument,
+        @Nullable Payload argument,
         Instant nextFireAt) {
 }

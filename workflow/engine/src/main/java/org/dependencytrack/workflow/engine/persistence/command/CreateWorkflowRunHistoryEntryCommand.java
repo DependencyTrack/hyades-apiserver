@@ -18,12 +18,12 @@
  */
 package org.dependencytrack.workflow.engine.persistence.command;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
 
 import java.util.UUID;
 
 public record CreateWorkflowRunHistoryEntryCommand(
         UUID workflowRunId,
         int sequenceNumber,
-        WorkflowEvent event) {
+        Event event) {
 }

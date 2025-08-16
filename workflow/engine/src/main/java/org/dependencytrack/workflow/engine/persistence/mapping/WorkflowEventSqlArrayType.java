@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
 
-public class WorkflowEventSqlArrayType extends ProtobufSqlArrayType<WorkflowEvent> {
+public class WorkflowEventSqlArrayType extends ProtobufSqlArrayType<Event> {
 }

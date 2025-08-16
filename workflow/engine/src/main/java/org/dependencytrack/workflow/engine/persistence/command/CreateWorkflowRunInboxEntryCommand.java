@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.command;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
@@ -27,5 +27,5 @@ import java.util.UUID;
 public record CreateWorkflowRunInboxEntryCommand(
         UUID workflowRunId,
         @Nullable Instant visibleFrom,
-        WorkflowEvent event) {
+        Event event) {
 }

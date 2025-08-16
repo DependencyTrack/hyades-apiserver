@@ -18,8 +18,7 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.proto.workflow.api.v1.ActivityTaskCompleted;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.MetadataRegistry.ActivityMetadata;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.persistence.command.PollActivityTaskCommand;
@@ -107,19 +106,13 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
         final var arg = activityMetadata.argumentConverter().convertFromPayload(task.argument());
 
         try {
-            final WorkflowPayload result;
+            final Payload result;
             try (ctx) {
                 final Object activityResult = activityMetadata.executor().execute(ctx, arg);
                 result = activityMetadata.resultConverter().convertToPayload(activityResult);
             }
 
             try {
-                final var subjectBuilder = ActivityTaskCompleted.newBuilder()
-                        .setTaskScheduledEventId(task.scheduledEventId());
-                if (result != null) {
-                    subjectBuilder.setResult(result);
-                }
-
                 // TODO: Retry on TimeoutException
                 engine.completeActivityTask(task, result).join();
             } catch (InterruptedException e) {

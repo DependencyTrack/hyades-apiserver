@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTask;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -37,7 +37,7 @@ public class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask
                 rs.getInt("scheduled_event_id"),
                 rs.getString("activity_name"),
                 getPriority(rs),
-                ctx.findColumnMapperFor(WorkflowPayload.class).orElseThrow().map(rs, "argument", ctx),
+                ctx.findColumnMapperFor(Payload.class).orElseThrow().map(rs, "argument", ctx),
                 ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "locked_until", ctx));
     }
 

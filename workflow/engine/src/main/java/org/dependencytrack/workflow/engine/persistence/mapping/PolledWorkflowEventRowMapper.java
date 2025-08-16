@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvent;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
@@ -34,7 +34,7 @@ public class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEve
         return new PolledWorkflowEvent(
                 PolledWorkflowEvent.EventType.valueOf(rs.getString("event_type")),
                 rs.getObject("workflow_run_id", UUID.class),
-                ctx.findColumnMapperFor(WorkflowEvent.class).orElseThrow().map(rs, "event", ctx),
+                ctx.findColumnMapperFor(Event.class).orElseThrow().map(rs, "event", ctx),
                 rs.getInt("sequence_number"),
                 rs.getInt("dequeue_count"));
     }

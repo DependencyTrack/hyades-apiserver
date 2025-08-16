@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
@@ -35,7 +35,7 @@ sealed interface TaskCommand permits
 
     record CompleteActivityTaskCommand(
             ActivityTask task,
-            @Nullable WorkflowPayload result,
+            @Nullable Payload result,
             Instant timestamp) implements TaskCommand {
     }
 

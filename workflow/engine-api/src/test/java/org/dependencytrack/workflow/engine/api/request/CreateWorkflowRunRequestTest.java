@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.api.request;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -31,24 +31,24 @@ class CreateWorkflowRunRequestTest {
     @Test
     void shouldThrowWhenWorkflowNameIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new CreateWorkflowRunRequest(null, 1))
+                .isThrownBy(() -> new CreateWorkflowRunRequest<>(null, 1))
                 .withMessage("workflowName must not be null");
     }
 
     @Test
     void shouldPopulateFieldsUsingWithers() {
-        final var request = new CreateWorkflowRunRequest("workflowName", 1)
+        final var request = new CreateWorkflowRunRequest<>("workflowName", 1)
                 .withPriority(666)
                 .withConcurrencyGroupId("concurrencyGroupId")
                 .withLabels(Map.of("foo", "bar"))
-                .withArgument(WorkflowPayload.getDefaultInstance());
+                .withArgument(Payload.getDefaultInstance());
 
         assertThat(request.workflowName()).isEqualTo("workflowName");
         assertThat(request.workflowVersion()).isEqualTo(1);
         assertThat(request.priority()).isEqualTo(666);
         assertThat(request.concurrencyGroupId()).isEqualTo("concurrencyGroupId");
         assertThat(request.labels()).containsEntry("foo", "bar");
-        assertThat(request.argument()).isEqualTo(WorkflowPayload.getDefaultInstance());
+        assertThat(request.argument()).isEqualTo(Payload.getDefaultInstance());
     }
 
 }

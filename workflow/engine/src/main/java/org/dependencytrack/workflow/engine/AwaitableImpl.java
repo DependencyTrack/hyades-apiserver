@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.api.Awaitable;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
 import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
@@ -66,7 +66,7 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
         throw WorkflowRunBlockedException.INSTANCE;
     }
 
-    boolean complete(@Nullable final WorkflowPayload result) {
+    boolean complete(@Nullable final Payload result) {
         if (completed) {
             return false;
         }

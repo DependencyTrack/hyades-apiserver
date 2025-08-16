@@ -18,17 +18,17 @@
  */
 syntax = "proto3";
 
-package org.dependencytrack.workflow.api.v1;
+package org.dependencytrack.workflow.event.v1;
 
 import "google/protobuf/timestamp.proto";
-import "org/dependencytrack/workflow/api/v1/common.proto";
-import "org/dependencytrack/workflow/api/v1/failure.proto";
-import "org/dependencytrack/workflow/api/v1/payload.proto";
+import "org/dependencytrack/workflow/common/v1/common.proto";
+import "org/dependencytrack/workflow/failure/v1/failure.proto";
+import "org/dependencytrack/workflow/payload/v1/payload.proto";
 
 option java_multiple_files = true;
-option java_package = "org.dependencytrack.proto.workflow.api.v1";
+option java_package = "org.dependencytrack.proto.workflow.event.v1";
 
-message WorkflowEvent {
+message Event {
   int32 id = 1;
 
   google.protobuf.Timestamp timestamp = 2;
@@ -70,7 +70,7 @@ message ExecutionCompleted {
 message RunScheduled {
   string workflow_name = 1;
   int32 workflow_version = 2;
-  optional WorkflowPayload argument = 3;
+  optional org.dependencytrack.workflow.payload.v1.Payload argument = 3;
   optional string concurrency_group_id = 4;
   optional int32 priority = 5;
   map<string, string> labels = 6;
@@ -98,28 +98,28 @@ message RunResumed {
 }
 
 message RunCompleted {
-  WorkflowRunStatus status = 1;
+  org.dependencytrack.workflow.common.v1.WorkflowRunStatus status = 1;
   optional string custom_status = 2;
-  optional WorkflowPayload result = 3;
-  optional WorkflowFailure failure = 4;
+  optional org.dependencytrack.workflow.payload.v1.Payload result = 3;
+  optional org.dependencytrack.workflow.failure.v1.Failure failure = 4;
 }
 
 message ActivityTaskScheduled {
   string name = 1;
   int32 version = 2;
   optional int32 priority = 3;
-  optional WorkflowPayload argument = 4;
+  optional org.dependencytrack.workflow.payload.v1.Payload argument = 4;
   optional google.protobuf.Timestamp scheduled_for = 5;
 }
 
 message ActivityTaskCompleted {
   int32 task_scheduled_event_id = 1;
-  optional WorkflowPayload result = 2;
+  optional org.dependencytrack.workflow.payload.v1.Payload result = 2;
 }
 
 message ActivityTaskFailed {
   int32 task_scheduled_event_id = 1;
-  WorkflowFailure failure = 2;
+  org.dependencytrack.workflow.failure.v1.Failure failure = 2;
 }
 
 message ChildRunScheduled {
@@ -129,17 +129,17 @@ message ChildRunScheduled {
   optional string concurrency_group_id = 4;
   optional int32 priority = 5;
   map<string, string> labels = 6;
-  optional WorkflowPayload argument = 7;
+  optional org.dependencytrack.workflow.payload.v1.Payload argument = 7;
 }
 
 message ChildRunCompleted {
   int32 run_scheduled_event_id = 1;
-  optional WorkflowPayload result = 2;
+  optional org.dependencytrack.workflow.payload.v1.Payload result = 2;
 }
 
 message ChildRunFailed {
   int32 run_scheduled_event_id = 1;
-  WorkflowFailure failure = 2;
+  org.dependencytrack.workflow.failure.v1.Failure failure = 2;
 }
 
 message TimerScheduled {
@@ -155,10 +155,10 @@ message TimerElapsed {
 message SideEffectExecuted {
   int32 side_effect_event_id = 1;
   string name = 2;
-  optional WorkflowPayload result = 3;
+  optional org.dependencytrack.workflow.payload.v1.Payload result = 3;
 }
 
 message ExternalEventReceived {
   string id = 1;
-  optional WorkflowPayload payload = 2;
+  optional org.dependencytrack.workflow.payload.v1.Payload payload = 2;
 }

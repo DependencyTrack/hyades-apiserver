@@ -29,7 +29,7 @@ module org.dependencytrack.workflow.engine.api {
     requires io.github.resilience4j.core;
     requires java.sql;
     requires micrometer.core;
-    requires transitive org.dependencytrack.proto;
     requires transitive org.dependencytrack.workflow.api;
+    requires transitive org.dependencytrack.workflow.proto;
     requires transitive org.jspecify;
 }

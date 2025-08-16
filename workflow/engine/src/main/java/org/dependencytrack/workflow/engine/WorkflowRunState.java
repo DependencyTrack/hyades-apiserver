@@ -20,18 +20,18 @@ package org.dependencytrack.workflow.engine;
 
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.util.Timestamps;
-import org.dependencytrack.proto.workflow.api.v1.ActivityTaskScheduled;
-import org.dependencytrack.proto.workflow.api.v1.ChildRunCompleted;
-import org.dependencytrack.proto.workflow.api.v1.ChildRunFailed;
-import org.dependencytrack.proto.workflow.api.v1.ChildRunScheduled;
-import org.dependencytrack.proto.workflow.api.v1.RunCompleted;
-import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
-import org.dependencytrack.proto.workflow.api.v1.SideEffectExecuted;
-import org.dependencytrack.proto.workflow.api.v1.TimerElapsed;
-import org.dependencytrack.proto.workflow.api.v1.TimerScheduled;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowFailure;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.event.v1.ActivityTaskScheduled;
+import org.dependencytrack.proto.workflow.event.v1.ChildRunCompleted;
+import org.dependencytrack.proto.workflow.event.v1.ChildRunFailed;
+import org.dependencytrack.proto.workflow.event.v1.ChildRunScheduled;
+import org.dependencytrack.proto.workflow.event.v1.Event;
+import org.dependencytrack.proto.workflow.event.v1.RunCompleted;
+import org.dependencytrack.proto.workflow.event.v1.RunScheduled;
+import org.dependencytrack.proto.workflow.event.v1.SideEffectExecuted;
+import org.dependencytrack.proto.workflow.event.v1.TimerElapsed;
+import org.dependencytrack.proto.workflow.event.v1.TimerScheduled;
+import org.dependencytrack.proto.workflow.failure.v1.Failure;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ContinueRunAsNewCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResultCommand;
@@ -55,7 +55,7 @@ import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toTimesta
 /**
  * Runtime state of a workflow run.
  * <p>
- * The state is event-sourced by consuming {@link WorkflowEvent}s,
+ * The state is event-sourced by consuming {@link Event}s,
  * and modified via execution of {@link WorkflowCommand}s.
  */
 final class WorkflowRunState {
@@ -64,17 +64,17 @@ final class WorkflowRunState {
     private final String workflowName;
     private final int workflowVersion;
     @Nullable private final String concurrencyGroupId;
-    private final List<WorkflowEvent> history;
-    private final List<WorkflowEvent> inbox;
-    private final List<WorkflowEvent> pendingActivityTaskScheduledEvents;
-    private final List<WorkflowEvent> pendingTimerElapsedEvents;
+    private final List<Event> history;
+    private final List<Event> inbox;
+    private final List<Event> pendingActivityTaskScheduledEvents;
+    private final List<Event> pendingTimerElapsedEvents;
     private final List<WorkflowRunMessage> pendingMessages;
-    @Nullable private WorkflowEvent scheduledEvent;
-    @Nullable private WorkflowEvent startedEvent;
-    @Nullable private WorkflowEvent completedEvent;
-    @Nullable private WorkflowPayload argument;
-    @Nullable private WorkflowPayload result;
-    @Nullable private WorkflowFailure failure;
+    @Nullable private Event scheduledEvent;
+    @Nullable private Event startedEvent;
+    @Nullable private Event completedEvent;
+    @Nullable private Payload argument;
+    @Nullable private Payload result;
+    @Nullable private Failure failure;
     private WorkflowRunStatus status = WorkflowRunStatus.CREATED;
     @Nullable private String customStatus;
     @Nullable private Integer priority;
@@ -90,7 +90,7 @@ final class WorkflowRunState {
             final String workflowName,
             final int workflowVersion,
             @Nullable final String concurrencyGroupId,
-            final List<WorkflowEvent> history) {
+            final List<Event> history) {
         this.id = id;
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
@@ -101,7 +101,7 @@ final class WorkflowRunState {
         this.pendingTimerElapsedEvents = new ArrayList<>();
         this.pendingMessages = new ArrayList<>();
 
-        for (final WorkflowEvent event : history) {
+        for (final Event event : history) {
             onEvent(event, /* isNew */ false);
         }
     }
@@ -123,19 +123,19 @@ final class WorkflowRunState {
         return concurrencyGroupId;
     }
 
-    List<WorkflowEvent> history() {
+    List<Event> history() {
         return history;
     }
 
-    List<WorkflowEvent> inbox() {
+    List<Event> inbox() {
         return inbox;
     }
 
-    List<WorkflowEvent> pendingActivityTaskScheduledEvents() {
+    List<Event> pendingActivityTaskScheduledEvents() {
         return pendingActivityTaskScheduledEvents;
     }
 
-    List<WorkflowEvent> pendingTimerElapsedEvents() {
+    List<Event> pendingTimerElapsedEvents() {
         return pendingTimerElapsedEvents;
     }
 
@@ -167,17 +167,17 @@ final class WorkflowRunState {
     }
 
     @Nullable
-    WorkflowPayload argument() {
+    Payload argument() {
         return argument;
     }
 
     @Nullable
-    WorkflowPayload result() {
+    Payload result() {
         return result;
     }
 
     @Nullable
-    WorkflowFailure failure() {
+    Failure failure() {
         return failure;
     }
 
@@ -205,11 +205,11 @@ final class WorkflowRunState {
         return continuedAsNew;
     }
 
-    void onEvent(final WorkflowEvent event) {
+    void onEvent(final Event event) {
         onEvent(event, true);
     }
 
-    private void onEvent(final WorkflowEvent event, final boolean isNew) {
+    private void onEvent(final Event event, final boolean isNew) {
         switch (event.getSubjectCase()) {
             case RUN_SCHEDULED -> {
                 if (scheduledEvent != null) {
@@ -304,7 +304,7 @@ final class WorkflowRunState {
             final RunScheduled.ParentRun parentRun = scheduledEvent.getRunScheduled().getParentRun();
             final var parentRunId = UUID.fromString(parentRun.getRunId());
 
-            final var childRunEventBuilder = WorkflowEvent.newBuilder()
+            final var childRunEventBuilder = Event.newBuilder()
                     .setId(-1)
                     .setTimestamp(Timestamps.now());
             if (command.status() == WorkflowRunStatus.COMPLETED) {
@@ -342,7 +342,7 @@ final class WorkflowRunState {
         if (command.failure() != null) {
             subjectBuilder.setFailure(command.failure());
         }
-        onEvent(WorkflowEvent.newBuilder()
+        onEvent(Event.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setRunCompleted(subjectBuilder.build())
@@ -377,7 +377,7 @@ final class WorkflowRunState {
         this.pendingMessages.clear();
         this.pendingMessages.add(new WorkflowRunMessage(
                 this.id,
-                WorkflowEvent.newBuilder()
+                Event.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
                         .setRunScheduled(newRunScheduledBuilder)
@@ -392,7 +392,7 @@ final class WorkflowRunState {
             subjectBuilder.setResult(command.result());
         }
 
-        onEvent(WorkflowEvent.newBuilder()
+        onEvent(Event.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setSideEffectExecuted(subjectBuilder.build())
@@ -413,7 +413,7 @@ final class WorkflowRunState {
             subjectBuilder.setScheduledFor(toTimestamp(command.scheduleFor()));
         }
 
-        final var taskScheduledEvent = WorkflowEvent.newBuilder()
+        final var taskScheduledEvent = Event.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setActivityTaskScheduled(subjectBuilder.build())
@@ -455,7 +455,7 @@ final class WorkflowRunState {
             runScheduledBuilder.setArgument(command.argument());
         }
 
-        onEvent(WorkflowEvent.newBuilder()
+        onEvent(Event.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setChildRunScheduled(childRunScheduledBuilder.build())
@@ -463,7 +463,7 @@ final class WorkflowRunState {
 
         pendingMessages.add(new WorkflowRunMessage(
                 childRunId,
-                WorkflowEvent.newBuilder()
+                Event.newBuilder()
                         .setId(-1)
                         .setTimestamp(Timestamps.now())
                         .setRunScheduled(runScheduledBuilder.build())
@@ -471,7 +471,7 @@ final class WorkflowRunState {
     }
 
     private void executeScheduleTimerCommand(final ScheduleTimerCommand command) {
-        onEvent(WorkflowEvent.newBuilder()
+        onEvent(Event.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setTimerScheduled(TimerScheduled.newBuilder()
@@ -480,7 +480,7 @@ final class WorkflowRunState {
                         .build())
                 .build(), /* isNew */ true);
 
-        pendingTimerElapsedEvents.add(WorkflowEvent.newBuilder()
+        pendingTimerElapsedEvents.add(Event.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
                 .setTimerElapsed(TimerElapsed.newBuilder()

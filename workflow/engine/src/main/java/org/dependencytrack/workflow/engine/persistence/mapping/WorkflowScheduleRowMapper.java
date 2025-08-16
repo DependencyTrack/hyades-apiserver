@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.mapper.RowMapper;
@@ -44,7 +44,7 @@ public class WorkflowScheduleRowMapper implements RowMapper<WorkflowSchedule> {
                 rs.getString("concurrency_group_id"),
                 getPriority(rs),
                 getLabels(rs, ctx),
-                ctx.findColumnMapperFor(WorkflowPayload.class).orElseThrow().map(rs, "argument", ctx),
+                ctx.findColumnMapperFor(Payload.class).orElseThrow().map(rs, "argument", ctx),
                 ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "created_at", ctx),
                 ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "updated_at", ctx),
                 ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "last_fired_at", ctx),

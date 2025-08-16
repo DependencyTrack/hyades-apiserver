@@ -28,15 +28,15 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import org.dependencytrack.proto.workflow.api.v1.ActivityTaskCompleted;
-import org.dependencytrack.proto.workflow.api.v1.ActivityTaskFailed;
-import org.dependencytrack.proto.workflow.api.v1.ExternalEventReceived;
-import org.dependencytrack.proto.workflow.api.v1.RunCanceled;
-import org.dependencytrack.proto.workflow.api.v1.RunResumed;
-import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
-import org.dependencytrack.proto.workflow.api.v1.RunSuspended;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.event.v1.ActivityTaskCompleted;
+import org.dependencytrack.proto.workflow.event.v1.ActivityTaskFailed;
+import org.dependencytrack.proto.workflow.event.v1.Event;
+import org.dependencytrack.proto.workflow.event.v1.ExternalEventReceived;
+import org.dependencytrack.proto.workflow.event.v1.RunCanceled;
+import org.dependencytrack.proto.workflow.event.v1.RunResumed;
+import org.dependencytrack.proto.workflow.event.v1.RunScheduled;
+import org.dependencytrack.proto.workflow.event.v1.RunSuspended;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
@@ -481,8 +481,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 runScheduledBuilder.putAllLabels(option.labels());
             }
             if (option.argument() != null) {
-                final WorkflowPayload argumentPayload;
-                if (option.argument() instanceof final WorkflowPayload payload) {
+                final Payload argumentPayload;
+                if (option.argument() instanceof final Payload payload) {
                     argumentPayload = payload;
                 } else {
                     //noinspection unchecked
@@ -495,7 +495,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     new CreateWorkflowRunInboxEntryCommand(
                             runId,
                             null,
-                            WorkflowEvent.newBuilder()
+                            Event.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(now)
                                     .setRunScheduled(runScheduledBuilder.build())
@@ -569,7 +569,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
     @Override
     public void requestRunCancellation(final UUID runId, final String reason) {
-        final var cancellationEvent = WorkflowEvent.newBuilder()
+        final var cancellationEvent = Event.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setRunCanceled(RunCanceled.newBuilder()
@@ -588,7 +588,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             final boolean hasPendingCancellation = dao.getRunInboxByRunId(runId).stream()
-                    .anyMatch(WorkflowEvent::hasRunCanceled);
+                    .anyMatch(Event::hasRunCanceled);
             if (hasPendingCancellation) {
                 throw new IllegalStateException("Cancellation of workflow run %s already pending".formatted(runId));
             }
@@ -601,7 +601,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
     @Override
     public void requestRunSuspension(final UUID runId) {
-        final var suspensionEvent = WorkflowEvent.newBuilder()
+        final var suspensionEvent = Event.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setRunSuspended(RunSuspended.getDefaultInstance())
@@ -620,7 +620,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             final boolean hasPendingSuspension = dao.getRunInboxByRunId(runId).stream()
-                    .anyMatch(WorkflowEvent::hasRunSuspended);
+                    .anyMatch(Event::hasRunSuspended);
             if (hasPendingSuspension) {
                 throw new IllegalStateException("Suspension of workflow run %s is already pending".formatted(runId));
             }
@@ -633,7 +633,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
     @Override
     public void requestRunResumption(final UUID runId) {
-        final var resumeEvent = WorkflowEvent.newBuilder()
+        final var resumeEvent = Event.newBuilder()
                 .setId(-1)
                 .setTimestamp(Timestamps.now())
                 .setRunResumed(RunResumed.getDefaultInstance())
@@ -652,7 +652,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             final boolean hasPendingResumption = dao.getRunInboxByRunId(runId).stream()
-                    .anyMatch(WorkflowEvent::hasRunResumed);
+                    .anyMatch(Event::hasRunResumed);
             if (hasPendingResumption) {
                 throw new IllegalStateException("Resumption of workflow run %s is already pending".formatted(runId));
             }
@@ -664,7 +664,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
-    public Page<WorkflowEvent> listRunEvents(final ListWorkflowRunEventsRequest request) {
+    public Page<Event> listRunEvents(final ListWorkflowRunEventsRequest request) {
         return jdbi.withHandle(handle -> new WorkflowRunDao(handle).listRunEvents(request));
     }
 
@@ -808,7 +808,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                         new CreateWorkflowRunInboxEntryCommand(
                                 externalEvent.workflowRunId(),
                                 null,
-                                WorkflowEvent.newBuilder()
+                                Event.newBuilder()
                                         .setId(-1)
                                         .setTimestamp(now)
                                         .setExternalEventReceived(subjectBuilder)
@@ -835,7 +835,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             final var historyRequests = new ArrayList<GetWorkflowRunHistoryRequest>(polledRunById.size());
-            final var cachedHistoryByRunId = new HashMap<UUID, List<WorkflowEvent>>(polledRunById.size());
+            final var cachedHistoryByRunId = new HashMap<UUID, List<Event>>(polledRunById.size());
 
             // Try to populate event histories from cache first.
             for (final UUID runId : polledRunById.keySet()) {
@@ -856,14 +856,14 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             return polledRunById.values().stream()
                     .map(polledRun -> {
                         final PolledWorkflowEvents polledEvents = polledEventsByRunId.get(polledRun.id());
-                        final List<WorkflowEvent> cachedHistoryEvents = cachedHistoryByRunId.get(polledRun.id());
+                        final List<Event> cachedHistoryEvents = cachedHistoryByRunId.get(polledRun.id());
 
                         var historySize = polledEvents.history().size();
                         if (cachedHistoryEvents != null) {
                             historySize += cachedHistoryEvents.size();
                         }
 
-                        final var history = new ArrayList<WorkflowEvent>(historySize);
+                        final var history = new ArrayList<Event>(historySize);
                         if (cachedHistoryEvents != null) {
                             history.addAll(cachedHistoryEvents);
                         }
@@ -992,7 +992,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
             // Write all processed events to history.
             int sequenceNumber = run.history().size();
-            for (final WorkflowEvent newEvent : run.inbox()) {
+            for (final Event newEvent : run.inbox()) {
                 createHistoryEntryCommands.add(
                         new CreateWorkflowRunHistoryEntryCommand(
                                 run.id(),
@@ -1000,7 +1000,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                                 newEvent));
             }
 
-            for (final WorkflowEvent newEvent : run.pendingTimerElapsedEvents()) {
+            for (final Event newEvent : run.pendingTimerElapsedEvents()) {
                 createInboxEntryCommands.add(
                         new CreateWorkflowRunInboxEntryCommand(
                                 run.id(),
@@ -1063,7 +1063,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                             new CreateWorkflowRunInboxEntryCommand(
                                     childRunId,
                                     /* visibleFrom */ null,
-                                    WorkflowEvent.newBuilder()
+                                    Event.newBuilder()
                                             .setId(-1)
                                             .setTimestamp(Timestamps.now())
                                             .setRunCanceled(RunCanceled.newBuilder()
@@ -1073,7 +1073,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 }
             }
 
-            for (final WorkflowEvent newEvent : run.pendingActivityTaskScheduledEvents()) {
+            for (final Event newEvent : run.pendingActivityTaskScheduledEvents()) {
                 createActivityTaskCommands.add(
                         new CreateActivityTaskCommand(
                                 run.id(),
@@ -1208,7 +1208,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     CompletableFuture<Void> completeActivityTask(
-            final ActivityTask task, @Nullable final WorkflowPayload result) throws InterruptedException, TimeoutException {
+            final ActivityTask task, @Nullable final Payload result) throws InterruptedException, TimeoutException {
         return taskCommandBuffer.add(new CompleteActivityTaskCommand(task, result, Instant.now()));
     }
 
@@ -1236,7 +1236,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     new CreateWorkflowRunInboxEntryCommand(
                             command.task().workflowRunId(),
                             null,
-                            WorkflowEvent.newBuilder()
+                            Event.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(toTimestamp(command.timestamp()))
                                     .setActivityTaskCompleted(taskCompletedBuilder.build())
@@ -1268,7 +1268,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     new CreateWorkflowRunInboxEntryCommand(
                             command.task().workflowRunId(),
                             /* visibleFrom */ null,
-                            WorkflowEvent.newBuilder()
+                            Event.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(toTimestamp(command.timestamp()))
                                     .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
@@ -1361,7 +1361,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
     }
 
-    public List<WorkflowEvent> getRunInbox(final UUID runId) {
+    public List<Event> getRunInbox(final UUID runId) {
         return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunInboxByRunId(runId));
     }
 

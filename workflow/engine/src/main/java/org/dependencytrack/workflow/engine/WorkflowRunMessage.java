@@ -18,9 +18,9 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
 
 import java.util.UUID;
 
-record WorkflowRunMessage(UUID recipientRunId, WorkflowEvent event) {
+record WorkflowRunMessage(UUID recipientRunId, Event event) {
 }

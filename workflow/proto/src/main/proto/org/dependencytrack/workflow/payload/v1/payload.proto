@@ -16,19 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.serialization;
+syntax = "proto3";
 
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+package org.dependencytrack.workflow.payload.v1;
 
-/**
- * @since 5.7.0
- */
-public final class WorkflowJacksonModule extends SimpleModule {
+import "google/protobuf/any.proto";
 
-    public WorkflowJacksonModule() {
-        super(WorkflowJacksonModule.class.getName());
-        addSerializer(WorkflowEvent.class, new WorkflowEventJacksonSerializer());
-    }
+option java_multiple_files = true;
+option java_package = "org.dependencytrack.proto.workflow.payload.v1";
 
+message Payload {
+  map<string, bytes> metadata = 1;
+
+  oneof content {
+    BinaryContent binary_content = 10;
+    google.protobuf.Any proto_content = 11;
+  }
+
+  message BinaryContent {
+    string media_type = 1;
+    bytes data = 2;
+  }
 }

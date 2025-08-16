@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
@@ -81,7 +81,7 @@ public final class WorkflowScheduleDao extends AbstractDao {
         final var concurrencyGroupIds = new ArrayList<@Nullable String>(commands.size());
         final var priorities = new ArrayList<@Nullable Integer>(commands.size());
         final var labelsJsons = new ArrayList<@Nullable String>(commands.size());
-        final var arguments = new ArrayList<@Nullable WorkflowPayload>(commands.size());
+        final var arguments = new ArrayList<@Nullable Payload>(commands.size());
         final var nextFireAts = new ArrayList<Instant>(commands.size());
 
         final JsonMapper.TypedJsonMapper jsonMapper = jdbiHandle
@@ -116,7 +116,7 @@ public final class WorkflowScheduleDao extends AbstractDao {
                 .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
                 .bindArray("priorities", Integer.class, priorities)
                 .bindArray("labelsJsons", String.class, labelsJsons)
-                .bindArray("arguments", WorkflowPayload.class, arguments)
+                .bindArray("arguments", Payload.class, arguments)
                 .bindArray("nextFireAts", Instant.class, nextFireAts)
                 .executeAndReturnGeneratedKeys("*")
                 .mapTo(WorkflowSchedule.class)

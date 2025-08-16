@@ -44,7 +44,7 @@
     <dependencies>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-            <artifactId>proto</artifactId>
+            <artifactId>workflow-proto</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

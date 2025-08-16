@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.event.v1.Event;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
 import org.dependencytrack.workflow.engine.persistence.mapping.PolledActivityTaskRowMapper;
@@ -68,11 +68,11 @@ public final class JdbiFactory {
                 .registerArrayType(new WorkflowEventSqlArrayType())
                 .registerArrayType(new WorkflowPayloadSqlArrayType())
                 .registerColumnMapper(
-                        WorkflowEvent.class,
-                        new ProtobufColumnMapper<>(WorkflowEvent.parser()))
+                        Event.class,
+                        new ProtobufColumnMapper<>(Event.parser()))
                 .registerColumnMapper(
-                        WorkflowPayload.class,
-                        new ProtobufColumnMapper<>(WorkflowPayload.parser()))
+                        Payload.class,
+                        new ProtobufColumnMapper<>(Payload.parser()))
                 .registerRowMapper(
                         WorkflowRunCountByNameAndStatusRow.class,
                         ConstructorMapper.of(WorkflowRunCountByNameAndStatusRow.class))

@@ -18,15 +18,15 @@
  */
 package org.dependencytrack.workflow.api.payload;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 public interface PayloadConverter<T> {
 
     @Nullable
-    WorkflowPayload convertToPayload(@Nullable T value);
+    Payload convertToPayload(@Nullable T value);
 
     @Nullable
-    T convertFromPayload(@Nullable WorkflowPayload payload);
+    T convertFromPayload(@Nullable Payload payload);
 
 }

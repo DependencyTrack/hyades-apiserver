@@ -21,21 +21,21 @@ package org.dependencytrack.workflow.engine;
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.Timestamp;
 import io.github.resilience4j.core.IntervalFunction;
-import org.dependencytrack.proto.workflow.api.v1.ActivityTaskCompleted;
-import org.dependencytrack.proto.workflow.api.v1.ActivityTaskFailed;
-import org.dependencytrack.proto.workflow.api.v1.ActivityTaskScheduled;
-import org.dependencytrack.proto.workflow.api.v1.ChildRunCompleted;
-import org.dependencytrack.proto.workflow.api.v1.ChildRunFailed;
-import org.dependencytrack.proto.workflow.api.v1.ChildRunScheduled;
-import org.dependencytrack.proto.workflow.api.v1.RunCanceled;
-import org.dependencytrack.proto.workflow.api.v1.RunResumed;
-import org.dependencytrack.proto.workflow.api.v1.RunScheduled;
-import org.dependencytrack.proto.workflow.api.v1.RunStarted;
-import org.dependencytrack.proto.workflow.api.v1.RunSuspended;
-import org.dependencytrack.proto.workflow.api.v1.SideEffectExecuted;
-import org.dependencytrack.proto.workflow.api.v1.TimerElapsed;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.event.v1.ActivityTaskCompleted;
+import org.dependencytrack.proto.workflow.event.v1.ActivityTaskFailed;
+import org.dependencytrack.proto.workflow.event.v1.ActivityTaskScheduled;
+import org.dependencytrack.proto.workflow.event.v1.ChildRunCompleted;
+import org.dependencytrack.proto.workflow.event.v1.ChildRunFailed;
+import org.dependencytrack.proto.workflow.event.v1.ChildRunScheduled;
+import org.dependencytrack.proto.workflow.event.v1.Event;
+import org.dependencytrack.proto.workflow.event.v1.RunCanceled;
+import org.dependencytrack.proto.workflow.event.v1.RunResumed;
+import org.dependencytrack.proto.workflow.event.v1.RunScheduled;
+import org.dependencytrack.proto.workflow.event.v1.RunStarted;
+import org.dependencytrack.proto.workflow.event.v1.RunSuspended;
+import org.dependencytrack.proto.workflow.event.v1.SideEffectExecuted;
+import org.dependencytrack.proto.workflow.event.v1.TimerElapsed;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.ActivityHandle;
 import org.dependencytrack.workflow.api.Awaitable;
@@ -93,14 +93,14 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private final WorkflowExecutor<A, R> workflowExecutor;
     private final PayloadConverter<A> argumentConverter;
     private final PayloadConverter<R> resultConverter;
-    private final List<WorkflowEvent> history;
-    private final List<WorkflowEvent> inbox;
-    private final List<WorkflowEvent> suspendedEvents;
-    private final Map<Integer, WorkflowEvent> eventByEventId;
+    private final List<Event> history;
+    private final List<Event> inbox;
+    private final List<Event> suspendedEvents;
+    private final Map<Integer, Event> eventByEventId;
     private final Map<Integer, WorkflowCommand> pendingCommandByEventId;
     private final Map<Integer, AwaitableImpl<?>> pendingAwaitableByEventId;
     private final Map<String, Queue<AwaitableImpl<?>>> pendingAwaitablesByExternalEventId;
-    private final Map<String, Queue<WorkflowEvent>> bufferedExternalEvents;
+    private final Map<String, Queue<Event>> bufferedExternalEvents;
     private final Logger logger;
     private int currentEventIndex;
     private int currentEventId;
@@ -121,8 +121,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             final WorkflowExecutor<A, R> workflowExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final List<WorkflowEvent> history,
-            final List<WorkflowEvent> inbox) {
+            final List<Event> history,
+            final List<Event> inbox) {
         this.runId = runId;
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;
@@ -293,7 +293,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             final PayloadConverter<WR> resultConverter) {
         assertNotInSideEffect("Child workflows can not be called from within a side effect");
 
-        final WorkflowPayload convertedArgument = argumentConverter.convertToPayload(argument);
+        final Payload convertedArgument = argumentConverter.convertToPayload(argument);
 
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId, new ScheduleChildRunCommand(
@@ -344,7 +344,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             try {
                 isInSideEffect = true;
                 final SR result = sideEffectFunction.apply(argument);
-                final WorkflowPayload resultPayload = resultConverter.convertToPayload(result);
+                final Payload resultPayload = resultConverter.convertToPayload(result);
                 pendingCommandByEventId.put(eventId, new RecordSideEffectResultCommand(
                         name, eventId, resultPayload));
                 awaitable.complete(resultPayload);
@@ -367,9 +367,9 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final var awaitable = new AwaitableImpl<>(this, resultConverter);
 
-        final Queue<WorkflowEvent> bufferedEvents = bufferedExternalEvents.get(externalEventId);
+        final Queue<Event> bufferedEvents = bufferedExternalEvents.get(externalEventId);
         if (bufferedEvents != null && !bufferedEvents.isEmpty()) {
-            final WorkflowEvent event = bufferedEvents.poll();
+            final Event event = bufferedEvents.poll();
             awaitable.complete(event.getExternalEventReceived().hasPayload()
                     ? event.getExternalEventReceived().getPayload()
                     : null);
@@ -416,7 +416,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     WorkflowRunExecutionResult execute() {
         try {
-            WorkflowEvent currentEvent;
+            Event currentEvent;
             while ((currentEvent = processNextEvent()) != null) {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Processed {}", DebugFormat.singleLine().toString(currentEvent));
@@ -442,8 +442,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Nullable
-    WorkflowEvent processNextEvent() {
-        final WorkflowEvent event = nextEvent();
+    Event processNextEvent() {
+        final Event event = nextEvent();
         if (event == null) {
             return null;
         }
@@ -452,7 +452,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         return event;
     }
 
-    private void processEvent(final WorkflowEvent event) {
+    private void processEvent(final Event event) {
         if (event.getId() >= 0) {
             eventByEventId.put(event.getId(), event);
         }
@@ -490,7 +490,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Nullable
-    private WorkflowEvent nextEvent() {
+    private Event nextEvent() {
         if (currentEventIndex < history.size()) {
             isReplaying = true;
             return history.get(currentEventIndex++);
@@ -552,7 +552,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         logger().debug("Resumed");
         isSuspended = false;
 
-        for (final WorkflowEvent event : suspendedEvents) {
+        for (final Event event : suspendedEvents) {
             processEvent(event);
         }
     }
@@ -596,7 +596,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         final int scheduledEventId = subject.getTaskScheduledEventId();
         logger().debug("Activity task failed for event ID {}", scheduledEventId);
 
-        final WorkflowEvent scheduledEvent = eventByEventId.get(scheduledEventId);
+        final Event scheduledEvent = eventByEventId.get(scheduledEventId);
         if (scheduledEvent == null || !scheduledEvent.hasActivityTaskScheduled()) {
             throw new NonDeterministicWorkflowException(
                     "Expected event with ID %d to be of type %s, but got: %s".formatted(
@@ -659,7 +659,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         final int scheduledEventId = subject.getRunScheduledEventId();
         logger().debug("Sub workflow run failed for event ID {}", scheduledEventId);
 
-        final WorkflowEvent scheduledEvent = eventByEventId.get(scheduledEventId);
+        final Event scheduledEvent = eventByEventId.get(scheduledEventId);
         if (scheduledEvent == null || !scheduledEvent.hasChildRunScheduled()) {
             throw new NonDeterministicWorkflowException(
                     "Expected event with ID %d to be of type %s, but got: %s".formatted(
@@ -737,11 +737,11 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                 : null);
     }
 
-    private void onExternalEventReceived(final WorkflowEvent event) {
+    private void onExternalEventReceived(final Event event) {
         final String externalEventId = event.getExternalEventReceived().getId();
         logger().debug("External event received for ID {}", externalEventId);
 
-        final WorkflowPayload externalEventContent = event.getExternalEventReceived().hasPayload()
+        final Payload externalEventContent = event.getExternalEventReceived().hasPayload()
                 ? event.getExternalEventReceived().getPayload()
                 : null;
 
@@ -802,7 +802,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                         /* failure */ null));
     }
 
-    private void continueAsNew(@Nullable final WorkflowPayload argument) {
+    private void continueAsNew(@Nullable final Payload argument) {
         if (logger().isDebugEnabled()) {
             logger().debug("Workflow run {}/{} continued as new with argument {}", workflowName, runId, argument);
         }

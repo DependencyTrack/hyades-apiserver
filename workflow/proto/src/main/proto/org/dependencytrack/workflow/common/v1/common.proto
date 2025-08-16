@@ -18,23 +18,17 @@
  */
 syntax = "proto3";
 
-package org.dependencytrack.workflow.api.v1;
-
-import "google/protobuf/any.proto";
+package org.dependencytrack.workflow.common.v1;
 
 option java_multiple_files = true;
-option java_package = "org.dependencytrack.proto.workflow.api.v1";
+option java_package = "org.dependencytrack.proto.workflow.common.v1";
 
-message WorkflowPayload {
-  map<string, bytes> metadata = 1;
-
-  oneof content {
-    BinaryContent binary_content = 10;
-    google.protobuf.Any proto_content = 11;
-  }
-
-  message BinaryContent {
-    string media_type = 1;
-    bytes data = 2;
-  }
+enum WorkflowRunStatus {
+  WORKFLOW_RUN_STATUS_UNSPECIFIED = 0;
+  WORKFLOW_RUN_STATUS_CREATED = 1;
+  WORKFLOW_RUN_STATUS_RUNNING = 2;
+  WORKFLOW_RUN_STATUS_SUSPENDED = 3;
+  WORKFLOW_RUN_STATUS_CANCELED = 4;
+  WORKFLOW_RUN_STATUS_COMPLETED = 5;
+  WORKFLOW_RUN_STATUS_FAILED = 6;
 }

@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.api.request;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
@@ -35,7 +35,7 @@ public record CreateWorkflowScheduleRequest(
         @Nullable String concurrencyGroupId,
         @Nullable Integer priority,
         @Nullable Map<String, String> labels,
-        @Nullable WorkflowPayload argument,
+        @Nullable Payload argument,
         @Nullable Duration initialDelay) {
 
     private static final Pattern CRON_PATTERN = Pattern.compile("((((\\d+,)+\\d+|(\\d+([/\\-])\\d+)|\\d+|\\*) ?){5,7})");
@@ -66,7 +66,7 @@ public record CreateWorkflowScheduleRequest(
                 this.concurrencyGroupId, this.priority, labels, this.argument, this.initialDelay);
     }
 
-    public CreateWorkflowScheduleRequest withArgument(@Nullable final WorkflowPayload argument) {
+    public CreateWorkflowScheduleRequest withArgument(@Nullable final Payload argument) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, this.labels, argument, this.initialDelay);
     }

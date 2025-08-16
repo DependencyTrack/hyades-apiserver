@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 
-public class WorkflowPayloadSqlArrayType extends ProtobufSqlArrayType<WorkflowPayload> {
+public class WorkflowPayloadSqlArrayType extends ProtobufSqlArrayType<Payload> {
 }

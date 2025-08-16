@@ -16,19 +16,19 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-syntax = "proto3";
+package org.dependencytrack.workflow.serialization;
 
-package org.dependencytrack.workflow.api.v1;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.dependencytrack.proto.workflow.event.v1.Event;
 
-option java_multiple_files = true;
-option java_package = "org.dependencytrack.proto.workflow.api.v1";
+/**
+ * @since 5.7.0
+ */
+public final class JacksonModule extends SimpleModule {
 
-enum WorkflowRunStatus {
-  WORKFLOW_RUN_STATUS_UNSPECIFIED = 0;
-  WORKFLOW_RUN_STATUS_CREATED = 1;
-  WORKFLOW_RUN_STATUS_RUNNING = 2;
-  WORKFLOW_RUN_STATUS_SUSPENDED = 3;
-  WORKFLOW_RUN_STATUS_CANCELED = 4;
-  WORKFLOW_RUN_STATUS_COMPLETED = 5;
-  WORKFLOW_RUN_STATUS_FAILED = 6;
+    public JacksonModule() {
+        super(JacksonModule.class.getName());
+        addSerializer(Event.class, new EventJsonSerializer());
+    }
+
 }

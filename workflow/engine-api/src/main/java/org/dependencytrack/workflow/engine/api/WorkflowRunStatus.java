@@ -20,12 +20,12 @@ package org.dependencytrack.workflow.engine.api;
 
 import java.util.Set;
 
-import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELED;
-import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
-import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CREATED;
-import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
-import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_RUNNING;
-import static org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_SUSPENDED;
+import static org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELED;
+import static org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
+import static org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CREATED;
+import static org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
+import static org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_RUNNING;
+import static org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_SUSPENDED;
 
 public enum WorkflowRunStatus {
 
@@ -51,7 +51,7 @@ public enum WorkflowRunStatus {
     }
 
     public static WorkflowRunStatus fromProto(
-            final org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus protoStatus) {
+            final org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus protoStatus) {
         return switch (protoStatus) {
             case WORKFLOW_RUN_STATUS_CREATED -> CREATED;
             case WORKFLOW_RUN_STATUS_RUNNING -> RUNNING;
@@ -63,7 +63,7 @@ public enum WorkflowRunStatus {
         };
     }
 
-    public org.dependencytrack.proto.workflow.api.v1.WorkflowRunStatus toProto() {
+    public org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus toProto() {
         return switch (this) {
             case CREATED -> WORKFLOW_RUN_STATUS_CREATED;
             case RUNNING -> WORKFLOW_RUN_STATUS_RUNNING;

@@ -18,8 +18,8 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowFailure;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.failure.v1.Failure;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.jspecify.annotations.Nullable;
 
@@ -44,19 +44,19 @@ sealed interface WorkflowCommand permits
             int eventId,
             WorkflowRunStatus status,
             @Nullable String customStatus,
-            @Nullable WorkflowPayload result,
-            @Nullable WorkflowFailure failure) implements WorkflowCommand {
+            @Nullable Payload result,
+            @Nullable Failure failure) implements WorkflowCommand {
     }
 
     record ContinueRunAsNewCommand(
             int eventId,
-            @Nullable WorkflowPayload argument) implements WorkflowCommand {
+            @Nullable Payload argument) implements WorkflowCommand {
     }
 
     record RecordSideEffectResultCommand(
             String name,
             int eventId,
-            @Nullable WorkflowPayload result) implements WorkflowCommand {
+            @Nullable Payload result) implements WorkflowCommand {
     }
 
     record ScheduleActivityCommand(
@@ -64,7 +64,7 @@ sealed interface WorkflowCommand permits
             String name,
             int version,
             @Nullable Integer priority,
-            @Nullable WorkflowPayload argument,
+            @Nullable Payload argument,
             @Nullable Instant scheduleFor) implements WorkflowCommand {
     }
 
@@ -75,7 +75,7 @@ sealed interface WorkflowCommand permits
             @Nullable String concurrencyGroupId,
             @Nullable Integer priority,
             @Nullable Map<String, String> labels,
-            @Nullable WorkflowPayload argument) implements WorkflowCommand {
+            @Nullable Payload argument) implements WorkflowCommand {
     }
 
     record ScheduleTimerCommand(

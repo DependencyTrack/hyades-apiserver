@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.engine;
 
 import io.micrometer.core.instrument.Tag;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowPayload;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
@@ -39,7 +39,7 @@ record ActivityTask(
         UUID workflowRunId,
         int scheduledEventId,
         String activityName,
-        @Nullable WorkflowPayload argument,
+        @Nullable Payload argument,
         Instant lockedUntil) implements Task {
 
     @Override

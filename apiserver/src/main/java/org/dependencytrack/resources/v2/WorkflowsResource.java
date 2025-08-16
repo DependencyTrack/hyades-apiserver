@@ -26,7 +26,7 @@ import org.dependencytrack.api.v2.model.ListWorkflowRunsResponseItem;
 import org.dependencytrack.api.v2.model.PaginationLinks;
 import org.dependencytrack.api.v2.model.PaginationMetadata;
 import org.dependencytrack.api.v2.model.WorkflowRunStatus;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
@@ -136,7 +136,7 @@ public class WorkflowsResource implements WorkflowsApi {
             throw new NotFoundException();
         }
 
-        final Page<@NonNull WorkflowEvent> eventsPage = workflowEngine.listRunEvents(
+        final Page<@NonNull Event> eventsPage = workflowEngine.listRunEvents(
                 new ListWorkflowRunEventsRequest(runId)
                         .withLimit(limit)
                         .withPageToken(pageToken));

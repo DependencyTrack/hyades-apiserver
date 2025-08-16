@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.engine;
 
 import io.micrometer.core.instrument.Tag;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -35,8 +35,8 @@ record WorkflowTask(
         @Nullable Integer priority,
         @Nullable Map<String, String> labels,
         int attempt,
-        List<WorkflowEvent> history,
-        List<WorkflowEvent> inbox) implements Task {
+        List<Event> history,
+        List<Event> inbox) implements Task {
 
     @Override
     public Set<Tag> meterTags() {

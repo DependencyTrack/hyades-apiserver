@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
@@ -390,7 +390,7 @@ public final class WorkflowDao extends AbstractDao {
 
         final var runIds = new ArrayList<UUID>(commands.size());
         final var visibleFroms = new ArrayList<@Nullable Instant>(commands.size());
-        final var events = new ArrayList<WorkflowEvent>(commands.size());
+        final var events = new ArrayList<Event>(commands.size());
 
         for (final CreateWorkflowRunInboxEntryCommand command : commands) {
             runIds.add(command.workflowRunId());
@@ -401,7 +401,7 @@ public final class WorkflowDao extends AbstractDao {
         return update
                 .bindArray("runIds", UUID.class, runIds)
                 .bindArray("visibleFroms", Instant.class, visibleFroms)
-                .bindArray("events", WorkflowEvent.class, events)
+                .bindArray("events", Event.class, events)
                 .execute();
     }
 
@@ -469,8 +469,8 @@ public final class WorkflowDao extends AbstractDao {
                 .mapTo(PolledWorkflowEvent.class)
                 .list();
 
-        final var historyByRunId = new HashMap<UUID, List<WorkflowEvent>>(requests.size());
-        final var inboxByRunId = new HashMap<UUID, List<WorkflowEvent>>(requests.size());
+        final var historyByRunId = new HashMap<UUID, List<Event>>(requests.size());
+        final var inboxByRunId = new HashMap<UUID, List<Event>>(requests.size());
         final var maxHistoryEventSequenceNumberByRunId = new HashMap<UUID, Integer>(requests.size());
         final var maxInboxEventDequeueCountByRunId = new HashMap<UUID, Integer>(requests.size());
 
@@ -511,7 +511,7 @@ public final class WorkflowDao extends AbstractDao {
         return polledEventsByRunId;
     }
 
-    public List<WorkflowEvent> getRunInboxByRunId(final UUID runId) {
+    public List<Event> getRunInboxByRunId(final UUID runId) {
         final Query query = jdbiHandle.createQuery("""
                 select event
                   from workflow_run_inbox
@@ -521,7 +521,7 @@ public final class WorkflowDao extends AbstractDao {
 
         return query
                 .bind("runId", runId)
-                .mapTo(WorkflowEvent.class)
+                .mapTo(Event.class)
                 .list();
     }
 
@@ -591,7 +591,7 @@ public final class WorkflowDao extends AbstractDao {
 
         final var runIds = new ArrayList<UUID>(commands.size());
         final var sequenceNumbers = new ArrayList<Integer>(commands.size());
-        final var events = new ArrayList<WorkflowEvent>(commands.size());
+        final var events = new ArrayList<Event>(commands.size());
 
         for (final CreateWorkflowRunHistoryEntryCommand command : commands) {
             runIds.add(command.workflowRunId());
@@ -602,7 +602,7 @@ public final class WorkflowDao extends AbstractDao {
         return update
                 .bindArray("runIds", UUID.class, runIds)
                 .bindArray("sequenceNumbers", Integer.class, sequenceNumbers)
-                .bindArray("events", WorkflowEvent.class, events)
+                .bindArray("events", Event.class, events)
                 .execute();
     }
 

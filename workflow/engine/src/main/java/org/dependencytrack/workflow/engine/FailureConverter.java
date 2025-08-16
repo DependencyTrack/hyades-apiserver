@@ -19,12 +19,12 @@
 package org.dependencytrack.workflow.engine;
 
 import com.google.protobuf.DebugFormat;
-import org.dependencytrack.proto.workflow.api.v1.ActivityFailureDetails;
-import org.dependencytrack.proto.workflow.api.v1.ApplicationFailureDetails;
-import org.dependencytrack.proto.workflow.api.v1.CancellationFailureDetails;
-import org.dependencytrack.proto.workflow.api.v1.ChildWorkflowFailureDetails;
-import org.dependencytrack.proto.workflow.api.v1.SideEffectFailureDetails;
-import org.dependencytrack.proto.workflow.api.v1.WorkflowFailure;
+import org.dependencytrack.proto.workflow.failure.v1.ActivityFailureDetails;
+import org.dependencytrack.proto.workflow.failure.v1.ApplicationFailureDetails;
+import org.dependencytrack.proto.workflow.failure.v1.CancellationFailureDetails;
+import org.dependencytrack.proto.workflow.failure.v1.ChildWorkflowFailureDetails;
+import org.dependencytrack.proto.workflow.failure.v1.Failure;
+import org.dependencytrack.proto.workflow.failure.v1.SideEffectFailureDetails;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
@@ -43,7 +43,7 @@ final class FailureConverter {
     private FailureConverter() {
     }
 
-    static WorkflowFailureException toException(final WorkflowFailure failure) {
+    static WorkflowFailureException toException(final Failure failure) {
         final WorkflowFailureException cause = failure.hasCause()
                 ? toException(failure.getCause())
                 : null;
@@ -86,8 +86,8 @@ final class FailureConverter {
         return exception;
     }
 
-    static WorkflowFailure toFailure(final Throwable throwable) {
-        final WorkflowFailure.Builder failureBuilder = WorkflowFailure.newBuilder();
+    static Failure toFailure(final Throwable throwable) {
+        final Failure.Builder failureBuilder = Failure.newBuilder();
 
         switch (throwable) {
             case final ActivityFailureException activityException -> failureBuilder
@@ -153,8 +153,8 @@ final class FailureConverter {
         for (final StackTraceElement element : stackTrace) {
             // Cut the stack trace off before it enters engine internals.
             // These are not necessary for communicating failures in user code.
-            if (element.getClassName().equals("org.dependencytrack.workflow.framework.ActivityTaskProcessor")
-                || element.getClassName().equals("org.dependencytrack.workflow.framework.WorkflowTaskProcessor")) {
+            if (element.getClassName().equals(ActivityTaskManager.class.getName())
+                || element.getClassName().equals(WorkflowTaskManager.class.getName())) {
                 break;
             }
 

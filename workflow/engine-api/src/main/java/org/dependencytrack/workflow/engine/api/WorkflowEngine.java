@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.api;
 
-import org.dependencytrack.proto.workflow.api.v1.WorkflowEvent;
+import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.annotation.Activity;
@@ -189,9 +189,9 @@ public interface WorkflowEngine extends Closeable {
      * Retrieve the event history of a workflow run.
      *
      * @param request The request.
-     * @return A {@link Page} containing {@link WorkflowEvent}s.
+     * @return A {@link Page} containing {@link Event}s.
      */
-    Page<WorkflowEvent> listRunEvents(ListWorkflowRunEventsRequest request);
+    Page<Event> listRunEvents(ListWorkflowRunEventsRequest request);
 
     /**
      * Send an external event to a workflow run.
