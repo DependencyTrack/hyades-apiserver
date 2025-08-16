@@ -69,9 +69,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
     public void process(final WorkflowTask task) {
         try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString());
              var ignoredMdcWorkflowName = MDC.putCloseable("workflowName", task.workflowName());
-             var ignoredMdcWorkflowVersion = MDC.putCloseable("workflowVersion", String.valueOf(task.workflowVersion()));
-             var ignoredMdcWorkflowPriority = MDC.putCloseable("workflowPriority", String.valueOf(task.priority()));
-             var ignoredMdcWorkflowConcurrencyGroupId = MDC.putCloseable("workflowConcurrencyGroupId", String.valueOf(task.concurrencyGroupId()))) {
+             var ignoredMdcWorkflowVersion = MDC.putCloseable("workflowVersion", String.valueOf(task.workflowVersion()))) {
             processInternal(task);
         } catch (RuntimeException e) {
             LOGGER.error("Failed to process task; Abandoning it", e);
@@ -122,15 +120,16 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
 
         // Inject an ExecutionStarted event.
         // Its timestamp will be used as deterministic "now" timestamp while processing new events.
-        workflowRunState.onEvent(Event.newBuilder()
-                .setId(-1)
-                .setTimestamp(Timestamps.now())
-                .setExecutionStarted(ExecutionStarted.getDefaultInstance())
-                .build());
+        workflowRunState.applyEvent(
+                Event.newBuilder()
+                        .setId(-1)
+                        .setTimestamp(Timestamps.now())
+                        .setExecutionStarted(ExecutionStarted.getDefaultInstance())
+                        .build());
 
         int eventsAdded = 0;
         for (final Event newEvent : task.inbox()) {
-            workflowRunState.onEvent(newEvent);
+            workflowRunState.applyEvent(newEvent);
             eventsAdded++;
 
             // Inject a RunStarted event when encountering a RunScheduled event.
@@ -138,11 +137,12 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
             // so we can differentiate between when a run was scheduled vs.
             // when it was eventually picked up.
             if (newEvent.hasRunScheduled()) {
-                workflowRunState.onEvent(Event.newBuilder()
-                        .setId(-1)
-                        .setTimestamp(Timestamps.now())
-                        .setRunStarted(RunStarted.getDefaultInstance())
-                        .build());
+                workflowRunState.applyEvent(
+                        Event.newBuilder()
+                                .setId(-1)
+                                .setTimestamp(Timestamps.now())
+                                .setRunStarted(RunStarted.getDefaultInstance())
+                                .build());
                 eventsAdded++;
             }
         }
@@ -162,17 +162,18 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
                 workflowMetadata.executor(),
                 workflowMetadata.argumentConverter(),
                 workflowMetadata.resultConverter(),
-                workflowRunState.history(),
-                workflowRunState.inbox());
+                workflowRunState.eventHistory(),
+                workflowRunState.newEvents());
         final WorkflowRunExecutionResult executionResult = ctx.execute();
 
         workflowRunState.setCustomStatus(executionResult.customStatus());
-        workflowRunState.executeCommands(executionResult.commands());
-        workflowRunState.onEvent(Event.newBuilder()
-                .setId(-1)
-                .setTimestamp(Timestamps.now())
-                .setExecutionCompleted(ExecutionCompleted.getDefaultInstance())
-                .build());
+        workflowRunState.processCommands(executionResult.commands());
+        workflowRunState.applyEvent(
+                Event.newBuilder()
+                        .setId(-1)
+                        .setTimestamp(Timestamps.now())
+                        .setExecutionCompleted(ExecutionCompleted.getDefaultInstance())
+                        .build());
 
         try {
             // TODO: Retry on TimeoutException.

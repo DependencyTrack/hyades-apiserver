@@ -991,8 +991,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             // Write all processed events to history.
-            int sequenceNumber = run.history().size();
-            for (final Event newEvent : run.inbox()) {
+            int sequenceNumber = run.eventHistory().size();
+            for (final Event newEvent : run.newEvents()) {
                 createHistoryEntryCommands.add(
                         new CreateWorkflowRunHistoryEntryCommand(
                                 run.id(),
@@ -1376,7 +1376,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private Set<UUID> getPendingChildRunIds(final WorkflowRunState run) {
         final var runIdByEventId = new HashMap<Integer, UUID>();
 
-        Stream.concat(run.history().stream(), run.inbox().stream()).forEach(event -> {
+        Stream.concat(run.eventHistory().stream(), run.newEvents().stream()).forEach(event -> {
             switch (event.getSubjectCase()) {
                 case CHILD_RUN_SCHEDULED -> {
                     final String runId = event.getChildRunScheduled().getRunId();
