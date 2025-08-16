@@ -16,23 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine;
+package org.dependencytrack.workflow.api;
 
-import org.dependencytrack.proto.workflow.payload.v1.Payload;
-import org.jspecify.annotations.Nullable;
+/**
+ * A {@link WorkflowRunError} thrown when the workflow run is unable
+ * to make further progress, yielding control back to the engine.
+ */
+public final class WorkflowRunBlockedError extends WorkflowRunError {
 
-final class WorkflowRunContinuedAsNewException extends WorkflowEngineException {
-
-    @Nullable private final Payload argument;
-
-    WorkflowRunContinuedAsNewException(@Nullable final Payload argument) {
+    public WorkflowRunBlockedError() {
         super(null, null, false, false);
-        this.argument = argument;
-    }
-
-    @Nullable
-    Payload getArgument() {
-        return argument;
     }
 
 }

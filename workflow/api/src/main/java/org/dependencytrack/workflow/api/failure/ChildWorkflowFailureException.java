@@ -22,7 +22,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
-public final class ChildWorkflowFailureException extends WorkflowFailureException {
+public final class ChildWorkflowFailureException extends FailureException {
 
     private final UUID runId;
     private final String workflowName;

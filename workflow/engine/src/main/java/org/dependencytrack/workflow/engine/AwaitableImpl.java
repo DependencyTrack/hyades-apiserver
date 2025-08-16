@@ -20,8 +20,9 @@ package org.dependencytrack.workflow.engine;
 
 import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.api.Awaitable;
+import org.dependencytrack.workflow.api.WorkflowRunBlockedError;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
-import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
+import org.dependencytrack.workflow.api.failure.FailureException;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 import org.jspecify.annotations.Nullable;
 
@@ -31,15 +32,20 @@ import static java.util.Objects.requireNonNull;
 
 sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableImpl {
 
+    // This error is thrown very frequently, it is used for control flow,
+    // and we don't care about stack traces for them. Having a single shared
+    // instance avoids garbage, and overhead of filling stack traces.
+    private static final WorkflowRunBlockedError BLOCKED_ERROR = new WorkflowRunBlockedError();
+
     private final WorkflowContextImpl<?, ?> executionContext;
     private final PayloadConverter<T> resultConverter;
     private boolean completed;
     private boolean canceled;
     @Nullable private String cancelReason;
     @Nullable private Consumer<@Nullable T> completeCallback;
-    @Nullable private Consumer<WorkflowFailureException> errorCallback;
+    @Nullable private Consumer<FailureException> errorCallback;
     @Nullable private T result;
-    @Nullable private WorkflowFailureException exception;
+    @Nullable private FailureException exception;
 
     AwaitableImpl(
             final WorkflowContextImpl<?, ?> workflowContext,
@@ -63,7 +69,7 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
             }
         } while (executionContext.processNextEvent() != null);
 
-        throw WorkflowRunBlockedException.INSTANCE;
+        throw BLOCKED_ERROR;
     }
 
     boolean complete(@Nullable final Payload result) {
@@ -80,7 +86,7 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
         return true;
     }
 
-    boolean completeExceptionally(final WorkflowFailureException exception) {
+    boolean completeExceptionally(final FailureException exception) {
         if (completed) {
             return false;
         }
@@ -112,7 +118,7 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
         this.completeCallback = callback;
     }
 
-    void onError(final Consumer<WorkflowFailureException> callback) {
+    void onError(final Consumer<FailureException> callback) {
         this.errorCallback = callback;
     }
 

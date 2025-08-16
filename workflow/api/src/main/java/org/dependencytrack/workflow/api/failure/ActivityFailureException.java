@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.api.failure;
 
 import org.jspecify.annotations.Nullable;
 
-public final class ActivityFailureException extends WorkflowFailureException {
+public final class ActivityFailureException extends FailureException {
 
     private final String activityName;
 

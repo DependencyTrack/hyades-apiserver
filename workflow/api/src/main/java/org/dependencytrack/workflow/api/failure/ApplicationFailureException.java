@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.api.failure;
 
 import org.jspecify.annotations.Nullable;
 
-public non-sealed class ApplicationFailureException extends WorkflowFailureException {
+public non-sealed class ApplicationFailureException extends FailureException {
 
     private final boolean isTerminal;
 

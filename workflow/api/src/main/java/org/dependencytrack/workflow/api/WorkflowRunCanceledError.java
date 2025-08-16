@@ -16,17 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine;
+package org.dependencytrack.workflow.api;
 
-public final class WorkflowRunBlockedException extends WorkflowEngineException {
+import org.jspecify.annotations.Nullable;
 
-    // This exception is thrown very frequently, it is used for control flow,
-    // and we don't care about stack traces for them. Having a single shared
-    // instance avoids garbage, and overhead of filling stack traces.
-    static final WorkflowRunBlockedException INSTANCE = new WorkflowRunBlockedException();
+/**
+ * A {@link WorkflowRunError} thrown a workflow run has been canceled.
+ */
+public final class WorkflowRunCanceledError extends WorkflowRunError {
 
-    private WorkflowRunBlockedException() {
-        super(null, null, false, false);
+    public WorkflowRunCanceledError(@Nullable final String message) {
+        super(message);
     }
 
 }

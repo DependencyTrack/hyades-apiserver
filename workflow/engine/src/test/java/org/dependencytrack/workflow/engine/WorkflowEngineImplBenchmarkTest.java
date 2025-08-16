@@ -76,21 +76,7 @@ public class WorkflowEngineImplBenchmarkTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineImplBenchmarkTest.class);
 
     @Container
-    private static final PostgresTestContainer postgresContainer = new PostgresTestContainer()
-            .withCommand(
-                    "postgres",
-                    "-c", "fsync=off", // Testcontainers default.
-                    // Allow Autovacuum to run more often and with fewer constraints.
-                    // Necessary here because tasks are essentially no-op and thus accumulate
-                    // lots of bloat in a very short period of time. This is usually not true
-                    // in production workloads, where activities involve I/O and take upwards
-                    // of a few seconds. https://tembo.io/blog/optimizing-postgres-auto-vacuum
-                    "-c", "autovacuum_vacuum_cost_delay=0",
-                    "-c", "autovacuum_naptime=10s",
-                    // Avoid too frequent checkpointing.
-                    "-c", "min_wal_size=1GB",
-                    "-c", "max_wal_size=4GB",
-                    "-c", "wal_compression=on");
+    private static final PostgresTestContainer postgresContainer = new PostgresTestContainer();
 
     @Activity(name = "foo")
     public static class TestActivityFoo implements ActivityExecutor<Void, Void> {

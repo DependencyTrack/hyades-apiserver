@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.api.failure;
 
-public final class CancellationFailureException extends WorkflowFailureException {
+public final class CancellationFailureException extends FailureException {
 
     private final String reason;
 

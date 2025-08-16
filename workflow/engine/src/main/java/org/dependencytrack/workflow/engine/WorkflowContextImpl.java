@@ -44,6 +44,10 @@ import org.dependencytrack.workflow.api.RetryPolicy;
 import org.dependencytrack.workflow.api.WorkflowContext;
 import org.dependencytrack.workflow.api.WorkflowExecutor;
 import org.dependencytrack.workflow.api.WorkflowHandle;
+import org.dependencytrack.workflow.api.WorkflowRunBlockedError;
+import org.dependencytrack.workflow.api.WorkflowRunCanceledError;
+import org.dependencytrack.workflow.api.WorkflowRunContinuedAsNewError;
+import org.dependencytrack.workflow.api.WorkflowRunDeterminismError;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
@@ -410,7 +414,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     public void continueAsNew(final ContinueAsNewOptions<A> options) {
         assertNotInSideEffect("continueAsNew is not allowed from within a side effect");
         requireNonNull(options, "options must not be null");
-        throw new WorkflowRunContinuedAsNewException(
+        throw new WorkflowRunContinuedAsNewError(
                 argumentConverter.convertToPayload(options.argument()));
     }
 
@@ -422,15 +426,15 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                     LOGGER.debug("Processed {}", DebugFormat.singleLine().toString(currentEvent));
                 }
             }
-        } catch (WorkflowRunBlockedException e) {
+        } catch (WorkflowRunBlockedError e) {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Blocked", e);
             }
-        } catch (WorkflowRunCanceledException e) {
+        } catch (WorkflowRunCanceledError e) {
             cancel(e.getMessage());
-        } catch (WorkflowRunContinuedAsNewException e) {
+        } catch (WorkflowRunContinuedAsNewError e) {
             continueAsNew(e.getArgument());
-        } catch (Exception e) {
+        } catch (WorkflowRunDeterminismError | Exception e) {
             fail(e);
         }
 
@@ -533,7 +537,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     private void onRunCanceled(final RunCanceled runCanceled) {
         logger().debug("Canceled with reason: {}", runCanceled.getReason());
-        throw new WorkflowRunCanceledException(runCanceled.getReason());
+        throw new WorkflowRunCanceledError(runCanceled.getReason());
     }
 
     private void onRunSuspended(final RunSuspended ignored) {
@@ -583,7 +587,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
-            throw new NonDeterministicWorkflowException("""
+            throw new WorkflowRunDeterminismError("""
                     Encountered ActivityTaskCompleted event for event ID %d, \
                     but no pending awaitable exists for it""".formatted(eventId));
         }
@@ -598,7 +602,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final Event scheduledEvent = eventByEventId.get(scheduledEventId);
         if (scheduledEvent == null || !scheduledEvent.hasActivityTaskScheduled()) {
-            throw new NonDeterministicWorkflowException(
+            throw new WorkflowRunDeterminismError(
                     "Expected event with ID %d to be of type %s, but got: %s".formatted(
                             scheduledEventId,
                             ActivityTaskScheduled.class.getSimpleName(),
@@ -609,7 +613,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(scheduledEventId);
         if (awaitable == null) {
-            throw new NonDeterministicWorkflowException("""
+            throw new WorkflowRunDeterminismError("""
                     Encountered ActivityTaskFailed event for event ID %d, \
                     but no pending awaitable exists for it""".formatted(scheduledEventId));
         }
@@ -623,15 +627,15 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     private void onChildRunScheduled(final int eventId) {
-        logger().debug("Sub workflow run scheduled for event ID {}", eventId);
+        logger().debug("Child workflow run scheduled for event ID {}", eventId);
 
         final WorkflowCommand command = pendingCommandByEventId.get(eventId);
         if (command == null) {
-            throw new NonDeterministicWorkflowException("""
+            throw new WorkflowRunDeterminismError("""
                     Encountered ChildRunScheduled event for event ID %d, \
                     but no pending command was found for it""".formatted(eventId));
         } else if (!(command instanceof ScheduleChildRunCommand)) {
-            throw new NonDeterministicWorkflowException("""
+            throw new WorkflowRunDeterminismError("""
                     Encountered ChildRunScheduled event for event ID %d, \
                     but the pending command for that number is of type %s\
                     """.formatted(eventId, command.getClass().getSimpleName()));
@@ -642,11 +646,11 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     private void onChildRunCompleted(final ChildRunCompleted subject) {
         final int eventId = subject.getRunScheduledEventId();
-        logger().debug("Sub workflow run failed for event ID {}", eventId);
+        logger().debug("Child workflow run failed for event ID {}", eventId);
 
         final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
-            throw new NonDeterministicWorkflowException("""
+            throw new WorkflowRunDeterminismError("""
                     Encountered ChildRunCompleted event for event ID %d, \
                     but no pending awaitable exists for it""".formatted(eventId));
         }
@@ -657,11 +661,11 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     private void onChildRunFailed(final ChildRunFailed subject) {
         final int scheduledEventId = subject.getRunScheduledEventId();
-        logger().debug("Sub workflow run failed for event ID {}", scheduledEventId);
+        logger().debug("Child workflow run failed for event ID {}", scheduledEventId);
 
         final Event scheduledEvent = eventByEventId.get(scheduledEventId);
         if (scheduledEvent == null || !scheduledEvent.hasChildRunScheduled()) {
-            throw new NonDeterministicWorkflowException(
+            throw new WorkflowRunDeterminismError(
                     "Expected event with ID %d to be of type %s, but got: %s".formatted(
                             scheduledEventId,
                             ChildRunScheduled.class.getSimpleName(),
@@ -672,7 +676,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(scheduledEventId);
         if (awaitable == null) {
-            throw new NonDeterministicWorkflowException(
+            throw new WorkflowRunDeterminismError(
                     "Encountered %s event for event ID %d, but no pending awaitable exists for it".formatted(
                             ChildRunFailed.class.getSimpleName(), scheduledEventId));
         }
@@ -692,11 +696,11 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final WorkflowCommand action = pendingCommandByEventId.get(eventId);
         if (action == null) {
-            throw new NonDeterministicWorkflowException("""
+            throw new WorkflowRunDeterminismError("""
                     Encountered TimerScheduled event for event ID %d, \
                     but no pending action was found for it""".formatted(eventId));
         } else if (!(action instanceof ScheduleTimerCommand)) {
-            throw new NonDeterministicWorkflowException("""
+            throw new WorkflowRunDeterminismError("""
                     Encountered TimerScheduled event for event ID %d, \
                     but the pending action for that number is of type %s\
                     """.formatted(eventId, action.getClass().getSimpleName()));
@@ -711,7 +715,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
-            throw new NonDeterministicWorkflowException("""
+            throw new WorkflowRunDeterminismError("""
                     Encountered TimerElapsed event for event ID %d, \
                     but no pending awaitable was found for it""".formatted(eventId));
         }
@@ -726,7 +730,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
-            throw new NonDeterministicWorkflowException("""
+            throw new WorkflowRunDeterminismError("""
                     Encountered SideEffectExecuted event for event ID %d, \
                     but no pending awaitable was found for it""".formatted(eventId));
         }

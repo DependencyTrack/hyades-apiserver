@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.api.failure;
 
 import org.jspecify.annotations.Nullable;
 
-public final class SideEffectFailureException extends WorkflowFailureException {
+public final class SideEffectFailureException extends FailureException {
 
     private final String sideEffectName;
 

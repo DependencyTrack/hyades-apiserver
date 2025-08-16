@@ -16,31 +16,27 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.api.failure;
+package org.dependencytrack.workflow.api;
 
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
-public sealed class WorkflowFailureException extends RuntimeException permits
-        ActivityFailureException,
-        ApplicationFailureException,
-        CancellationFailureException,
-        SideEffectFailureException,
-        ChildWorkflowFailureException {
+/**
+ * A {@link WorkflowRunError} thrown when a workflow run was requested
+ * to restart with a truncated event history.
+ */
+public final class WorkflowRunContinuedAsNewError extends WorkflowRunError {
 
-    @Nullable
-    private final String originalMessage;
+    @Nullable private final Payload argument;
 
-    WorkflowFailureException(
-            @Nullable final String message,
-            @Nullable final String originalMessage,
-            @Nullable final Throwable cause) {
-        super(message, cause);
-        this.originalMessage = originalMessage != null ? originalMessage : message;
+    public WorkflowRunContinuedAsNewError(@Nullable final Payload argument) {
+        super(null, null, false, false);
+        this.argument = argument;
     }
 
     @Nullable
-    public String getOriginalMessage() {
-        return originalMessage;
+    public Payload getArgument() {
+        return argument;
     }
 
 }

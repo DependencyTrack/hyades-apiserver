@@ -29,8 +29,8 @@ import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
 import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
+import org.dependencytrack.workflow.api.failure.FailureException;
 import org.dependencytrack.workflow.api.failure.SideEffectFailureException;
-import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
 import org.jspecify.annotations.Nullable;
 
 import java.util.StringJoiner;
@@ -43,12 +43,12 @@ final class FailureConverter {
     private FailureConverter() {
     }
 
-    static WorkflowFailureException toException(final Failure failure) {
-        final WorkflowFailureException cause = failure.hasCause()
+    static FailureException toException(final Failure failure) {
+        final FailureException cause = failure.hasCause()
                 ? toException(failure.getCause())
                 : null;
 
-        final WorkflowFailureException exception = switch (failure.getFailureDetailsCase()) {
+        final FailureException exception = switch (failure.getFailureDetailsCase()) {
             case ACTIVITY_FAILURE_DETAILS -> {
                 final ActivityFailureDetails details = failure.getActivityFailureDetails();
                 yield new ActivityFailureException(details.getActivityName(), cause);

@@ -18,8 +18,10 @@
  */
 package org.dependencytrack.workflow.api;
 
+import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
-import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
+import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
+import org.dependencytrack.workflow.api.failure.SideEffectFailureException;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -30,9 +32,15 @@ import org.jspecify.annotations.Nullable;
 public interface Awaitable<T> {
 
     /**
+     * Await completion and retrieve the result.
+     *
      * @return The result, if any.
-     * @throws WorkflowFailureException     If the {@link Awaitable} completed exceptionally.
-     * @throws CancellationFailureException When the awaitable was canceled before it could complete.
+     * @throws WorkflowRunError              When a condition was encountered that should be handled by the engine.
+     *                                       <strong>Must not</strong> be caught.
+     * @throws CancellationFailureException  When the awaitable was canceled before it could complete.
+     * @throws ActivityFailureException      When awaiting an activity result, and the activity failed.
+     * @throws ChildWorkflowFailureException When awaiting a child workflow result, and the workflow failed.
+     * @throws SideEffectFailureException    When awaiting a side effect result, and the side effect failed.
      */
     @Nullable
     T await();

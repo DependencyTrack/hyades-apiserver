@@ -30,7 +30,9 @@ public interface WorkflowExecutor<A, R> {
      * @param ctx      Context of the execution.
      * @param argument Argument of the execution.
      * @return Result of the execution.
-     * @throws Exception When the execution failed.
+     * @throws Exception        When the execution failed.
+     * @throws WorkflowRunError When a condition was encountered that should be handled by the engine.
+     *                          <strong>Must not</strong> be caught.
      */
     @Nullable
     R execute(WorkflowContext<A> ctx, @Nullable A argument) throws Exception;

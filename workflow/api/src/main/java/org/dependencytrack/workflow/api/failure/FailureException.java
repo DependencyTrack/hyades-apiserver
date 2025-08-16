@@ -16,26 +16,31 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine;
+package org.dependencytrack.workflow.api.failure;
 
 import org.jspecify.annotations.Nullable;
 
-public sealed class WorkflowEngineException extends RuntimeException permits
-        NonDeterministicWorkflowException,
-        WorkflowRunBlockedException,
-        WorkflowRunCanceledException,
-        WorkflowRunContinuedAsNewException {
+public abstract sealed class FailureException extends RuntimeException permits
+        ActivityFailureException,
+        ApplicationFailureException,
+        CancellationFailureException,
+        SideEffectFailureException,
+        ChildWorkflowFailureException {
 
-    WorkflowEngineException(final String message) {
-        super(message);
+    @Nullable
+    private final String originalMessage;
+
+    FailureException(
+            @Nullable final String message,
+            @Nullable final String originalMessage,
+            @Nullable final Throwable cause) {
+        super(message, cause);
+        this.originalMessage = originalMessage != null ? originalMessage : message;
     }
 
-    WorkflowEngineException(
-            @Nullable final String message,
-            @Nullable final Throwable cause,
-            final boolean enableSuppression,
-            final boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
+    @Nullable
+    public String getOriginalMessage() {
+        return originalMessage;
     }
 
 }

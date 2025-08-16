@@ -24,8 +24,8 @@ import org.dependencytrack.workflow.api.ContinueAsNewOptions;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
+import org.dependencytrack.workflow.api.failure.FailureException;
 import org.dependencytrack.workflow.api.failure.TerminalApplicationFailureException;
-import org.dependencytrack.workflow.api.failure.WorkflowFailureException;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.api.ExternalEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
@@ -862,12 +862,12 @@ class WorkflowEngineImplTest {
 
     @Test
     void shouldPropagateExceptions() {
-        final AtomicReference<WorkflowFailureException> exceptionReference = new AtomicReference<>();
+        final AtomicReference<FailureException> exceptionReference = new AtomicReference<>();
 
         engine.registerWorkflowInternal("foo", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             try {
                 ((WorkflowContextImpl<?, ?>) ctx).callChildWorkflow("bar", 1, null, null, voidConverter(), voidConverter()).await();
-            } catch (WorkflowFailureException e) {
+            } catch (FailureException e) {
                 exceptionReference.set(e);
                 throw e;
             }

@@ -16,11 +16,17 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine;
+package org.dependencytrack.workflow.api;
 
-public final class NonDeterministicWorkflowException extends WorkflowEngineException {
+import org.jspecify.annotations.Nullable;
 
-    NonDeterministicWorkflowException(final String message) {
+/**
+ * A {@link WorkflowRunError} thrown when the workflow run's execution was
+ * found to be non-deterministic.
+ */
+public final class WorkflowRunDeterminismError extends WorkflowRunError {
+
+    public WorkflowRunDeterminismError(@Nullable final String message) {
         super(message);
     }
 
