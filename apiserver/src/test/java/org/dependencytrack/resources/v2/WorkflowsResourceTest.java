@@ -165,7 +165,7 @@ public class WorkflowsResourceTest extends ResourceTest {
                             {
                               "id": 1,
                               "timestamp": "1970-01-01T00:11:06.666Z",
-                              "runScheduled": {
+                              "runCreated": {
                                 "workflowName": "workflowName",
                                 "workflowVersion": 123,
                                 "argument": {
