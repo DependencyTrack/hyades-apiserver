@@ -19,10 +19,15 @@
 package org.dependencytrack.tasks.maintenance;
 
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.event.kafka.KafkaTopics;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
+import org.dependencytrack.model.Project;
+import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
+import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.Notification;
 import org.junit.Test;
 
 import javax.jdo.JDOObjectNotFoundException;
@@ -36,6 +41,11 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeKey;
+import static org.dependencytrack.util.KafkaTestUtil.deserializeValue;
 
 public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
 
@@ -123,6 +133,21 @@ public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
         childState.setUpdatedAt(Date.from(timeoutCutoff.plus(1, ChronoUnit.HOURS)));
         qm.persist(childState);
 
+        final var project = new Project();
+        project.setName("acme-app");
+        qm.persist(project);
+
+        final var vulnScan = new VulnerabilityScan();
+        vulnScan.setToken(token);
+        vulnScan.setTargetType(VulnerabilityScan.TargetType.PROJECT);
+        vulnScan.setTargetIdentifier(project.getUuid());
+        vulnScan.setStatus(VulnerabilityScan.Status.IN_PROGRESS);
+        vulnScan.setExpectedResults(1);
+        vulnScan.setFailureThreshold(0.1);
+        vulnScan.setStartedAt(new Date());
+        vulnScan.setUpdatedAt(vulnScan.getStartedAt());
+        qm.persist(vulnScan);
+
         final var task = new WorkflowMaintenanceTask();
         assertThatNoException().isThrownBy(() -> task.inform(new WorkflowMaintenanceEvent()));
 
@@ -133,6 +158,26 @@ public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
         assertThat(childState.getStatus()).isEqualTo(WorkflowStatus.CANCELLED);
         assertThat(childState.getFailureReason()).isNull();
         assertThat(childState.getUpdatedAt()).isEqualTo(parentState.getUpdatedAt()); // Modified.
+
+        assertThat(kafkaMockProducer.history()).satisfiesExactly(
+                record -> {
+                    assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
+
+                    final String recordKey = deserializeKey(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(recordKey).isEqualTo(project.getUuid().toString());
+
+                    final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, record);
+                    assertThat(notification.getScope()).isEqualTo(SCOPE_PORTFOLIO);
+                    assertThat(notification.getGroup()).isEqualTo(GROUP_BOM_PROCESSING_FAILED);
+                    assertThat(notification.getLevel()).isEqualTo(LEVEL_INFORMATIONAL);
+                    assertThat(notification.getSubject().is(BomProcessingFailedSubject.class)).isTrue();
+
+                    final var subject = notification.getSubject().unpack(BomProcessingFailedSubject.class);
+                    assertThat(subject.getToken()).isEqualTo(token.toString());
+                    assertThat(subject.getCause()).isEqualTo("Timed out");
+                    assertThat(subject.getProject().getUuid()).isEqualTo(project.getUuid().toString());
+                }
+        );
     }
 
     @Test

@@ -21,13 +21,23 @@ package org.dependencytrack.tasks.maintenance;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import com.google.protobuf.Any;
+import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.event.kafka.KafkaEvent;
+import org.dependencytrack.event.kafka.KafkaEventConverter;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
+import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
+import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.Notification;
 import org.jdbi.v3.core.Handle;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,6 +45,9 @@ import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
@@ -44,6 +57,7 @@ import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 public class WorkflowMaintenanceTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowMaintenanceTask.class);
+    private final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
 
     @Override
     public void inform(final Event event) {
@@ -106,6 +120,25 @@ public class WorkflowMaintenanceTask implements Subscriber {
             if (failedStepIds.isEmpty()) {
                 return;
             }
+
+            // Send BOM_PROCESSING_FAILED notifications for timed out failures.
+            final var notificationSubjectDao = jdbiHandle.attach(NotificationSubjectDao.class);
+            final List<BomProcessingFailedSubject> notificationSubjectsForFailure =
+                    notificationSubjectDao.getForBomProcessingTimedOut(failedStepIds);
+            final var notifications = new ArrayList<KafkaEvent<?, ?>>(notificationSubjectsForFailure.size());
+            notificationSubjectsForFailure.stream()
+                    .map(subject -> Notification.newBuilder()
+                            .setScope(SCOPE_PORTFOLIO)
+                            .setGroup(GROUP_BOM_PROCESSING_FAILED)
+                            .setLevel(LEVEL_INFORMATIONAL)
+                            .setTimestamp(Timestamps.now())
+                            .setTitle(NotificationConstants.Title.BOM_PROCESSING_FAILED)
+                            .setContent("A %s BOM processing failed".formatted(subject.getBom().getFormat()))
+                            .setSubject(Any.pack(subject))
+                            .build())
+                    .map(KafkaEventConverter::convert)
+                    .forEach(notifications::add);
+            eventDispatcher.dispatchAll(notifications);
 
             failedStepsResult.numStepsFailed = failedStepIds.size();
             LOGGER.warn("Transitioned %d workflow step(s) from %s to %s for timeout %s"

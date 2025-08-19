@@ -382,6 +382,25 @@ public interface NotificationSubjectDao extends SqlObject {
 
     @SqlQuery("""
             SELECT "P"."UUID" AS "projectUuid"
+                 , "P"."NAME"        AS "projectName"
+                 , "P"."VERSION"     AS "projectVersion"
+                 , 'CycloneDX'       AS "bomFormat"
+                 , 'Unknown'         AS "bomSpecVersion"
+                 , '(Omitted)'       AS "bomContent"
+                 , "WFS"."TOKEN"     AS "token"
+                 , "WFS"."FAILURE_REASON"     AS "cause"
+              FROM "VULNERABILITYSCAN" AS "VS"
+             INNER JOIN "PROJECT" AS "P"
+                ON "P"."UUID" = "VS"."TARGET_IDENTIFIER"
+             INNER JOIN "WORKFLOW_STATE" AS "WFS"
+                ON "WFS"."TOKEN" = "VS"."TOKEN"
+             WHERE "WFS"."ID" = ANY(:failedWorkflowIds)
+            """)
+    @RegisterRowMapper(NotificationSubjectBomProcessingFailedRowMapper.class)
+    List<BomProcessingFailedSubject> getForBomProcessingTimedOut(Collection<Long> failedWorkflowIds);
+
+    @SqlQuery("""
+            SELECT "P"."UUID" AS "projectUuid"
                  , "P"."NAME" AS "projectName"
                  , "P"."VERSION" AS "projectVersion"
                  , "P"."DESCRIPTION" AS "projectDescription"
