@@ -24,9 +24,9 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.util.UUID;
 
-public record CreateActivityTaskCommand(
+public record CreateActivityRunCommand(
         UUID workflowRunId,
-        int scheduledEventId,
+        int createdEventId,
         String activityName,
         @Nullable Integer priority,
         @Nullable Payload argument,

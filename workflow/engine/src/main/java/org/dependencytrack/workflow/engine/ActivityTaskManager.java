@@ -36,7 +36,7 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
     private final WorkflowEngineImpl engine;
     private final ActivityGroup activityGroup;
     private final MetadataRegistry metadataRegistry;
-    private final List<PollActivityTaskCommand> pollCmds;
+    private final List<PollActivityTaskCommand> pollCommands;
 
     ActivityTaskManager(
             final WorkflowEngineImpl engine,
@@ -45,7 +45,7 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
         this.engine = engine;
         this.activityGroup = activityGroup;
         this.metadataRegistry = metadataRegistry;
-        this.pollCmds = activityGroup.activityNames().stream()
+        this.pollCommands = activityGroup.activityNames().stream()
                 .map(metadataRegistry::getActivityMetadata)
                 .map(metadata -> new PollActivityTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
@@ -58,7 +58,7 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
 
     @Override
     public List<ActivityTask> poll(final int limit) {
-        return engine.pollActivityTasks(pollCmds, limit);
+        return engine.pollActivityTasks(pollCommands, limit);
     }
 
     @Override
@@ -98,7 +98,7 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
         final var ctx = new ActivityContextImpl<>(
                 engine,
                 task.workflowRunId(),
-                task.scheduledEventId(),
+                task.createdEventId(),
                 activityMetadata.executor(),
                 activityMetadata.lockTimeout(),
                 task.lockedUntil(),

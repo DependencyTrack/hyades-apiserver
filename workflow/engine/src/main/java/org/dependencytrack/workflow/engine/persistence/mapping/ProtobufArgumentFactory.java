@@ -22,6 +22,7 @@ import com.google.protobuf.Message;
 import org.jdbi.v3.core.argument.AbstractArgumentFactory;
 import org.jdbi.v3.core.argument.Argument;
 import org.jdbi.v3.core.config.ConfigRegistry;
+import org.jspecify.annotations.Nullable;
 
 import java.sql.Types;
 
@@ -32,7 +33,7 @@ abstract class ProtobufArgumentFactory<T extends Message> extends AbstractArgume
     }
 
     @Override
-    protected Argument build(final T value, final ConfigRegistry config) {
+    protected Argument build(@Nullable final T value, final ConfigRegistry config) {
         return (position, statement, ctx) -> {
             if (value == null) {
                 statement.setNull(position, Types.LONGVARBINARY);

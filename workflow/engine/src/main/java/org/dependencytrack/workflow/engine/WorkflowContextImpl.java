@@ -21,16 +21,16 @@ package org.dependencytrack.workflow.engine;
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.Timestamp;
 import io.github.resilience4j.core.IntervalFunction;
-import org.dependencytrack.proto.workflow.event.v1.ActivityTaskCompleted;
-import org.dependencytrack.proto.workflow.event.v1.ActivityTaskFailed;
-import org.dependencytrack.proto.workflow.event.v1.ActivityTaskScheduled;
+import org.dependencytrack.proto.workflow.event.v1.ActivityRunCompleted;
+import org.dependencytrack.proto.workflow.event.v1.ActivityRunCreated;
+import org.dependencytrack.proto.workflow.event.v1.ActivityRunFailed;
 import org.dependencytrack.proto.workflow.event.v1.ChildRunCompleted;
+import org.dependencytrack.proto.workflow.event.v1.ChildRunCreated;
 import org.dependencytrack.proto.workflow.event.v1.ChildRunFailed;
-import org.dependencytrack.proto.workflow.event.v1.ChildRunScheduled;
 import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.dependencytrack.proto.workflow.event.v1.RunCanceled;
+import org.dependencytrack.proto.workflow.event.v1.RunCreated;
 import org.dependencytrack.proto.workflow.event.v1.RunResumed;
-import org.dependencytrack.proto.workflow.event.v1.RunScheduled;
 import org.dependencytrack.proto.workflow.event.v1.RunStarted;
 import org.dependencytrack.proto.workflow.event.v1.RunSuspended;
 import org.dependencytrack.proto.workflow.event.v1.SideEffectExecuted;
@@ -58,10 +58,10 @@ import org.dependencytrack.workflow.engine.MetadataRegistry.ActivityMetadata;
 import org.dependencytrack.workflow.engine.MetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ContinueRunAsNewCommand;
+import org.dependencytrack.workflow.engine.WorkflowCommand.CreateActivityRunCommand;
+import org.dependencytrack.workflow.engine.WorkflowCommand.CreateChildRunCommand;
+import org.dependencytrack.workflow.engine.WorkflowCommand.CreateTimerCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResultCommand;
-import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleActivityCommand;
-import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleChildRunCommand;
-import org.dependencytrack.workflow.engine.WorkflowCommand.ScheduleTimerCommand;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -275,7 +275,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             @Nullable final Duration delay) {
         final int eventId = currentEventId++;
         pendingCommandByEventId.put(eventId,
-                new ScheduleActivityCommand(
+                new CreateActivityRunCommand(
                         eventId,
                         name,
                         /* version */ -1,
@@ -300,7 +300,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         final Payload convertedArgument = argumentConverter.convertToPayload(argument);
 
         final int eventId = currentEventId++;
-        pendingCommandByEventId.put(eventId, new ScheduleChildRunCommand(
+        pendingCommandByEventId.put(eventId, new CreateChildRunCommand(
                 eventId, name, version, concurrencyGroupId, this.priority, this.labels, convertedArgument));
 
         final var awaitable = new AwaitableImpl<>(this, resultConverter);
@@ -310,14 +310,14 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
     @Override
     public Awaitable<Void> createTimer(final String name, final Duration delay) {
-        return scheduleTimerInternal(name, delay);
+        return createTimerInternal(name, delay);
     }
 
-    private AwaitableImpl<Void> scheduleTimerInternal(final String name, final Duration delay) {
-        assertNotInSideEffect("Timers can not be scheduled from within a side effect");
+    private AwaitableImpl<Void> createTimerInternal(final String name, final Duration delay) {
+        assertNotInSideEffect("Timers can not be created from within a side effect");
 
         final int eventId = currentEventId++;
-        pendingCommandByEventId.put(eventId, new ScheduleTimerCommand(eventId, name, currentTime.plus(delay)));
+        pendingCommandByEventId.put(eventId, new CreateTimerCommand(eventId, name, currentTime.plus(delay)));
 
         final var awaitable = new AwaitableImpl<>(this, voidConverter());
         pendingAwaitableByEventId.put(eventId, awaitable);
@@ -394,7 +394,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             return awaitables;
         });
 
-        scheduleTimerInternal("External event %s wait timeout".formatted(externalEventId), timeout).onComplete(ignored -> {
+        createTimerInternal("External event %s wait timeout".formatted(externalEventId), timeout).onComplete(ignored -> {
             awaitable.cancel("Timed out while waiting for external event");
 
             pendingAwaitablesByExternalEventId.computeIfPresent(externalEventId, (ignoredKey, awaitables) -> {
@@ -475,18 +475,18 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
 
         switch (event.getSubjectCase()) {
             case EXECUTION_STARTED -> onExecutionStarted(event.getTimestamp());
-            case RUN_SCHEDULED -> onRunScheduled(event.getRunScheduled());
+            case RUN_CREATED -> onRunCreated(event.getRunCreated());
             case RUN_STARTED -> onRunStarted(event.getRunStarted());
             case RUN_CANCELED -> onRunCanceled(event.getRunCanceled());
             case RUN_SUSPENDED -> onRunSuspended(event.getRunSuspended());
             case RUN_RESUMED -> onRunResumed(event.getRunResumed());
-            case ACTIVITY_TASK_SCHEDULED -> onActivityTaskScheduled(event.getId());
-            case ACTIVITY_TASK_COMPLETED -> onActivityTaskCompleted(event.getActivityTaskCompleted());
-            case ACTIVITY_TASK_FAILED -> onActivityTaskFailed(event.getActivityTaskFailed());
-            case CHILD_RUN_SCHEDULED -> onChildRunScheduled(event.getId());
+            case ACTIVITY_RUN_CREATED -> onActivityRunCreated(event.getId());
+            case ACTIVITY_RUN_COMPLETED -> onActivityRunCompleted(event.getActivityRunCompleted());
+            case ACTIVITY_RUN_FAILED -> onActivityRunFailed(event.getActivityRunFailed());
+            case CHILD_RUN_CREATED -> onChildRunCreated(event.getId());
             case CHILD_RUN_COMPLETED -> onChildRunCompleted(event.getChildRunCompleted());
             case CHILD_RUN_FAILED -> onChildRunFailed(event.getChildRunFailed());
-            case TIMER_SCHEDULED -> onTimerScheduled(event.getId());
+            case TIMER_CREATED -> onTimerCreated(event.getId());
             case TIMER_ELAPSED -> onTimerElapsed(event.getTimerElapsed());
             case SIDE_EFFECT_EXECUTED -> onSideEffectExecuted(event.getSideEffectExecuted());
             case EXTERNAL_EVENT_RECEIVED -> onExternalEventReceived(event);
@@ -510,11 +510,11 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         currentTime = toInstant(timestamp);
     }
 
-    private void onRunScheduled(final RunScheduled runScheduled) {
-        logger().debug("Scheduled");
+    private void onRunCreated(final RunCreated runCreated) {
+        logger().debug("Created");
 
-        if (runScheduled.hasArgument()) {
-            this.argument = argumentConverter.convertFromPayload(runScheduled.getArgument());
+        if (runCreated.hasArgument()) {
+            this.argument = argumentConverter.convertFromPayload(runCreated.getArgument());
         }
     }
 
@@ -561,18 +561,18 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         }
     }
 
-    private void onActivityTaskScheduled(final int eventId) {
-        logger().debug("Activity task scheduled for event ID {}", eventId);
+    private void onActivityRunCreated(final int eventId) {
+        logger().debug("Activity run created for event ID {}", eventId);
 
         final WorkflowCommand action = pendingCommandByEventId.get(eventId);
         if (action == null) {
             logger().warn("""
-                    Encountered ActivityTaskScheduled event for event ID {}, \
+                    Encountered ActivityRunCreated event for event ID {}, \
                     but no pending action was found for it""", eventId);
             return;
-        } else if (!(action instanceof ScheduleActivityCommand)) {
+        } else if (!(action instanceof CreateActivityRunCommand)) {
             logger().warn("""
-                    Encountered ActivityTaskScheduled event for event ID {}, \
+                    Encountered ActivityRunCreated event for event ID {}, \
                     but the pending action for that number is of type {}\
                     """, eventId, action.getClass().getSimpleName());
             return;
@@ -581,14 +581,14 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingCommandByEventId.remove(eventId);
     }
 
-    private void onActivityTaskCompleted(final ActivityTaskCompleted subject) {
-        final int eventId = subject.getTaskScheduledEventId();
+    private void onActivityRunCompleted(final ActivityRunCompleted subject) {
+        final int eventId = subject.getActivityRunCreatedEventId();
         logger().debug("Activity task completed for event ID {}", eventId);
 
         final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(eventId);
         if (awaitable == null) {
             throw new WorkflowRunDeterminismError("""
-                    Encountered ActivityTaskCompleted event for event ID %d, \
+                    Encountered ActivityRunCompleted event for event ID %d, \
                     but no pending awaitable exists for it""".formatted(eventId));
         }
 
@@ -596,47 +596,47 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
         pendingAwaitableByEventId.remove(eventId);
     }
 
-    private void onActivityTaskFailed(final ActivityTaskFailed subject) {
-        final int scheduledEventId = subject.getTaskScheduledEventId();
-        logger().debug("Activity task failed for event ID {}", scheduledEventId);
+    private void onActivityRunFailed(final ActivityRunFailed subject) {
+        final int createdEventId = subject.getActivityRunCreatedEventId();
+        logger().debug("Activity task failed for event ID {}", createdEventId);
 
-        final Event scheduledEvent = eventByEventId.get(scheduledEventId);
-        if (scheduledEvent == null || !scheduledEvent.hasActivityTaskScheduled()) {
+        final Event createdEvent = eventByEventId.get(createdEventId);
+        if (createdEvent == null || !createdEvent.hasActivityRunCreated()) {
             throw new WorkflowRunDeterminismError(
                     "Expected event with ID %d to be of type %s, but got: %s".formatted(
-                            scheduledEventId,
-                            ActivityTaskScheduled.class.getSimpleName(),
-                            scheduledEvent != null ?
-                                    DebugFormat.singleLine().toString(scheduledEvent)
+                            createdEventId,
+                            ActivityRunCreated.class.getSimpleName(),
+                            createdEvent != null ?
+                                    DebugFormat.singleLine().toString(createdEvent)
                                     : null));
         }
 
-        final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(scheduledEventId);
+        final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(createdEventId);
         if (awaitable == null) {
             throw new WorkflowRunDeterminismError("""
-                    Encountered ActivityTaskFailed event for event ID %d, \
-                    but no pending awaitable exists for it""".formatted(scheduledEventId));
+                    Encountered ActivityRunFailed event for event ID %d, \
+                    but no pending awaitable exists for it""".formatted(createdEventId));
         }
 
         final var exception = new ActivityFailureException(
-                scheduledEvent.getActivityTaskScheduled().getName(),
+                createdEvent.getActivityRunCreated().getName(),
                 FailureConverter.toException(subject.getFailure()));
 
         awaitable.completeExceptionally(exception);
-        pendingAwaitableByEventId.remove(scheduledEventId);
+        pendingAwaitableByEventId.remove(createdEventId);
     }
 
-    private void onChildRunScheduled(final int eventId) {
-        logger().debug("Child workflow run scheduled for event ID {}", eventId);
+    private void onChildRunCreated(final int eventId) {
+        logger().debug("Child workflow run created for event ID {}", eventId);
 
         final WorkflowCommand command = pendingCommandByEventId.get(eventId);
         if (command == null) {
             throw new WorkflowRunDeterminismError("""
-                    Encountered ChildRunScheduled event for event ID %d, \
+                    Encountered ChildRunCreated event for event ID %d, \
                     but no pending command was found for it""".formatted(eventId));
-        } else if (!(command instanceof ScheduleChildRunCommand)) {
+        } else if (!(command instanceof CreateChildRunCommand)) {
             throw new WorkflowRunDeterminismError("""
-                    Encountered ChildRunScheduled event for event ID %d, \
+                    Encountered ChildRunCreated event for event ID %d, \
                     but the pending command for that number is of type %s\
                     """.formatted(eventId, command.getClass().getSimpleName()));
         }
@@ -645,7 +645,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     private void onChildRunCompleted(final ChildRunCompleted subject) {
-        final int eventId = subject.getRunScheduledEventId();
+        final int eventId = subject.getChildRunCreatedEventId();
         logger().debug("Child workflow run failed for event ID {}", eventId);
 
         final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(eventId);
@@ -660,48 +660,48 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     private void onChildRunFailed(final ChildRunFailed subject) {
-        final int scheduledEventId = subject.getRunScheduledEventId();
-        logger().debug("Child workflow run failed for event ID {}", scheduledEventId);
+        final int createdEventId = subject.getChildRunCreatedEventId();
+        logger().debug("Child workflow run failed for event ID {}", createdEventId);
 
-        final Event scheduledEvent = eventByEventId.get(scheduledEventId);
-        if (scheduledEvent == null || !scheduledEvent.hasChildRunScheduled()) {
+        final Event createdEvent = eventByEventId.get(createdEventId);
+        if (createdEvent == null || !createdEvent.hasChildRunCreated()) {
             throw new WorkflowRunDeterminismError(
                     "Expected event with ID %d to be of type %s, but got: %s".formatted(
-                            scheduledEventId,
-                            ChildRunScheduled.class.getSimpleName(),
-                            scheduledEvent != null ?
-                                    DebugFormat.singleLine().toString(scheduledEvent)
+                            createdEventId,
+                            ChildRunCreated.class.getSimpleName(),
+                            createdEvent != null ?
+                                    DebugFormat.singleLine().toString(createdEvent)
                                     : null));
         }
 
-        final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(scheduledEventId);
+        final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(createdEventId);
         if (awaitable == null) {
             throw new WorkflowRunDeterminismError(
                     "Encountered %s event for event ID %d, but no pending awaitable exists for it".formatted(
-                            ChildRunFailed.class.getSimpleName(), scheduledEventId));
+                            ChildRunFailed.class.getSimpleName(), createdEventId));
         }
 
         final var exception = new ChildWorkflowFailureException(
-                UUID.fromString(scheduledEvent.getChildRunScheduled().getRunId()),
-                scheduledEvent.getChildRunScheduled().getWorkflowName(),
-                scheduledEvent.getChildRunScheduled().getWorkflowVersion(),
+                UUID.fromString(createdEvent.getChildRunCreated().getRunId()),
+                createdEvent.getChildRunCreated().getWorkflowName(),
+                createdEvent.getChildRunCreated().getWorkflowVersion(),
                 FailureConverter.toException(subject.getFailure()));
 
         awaitable.completeExceptionally(exception);
-        pendingAwaitableByEventId.remove(scheduledEventId);
+        pendingAwaitableByEventId.remove(createdEventId);
     }
 
-    private void onTimerScheduled(final int eventId) {
+    private void onTimerCreated(final int eventId) {
         logger().debug("Timer created for event ID {}", eventId);
 
         final WorkflowCommand action = pendingCommandByEventId.get(eventId);
         if (action == null) {
             throw new WorkflowRunDeterminismError("""
-                    Encountered TimerScheduled event for event ID %d, \
+                    Encountered TimerCreated event for event ID %d, \
                     but no pending action was found for it""".formatted(eventId));
-        } else if (!(action instanceof ScheduleTimerCommand)) {
+        } else if (!(action instanceof CreateTimerCommand)) {
             throw new WorkflowRunDeterminismError("""
-                    Encountered TimerScheduled event for event ID %d, \
+                    Encountered TimerCreated event for event ID %d, \
                     but the pending action for that number is of type %s\
                     """.formatted(eventId, action.getClass().getSimpleName()));
         }
@@ -710,17 +710,17 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     private void onTimerElapsed(final TimerElapsed subject) {
-        final int eventId = subject.getTimerScheduledEventId();
-        logger().debug("Timer elapsed for event ID {}", eventId);
+        final int createdEventId = subject.getTimerCreatedEventId();
+        logger().debug("Timer elapsed for event ID {}", createdEventId);
 
-        final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(eventId);
+        final AwaitableImpl<?> awaitable = pendingAwaitableByEventId.get(createdEventId);
         if (awaitable == null) {
             throw new WorkflowRunDeterminismError("""
                     Encountered TimerElapsed event for event ID %d, \
-                    but no pending awaitable was found for it""".formatted(eventId));
+                    but no pending awaitable was found for it""".formatted(createdEventId));
         }
 
-        pendingAwaitableByEventId.remove(eventId);
+        pendingAwaitableByEventId.remove(createdEventId);
         awaitable.complete(null);
     }
 

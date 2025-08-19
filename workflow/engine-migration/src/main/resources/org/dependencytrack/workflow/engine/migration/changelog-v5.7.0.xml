@@ -53,11 +53,11 @@
             , constraint workflow_run_parent_fk foreign key (parent_id) references workflow_run (id) on delete cascade
             ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
-            create table workflow_concurrency_group (
+            create table workflow_run_concurrency_group (
               id text
             , next_run_id uuid not null
-            , constraint workflow_concurrency_group_pk primary key (id)
-            , constraint workflow_concurrency_group_next_run_fk foreign key (next_run_id) references workflow_run (id) on delete cascade
+            , constraint workflow_run_concurrency_group_pk primary key (id)
+            , constraint workflow_run_concurrency_group_next_run_fk foreign key (next_run_id) references workflow_run (id) on delete cascade
             ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
             create table workflow_run_history (
@@ -78,9 +78,9 @@
             , constraint workflow_run_inbox_pk primary key (id)
             ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
-            create table workflow_activity_task (
+            create table workflow_activity_run (
               workflow_run_id uuid
-            , scheduled_event_id int
+            , created_event_id int
             , activity_name text not null
             , priority smallint
             , argument bytea
@@ -89,8 +89,8 @@
             , locked_until timestamptz(3)
             , created_at timestamptz(3) not null default now()
             , updated_at timestamptz(3)
-            , constraint workflow_activity_task_pk primary key (workflow_run_id, scheduled_event_id)
-            , constraint workflow_activity_task_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
+            , constraint workflow_activity_run_pk primary key (workflow_run_id, created_event_id)
+            , constraint workflow_activity_run_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
             ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
             create table workflow_schedule (
@@ -113,6 +113,11 @@
                 on workflow_run (priority desc nulls last, id, workflow_name)
              where status = any(cast('{CREATED, RUNNING, SUSPENDED}' as workflow_run_status[]));
 
+            create index workflow_run_concurrency_group_update_idx
+                on workflow_run (concurrency_group_id, priority desc nulls last, id)
+             where status = cast('CREATED' as workflow_run_status)
+               and concurrency_group_id is not null;
+
             create index workflow_run_labels_idx
                 on workflow_run using gin (labels jsonb_path_ops)
                 where labels is not null;
@@ -127,8 +132,97 @@
             create index workflow_run_inbox_workflow_run_id_idx
                 on workflow_run_inbox (workflow_run_id);
 
-            create index workflow_activity_task_poll_idx
-                on workflow_activity_task (priority desc nulls last, created_at, activity_name);
+            create index workflow_activity_run_poll_idx
+                on workflow_activity_run (priority desc nulls last, created_at, activity_name);
+        </sql>
+
+        <sql splitStatements="false">
+            create function create_workflow_run_concurrency_groups_on_run_creation()
+            returns trigger
+            as $$
+            begin
+              insert into workflow_run_concurrency_group (id, next_run_id)
+              select distinct on (concurrency_group_id)
+                     concurrency_group_id
+                   , id
+                from new_table
+               where concurrency_group_id is not null
+               order by concurrency_group_id
+                      , priority desc nulls last
+                      , id
+              on conflict (id) do nothing;
+              return null;
+            end;
+            $$ language plpgsql;
+        </sql>
+
+        <sql splitStatements="false">
+            create function update_workflow_run_concurrency_groups_on_run_completion()
+            returns trigger
+            as $$
+            declare
+              group_ids text[];
+              updated_group_ids text[];
+            begin
+              select array_agg(distinct concurrency_group_id)
+                into group_ids
+                from new_table
+               where status = any(cast('{CANCELED, COMPLETED, FAILED}' as workflow_run_status[]))
+                 and concurrency_group_id is not null;
+
+              if coalesce(array_length(group_ids, 1), 0) = 0 then
+                return null;
+              end if;
+
+              with
+              cte_next_run as (
+                select distinct on (concurrency_group_id)
+                       concurrency_group_id
+                     , id
+                  from workflow_run
+                 where concurrency_group_id = any(group_ids)
+                   and status = cast('CREATED' as workflow_run_status)
+                 order by concurrency_group_id
+                        , priority desc nulls last
+                        , id
+              ),
+              cte_updated_group as (
+                update workflow_run_concurrency_group
+                   set next_run_id = cte_next_run.id
+                  from cte_next_run
+                 where workflow_run_concurrency_group.id = cte_next_run.concurrency_group_id
+                returning workflow_run_concurrency_group.id
+              )
+              select array_agg(id)
+                into updated_group_ids
+                from cte_updated_group;
+
+              if coalesce(array_length(updated_group_ids, 1), 0) = array_length(group_ids, 1) then
+                return null;
+              end if;
+
+              delete
+                from workflow_run_concurrency_group
+               where id = any(group_ids)
+                 and id != all(updated_group_ids);
+
+              return null;
+            end;
+            $$ language plpgsql;
+        </sql>
+
+        <sql splitStatements="true">
+            create trigger trigger_create_workflow_run_concurrency_groups_on_run_creation
+            after insert on workflow_run
+            referencing new table as new_table
+            for each statement
+            execute function create_workflow_run_concurrency_groups_on_run_creation();
+
+            create trigger trigger_update_workflow_run_concurrency_groups_on_run_completion
+            after update on workflow_run
+            referencing new table as new_table
+            for each statement
+            execute function update_workflow_run_concurrency_groups_on_run_completion();
         </sql>
     </changeSet>
 </databaseChangeLog>

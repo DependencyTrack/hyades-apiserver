@@ -20,5 +20,5 @@ package org.dependencytrack.workflow.engine.persistence.model;
 
 import java.util.UUID;
 
-public record ActivityTaskId(UUID workflowRunId, int scheduledEventId) {
+public record ActivityTaskId(UUID workflowRunId, int createdEventId) {
 }

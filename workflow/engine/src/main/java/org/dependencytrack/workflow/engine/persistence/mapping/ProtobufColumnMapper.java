@@ -23,11 +23,12 @@ import com.google.protobuf.Message;
 import com.google.protobuf.Parser;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.statement.StatementContext;
+import org.jspecify.annotations.Nullable;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class ProtobufColumnMapper <T extends Message> implements ColumnMapper<T> {
+public final class ProtobufColumnMapper <T extends Message> implements ColumnMapper<T> {
 
     private final Parser<T> parser;
 
@@ -36,6 +37,7 @@ public class ProtobufColumnMapper <T extends Message> implements ColumnMapper<T>
     }
 
     @Override
+    @Nullable
     public T map(final ResultSet rs, final int columnNumber, final StatementContext ctx) throws SQLException {
         final byte[] valueBytes = rs.getBytes(columnNumber);
         if (rs.wasNull()) {

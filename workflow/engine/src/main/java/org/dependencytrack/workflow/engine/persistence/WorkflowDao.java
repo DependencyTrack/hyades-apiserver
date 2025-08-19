@@ -30,7 +30,6 @@ import org.dependencytrack.workflow.engine.persistence.command.UpdateAndUnlockRu
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrencyGroup;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.request.GetWorkflowRunHistoryRequest;
@@ -127,33 +126,6 @@ public final class WorkflowDao extends AbstractDao {
                 .list();
     }
 
-    public int maybeCreateConcurrencyGroups(final Collection<WorkflowConcurrencyGroup> concurrencyGroups) {
-        // NB: We must *not* use ON CONFLICT DO UPDATE here, since we have to assume that the
-        // existing NEXT_RUN_ID is already being worked on, even if it technically orders
-        // *after* the run ID we're trying to insert here.
-        final Update update = jdbiHandle.createUpdate("""
-                insert into workflow_concurrency_group (
-                  id
-                , next_run_id
-                )
-                select * from unnest(:groupIds, :nextRunIds)
-                on conflict (id) do nothing
-                """);
-
-        final var groupIds = new ArrayList<String>(concurrencyGroups.size());
-        final var nextRunIds = new ArrayList<UUID>(concurrencyGroups.size());
-
-        for (final WorkflowConcurrencyGroup concurrencyGroup : concurrencyGroups) {
-            groupIds.add(concurrencyGroup.id());
-            nextRunIds.add(concurrencyGroup.nextRunId());
-        }
-
-        return update
-                .bindArray("groupIds", String.class, groupIds)
-                .bindArray("nextRunIds", UUID.class, nextRunIds)
-                .execute();
-    }
-
     public Map<String, String> updateConcurrencyGroups(final Collection<String> concurrencyGroupIds) {
         final Query query = jdbiHandle.createQuery("""
                 with
@@ -169,15 +141,15 @@ public final class WorkflowDao extends AbstractDao {
                             , id
                 ),
                 cte_updated_group as (
-                    update workflow_concurrency_group
+                    update workflow_run_concurrency_group
                        set next_run_id = cte_next_run.id
                       from cte_next_run
-                     where workflow_concurrency_group.id = cte_next_run.concurrency_group_id
-                    returning workflow_concurrency_group.id
+                     where workflow_run_concurrency_group.id = cte_next_run.concurrency_group_id
+                    returning workflow_run_concurrency_group.id
                 ),
                 cte_deleted_group as (
                    delete
-                     from workflow_concurrency_group
+                     from workflow_run_concurrency_group
                     where id = any(:groupIds)
                       and id != all(select id from cte_updated_group)
                    returning id
@@ -303,9 +275,9 @@ public final class WorkflowDao extends AbstractDao {
                      and (concurrency_group_id is null
                           or exists (
                                select 1
-                                 from workflow_concurrency_group as wcg
-                                where wcg.id = workflow_run.concurrency_group_id
-                                  and wcg.next_run_id = workflow_run.id
+                                 from workflow_run_concurrency_group as wrcg
+                                where wrcg.id = workflow_run.concurrency_group_id
+                                  and wrcg.next_run_id = workflow_run.id
                              )
                          )
                      and (locked_until is null or locked_until <= now())

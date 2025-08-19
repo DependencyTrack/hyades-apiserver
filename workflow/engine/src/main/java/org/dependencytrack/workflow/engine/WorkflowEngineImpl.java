@@ -28,13 +28,13 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import org.dependencytrack.proto.workflow.event.v1.ActivityTaskCompleted;
-import org.dependencytrack.proto.workflow.event.v1.ActivityTaskFailed;
+import org.dependencytrack.proto.workflow.event.v1.ActivityRunCompleted;
+import org.dependencytrack.proto.workflow.event.v1.ActivityRunFailed;
 import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.dependencytrack.proto.workflow.event.v1.ExternalEventReceived;
 import org.dependencytrack.proto.workflow.event.v1.RunCanceled;
+import org.dependencytrack.proto.workflow.event.v1.RunCreated;
 import org.dependencytrack.proto.workflow.event.v1.RunResumed;
-import org.dependencytrack.proto.workflow.event.v1.RunScheduled;
 import org.dependencytrack.proto.workflow.event.v1.RunSuspended;
 import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.api.ActivityExecutor;
@@ -70,7 +70,7 @@ import org.dependencytrack.workflow.engine.persistence.WorkflowActivityDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowRunDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowScheduleDao;
-import org.dependencytrack.workflow.engine.persistence.command.CreateActivityTaskCommand;
+import org.dependencytrack.workflow.engine.persistence.command.CreateActivityRunCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
@@ -83,7 +83,6 @@ import org.dependencytrack.workflow.engine.persistence.command.UpdateAndUnlockRu
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowConcurrencyGroup;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.request.GetWorkflowRunHistoryRequest;
@@ -450,7 +449,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var now = Timestamps.now();
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(options.size());
         final var createInboxEntryCommand = new ArrayList<CreateWorkflowRunInboxEntryCommand>(options.size());
-        final var nextRunIdByConcurrencyGroupId = new HashMap<String, UUID>();
 
         for (final CreateWorkflowRunRequest<?> option : options) {
             //noinspection rawtypes
@@ -468,17 +466,17 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                             option.priority(),
                             option.labels()));
 
-            final var runScheduledBuilder = RunScheduled.newBuilder()
+            final var runCreatedBuilder = RunCreated.newBuilder()
                     .setWorkflowName(option.workflowName())
                     .setWorkflowVersion(option.workflowVersion());
             if (option.concurrencyGroupId() != null) {
-                runScheduledBuilder.setConcurrencyGroupId(option.concurrencyGroupId());
+                runCreatedBuilder.setConcurrencyGroupId(option.concurrencyGroupId());
             }
             if (option.priority() != null) {
-                runScheduledBuilder.setPriority(option.priority());
+                runCreatedBuilder.setPriority(option.priority());
             }
             if (option.labels() != null) {
-                runScheduledBuilder.putAllLabels(option.labels());
+                runCreatedBuilder.putAllLabels(option.labels());
             }
             if (option.argument() != null) {
                 final Payload argumentPayload;
@@ -488,7 +486,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     //noinspection unchecked
                     argumentPayload = workflowMetadata.argumentConverter().convertToPayload(option.argument());
                 }
-                runScheduledBuilder.setArgument(argumentPayload);
+                runCreatedBuilder.setArgument(argumentPayload);
             }
 
             createInboxEntryCommand.add(
@@ -498,26 +496,9 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                             Event.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(now)
-                                    .setRunScheduled(runScheduledBuilder.build())
+                                    .setRunCreated(runCreatedBuilder.build())
                                     .build()));
-
-            if (option.concurrencyGroupId() != null) {
-                nextRunIdByConcurrencyGroupId.compute(option.concurrencyGroupId(), (ignored, previous) -> {
-                    if (previous == null) {
-                        return runId;
-                    }
-
-                    return runId.compareTo(previous) < 0 ? runId : previous;
-                });
-            }
         }
-
-        final List<WorkflowConcurrencyGroup> newConcurrencyGroups =
-                nextRunIdByConcurrencyGroupId.entrySet().stream()
-                        .map(entry -> new WorkflowConcurrencyGroup(
-                                /* id */ entry.getKey(),
-                                /* nextRunId */ entry.getValue()))
-                        .toList();
 
         return jdbi.inTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
@@ -531,10 +512,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             assert createdInboxEvents == createInboxEntryCommand.size()
                     : "Created inbox events: actual=%d, expected=%d".formatted(
                     createdInboxEvents, createInboxEntryCommand.size());
-
-            if (!newConcurrencyGroups.isEmpty()) {
-                dao.maybeCreateConcurrencyGroups(newConcurrencyGroups);
-            }
 
             return createdRunIds;
         });
@@ -968,9 +945,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var createInboxEntryCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size() * 2);
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>();
         final var continuedAsNewRunIds = new ArrayList<UUID>();
-        final var createActivityTaskCommands = new ArrayList<CreateActivityTaskCommand>();
-        final var nextRunIdByNewConcurrencyGroupId = new HashMap<String, UUID>();
-        final var concurrencyGroupsToUpdate = new HashSet<String>();
+        final var createActivityRunCommands = new ArrayList<CreateActivityRunCommand>();
         final var completedRuns = new ArrayList<WorkflowRunMetadata>();
 
         for (final WorkflowRunState run : actionableRuns) {
@@ -1009,9 +984,9 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             }
 
             for (final WorkflowRunMessage message : run.pendingWorkflowMessages()) {
-                // If the outbound message is a RunScheduled event, the recipient
+                // If the outbound message is a RunCreated event, the recipient
                 // workflow run will need to be created first.
-                boolean shouldCreateWorkflowRun = message.event().hasRunScheduled();
+                boolean shouldCreateWorkflowRun = message.event().hasRunCreated();
 
                 // If this is the run re-scheduling itself as part of he "continue as new"
                 // mechanism, no new run needs to be created.
@@ -1022,31 +997,17 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                             new CreateWorkflowRunCommand(
                                     message.recipientRunId(),
                                     /* parentId */ run.id(),
-                                    message.event().getRunScheduled().getWorkflowName(),
-                                    message.event().getRunScheduled().getWorkflowVersion(),
-                                    message.event().getRunScheduled().hasConcurrencyGroupId()
-                                            ? message.event().getRunScheduled().getConcurrencyGroupId()
+                                    message.event().getRunCreated().getWorkflowName(),
+                                    message.event().getRunCreated().getWorkflowVersion(),
+                                    message.event().getRunCreated().hasConcurrencyGroupId()
+                                            ? message.event().getRunCreated().getConcurrencyGroupId()
                                             : null,
-                                    message.event().getRunScheduled().hasPriority()
-                                            ? message.event().getRunScheduled().getPriority()
+                                    message.event().getRunCreated().hasPriority()
+                                            ? message.event().getRunCreated().getPriority()
                                             : null,
-                                    message.event().getRunScheduled().getLabelsCount() > 0
-                                            ? Map.copyOf(message.event().getRunScheduled().getLabelsMap())
+                                    message.event().getRunCreated().getLabelsCount() > 0
+                                            ? Map.copyOf(message.event().getRunCreated().getLabelsMap())
                                             : null));
-
-                    if (message.event().getRunScheduled().hasConcurrencyGroupId()) {
-                        nextRunIdByNewConcurrencyGroupId.compute(
-                                message.event().getRunScheduled().getConcurrencyGroupId(),
-                                (ignored, previous) -> {
-                                    if (previous == null) {
-                                        return message.recipientRunId();
-                                    }
-
-                                    return message.recipientRunId().compareTo(previous) < 0
-                                            ? message.recipientRunId()
-                                            : previous;
-                                });
-                    }
                 }
 
                 createInboxEntryCommands.add(
@@ -1073,29 +1034,25 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 }
             }
 
-            for (final Event newEvent : run.pendingActivityTaskScheduledEvents()) {
-                createActivityTaskCommands.add(
-                        new CreateActivityTaskCommand(
+            for (final Event newEvent : run.pendingActivityRunCreatedEvents()) {
+                createActivityRunCommands.add(
+                        new CreateActivityRunCommand(
                                 run.id(),
                                 newEvent.getId(),
-                                newEvent.getActivityTaskScheduled().getName(),
-                                newEvent.getActivityTaskScheduled().hasPriority()
-                                        ? newEvent.getActivityTaskScheduled().getPriority()
+                                newEvent.getActivityRunCreated().getName(),
+                                newEvent.getActivityRunCreated().hasPriority()
+                                        ? newEvent.getActivityRunCreated().getPriority()
                                         : null,
-                                newEvent.getActivityTaskScheduled().hasArgument()
-                                        ? newEvent.getActivityTaskScheduled().getArgument()
+                                newEvent.getActivityRunCreated().hasArgument()
+                                        ? newEvent.getActivityRunCreated().getArgument()
                                         : null,
-                                newEvent.getActivityTaskScheduled().hasScheduledFor()
-                                        ? toInstant(newEvent.getActivityTaskScheduled().getScheduledFor())
+                                newEvent.getActivityRunCreated().hasScheduledFor()
+                                        ? toInstant(newEvent.getActivityRunCreated().getScheduledFor())
                                         : null));
             }
 
             if (run.continuedAsNew()) {
                 continuedAsNewRunIds.add(run.id());
-            }
-
-            if (run.status().isTerminal() && run.concurrencyGroupId() != null) {
-                concurrencyGroupsToUpdate.add(run.concurrencyGroupId());
             }
         }
 
@@ -1111,8 +1068,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
 
         if (!createWorkflowRunCommands.isEmpty()) {
-            // TODO: Call ScheduleWorkflowRuns instead so concurrency groups are updated, too.
-            //  Ensure it can participate in this transaction!
             final List<UUID> createdRunIds = workflowDao.createRuns(createWorkflowRunCommands);
             assert createdRunIds.size() == createWorkflowRunCommands.size()
                     : "Created runs: actual=%d, expected=%d".formatted(
@@ -1126,11 +1081,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     createdInboxEvents, createInboxEntryCommands.size());
         }
 
-        if (!createActivityTaskCommands.isEmpty()) {
-            final int createdActivityTasks = activityDao.createActivityTasks(createActivityTaskCommands);
-            assert createdActivityTasks == createActivityTaskCommands.size()
+        if (!createActivityRunCommands.isEmpty()) {
+            final int createdActivityTasks = activityDao.createActivityRuns(createActivityRunCommands);
+            assert createdActivityTasks == createActivityRunCommands.size()
                     : "Created activity tasks: actual=%d, expected=%d".formatted(
-                    createdActivityTasks, createActivityTaskCommands.size());
+                    createdActivityTasks, createActivityRunCommands.size());
         }
 
         final int deletedInboxEvents = workflowDao.deleteRunInboxEvents(
@@ -1143,29 +1098,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         assert deletedInboxEvents >= updatedRunIds.size()
                 : "Deleted inbox events: actual=%d, expectedAtLeast=%d".formatted(
                 deletedInboxEvents, updatedRunIds.size());
-
-        if (!nextRunIdByNewConcurrencyGroupId.isEmpty()) {
-            final List<WorkflowConcurrencyGroup> newConcurrencyGroupRows =
-                    nextRunIdByNewConcurrencyGroupId.entrySet().stream()
-                            .map(entry -> new WorkflowConcurrencyGroup(
-                                    /* id */ entry.getKey(),
-                                    /* nextRunId */ entry.getValue()))
-                            .toList();
-            workflowDao.maybeCreateConcurrencyGroups(newConcurrencyGroupRows);
-        }
-
-        if (!concurrencyGroupsToUpdate.isEmpty()) {
-            final Map<String, String> statusByGroupId = workflowDao.updateConcurrencyGroups(concurrencyGroupsToUpdate);
-            assert statusByGroupId.size() == concurrencyGroupsToUpdate.size()
-                    : "Updated concurrency groups: actual=%d, expected=%d".formatted(
-                    statusByGroupId.size(), concurrencyGroupsToUpdate.size());
-
-            if (LOGGER.isDebugEnabled()) {
-                for (final Map.Entry<String, String> entry : statusByGroupId.entrySet()) {
-                    LOGGER.debug("Concurrency group {}: {}", entry.getKey(), entry.getValue());
-                }
-            }
-        }
 
         if (!completedRuns.isEmpty()) {
             engineEvents.add(new WorkflowRunsCompletedEvent(completedRuns));
@@ -1180,7 +1112,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                             this.config.instanceId(), commands, limit).stream()
                     .map(polledTask -> new ActivityTask(
                             polledTask.workflowRunId(),
-                            polledTask.scheduledEventId(),
+                            polledTask.createdEventId(),
                             polledTask.activityName(),
                             polledTask.argument(),
                             polledTask.lockedUntil()))
@@ -1201,7 +1133,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 commands.stream()
                         .map(command -> new ActivityTaskId(
                                 command.task().workflowRunId(),
-                                command.task().scheduledEventId()))
+                                command.task().createdEventId()))
                         .toList());
         assert abandonedTasks == commands.size()
                 : "Abandoned tasks: actual=%d, expected=%d".formatted(abandonedTasks, 1);
@@ -1225,10 +1157,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size());
 
         for (final CompleteActivityTaskCommand command : commands) {
-            tasksToDelete.add(new ActivityTaskId(command.task().workflowRunId(), command.task().scheduledEventId()));
+            tasksToDelete.add(new ActivityTaskId(command.task().workflowRunId(), command.task().createdEventId()));
 
-            final var taskCompletedBuilder = ActivityTaskCompleted.newBuilder()
-                    .setTaskScheduledEventId(command.task().scheduledEventId());
+            final var taskCompletedBuilder = ActivityRunCompleted.newBuilder()
+                    .setActivityRunCreatedEventId(command.task().createdEventId());
             if (command.result() != null) {
                 taskCompletedBuilder.setResult(command.result());
             }
@@ -1239,7 +1171,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                             Event.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(toTimestamp(command.timestamp()))
-                                    .setActivityTaskCompleted(taskCompletedBuilder.build())
+                                    .setActivityRunCompleted(taskCompletedBuilder.build())
                                     .build()));
         }
 
@@ -1262,7 +1194,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var inboxEventsToCreate = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size());
 
         for (final FailActivityTaskCommand command : commands) {
-            tasksToDelete.add(new ActivityTaskId(command.task().workflowRunId(), command.task().scheduledEventId()));
+            tasksToDelete.add(new ActivityTaskId(command.task().workflowRunId(), command.task().createdEventId()));
 
             inboxEventsToCreate.add(
                     new CreateWorkflowRunInboxEntryCommand(
@@ -1271,8 +1203,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                             Event.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(toTimestamp(command.timestamp()))
-                                    .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
-                                            .setTaskScheduledEventId(command.task().scheduledEventId())
+                                    .setActivityRunFailed(ActivityRunFailed.newBuilder()
+                                            .setActivityRunCreatedEventId(command.task().createdEventId())
                                             .setFailure(FailureConverter.toFailure(command.exception()))
                                             .build())
                                     .build()));
@@ -1378,17 +1310,17 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
         Stream.concat(run.eventHistory().stream(), run.newEvents().stream()).forEach(event -> {
             switch (event.getSubjectCase()) {
-                case CHILD_RUN_SCHEDULED -> {
-                    final String runId = event.getChildRunScheduled().getRunId();
+                case CHILD_RUN_CREATED -> {
+                    final String runId = event.getChildRunCreated().getRunId();
                     runIdByEventId.put(event.getId(), UUID.fromString(runId));
                 }
                 case CHILD_RUN_COMPLETED -> {
-                    final int scheduledEventId = event.getChildRunCompleted().getRunScheduledEventId();
-                    runIdByEventId.remove(scheduledEventId);
+                    final int createdEventId = event.getChildRunCompleted().getChildRunCreatedEventId();
+                    runIdByEventId.remove(createdEventId);
                 }
                 case CHILD_RUN_FAILED -> {
-                    final int scheduledEventId = event.getChildRunFailed().getRunScheduledEventId();
-                    runIdByEventId.remove(scheduledEventId);
+                    final int createdEventId = event.getChildRunFailed().getChildRunCreatedEventId();
+                    runIdByEventId.remove(createdEventId);
                 }
             }
         });

@@ -37,22 +37,22 @@ message Event {
     ExecutionStarted execution_started = 25;
     ExecutionCompleted execution_completed = 26;
 
-    RunScheduled run_scheduled = 50;
+    RunCreated run_created = 50;
     RunStarted run_started = 51;
     RunCanceled run_canceled = 52;
     RunSuspended run_suspended = 53;
     RunResumed run_resumed = 54;
     RunCompleted run_completed = 55;
 
-    ActivityTaskScheduled activity_task_scheduled = 75;
-    ActivityTaskCompleted activity_task_completed = 76;
-    ActivityTaskFailed activity_task_failed = 77;
+    ActivityRunCreated activity_run_created = 75;
+    ActivityRunCompleted activity_run_completed = 76;
+    ActivityRunFailed activity_run_failed = 77;
 
-    ChildRunScheduled child_run_scheduled = 100;
+    ChildRunCreated child_run_created = 100;
     ChildRunCompleted child_run_completed = 101;
     ChildRunFailed child_run_failed = 102;
 
-    TimerScheduled timer_scheduled = 125;
+    TimerCreated timer_created = 125;
     TimerElapsed timer_elapsed = 126;
 
     SideEffectExecuted side_effect_executed = 150;
@@ -67,7 +67,7 @@ message ExecutionStarted {
 message ExecutionCompleted {
 }
 
-message RunScheduled {
+message RunCreated {
   string workflow_name = 1;
   int32 workflow_version = 2;
   optional org.dependencytrack.workflow.payload.v1.Payload argument = 3;
@@ -77,7 +77,7 @@ message RunScheduled {
   optional ParentRun parent_run = 7;
 
   message ParentRun {
-    int32 child_run_scheduled_event_id = 1;
+    int32 child_run_created_event_id = 1;
     string run_id = 2;
     string workflow_name = 3;
     int32 workflow_version = 4;
@@ -104,7 +104,7 @@ message RunCompleted {
   optional org.dependencytrack.workflow.failure.v1.Failure failure = 4;
 }
 
-message ActivityTaskScheduled {
+message ActivityRunCreated {
   string name = 1;
   int32 version = 2;
   optional int32 priority = 3;
@@ -112,17 +112,17 @@ message ActivityTaskScheduled {
   optional google.protobuf.Timestamp scheduled_for = 5;
 }
 
-message ActivityTaskCompleted {
-  int32 task_scheduled_event_id = 1;
+message ActivityRunCompleted {
+  int32 activity_run_created_event_id = 1;
   optional org.dependencytrack.workflow.payload.v1.Payload result = 2;
 }
 
-message ActivityTaskFailed {
-  int32 task_scheduled_event_id = 1;
+message ActivityRunFailed {
+  int32 activity_run_created_event_id = 1;
   org.dependencytrack.workflow.failure.v1.Failure failure = 2;
 }
 
-message ChildRunScheduled {
+message ChildRunCreated {
   string run_id = 1;
   string workflow_name = 2;
   int32 workflow_version = 3;
@@ -133,22 +133,22 @@ message ChildRunScheduled {
 }
 
 message ChildRunCompleted {
-  int32 run_scheduled_event_id = 1;
+  int32 child_run_created_event_id = 1;
   optional org.dependencytrack.workflow.payload.v1.Payload result = 2;
 }
 
 message ChildRunFailed {
-  int32 run_scheduled_event_id = 1;
+  int32 child_run_created_event_id = 1;
   org.dependencytrack.workflow.failure.v1.Failure failure = 2;
 }
 
-message TimerScheduled {
+message TimerCreated {
   string name = 1;
   google.protobuf.Timestamp elapse_at = 2;
 }
 
 message TimerElapsed {
-  int32 timer_scheduled_event_id = 1;
+  int32 timer_created_event_id = 1;
   google.protobuf.Timestamp elapse_at = 2;
 }
 

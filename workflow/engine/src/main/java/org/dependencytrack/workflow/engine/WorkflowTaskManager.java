@@ -40,7 +40,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
     private final WorkflowEngineImpl engine;
     private final WorkflowGroup workflowGroup;
     private final MetadataRegistry metadataRegistry;
-    private final List<PollWorkflowTaskCommand> pollCmds;
+    private final List<PollWorkflowTaskCommand> pollCommands;
 
     WorkflowTaskManager(
             final WorkflowEngineImpl engine,
@@ -49,7 +49,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
         this.engine = engine;
         this.workflowGroup = workflowGroup;
         this.metadataRegistry = metadataRegistry;
-        this.pollCmds = workflowGroup.workflowNames().stream()
+        this.pollCommands = workflowGroup.workflowNames().stream()
                 .map(metadataRegistry::getWorkflowMetadata)
                 .map(metadata -> new PollWorkflowTaskCommand(metadata.name(), metadata.lockTimeout()))
                 .toList();
@@ -62,7 +62,7 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
 
     @Override
     public List<WorkflowTask> poll(final int limit) {
-        return engine.pollWorkflowTasks(pollCmds, limit);
+        return engine.pollWorkflowTasks(pollCommands, limit);
     }
 
     @Override
@@ -132,11 +132,11 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
             workflowRunState.applyEvent(newEvent);
             eventsAdded++;
 
-            // Inject a RunStarted event when encountering a RunScheduled event.
+            // Inject a RunStarted event when encountering a RunCreated event.
             // This is mainly to populate the run's startedAt timestamp,
-            // so we can differentiate between when a run was scheduled vs.
+            // so we can differentiate between when a run was created vs.
             // when it was eventually picked up.
-            if (newEvent.hasRunScheduled()) {
+            if (newEvent.hasRunCreated()) {
                 workflowRunState.applyEvent(
                         Event.newBuilder()
                                 .setId(-1)

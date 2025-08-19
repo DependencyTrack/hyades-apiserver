@@ -27,18 +27,12 @@ import java.time.Instant;
 import java.util.Map;
 
 sealed interface WorkflowCommand permits
-        WorkflowCommand.CancelRunCommand,
         WorkflowCommand.CompleteRunCommand,
         WorkflowCommand.ContinueRunAsNewCommand,
         WorkflowCommand.RecordSideEffectResultCommand,
-        WorkflowCommand.ScheduleActivityCommand,
-        WorkflowCommand.ScheduleChildRunCommand,
-        WorkflowCommand.ScheduleTimerCommand {
-
-    record CancelRunCommand(
-            int eventId,
-            String reason) implements WorkflowCommand {
-    }
+        WorkflowCommand.CreateActivityRunCommand,
+        WorkflowCommand.CreateChildRunCommand,
+        WorkflowCommand.CreateTimerCommand {
 
     record CompleteRunCommand(
             int eventId,
@@ -59,7 +53,7 @@ sealed interface WorkflowCommand permits
             @Nullable Payload result) implements WorkflowCommand {
     }
 
-    record ScheduleActivityCommand(
+    record CreateActivityRunCommand(
             int eventId,
             String name,
             int version,
@@ -68,7 +62,7 @@ sealed interface WorkflowCommand permits
             @Nullable Instant scheduleFor) implements WorkflowCommand {
     }
 
-    record ScheduleChildRunCommand(
+    record CreateChildRunCommand(
             int eventId,
             String workflowName,
             int workflowVersion,
@@ -78,7 +72,7 @@ sealed interface WorkflowCommand permits
             @Nullable Payload argument) implements WorkflowCommand {
     }
 
-    record ScheduleTimerCommand(
+    record CreateTimerCommand(
             int eventId,
             String name,
             Instant elapseAt) implements WorkflowCommand {

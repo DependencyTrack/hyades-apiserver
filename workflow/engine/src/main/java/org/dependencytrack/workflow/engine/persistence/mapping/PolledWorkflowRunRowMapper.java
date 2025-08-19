@@ -19,19 +19,17 @@
 package org.dependencytrack.workflow.engine.persistence.mapping;
 
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
-import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
-import org.jdbi.v3.json.JsonConfig;
-import org.jdbi.v3.json.JsonMapper.TypedJsonMapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.Map;
 import java.util.UUID;
 
-public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRun> {
+import static org.dependencytrack.workflow.engine.persistence.mapping.MappingUtil.mapJsonEncodedMap;
+import static org.dependencytrack.workflow.engine.persistence.mapping.MappingUtil.mapNullableInteger;
+
+public final class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRun> {
 
     @Override
     public PolledWorkflowRun map(final ResultSet rs, final StatementContext ctx) throws SQLException {
@@ -40,31 +38,8 @@ public class PolledWorkflowRunRowMapper implements RowMapper<PolledWorkflowRun> 
                 rs.getString("workflow_name"),
                 rs.getInt("workflow_version"),
                 rs.getString("concurrency_group_id"),
-                getPriority(rs),
-                getLabels(rs, ctx));
-    }
-
-    private static Integer getPriority(final ResultSet rs) throws SQLException {
-        final int priority = rs.getInt("priority");
-        if (rs.wasNull()) {
-            return null;
-        }
-
-        return priority;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, String> getLabels(final ResultSet rs, final StatementContext ctx) throws SQLException {
-        final String labelsJson = rs.getString("labels");
-        if (rs.wasNull()) {
-            return Collections.emptyMap();
-        }
-
-        final TypedJsonMapper jsonMapper = ctx
-                .getConfig(JsonConfig.class).getJsonMapper()
-                .forType(new GenericType<Map<String, String>>() {}.getType(), ctx.getConfig());
-
-        return (Map<String, String>) jsonMapper.fromJson(labelsJson, ctx.getConfig());
+                mapNullableInteger(rs, "priority"),
+                mapJsonEncodedMap(rs, ctx, "labels", String.class, String.class));
     }
 
 }

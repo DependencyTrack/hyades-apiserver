@@ -29,15 +29,15 @@ import java.util.UUID;
 /**
  * Unit of work for the execution of an activity.
  *
- * @param workflowRunId    ID of the workflow run the activity belongs to.
- * @param scheduledEventId ID of the event that scheduled the activity execution.
- * @param activityName     Name of the activity.
- * @param argument         Argument of the activity.
- * @param lockedUntil      Timestamp until when the activity is locked for execution.
+ * @param workflowRunId  ID of the workflow run the activity belongs to.
+ * @param createdEventId ID of the event that created the activity execution.
+ * @param activityName   Name of the activity.
+ * @param argument       Argument of the activity.
+ * @param lockedUntil    Timestamp until when the activity is locked for execution.
  */
 record ActivityTask(
         UUID workflowRunId,
-        int scheduledEventId,
+        int createdEventId,
         String activityName,
         @Nullable Payload argument,
         Instant lockedUntil) implements Task {

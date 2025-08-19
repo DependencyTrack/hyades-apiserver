@@ -28,26 +28,19 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.UUID;
 
-public class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask> {
+import static org.dependencytrack.workflow.engine.persistence.mapping.MappingUtil.mapNullableInteger;
+
+public final class PolledActivityTaskRowMapper implements RowMapper<PolledActivityTask> {
 
     @Override
     public PolledActivityTask map(final ResultSet rs, final StatementContext ctx) throws SQLException {
         return new PolledActivityTask(
                 rs.getObject("workflow_run_id", UUID.class),
-                rs.getInt("scheduled_event_id"),
+                rs.getInt("created_event_id"),
                 rs.getString("activity_name"),
-                getPriority(rs),
+                mapNullableInteger(rs, "priority"),
                 ctx.findColumnMapperFor(Payload.class).orElseThrow().map(rs, "argument", ctx),
                 ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "locked_until", ctx));
-    }
-
-    private static Integer getPriority(final ResultSet rs) throws SQLException {
-        final int priority = rs.getInt("priority");
-        if (rs.wasNull()) {
-            return null;
-        }
-
-        return priority;
     }
 
 }

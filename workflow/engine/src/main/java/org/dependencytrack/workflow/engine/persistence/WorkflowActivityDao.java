@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.engine.persistence;
 
 import org.dependencytrack.proto.workflow.payload.v1.Payload;
-import org.dependencytrack.workflow.engine.persistence.command.CreateActivityTaskCommand;
+import org.dependencytrack.workflow.engine.persistence.command.CreateActivityRunCommand;
 import org.dependencytrack.workflow.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTask;
@@ -40,11 +40,11 @@ public final class WorkflowActivityDao extends AbstractDao {
         super(jdbiHandle);
     }
 
-    public int createActivityTasks(final Collection<CreateActivityTaskCommand> commands) {
+    public int createActivityRuns(final Collection<CreateActivityRunCommand> commands) {
         final Update update = jdbiHandle.createUpdate("""
-                insert into workflow_activity_task (
+                insert into workflow_activity_run (
                   workflow_run_id
-                , scheduled_event_id
+                , created_event_id
                 , activity_name
                 , priority
                 , argument
@@ -55,7 +55,7 @@ public final class WorkflowActivityDao extends AbstractDao {
                      , now()
                   from unnest (
                          :runIds
-                       , :scheduledEventIds
+                       , :createdEventIds
                        , :activityNames
                        , :priorities
                        , :arguments
@@ -63,15 +63,15 @@ public final class WorkflowActivityDao extends AbstractDao {
                 """);
 
         final var runIds = new ArrayList<UUID>(commands.size());
-        final var scheduledEventIds = new ArrayList<Integer>(commands.size());
+        final var createdEventIds = new ArrayList<Integer>(commands.size());
         final var activityNames = new ArrayList<String>(commands.size());
         final var priorities = new ArrayList<@Nullable Integer>(commands.size());
         final var arguments = new ArrayList<@Nullable Payload>(commands.size());
         final var visibleFroms = new ArrayList<@Nullable Instant>(commands.size());
 
-        for (final CreateActivityTaskCommand command : commands) {
+        for (final CreateActivityRunCommand command : commands) {
             runIds.add(command.workflowRunId());
-            scheduledEventIds.add(command.scheduledEventId());
+            createdEventIds.add(command.createdEventId());
             activityNames.add(command.activityName());
             priorities.add(command.priority());
             arguments.add(command.argument());
@@ -80,7 +80,7 @@ public final class WorkflowActivityDao extends AbstractDao {
 
         return update
                 .bindArray("runIds", UUID.class, runIds)
-                .bindArray("scheduledEventIds", Integer.class, scheduledEventIds)
+                .bindArray("createdEventIds", Integer.class, createdEventIds)
                 .bindArray("activityNames", String.class, activityNames)
                 .bindArray("priorities", Integer.class, priorities)
                 .bindArray("arguments", Payload.class, arguments)
@@ -100,8 +100,8 @@ public final class WorkflowActivityDao extends AbstractDao {
                 ),
                 cte_poll as (
                     select workflow_run_id
-                         , scheduled_event_id
-                      from workflow_activity_task
+                         , created_event_id
+                      from workflow_activity_run
                      where activity_name in (select activity_name from cte_poll_req)
                        and (visible_from is null or visible_from <= now())
                        and (locked_until is null or locked_until <= now())
@@ -110,21 +110,21 @@ public final class WorkflowActivityDao extends AbstractDao {
                        for no key update
                       skip locked
                      limit :limit)
-                update workflow_activity_task as wat
+                update workflow_activity_run as war
                    set locked_by = :workerInstanceId
                      , locked_until = now() + cte_poll_req.lock_timeout
                      , updated_at = now()
                   from cte_poll
                      , cte_poll_req
-                 where cte_poll.workflow_run_id = wat.workflow_run_id
-                   and cte_poll.scheduled_event_id = wat.scheduled_event_id
-                   and cte_poll_req.activity_name = wat.activity_name
-                returning wat.workflow_run_id
-                        , wat.scheduled_event_id
-                        , wat.activity_name
-                        , wat.priority
-                        , wat.argument
-                        , wat.locked_until
+                 where cte_poll.workflow_run_id = war.workflow_run_id
+                   and cte_poll.created_event_id = war.created_event_id
+                   and cte_poll_req.activity_name = war.activity_name
+                returning war.workflow_run_id
+                        , war.created_event_id
+                        , war.activity_name
+                        , war.priority
+                        , war.argument
+                        , war.locked_until
                 """);
 
         final var activityNames = new ArrayList<String>(commands.size());
@@ -142,7 +142,7 @@ public final class WorkflowActivityDao extends AbstractDao {
                 .bind("limit", limit)
                 .executeAndReturnGeneratedKeys(
                         "workflow_run_id",
-                        "scheduled_event_id",
+                        "created_event_id",
                         "activity_name",
                         "priority",
                         "argument",
@@ -157,11 +157,11 @@ public final class WorkflowActivityDao extends AbstractDao {
             final ActivityTaskId activityTask,
             final Duration lockTimeout) {
         final Update update = jdbiHandle.createUpdate("""
-                update workflow_activity_task
+                update workflow_activity_run
                    set locked_until = locked_until + :lockTimeout
                      , updated_at = now()
                  where workflow_run_id = :workflowRunId
-                   and scheduled_event_id = :scheduledEventId
+                   and created_event_id = :createdEventId
                    and locked_by = :workerInstanceId
                 returning locked_until
                 """);
@@ -169,7 +169,7 @@ public final class WorkflowActivityDao extends AbstractDao {
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bind("workflowRunId", activityTask.workflowRunId())
-                .bind("scheduledEventId", activityTask.scheduledEventId())
+                .bind("createdEventId", activityTask.createdEventId())
                 .bind("lockTimeout", lockTimeout)
                 .executeAndReturnGeneratedKeys("locked_until")
                 .mapTo(Instant.class)
@@ -179,58 +179,58 @@ public final class WorkflowActivityDao extends AbstractDao {
 
     public int unlockActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {
         final var workflowRunIds = new ArrayList<UUID>(activityTasks.size());
-        final var scheduledEventIds = new ArrayList<Integer>(activityTasks.size());
+        final var createdEventIds = new ArrayList<Integer>(activityTasks.size());
 
         for (final ActivityTaskId activityTask : activityTasks) {
             workflowRunIds.add(activityTask.workflowRunId());
-            scheduledEventIds.add(activityTask.scheduledEventId());
+            createdEventIds.add(activityTask.createdEventId());
         }
 
         final Update update = jdbiHandle.createUpdate("""
                 with cte as (
                     select *
-                      from unnest(:workflowRunIds, :scheduledEventIds) as t(workflow_run_id, scheduled_event_id))
-                update workflow_activity_task
+                      from unnest(:workflowRunIds, :createdEventIds) as t(workflow_run_id, created_event_id))
+                update workflow_activity_run
                    set locked_by = null
                      , locked_until = null
                   from cte
-                 where cte.workflow_run_id = workflow_activity_task.workflow_run_id
-                   and cte.scheduled_event_id = workflow_activity_task.scheduled_event_id
-                   and workflow_activity_task.locked_by = :workerInstanceId
+                 where cte.workflow_run_id = workflow_activity_run.workflow_run_id
+                   and cte.created_event_id = workflow_activity_run.created_event_id
+                   and workflow_activity_run.locked_by = :workerInstanceId
                 """);
 
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("workflowRunIds", UUID.class, workflowRunIds)
-                .bindArray("scheduledEventIds", Integer.class, scheduledEventIds)
+                .bindArray("createdEventIds", Integer.class, createdEventIds)
                 .execute();
     }
 
     public int deleteLockedActivityTasks(final UUID workerInstanceId, final List<ActivityTaskId> activityTasks) {
         final var workflowRunIds = new ArrayList<UUID>(activityTasks.size());
-        final var scheduledEventIds = new ArrayList<Integer>(activityTasks.size());
+        final var createdEventIds = new ArrayList<Integer>(activityTasks.size());
 
         for (final ActivityTaskId activityTask : activityTasks) {
             workflowRunIds.add(activityTask.workflowRunId());
-            scheduledEventIds.add(activityTask.scheduledEventId());
+            createdEventIds.add(activityTask.createdEventId());
         }
 
         final Update update = jdbiHandle.createUpdate("""
                 with cte as (
                     select *
-                      from unnest(:workflowRunIds, :scheduledEventIds) as t(workflow_run_id, scheduled_event_id))
+                      from unnest(:workflowRunIds, :createdEventIds) as t(workflow_run_id, created_event_id))
                 delete
-                  from workflow_activity_task
+                  from workflow_activity_run
                  using cte
-                 where cte.workflow_run_id = workflow_activity_task.workflow_run_id
-                   and cte.scheduled_event_id = workflow_activity_task.scheduled_event_id
-                   and workflow_activity_task.locked_by = :workerInstanceId
+                 where cte.workflow_run_id = workflow_activity_run.workflow_run_id
+                   and cte.created_event_id = workflow_activity_run.created_event_id
+                   and workflow_activity_run.locked_by = :workerInstanceId
                 """);
 
         return update
                 .bind("workerInstanceId", workerInstanceId.toString())
                 .bindArray("workflowRunIds", UUID.class, workflowRunIds)
-                .bindArray("scheduledEventIds", Integer.class, scheduledEventIds)
+                .bindArray("createdEventIds", Integer.class, createdEventIds)
                 .execute();
     }
 

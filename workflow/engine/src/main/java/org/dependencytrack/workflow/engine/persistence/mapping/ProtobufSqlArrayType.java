@@ -20,6 +20,7 @@ package org.dependencytrack.workflow.engine.persistence.mapping;
 
 import com.google.protobuf.Message;
 import org.jdbi.v3.core.array.SqlArrayType;
+import org.jspecify.annotations.Nullable;
 
 import static org.postgresql.util.PGbytea.toPGString;
 
@@ -31,7 +32,8 @@ abstract class ProtobufSqlArrayType<T extends Message> implements SqlArrayType<T
     }
 
     @Override
-    public Object convertArrayElement(final T element) {
+    @Nullable
+    public Object convertArrayElement(@Nullable final T element) {
         if (element == null) {
             return null;
         }

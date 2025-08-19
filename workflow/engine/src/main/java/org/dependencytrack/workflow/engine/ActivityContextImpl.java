@@ -36,7 +36,7 @@ final class ActivityContextImpl<T> implements ActivityContext, Closeable {
 
     private final WorkflowEngineImpl engine;
     private final UUID workflowRunId;
-    private final int scheduledEventId;
+    private final int createdEventId;
     private final ActivityExecutor<T, ?> activityExecutor;
     private final Duration lockTimeout;
     @Nullable private ScheduledExecutorService heartbeatExecutor;
@@ -45,14 +45,14 @@ final class ActivityContextImpl<T> implements ActivityContext, Closeable {
     ActivityContextImpl(
             final WorkflowEngineImpl engine,
             final UUID workflowRunId,
-            final int scheduledEventId,
+            final int createdEventId,
             final ActivityExecutor<T, ?> activityExecutor,
             final Duration lockTimeout,
             final Instant lockedUntil,
             final boolean heartbeatEnabled) {
         this.engine = engine;
         this.workflowRunId = workflowRunId;
-        this.scheduledEventId = scheduledEventId;
+        this.createdEventId = createdEventId;
         this.activityExecutor = activityExecutor;
         this.lockTimeout = lockTimeout;
         this.lockedUntil = lockedUntil;
@@ -81,7 +81,7 @@ final class ActivityContextImpl<T> implements ActivityContext, Closeable {
         // TODO: Return info about workflow run so the task can
         //  detect when run was canceled or failed.
         this.lockedUntil = engine.heartbeatActivityTask(
-                new ActivityTaskId(workflowRunId, scheduledEventId), lockTimeout);
+                new ActivityTaskId(workflowRunId, createdEventId), lockTimeout);
         LoggerFactory.getLogger(activityExecutor.getClass()).debug(
                 "Lock extended to {}", this.lockedUntil);
     }

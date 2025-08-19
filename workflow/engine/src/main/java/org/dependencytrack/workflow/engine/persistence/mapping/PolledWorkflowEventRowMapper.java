@@ -27,7 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 
-public class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEvent> {
+public final class PolledWorkflowEventRowMapper implements RowMapper<PolledWorkflowEvent> {
 
     @Override
     public PolledWorkflowEvent map(final ResultSet rs, final StatementContext ctx) throws SQLException {
