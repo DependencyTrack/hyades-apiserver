@@ -52,7 +52,8 @@ final class ProtobufPayloadConverter<T extends Message> implements PayloadConver
         }
 
         if (!payload.hasProtoContent()) {
-            throw new PayloadConversionException("Payload has no Protobuf content");
+            throw new PayloadConversionException(
+                    "Expected payload to have protobuf content, but was: " + payload.getContentCase());
         }
 
         if (!payload.getProtoContent().is(clazz)) {

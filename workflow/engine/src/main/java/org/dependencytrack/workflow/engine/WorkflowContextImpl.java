@@ -325,7 +325,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     }
 
     @Override
-    public void setStatus(final String status) {
+    public void setStatus(@Nullable final String status) {
         this.customStatus = status;
     }
 
@@ -334,9 +334,10 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
             final String name,
             @Nullable final SA argument,
             final PayloadConverter<SR> resultConverter,
-            final Function<SA, SR> sideEffectFunction) {
+            final Function<@Nullable SA, @Nullable SR> sideEffectFunction) {
         assertNotInSideEffect("Nested side effects are not allowed");
         requireNonNull(name, "name must not be null");
+        requireNonNull(resultConverter, "resultConverter must not be null");
         requireNonNull(sideEffectFunction, "sideEffectFunction must not be null");
 
         final int eventId = currentEventId++;

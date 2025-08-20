@@ -20,12 +20,34 @@ package org.dependencytrack.workflow.api;
 
 import java.time.Duration;
 
+import static java.util.Objects.requireNonNull;
+
 public record RetryPolicy(
         Duration initialDelay,
         double multiplier,
         double randomizationFactor,
         Duration maxDelay,
         int maxAttempts) {
+
+    public RetryPolicy {
+        requireNonNull(initialDelay, "initialDelay must not be null");
+        if (initialDelay.isZero() || initialDelay.isNegative()) {
+            throw new IllegalArgumentException("initialDelay must be positive");
+        }
+        if (multiplier <= 0) {
+            throw new IllegalArgumentException("multiplier must be positive");
+        }
+        if (randomizationFactor <= 0) {
+            throw new IllegalArgumentException("randomizationFactor must be positive");
+        }
+        requireNonNull(maxDelay, "maxDelay must not be null");
+        if (maxDelay.isZero() || maxDelay.isNegative()) {
+            throw new IllegalArgumentException("maxDelay must be positive");
+        }
+        if (maxAttempts <= 0) {
+            throw new IllegalArgumentException("maxAttempts must be positive");
+        }
+    }
 
     public static RetryPolicy defaultRetryPolicy() {
         return new RetryPolicy(Duration.ofSeconds(5), 1.5, 0.3, Duration.ofMinutes(30), 6);

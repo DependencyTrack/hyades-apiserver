@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.workflow.engine;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.dependencytrack.workflow.api.Awaitable;
 import org.dependencytrack.workflow.api.ContinueAsNewOptions;
@@ -89,6 +90,9 @@ class WorkflowEngineImplTest {
         final var config = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
         config.scheduler().setInitialDelay(Duration.ofMillis(250));
         config.scheduler().setPollInterval(Duration.ofMillis(250));
+
+        // Ensure code paths to register metrics etc. are executed.
+        config.setMeterRegistry(new SimpleMeterRegistry());
 
         engine = new WorkflowEngineImpl(config);
     }

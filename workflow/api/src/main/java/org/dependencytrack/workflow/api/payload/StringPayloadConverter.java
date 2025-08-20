@@ -45,8 +45,13 @@ final class StringPayloadConverter implements PayloadConverter<String> {
     @Nullable
     @Override
     public String convertFromPayload(@Nullable final Payload payload) {
-        if (payload == null || !payload.hasBinaryContent()) {
+        if (payload == null) {
             return null;
+        }
+
+        if (!payload.hasBinaryContent()) {
+            throw new PayloadConversionException(
+                    "Expected payload to have binary content, but was: " + payload.getContentCase());
         }
 
         final Payload.BinaryContent binaryContent = payload.getBinaryContent();
