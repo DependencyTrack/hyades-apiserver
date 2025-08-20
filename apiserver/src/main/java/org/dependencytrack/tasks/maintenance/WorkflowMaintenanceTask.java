@@ -18,11 +18,13 @@
  */
 package org.dependencytrack.tasks.maintenance;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import com.google.protobuf.Any;
 import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.KafkaEvent;
 import org.dependencytrack.event.kafka.KafkaEventConverter;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
@@ -105,6 +107,8 @@ public class WorkflowMaintenanceTask implements Subscriber {
         final Integer stepTimeoutMinutes = configPropertyDao.getValue(MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES, Integer.class);
         final Duration stepTimeoutDuration = Duration.ofMinutes(stepTimeoutMinutes);
 
+        final boolean delayBomProcessedNotification = Config.getInstance().getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION);
+
         final int numStepsTimedOut = workflowDao.transitionAllPendingStepsToTimedOutForTimeout(stepTimeoutDuration);
         if (numStepsTimedOut > 0) {
             LOGGER.warn("Transitioned %d workflow step(s) from %s to %s for timeout %s"
@@ -115,6 +119,8 @@ public class WorkflowMaintenanceTask implements Subscriber {
             int numStepsFailed = 0;
             int numStepsCancelled = 0;
         };
+
+        final var notifications = new ArrayList<KafkaEvent<?, ?>>();
         jdbiHandle.useTransaction(ignored -> {
             final List<Long> failedStepIds = workflowDao.transitionAllTimedOutStepsToFailedForTimeout(stepTimeoutDuration);
             if (failedStepIds.isEmpty()) {
@@ -122,23 +128,23 @@ public class WorkflowMaintenanceTask implements Subscriber {
             }
 
             // Send BOM_PROCESSING_FAILED notifications for timed out failures.
-            final var notificationSubjectDao = jdbiHandle.attach(NotificationSubjectDao.class);
-            final List<BomProcessingFailedSubject> notificationSubjectsForFailure =
-                    notificationSubjectDao.getForBomProcessingTimedOut(failedStepIds);
-            final var notifications = new ArrayList<KafkaEvent<?, ?>>(notificationSubjectsForFailure.size());
-            notificationSubjectsForFailure.stream()
-                    .map(subject -> Notification.newBuilder()
-                            .setScope(SCOPE_PORTFOLIO)
-                            .setGroup(GROUP_BOM_PROCESSING_FAILED)
-                            .setLevel(LEVEL_INFORMATIONAL)
-                            .setTimestamp(Timestamps.now())
-                            .setTitle(NotificationConstants.Title.BOM_PROCESSING_FAILED)
-                            .setContent("A %s BOM processing failed".formatted(subject.getBom().getFormat()))
-                            .setSubject(Any.pack(subject))
-                            .build())
-                    .map(KafkaEventConverter::convert)
-                    .forEach(notifications::add);
-            eventDispatcher.dispatchAll(notifications);
+            if (delayBomProcessedNotification) {
+                final var notificationSubjectDao = jdbiHandle.attach(NotificationSubjectDao.class);
+                final List<BomProcessingFailedSubject> notificationSubjectsForFailure =
+                        notificationSubjectDao.getForVulnAnalysisTimedOut(failedStepIds);
+                notificationSubjectsForFailure.stream()
+                        .map(subject -> Notification.newBuilder()
+                                .setScope(SCOPE_PORTFOLIO)
+                                .setGroup(GROUP_BOM_PROCESSING_FAILED)
+                                .setLevel(LEVEL_INFORMATIONAL)
+                                .setTimestamp(Timestamps.now())
+                                .setTitle(NotificationConstants.Title.BOM_PROCESSING_FAILED)
+                                .setContent("A %s BOM processing failed".formatted(subject.getBom().getFormat()))
+                                .setSubject(Any.pack(subject))
+                                .build())
+                        .map(KafkaEventConverter::convert)
+                        .forEach(notifications::add);
+            }
 
             failedStepsResult.numStepsFailed = failedStepIds.size();
             LOGGER.warn("Transitioned %d workflow step(s) from %s to %s for timeout %s"
@@ -151,6 +157,7 @@ public class WorkflowMaintenanceTask implements Subscriber {
             }
         });
 
+        eventDispatcher.dispatchAll(notifications);
         final int numWorkflowsDeleted = workflowDao.deleteAllForRetention(retentionDuration);
 
         return new Statistics(

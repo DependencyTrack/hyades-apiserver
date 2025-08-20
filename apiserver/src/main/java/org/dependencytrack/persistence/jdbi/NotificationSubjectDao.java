@@ -384,6 +384,7 @@ public interface NotificationSubjectDao extends SqlObject {
             SELECT "P"."UUID" AS "projectUuid"
                  , "P"."NAME"        AS "projectName"
                  , "P"."VERSION"     AS "projectVersion"
+                 , ("P"."INACTIVE_SINCE" IS NULL)     AS "isActive"
                  , 'CycloneDX'       AS "bomFormat"
                  , 'Unknown'         AS "bomSpecVersion"
                  , '(Omitted)'       AS "bomContent"
@@ -394,10 +395,11 @@ public interface NotificationSubjectDao extends SqlObject {
                 ON "P"."UUID" = "VS"."TARGET_IDENTIFIER"
              INNER JOIN "WORKFLOW_STATE" AS "WFS"
                 ON "WFS"."TOKEN" = "VS"."TOKEN"
+                AND "WFS"."STEP" = 'VULN_ANALYSIS'
              WHERE "WFS"."ID" = ANY(:failedWorkflowIds)
             """)
     @RegisterRowMapper(NotificationSubjectBomProcessingFailedRowMapper.class)
-    List<BomProcessingFailedSubject> getForBomProcessingTimedOut(Collection<Long> failedWorkflowIds);
+    List<BomProcessingFailedSubject> getForVulnAnalysisTimedOut(Collection<Long> failedWorkflowIds);
 
     @SqlQuery("""
             SELECT "P"."UUID" AS "projectUuid"
