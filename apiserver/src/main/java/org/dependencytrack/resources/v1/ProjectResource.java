@@ -86,7 +86,6 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-import static alpine.event.framework.Event.isEventBeingProcessed;
 import static java.util.Objects.requireNonNullElseGet;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.createLocalJdbi;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
@@ -954,27 +953,14 @@ public class ProjectResource extends AbstractApiResource {
 
                 LOGGER.info("Project " + sourceProject + " is being cloned by " + super.getPrincipal().getName());
                 final var event = new CloneProjectEvent(jsonRequest);
-                WorkflowState workflowState = qm.getWorkflowStateByTokenAndStep(event.getChainIdentifier(), WorkflowStep.PROJECT_CLONE);
-                if (workflowState != null) {
-                    if (isEventBeingProcessed(event.getChainIdentifier()) || !workflowState.getStatus().isTerminal()) {
-                        throw new ClientErrorException(Response
-                                .status(Response.Status.CONFLICT)
-                                .entity(Map.of("message", "Project cloning is already in progress"))
-                                .build());
-                    }
-                    workflowState.setStatus(WorkflowStatus.PENDING);
-                    workflowState.setStartedAt(null);
-                    workflowState.setUpdatedAt(new Date());
-                } else {
-                    workflowState = new WorkflowState();
-                    workflowState.setStep(WorkflowStep.PROJECT_CLONE);
-                    workflowState.setStatus(WorkflowStatus.PENDING);
-                    workflowState.setToken(event.getChainIdentifier());
-                    workflowState.setUpdatedAt(new Date());
-                    qm.persist(workflowState);
-                }
+                final var workflowState = new WorkflowState();
+                workflowState.setStep(WorkflowStep.PROJECT_CLONE);
+                workflowState.setStatus(WorkflowStatus.PENDING);
+                workflowState.setToken(event.getChainIdentifier());
+                workflowState.setUpdatedAt(new Date());
+                qm.persist(workflowState);
 
-                return new CloneProjectEvent(jsonRequest);
+                return event;
             });
 
             Event.dispatch(cloneEvent);
