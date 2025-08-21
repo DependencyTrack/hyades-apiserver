@@ -355,6 +355,7 @@ public interface NotificationSubjectDao extends SqlObject {
                AND "WFS"."STEP" = 'BOM_PROCESSING'
                AND "WFS"."STATUS" = 'COMPLETED'
              WHERE "VS"."TOKEN" = ANY(:workflowTokens)
+             AND "VS"."STATUS" = 'COMPLETED'
             """)
     @RegisterRowMapper(NotificationSubjectBomConsumedOrProcessedRowMapper.class)
     List<BomConsumedOrProcessedSubject> getForDelayedBomProcessed(Collection<UUID> workflowTokens);
@@ -373,18 +374,18 @@ public interface NotificationSubjectDao extends SqlObject {
                 ON "P"."UUID" = "VS"."TARGET_IDENTIFIER"
              INNER JOIN "WORKFLOW_STATE" AS "WFS"
                 ON "WFS"."TOKEN" = "VS"."TOKEN"
-               AND "WFS"."STEP" = 'BOM_PROCESSING'
-               AND "WFS"."STATUS" = 'FAILED'
+                AND "WFS"."STEP" = 'BOM_PROCESSING'
+               AND "WFS"."STATUS" = 'COMPLETED'
              WHERE "VS"."TOKEN" = ANY(:workflowTokens)
+             AND "VS"."STATUS" = 'FAILED'
             """)
     @RegisterRowMapper(NotificationSubjectBomProcessingFailedRowMapper.class)
-    List<BomProcessingFailedSubject> getForBomProcessingFailed(Collection<UUID> workflowTokens);
+    List<BomProcessingFailedSubject> getForBomProcessedVulnScanFailed(Collection<UUID> workflowTokens);
 
     @SqlQuery("""
             SELECT "P"."UUID" AS "projectUuid"
                  , "P"."NAME"        AS "projectName"
                  , "P"."VERSION"     AS "projectVersion"
-                 , ("P"."INACTIVE_SINCE" IS NULL)     AS "isActive"
                  , 'CycloneDX'       AS "bomFormat"
                  , 'Unknown'         AS "bomSpecVersion"
                  , '(Omitted)'       AS "bomContent"

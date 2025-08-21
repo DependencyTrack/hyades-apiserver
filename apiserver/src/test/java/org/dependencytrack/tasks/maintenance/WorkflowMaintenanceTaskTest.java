@@ -200,7 +200,6 @@ public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
 
         final var project = new Project();
         project.setName("acme-app");
-        project.setInactiveSince(new Date());
         qm.persist(project);
 
         final var vulnScan = new VulnerabilityScan();
@@ -238,7 +237,6 @@ public class WorkflowMaintenanceTaskTest extends PersistenceCapableTest {
                     assertThat(subject.getToken()).isEqualTo(token.toString());
                     assertThat(subject.getCause()).isEqualTo("Timed out");
                     assertThat(subject.getProject().getUuid()).isEqualTo(project.getUuid().toString());
-                    assertThat(subject.getProject().getIsActive()).isFalse();
                 }
         );
     }
