@@ -52,6 +52,7 @@ import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineHealthProbeResult;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
+import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.WorkflowSchedule;
@@ -83,8 +84,8 @@ import org.dependencytrack.workflow.engine.persistence.command.UpdateAndUnlockRu
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.workflow.engine.persistence.request.GetWorkflowRunHistoryRequest;
 import org.dependencytrack.workflow.engine.support.Buffer;
 import org.dependencytrack.workflow.engine.support.DefaultThreadFactory;
@@ -517,26 +518,73 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         });
     }
 
+
+    @Override
+    @Nullable
+    public WorkflowRun getRun(final UUID id) {
+        final List<Event> eventHistory = jdbi.withHandle(handle -> {
+            final var dao = new WorkflowRunDao(handle);
+            final var events = new ArrayList<Event>();
+
+            Page<Event> eventsPage;
+            String nextPageToken = null;
+            do {
+                eventsPage = dao.listRunEvents(
+                        new ListWorkflowRunEventsRequest(id)
+                                .withPageToken(nextPageToken)
+                                .withLimit(25));
+                nextPageToken = eventsPage.nextPageToken();
+                events.addAll(eventsPage.items());
+            } while (nextPageToken != null);
+
+            return events;
+        });
+        if (eventHistory.isEmpty()) {
+            return null;
+        }
+
+        final var runState = new WorkflowRunState(id, eventHistory);
+
+        return new WorkflowRun(
+                runState.id(),
+                runState.workflowName(),
+                runState.workflowVersion(),
+                runState.status(),
+                runState.customStatus(),
+                runState.priority(),
+                runState.concurrencyGroupId(),
+                runState.labels(),
+                runState.createdAt(),
+                runState.updatedAt(),
+                runState.startedAt(),
+                runState.completedAt(),
+                runState.argument(),
+                runState.result(),
+                runState.failure(),
+                runState.eventHistory());
+    }
+
     @Nullable
     public WorkflowRunMetadata getRunMetadata(final UUID runId) {
-        final WorkflowRun runRow = jdbi.withHandle(handle -> new WorkflowDao(handle).getRunById(runId));
-        if (runRow == null) {
+        final WorkflowRunMetadataRow metadataRow = jdbi.withHandle(
+                handle -> new WorkflowDao(handle).getRunMetadataById(runId));
+        if (metadataRow == null) {
             return null;
         }
 
         return new WorkflowRunMetadata(
-                runRow.id(),
-                runRow.workflowName(),
-                runRow.workflowVersion(),
-                runRow.status(),
-                runRow.customStatus(),
-                runRow.priority(),
-                runRow.concurrencyGroupId(),
-                runRow.labels(),
-                runRow.createdAt(),
-                runRow.updatedAt(),
-                runRow.startedAt(),
-                runRow.completedAt());
+                metadataRow.id(),
+                metadataRow.workflowName(),
+                metadataRow.workflowVersion(),
+                metadataRow.status(),
+                metadataRow.customStatus(),
+                metadataRow.priority(),
+                metadataRow.concurrencyGroupId(),
+                metadataRow.labels(),
+                metadataRow.createdAt(),
+                metadataRow.updatedAt(),
+                metadataRow.startedAt(),
+                metadataRow.completedAt());
     }
 
     @Override
@@ -557,10 +605,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRun run = dao.getRunById(runId);
-            if (run == null) {
+            final WorkflowRunMetadataRow runMetadata = dao.getRunMetadataById(runId);
+            if (runMetadata == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
-            } else if (run.status().isTerminal()) {
+            } else if (runMetadata.status().isTerminal()) {
                 throw new IllegalStateException("Workflow run %s is already in terminal status".formatted(runId));
             }
 
@@ -587,12 +635,12 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRun run = dao.getRunById(runId);
-            if (run == null) {
+            final WorkflowRunMetadataRow runMetadata = dao.getRunMetadataById(runId);
+            if (runMetadata == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
-            } else if (run.status().isTerminal()) {
+            } else if (runMetadata.status().isTerminal()) {
                 throw new IllegalStateException("Workflow run %s is already in terminal status".formatted(runId));
-            } else if (run.status() == WorkflowRunStatus.SUSPENDED) {
+            } else if (runMetadata.status() == WorkflowRunStatus.SUSPENDED) {
                 throw new IllegalStateException("Workflow run %s is already suspended".formatted(runId));
             }
 
@@ -619,12 +667,12 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         jdbi.useTransaction(handle -> {
             final var dao = new WorkflowDao(handle);
 
-            final WorkflowRun run = dao.getRunById(runId);
-            if (run == null) {
+            final WorkflowRunMetadataRow runMetadata = dao.getRunMetadataById(runId);
+            if (runMetadata == null) {
                 throw new NoSuchElementException("A workflow run with ID %s does not exist".formatted(runId));
-            } else if (run.status().isTerminal()) {
+            } else if (runMetadata.status().isTerminal()) {
                 throw new IllegalStateException("Workflow run %s is already in terminal status".formatted(runId));
-            } else if (run.status() != WorkflowRunStatus.SUSPENDED) {
+            } else if (runMetadata.status() != WorkflowRunStatus.SUSPENDED) {
                 throw new IllegalStateException("Workflow run %s can not be resumed because it is not suspended".formatted(runId));
             }
 

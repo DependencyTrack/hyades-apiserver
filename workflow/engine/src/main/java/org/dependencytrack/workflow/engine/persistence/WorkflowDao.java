@@ -30,8 +30,8 @@ import org.dependencytrack.workflow.engine.persistence.command.UpdateAndUnlockRu
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvent;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowEvents;
 import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.workflow.engine.persistence.request.GetWorkflowRunHistoryRequest;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
@@ -248,7 +248,7 @@ public final class WorkflowDao extends AbstractDao {
     }
 
     @Nullable
-    public WorkflowRun getRunById(final UUID id) {
+    public WorkflowRunMetadataRow getRunMetadataById(final UUID id) {
         final Query query = jdbiHandle.createQuery("""
                 select *
                   from workflow_run
@@ -257,7 +257,7 @@ public final class WorkflowDao extends AbstractDao {
 
         return query
                 .bind("id", id)
-                .mapTo(WorkflowRun.class)
+                .mapTo(WorkflowRunMetadataRow.class)
                 .findOne()
                 .orElse(null);
     }

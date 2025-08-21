@@ -64,9 +64,9 @@ import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toTimesta
 final class WorkflowRunState {
 
     private final UUID id;
-    private final String workflowName;
-    private final int workflowVersion;
-    @Nullable private final String concurrencyGroupId;
+    @Nullable private String workflowName;
+    @Nullable Integer workflowVersion;
+    @Nullable private String concurrencyGroupId;
     private final List<Event> eventHistory;
     private final List<Event> newEvents;
     private final List<Event> pendingActivityRunCreatedEvents;
@@ -78,7 +78,7 @@ final class WorkflowRunState {
     @Nullable private Payload argument;
     @Nullable private Payload result;
     @Nullable private Failure failure;
-    private WorkflowRunStatus status = WorkflowRunStatus.CREATED;
+    @Nullable private WorkflowRunStatus status;
     @Nullable private String customStatus;
     @Nullable private Integer priority;
     @Nullable private Map<String, String> labels;
@@ -90,14 +90,8 @@ final class WorkflowRunState {
 
     WorkflowRunState(
             final UUID id,
-            final String workflowName,
-            final int workflowVersion,
-            @Nullable final String concurrencyGroupId,
             final List<Event> eventHistory) {
         this.id = id;
-        this.workflowName = workflowName;
-        this.workflowVersion = workflowVersion;
-        this.concurrencyGroupId = concurrencyGroupId;
         this.eventHistory = new ArrayList<>(eventHistory.size());
         this.newEvents = new ArrayList<>();
         this.pendingActivityRunCreatedEvents = new ArrayList<>();
@@ -113,11 +107,13 @@ final class WorkflowRunState {
         return id;
     }
 
+    @Nullable
     String workflowName() {
         return workflowName;
     }
 
-    int workflowVersion() {
+    @Nullable
+    Integer workflowVersion() {
         return workflowVersion;
     }
 
@@ -146,6 +142,7 @@ final class WorkflowRunState {
         return pendingMessages;
     }
 
+    @Nullable
     WorkflowRunStatus status() {
         return status;
     }
@@ -223,6 +220,12 @@ final class WorkflowRunState {
                             "%s/%s: Duplicate RunCreated event; Previous event is: %s; New event is: %s".formatted(
                                     this.workflowName, this.id, previousEventStr, nextEventStr));
                 }
+                workflowName = event.getRunCreated().getWorkflowName();
+                workflowVersion = event.getRunCreated().getWorkflowVersion();
+                concurrencyGroupId = event.getRunCreated().hasConcurrencyGroupId()
+                        ? event.getRunCreated().getConcurrencyGroupId()
+                        : null;
+                setStatus(WorkflowRunStatus.CREATED);
                 createdEvent = event;
                 argument = event.getRunCreated().hasArgument()
                         ? event.getRunCreated().getArgument()
@@ -494,7 +497,7 @@ final class WorkflowRunState {
     }
 
     private void setStatus(final WorkflowRunStatus newStatus) {
-        if (this.status.canTransitionTo(newStatus)) {
+        if (this.status == null || this.status.canTransitionTo(newStatus)) {
             this.status = newStatus;
             return;
         }

@@ -23,8 +23,8 @@ import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
-import org.dependencytrack.workflow.engine.persistence.model.WorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunHistoryEntry;
+import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunMetadataRow;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;
@@ -116,7 +116,7 @@ public final class WorkflowRunDao extends AbstractDao {
                 .bind("limit", request.limit() + 1)
                 .bind("lastId", decodedPageToken != null ? decodedPageToken.lastId() : null)
                 .defineNamedBindings()
-                .mapTo(WorkflowRun.class)
+                .mapTo(WorkflowRunMetadataRow.class)
                 .map(row -> new WorkflowRunMetadata(
                         row.id(),
                         row.workflowName(),

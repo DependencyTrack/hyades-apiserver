@@ -16,13 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.model;
+package org.dependencytrack.workflow.engine.api;
 
-import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
-import org.jdbi.v3.json.Json;
+import org.dependencytrack.proto.workflow.event.v1.Event;
+import org.dependencytrack.proto.workflow.failure.v1.Failure;
+import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,13 +34,15 @@ public record WorkflowRun(
         int workflowVersion,
         WorkflowRunStatus status,
         @Nullable String customStatus,
-        @Nullable String concurrencyGroupId,
         @Nullable Integer priority,
-        @Nullable @Json Map<String, String> labels,
-        @Nullable String lockedBy,
-        @Nullable Instant lockedUntil,
+        @Nullable String concurrencyGroupId,
+        @Nullable Map<String, String> labels,
         Instant createdAt,
         @Nullable Instant updatedAt,
         @Nullable Instant startedAt,
-        @Nullable Instant completedAt) {
+        @Nullable Instant completedAt,
+        @Nullable Payload argument,
+        @Nullable Payload result,
+        @Nullable Failure failure,
+        List<Event> eventHistory) {
 }

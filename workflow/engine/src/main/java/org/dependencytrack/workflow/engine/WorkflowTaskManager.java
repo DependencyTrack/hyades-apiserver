@@ -101,13 +101,8 @@ final class WorkflowTaskManager implements TaskManager<WorkflowTask> {
         final WorkflowMetadata workflowMetadata = metadataRegistry.getWorkflowMetadata(task.workflowName());
 
         // Hydrate workflow run state from the history.
-        final var workflowRunState = new WorkflowRunState(
-                task.workflowRunId(),
-                task.workflowName(),
-                task.workflowVersion(),
-                task.concurrencyGroupId(),
-                task.history());
-        if (workflowRunState.status().isTerminal()) {
+        final var workflowRunState = new WorkflowRunState(task.workflowRunId(), task.history());
+        if (workflowRunState.status() != null && workflowRunState.status().isTerminal()) {
             LOGGER.warn("""
                     Task was scheduled despite the workflow run already being in terminal state {}. \
                     Discarding {} events in the run's inbox.""", workflowRunState.status(), task.inbox().size());

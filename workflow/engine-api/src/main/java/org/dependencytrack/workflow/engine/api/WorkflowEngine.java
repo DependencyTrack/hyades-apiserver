@@ -130,6 +130,11 @@ public interface WorkflowEngine extends Closeable {
     List<UUID> createRuns(Collection<CreateWorkflowRunRequest<?>> requests);
 
     /**
+     * Creates a single workflow run.
+     *
+     * @param request Request for the run to create.
+     * @param <A>     Type of the workflow's argument.
+     * @return ID of the created run.
      * @see #createRuns(Collection)
      */
     default <A> UUID createRun(final CreateWorkflowRunRequest<A> request) {
@@ -141,6 +146,24 @@ public interface WorkflowEngine extends Closeable {
         return results.getFirst();
     }
 
+    /**
+     * Retrieve all data about a workflow run, including its full event history.
+     * <p>
+     * If only high-level information about the run is required, prefer to use
+     * {@link #getRunMetadata(UUID)} as it is significantly more efficient.
+     *
+     * @param id ID of the workflow run.
+     * @return The run data, or {@code null} if no run with the given ID exists.
+     */
+    @Nullable
+    WorkflowRun getRun(UUID id);
+
+    /**
+     * Retrieve metadata about a workflow run.
+     *
+     * @param id ID of the workflow run.
+     * @return The run metadata, or {@code null} if no run with the given ID exists.
+     */
     @Nullable
     WorkflowRunMetadata getRunMetadata(UUID id);
 
