@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import static java.util.Objects.requireNonNull;
@@ -56,13 +57,13 @@ final class MetadataRegistry {
     private static final Pattern ACTIVITY_NAME_PATTERN = WORKFLOW_NAME_PATTERN;
 
     @SuppressWarnings("rawtypes")
-    private final Map<Class<? extends WorkflowExecutor>, WorkflowMetadata> workflowMetadataByExecutorClass = new HashMap<>();
+    private final Map<Class<? extends WorkflowExecutor>, String> workflowNameByExecutorClass = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
     private final Map<String, WorkflowMetadata> workflowMetadataByName = new HashMap<>();
 
     @SuppressWarnings("rawtypes")
-    private final Map<Class<? extends ActivityExecutor>, ActivityMetadata> activityMetadataByExecutorClass = new HashMap<>();
+    private final Map<Class<? extends ActivityExecutor>, String> activityNameByExecutorClass = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
     private final Map<String, ActivityMetadata> activityMetadataByName = new HashMap<>();
@@ -100,7 +101,7 @@ final class MetadataRegistry {
             final WorkflowExecutor<A, R> executor) {
         requireValidWorkflowName(name);
 
-        if (workflowMetadataByExecutorClass.containsKey(executor.getClass())) {
+        if (workflowNameByExecutorClass.containsKey(executor.getClass())) {
             throw new IllegalArgumentException(
                     "A workflow with executor %s is already registered".formatted(
                             executor.getClass().getName()));
@@ -117,7 +118,7 @@ final class MetadataRegistry {
                 argumentConverter,
                 resultConverter,
                 lockTimeout);
-        workflowMetadataByExecutorClass.put(executor.getClass(), metadata);
+        workflowNameByExecutorClass.put(executor.getClass(), name);
         workflowMetadataByName.put(name, metadata);
     }
 
@@ -136,7 +137,13 @@ final class MetadataRegistry {
             throw new IllegalArgumentException("Executor class must be annotated with @Activity");
         }
 
-        registerActivity(activityAnnotation.name(), argumentConverter, resultConverter, lockTimeout, activityAnnotation.heartbeat(), executor);
+        registerActivity(
+                activityAnnotation.name(),
+                argumentConverter,
+                resultConverter,
+                lockTimeout,
+                activityAnnotation.heartbeat(),
+                executor);
     }
 
     <A, R> void registerActivity(
@@ -148,7 +155,7 @@ final class MetadataRegistry {
             final ActivityExecutor<A, R> executor) {
         requireValidActivityName(name);
 
-        if (activityMetadataByExecutorClass.containsKey(executor.getClass())) {
+        if (activityNameByExecutorClass.containsKey(executor.getClass())) {
             throw new IllegalArgumentException(
                     "An activity with executor %s is already registered".formatted(
                             executor.getClass().getName()));
@@ -165,7 +172,7 @@ final class MetadataRegistry {
                 resultConverter,
                 lockTimeout,
                 heartbeatEnabled);
-        activityMetadataByExecutorClass.put(executor.getClass(), metadata);
+        activityNameByExecutorClass.put(executor.getClass(), name);
         activityMetadataByName.put(name, metadata);
     }
 
@@ -173,12 +180,9 @@ final class MetadataRegistry {
     <A, R> WorkflowMetadata<A, R> getWorkflowMetadata(final Class<? extends WorkflowExecutor<A, R>> executorClass) {
         requireNonNull(executorClass, "executorClass must not be null");
 
-        final var metadata = (WorkflowMetadata<A, R>) workflowMetadataByExecutorClass.get(executorClass);
-        if (metadata == null) {
-            throw new NoSuchElementException("No workflow for executor %s found".formatted(executorClass.getName()));
-        }
+        final String workflowName = getWorkflowName(executorClass);
 
-        return metadata;
+        return (WorkflowMetadata<A, R>) getWorkflowMetadata(workflowName);
     }
 
     @SuppressWarnings("rawtypes")
@@ -197,12 +201,9 @@ final class MetadataRegistry {
     <A, R> ActivityMetadata<A, R> getActivityMetadata(final Class<? extends ActivityExecutor<A, R>> executorClass) {
         requireNonNull(executorClass, "executorClass must not be null");
 
-        final var metadata = (ActivityMetadata<A, R>) activityMetadataByExecutorClass.get(executorClass);
-        if (metadata == null) {
-            throw new NoSuchElementException("No activity for executor %s found".formatted(executorClass.getName()));
-        }
+        final var activityName = getActivityName(executorClass);
 
-        return metadata;
+        return (ActivityMetadata<A, R>) getActivityMetadata(activityName);
     }
 
     @SuppressWarnings("rawtypes")
@@ -215,6 +216,30 @@ final class MetadataRegistry {
         }
 
         return metadata;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private String getWorkflowName(final Class<? extends WorkflowExecutor> executorClass) {
+        return workflowNameByExecutorClass.computeIfAbsent(executorClass, ignored -> {
+            final Workflow workflowAnnotation = executorClass.getAnnotation(Workflow.class);
+            if (workflowAnnotation == null) {
+                throw new IllegalArgumentException("Executor class must be annotated with @Workflow");
+            }
+
+            return workflowAnnotation.name();
+        });
+    }
+
+    @SuppressWarnings("rawtypes")
+    private String getActivityName(final Class<? extends ActivityExecutor> executorClass) {
+        return activityNameByExecutorClass.computeIfAbsent(executorClass, ignored -> {
+            final Activity activityAnnotation = executorClass.getAnnotation(Activity.class);
+            if (activityAnnotation == null) {
+                throw new IllegalArgumentException("Executor class must be annotated with @Activity");
+            }
+
+            return activityAnnotation.name();
+        });
     }
 
     private static void requireValidWorkflowName(final String workflowName) {
