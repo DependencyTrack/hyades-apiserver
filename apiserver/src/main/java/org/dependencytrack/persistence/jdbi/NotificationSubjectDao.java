@@ -82,6 +82,7 @@ public interface NotificationSubjectDao extends SqlObject {
               "P"."VERSION"                    AS "projectVersion",
               "P"."DESCRIPTION"                AS "projectDescription",
               "P"."PURL"                       AS "projectPurl",
+              ("P"."INACTIVE_SINCE" IS NULL)   AS "isActive",
               (SELECT
                  ARRAY_AGG(DISTINCT "T"."NAME")
                FROM
@@ -172,6 +173,7 @@ public interface NotificationSubjectDao extends SqlObject {
               "P"."VERSION"                    AS "projectVersion",
               "P"."DESCRIPTION"                AS "projectDescription",
               "P"."PURL"                       AS "projectPurl",
+              ("P"."INACTIVE_SINCE" IS NULL)   AS "isActive",
               (SELECT
                  ARRAY_AGG(DISTINCT "T"."NAME")
                FROM
@@ -258,6 +260,7 @@ public interface NotificationSubjectDao extends SqlObject {
               "P"."VERSION"                    AS "projectVersion",
               "P"."DESCRIPTION"                AS "projectDescription",
               "P"."PURL"                       AS "projectPurl",
+              ("P"."INACTIVE_SINCE" IS NULL)   AS "isActive",
               (SELECT
                  ARRAY_AGG(DISTINCT "T"."NAME")
                FROM
@@ -337,6 +340,7 @@ public interface NotificationSubjectDao extends SqlObject {
                  , "P"."VERSION"     AS "projectVersion"
                  , "P"."DESCRIPTION" AS "projectDescription"
                  , "P"."PURL"        AS "projectPurl"
+                 , ("P"."INACTIVE_SINCE" IS NULL)     AS "isActive"
                  , (SELECT ARRAY_AGG(DISTINCT "T"."NAME")
                       FROM "TAG" AS "T"
                      INNER JOIN "PROJECTS_TAGS" AS "PT"
@@ -364,6 +368,7 @@ public interface NotificationSubjectDao extends SqlObject {
             SELECT "P"."UUID" AS "projectUuid"
                  , "P"."NAME"        AS "projectName"
                  , "P"."VERSION"     AS "projectVersion"
+                 , ("P"."INACTIVE_SINCE" IS NULL) AS "isActive"
                  , 'CycloneDX'       AS "bomFormat"
                  , 'Unknown'         AS "bomSpecVersion"
                  , '(Omitted)'       AS "bomContent"
@@ -408,6 +413,7 @@ public interface NotificationSubjectDao extends SqlObject {
                  , "P"."VERSION" AS "projectVersion"
                  , "P"."DESCRIPTION" AS "projectDescription"
                  , "P"."PURL" AS "projectPurl"
+                 , ("P"."INACTIVE_SINCE" IS NULL) AS "isActive"
                  , (SELECT ARRAY_AGG(DISTINCT "T"."NAME")
                       FROM "TAG" AS "T"
                      INNER JOIN "PROJECTS_TAGS" AS "PT"

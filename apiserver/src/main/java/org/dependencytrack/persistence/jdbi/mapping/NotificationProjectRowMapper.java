@@ -38,6 +38,7 @@ public class NotificationProjectRowMapper implements RowMapper<Project> {
         maybeSet(rs, "projectDescription", ResultSet::getString, builder::setDescription);
         maybeSet(rs, "projectPurl", ResultSet::getString, builder::setPurl);
         maybeSet(rs, "projectTags", RowMapperUtil::stringArray, builder::addAllTags);
+        maybeSet(rs, "isActive", ResultSet::getBoolean, builder::setIsActive);
         return builder.build();
     }
 
