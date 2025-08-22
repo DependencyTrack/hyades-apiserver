@@ -30,15 +30,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static java.util.Objects.requireNonNull;
 
 final class TaskDispatcher<T extends Task> implements Runnable {
 
@@ -48,10 +51,10 @@ final class TaskDispatcher<T extends Task> implements Runnable {
     private final ExecutorService taskExecutorService;
     private final TaskManager<T> taskManager;
     private final Semaphore taskSemaphore;
-    @Nullable private final Duration minPollInterval;
-    @Nullable private final IntervalFunction pollBackoffIntervalFunction;
+    private final BlockingQueue<Void> pollRequestQueue;
+    private final long minPollIntervalMillis;
+    private final IntervalFunction pollBackoffIntervalFunction;
     @Nullable private final MeterRegistry meterRegistry;
-    @Nullable private Instant lastPolledAt;
     @Nullable private Timer taskPollLatencyTimer;
     @Nullable private Counter taskPollsCounter;
     @Nullable private MeterProvider<DistributionSummary> taskPollDistributionProvider;
@@ -63,15 +66,16 @@ final class TaskDispatcher<T extends Task> implements Runnable {
             final ExecutorService taskExecutorService,
             final TaskManager<T> taskManager,
             final int maxConcurrency,
-            @Nullable final Duration minPollInterval,
-            @Nullable final IntervalFunction pollBackoffIntervalFunction,
+            final Duration minPollInterval,
+            final IntervalFunction pollBackoffIntervalFunction,
             @Nullable final MeterRegistry meterRegistry) {
         this.engine = engine;
         this.taskExecutorService = taskExecutorService;
         this.taskManager = taskManager;
         this.taskSemaphore = new Semaphore(maxConcurrency);
-        this.minPollInterval = minPollInterval;
-        this.pollBackoffIntervalFunction = pollBackoffIntervalFunction;
+        this.pollRequestQueue = new ArrayBlockingQueue<>(1);
+        this.minPollIntervalMillis = requireNonNull(minPollInterval, "minPollInterval must not be null").toMillis();
+        this.pollBackoffIntervalFunction = requireNonNull(pollBackoffIntervalFunction, "pollBackoffIntervalFunction must not be null");
         this.meterRegistry = meterRegistry;
     }
 
@@ -79,11 +83,30 @@ final class TaskDispatcher<T extends Task> implements Runnable {
     public void run() {
         maybeInitializeMeters();
 
+        long nowMillis;
+        long lastPolledAtMillis = 0;
+        long nextPollAtMillis;
+        long nextPollDueInMillis;
         int pollsWithoutResults = 0;
 
         while (engine.status().isNotStoppingOrStopped() && !Thread.currentThread().isInterrupted()) {
-            final boolean interruptedDuringSleep = maybeSleepUntilNextPollIsDue();
-            if (interruptedDuringSleep) {
+            if (pollsWithoutResults == 0) {
+                nowMillis = System.currentTimeMillis();
+                nextPollAtMillis = lastPolledAtMillis + minPollIntervalMillis;
+                nextPollDueInMillis = nextPollAtMillis > nowMillis
+                        ? nextPollAtMillis - nowMillis
+                        : 0;
+            } else {
+                nextPollDueInMillis = pollBackoffIntervalFunction.apply(pollsWithoutResults);
+            }
+
+            // Wait for either the poll delay to elapse,
+            // or a poll being explicitly requested (not implemented yet).
+            try {
+                pollRequestQueue.poll(nextPollDueInMillis, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                LOGGER.info("Interrupted while waiting for next poll");
+                Thread.currentThread().interrupt();
                 break;
             }
 
@@ -117,7 +140,7 @@ final class TaskDispatcher<T extends Task> implements Runnable {
             final Timer.Sample taskPollLatencySample = Timer.start();
             try {
                 polledTasks = taskManager.poll(tasksToPoll);
-                lastPolledAt = Instant.now();
+                lastPolledAtMillis = System.currentTimeMillis();
             } finally {
                 if (taskPollLatencyTimer != null) {
                     taskPollLatencySample.stop(taskPollLatencyTimer);
@@ -138,21 +161,8 @@ final class TaskDispatcher<T extends Task> implements Runnable {
             }
 
             if (polledTasks.isEmpty()) {
-                if (pollBackoffIntervalFunction == null) {
-                    continue;
-                }
-
-                final long backoffMillis = pollBackoffIntervalFunction.apply(++pollsWithoutResults);
-                LOGGER.debug("Backing off for {}ms", backoffMillis);
-                try {
-                    //noinspection BusyWait
-                    Thread.sleep(backoffMillis);
-                    continue;
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    LOGGER.warn("Interrupted during poll backoff", e);
-                    break;
-                }
+                pollsWithoutResults++;
+                continue;
             }
 
             pollsWithoutResults = 0;
@@ -201,29 +211,6 @@ final class TaskDispatcher<T extends Task> implements Runnable {
         } finally {
             taskSemaphore.release();
         }
-    }
-
-    private boolean maybeSleepUntilNextPollIsDue() {
-        if (lastPolledAt == null || minPollInterval == null || minPollInterval.isZero()) {
-            return false;
-        }
-
-        final Instant now = Instant.now();
-        final Instant nextPollAt = lastPolledAt.plus(minPollInterval);
-        if (now.isAfter(nextPollAt)) {
-            return false;
-        }
-
-        final Duration nextPollDueIn = Duration.between(now, nextPollAt);
-        try {
-            Thread.sleep(nextPollDueIn.toMillis());
-        } catch (final InterruptedException e) {
-            Thread.currentThread().interrupt();
-            LOGGER.warn("Interrupted while waiting for next poll at {}", nextPollAt, e);
-            return true;
-        }
-
-        return false;
     }
 
     private void maybeInitializeMeters() {
