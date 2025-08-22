@@ -18,18 +18,30 @@
  */
 package org.dependencytrack.tasks.maintenance;
 
+import alpine.Config;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import com.google.protobuf.Any;
+import com.google.protobuf.util.Timestamps;
+import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.common.MdcScope;
+import org.dependencytrack.event.kafka.KafkaEvent;
+import org.dependencytrack.event.kafka.KafkaEventConverter;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
+import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
+import org.dependencytrack.persistence.jdbi.NotificationSubjectDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
+import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
+import org.dependencytrack.proto.notification.v1.Notification;
 import org.jdbi.v3.core.Handle;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +51,9 @@ import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TOKEN;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
+import static org.dependencytrack.proto.notification.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
@@ -48,6 +63,7 @@ import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 public class WorkflowMaintenanceTask implements Subscriber {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowMaintenanceTask.class);
+    private final KafkaEventDispatcher eventDispatcher = new KafkaEventDispatcher();
 
     @Override
     public void inform(final Event event) {
@@ -95,6 +111,8 @@ public class WorkflowMaintenanceTask implements Subscriber {
         final Integer stepTimeoutMinutes = configPropertyDao.getValue(MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES, Integer.class);
         final Duration stepTimeoutDuration = Duration.ofMinutes(stepTimeoutMinutes);
 
+        final boolean delayBomProcessedNotification = Config.getInstance().getPropertyAsBoolean(ConfigKey.TMP_DELAY_BOM_PROCESSED_NOTIFICATION);
+
         final int numStepsTimedOut = workflowDao.transitionAllPendingStepsToTimedOutForTimeout(stepTimeoutDuration);
         if (numStepsTimedOut > 0) {
             LOGGER.warn("Transitioned %d workflow step(s) from %s to %s for timeout %s"
@@ -105,13 +123,16 @@ public class WorkflowMaintenanceTask implements Subscriber {
             int numStepsFailed = 0;
             int numStepsCancelled = 0;
         };
+
+        final var notifications = new ArrayList<KafkaEvent<?, ?>>();
         jdbiHandle.useTransaction(ignored -> {
             final List<WorkflowState> failedStates = workflowDao.transitionAllTimedOutStepsToFailedForTimeout(stepTimeoutDuration);
             if (failedStates.isEmpty()) {
                 return;
             }
 
-            failedStepsResult.numStepsFailed = failedStates.size();
+            var failedStepIds = failedStates.stream().map(WorkflowState::getId).toList();
+            failedStepsResult.numStepsFailed = failedStepIds.size();
 
             for (var failedState : failedStates) {
                 try (var ignore = new MdcScope(Map.of(MDC_WORKFLOW_TOKEN, failedState.getToken().toString()))) {
@@ -119,14 +140,33 @@ public class WorkflowMaintenanceTask implements Subscriber {
                 }
             }
 
-            failedStepsResult.numStepsCancelled = Arrays.stream(workflowDao.cancelAllChildrenByParentStepIdAnyOf(
-                    failedStates.stream().map(WorkflowState::getId).toList())).sum();
+            // Send BOM_PROCESSING_FAILED notifications for timed out failures.
+            if (delayBomProcessedNotification) {
+                final var notificationSubjectDao = jdbiHandle.attach(NotificationSubjectDao.class);
+                final List<BomProcessingFailedSubject> notificationSubjectsForFailure =
+                        notificationSubjectDao.getForVulnAnalysisTimedOut(failedStepIds);
+                notificationSubjectsForFailure.stream()
+                        .map(subject -> Notification.newBuilder()
+                                .setScope(SCOPE_PORTFOLIO)
+                                .setGroup(GROUP_BOM_PROCESSING_FAILED)
+                                .setLevel(LEVEL_INFORMATIONAL)
+                                .setTimestamp(Timestamps.now())
+                                .setTitle(NotificationConstants.Title.BOM_PROCESSING_FAILED)
+                                .setContent("A %s BOM processing failed".formatted(subject.getBom().getFormat()))
+                                .setSubject(Any.pack(subject))
+                                .build())
+                        .map(KafkaEventConverter::convert)
+                        .forEach(notifications::add);
+            }
+
+            failedStepsResult.numStepsCancelled = Arrays.stream(workflowDao.cancelAllChildrenByParentStepIdAnyOf(failedStepIds)).sum();
             if (failedStepsResult.numStepsCancelled > 0) {
                 LOGGER.warn("Transitioned %d workflow step(s) to %s because their parent steps transitioned to %s"
                         .formatted(failedStepsResult.numStepsCancelled, WorkflowStatus.CANCELLED, WorkflowStatus.FAILED));
             }
         });
 
+        eventDispatcher.dispatchAll(notifications);
         final int numWorkflowsDeleted = workflowDao.deleteAllForRetention(retentionDuration);
 
         return new Statistics(

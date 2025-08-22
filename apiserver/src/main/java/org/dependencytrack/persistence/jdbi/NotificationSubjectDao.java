@@ -25,11 +25,13 @@ import org.dependencytrack.persistence.jdbi.mapping.NotificationBomRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationComponentRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationProjectRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectBomConsumedOrProcessedRowMapper;
+import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectBomProcessingFailedRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectNewVulnerabilityRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectNewVulnerableDependencyRowReducer;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationSubjectProjectAuditChangeRowMapper;
 import org.dependencytrack.persistence.jdbi.mapping.NotificationVulnerabilityRowMapper;
 import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
+import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
 import org.dependencytrack.proto.notification.v1.Component;
 import org.dependencytrack.proto.notification.v1.ComponentVulnAnalysisCompleteSubject;
 import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
@@ -353,9 +355,52 @@ public interface NotificationSubjectDao extends SqlObject {
                AND "WFS"."STEP" = 'BOM_PROCESSING'
                AND "WFS"."STATUS" = 'COMPLETED'
              WHERE "VS"."TOKEN" = ANY(:workflowTokens)
+             AND "VS"."STATUS" = 'COMPLETED'
             """)
     @RegisterRowMapper(NotificationSubjectBomConsumedOrProcessedRowMapper.class)
     List<BomConsumedOrProcessedSubject> getForDelayedBomProcessed(Collection<UUID> workflowTokens);
+
+    @SqlQuery("""
+            SELECT "P"."UUID" AS "projectUuid"
+                 , "P"."NAME"        AS "projectName"
+                 , "P"."VERSION"     AS "projectVersion"
+                 , 'CycloneDX'       AS "bomFormat"
+                 , 'Unknown'         AS "bomSpecVersion"
+                 , '(Omitted)'       AS "bomContent"
+                 , "WFS"."TOKEN"     AS "token"
+                 , "WFS"."FAILURE_REASON"     AS "cause"
+              FROM "VULNERABILITYSCAN" AS "VS"
+             INNER JOIN "PROJECT" AS "P"
+                ON "P"."UUID" = "VS"."TARGET_IDENTIFIER"
+             INNER JOIN "WORKFLOW_STATE" AS "WFS"
+                ON "WFS"."TOKEN" = "VS"."TOKEN"
+                AND "WFS"."STEP" = 'BOM_PROCESSING'
+               AND "WFS"."STATUS" = 'COMPLETED'
+             WHERE "VS"."TOKEN" = ANY(:workflowTokens)
+             AND "VS"."STATUS" = 'FAILED'
+            """)
+    @RegisterRowMapper(NotificationSubjectBomProcessingFailedRowMapper.class)
+    List<BomProcessingFailedSubject> getForBomProcessedVulnScanFailed(Collection<UUID> workflowTokens);
+
+    @SqlQuery("""
+            SELECT "P"."UUID" AS "projectUuid"
+                 , "P"."NAME"        AS "projectName"
+                 , "P"."VERSION"     AS "projectVersion"
+                 , 'CycloneDX'       AS "bomFormat"
+                 , 'Unknown'         AS "bomSpecVersion"
+                 , '(Omitted)'       AS "bomContent"
+                 , "WFS"."TOKEN"     AS "token"
+                 , "WFS"."FAILURE_REASON"     AS "cause"
+              FROM "VULNERABILITYSCAN" AS "VS"
+             INNER JOIN "PROJECT" AS "P"
+                ON "P"."UUID" = "VS"."TARGET_IDENTIFIER"
+             INNER JOIN "WORKFLOW_STATE" AS "WFS"
+                ON "WFS"."TOKEN" = "VS"."TOKEN"
+                AND "WFS"."STEP" = 'VULN_ANALYSIS'
+             WHERE "WFS"."ID" = ANY(:failedWorkflowIds)
+            """)
+    @RegisterRowMapper(NotificationSubjectBomProcessingFailedRowMapper.class)
+    List<BomProcessingFailedSubject> getForVulnAnalysisTimedOut(Collection<Long> failedWorkflowIds);
 
     @SqlQuery("""
             SELECT "P"."UUID" AS "projectUuid"
