@@ -21,7 +21,9 @@ package org.dependencytrack.tasks.maintenance;
 import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
+import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
+import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
@@ -30,8 +32,10 @@ import org.jdbi.v3.core.Handle;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TOKEN;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
@@ -102,16 +106,21 @@ public class WorkflowMaintenanceTask implements Subscriber {
             int numStepsCancelled = 0;
         };
         jdbiHandle.useTransaction(ignored -> {
-            final List<Long> failedStepIds = workflowDao.transitionAllTimedOutStepsToFailedForTimeout(stepTimeoutDuration);
-            if (failedStepIds.isEmpty()) {
+            final List<WorkflowState> failedStates = workflowDao.transitionAllTimedOutStepsToFailedForTimeout(stepTimeoutDuration);
+            if (failedStates.isEmpty()) {
                 return;
             }
 
-            failedStepsResult.numStepsFailed = failedStepIds.size();
-            LOGGER.warn("Transitioned %d workflow step(s) from %s to %s for timeout %s"
-                    .formatted(failedStepsResult.numStepsFailed, WorkflowStatus.TIMED_OUT, WorkflowStatus.FAILED, stepTimeoutDuration));
+            failedStepsResult.numStepsFailed = failedStates.size();
 
-            failedStepsResult.numStepsCancelled = Arrays.stream(workflowDao.cancelAllChildrenByParentStepIdAnyOf(failedStepIds)).sum();
+            for (var failedState : failedStates) {
+                try (var ignore = new MdcScope(Map.of(MDC_WORKFLOW_TOKEN, failedState.getToken().toString()))) {
+                    LOGGER.warn("Transitioned workflow step %s from %s to %s".formatted(failedState.getStep(), WorkflowStatus.TIMED_OUT, WorkflowStatus.FAILED));
+                }
+            }
+
+            failedStepsResult.numStepsCancelled = Arrays.stream(workflowDao.cancelAllChildrenByParentStepIdAnyOf(
+                    failedStates.stream().map(WorkflowState::getId).toList())).sum();
             if (failedStepsResult.numStepsCancelled > 0) {
                 LOGGER.warn("Transitioned %d workflow step(s) to %s because their parent steps transitioned to %s"
                         .formatted(failedStepsResult.numStepsCancelled, WorkflowStatus.CANCELLED, WorkflowStatus.FAILED));
