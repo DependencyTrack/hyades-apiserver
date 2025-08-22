@@ -18,39 +18,71 @@
  */
 package org.dependencytrack.workflow;
 
-import alpine.Config;
+import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.WithConfigProperty;
 import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_ENABLED;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 
 public class WorkflowEngineInitializerTest {
 
+    @Rule
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
+
+    private PostgreSQLContainer<?> postgresContainer;
     private WorkflowEngineInitializer initializer;
+
+    @Before
+    public void setUp() {
+        postgresContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"));
+        postgresContainer.start();
+
+        configPropertyRule.setProperty("testcontainers.postgresql.jdbc-url", postgresContainer.getJdbcUrl());
+        configPropertyRule.setProperty("testcontainers.postgresql.username", postgresContainer.getUsername());
+        configPropertyRule.setProperty("testcontainers.postgresql.password", postgresContainer.getPassword());
+    }
 
     @After
     public void afterEach() {
         if (initializer != null) {
             initializer.contextDestroyed(null);
         }
+        if (postgresContainer != null) {
+            postgresContainer.stop();
+        }
 
         WorkflowEngineHolder.set(null);
     }
 
     @Test
+    @WithConfigProperty("workflow-engine.enabled=false")
     public void shouldDoNothingWhenEngineIsDisabled() {
-        final var configMock = mock(Config.class);
-        doReturn(false).when(configMock).getPropertyAsBoolean(eq(WORKFLOW_ENGINE_ENABLED));
-
-        initializer = new WorkflowEngineInitializer(configMock);
+        initializer = new WorkflowEngineInitializer();
         initializer.contextInitialized(null);
 
         assertThat(WorkflowEngineHolder.get()).isNull();
         assertThat(initializer.getEngine()).isNull();
+    }
+
+    @Test
+    @WithConfigProperty(value = {
+            "workflow-engine.enabled=true",
+            "workflow-engine.database.url=${testcontainers.postgresql.jdbc-url}",
+            "workflow-engine.database.username=${testcontainers.postgresql.username}",
+            "workflow-engine.database.password=${testcontainers.postgresql.password}"
+    })
+    public void shouldStartEngine() {
+        initializer = new WorkflowEngineInitializer();
+        initializer.contextInitialized(null);
+
+        assertThat(WorkflowEngineHolder.get()).isNotNull();
+        assertThat(initializer.getEngine()).isNotNull();
+        assertThat(initializer.getEngine().probeHealth().isUp()).isTrue();
     }
 
 }

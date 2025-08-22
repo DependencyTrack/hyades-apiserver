@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.workflow;
 
-import alpine.Config;
 import alpine.common.metrics.Metrics;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -26,6 +25,8 @@ import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineFactory;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,34 +39,7 @@ import java.time.Duration;
 import java.util.ServiceLoader;
 import java.util.UUID;
 
-import static alpine.Config.AlpineKey.DATABASE_PASSWORD;
-import static alpine.Config.AlpineKey.DATABASE_URL;
-import static alpine.Config.AlpineKey.DATABASE_USERNAME;
-import static alpine.Config.AlpineKey.METRICS_ENABLED;
 import static io.github.resilience4j.core.IntervalFunction.ofExponentialRandomBackoff;
-import static java.util.Objects.requireNonNullElseGet;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_COMMAND_FLUSH_INTERVAL_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_BUFFER_TASK_COMMAND_MAX_SIZE;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_CACHE_RUN_HISTORY_MAX_SIZE;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_CACHE_RUN_HISTORY_TTL_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_PASSWORD;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_POOL_ENABLED;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_POOL_MAX_SIZE;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_POOL_MIN_IDLE;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_URL;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_USERNAME;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_ENABLED;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_RETENTION_DAYS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_MIN_POLL_INTERVAL_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_INITIAL_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_MAX_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_MULTIPLIER;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_RANDOMIZATION_FACTOR;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_MIN_POLL_INTERVAL_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_INITIAL_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_MAX_MS;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_MULTIPLIER;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_RANDOMIZATION_FACTOR;
 
 /**
  * @since 5.7.0
@@ -77,18 +51,13 @@ public final class WorkflowEngineInitializer implements ServletContextListener {
     private final Config config;
     private WorkflowEngine engine;
 
-    WorkflowEngineInitializer(final Config config) {
-        this.config = config;
-    }
-
-    @SuppressWarnings("unused") // Used by servlet context.
     public WorkflowEngineInitializer() {
-        this(Config.getInstance());
+        this.config = ConfigProvider.getConfig();
     }
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
-        if (!config.getPropertyAsBoolean(WORKFLOW_ENGINE_ENABLED)) {
+        if (!config.getOptionalValue("workflow-engine.enabled", Boolean.class).orElse(false)) {
             return;
         }
 
@@ -126,36 +95,43 @@ public final class WorkflowEngineInitializer implements ServletContextListener {
     private static WorkflowEngineConfig createEngineConfig(final Config config) {
         final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), createDataSource(config));
 
-        engineConfig.retention().setDays(
-                config.getPropertyAsInt(WORKFLOW_ENGINE_RETENTION_DAYS));
+        config.getOptionalValue("workflow-engine.cache.run-history.max-size", int.class)
+                .ifPresent(engineConfig.runHistoryCache()::setMaxSize);
+        config.getOptionalValue("workflow-engine.cache.run-history.ttl", Duration.class)
+                .ifPresent(engineConfig.runHistoryCache()::setEvictAfterAccess);
 
-        engineConfig.runHistoryCache().setMaxSize(
-                config.getPropertyAsInt(WORKFLOW_ENGINE_CACHE_RUN_HISTORY_MAX_SIZE));
-        engineConfig.runHistoryCache().setEvictAfterAccess(Duration.ofMillis(
-                config.getPropertyAsInt(WORKFLOW_ENGINE_CACHE_RUN_HISTORY_TTL_MS)));
+        config.getOptionalValue("workflow-engine.buffer.external-event.flush-interval", Duration.class)
+                .ifPresent(engineConfig.externalEventBuffer()::setFlushInterval);
+        config.getOptionalValue("workflow-engine.buffer.external-event.max-size", int.class)
+                .ifPresent(engineConfig.externalEventBuffer()::setMaxBatchSize);
 
-        engineConfig.taskCommandBuffer().setFlushInterval(Duration.ofMillis(
-                config.getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_TASK_COMMAND_FLUSH_INTERVAL_MS)));
-        engineConfig.taskCommandBuffer().setMaxBatchSize(
-                config.getPropertyAsInt(WORKFLOW_ENGINE_BUFFER_TASK_COMMAND_MAX_SIZE));
+        config.getOptionalValue("workflow-engine.buffer.task-command.flush-interval", Duration.class)
+                .ifPresent(engineConfig.taskCommandBuffer()::setFlushInterval);
+        config.getOptionalValue("workflow-engine.buffer.task-command.max-size", int.class)
+                .ifPresent(engineConfig.taskCommandBuffer()::setMaxBatchSize);
 
-        engineConfig.activityTaskDispatcher().setMinPollInterval(Duration.ofMillis(
-                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_MIN_POLL_INTERVAL_MS)));
+        config.getOptionalValue("workflow-engine.retention.enabled", boolean.class)
+                .ifPresent(engineConfig.retention()::setWorkerEnabled);
+        config.getOptionalValue("workflow-engine.retention.days", int.class)
+                .ifPresent(engineConfig.retention()::setDays);
+
+        config.getOptionalValue("workflow-engine.task-dispatcher.activity.min-poll-interval", Duration.class)
+                .ifPresent(engineConfig.activityTaskDispatcher()::setMinPollInterval);
         engineConfig.activityTaskDispatcher().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
-                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_INITIAL_MS),
-                config.getPropertyAsDouble(WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_MULTIPLIER),
-                config.getPropertyAsDouble(WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_RANDOMIZATION_FACTOR),
-                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_ACTIVITY_POLL_BACKOFF_MAX_MS)));
+                config.getOptionalValue("workflow-engine.task-dispatcher.activity.poll-backoff.initial-delay", Duration.class).orElseGet(() -> Duration.ofMillis(100)),
+                config.getOptionalValue("workflow-engine.task-dispatcher.activity.poll-backoff.multiplier", double.class).orElse(1.5),
+                config.getOptionalValue("workflow-engine.task-dispatcher.activity.poll-backoff.randomization-factor", double.class).orElse(0.3),
+                config.getOptionalValue("workflow-engine.task-dispatcher.activity.poll-backoff.max-delay", Duration.class).orElseGet(() -> Duration.ofSeconds(3))));
 
-        engineConfig.workflowTaskDispatcher().setMinPollInterval(Duration.ofMillis(
-                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_MIN_POLL_INTERVAL_MS)));
-        engineConfig.activityTaskDispatcher().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
-                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_INITIAL_MS),
-                config.getPropertyAsDouble(WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_MULTIPLIER),
-                config.getPropertyAsDouble(WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_RANDOMIZATION_FACTOR),
-                config.getPropertyAsInt(WORKFLOW_ENGINE_TASK_DISPATCHER_WORKFLOW_POLL_BACKOFF_MAX_MS)));
+        config.getOptionalValue("workflow-engine.task-dispatcher.workflow.min-poll-interval", Duration.class)
+                .ifPresent(engineConfig.workflowTaskDispatcher()::setMinPollInterval);
+        engineConfig.workflowTaskDispatcher().setPollBackoffIntervalFunction(ofExponentialRandomBackoff(
+                config.getOptionalValue("workflow-engine.task-dispatcher.workflow.poll-backoff.initial-delay", Duration.class).orElseGet(() -> Duration.ofMillis(100)),
+                config.getOptionalValue("workflow-engine.task-dispatcher.workflow.poll-backoff.multiplier", double.class).orElse(1.5),
+                config.getOptionalValue("workflow-engine.task-dispatcher.workflow.poll-backoff.randomization-factor", double.class).orElse(0.3),
+                config.getOptionalValue("workflow-engine.task-dispatcher.workflow.poll-backoff.max-delay", Duration.class).orElseGet(() -> Duration.ofSeconds(3))));
 
-        if (config.getPropertyAsBoolean(METRICS_ENABLED)) {
+        if (config.getOptionalValue("alpine.metrics.enabled", boolean.class).orElse(false)) {
             engineConfig.setMeterRegistry(Metrics.getRegistry());
         }
 
@@ -163,27 +139,26 @@ public final class WorkflowEngineInitializer implements ServletContextListener {
     }
 
     private static DataSource createDataSource(final Config config) {
-        final String url = requireNonNullElseGet(
-                config.getProperty(WORKFLOW_ENGINE_DATABASE_URL),
-                () -> config.getProperty(DATABASE_URL));
-        final String username = requireNonNullElseGet(
-                config.getProperty(WORKFLOW_ENGINE_DATABASE_USERNAME),
-                () -> config.getProperty(DATABASE_USERNAME));
-        final String password = requireNonNullElseGet(
-                config.getProperty(WORKFLOW_ENGINE_DATABASE_PASSWORD),
-                () -> config.getProperty(DATABASE_PASSWORD));
+        final String url = config.getOptionalValue("workflow-engine.database.url", String.class)
+                .orElseGet(() -> config.getValue("alpine.database.url", String.class));
+        final String username = config.getOptionalValue("workflow-engine.database.username", String.class)
+                .or(() -> config.getOptionalValue("alpine.database.username", String.class))
+                .orElse(null);
+        final String password = config.getOptionalValue("workflow-engine.database.password", String.class)
+                .or(() -> config.getOptionalValue("alpine.database.password", String.class))
+                .orElse(null);
 
-        if (config.getPropertyAsBoolean(WORKFLOW_ENGINE_DATABASE_POOL_ENABLED)) {
+        if (config.getOptionalValue("workflow-engine.database.pool.enabled", boolean.class).orElse(true)) {
             final var hikariConfig = new HikariConfig();
             hikariConfig.setPoolName("workflow-engine");
             hikariConfig.setJdbcUrl(url);
             hikariConfig.setDriverClassName(org.postgresql.Driver.class.getName());
             hikariConfig.setUsername(username);
             hikariConfig.setPassword(password);
-            hikariConfig.setMaximumPoolSize(config.getPropertyAsInt(WORKFLOW_ENGINE_DATABASE_POOL_MAX_SIZE));
-            hikariConfig.setMinimumIdle(config.getPropertyAsInt(WORKFLOW_ENGINE_DATABASE_POOL_MIN_IDLE));
+            hikariConfig.setMaximumPoolSize(config.getOptionalValue("workflow-engine.database.pool.max-size", int.class).orElse(10));
+            hikariConfig.setMinimumIdle(config.getOptionalValue("workflow-engine.database.pool.min-idle", int.class).orElse(3));
 
-            if (config.getPropertyAsBoolean(METRICS_ENABLED)) {
+            if (config.getOptionalValue("alpine.metrics.enabled", boolean.class).orElse(false)) {
                 hikariConfig.setMetricsTrackerFactory(
                         new MicrometerMetricsTrackerFactory(Metrics.getRegistry()));
             }

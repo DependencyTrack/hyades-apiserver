@@ -27,14 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_MIGRATION_PASSWORD;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_MIGRATION_URL;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_MIGRATION_USERNAME;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_PASSWORD;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_URL;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_DATABASE_USERNAME;
-import static org.dependencytrack.common.ConfigKey.WORKFLOW_ENGINE_ENABLED;
-
 /**
  * @since 5.7.0
  */
@@ -54,10 +46,8 @@ public final class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
 
     @Override
     public void execute(final InitTaskContext ctx) throws Exception {
-        if (!ctx.config().getOptionalValue(WORKFLOW_ENGINE_ENABLED.getPropertyName(), boolean.class).orElse(false)) {
-            LOGGER.info(
-                    "Skipping execution because {} is disabled",
-                    WORKFLOW_ENGINE_ENABLED.getPropertyName());
+        if (!ctx.config().getOptionalValue("workflow-engine.enabled", boolean.class).orElse(false)) {
+            LOGGER.info("Skipping execution because workflow engine is disabled");
             return;
         }
 
@@ -65,27 +55,21 @@ public final class WorkflowEngineDatabaseMigrationInitTask implements InitTask {
     }
 
     private DataSource getDataSource(final InitTaskContext ctx) {
-        String engineDbUrl = ctx.config().getOptionalValue(
-                WORKFLOW_ENGINE_DATABASE_MIGRATION_URL.getPropertyName(), String.class).orElse(null);
+        String engineDbUrl = ctx.config().getOptionalValue("workflow-engine.database.migration-url", String.class).orElse(null);
         if (engineDbUrl != null) {
             final var dataSource = new PGSimpleDataSource();
             dataSource.setUrl(engineDbUrl);
-            dataSource.setUser(ctx.config().getOptionalValue(
-                    WORKFLOW_ENGINE_DATABASE_MIGRATION_USERNAME.getPropertyName(), String.class).orElse(null));
-            dataSource.setPassword(ctx.config().getOptionalValue(
-                    WORKFLOW_ENGINE_DATABASE_MIGRATION_PASSWORD.getPropertyName(), String.class).orElse(null));
+            dataSource.setUser(ctx.config().getOptionalValue("workflow-engine.database.migration-username", String.class).orElse(null));
+            dataSource.setPassword(ctx.config().getOptionalValue("workflow-engine.database.migration-password", String.class).orElse(null));
             return dataSource;
         }
 
-        engineDbUrl = ctx.config().getOptionalValue(
-                WORKFLOW_ENGINE_DATABASE_URL.getPropertyName(), String.class).orElse(null);
+        engineDbUrl = ctx.config().getOptionalValue("workflow-engine.database.url", String.class).orElse(null);
         if (engineDbUrl != null) {
             final var dataSource = new PGSimpleDataSource();
             dataSource.setUrl(engineDbUrl);
-            dataSource.setUser(ctx.config().getOptionalValue(
-                    WORKFLOW_ENGINE_DATABASE_USERNAME.getPropertyName(), String.class).orElse(null));
-            dataSource.setPassword(ctx.config().getOptionalValue(
-                    WORKFLOW_ENGINE_DATABASE_PASSWORD.getPropertyName(), String.class).orElse(null));
+            dataSource.setUser(ctx.config().getOptionalValue("workflow-engine.database.username", String.class).orElse(null));
+            dataSource.setPassword(ctx.config().getOptionalValue("workflow-engine.database.password", String.class).orElse(null));
             return dataSource;
         }
 

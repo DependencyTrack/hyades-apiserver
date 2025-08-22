@@ -68,7 +68,7 @@ public class WorkflowEngineDatabaseMigrationInitTaskTest {
     }
 
     @Test
-    @WithConfigProperty("workflow.engine.enabled=false")
+    @WithConfigProperty("workflow-engine.enabled=false")
     public void shouldNotExecuteWhenWorkflowEngineIsDisabled() throws Exception {
         new WorkflowEngineDatabaseMigrationInitTask().execute(
                 new InitTaskContext(ConfigProvider.getConfig(), dataSource));
@@ -78,10 +78,10 @@ public class WorkflowEngineDatabaseMigrationInitTaskTest {
 
     @Test
     @WithConfigProperty({
-            "workflow.engine.enabled=true",
-            "workflow.engine.database.migration.url=${testcontainers.postgresql.jdbc-url}",
-            "workflow.engine.database.migration.username=${testcontainers.postgresql.username}",
-            "workflow.engine.database.migration.password=${testcontainers.postgresql.password}"
+            "workflow-engine.enabled=true",
+            "workflow-engine.database.migration-url=${testcontainers.postgresql.jdbc-url}",
+            "workflow-engine.database.migration-username=${testcontainers.postgresql.username}",
+            "workflow-engine.database.migration-password=${testcontainers.postgresql.password}"
     })
     public void shouldUseEngineMigrationDataSourceWhenConfigured() throws Exception {
         new WorkflowEngineDatabaseMigrationInitTask().execute(
@@ -92,10 +92,10 @@ public class WorkflowEngineDatabaseMigrationInitTaskTest {
 
     @Test
     @WithConfigProperty({
-            "workflow.engine.enabled=true",
-            "workflow.engine.database.url=${testcontainers.postgresql.jdbc-url}",
-            "workflow.engine.database.username=${testcontainers.postgresql.username}",
-            "workflow.engine.database.password=${testcontainers.postgresql.password}"
+            "workflow-engine.enabled=true",
+            "workflow-engine.database.url=${testcontainers.postgresql.jdbc-url}",
+            "workflow-engine.database.username=${testcontainers.postgresql.username}",
+            "workflow-engine.database.password=${testcontainers.postgresql.password}"
     })
     public void shouldUseEngineDataSourceWhenConfigured() throws Exception {
         new WorkflowEngineDatabaseMigrationInitTask().execute(
@@ -105,7 +105,7 @@ public class WorkflowEngineDatabaseMigrationInitTaskTest {
     }
 
     @Test
-    @WithConfigProperty("workflow.engine.enabled=true")
+    @WithConfigProperty("workflow-engine.enabled=true")
     public void shouldUseInitTaskDataSourceAsFallback() throws Exception {
         new WorkflowEngineDatabaseMigrationInitTask().execute(
                 new InitTaskContext(ConfigProvider.getConfig(), dataSource));
