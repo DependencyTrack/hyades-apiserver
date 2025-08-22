@@ -24,8 +24,8 @@ public abstract sealed class FailureException extends RuntimeException permits
         ActivityFailureException,
         ApplicationFailureException,
         CancellationFailureException,
-        SideEffectFailureException,
-        ChildWorkflowFailureException {
+        ChildWorkflowFailureException,
+        SideEffectFailureException {
 
     @Nullable
     private final String originalMessage;

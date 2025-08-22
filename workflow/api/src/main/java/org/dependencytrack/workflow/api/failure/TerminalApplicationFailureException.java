@@ -20,6 +20,9 @@ package org.dependencytrack.workflow.api.failure;
 
 import org.jspecify.annotations.Nullable;
 
+/**
+ * A {@link FailureException} indicating a terminal failure in application code that shall not be retried.
+ */
 public class TerminalApplicationFailureException extends ApplicationFailureException {
 
     public TerminalApplicationFailureException(

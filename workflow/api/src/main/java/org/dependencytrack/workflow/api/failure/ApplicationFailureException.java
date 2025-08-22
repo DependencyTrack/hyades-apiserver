@@ -20,6 +20,9 @@ package org.dependencytrack.workflow.api.failure;
 
 import org.jspecify.annotations.Nullable;
 
+/**
+ * A {@link FailureException} thrown by application code.
+ */
 public non-sealed class ApplicationFailureException extends FailureException {
 
     private final boolean isTerminal;

@@ -20,6 +20,11 @@ package org.dependencytrack.workflow.api.failure;
 
 import org.jspecify.annotations.Nullable;
 
+/**
+ * A {@link FailureException} thrown by the engine when a side effect failed.
+ * <p>
+ * Application code must never throw this exception.
+ */
 public final class SideEffectFailureException extends FailureException {
 
     private final String sideEffectName;

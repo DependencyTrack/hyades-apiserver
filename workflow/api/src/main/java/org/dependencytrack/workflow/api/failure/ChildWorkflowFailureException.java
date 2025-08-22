@@ -22,6 +22,11 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
+/**
+ * A {@link FailureException} thrown by the engine when a child workflow failed.
+ * <p>
+ * Application code must never throw this exception.
+ */
 public final class ChildWorkflowFailureException extends FailureException {
 
     private final UUID runId;
@@ -33,7 +38,7 @@ public final class ChildWorkflowFailureException extends FailureException {
             final String workflowName,
             final int workflowVersion,
             @Nullable final Throwable cause) {
-        super("Run %s of workflow %s v%d failed".formatted(runId, workflowName, workflowVersion), null, cause);
+        super("Run %s of child workflow %s v%d failed".formatted(runId, workflowName, workflowVersion), null, cause);
         this.runId = runId;
         this.workflowName = workflowName;
         this.workflowVersion = workflowVersion;

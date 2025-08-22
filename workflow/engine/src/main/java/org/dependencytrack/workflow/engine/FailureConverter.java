@@ -90,36 +90,58 @@ final class FailureConverter {
         final Failure.Builder failureBuilder = Failure.newBuilder();
 
         switch (throwable) {
-            case final ActivityFailureException activityException -> failureBuilder
-                    .setMessage(activityException.getOriginalMessage())
-                    .setActivityFailureDetails(
-                            ActivityFailureDetails.newBuilder()
-                                    .setActivityName(activityException.getActivityName())
-                                    .build());
-            case final ApplicationFailureException applicationException -> failureBuilder
-                    .setMessage(applicationException.getOriginalMessage())
-                    .setApplicationFailureDetails(
-                            ApplicationFailureDetails.newBuilder()
-                                    .setIsTerminal(applicationException.isTerminal())
-                                    .build());
-            case final CancellationFailureException cancellationException -> failureBuilder
-                    .setMessage(cancellationException.getOriginalMessage())
-                    .setCancellationFailureDetails(
-                            CancellationFailureDetails.newBuilder()
-                                    .setReason(cancellationException.getReason())
-                                    .build());
-            case final SideEffectFailureException sideEffectException -> failureBuilder
-                    .setSideEffectFailureDetails(
-                            SideEffectFailureDetails.newBuilder()
-                                    .setSideEffectName(sideEffectException.getSideEffectName())
-                                    .build());
-            case final ChildWorkflowFailureException childWorkflowException -> failureBuilder
-                    .setChildWorkflowFailureDetails(
-                            ChildWorkflowFailureDetails.newBuilder()
-                                    .setWorkflowRunId(childWorkflowException.getRunId().toString())
-                                    .setWorkflowName(childWorkflowException.getWorkflowName())
-                                    .setWorkflowVersion(childWorkflowException.getWorkflowVersion())
-                                    .build());
+            case final ActivityFailureException activityException -> {
+                if (activityException.getOriginalMessage() != null) {
+                    failureBuilder.setMessage(activityException.getOriginalMessage());
+                }
+                failureBuilder
+                        .setActivityFailureDetails(
+                                ActivityFailureDetails.newBuilder()
+                                        .setActivityName(activityException.getActivityName())
+                                        .build());
+            }
+            case final ApplicationFailureException applicationException -> {
+                if (applicationException.getOriginalMessage() != null) {
+                    failureBuilder.setMessage(applicationException.getOriginalMessage());
+                }
+                failureBuilder
+                        .setApplicationFailureDetails(
+                                ApplicationFailureDetails.newBuilder()
+                                        .setIsTerminal(applicationException.isTerminal())
+                                        .build());
+            }
+            case final CancellationFailureException cancellationException -> {
+                if (cancellationException.getOriginalMessage() != null) {
+                    failureBuilder.setMessage(cancellationException.getOriginalMessage());
+                }
+                failureBuilder
+                        .setCancellationFailureDetails(
+                                CancellationFailureDetails.newBuilder()
+                                        .setReason(cancellationException.getReason())
+                                        .build());
+            }
+            case final SideEffectFailureException sideEffectException -> {
+                if (sideEffectException.getOriginalMessage() != null) {
+                    failureBuilder.setMessage(sideEffectException.getOriginalMessage());
+                }
+                failureBuilder
+                        .setSideEffectFailureDetails(
+                                SideEffectFailureDetails.newBuilder()
+                                        .setSideEffectName(sideEffectException.getSideEffectName())
+                                        .build());
+            }
+            case final ChildWorkflowFailureException childWorkflowException -> {
+                if (childWorkflowException.getOriginalMessage() != null) {
+                    failureBuilder.setMessage(childWorkflowException.getOriginalMessage());
+                }
+                failureBuilder
+                        .setChildWorkflowFailureDetails(
+                                ChildWorkflowFailureDetails.newBuilder()
+                                        .setWorkflowRunId(childWorkflowException.getRunId().toString())
+                                        .setWorkflowName(childWorkflowException.getWorkflowName())
+                                        .setWorkflowVersion(childWorkflowException.getWorkflowVersion())
+                                        .build());
+            }
             default -> {
                 if (throwable.getMessage() != null) {
                     failureBuilder.setMessage(throwable.getMessage());
@@ -144,7 +166,7 @@ final class FailureConverter {
     }
 
     @Nullable
-    private static String serializeStackTrace(@Nullable final StackTraceElement[] stackTrace) {
+    private static String serializeStackTrace(final StackTraceElement @Nullable [] stackTrace) {
         if (stackTrace == null || stackTrace.length == 0) {
             return null;
         }
@@ -172,8 +194,7 @@ final class FailureConverter {
     private static final Pattern STACK_TRACE_ELEMENT_PATTERN = Pattern.compile(
             "^(?<className>[\\w.$]+)\\.(?<methodName>[\\w.$]+)(?:\\((?<fileName>[\\w.]+):(?<lineNumber>-?\\d+)\\))?$");
 
-    @Nullable
-    private static StackTraceElement[] deserializeStackTrace(@Nullable final String stackTrace) {
+    private static StackTraceElement @Nullable [] deserializeStackTrace(@Nullable final String stackTrace) {
         if (stackTrace == null || stackTrace.isEmpty()) {
             return null;
         }

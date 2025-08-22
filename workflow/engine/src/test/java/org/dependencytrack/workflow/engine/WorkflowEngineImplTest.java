@@ -264,7 +264,7 @@ class WorkflowEngineImplTest {
     }
 
     @Test
-    void shouldWaitForScheduledTimerToElapse() {
+    void shouldWaitForTimerToElapse() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             // Sleep for a moment so we get an opportunity to cancel the run.
             ctx.createTimer("Sleep for 3 seconds", Duration.ofSeconds(5)).await();
@@ -295,7 +295,7 @@ class WorkflowEngineImplTest {
     }
 
     @Test
-    void shouldWaitForMultipleScheduledTimersToElapse() {
+    void shouldWaitForMultipleTimersToElapse() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             final var timers = new ArrayList<Awaitable<Void>>(3);
             for (int i = 0; i < 3; i++) {
@@ -402,7 +402,7 @@ class WorkflowEngineImplTest {
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_COMPLETED);
                     assertThat(entry.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_FAILED);
-                    assertThat(entry.getRunCompleted().getFailure().hasMessage()).isFalse();
+                    assertThat(entry.getRunCompleted().getFailure().getMessage()).matches("Run .+ of child workflow bar v1 failed");
                     assertThat(entry.getRunCompleted().getFailure().getCause().getMessage()).isEqualTo("Oh no!");
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED));
@@ -748,7 +748,7 @@ class WorkflowEngineImplTest {
     }
 
     @Test
-    void shouldScheduleMultipleActivitiesConcurrently() {
+    void shouldCreateMultipleActivitiesConcurrently() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             final List<Awaitable<String>> awaitables = List.of(
                     ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", "first", stringConverter(), stringConverter(), defaultRetryPolicy()),
@@ -908,7 +908,7 @@ class WorkflowEngineImplTest {
 
         assertThat(exceptionReference.get()).satisfies(e -> {
             assertThat(e).isInstanceOf(ChildWorkflowFailureException.class);
-            assertThat(e.getMessage()).matches("Run .+ of workflow bar v1 failed");
+            assertThat(e.getMessage()).matches("Run .+ of child workflow bar v1 failed");
             assertThat(e.getStackTrace()).isNotEmpty();
 
             {
@@ -920,7 +920,7 @@ class WorkflowEngineImplTest {
 
             assertThat(e.getCause()).satisfies(firstCause -> {
                 assertThat(firstCause).isInstanceOf(ChildWorkflowFailureException.class);
-                assertThat(firstCause.getMessage()).matches("Run .+ of workflow baz v1 failed");
+                assertThat(firstCause.getMessage()).matches("Run .+ of child workflow baz v1 failed");
                 assertThat(firstCause.getStackTrace()).isNotEmpty();
 
                 {

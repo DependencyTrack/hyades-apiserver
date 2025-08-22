@@ -20,6 +20,11 @@ package org.dependencytrack.workflow.api.failure;
 
 import org.jspecify.annotations.Nullable;
 
+/**
+ * A {@link FailureException} thrown by the engine when an activity failed.
+ * <p>
+ * Application code must never throw this exception.
+ */
 public final class ActivityFailureException extends FailureException {
 
     private final String activityName;

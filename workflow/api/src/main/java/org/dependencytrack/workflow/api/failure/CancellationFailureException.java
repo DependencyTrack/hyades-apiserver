@@ -18,6 +18,11 @@
  */
 package org.dependencytrack.workflow.api.failure;
 
+/**
+ * A {@link FailureException} thrown by the engine upon cancellation of a workflow run or awaitable.
+ * <p>
+ * Application code must never throw this exception.
+ */
 public final class CancellationFailureException extends FailureException {
 
     private final String reason;
