@@ -17,7 +17,11 @@
 get:
   operationId: listWorkflowRunEvents
   summary: List all events of a workflow run
-  description: Returns a paginated list of a workflow run's events
+  description: |-
+    Returns a paginated list of a workflow run's events.
+    
+    Events are exposed for diagnostics purposes. 3rd party clients should not depend on them.
+    The event structure is to be considered an implementation detail that may change without further notice.
   tags:
   - Workflows
   parameters:
