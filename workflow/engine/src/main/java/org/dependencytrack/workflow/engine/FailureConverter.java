@@ -170,7 +170,7 @@ final class FailureConverter {
     }
 
     private static final Pattern STACK_TRACE_ELEMENT_PATTERN = Pattern.compile(
-            "^(?<className>[\\w.$]+)\\.(?<methodName>[\\w.$]+)(?:\\((?<fileName>[\\w.]+):(?<lineNumber>\\d+)\\))?$");
+            "^(?<className>[\\w.$]+)\\.(?<methodName>[\\w.$]+)(?:\\((?<fileName>[\\w.]+):(?<lineNumber>-?\\d+)\\))?$");
 
     @Nullable
     private static StackTraceElement[] deserializeStackTrace(@Nullable final String stackTrace) {
