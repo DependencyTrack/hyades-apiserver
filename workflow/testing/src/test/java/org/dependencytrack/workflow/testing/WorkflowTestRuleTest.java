@@ -32,8 +32,11 @@ import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.jspecify.annotations.Nullable;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -48,8 +51,12 @@ import static org.mockito.Mockito.mock;
 
 public class WorkflowTestRuleTest {
 
+    @ClassRule
+    public static final PostgreSQLContainer<?> POSTGRES_CONTAINER =
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres:13-alpine"));
+
     @Rule
-    public final WorkflowTestRule workflowTestRule = new WorkflowTestRule();
+    public final WorkflowTestRule workflowTestRule = new WorkflowTestRule(POSTGRES_CONTAINER);
 
     @Test
     public void shouldExecuteWorkflow() {
@@ -68,7 +75,8 @@ public class WorkflowTestRuleTest {
                 new TestActivity(),
                 voidConverter(),
                 stringConverter(),
-                Duration.ofSeconds(3));
+                Duration.ofSeconds(3),
+                false);
         engine.mountActivities(
                 new ActivityGroup("all")
                         .withActivity(TestActivity.class));
@@ -103,7 +111,8 @@ public class WorkflowTestRuleTest {
                 activityMock,
                 voidConverter(),
                 stringConverter(),
-                Duration.ofSeconds(3));
+                Duration.ofSeconds(3),
+                false);
         engine.mountActivities(
                 new ActivityGroup("all")
                         .withActivity(TestActivity.class));

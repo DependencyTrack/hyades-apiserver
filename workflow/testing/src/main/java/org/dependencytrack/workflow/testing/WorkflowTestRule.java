@@ -31,8 +31,8 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
+import javax.sql.DataSource;
 import java.time.Duration;
 import java.util.ServiceLoader;
 import java.util.UUID;
@@ -46,42 +46,41 @@ public final class WorkflowTestRule implements TestRule {
     private static final ServiceLoader<WorkflowEngineFactory> ENGINE_FACTORY_LOADER =
             ServiceLoader.load(WorkflowEngineFactory.class);
 
+    private final DataSource dataSource;
+
     @Nullable
     private WorkflowEngine engine;
 
     @Nullable
     private Consumer<WorkflowEngineConfig> configCustomizer;
 
+    public WorkflowTestRule(final DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    public WorkflowTestRule(final PostgreSQLContainer<?> postgresContainer) {
+        this(createDataSource(postgresContainer));
+    }
+
     @Override
     public Statement apply(final Statement statement, final Description description) {
         return new Statement() {
             @Override
             public void evaluate() throws Throwable {
-                // TODO: Support container reuse.
-                try (final var postgresContainer = new PostgreSQLContainer<>(
-                        DockerImageName.parse("postgres:13-alpine"))) {
-                    postgresContainer.start();
+                new MigrationExecutor(dataSource).executeMigration();
 
-                    final var dataSource = new PGSimpleDataSource();
-                    dataSource.setUrl(postgresContainer.getJdbcUrl());
-                    dataSource.setUser(postgresContainer.getUsername());
-                    dataSource.setPassword(postgresContainer.getPassword());
+                final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
+                if (configCustomizer != null) {
+                    configCustomizer.accept(engineConfig);
+                }
 
-                    new MigrationExecutor(dataSource).executeMigration();
+                final WorkflowEngineFactory engineFactory = ENGINE_FACTORY_LOADER.findFirst().orElseThrow();
 
-                    final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
-                    if (configCustomizer != null) {
-                        configCustomizer.accept(engineConfig);
-                    }
-
-                    final WorkflowEngineFactory engineFactory = ENGINE_FACTORY_LOADER.findFirst().orElseThrow();
-
-                    engine = engineFactory.create(engineConfig);
-                    try {
-                        statement.evaluate();
-                    } finally {
-                        engine.close();
-                    }
+                engine = engineFactory.create(engineConfig);
+                try {
+                    statement.evaluate();
+                } finally {
+                    engine.close();
                 }
             }
         };
@@ -138,6 +137,14 @@ public final class WorkflowTestRule implements TestRule {
     @Nullable
     public WorkflowRun awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
         return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(5));
+    }
+
+    private static DataSource createDataSource(final PostgreSQLContainer<?> postgresContainer) {
+        final var dataSource = new PGSimpleDataSource();
+        dataSource.setUrl(postgresContainer.getJdbcUrl());
+        dataSource.setUser(postgresContainer.getUsername());
+        dataSource.setPassword(postgresContainer.getPassword());
+        return dataSource;
     }
 
 }
