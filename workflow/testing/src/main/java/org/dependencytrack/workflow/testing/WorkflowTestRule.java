@@ -18,10 +18,11 @@
  */
 package org.dependencytrack.workflow.testing;
 
+import com.google.protobuf.DebugFormat;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineFactory;
-import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.workflow.engine.api.WorkflowRun;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.migration.MigrationExecutor;
 import org.jspecify.annotations.Nullable;
@@ -37,6 +38,7 @@ import java.util.ServiceLoader;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 public final class WorkflowTestRule implements TestRule {
@@ -98,26 +100,43 @@ public final class WorkflowTestRule implements TestRule {
         return this;
     }
 
-    public WorkflowRunMetadata awaitRunStatus(
+    @Nullable
+    public WorkflowRun awaitRunStatus(
             final UUID runId,
             final WorkflowRunStatus expectedStatus,
             final Duration timeout) {
-        return await("Workflow Run Status to become " + expectedStatus)
+        return await("Workflow run status to become " + expectedStatus)
                 .atMost(timeout)
                 .failFast(() -> {
-                    final WorkflowRunStatus currentStatus = engine.getRunMetadata(runId).status();
-                    if (currentStatus.isTerminal() && !expectedStatus.isTerminal()) {
-                        return true;
+                    final WorkflowRun run = getEngine().getRun(runId);
+                    if (run == null) {
+                        return;
                     }
 
-                    return currentStatus.isTerminal()
-                           && expectedStatus.isTerminal()
-                           && currentStatus != expectedStatus;
+                    assertThat(!expectedStatus.isTerminal() && run.status().isTerminal())
+                            .as("If the expected status is non-terminal, the current status must not be terminal")
+                            .isFalse();
+
+                    if (expectedStatus.isTerminal() && run.status().isTerminal()) {
+                        assertThat(expectedStatus)
+                                .as("If expected and actual status are terminal, they must be equal")
+                                .withFailMessage(() -> {
+                                    var message = "Expected status to be %s, but was %s".formatted(
+                                            expectedStatus, run.status());
+                                    if (run.failure() != null) {
+                                        message += " (failure: %s)".formatted(
+                                                DebugFormat.singleLine().toString(run.failure()));
+                                    }
+                                    return message;
+                                })
+                                .isEqualTo(run.status());
+                    }
                 })
-                .until(() -> engine.getRunMetadata(runId), run -> run.status() == expectedStatus);
+                .until(() -> getEngine().getRun(runId), run -> run != null && run.status() == expectedStatus);
     }
 
-    public WorkflowRunMetadata awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
+    @Nullable
+    public WorkflowRun awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
         return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(5));
     }
 

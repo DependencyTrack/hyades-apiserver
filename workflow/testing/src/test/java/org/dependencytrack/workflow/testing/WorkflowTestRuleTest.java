@@ -52,7 +52,7 @@ public class WorkflowTestRuleTest {
     public final WorkflowTestRule workflowTestRule = new WorkflowTestRule();
 
     @Test
-    public void test() {
+    public void shouldExecuteWorkflow() {
         final WorkflowEngine engine = workflowTestRule.getEngine();
 
         engine.registerWorkflow(
@@ -77,16 +77,14 @@ public class WorkflowTestRuleTest {
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class));
 
-        workflowTestRule.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
-
-        final WorkflowRun run = engine.getRun(runId);
+        final WorkflowRun run = workflowTestRule.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
         assertThat(run).isNotNull();
         assertThat(run.result()).isNotNull();
         assertThat(stringConverter().convertFromPayload(run.result())).isEqualTo("foo-bar");
     }
 
     @Test
-    public void testWithActivityMock() {
+    public void shouldSupportMockedActivities() {
         final WorkflowEngine engine = workflowTestRule.getEngine();
 
         engine.registerWorkflow(
@@ -114,9 +112,7 @@ public class WorkflowTestRuleTest {
 
         final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>(TestWorkflow.class));
 
-        workflowTestRule.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
-
-        final WorkflowRun run = engine.getRun(runId);
+        final WorkflowRun run = workflowTestRule.awaitRunStatus(runId, WorkflowRunStatus.COMPLETED);
         assertThat(run).isNotNull();
         assertThat(run.result()).isNotNull();
         assertThat(stringConverter().convertFromPayload(run.result())).isEqualTo("foo-mocked");
