@@ -126,7 +126,8 @@ final class MetadataRegistry {
             final ActivityExecutor<A, R> executor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final Duration lockTimeout) {
+            final Duration lockTimeout,
+            final boolean heartbeatEnabled) {
         requireNonNull(executor, "executor must not be null");
         requireNonNull(argumentConverter, "argumentConverter must not be null");
         requireNonNull(resultConverter, "resultConverter must not be null");
@@ -142,7 +143,7 @@ final class MetadataRegistry {
                 argumentConverter,
                 resultConverter,
                 lockTimeout,
-                activityAnnotation.heartbeat(),
+                heartbeatEnabled,
                 executor);
     }
 

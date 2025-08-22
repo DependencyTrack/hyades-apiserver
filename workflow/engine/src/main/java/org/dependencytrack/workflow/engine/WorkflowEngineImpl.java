@@ -388,9 +388,10 @@ final class WorkflowEngineImpl implements WorkflowEngine {
             final ActivityExecutor<A, R> activityExecutor,
             final PayloadConverter<A> argumentConverter,
             final PayloadConverter<R> resultConverter,
-            final Duration lockTimeout) {
+            final Duration lockTimeout,
+            boolean heartbeatEnabled) {
         requireStatusAnyOf(Status.CREATED, Status.STOPPED);
-        metadataRegistry.registerActivity(activityExecutor, argumentConverter, resultConverter, lockTimeout);
+        metadataRegistry.registerActivity(activityExecutor, argumentConverter, resultConverter, lockTimeout, heartbeatEnabled);
     }
 
     <A, R> void registerActivityInternal(

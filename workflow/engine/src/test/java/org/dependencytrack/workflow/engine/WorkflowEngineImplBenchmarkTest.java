@@ -151,9 +151,9 @@ public class WorkflowEngineImplBenchmarkTest {
 
         engine = new WorkflowEngineImpl(engineConfig);
         engine.registerWorkflow(new TestWorkflow(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
-        engine.registerActivity(new TestActivityFoo(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
-        engine.registerActivity(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
-        engine.registerActivity(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5));
+        engine.registerActivity(new TestActivityFoo(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
+        engine.registerActivity(new TestActivityBar(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
+        engine.registerActivity(new TestActivityBaz(), voidConverter(), voidConverter(), Duration.ofSeconds(5), false);
 
         engine.mountWorkflows(new WorkflowGroup("test")
                 .withWorkflow(TestWorkflow.class)

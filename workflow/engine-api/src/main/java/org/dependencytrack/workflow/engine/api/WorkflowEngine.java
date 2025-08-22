@@ -76,6 +76,8 @@ public interface WorkflowEngine extends Closeable {
      * @param argumentConverter The {@link PayloadConverter} to use for arguments.
      * @param resultConverter   The {@link PayloadConverter} to use for results.
      * @param lockTimeout       How instances of this activity shall be locked for execution.
+     * @param heartbeatEnabled  Whether the engine should send heartbeats to extend locks,
+     *                          in case the activity takes longer than expected to complete.
      * @param <A>               Type of the activity's argument.
      * @param <R>               Type of the activity's result.
      * @throws IllegalStateException When the engine was already started.
@@ -84,7 +86,8 @@ public interface WorkflowEngine extends Closeable {
             ActivityExecutor<A, R> executor,
             PayloadConverter<A> argumentConverter,
             PayloadConverter<R> resultConverter,
-            Duration lockTimeout);
+            Duration lockTimeout,
+            boolean heartbeatEnabled);
 
     /**
      * Mount a {@link WorkflowGroup}.
@@ -108,7 +111,7 @@ public interface WorkflowEngine extends Closeable {
      * @throws IllegalStateException When any of the activities within the group have not been registered,
      *                               or another group with the same name is already mounted.
      * @throws IllegalStateException When the engine was already started.
-     * @see #registerActivity(ActivityExecutor, PayloadConverter, PayloadConverter, Duration)
+     * @see #registerActivity(ActivityExecutor, PayloadConverter, PayloadConverter, Duration, boolean)
      */
     void mountActivities(ActivityGroup group);
 

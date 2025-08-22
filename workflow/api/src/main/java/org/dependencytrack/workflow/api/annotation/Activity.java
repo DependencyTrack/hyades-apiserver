@@ -34,10 +34,4 @@ public @interface Activity {
      */
     String name();
 
-    /**
-     * @return Whether the engine should send heartbeats to extend locks,
-     * in case the activity takes longer than expected to complete.
-     */
-    boolean heartbeat() default false;
-
 }
