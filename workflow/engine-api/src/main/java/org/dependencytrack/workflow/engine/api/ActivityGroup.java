@@ -38,6 +38,10 @@ public record ActivityGroup(String name, Set<String> activityNames, int maxConcu
     public ActivityGroup {
         requireNonNull(name, "name must not be null");
         requireNonNull(activityNames, "activityNames must not be null");
+        if (maxConcurrency < 1) {
+            throw new IllegalArgumentException("maxConcurrency must be greater than 0");
+        }
+
     }
 
     public ActivityGroup(final String name) {
@@ -45,8 +49,9 @@ public record ActivityGroup(String name, Set<String> activityNames, int maxConcu
     }
 
     public ActivityGroup withActivity(final String activityName) {
-        this.activityNames.add(activityName);
-        return this;
+        final var activityNames = new HashSet<>(this.activityNames);
+        activityNames.add(activityName);
+        return new ActivityGroup(this.name, activityNames, this.maxConcurrency);
     }
 
     public ActivityGroup withActivity(final Class<? extends ActivityExecutor<?, ?>> executorClass) {
@@ -58,15 +63,10 @@ public record ActivityGroup(String name, Set<String> activityNames, int maxConcu
                     Activity.class.getName(), executorClass.getName()));
         }
 
-        this.activityNames.add(activityAnnotation.name());
-        return this;
+        return withActivity(activityAnnotation.name());
     }
 
     public ActivityGroup withMaxConcurrency(final int maxConcurrency) {
-        if (maxConcurrency < 1) {
-            throw new IllegalArgumentException("maxConcurrency must be greater than 0");
-        }
-
         return new ActivityGroup(this.name, this.activityNames, maxConcurrency);
     }
 

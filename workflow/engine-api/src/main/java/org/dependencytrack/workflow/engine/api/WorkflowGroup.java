@@ -38,6 +38,9 @@ public record WorkflowGroup(String name, Set<String> workflowNames, int maxConcu
     public WorkflowGroup {
         requireNonNull(name, "name must not be null");
         requireNonNull(workflowNames, "workflowNames must not be null");
+        if (maxConcurrency < 1) {
+            throw new IllegalArgumentException("maxConcurrency must be greater than 0");
+        }
     }
 
     public WorkflowGroup(final String name) {
@@ -45,8 +48,9 @@ public record WorkflowGroup(String name, Set<String> workflowNames, int maxConcu
     }
 
     public WorkflowGroup withWorkflow(final String workflowName) {
-        this.workflowNames.add(workflowName);
-        return this;
+        final var workflowNames = new HashSet<>(this.workflowNames);
+        workflowNames.add(workflowName);
+        return new WorkflowGroup(this.name, workflowNames, this.maxConcurrency);
     }
 
     public WorkflowGroup withWorkflow(final Class<? extends WorkflowExecutor<?, ?>> executorClass) {
@@ -58,14 +62,10 @@ public record WorkflowGroup(String name, Set<String> workflowNames, int maxConcu
                     Workflow.class.getName(), executorClass.getName()));
         }
 
-        this.workflowNames.add(workflowAnnotation.name());
-        return this;
+        return withWorkflow(workflowAnnotation.name());
     }
 
     public WorkflowGroup withMaxConcurrency(final int maxConcurrency) {
-        if (maxConcurrency < 1) {
-            throw new IllegalArgumentException("maxConcurrency must be greater than 0");
-        }
         return new WorkflowGroup(this.name, this.workflowNames, maxConcurrency);
     }
 
