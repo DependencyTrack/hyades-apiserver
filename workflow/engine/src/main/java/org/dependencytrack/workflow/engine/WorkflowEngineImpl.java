@@ -447,14 +447,14 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<UUID> createRuns(final Collection<CreateWorkflowRunRequest<?>> options) {
         final var now = Timestamps.now();
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(options.size());
         final var createInboxEntryCommand = new ArrayList<CreateWorkflowRunInboxEntryCommand>(options.size());
 
         for (final CreateWorkflowRunRequest<?> option : options) {
-            //noinspection rawtypes
-            final WorkflowMetadata workflowMetadata =
+            @SuppressWarnings("rawtypes") final WorkflowMetadata workflowMetadata =
                     metadataRegistry.getWorkflowMetadata(option.workflowName());
 
             final UUID runId = timeBasedEpochRandomGenerator().generate();
@@ -485,7 +485,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 if (option.argument() instanceof final Payload payload) {
                     argumentPayload = payload;
                 } else {
-                    //noinspection unchecked
                     argumentPayload = workflowMetadata.argumentConverter().convertToPayload(option.argument());
                 }
                 runCreatedBuilder.setArgument(argumentPayload);

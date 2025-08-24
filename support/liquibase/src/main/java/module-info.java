@@ -16,11 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
+@SuppressWarnings("requires-transitive-automatic")
 module org.dependencytrack.support.liquibase {
     exports org.dependencytrack.support.liquibase;
 
     requires java.logging;
-    requires liquibase.core;
+    requires transitive liquibase.core;
     requires org.slf4j;
 
     requires transitive java.sql;

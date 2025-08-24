@@ -37,6 +37,9 @@ public class WorkflowEngineConfig {
         private Duration flushInterval = Duration.ofMillis(5);
         private int maxBatchSize = 100;
 
+        private BufferConfig() {
+        }
+
         /**
          * @return Interval at which the buffer content is flushed.
          */
@@ -66,6 +69,9 @@ public class WorkflowEngineConfig {
         private Duration evictAfterAccess = Duration.ofMinutes(5);
         private int maxSize = 1000;
 
+        private CacheConfig() {
+        }
+
         public Duration evictAfterAccess() {
             return evictAfterAccess;
         }
@@ -90,6 +96,9 @@ public class WorkflowEngineConfig {
         private boolean workerEnabled = true;
         private Duration workerInitialDelay = Duration.ofMinutes(1);
         private Duration workerInterval = Duration.ofMinutes(30);
+
+        private RetentionConfig() {
+        }
 
         /**
          * @return Number of days to retain completed workflow runs for.
@@ -143,6 +152,9 @@ public class WorkflowEngineConfig {
         private Duration initialDelay = Duration.ofSeconds(15);
         private Duration pollInterval = Duration.ofSeconds(15);
 
+        private SchedulerConfig() {
+        }
+
         /**
          * @return Whether the scheduler shall be enabled in this instance.
          */
@@ -186,6 +198,9 @@ public class WorkflowEngineConfig {
                 /* multiplier */ 2,
                 /* randomizationFactor */ 0.3,
                 /* maxIntervalMillis */ TimeUnit.SECONDS.toMillis(3));
+
+        private TaskDispatcherConfig() {
+        }
 
         /**
          * @return Minimum interval at which tasks are being polled.

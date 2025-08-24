@@ -23,6 +23,6 @@ import org.jspecify.annotations.NullMarked;
 module org.dependencytrack.workflow.engine.migration {
     exports org.dependencytrack.workflow.engine.migration;
 
-    requires org.dependencytrack.support.liquibase;
+    requires transitive org.dependencytrack.support.liquibase;
     requires org.jspecify;
 }

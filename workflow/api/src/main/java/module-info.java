@@ -20,6 +20,7 @@
 import org.jspecify.annotations.NullMarked;
 
 @NullMarked
+@SuppressWarnings("requires-automatic")
 module org.dependencytrack.workflow.api {
     exports org.dependencytrack.workflow.api;
     exports org.dependencytrack.workflow.api.annotation;
@@ -29,5 +30,5 @@ module org.dependencytrack.workflow.api {
     requires com.google.protobuf;
     requires transitive org.dependencytrack.workflow.proto;
     requires transitive org.jspecify;
-    requires org.slf4j;
+    requires transitive org.slf4j;
 }

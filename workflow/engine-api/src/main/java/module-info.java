@@ -20,15 +20,16 @@
 import org.jspecify.annotations.NullMarked;
 
 @NullMarked
+@SuppressWarnings("requires-transitive-automatic")
 module org.dependencytrack.workflow.engine.api {
     exports org.dependencytrack.workflow.engine.api;
     exports org.dependencytrack.workflow.engine.api.event;
     exports org.dependencytrack.workflow.engine.api.pagination;
     exports org.dependencytrack.workflow.engine.api.request;
 
-    requires io.github.resilience4j.core;
-    requires java.sql;
-    requires micrometer.core;
+    requires transitive io.github.resilience4j.core;
+    requires transitive java.sql;
+    requires transitive micrometer.core;
     requires transitive org.dependencytrack.workflow.api;
     requires transitive org.dependencytrack.workflow.proto;
     requires transitive org.jspecify;

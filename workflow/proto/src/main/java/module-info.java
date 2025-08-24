@@ -16,6 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
+@SuppressWarnings("requires-transitive-automatic")
 module org.dependencytrack.workflow.proto {
     exports org.dependencytrack.proto.workflow.common.v1;
     exports org.dependencytrack.proto.workflow.event.v1;

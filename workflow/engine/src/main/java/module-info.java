@@ -20,6 +20,7 @@
 import org.jspecify.annotations.NullMarked;
 
 @NullMarked
+@SuppressWarnings("requires-automatic")
 module org.dependencytrack.workflow.engine {
     provides org.dependencytrack.workflow.engine.api.WorkflowEngineFactory
             with org.dependencytrack.workflow.engine.WorkflowEngineFactoryImpl;
