@@ -25,6 +25,9 @@ import java.util.UUID;
  */
 public interface ActivityContext {
 
+    /**
+     * @return ID of the workflow run that this activity run is part of.
+     */
     UUID workflowRunId();
 
 }

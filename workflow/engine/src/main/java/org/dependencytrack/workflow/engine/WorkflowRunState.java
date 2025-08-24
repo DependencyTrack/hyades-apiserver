@@ -487,7 +487,7 @@ final class WorkflowRunState {
                 .build(), /* isNew */ true);
 
         pendingTimerElapsedEvents.add(Event.newBuilder()
-                .setId(command.eventId())
+                .setId(command.elapsedEventId())
                 .setTimestamp(Timestamps.now())
                 .setTimerElapsed(TimerElapsed.newBuilder()
                         .setTimerCreatedEventId(command.eventId())

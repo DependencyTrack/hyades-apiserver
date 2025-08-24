@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.workflow.engine;
 
+import org.dependencytrack.proto.workflow.event.v1.TimerCreated;
+import org.dependencytrack.proto.workflow.event.v1.TimerElapsed;
 import org.dependencytrack.proto.workflow.failure.v1.Failure;
 import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
@@ -72,8 +74,15 @@ sealed interface WorkflowCommand permits
             @Nullable Payload argument) implements WorkflowCommand {
     }
 
+    /**
+     * @param eventId        ID of the {@link TimerCreated} event.
+     * @param elapsedEventId ID of the corresponding {@link TimerElapsed} event.
+     * @param name           Name of the timer.
+     * @param elapseAt       When the timer elapses.
+     */
     record CreateTimerCommand(
             int eventId,
+            int elapsedEventId,
             String name,
             Instant elapseAt) implements WorkflowCommand {
     }

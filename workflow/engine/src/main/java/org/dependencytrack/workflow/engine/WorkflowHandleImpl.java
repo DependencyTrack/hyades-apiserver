@@ -48,6 +48,7 @@ final class WorkflowHandleImpl<A, R> implements WorkflowHandle<A, R> {
 
     @Override
     public Awaitable<R> call(final WorkflowCallOptions<A> options) {
+        requireNonNull(options, "options must not be null");
         return workflowContext.callChildWorkflow(
                 this.workflowName,
                 this.workflowVersion,

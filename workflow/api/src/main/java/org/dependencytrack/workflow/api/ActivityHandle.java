@@ -25,7 +25,7 @@ public interface ActivityHandle<A, R> {
     /**
      * Call the activity.
      * <p>
-     * If the activity fails, {@link Awaitable#await()} will throw a {@link ActivityFailureException}.
+     * If the activity fails, {@link Awaitable#await()} will throw an {@link ActivityFailureException}.
      *
      * @param options Options of the call.
      * @return An {@link Awaitable} wrapping the activity's result.

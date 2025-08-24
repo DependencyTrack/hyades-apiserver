@@ -218,6 +218,46 @@ class WorkflowEngineImplTest {
     }
 
     @Test
+    void shouldFailWorkflowRunOnNonDeterministicExecution() {
+        final var executionCounter = new AtomicInteger(0);
+        engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
+            if (executionCounter.incrementAndGet() == 1) {
+                ((WorkflowContextImpl<?, ?>) ctx).callActivity(
+                        "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+            } else {
+                ((WorkflowContextImpl<?, ?>) ctx).callActivity(
+                        "def", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+            }
+            return null;
+        });
+        engine.mountWorkflows(new WorkflowGroup("test-group").withWorkflow("test"));
+        engine.registerActivityInternal("abc", voidConverter(), voidConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> null);
+        engine.registerActivityInternal("def", voidConverter(), voidConverter(), Duration.ofSeconds(5), false, (ctx, arg) -> null);
+        engine.mountActivities(new ActivityGroup("test-group").withActivity("abc").withActivity("def"));
+        engine.start();
+
+        final UUID runId = engine.createRun(new CreateWorkflowRunRequest<>("test", 1));
+
+        awaitRunStatus(runId, WorkflowRunStatus.FAILED);
+
+        assertThat(engine.listRunEvents(new ListWorkflowRunEventsRequest(runId)).items()).satisfiesExactly(
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_CREATED),
+                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_STARTED),
+                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
+                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED),
+                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
+                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_COMPLETED),
+                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
+                event -> {
+                    assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_COMPLETED);
+                    assertThat(event.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_FAILED);
+                    assertThat(event.getRunCompleted().getFailure().getMessage()).startsWith("Detected non-deterministic workflow execution");
+                },
+                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED));
+    }
+
+    @Test
     void shouldFailWorkflowRunWhenCancelled() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             // Sleep for a moment so we get an opportunity to cancel the run.

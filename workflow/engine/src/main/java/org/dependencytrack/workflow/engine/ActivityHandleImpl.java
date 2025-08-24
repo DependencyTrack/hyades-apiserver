@@ -23,6 +23,8 @@ import org.dependencytrack.workflow.api.ActivityHandle;
 import org.dependencytrack.workflow.api.Awaitable;
 import org.dependencytrack.workflow.api.payload.PayloadConverter;
 
+import static java.util.Objects.requireNonNull;
+
 final class ActivityHandleImpl<A, R> implements ActivityHandle<A, R> {
 
     private final WorkflowContextImpl<?, ?> workflowContext;
@@ -43,6 +45,7 @@ final class ActivityHandleImpl<A, R> implements ActivityHandle<A, R> {
 
     @Override
     public Awaitable<R> call(final ActivityCallOptions<A> options) {
+        requireNonNull(options, "options must not be null");
         return workflowContext.callActivity(
                 this.activityName,
                 options.argument(),
