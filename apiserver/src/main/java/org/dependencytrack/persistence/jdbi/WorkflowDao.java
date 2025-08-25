@@ -158,7 +158,7 @@ public interface WorkflowDao extends SqlObject {
     /**
      * @since 5.6.0
      */
-    default List<Long> transitionAllTimedOutStepsToFailedForTimeout(final Duration timeoutDuration) {
+    default List<WorkflowState> transitionAllTimedOutStepsToFailedForTimeout(final Duration timeoutDuration) {
         // NB: Can't use interface method here due to https://github.com/jdbi/jdbi/issues/1807.
         return getHandle().createUpdate("""
                         UPDATE "WORKFLOW_STATE"
@@ -167,11 +167,11 @@ public interface WorkflowDao extends SqlObject {
                              , "UPDATED_AT" = NOW()
                          WHERE "STATUS" = 'TIMED_OUT'
                            AND "UPDATED_AT" < (NOW() - :timeoutDuration)
-                        RETURNING "ID"
+                        RETURNING *
                         """)
                 .bind("timeoutDuration", timeoutDuration)
                 .executeAndReturnGeneratedKeys()
-                .mapTo(Long.class)
+                .mapToBean(WorkflowState.class)
                 .list();
     }
 

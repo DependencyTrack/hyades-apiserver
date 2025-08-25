@@ -25,10 +25,12 @@ import alpine.event.framework.Subscriber;
 import com.google.protobuf.Any;
 import com.google.protobuf.util.Timestamps;
 import org.dependencytrack.common.ConfigKey;
+import org.dependencytrack.common.MdcScope;
 import org.dependencytrack.event.kafka.KafkaEvent;
 import org.dependencytrack.event.kafka.KafkaEventConverter;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
+import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
@@ -42,8 +44,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static net.javacrumbs.shedlock.core.LockAssert.assertLocked;
+import static org.dependencytrack.common.MdcKeys.MDC_WORKFLOW_TOKEN;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_RETENTION_HOURS;
 import static org.dependencytrack.model.ConfigPropertyConstants.MAINTENANCE_WORKFLOW_STEP_TIMEOUT_MINUTES;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
@@ -122,9 +126,18 @@ public class WorkflowMaintenanceTask implements Subscriber {
 
         final var notifications = new ArrayList<KafkaEvent<?, ?>>();
         jdbiHandle.useTransaction(ignored -> {
-            final List<Long> failedStepIds = workflowDao.transitionAllTimedOutStepsToFailedForTimeout(stepTimeoutDuration);
-            if (failedStepIds.isEmpty()) {
+            final List<WorkflowState> failedStates = workflowDao.transitionAllTimedOutStepsToFailedForTimeout(stepTimeoutDuration);
+            if (failedStates.isEmpty()) {
                 return;
+            }
+
+            var failedStepIds = failedStates.stream().map(WorkflowState::getId).toList();
+            failedStepsResult.numStepsFailed = failedStepIds.size();
+
+            for (var failedState : failedStates) {
+                try (var ignore = new MdcScope(Map.of(MDC_WORKFLOW_TOKEN, failedState.getToken().toString()))) {
+                    LOGGER.warn("Transitioned workflow step %s from %s to %s".formatted(failedState.getStep(), WorkflowStatus.TIMED_OUT, WorkflowStatus.FAILED));
+                }
             }
 
             // Send BOM_PROCESSING_FAILED notifications for timed out failures.
@@ -145,10 +158,6 @@ public class WorkflowMaintenanceTask implements Subscriber {
                         .map(KafkaEventConverter::convert)
                         .forEach(notifications::add);
             }
-
-            failedStepsResult.numStepsFailed = failedStepIds.size();
-            LOGGER.warn("Transitioned %d workflow step(s) from %s to %s for timeout %s"
-                    .formatted(failedStepsResult.numStepsFailed, WorkflowStatus.TIMED_OUT, WorkflowStatus.FAILED, stepTimeoutDuration));
 
             failedStepsResult.numStepsCancelled = Arrays.stream(workflowDao.cancelAllChildrenByParentStepIdAnyOf(failedStepIds)).sum();
             if (failedStepsResult.numStepsCancelled > 0) {
