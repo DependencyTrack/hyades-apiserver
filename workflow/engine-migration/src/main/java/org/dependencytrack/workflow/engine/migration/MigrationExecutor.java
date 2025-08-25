@@ -24,8 +24,8 @@ public final class MigrationExecutor extends org.dependencytrack.support.liquiba
 
     public MigrationExecutor(final DataSource dataSource) {
         super(dataSource, "/org/dependencytrack/workflow/engine/migration/changelog-main.xml");
-        withChangeLogTableName("workflow_engine_database_changelog");
-        withChangeLogLockTableName("workflow_engine_database_changelog_lock");
+        withChangeLogTableName("workflow_engine_databasechangelog");
+        withChangeLogLockTableName("workflow_engine_databasechangeloglock");
     }
 
 }
