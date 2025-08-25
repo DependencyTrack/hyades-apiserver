@@ -26,9 +26,13 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
+import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
+import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
+import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -45,7 +49,10 @@ import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.BOM_CONSUMPTION;
 import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 
 public class WorkflowResourceTest extends ResourceTest {
 
@@ -63,6 +70,13 @@ public class WorkflowResourceTest extends ResourceTest {
                             bind(WORKFLOW_ENGINE_MOCK).to(WorkflowEngine.class);
                         }
                     }));
+
+    @After
+    @Override
+    public void after() {
+        reset(WORKFLOW_ENGINE_MOCK);
+        super.after();
+    }
 
     @Test
     public void getWorkflowStatusOk() {
@@ -134,4 +148,33 @@ public class WorkflowResourceTest extends ResourceTest {
         assertThat(response.getStatus()).isEqualTo(HttpStatus.SC_NOT_FOUND);
         assertThat(getPlainTextBody(response)).isEqualTo("Provided token " + randomUuid + " does not exist.");
     }
+
+    @Test
+    public void shouldReturnMovedPermanentlyWhenWorkflowRunWasFoundButCanNotBeConverted() {
+        final WorkflowRunMetadata runMetadata = new WorkflowRunMetadata(
+                UUID.fromString("f5cd00be-417d-4df5-b351-0499d498c9c1"),
+                "test-workflow",
+                1,
+                WorkflowRunStatus.RUNNING,
+                null,
+                null,
+                null,
+                null,
+                Instant.ofEpochMilli(666666),
+                Instant.ofEpochMilli(777777),
+                Instant.ofEpochMilli(777777),
+                null);
+
+        doReturn(runMetadata).when(WORKFLOW_ENGINE_MOCK).getRunMetadata(
+                eq(UUID.fromString("f5cd00be-417d-4df5-b351-0499d498c9c1")));
+
+        final Response response = jersey.target(V1_WORKFLOW + "/token/f5cd00be-417d-4df5-b351-0499d498c9c1/status")
+                .property(ClientProperties.FOLLOW_REDIRECTS, false)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .get();
+        assertThat(response.getStatus()).isEqualTo(301);
+        assertThat(response.getLocation().getPath()).isEqualTo("/api/v2/workflow-runs/f5cd00be-417d-4df5-b351-0499d498c9c1");
+    }
+
 }

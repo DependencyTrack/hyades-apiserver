@@ -35,8 +35,11 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.validation.ValidUuid;
@@ -57,8 +60,11 @@ public class WorkflowResource {
 
     private static final Logger LOGGER = Logger.getLogger(WorkflowResource.class);
 
+    @Context
+    private UriInfo uriInfo;
+
     @Inject
-    WorkflowEngine workflowEngine;
+    private WorkflowEngine workflowEngine;
 
     @GET
     @Path("/token/{uuid}/status")
@@ -88,8 +94,12 @@ public class WorkflowResource {
                 //  state tracking. If yes, map the new run metadata to legacy
                 //  WorkflowState object(s) to allow smooth transition for clients.
 
-                // Other workflows must be queried via /api/v2/workflow-runs/{id}.
-                return Response.status(Response.Status.BAD_REQUEST).build();
+                return Response
+                        .status(Response.Status.MOVED_PERMANENTLY)
+                        .location(uriInfo.getBaseUriBuilder()
+                                .path("/api/v2/workflow-runs/{id}")
+                                .build(uuid))
+                        .build();
             }
 
             // For the transitional period, workflows can exist in either the dedicated
