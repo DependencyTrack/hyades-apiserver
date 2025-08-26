@@ -39,7 +39,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 /**
  * @since 5.6.0
  */
-final class ConfigRegistryImpl implements ConfigRegistry {
+public final class ConfigRegistryImpl implements ConfigRegistry {
 
     private final String extensionPointName;
     private final String extensionName;
@@ -66,7 +66,7 @@ final class ConfigRegistryImpl implements ConfigRegistry {
      * @param extensionName      Name of the extension.
      * @return A {@link ConfigRegistryImpl} scoped to {@code extensionPointName} and {@code extensionName}.
      */
-    static ConfigRegistryImpl forExtension(final String extensionPointName, final String extensionName) {
+    public static ConfigRegistryImpl forExtension(final String extensionPointName, final String extensionName) {
         return new ConfigRegistryImpl(requireNonNull(extensionPointName), requireNonNull(extensionName));
     }
 

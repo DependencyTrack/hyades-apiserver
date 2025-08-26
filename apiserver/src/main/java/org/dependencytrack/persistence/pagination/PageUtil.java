@@ -33,10 +33,26 @@ import java.util.Base64;
  */
 public final class PageUtil {
 
-    private PageUtil() {}
+    private PageUtil() {
+    }
+
+    public static String decodePageToken(final String encodedToken) {
+        if (encodedToken == null) {
+            return null;
+        }
+
+        try {
+            final byte[] encryptedTokenBytes = Base64.getUrlDecoder().decode(encodedToken);
+            final byte[] decryptedToken = DataEncryption.decryptAsBytes(encryptedTokenBytes);
+            return new String(decryptedToken);
+        } catch (Exception e) {
+            throw new InvalidPageTokenException(e);
+        }
+    }
 
     public static <T> T decodePageToken(final Handle handle, final String encodedToken, final Class<T> tokenClass) {
-        if (encodedToken == null) {
+        final String decodedToken = decodePageToken(encodedToken);
+        if (decodedToken == null) {
             return null;
         }
 
@@ -46,9 +62,20 @@ public final class PageUtil {
                 .forType(tokenClass, handle.getConfig());
 
         try {
-            final byte[] encryptedTokenBytes = Base64.getUrlDecoder().decode(encodedToken);
-            final byte[] decryptedToken = DataEncryption.decryptAsBytes(encryptedTokenBytes);
-            return (T) jsonMapper.fromJson(new String(decryptedToken), handle.getConfig());
+            return (T) jsonMapper.fromJson(decodedToken, handle.getConfig());
+        } catch (RuntimeException e) {
+            throw new InvalidPageTokenException(e);
+        }
+    }
+
+    public static String encodePageToken(final String pageToken) {
+        if (pageToken == null) {
+            return null;
+        }
+
+        try {
+            final byte[] encryptedTokenBytes = DataEncryption.encryptAsBytes(pageToken);
+            return Base64.getUrlEncoder().encodeToString(encryptedTokenBytes);
         } catch (Exception e) {
             throw new InvalidPageTokenException(e);
         }
@@ -64,13 +91,14 @@ public final class PageUtil {
                 .getJsonMapper()
                 .forType(Object.class, handle.getConfig());
 
+        final String tokenJson;
         try {
-            final String tokenJson = jsonMapper.toJson(pageToken, handle.getConfig());
-            final byte[] encryptedTokenBytes = DataEncryption.encryptAsBytes(tokenJson);
-            return Base64.getUrlEncoder().encodeToString(encryptedTokenBytes);
-        } catch (Exception e) {
+            tokenJson = jsonMapper.toJson(pageToken, handle.getConfig());
+        } catch (RuntimeException e) {
             throw new InvalidPageTokenException(e);
         }
+
+        return encodePageToken(tokenJson);
     }
 
     public static PaginationMetadata createPaginationMetadata(final UriInfo uriInfo, final Page<?> page) {
