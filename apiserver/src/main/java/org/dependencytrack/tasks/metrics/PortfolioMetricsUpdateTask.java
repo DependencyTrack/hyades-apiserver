@@ -28,6 +28,7 @@ import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.event.CallbackEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
+import org.dependencytrack.persistence.jdbi.MetricsDao;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 
 import java.time.Duration;
@@ -38,6 +39,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 import static org.dependencytrack.util.LockProvider.executeWithLock;
 import static org.dependencytrack.util.LockProvider.isTaskLockToBeExtended;
@@ -76,6 +78,8 @@ public class PortfolioMetricsUpdateTask implements Subscriber {
                 LOGGER.info("Refreshing project metrics");
                 refreshProjectMetrics();
             }
+
+            useJdbiTransaction(handle -> handle.attach(MetricsDao.class).refreshGlobalPortfolioMetrics());
         } finally {
             LOGGER.info("Completed portfolio metrics update in " + Duration.ofNanos(System.nanoTime() - startTimeNs));
         }

@@ -92,6 +92,16 @@ public interface MetricsDao extends SqlObject {
     }
 
     /**
+     * Compute the portfolio metrics for the projects accessible by the calling principal.
+     * <p>
+     * If portfolio ACL is disabled, or the principal is bypassing ACL in any other
+     * way, the query selects from the {@code PORTFOLIOMETRICS_GLOBAL} materialized view
+     * rather than performing ad-hoc aggregations. The assumption is that most users
+     * will only have access to a small subset of projects, even if the entire portfolio
+     * span multiple 10s of thousands of projects. But users who bypass ACL restrictions
+     * would need aggregations to be performed over a large set of projects, which is
+     * not feasible.
+     * <p>
      * Note that <code>generate_series</code> is invoked with integers rather
      * than <code>date</code>s, because the query planner tends to overestimate
      * rows with the latter approach.
@@ -99,6 +109,12 @@ public interface MetricsDao extends SqlObject {
      * @see <a href="https://stackoverflow.com/a/66279403">generate_series quirk</a>
      */
     @SqlQuery("""
+            <#if apiProjectAclCondition?c_lower_case == 'true'>
+            SELECT *
+              FROM "PORTFOLIOMETRICS_GLOBAL"
+             WHERE "LAST_OCCURRENCE" >= CURRENT_DATE - (INTERVAL '1 day' * (:days - 1))
+             ORDER BY "LAST_OCCURRENCE";
+            <#else>
             WITH
             date_range AS(
               SELECT DATE_TRUNC('day', CURRENT_DATE - (INTERVAL '1 day' * day)) AS metrics_date
@@ -196,9 +212,15 @@ public interface MetricsDao extends SqlObject {
               LEFT JOIN daily_metrics AS dm
                 ON date_range.metrics_date = dm.metrics_date
              ORDER BY date_range.metrics_date;
+            </#if>
             """)
     @RegisterBeanMapper(PortfolioMetrics.class)
     List<PortfolioMetrics> getPortfolioMetricsForDays(@Bind int days);
+
+    @SqlUpdate("""
+            REFRESH MATERIALIZED VIEW CONCURRENTLY "PORTFOLIOMETRICS_GLOBAL"
+            """)
+    void refreshGlobalPortfolioMetrics();
 
     @SqlQuery("""
             SELECT *, "RISKSCORE" AS inherited_risk_score FROM "PROJECTMETRICS"
