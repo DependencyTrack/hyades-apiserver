@@ -16,16 +16,32 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.datasource.vuln.osv;
 
-import alpine.event.framework.Event;
+import org.cyclonedx.proto.v1_6.Bom;
+import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
+
+import java.util.Collection;
 
 /**
- * Defines an event used to start a mirror of GitHub Advisories.
- *
- * @author Steve Springett
- * @since 4.4.0
+ * @since 5.7.0
  */
-public class GitHubAdvisoryMirrorEvent implements Event {
+final class OsvVulnDataSource implements VulnDataSource {
+
+    private final Collection<String> ecosystems;
+
+    OsvVulnDataSource(final Collection<String> ecosystems) {
+        this.ecosystems = ecosystems;
+    }
+
+    @Override
+    public boolean hasNext() {
+        return false;
+    }
+
+    @Override
+    public Bom next() {
+        return null;
+    }
 
 }

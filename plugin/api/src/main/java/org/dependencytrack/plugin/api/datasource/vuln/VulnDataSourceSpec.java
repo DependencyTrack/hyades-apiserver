@@ -16,16 +16,28 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.plugin.api.datasource.vuln;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.dependencytrack.plugin.api.ExtensionPointSpec;
 
-public class NistMirrorEventTest {
+/**
+ * @since 5.7.0
+ */
+public class VulnDataSourceSpec implements ExtensionPointSpec<VulnDataSource> {
 
-    @Test
-    public void testDefaultConstructor() {
-        NistMirrorEvent event = new NistMirrorEvent();
-        Assert.assertNotNull(event);
+    @Override
+    public String name() {
+        return "vuln.datasource";
     }
+
+    @Override
+    public boolean required() {
+        return false;
+    }
+
+    @Override
+    public Class<VulnDataSource> extensionPointClass() {
+        return VulnDataSource.class;
+    }
+
 }

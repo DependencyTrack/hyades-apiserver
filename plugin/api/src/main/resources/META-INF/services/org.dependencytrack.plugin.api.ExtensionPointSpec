@@ -1,1 +1,2 @@
 org.dependencytrack.plugin.api.filestorage.FileStorageSpec
+org.dependencytrack.plugin.api.datasource.vuln.VulnDataSourceSpec

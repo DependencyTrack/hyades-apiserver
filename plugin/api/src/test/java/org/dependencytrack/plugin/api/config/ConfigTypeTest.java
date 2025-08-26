@@ -38,12 +38,6 @@ class ConfigTypeTest {
     @Nested
     class BooleanTest {
 
-        @Test
-        void shouldReturnCorrectTypeClass() {
-            final var configType = new ConfigType.Boolean();
-            assertThat(configType.clazz()).isEqualTo(Boolean.class);
-        }
-
         private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
             return Stream.of(
                     Arguments.of(null, null),
@@ -82,12 +76,6 @@ class ConfigTypeTest {
 
     @Nested
     class DurationTest {
-
-        @Test
-        void shouldReturnCorrectTypeClass() {
-            final var configType = new ConfigType.Duration();
-            assertThat(configType.clazz()).isEqualTo(Duration.class);
-        }
 
         private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
             return Stream.of(
@@ -129,12 +117,6 @@ class ConfigTypeTest {
     @Nested
     class InstantTest {
 
-        @Test
-        void shouldReturnCorrectTypeClass() {
-            final var configType = new ConfigType.Instant();
-            assertThat(configType.clazz()).isEqualTo(Instant.class);
-        }
-
         private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
             return Stream.of(
                     Arguments.of(null, null),
@@ -172,12 +154,6 @@ class ConfigTypeTest {
 
     @Nested
     class IntegerTest {
-
-        @Test
-        void shouldReturnCorrectTypeClass() {
-            final var configType = new ConfigType.Integer();
-            assertThat(configType.clazz()).isEqualTo(Integer.class);
-        }
 
         private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
             return Stream.of(
@@ -219,12 +195,6 @@ class ConfigTypeTest {
     @Nested
     class PathTest {
 
-        @Test
-        void shouldReturnCorrectTypeClass() {
-            final var configType = new ConfigType.Path();
-            assertThat(configType.clazz()).isEqualTo(Path.class);
-        }
-
         private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
             return Stream.of(
                     Arguments.of(null, null),
@@ -257,12 +227,6 @@ class ConfigTypeTest {
 
     @Nested
     class StringTest {
-
-        @Test
-        void shouldReturnCorrectTypeClass() {
-            final var configType = new ConfigType.String();
-            assertThat(configType.clazz()).isEqualTo(String.class);
-        }
 
         private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
             return Stream.of(
