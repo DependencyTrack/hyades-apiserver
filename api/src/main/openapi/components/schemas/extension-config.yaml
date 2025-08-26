@@ -1,0 +1,48 @@
+# This file is part of Dependency-Track.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) OWASP Foundation. All Rights Reserved.
+type: object
+properties:
+  name:
+    description: Name of the config.
+    type: string
+  description:
+    type: string
+  type:
+    $ref: "./extension-config-type.yaml"
+  is_required:
+    description: >-
+      Whether this configuration is required.
+      Required configs can not be set to `null`.
+    type: boolean
+  is_secret:
+    description: >-
+      Whether this configuration's value is to be treated as secret.
+      Secret values are stored encrypted and not readable by API clients.
+    type: boolean
+  value:
+    description: |-
+      Value of the config.
+      
+      If the config is a secret, and the value is non-`null`, the value
+      returned by the API will be `***SECRET-PLACEHOLDER***`.
+    type: string
+required:
+- name
+- description
+- type
+- is_required
+- is_secret

@@ -29,8 +29,7 @@ import org.dependencytrack.plugin.api.Plugin;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.util.List;
-import java.util.SortedSet;
+import java.util.SequencedCollection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -45,7 +44,8 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetLoadedPlugins() {
-        final List<Plugin> loadedPlugins = PluginManager.getInstance().getLoadedPlugins();
+        final SequencedCollection<Plugin> loadedPlugins =
+                PluginManager.getInstance().getLoadedPlugins();
         assertThat(loadedPlugins).satisfiesExactlyInAnyOrder(
                 plugin -> assertThat(plugin).isOfAnyClassIn(DummyPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(FileStoragePlugin.class));
@@ -120,7 +120,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetFactories() {
-        final SortedSet<ExtensionFactory<TestExtensionPoint>> factories =
+        final SequencedCollection<ExtensionFactory<TestExtensionPoint>> factories =
                 PluginManager.getInstance().getFactories(TestExtensionPoint.class);
         assertThat(factories).satisfiesExactly(factory ->
                 assertThat(factory).isExactlyInstanceOf(DummyTestExtensionFactory.class));
@@ -128,7 +128,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
 
     @Test
     public void testGetFactoriesForUnknownExtensionPoint() {
-        final SortedSet<ExtensionFactory<UnknownExtensionPoint>> factories =
+        final SequencedCollection<ExtensionFactory<UnknownExtensionPoint>> factories =
                 PluginManager.getInstance().getFactories(UnknownExtensionPoint.class);
         assertThat(factories).isEmpty();
     }

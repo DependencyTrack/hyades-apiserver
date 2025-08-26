@@ -22,31 +22,29 @@ import alpine.model.ConfigProperty;
 import alpine.model.IConfigProperty.PropertyType;
 import alpine.security.crypto.DataEncryption;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindBean;
+import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
+import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
 /**
  * @since 5.6.0
  */
-public interface ConfigPropertyDao {
+public interface ConfigPropertyDao extends SqlObject {
 
-    @SqlUpdate("""
+    @SqlBatch("""
             INSERT INTO "CONFIGPROPERTY" ("GROUPNAME", "PROPERTYNAME", "PROPERTYTYPE", "DESCRIPTION", "PROPERTYVALUE")
-            VALUES (:group, :name, :type, :description, :value)
+            VALUES (:groupName, :propertyName, :propertyType, :description, :propertyValue)
             ON CONFLICT ("GROUPNAME", "PROPERTYNAME") DO NOTHING
             """)
-    void maybeCreate(
-            @Bind String group,
-            @Bind String name,
-            @Bind PropertyType type,
-            @Bind String description,
-            @Bind String value);
+    void maybeCreateAll(@BindBean Collection<ConfigProperty> property);
 
     @SqlQuery("""
             SELECT *

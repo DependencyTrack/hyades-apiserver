@@ -34,6 +34,11 @@ abstract class LoggingProblemDetailsExceptionMapper<E extends Exception, P exten
     @Override
     @SuppressWarnings("unchecked")
     P map(final E exception) {
+        if (exception instanceof final ProblemDetailsException pde) {
+            // Already has properly mapped problem details. Nothing to do here.
+            return (P) pde.getProblemDetails();
+        }
+
         logger.error("Uncaught exception occurred during request processing", exception);
 
         final int status = exception instanceof final ServerErrorException see
