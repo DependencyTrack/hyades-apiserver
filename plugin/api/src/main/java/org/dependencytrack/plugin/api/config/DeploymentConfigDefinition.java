@@ -16,17 +16,25 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api;
+package org.dependencytrack.plugin.api.config;
+
+import static java.util.Objects.requireNonNull;
 
 /**
- * @since 5.6.0
+ * Definition of a deployment configuration.
+ * <p>
+ * Configurations of this type are immutable and can't change while the application is running.
+ *
+ * @param name       Name of the config.
+ * @param isRequired Whether the config is required (value must not be {@code null}).
+ * @since 5.7.0
  */
-public enum ConfigSource {
+public record DeploymentConfigDefinition(
+        String name,
+        boolean isRequired) implements ConfigDefinition {
 
-    ANY,
-
-    DEPLOYMENT,
-
-    RUNTIME
+    public DeploymentConfigDefinition {
+        requireNonNull(name, "name must not be null");
+    }
 
 }

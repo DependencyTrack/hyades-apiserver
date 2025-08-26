@@ -18,15 +18,16 @@
  */
 package org.dependencytrack.plugin;
 
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigRegistry;
-import org.dependencytrack.plugin.api.ConfigSource;
 import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.config.ConfigDefinition;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
+import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 
 public class DummyTestExtensionFactory implements ExtensionFactory<TestExtensionPoint> {
 
-    private static final ConfigDefinition CONFIG_FOO = new ConfigDefinition("foo", ConfigSource.RUNTIME, false, false);
-    private static final ConfigDefinition CONFIG_BAR = new ConfigDefinition("bar", ConfigSource.DEPLOYMENT, false, false);
+    private static final ConfigDefinition CONFIG_FOO = new RuntimeConfigDefinition("foo", "description", false, false);
+    private static final ConfigDefinition CONFIG_BAR = new DeploymentConfigDefinition("bar", false);
 
     private ConfigRegistry configRegistry;
 

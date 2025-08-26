@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.filestorage;
 
-import org.dependencytrack.plugin.api.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
 

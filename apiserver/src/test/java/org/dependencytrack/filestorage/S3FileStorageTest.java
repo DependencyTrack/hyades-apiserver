@@ -23,7 +23,7 @@ import io.minio.GetObjectResponse;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.dependencytrack.plugin.MockConfigRegistry;
+import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.junit.After;
