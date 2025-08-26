@@ -19,8 +19,11 @@
 package org.dependencytrack.plugin.api;
 
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 
 import java.io.Closeable;
+import java.util.Collections;
+import java.util.SequencedCollection;
 
 /**
  * @since 5.6.0
@@ -47,11 +50,19 @@ public interface ExtensionFactory<T extends ExtensionPoint> extends Closeable {
     int priority();
 
     /**
+     * @return The supported runtime configuration definitions.
+     * @since 5.7.0
+     */
+    default SequencedCollection<RuntimeConfigDefinition<?>> runtimeConfigs() {
+        return Collections.emptyList();
+    }
+
+    /**
      * Initialize the factory. This method is called <em>once</em> during application startup.
      *
      * @param configRegistry A {@link ConfigRegistry} to read configuration from.
      */
-    void init(final ConfigRegistry configRegistry);
+    void init(ConfigRegistry configRegistry);
 
     /**
      * @return An extension instance.
