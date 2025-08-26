@@ -24,6 +24,7 @@ description: |-
   * `INTEGER` represents an integer, e.g. `666`.
   * `PATH` represents a file path, e.g. `/foo/bar.baz`.
   * `STRING` represents a simple string, e.g. `foo bar baz`.
+  * `URL` represents a uniform resource locator, e.g. `https://example.com`.
 enum:
 - BOOLEAN
 - DURATION
@@ -31,3 +32,4 @@ enum:
 - INTEGER
 - PATH
 - STRING
+- URL

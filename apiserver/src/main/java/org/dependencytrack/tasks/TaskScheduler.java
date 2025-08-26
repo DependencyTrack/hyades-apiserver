@@ -25,15 +25,13 @@ import com.asahaf.javacron.Schedule;
 import org.dependencytrack.event.DefectDojoUploadEventAbstract;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.FortifySscUploadEventAbstract;
-import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
 import org.dependencytrack.event.IntegrityMetaInitializerEvent;
 import org.dependencytrack.event.InternalComponentIdentificationEvent;
 import org.dependencytrack.event.KennaSecurityUploadEventAbstract;
-import org.dependencytrack.event.NistMirrorEvent;
-import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.event.PortfolioRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.PortfolioVulnerabilityAnalysisEvent;
+import org.dependencytrack.event.VulnDataSourceMirrorEvent;
 import org.dependencytrack.event.VulnerabilityMetricsUpdateEvent;
 import org.dependencytrack.event.VulnerabilityPolicyFetchEvent;
 import org.dependencytrack.event.maintenance.ComponentMetadataMaintenanceEvent;
@@ -82,9 +80,7 @@ public final class TaskScheduler extends BaseTaskScheduler {
         final Map<Event, Schedule> eventScheduleMap = Map.ofEntries(
                 Map.entry(new VulnerabilityPolicyFetchEvent(), getCronScheduleForTask(VulnerabilityPolicyFetchTask.class)),
                 Map.entry(new LdapSyncEvent(), getCronScheduleForTask(LdapSyncTask.class)),
-                Map.entry(new NistMirrorEvent(), getCronScheduleForTask(NistMirrorTask.class)),
-                Map.entry(new OsvMirrorEvent(null), getCronScheduleForTask(OsvMirrorTask.class)),
-                Map.entry(new GitHubAdvisoryMirrorEvent(), getCronScheduleForTask(GitHubAdvisoryMirrorTask.class)),
+                Map.entry(new VulnDataSourceMirrorEvent(), getCronScheduleForTask(VulnDataSourceMirrorTask.class)),
                 Map.entry(new EpssMirrorEvent(), getCronScheduleForTask(EpssMirrorTask.class)),
                 Map.entry(new PortfolioMetricsUpdateEvent(), getCronScheduleForTask(PortfolioMetricsUpdateTask.class)),
                 Map.entry(new VulnerabilityMetricsUpdateEvent(), getCronScheduleForTask(VulnerabilityMetricsUpdateTask.class)),

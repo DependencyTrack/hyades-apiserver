@@ -24,11 +24,7 @@ import com.google.protobuf.Message;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.EpssMirrorEvent;
-import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
-import org.dependencytrack.event.NistMirrorEvent;
-import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
-import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.parser.dependencytrack.NotificationModelConverter;
 import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
@@ -70,9 +66,6 @@ public final class KafkaEventConverter {
         return switch (event) {
             case ComponentRepositoryMetaAnalysisEvent e -> convert(e);
             case ComponentVulnerabilityAnalysisEvent e -> convert(e);
-            case GitHubAdvisoryMirrorEvent e -> convert(e);
-            case NistMirrorEvent e -> convert(e);
-            case OsvMirrorEvent e -> convert(e);
             case EpssMirrorEvent e -> convert(e);
             default -> throw new IllegalArgumentException("Unable to convert event " + event);
         };
@@ -146,22 +139,6 @@ public final class KafkaEventConverter {
                 .build();
 
         return new KafkaEvent<>(KafkaTopics.REPO_META_ANALYSIS_COMMAND, event.purlCoordinates(), analysisCommand, null);
-    }
-
-    static KafkaEvent<String, String> convert(final GitHubAdvisoryMirrorEvent ignored) {
-        final String key = Vulnerability.Source.GITHUB.name();
-        return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, null);
-    }
-
-    static KafkaEvent<String, String> convert(final NistMirrorEvent ignored) {
-        final String key = Vulnerability.Source.NVD.name();
-        return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, null);
-    }
-
-    static KafkaEvent<String, String> convert(final OsvMirrorEvent event) {
-        final String key = Vulnerability.Source.OSV.name();
-        final String value = event.ecosystem();
-        return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, value);
     }
 
     static KafkaEvent<String, String> convert(final EpssMirrorEvent ignored) {

@@ -22,6 +22,8 @@ import alpine.Config;
 import alpine.common.logging.Logger;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+
+import alpine.event.framework.Event;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.persistence.QueryManager;
@@ -46,6 +48,8 @@ public class PurlMigrator implements ServletContextListener {
 
     @Override
     public void contextInitialized(final ServletContextEvent event) {
+        Event.dispatch(new VulnDataSourceMirrorEvent());
+
         if (integrityInitializerEnabled) {
             try {
                 executeWithLock(
