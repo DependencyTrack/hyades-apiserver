@@ -137,4 +137,12 @@
             <column name="LAST_OCCURRENCE"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.7.0-6" author="nscuro">
+        <!-- Support aggregation queries that need to find the latest metrics per project. -->
+        <createIndex tableName="PROJECTMETRICS" indexName="PROJECTMETRICS_PROJECT_ID_LAST_OCCURRENCE_DESC_IDX">
+            <column name="PROJECT_ID"/>
+            <column name="LAST_OCCURRENCE" descending="true"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
