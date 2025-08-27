@@ -137,7 +137,8 @@ public interface MetricsDao extends SqlObject {
                   INNER JOIN "PROJECTMETRICS" pm
                      ON pm."PROJECT_ID" = projects_in_scope."ID"
                   WHERE pm."LAST_OCCURRENCE" < date_range.metrics_date + INTERVAL '1 day'
-                    AND pm."LAST_OCCURRENCE" >= DATE_TRUNC('day', CURRENT_DATE - (INTERVAL '1 day' * GREATEST(:days - 1, 0)))
+                    -- Consider data from previous day in case we don't have any for today.
+                    AND pm."LAST_OCCURRENCE" >= date_range.metrics_date - INTERVAL '1 day'
                   ORDER BY pm."PROJECT_ID", pm."LAST_OCCURRENCE" DESC
                ) AS latest_metrics ON TRUE
             ),

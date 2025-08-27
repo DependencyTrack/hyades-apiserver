@@ -54,7 +54,8 @@
                           ON pm."PROJECT_ID" = p."ID"
                          AND p."INACTIVE_SINCE" IS NULL
                        WHERE pm."LAST_OCCURRENCE" &lt; date_range.metrics_date + INTERVAL '1 day'
-                         AND pm."LAST_OCCURRENCE" &gt;= DATE_TRUNC('day', CURRENT_DATE - (INTERVAL '1 day' * GREATEST((SELECT days FROM retention) - 1, 0)))
+                         -- Consider data from previous day in case we don't have any for today.
+                         AND pm."LAST_OCCURRENCE" &gt;= date_range.metrics_date - INTERVAL '1 day'
                        ORDER BY pm."PROJECT_ID", pm."LAST_OCCURRENCE" DESC
                     ) AS latest_metrics ON TRUE
                 ),
