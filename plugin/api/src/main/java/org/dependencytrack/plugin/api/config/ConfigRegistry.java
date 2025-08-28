@@ -16,7 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api;
+package org.dependencytrack.plugin.api.config;
+
+import org.dependencytrack.plugin.api.ExtensionPoint;
 
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -42,10 +44,35 @@ import java.util.Optional;
  */
 public interface ConfigRegistry {
 
+    /**
+     * Retrieve the value of a configuration.
+     *
+     * @param config Definition of the config to retrieve.
+     * @return The config's value, if any.
+     */
     Optional<String> getOptionalValue(final ConfigDefinition config);
 
+    /**
+     * Retrieve the value of a configuration, throwing if there is none.
+     *
+     * @param config Definition of the config to retrieve.
+     * @return The config's value.
+     * @throws NoSuchElementException When the config does not exist or is {@code null}.
+     */
     default String getValue(final ConfigDefinition config) {
         return getOptionalValue(config).orElseThrow(NoSuchElementException::new);
     }
+
+    /**
+     * Set the value of a given runtime configuration.
+     *
+     * @param config The definition of the config to set.
+     * @param value  The value to set.
+     * @throws IllegalArgumentException When {@link RuntimeConfigDefinition#isRequired()} is {@code true} but
+     *                                  {@code value} is null, or {@link RuntimeConfigDefinition#isSecret()} is
+     *                                  {@code true} but encryption failed.
+     * @since 5.7.0
+     */
+    void setValue(RuntimeConfigDefinition config, String value);
 
 }

@@ -19,9 +19,9 @@
 package org.dependencytrack.filestorage;
 
 import alpine.Config;
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigRegistry;
-import org.dependencytrack.plugin.api.ConfigSource;
+import org.dependencytrack.plugin.api.config.ConfigDefinition;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
 import org.slf4j.Logger;
@@ -39,21 +39,12 @@ public final class LocalFileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorageFactory.class);
 
-    static final ConfigDefinition CONFIG_DIRECTORY = new ConfigDefinition(
-            "directory",
-            ConfigSource.DEPLOYMENT,
-            /* isRequired */ false,
-            /* isSecret */ false);
-    static final ConfigDefinition CONFIG_COMPRESSION_THRESHOLD_BYTES = new ConfigDefinition(
-            "compression.threshold.bytes",
-            ConfigSource.DEPLOYMENT,
-            /* isRequired */ false,
-            /* isSecret */ false);
-    static final ConfigDefinition CONFIG_COMPRESSION_LEVEL = new ConfigDefinition(
-            "compression.level",
-            ConfigSource.DEPLOYMENT,
-            /* isRequired */ false,
-            /* isSecret */ false);
+    static final ConfigDefinition CONFIG_DIRECTORY =
+            new DeploymentConfigDefinition("directory", /* isRequired */ false);
+    static final ConfigDefinition CONFIG_COMPRESSION_THRESHOLD_BYTES =
+            new DeploymentConfigDefinition("compression.threshold.bytes", /* isRequired */ false);
+    static final ConfigDefinition CONFIG_COMPRESSION_LEVEL =
+            new DeploymentConfigDefinition("compression.level", /* isRequired */ false);
 
     private Path directoryPath;
     private int compressionThresholdBytes;

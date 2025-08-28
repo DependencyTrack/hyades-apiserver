@@ -16,25 +16,21 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin;
+package org.dependencytrack.plugin.api.config;
 
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigRegistry;
+/**
+ * @since 5.7.0
+ */
+public sealed interface ConfigDefinition permits DeploymentConfigDefinition, RuntimeConfigDefinition {
 
-import java.util.Map;
-import java.util.Optional;
+    /**
+     * @return Name of the configuration.
+     */
+    String name();
 
-public class MockConfigRegistry implements ConfigRegistry {
-
-    private final Map<String, String> properties;
-
-    public MockConfigRegistry(final Map<String, String> properties) {
-        this.properties = properties;
-    }
-
-    @Override
-    public Optional<String> getOptionalValue(final ConfigDefinition config) {
-        return Optional.ofNullable(properties.get(config.name()));
-    }
+    /**
+     * @return Whether the configuration is required (value must not be {@code null}).
+     */
+    boolean isRequired();
 
 }

@@ -20,12 +20,12 @@ package org.dependencytrack.plugin;
 
 import alpine.common.logging.Logger;
 import org.dependencytrack.common.MdcScope;
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigSource;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.plugin.api.Plugin;
+import org.dependencytrack.plugin.api.config.ConfigDefinition;
+import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.slf4j.MDC;
 
 import java.lang.reflect.Modifier;
@@ -63,8 +63,10 @@ public class PluginManager {
     private static final Logger LOGGER = Logger.getLogger(PluginManager.class);
     private static final Pattern EXTENSION_POINT_NAME_PATTERN = Pattern.compile("^[a-z0-9.]+$");
     private static final Pattern EXTENSION_NAME_PATTERN = EXTENSION_POINT_NAME_PATTERN;
-    private static final ConfigDefinition CONFIG_EXTENSION_ENABLED = new ConfigDefinition("enabled", ConfigSource.DEPLOYMENT, false, false);
-    private static final ConfigDefinition CONFIG_DEFAULT_EXTENSION = new ConfigDefinition("default.extension", ConfigSource.DEPLOYMENT, false, false);
+    private static final ConfigDefinition CONFIG_EXTENSION_ENABLED =
+            new DeploymentConfigDefinition("enabled", /* isRequired */ false);
+    private static final ConfigDefinition CONFIG_DEFAULT_EXTENSION =
+            new DeploymentConfigDefinition("default.extension", /* isRequired */ false);
     private static final PluginManager INSTANCE = new PluginManager();
 
     private final SequencedMap<Class<? extends Plugin>, Plugin> loadedPluginByClass;
