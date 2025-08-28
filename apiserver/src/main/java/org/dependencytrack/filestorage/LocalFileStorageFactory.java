@@ -21,6 +21,7 @@ package org.dependencytrack.filestorage;
 import alpine.Config;
 import org.dependencytrack.plugin.api.config.ConfigDefinition;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.ConfigTypes;
 import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
@@ -30,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * @since 5.6.0
@@ -39,12 +39,12 @@ public final class LocalFileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorageFactory.class);
 
-    static final ConfigDefinition CONFIG_DIRECTORY =
-            new DeploymentConfigDefinition("directory", /* isRequired */ false);
-    static final ConfigDefinition CONFIG_COMPRESSION_THRESHOLD_BYTES =
-            new DeploymentConfigDefinition("compression.threshold.bytes", /* isRequired */ false);
-    static final ConfigDefinition CONFIG_COMPRESSION_LEVEL =
-            new DeploymentConfigDefinition("compression.level", /* isRequired */ false);
+    static final ConfigDefinition<Path> CONFIG_DIRECTORY =
+            new DeploymentConfigDefinition<>("directory", ConfigTypes.PATH, /* isRequired */ false);
+    static final ConfigDefinition<Integer> CONFIG_COMPRESSION_THRESHOLD_BYTES =
+            new DeploymentConfigDefinition<>("compression.threshold.bytes", ConfigTypes.INTEGER, /* isRequired */ false);
+    static final ConfigDefinition<Integer> CONFIG_COMPRESSION_LEVEL =
+            new DeploymentConfigDefinition<>("compression.level", ConfigTypes.INTEGER, /* isRequired */ false);
 
     private Path directoryPath;
     private int compressionThresholdBytes;
@@ -68,7 +68,6 @@ public final class LocalFileStorageFactory implements FileStorageFactory {
     @Override
     public void init(final ConfigRegistry configRegistry) {
         directoryPath = configRegistry.getOptionalValue(CONFIG_DIRECTORY)
-                .map(Paths::get)
                 .orElseGet(() -> Config.getInstance().getDataDirectorty().toPath().resolve("storage"))
                 .normalize()
                 .toAbsolutePath();
@@ -91,12 +90,8 @@ public final class LocalFileStorageFactory implements FileStorageFactory {
 
         LOGGER.debug("Files will be stored in {}", directoryPath);
 
-        compressionThresholdBytes = configRegistry.getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES)
-                .map(Integer::parseInt)
-                .orElse(4096);
-        compressionLevel = configRegistry.getOptionalValue(CONFIG_COMPRESSION_LEVEL)
-                .map(Integer::parseInt)
-                .orElse(5);
+        compressionThresholdBytes = configRegistry.getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES).orElse(4096);
+        compressionLevel = configRegistry.getOptionalValue(CONFIG_COMPRESSION_LEVEL).orElse(5);
     }
 
     @Override
