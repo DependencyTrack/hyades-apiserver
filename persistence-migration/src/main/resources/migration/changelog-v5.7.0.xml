@@ -23,4 +23,126 @@
     <changeSet id="v5.7.0-4" author="nscuro">
         <modifyDataType tableName="VULNERABLESOFTWARE" columnName="PURL" newDataType="VARCHAR(1024)"/>
     </changeSet>
+
+    <changeSet id="v5.7.0-5" author="nscuro">
+        <sql>
+            CREATE MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL" AS
+                WITH
+                retention AS(
+                   SELECT COALESCE(
+                     (
+                       SELECT CAST("PROPERTYVALUE" AS INT)
+                         FROM "CONFIGPROPERTY"
+                        WHERE "GROUPNAME" = 'maintenance'
+                          AND "PROPERTYNAME" = 'metrics.retention.days'
+                     )
+                   , 90) AS days
+                ),
+                date_range AS(
+                  SELECT DATE_TRUNC('day', CURRENT_DATE - (INTERVAL '1 day' * day)) AS metrics_date
+                    FROM GENERATE_SERIES(0, GREATEST((SELECT days FROM retention) - 1, 0)) day
+                ),
+                latest_daily_project_metrics AS(
+                  SELECT date_range.metrics_date
+                       , latest_metrics.*
+                    FROM date_range
+                    LEFT JOIN LATERAL (
+                      SELECT DISTINCT ON (pm."PROJECT_ID")
+                             pm.*
+                        FROM "PROJECT" AS p
+                       INNER JOIN "PROJECTMETRICS" AS pm
+                          ON pm."PROJECT_ID" = p."ID"
+                         AND p."INACTIVE_SINCE" IS NULL
+                       WHERE pm."LAST_OCCURRENCE" &lt; date_range.metrics_date + INTERVAL '1 day'
+                         -- Consider data from previous day in case we don't have any for today.
+                         AND pm."LAST_OCCURRENCE" &gt;= date_range.metrics_date - INTERVAL '1 day'
+                       ORDER BY pm."PROJECT_ID", pm."LAST_OCCURRENCE" DESC
+                    ) AS latest_metrics ON TRUE
+                ),
+                daily_metrics AS(
+                  SELECT COUNT(DISTINCT "PROJECT_ID") AS projects
+                       , SUM("COMPONENTS") AS components
+                       , SUM("CRITICAL") AS critical
+                       , metrics_date
+                       , SUM("FINDINGS_AUDITED") AS findings_audited
+                       , SUM("FINDINGS_TOTAL") AS findings_total
+                       , SUM("FINDINGS_UNAUDITED") AS findings_unaudited
+                       , SUM("HIGH") AS high
+                       , SUM("RISKSCORE") as inherited_risk_score
+                       , SUM("LOW") AS low
+                       , SUM("MEDIUM") AS medium
+                       , SUM("POLICYVIOLATIONS_AUDITED") AS policy_violations_audited
+                       , SUM("POLICYVIOLATIONS_FAIL") AS policy_violations_fail
+                       , SUM("POLICYVIOLATIONS_INFO") AS policy_violations_info
+                       , SUM("POLICYVIOLATIONS_LICENSE_AUDITED") AS policy_violations_license_audited
+                       , SUM("POLICYVIOLATIONS_LICENSE_TOTAL") AS policy_violations_license_total
+                       , SUM("POLICYVIOLATIONS_LICENSE_UNAUDITED") AS policy_violations_license_unaudited
+                       , SUM("POLICYVIOLATIONS_OPERATIONAL_AUDITED") AS policy_violations_operational_audited
+                       , SUM("POLICYVIOLATIONS_OPERATIONAL_TOTAL") AS policy_violations_operational_total
+                       , SUM("POLICYVIOLATIONS_OPERATIONAL_UNAUDITED") AS policy_violations_operational_unaudited
+                       , SUM("POLICYVIOLATIONS_SECURITY_AUDITED") AS policy_violations_security_audited
+                       , SUM("POLICYVIOLATIONS_SECURITY_TOTAL") AS policy_violations_security_total
+                       , SUM("POLICYVIOLATIONS_SECURITY_UNAUDITED") AS policy_violations_security_unaudited
+                       , SUM("POLICYVIOLATIONS_TOTAL") AS policy_violations_total
+                       , SUM("POLICYVIOLATIONS_UNAUDITED") AS policy_violations_unaudited
+                       , SUM("POLICYVIOLATIONS_WARN") AS policy_violations_warn
+                       , SUM("SUPPRESSED") AS suppressed
+                       , SUM("UNASSIGNED_SEVERITY") AS unassigned
+                       , SUM("VULNERABILITIES") AS vulnerabilities
+                       , SUM("VULNERABLECOMPONENTS") AS vulnerable_components
+                       , SUM(CASE WHEN "VULNERABLECOMPONENTS" &gt; 0 THEN 1 ELSE 0 END) AS vulnerable_projects
+                    FROM latest_daily_project_metrics
+                   GROUP BY metrics_date
+                )
+                SELECT COALESCE(dm.components, 0) AS "COMPONENTS"
+                     , COALESCE(dm.critical, 0) AS "CRITICAL"
+                     , COALESCE(dm.findings_audited, 0) AS "FINDINGS_AUDITED"
+                     , COALESCE(dm.findings_total, 0) AS "FINDINGS_TOTAL"
+                     , COALESCE(dm.findings_unaudited, 0) AS "FINDINGS_UNAUDITED"
+                     , date_range.metrics_date AS "FIRST_OCCURRENCE"
+                     , COALESCE(dm.high, 0) AS "HIGH"
+                     , COALESCE(dm.inherited_risk_score, 0) AS "INHERITED_RISK_SCORE"
+                     , date_range.metrics_date AS "LAST_OCCURRENCE"
+                     , COALESCE(dm.low, 0) AS "LOW"
+                     , COALESCE(dm.medium, 0) AS "MEDIUM"
+                     , COALESCE(dm.policy_violations_audited, 0) AS "POLICY_VIOLATIONS_AUDITED"
+                     , COALESCE(dm.policy_violations_fail, 0) AS "POLICY_VIOLATIONS_FAIL"
+                     , COALESCE(dm.policy_violations_info, 0) AS "POLICY_VIOLATIONS_INFO"
+                     , COALESCE(dm.policy_violations_license_audited, 0) AS "POLICY_VIOLATIONS_LICENSE_AUDITED"
+                     , COALESCE(dm.policy_violations_license_total, 0) AS "POLICY_VIOLATIONS_LICENSE_TOTAL"
+                     , COALESCE(dm.policy_violations_license_unaudited, 0) AS "POLICY_VIOLATIONS_LICENSE_UNAUDITED"
+                     , COALESCE(dm.policy_violations_operational_audited, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_AUDITED"
+                     , COALESCE(dm.policy_violations_operational_total, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_TOTAL"
+                     , COALESCE(dm.policy_violations_operational_unaudited, 0) AS "POLICY_VIOLATIONS_OPERATIONAL_UNAUDITED"
+                     , COALESCE(dm.policy_violations_security_audited, 0) AS "POLICY_VIOLATIONS_SECURITY_AUDITED"
+                     , COALESCE(dm.policy_violations_security_total, 0) AS "POLICY_VIOLATIONS_SECURITY_TOTAL"
+                     , COALESCE(dm.policy_violations_security_unaudited, 0) AS "POLICY_VIOLATIONS_SECURITY_UNAUDITED"
+                     , COALESCE(dm.policy_violations_total, 0) AS "POLICY_VIOLATIONS_TOTAL"
+                     , COALESCE(dm.policy_violations_unaudited, 0) AS "POLICY_VIOLATIONS_UNAUDITED"
+                     , COALESCE(dm.policy_violations_warn, 0) AS "POLICY_VIOLATIONS_WARN"
+                     , COALESCE(dm.projects, 0) AS "PROJECTS"
+                     , COALESCE(dm.suppressed, 0) AS "SUPPRESSED"
+                     , COALESCE(dm.unassigned, 0) AS "UNASSIGNED"
+                     , COALESCE(dm.vulnerabilities, 0) AS "VULNERABILITIES"
+                     , COALESCE(dm.vulnerable_components, 0) AS "VULNERABLE_COMPONENTS"
+                     , COALESCE(dm.vulnerable_projects, 0) AS "VULNERABLE_PROJECTS"
+                  FROM date_range
+                  LEFT JOIN daily_metrics AS dm
+                    ON date_range.metrics_date = dm.metrics_date
+            WITH DATA
+        </sql>
+
+        <!-- Unique index is required to be able to use REFRESH MATERIALIZED VIEW CONCURRENTLY. -->
+        <createIndex tableName="PORTFOLIOMETRICS_GLOBAL" indexName="PORTFOLIOMETRICS_GLOBAL_LAST_OCCURRENCE_IDX" unique="true">
+            <column name="LAST_OCCURRENCE"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v5.7.0-6" author="nscuro">
+        <!-- Support aggregation queries that need to find the latest metrics per project. -->
+        <createIndex tableName="PROJECTMETRICS" indexName="PROJECTMETRICS_PROJECT_ID_LAST_OCCURRENCE_DESC_IDX">
+            <column name="PROJECT_ID"/>
+            <column name="LAST_OCCURRENCE" descending="true"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
