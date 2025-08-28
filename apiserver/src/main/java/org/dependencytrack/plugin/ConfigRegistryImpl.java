@@ -18,18 +18,22 @@
  */
 package org.dependencytrack.plugin;
 
-import alpine.Config;
 import alpine.model.ConfigProperty;
 import alpine.model.IConfigProperty.PropertyType;
-import org.apache.commons.lang3.tuple.Pair;
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigRegistry;
+import alpine.security.crypto.DataEncryption;
+import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
+import org.dependencytrack.plugin.api.config.ConfigDefinition;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
+import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 import org.dependencytrack.util.DebugDataEncryption;
-import org.jdbi.v3.core.mapper.reflect.BeanMapper;
+import org.eclipse.microprofile.config.ConfigProvider;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 /**
@@ -68,32 +72,52 @@ final class ConfigRegistryImpl implements ConfigRegistry {
 
     @Override
     public Optional<String> getOptionalValue(final ConfigDefinition config) {
-        return switch (config.source()) {
-            case DEPLOYMENT -> getDeploymentConfigValue(config);
-            case RUNTIME -> getRuntimeConfigValue(config);
-            case ANY -> getDeploymentConfigValue(config).or(() -> getRuntimeConfigValue(config));
-            case null -> throw new IllegalArgumentException("No config source specified");
+        return switch (config) {
+            case DeploymentConfigDefinition it -> getDeploymentConfigValue(it);
+            case RuntimeConfigDefinition it -> getRuntimeConfigValue(it);
+            case null -> throw new NullPointerException("config must not be null");
         };
     }
 
-    private record DeploymentConfigKey(String name) implements Config.Key {
+    @Override
+    public void setValue(final RuntimeConfigDefinition config, final String value) {
+        requireNonNull(config, "config must not be null");
 
-        @Override
-        public String getPropertyName() {
-            return name;
+        if (config.isRequired() && value == null) {
+            throw new IllegalArgumentException(
+                    "Config %s is defined as required, but value is null".formatted(config.name()));
         }
 
-        @Override
-        public Object getDefaultValue() {
-            return null;
+        final Map.Entry<String, String> groupAndName = namespacedConfigGroupAndName(config);
+        final String groupName = groupAndName.getKey();
+        final String propertyName = groupAndName.getValue();
+
+        final String valueToStore;
+        if (config.isSecret() && value != null) {
+            try {
+                valueToStore = DataEncryption.encryptAsString(value);
+            } catch (Exception e) {
+                throw new IllegalStateException(
+                        "Failed to encrypt value of config %s".formatted(config.name()), e);
+            }
+        } else {
+            valueToStore = value;
         }
 
+        useJdbiTransaction(handle -> {
+            final var dao = handle.attach(ConfigPropertyDao.class);
+
+            final boolean updated = dao.setValue(groupName, propertyName, valueToStore);
+            if (!updated) {
+                final PropertyType type = config.isSecret() ? PropertyType.ENCRYPTEDSTRING : PropertyType.STRING;
+                dao.maybeCreate(groupName, propertyName, type, config.description(), valueToStore);
+            }
+        });
     }
 
-    private Optional<String> getDeploymentConfigValue(final ConfigDefinition config) {
-        final var key = new DeploymentConfigKey(namespacedDeploymentConfigName(config));
-
-        final String value = Config.getInstance().getProperty(key);
+    private Optional<String> getDeploymentConfigValue(final DeploymentConfigDefinition config) {
+        final String value = ConfigProvider.getConfig().getOptionalValue(
+                namespacedConfigName(config), String.class).orElse(null);
         if (value == null) {
             if (config.isRequired()) {
                 throw new IllegalStateException("""
@@ -107,23 +131,13 @@ final class ConfigRegistryImpl implements ConfigRegistry {
         return Optional.of(value);
     }
 
-    private Optional<String> getRuntimeConfigValue(final ConfigDefinition config) {
-        final Pair<String, String> groupAndName = namespacedRuntimeConfigGroupAndName(config);
-        final String groupName = groupAndName.getLeft();
-        final String propertyName = groupAndName.getRight();
+    private Optional<String> getRuntimeConfigValue(final RuntimeConfigDefinition config) {
+        final Map.Entry<String, String> groupAndName = namespacedConfigGroupAndName(config);
+        final String groupName = groupAndName.getKey();
+        final String propertyName = groupAndName.getValue();
 
-        final ConfigProperty property = withJdbiHandle(handle -> handle.createQuery("""
-                        SELECT "PROPERTYVALUE"
-                             , "PROPERTYTYPE"
-                          FROM "CONFIGPROPERTY"
-                         WHERE "GROUPNAME" = :groupName
-                           AND "PROPERTYNAME" = :propertyName
-                        """)
-                .bind("groupName", groupName)
-                .bind("propertyName", propertyName)
-                .map(BeanMapper.of(ConfigProperty.class))
-                .findOne()
-                .orElse(null));
+        final ConfigProperty property = withJdbiHandle(
+                handle -> handle.attach(ConfigPropertyDao.class).getOptional(groupName, propertyName)).orElse(null);
         if (property == null || property.getPropertyValue() == null) {
             if (config.isRequired()) {
                 throw new IllegalStateException("""
@@ -153,7 +167,7 @@ final class ConfigRegistryImpl implements ConfigRegistry {
         }
     }
 
-    private String namespacedDeploymentConfigName(final ConfigDefinition config) {
+    private String namespacedConfigName(final DeploymentConfigDefinition config) {
         if (extensionName == null) {
             return "%s.%s".formatted(extensionPointName, config.name());
         }
@@ -161,12 +175,12 @@ final class ConfigRegistryImpl implements ConfigRegistry {
         return "%s.extension.%s.%s".formatted(extensionPointName, extensionName, config.name());
     }
 
-    private Pair<String, String> namespacedRuntimeConfigGroupAndName(final ConfigDefinition config) {
+    private Map.Entry<String, String> namespacedConfigGroupAndName(final RuntimeConfigDefinition config) {
         if (extensionName == null) {
-            return Pair.of(extensionPointName, config.name());
+            return Map.entry(extensionPointName, config.name());
         }
 
-        return Pair.of(extensionPointName, "extension.%s.%s".formatted(extensionName, config.name()));
+        return Map.entry(extensionPointName, "extension.%s.%s".formatted(extensionName, config.name()));
     }
 
 }

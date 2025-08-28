@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.plugin.api;
 
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+
 import java.io.Closeable;
 
 /**

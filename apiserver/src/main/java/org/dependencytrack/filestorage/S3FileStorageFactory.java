@@ -21,9 +21,9 @@ package org.dependencytrack.filestorage;
 import alpine.Config;
 import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
-import org.dependencytrack.plugin.api.ConfigDefinition;
-import org.dependencytrack.plugin.api.ConfigRegistry;
-import org.dependencytrack.plugin.api.ConfigSource;
+import org.dependencytrack.plugin.api.config.ConfigDefinition;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
 import org.slf4j.Logger;
@@ -38,41 +38,20 @@ public final class S3FileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3FileStorageFactory.class);
 
-    static final ConfigDefinition CONFIG_ENDPOINT = new ConfigDefinition(
-            "endpoint",
-            ConfigSource.DEPLOYMENT,
-            /* isRequired */ true,
-            /* isSecret */ false);
-    static final ConfigDefinition CONFIG_BUCKET = new ConfigDefinition(
-            "bucket",
-            ConfigSource.DEPLOYMENT,
-            /* isRequired */ true,
-            /* isSecret */ false);
-    static final ConfigDefinition CONFIG_ACCESS_KEY = new ConfigDefinition(
-            "access.key",
-            ConfigSource.DEPLOYMENT,
-            /* isRequired */ false,
-            /* isSecret */ true);
-    static final ConfigDefinition CONFIG_SECRET_KEY = new ConfigDefinition(
-            "secret.key",
-            ConfigSource.DEPLOYMENT,
-            /* isRequired */ false,
-            /* isSecret */ true);
-    static final ConfigDefinition CONFIG_REGION = new ConfigDefinition(
-            "region",
-            ConfigSource.DEPLOYMENT,
-            /* isRequired */ false,
-            /* isSecret */ false);
-    static final ConfigDefinition CONFIG_COMPRESSION_THRESHOLD_BYTES = new ConfigDefinition(
-            "compression.threshold.bytes",
-            ConfigSource.DEPLOYMENT,
-            /* isRequired */ false,
-            /* isSecret */ false);
-    static final ConfigDefinition CONFIG_COMPRESSION_LEVEL = new ConfigDefinition(
-            "compression.level",
-            ConfigSource.DEPLOYMENT,
-            /* isRequired */ false,
-            /* isSecret */ false);
+    static final ConfigDefinition CONFIG_ENDPOINT =
+            new DeploymentConfigDefinition("endpoint", /* isRequired */ true);
+    static final ConfigDefinition CONFIG_BUCKET =
+            new DeploymentConfigDefinition("bucket", /* isRequired */ true);
+    static final ConfigDefinition CONFIG_ACCESS_KEY =
+            new DeploymentConfigDefinition("access.key", /* isRequired */ false);
+    static final ConfigDefinition CONFIG_SECRET_KEY =
+            new DeploymentConfigDefinition("secret.key", /* isRequired */ false);
+    static final ConfigDefinition CONFIG_REGION =
+            new DeploymentConfigDefinition("region", /* isRequired */ false);
+    static final ConfigDefinition CONFIG_COMPRESSION_THRESHOLD_BYTES =
+            new DeploymentConfigDefinition("compression.threshold.bytes", /* isRequired */ false);
+    static final ConfigDefinition CONFIG_COMPRESSION_LEVEL =
+            new DeploymentConfigDefinition("compression.level", /* isRequired */ false);
 
     private MinioClient s3Client;
     private String bucketName;
