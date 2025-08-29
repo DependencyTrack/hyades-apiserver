@@ -29,6 +29,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -38,6 +40,8 @@ import jakarta.ws.rs.core.Response;
 import org.dependencytrack.model.validation.ValidUuid;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.resources.v1.vo.IsTokenBeingProcessedResponse;
+import org.dependencytrack.workflow.engine.api.WorkflowEngine;
+import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 
 import java.util.UUID;
 
@@ -56,6 +60,9 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
         @SecurityRequirement(name = "BearerAuth")
 })
 public class EventResource extends AlpineResource {
+
+    @Inject
+    private WorkflowEngine workflowEngine;
 
     @GET
     @Path("/token/{uuid}")
@@ -87,12 +94,21 @@ public class EventResource extends AlpineResource {
             @PathParam("uuid") @ValidUuid String uuid) {
         final UUID token = UUID.fromString(uuid);
 
-        final boolean isProcessing;
+        boolean isProcessing = false;
         if (Event.isEventBeingProcessed(token)) {
             isProcessing = true;
         } else {
-            isProcessing = withJdbiHandle(getAlpineRequest(), handle ->
-                    handle.attach(WorkflowDao.class).existsWithNonTerminalStatus(token));
+            if (workflowEngine != null) {
+                final WorkflowRunMetadata runMetadata =
+                        workflowEngine.getRunMetadata(token);
+                if (runMetadata != null) {
+                    isProcessing = !runMetadata.status().isTerminal();
+                }
+            }
+            if (!isProcessing) {
+                isProcessing = withJdbiHandle(getAlpineRequest(), handle ->
+                        handle.attach(WorkflowDao.class).existsWithNonTerminalStatus(token));
+            }
         }
 
         final var response = new IsTokenBeingProcessedResponse();
