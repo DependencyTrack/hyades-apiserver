@@ -40,10 +40,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.SequencedCollection;
 import java.util.SequencedMap;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
@@ -98,6 +98,10 @@ public class PluginManager {
         return INSTANCE;
     }
 
+    public List<ExtensionPointSpec<?>> getExtensionPoints() {
+        return List.copyOf(specByExtensionPointClass.values());
+    }
+
     public List<Plugin> getLoadedPlugins() {
         return List.copyOf(loadedPluginByClass.sequencedValues());
     }
@@ -138,10 +142,10 @@ public class PluginManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> SortedSet<U> getFactories(final Class<T> extensionPointClass) {
+    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> SequencedCollection<U> getFactories(final Class<T> extensionPointClass) {
         final Set<String> extensionNames = extensionNamesByExtensionPointClass.get(extensionPointClass);
         if (extensionNames == null) {
-            return Collections.emptySortedSet();
+            return Collections.emptyList();
         }
 
         final var factories = new TreeSet<U>(factoryComparator);
@@ -154,6 +158,21 @@ public class PluginManager {
         }
 
         return factories;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public SequencedCollection<ExtensionFactory<? extends ExtensionPoint>> getFactories(final String extensionPointName) {
+        final Class extensionPointClass =
+                specByExtensionPointClass.entrySet().stream()
+                        .filter(entry -> entry.getValue().name().equals(extensionPointName))
+                        .map(Map.Entry::getKey)
+                        .findAny()
+                        .orElse(null);
+        if (extensionPointClass == null) {
+            return Collections.emptyList();
+        }
+
+        return getFactories(extensionPointClass);
     }
 
     void loadPlugins() {
@@ -319,7 +338,8 @@ public class PluginManager {
                     Map.entry(MDC_EXTENSION_POINT_NAME, extensionPointSpec.name())))) {
                 LOGGER.debug("Determining default extension");
 
-                final SortedSet<? extends ExtensionFactory<?>> factories = getFactories(extensionPointClass);
+                final SequencedCollection<? extends ExtensionFactory<?>> factories =
+                        getFactories(extensionPointClass);
                 if (factories == null || factories.isEmpty()) {
                     LOGGER.warn("No extension available; Skipping");
                     continue;
@@ -331,7 +351,7 @@ public class PluginManager {
                 final ExtensionFactory<?> extensionFactory;
                 if (defaultExtensionName.isEmpty()) {
                     LOGGER.debug("No default extension configured; Choosing based on priority");
-                    extensionFactory = factories.first();
+                    extensionFactory = factories.getFirst();
                     LOGGER.debug("Chose extension %s (%s) with priority %d as default".formatted(
                             extensionFactory.extensionName(),
                             extensionFactory.extensionClass().getName(),
