@@ -25,6 +25,7 @@ import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
 import org.dependencytrack.plugin.api.Plugin;
 import org.dependencytrack.plugin.api.config.ConfigDefinition;
+import org.dependencytrack.plugin.api.config.ConfigTypes;
 import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.slf4j.MDC;
 
@@ -63,10 +64,10 @@ public class PluginManager {
     private static final Logger LOGGER = Logger.getLogger(PluginManager.class);
     private static final Pattern EXTENSION_POINT_NAME_PATTERN = Pattern.compile("^[a-z0-9.]+$");
     private static final Pattern EXTENSION_NAME_PATTERN = EXTENSION_POINT_NAME_PATTERN;
-    private static final ConfigDefinition CONFIG_EXTENSION_ENABLED =
-            new DeploymentConfigDefinition("enabled", /* isRequired */ false);
-    private static final ConfigDefinition CONFIG_DEFAULT_EXTENSION =
-            new DeploymentConfigDefinition("default.extension", /* isRequired */ false);
+    private static final ConfigDefinition<Boolean> CONFIG_EXTENSION_ENABLED =
+            new DeploymentConfigDefinition<>("enabled", ConfigTypes.BOOLEAN, /* isRequired */ false);
+    private static final ConfigDefinition<String> CONFIG_DEFAULT_EXTENSION =
+            new DeploymentConfigDefinition<>("default.extension", ConfigTypes.STRING, /* isRequired */ false);
     private static final PluginManager INSTANCE = new PluginManager();
 
     private final SequencedMap<Class<? extends Plugin>, Plugin> loadedPluginByClass;
@@ -268,7 +269,7 @@ public class PluginManager {
         }
 
         final var configRegistry = ConfigRegistryImpl.forExtension(extensionPointSpec.name(), extensionIdentity.name());
-        final boolean isEnabled = configRegistry.getOptionalValue(CONFIG_EXTENSION_ENABLED).map(Boolean::parseBoolean).orElse(true);
+        final boolean isEnabled = configRegistry.getOptionalValue(CONFIG_EXTENSION_ENABLED).orElse(true);
         if (!isEnabled) {
             LOGGER.debug("Extension is disabled; Skipping");
             return;

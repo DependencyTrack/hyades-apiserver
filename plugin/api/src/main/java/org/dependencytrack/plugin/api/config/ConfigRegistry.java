@@ -50,7 +50,7 @@ public interface ConfigRegistry {
      * @param config Definition of the config to retrieve.
      * @return The config's value, if any.
      */
-    Optional<String> getOptionalValue(final ConfigDefinition config);
+    <T> Optional<T> getOptionalValue(final ConfigDefinition<T> config);
 
     /**
      * Retrieve the value of a configuration, throwing if there is none.
@@ -59,7 +59,7 @@ public interface ConfigRegistry {
      * @return The config's value.
      * @throws NoSuchElementException When the config does not exist or is {@code null}.
      */
-    default String getValue(final ConfigDefinition config) {
+    default <T> T getValue(final ConfigDefinition<T> config) {
         return getOptionalValue(config).orElseThrow(NoSuchElementException::new);
     }
 
@@ -73,6 +73,6 @@ public interface ConfigRegistry {
      *                                  {@code true} but encryption failed.
      * @since 5.7.0
      */
-    void setValue(RuntimeConfigDefinition config, String value);
+    <T> void setValue(RuntimeConfigDefinition<T> config, T value);
 
 }

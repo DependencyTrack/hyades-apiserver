@@ -18,34 +18,23 @@
  */
 package org.dependencytrack.plugin.api.config;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 
 /**
  * @since 5.7.0
  */
-public final class MockConfigRegistry implements ConfigRegistry {
+public final class ConfigTypes {
 
-    private final Map<String, String> properties;
+    public static final ConfigType<Boolean> BOOLEAN = new ConfigType.Boolean();
+    public static final ConfigType<Duration> DURATION = new ConfigType.Duration();
+    public static final ConfigType<Instant> INSTANT = new ConfigType.Instant();
+    public static final ConfigType<Integer> INTEGER = new ConfigType.Integer();
+    public static final ConfigType<Path> PATH = new ConfigType.Path();
+    public static final ConfigType<String> STRING = new ConfigType.String();
 
-    public MockConfigRegistry() {
-        this(new HashMap<>());
-    }
-
-    public MockConfigRegistry(final Map<String, String> properties) {
-        this.properties = properties;
-    }
-
-    @Override
-    public <T> Optional<T> getOptionalValue(final ConfigDefinition<T> config) {
-        final String value = properties.get(config.name());
-        return Optional.ofNullable(config.type().fromString(value));
-    }
-
-    @Override
-    public <T> void setValue(final RuntimeConfigDefinition<T> config, final T value) {
-        properties.put(config.name(), config.type().toString(value));
+    private ConfigTypes() {
     }
 
 }
