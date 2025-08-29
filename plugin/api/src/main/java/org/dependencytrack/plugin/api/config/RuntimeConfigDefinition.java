@@ -32,15 +32,17 @@ import static java.util.Objects.requireNonNull;
  * @param isSecret    Whether the config is secret (value should be stored in encrypted form).
  * @since 5.7.0
  */
-public record RuntimeConfigDefinition(
+public record RuntimeConfigDefinition<T>(
         String name,
         String description,
+        ConfigType<T> type,
         boolean isRequired,
-        boolean isSecret) implements ConfigDefinition {
+        boolean isSecret) implements ConfigDefinition<T> {
 
     public RuntimeConfigDefinition {
         requireNonNull(name, "name must not be null");
         requireNonNull(description, "description must not be null");
+        requireNonNull(type, "type must not be null");
     }
 
 }

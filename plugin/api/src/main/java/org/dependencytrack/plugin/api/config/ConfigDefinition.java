@@ -21,12 +21,17 @@ package org.dependencytrack.plugin.api.config;
 /**
  * @since 5.7.0
  */
-public sealed interface ConfigDefinition permits DeploymentConfigDefinition, RuntimeConfigDefinition {
+public sealed interface ConfigDefinition<T> permits DeploymentConfigDefinition, RuntimeConfigDefinition {
 
     /**
      * @return Name of the configuration.
      */
     String name();
+
+    /**
+     * @return Type of the configuration.
+     */
+    ConfigType<T> type();
 
     /**
      * @return Whether the configuration is required (value must not be {@code null}).

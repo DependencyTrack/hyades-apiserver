@@ -29,12 +29,14 @@ import static java.util.Objects.requireNonNull;
  * @param isRequired Whether the config is required (value must not be {@code null}).
  * @since 5.7.0
  */
-public record DeploymentConfigDefinition(
+public record DeploymentConfigDefinition<T>(
         String name,
-        boolean isRequired) implements ConfigDefinition {
+        ConfigType<T> type,
+        boolean isRequired) implements ConfigDefinition<T> {
 
     public DeploymentConfigDefinition {
         requireNonNull(name, "name must not be null");
+        requireNonNull(type, "type must not be null");
     }
 
 }

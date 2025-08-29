@@ -23,6 +23,7 @@ import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
 import org.dependencytrack.plugin.api.config.ConfigDefinition;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.config.ConfigTypes;
 import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
@@ -38,20 +39,20 @@ public final class S3FileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3FileStorageFactory.class);
 
-    static final ConfigDefinition CONFIG_ENDPOINT =
-            new DeploymentConfigDefinition("endpoint", /* isRequired */ true);
-    static final ConfigDefinition CONFIG_BUCKET =
-            new DeploymentConfigDefinition("bucket", /* isRequired */ true);
-    static final ConfigDefinition CONFIG_ACCESS_KEY =
-            new DeploymentConfigDefinition("access.key", /* isRequired */ false);
-    static final ConfigDefinition CONFIG_SECRET_KEY =
-            new DeploymentConfigDefinition("secret.key", /* isRequired */ false);
-    static final ConfigDefinition CONFIG_REGION =
-            new DeploymentConfigDefinition("region", /* isRequired */ false);
-    static final ConfigDefinition CONFIG_COMPRESSION_THRESHOLD_BYTES =
-            new DeploymentConfigDefinition("compression.threshold.bytes", /* isRequired */ false);
-    static final ConfigDefinition CONFIG_COMPRESSION_LEVEL =
-            new DeploymentConfigDefinition("compression.level", /* isRequired */ false);
+    static final ConfigDefinition<String> CONFIG_ENDPOINT =
+            new DeploymentConfigDefinition<>("endpoint", ConfigTypes.STRING, /* isRequired */ true);
+    static final ConfigDefinition<String> CONFIG_BUCKET =
+            new DeploymentConfigDefinition<>("bucket", ConfigTypes.STRING, /* isRequired */ true);
+    static final ConfigDefinition<String> CONFIG_ACCESS_KEY =
+            new DeploymentConfigDefinition<>("access.key", ConfigTypes.STRING, /* isRequired */ false);
+    static final ConfigDefinition<String> CONFIG_SECRET_KEY =
+            new DeploymentConfigDefinition<>("secret.key", ConfigTypes.STRING, /* isRequired */ false);
+    static final ConfigDefinition<String> CONFIG_REGION =
+            new DeploymentConfigDefinition<>("region", ConfigTypes.STRING, /* isRequired */ false);
+    static final ConfigDefinition<Integer> CONFIG_COMPRESSION_THRESHOLD_BYTES =
+            new DeploymentConfigDefinition<>("compression.threshold.bytes", ConfigTypes.INTEGER, /* isRequired */ false);
+    static final ConfigDefinition<Integer> CONFIG_COMPRESSION_LEVEL =
+            new DeploymentConfigDefinition<>("compression.level", ConfigTypes.INTEGER, /* isRequired */ false);
 
     private MinioClient s3Client;
     private String bucketName;
@@ -92,12 +93,8 @@ public final class S3FileStorageFactory implements FileStorageFactory {
                 Config.getInstance().getApplicationName(),
                 Config.getInstance().getApplicationVersion());
 
-        compressionThresholdBytes = configRegistry.getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES)
-                .map(Integer::parseInt)
-                .orElse(4096);
-        compressionLevel = configRegistry.getOptionalValue(CONFIG_COMPRESSION_LEVEL)
-                .map(Integer::parseInt)
-                .orElse(5);
+        compressionThresholdBytes = configRegistry.getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES).orElse(4096);
+        compressionLevel = configRegistry.getOptionalValue(CONFIG_COMPRESSION_LEVEL).orElse(5);
 
         LOGGER.debug("Verifying existence of bucket {}", bucketName);
         requireBucketExists(s3Client, bucketName);
