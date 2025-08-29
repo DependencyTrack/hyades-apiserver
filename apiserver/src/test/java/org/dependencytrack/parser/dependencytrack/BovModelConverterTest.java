@@ -19,6 +19,7 @@
 package org.dependencytrack.parser.dependencytrack;
 
 import com.google.protobuf.Timestamp;
+import io.github.nscuro.versatile.Vers;
 import org.cyclonedx.proto.v1_6.Advisory;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Property;
@@ -38,11 +39,11 @@ import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV3;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_CVSSV31;
 import static org.cyclonedx.proto.v1_6.ScoreMethod.SCORE_METHOD_OWASP;
 
-public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
+public class BovModelConverterTest extends PersistenceCapableTest {
 
     @Test
     public void testConvertNullValue() {
-        assertThat(ModelConverterCdxToVuln.convert(qm, Bom.newBuilder().build(), null, false)).isNull();
+        assertThat(BovModelConverter.convert(Bom.newBuilder().build(), null, false)).isNull();
     }
 
     @Test
@@ -81,11 +82,11 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
                                 .setId("SNYK-JAVA-ORGAPACHELOGGINGLOG4J-2314720")
                                 .setSource(Source.newBuilder().setName("SNYK").build()).build())
                         .addProperties(Property.newBuilder()
-                                .setName(ModelConverterCdxToVuln.TITLE_PROPERTY_NAME)
+                                .setName(BovModelConverter.TITLE_PROPERTY_NAME)
                                 .setValue("Foo Bar Title").build())
                         .build()).build();
 
-        final Vulnerability vuln = ModelConverterCdxToVuln.convert(qm, bovInput, bovInput.getVulnerabilities(0), true);
+        final Vulnerability vuln = BovModelConverter.convert(bovInput, bovInput.getVulnerabilities(0), true);
         assertThat(vuln.getVulnId()).isEqualTo("CVE-2021-44228");
         assertThat(vuln.getSource()).isEqualTo(Vulnerability.Source.NVD.name());
         assertThat(vuln.getTitle()).isEqualTo("Foo Bar Title");
@@ -134,7 +135,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
                                 .setVector("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H")
                                 .setScore(8.8))
                         .build()).build();
-        final Vulnerability vuln = ModelConverterCdxToVuln.convert(qm, bovInput, bovInput.getVulnerabilities(0), true);
+        final Vulnerability vuln = BovModelConverter.convert(bovInput, bovInput.getVulnerabilities(0), true);
         assertThat(vuln).isNotNull();
         assertThat(vuln.getVulnId()).isEqualTo("SNYK-PYTHON-DJANGO-2968205");
         assertThat(vuln.getSource()).isEqualTo(Vulnerability.Source.SNYK.name());
@@ -168,7 +169,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
                                 .setSource(Source.newBuilder().setName("UNSPECIFIED").build())
                                 .setScore(8.8))
                         .build()).build();
-        final Vulnerability vuln = ModelConverterCdxToVuln.convert(qm, bovInput, bovInput.getVulnerabilities(0), true);
+        final Vulnerability vuln = BovModelConverter.convert(bovInput, bovInput.getVulnerabilities(0), true);
         assertThat(vuln).isNotNull();
         assertThat(vuln.getVulnId()).isEqualTo("SNYK-PYTHON-DJANGO-2968205");
         assertThat(vuln.getSource()).isEqualTo(Vulnerability.Source.SNYK.name());
@@ -185,7 +186,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
                         .setId("Foo")
                         .setSource(Source.newBuilder().setName("OSSINDEX").build())
                         .build()).build();
-        final Vulnerability vuln = ModelConverterCdxToVuln.convert(qm, bovInput, bovInput.getVulnerabilities(0), true);
+        final Vulnerability vuln = BovModelConverter.convert(bovInput, bovInput.getVulnerabilities(0), true);
         assertThat(vuln).isNotNull();
         assertThat(vuln.getCvssV3Vector()).isNull();
         assertThat(vuln.getCvssV3BaseScore()).isNull();
@@ -216,7 +217,7 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
                                 .setMethod(SCORE_METHOD_OWASP)
                                 .setVector("SL:1/M:4/O:4/S:9/ED:7/EE:3/A:4/ID:3/LC:9/LI:1/LAV:5/LAC:1/FD:3/RD:4/NC:7/PV:9"))
                         .build()).build();
-        final Vulnerability vuln = ModelConverterCdxToVuln.convert(qm, bovInput, bovInput.getVulnerabilities(0), true);
+        final Vulnerability vuln = BovModelConverter.convert(bovInput, bovInput.getVulnerabilities(0), true);
         assertThat(vuln).isNotNull();
         assertThat(vuln.getCvssV3Vector()).isNull();
         assertThat(vuln.getCvssV3BaseScore()).isNull();
@@ -242,7 +243,15 @@ public class ModelConverterCdxToVulnTest extends PersistenceCapableTest {
                                 .setSource(Source.newBuilder().setName("NVD").build())
                                 .setVector("(AV:N/AC:M/Au:N/C:C/I:C/A:C)"))
                         .build()).build();
-        final Vulnerability vuln = ModelConverterCdxToVuln.convert(qm, bovInput, bovInput.getVulnerabilities(0), true);
+        final Vulnerability vuln = BovModelConverter.convert(bovInput, bovInput.getVulnerabilities(0), true);
         assertThat(vuln).isNotNull();
     }
+
+    @Test
+    public void testConvertRangeToVersList() {
+        var range = "vers:earth/<=6.0.7";
+        List<Vers> versConverted = BovModelConverter.convertRangeToVersList(range);
+        assertThat(versConverted.getFirst().toString()).isEqualTo("vers:generic/<=6.0.7");
+    }
+
 }
