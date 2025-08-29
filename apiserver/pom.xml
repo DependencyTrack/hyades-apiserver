@@ -34,7 +34,7 @@
         <lib.kotlin-stdlib.version>2.2.10</lib.kotlin-stdlib.version>
         <lib.wiremock.version>3.13.1</lib.wiremock.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
-        <lib.parallel-consumer.version>0.5.3.2</lib.parallel-consumer.version>
+        <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.4</lib.pebble.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
         <lib.swagger.version>2.2.36</lib.swagger.version>
