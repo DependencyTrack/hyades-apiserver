@@ -34,6 +34,7 @@
         <module>alpine</module>
         <module>proto</module>
         <module>plugin/api</module>
+        <module>plugin/vuln-datasource-nvd</module>
         <module>persistence-migration</module>
         <module>persistence-jooq</module>
         <module>apiserver</module>
@@ -116,6 +117,7 @@
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.13.4</lib.smallrye-config.version>
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
+        <lib.versatile.version>0.7.0</lib.versatile.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
 
@@ -281,6 +283,12 @@
                 <version>${lib.testcontainers.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.github.nscuro</groupId>
+                <artifactId>versatile</artifactId>
+                <version>${lib.versatile.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
