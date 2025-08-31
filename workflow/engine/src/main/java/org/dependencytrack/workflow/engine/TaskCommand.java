@@ -23,12 +23,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 
-sealed interface TaskCommand permits
-        TaskCommand.AbandonActivityTaskCommand,
-        TaskCommand.CompleteActivityTaskCommand,
-        TaskCommand.FailActivityTaskCommand,
-        TaskCommand.AbandonWorkflowTaskCommand,
-        TaskCommand.CompleteWorkflowTaskCommand {
+sealed interface TaskCommand {
 
     record AbandonActivityTaskCommand(ActivityTask task) implements TaskCommand {
     }

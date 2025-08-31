@@ -28,13 +28,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.util.Map;
 
-sealed interface WorkflowCommand permits
-        WorkflowCommand.CompleteRunCommand,
-        WorkflowCommand.ContinueRunAsNewCommand,
-        WorkflowCommand.RecordSideEffectResultCommand,
-        WorkflowCommand.CreateActivityRunCommand,
-        WorkflowCommand.CreateChildRunCommand,
-        WorkflowCommand.CreateTimerCommand {
+sealed interface WorkflowCommand {
 
     record CompleteRunCommand(
             int eventId,

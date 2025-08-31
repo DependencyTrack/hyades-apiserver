@@ -221,8 +221,8 @@ final class MetadataRegistry {
 
     @SuppressWarnings("rawtypes")
     private String getWorkflowName(final Class<? extends WorkflowExecutor> executorClass) {
-        return workflowNameByExecutorClass.computeIfAbsent(executorClass, ignored -> {
-            final Workflow workflowAnnotation = executorClass.getAnnotation(Workflow.class);
+        return workflowNameByExecutorClass.computeIfAbsent(executorClass, clazz -> {
+            final Workflow workflowAnnotation = clazz.getAnnotation(Workflow.class);
             if (workflowAnnotation == null) {
                 throw new IllegalArgumentException("Executor class must be annotated with @Workflow");
             }
@@ -233,8 +233,8 @@ final class MetadataRegistry {
 
     @SuppressWarnings("rawtypes")
     private String getActivityName(final Class<? extends ActivityExecutor> executorClass) {
-        return activityNameByExecutorClass.computeIfAbsent(executorClass, ignored -> {
-            final Activity activityAnnotation = executorClass.getAnnotation(Activity.class);
+        return activityNameByExecutorClass.computeIfAbsent(executorClass, clazz -> {
+            final Activity activityAnnotation = clazz.getAnnotation(Activity.class);
             if (activityAnnotation == null) {
                 throw new IllegalArgumentException("Executor class must be annotated with @Activity");
             }
