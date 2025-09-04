@@ -16,27 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api.config;
+package org.dependencytrack.datasource.vuln.osv;
 
-import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
+import org.dependencytrack.plugin.api.config.ConfigTypes;
+import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
+
 import java.util.List;
 
 /**
  * @since 5.7.0
  */
-public final class ConfigTypes {
+final class OsvVulnDataSourceConfigs {
 
-    public static final ConfigType<Boolean> BOOLEAN = new ConfigType.Boolean();
-    public static final ConfigType<Duration> DURATION = new ConfigType.Duration();
-    public static final ConfigType<Instant> INSTANT = new ConfigType.Instant();
-    public static final ConfigType<Integer> INTEGER = new ConfigType.Integer();
-    public static final ConfigType<Path> PATH = new ConfigType.Path();
-    public static final ConfigType<String> STRING = new ConfigType.String();
-    public static final ConfigType<List<String>> STRING_LIST = new ConfigType.StringList();
+    static final RuntimeConfigDefinition<Boolean> CONFIG_ENABLED =
+            new RuntimeConfigDefinition<>("enabled", "", ConfigTypes.BOOLEAN, false, false);
+    static final RuntimeConfigDefinition<List<String>> CONFIG_ECOSYSTEMS =
+            new RuntimeConfigDefinition<>("ecosystems", "", ConfigTypes.STRING_LIST, false, false);
 
-    private ConfigTypes() {
+    private OsvVulnDataSourceConfigs() {
     }
 
 }

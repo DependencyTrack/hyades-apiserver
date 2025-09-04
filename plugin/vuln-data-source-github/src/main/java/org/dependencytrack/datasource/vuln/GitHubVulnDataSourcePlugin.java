@@ -16,24 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.datasource.vuln;
 
-import alpine.event.framework.SingletonCapableEvent;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
 
-import java.util.UUID;
+import java.util.Collection;
+import java.util.List;
 
 /**
- * Defines an event used to start a mirror of the NVD.
- *
- * @author Steve Springett
- * @since 3.0.0
+ * @since 5.7.0
  */
-public class NistMirrorEvent extends SingletonCapableEvent {
+public final class GitHubVulnDataSourcePlugin implements Plugin {
 
-    private static final UUID CHAIN_IDENTIFIER = UUID.fromString("077fa5fe-2f7a-457f-a0f1-9e9a0e578ede");
-
-    public NistMirrorEvent() {
-        setChainIdentifier(CHAIN_IDENTIFIER);
-        setSingleton(true);
+    @Override
+    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+        return List.of(new GitHubVulnDataSourceFactory());
     }
+
 }

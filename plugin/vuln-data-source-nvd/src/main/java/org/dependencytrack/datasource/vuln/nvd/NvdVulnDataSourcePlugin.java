@@ -16,27 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api.config;
+package org.dependencytrack.datasource.vuln.nvd;
 
-import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
+
+import java.util.Collection;
 import java.util.List;
 
 /**
  * @since 5.7.0
  */
-public final class ConfigTypes {
+public final class NvdVulnDataSourcePlugin implements Plugin {
 
-    public static final ConfigType<Boolean> BOOLEAN = new ConfigType.Boolean();
-    public static final ConfigType<Duration> DURATION = new ConfigType.Duration();
-    public static final ConfigType<Instant> INSTANT = new ConfigType.Instant();
-    public static final ConfigType<Integer> INTEGER = new ConfigType.Integer();
-    public static final ConfigType<Path> PATH = new ConfigType.Path();
-    public static final ConfigType<String> STRING = new ConfigType.String();
-    public static final ConfigType<List<String>> STRING_LIST = new ConfigType.StringList();
-
-    private ConfigTypes() {
+    @Override
+    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+        return List.of(new NvdVulnDataSourceFactory());
     }
 
 }
