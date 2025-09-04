@@ -16,7 +16,36 @@
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 type: object
 properties:
-  states:
-    type: array
-    items:
-      $ref: "./list-workflow-states-response-item.yaml"
+  id:
+    type: string
+    format: uuid
+  workflow_name:
+    type: string
+  workflow_version:
+    type: integer
+    format: int32
+  status:
+    $ref: "./workflow-run-status.yaml"
+  priority:
+    type: integer
+    format: int32
+  concurrency_group_id:
+    type: string
+  labels:
+    type: object
+    additionalProperties:
+      type: string
+  created_at:
+    $ref: "./timestamp.yaml"
+  updated_at:
+    $ref: "./timestamp.yaml"
+  started_at:
+    $ref: "./timestamp.yaml"
+  completed_at:
+    $ref: "./timestamp.yaml"
+required:
+- id
+- workflow_name
+- workflow_version
+- status
+- created_at
