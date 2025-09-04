@@ -52,7 +52,7 @@ public class KafkaEventDispatcherTest {
 
     @Before
     public void setUp() {
-        mockProducer = new MockProducer<>(false, new ByteArraySerializer(), new ByteArraySerializer());
+        mockProducer = new MockProducer<>(false, /* partitioner */ null, new ByteArraySerializer(), new ByteArraySerializer());
         eventDispatcher = new KafkaEventDispatcher(mockProducer);
     }
 
