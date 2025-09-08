@@ -106,7 +106,7 @@
         <lib.jackson.version>2.20.0</lib.jackson.version>
         <lib.jdbi.version>3.49.5</lib.jdbi.version>
         <lib.jersey.version>3.1.11</lib.jersey.version>
-        <lib.jetty.version>12.1.0</lib.jetty.version>
+        <lib.jetty.version>12.1.1</lib.jetty.version>
         <lib.jooq.version>3.20.6</lib.jooq.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
