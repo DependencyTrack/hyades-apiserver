@@ -187,6 +187,13 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
         assertPersistent(persistentVuln, "vuln must be persistent");
         assertNonPersistentAll(vsList, "vsList must not be persistent");
 
+        // Create a copy of vsList that is guaranteed to be mutable,
+        // as we'll need to modify it during the synchronization process.
+        //
+        // If vsList was created via Collections#emptyList(), Stream#toList() or similar,
+        // it'd be immutable.
+        final var mutableVsList = new ArrayList<>(vsList);
+
         runInTransaction(() -> {
             // Get all VulnerableSoftware records that are currently associated with the vulnerability.
             // Note: For SOME ODD REASON, duplicate (as in, same database ID and all) VulnerableSoftware
@@ -215,7 +222,7 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
             final var matchedOldVsList = new ArrayList<VulnerableSoftware>();
 
             for (final VulnerableSoftware vsOld : vsOldList) {
-                if (vsList.removeIf(vsOld::equalsIgnoringDatastoreIdentity)) {
+                if (mutableVsList.removeIf(vsOld::equalsIgnoringDatastoreIdentity)) {
                     vsListToKeep.add(vsOld);
                     matchedOldVsList.add(vsOld);
                 } else {
@@ -276,7 +283,7 @@ final class VulnerableSoftwareQueryManager extends QueryManager implements IQuer
 
             // For VulnerableSoftware records that are newly reported for this vulnerability, check if any matching
             // records exist in the database that are currently associated with other (or no) vulnerabilities.
-            for (final VulnerableSoftware vs : vsList) {
+            for (final VulnerableSoftware vs : mutableVsList) {
                 final VulnerableSoftware existingVs;
                 if (vs.getCpe23() != null) {
                     existingVs = getVulnerableSoftwareByCpe23(
