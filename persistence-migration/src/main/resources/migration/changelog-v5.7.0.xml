@@ -145,4 +145,31 @@
             <column name="LAST_OCCURRENCE" descending="true"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="v5.7.0-7" author="nscuro">
+        <!--
+          Support global search of components by their coordinates.
+          Search is expected to be case-insensitive and have "contains" semantics.
+
+          DataNucleus is not smart enough to use ILIKE for case-insensitivity,
+          so we need to explicitly index on LOWER.
+        -->
+        <sql>
+            CREATE INDEX "COMPONENT_COORDINATES_SEARCH_IDX"
+                ON "COMPONENT" USING gin (LOWER("NAME") gin_trgm_ops, LOWER("VERSION") gin_trgm_ops, LOWER("GROUP") gin_trgm_ops);
+        </sql>
+    </changeSet>
+
+    <changeSet id="v5.7.0-8" author="nscuro">
+        <!--
+          We only allow searching by valid PURLs, which means there will always
+          be some prefix, like "pkg:npm/foo". text_pattern_ops can only support
+          prefix lookups, but is more lightweight than GIN indexes.
+        -->
+        <sql>
+            CREATE INDEX "COMPONENT_PURL_SEARCH_IDX"
+                ON "COMPONENT" (LOWER("PURL") text_pattern_ops)
+             WHERE "PURL" IS NOT NULL;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
