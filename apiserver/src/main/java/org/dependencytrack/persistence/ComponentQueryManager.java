@@ -382,8 +382,11 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
 
             result = loadComponents("(" + String.join(" && ", queryFilterElements) + ")", queryParams);
         } else if (identity.getPurl() != null) {
-            queryFilterElements.add("purl.toLowerCase().matches(:purl)");
-            queryParams.put("purl", ".*" + identity.getPurl().canonicalize().toLowerCase() + ".*");
+            // "contains" conditions with wildcards on both sides don't make sense here
+            // given we already require a valid PURL to be provided. There will always
+            // be a mandatory prefix such as "pkg:npm/foo".
+            queryFilterElements.add("purl.toLowerCase().startsWith(:purl)");
+            queryParams.put("purl", identity.getPurl().canonicalize().toLowerCase());
 
             result = loadComponents("(" + String.join(" && ", queryFilterElements) + ")", queryParams);
         } else if (identity.getCpe() != null) {
