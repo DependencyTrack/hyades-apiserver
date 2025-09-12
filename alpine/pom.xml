@@ -86,7 +86,6 @@
         <lib.javassist.version>3.30.2-GA</lib.javassist.version>
         <lib.jaxb-runtime.version>4.0.5</lib.jaxb-runtime.version>
         <lib.jdo.api.version>3.2.1</lib.jdo.api.version>
-        <lib.json-unit.version>4.1.1</lib.json-unit.version>
         <lib.jsonwebtoken.version>0.13.0</lib.jsonwebtoken.version>
         <lib.jsr305.version>3.0.2</lib.jsr305.version>
         <lib.logback.version>1.5.18</lib.logback.version>
@@ -266,12 +265,6 @@
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
                 <version>${lib.mockito.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>net.javacrumbs.json-unit</groupId>
-                <artifactId>json-unit-assertj</artifactId>
-                <version>${lib.json-unit.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
