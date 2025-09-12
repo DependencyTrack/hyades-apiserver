@@ -112,7 +112,7 @@
         <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.postgresql.version>42.7.7</lib.postgresql.version>
-        <lib.protobuf-java.version>4.32.0</lib.protobuf-java.version>
+        <lib.protobuf-java.version>4.32.1</lib.protobuf-java.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.13.4</lib.smallrye-config.version>
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
