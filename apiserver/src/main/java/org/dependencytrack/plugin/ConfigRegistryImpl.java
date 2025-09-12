@@ -29,7 +29,10 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 import org.dependencytrack.util.DebugDataEncryption;
 import org.eclipse.microprofile.config.ConfigProvider;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
@@ -39,7 +42,7 @@ import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 /**
  * @since 5.6.0
  */
-final class ConfigRegistryImpl implements ConfigRegistry {
+public final class ConfigRegistryImpl implements ConfigRegistry {
 
     private final String extensionPointName;
     private final String extensionName;
@@ -66,8 +69,52 @@ final class ConfigRegistryImpl implements ConfigRegistry {
      * @param extensionName      Name of the extension.
      * @return A {@link ConfigRegistryImpl} scoped to {@code extensionPointName} and {@code extensionName}.
      */
-    static ConfigRegistryImpl forExtension(final String extensionPointName, final String extensionName) {
+    public static ConfigRegistryImpl forExtension(final String extensionPointName, final String extensionName) {
         return new ConfigRegistryImpl(requireNonNull(extensionPointName), requireNonNull(extensionName));
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public void createWithDefaultsIfNotExist(final Collection<RuntimeConfigDefinition<?>> configs) {
+        requireNonNull(extensionName, "extensionName must not be null");
+
+        if (configs == null || configs.isEmpty()) {
+            return;
+        }
+
+        final var configPropertiesToCreate = new ArrayList<ConfigProperty>(configs.size());
+        for (final RuntimeConfigDefinition config : configs) {
+            final Map.Entry<String, String> groupAndName = namespacedConfigGroupAndName(config);
+            final String groupName = groupAndName.getKey();
+            final String propertyName = groupAndName.getValue();
+
+            final String valueString = config.type().toString(config.defaultValue());
+            final String valueToStore;
+
+            if (config.isSecret() && valueString != null) {
+                try {
+                    valueToStore = DataEncryption.encryptAsString(valueString);
+                } catch (Exception e) {
+                    throw new IllegalStateException(
+                            "Failed to encrypt value of config %s".formatted(config.name()), e);
+                }
+            } else {
+                valueToStore = valueString;
+            }
+
+            final var configProperty = new ConfigProperty();
+            configProperty.setGroupName(groupName);
+            configProperty.setPropertyName(propertyName);
+            configProperty.setPropertyType(
+                    config.isSecret()
+                            ? PropertyType.ENCRYPTEDSTRING
+                            : PropertyType.STRING);
+            configProperty.setDescription(config.description());
+            configProperty.setPropertyValue(valueToStore);
+            configPropertiesToCreate.add(configProperty);
+        }
+
+        useJdbiTransaction(handle -> handle.attach(
+                ConfigPropertyDao.class).maybeCreateAll(configPropertiesToCreate));
     }
 
     @Override
@@ -110,8 +157,7 @@ final class ConfigRegistryImpl implements ConfigRegistry {
 
             final boolean updated = dao.setValue(groupName, propertyName, valueToStore);
             if (!updated) {
-                final PropertyType type = config.isSecret() ? PropertyType.ENCRYPTEDSTRING : PropertyType.STRING;
-                dao.maybeCreate(groupName, propertyName, type, config.description(), valueToStore);
+                throw new NoSuchElementException("Config %s does not exist".formatted(config.name()));
             }
         });
     }

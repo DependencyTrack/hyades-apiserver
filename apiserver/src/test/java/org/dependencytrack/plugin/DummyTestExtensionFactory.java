@@ -28,7 +28,7 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 public class DummyTestExtensionFactory implements ExtensionFactory<TestExtensionPoint> {
 
     private static final ConfigDefinition<String> CONFIG_FOO =
-            new RuntimeConfigDefinition<>("foo", "description", ConfigTypes.STRING, false, false);
+            new RuntimeConfigDefinition<>("foo", "description", ConfigTypes.STRING, null, false, false);
     private static final ConfigDefinition<String> CONFIG_BAR =
             new DeploymentConfigDefinition<>("bar", ConfigTypes.STRING, false);
 

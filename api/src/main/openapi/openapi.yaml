@@ -34,6 +34,8 @@ servers:
 tags:
 - name: Components
   description: Endpoints related to components
+- name: Extensions
+  description: Endpoints related to extensions
 - name: Metrics
   description: Endpoints related to metrics
 - name: Projects
@@ -46,6 +48,12 @@ tags:
 paths:
   /components:
     $ref: "./paths/components.yaml"
+  /extension-points:
+    $ref: "./paths/extension-points.yaml"
+  /extension-points/{extensionPointName}/extensions:
+    $ref: "./paths/extension-points__name__extensions.yaml"
+  /extension-points/{extensionPointName}/extensions/{extensionName}/configs:
+    $ref: "./paths/extension-points__name__extensions__name__configs.yaml"
   /projects/{uuid}/components:
     $ref: "./paths/projects_uuid_components.yaml"
   /metrics/portfolio/current:
