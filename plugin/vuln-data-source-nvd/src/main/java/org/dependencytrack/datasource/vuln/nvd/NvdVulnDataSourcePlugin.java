@@ -16,16 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.datasource.vuln.nvd;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
 
-public class NistMirrorEventTest {
+import java.util.Collection;
+import java.util.List;
 
-    @Test
-    public void testDefaultConstructor() {
-        NistMirrorEvent event = new NistMirrorEvent();
-        Assert.assertNotNull(event);
+/**
+ * @since 5.7.0
+ */
+public final class NvdVulnDataSourcePlugin implements Plugin {
+
+    @Override
+    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+        return List.of(new NvdVulnDataSourceFactory());
     }
+
 }

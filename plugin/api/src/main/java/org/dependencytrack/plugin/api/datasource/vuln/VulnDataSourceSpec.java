@@ -16,16 +16,28 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.plugin.api.datasource.vuln;
 
-import alpine.event.framework.Event;
+import org.dependencytrack.plugin.api.ExtensionPointSpec;
 
 /**
- * Defines an event used to start a mirror of GitHub Advisories.
- *
- * @author Steve Springett
- * @since 4.4.0
+ * @since 5.7.0
  */
-public class GitHubAdvisoryMirrorEvent implements Event {
+public class VulnDataSourceSpec implements ExtensionPointSpec<VulnDataSource> {
+
+    @Override
+    public String name() {
+        return "vuln.datasource";
+    }
+
+    @Override
+    public boolean required() {
+        return false;
+    }
+
+    @Override
+    public Class<VulnDataSource> extensionPointClass() {
+        return VulnDataSource.class;
+    }
 
 }

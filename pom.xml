@@ -34,6 +34,9 @@
         <module>alpine</module>
         <module>proto</module>
         <module>plugin/api</module>
+        <module>plugin/vuln-data-source-github</module>
+        <module>plugin/vuln-data-source-nvd</module>
+        <module>plugin/vuln-data-source-osv</module>
         <module>persistence-migration</module>
         <module>persistence-jooq</module>
         <module>apiserver</module>
@@ -111,11 +114,13 @@
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
+        <lib.open-vulnerability-clients.version>8.0.0</lib.open-vulnerability-clients.version>
         <lib.postgresql.version>42.7.7</lib.postgresql.version>
         <lib.protobuf-java.version>4.32.0</lib.protobuf-java.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.13.4</lib.smallrye-config.version>
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
+        <lib.versatile.version>0.7.0</lib.versatile.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
 
@@ -240,6 +245,12 @@
             </dependency>
 
             <dependency>
+                <groupId>io.github.jeremylong</groupId>
+                <artifactId>open-vulnerability-clients</artifactId>
+                <version>${lib.open-vulnerability-clients.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
                 <version>${lib.postgresql.version}</version>
@@ -266,6 +277,11 @@
                 <artifactId>slf4j-nop</artifactId>
                 <version>${lib.slf4j.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${lib.slf4j.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>io.smallrye.config</groupId>
@@ -281,6 +297,12 @@
                 <version>${lib.testcontainers.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.github.nscuro</groupId>
+                <artifactId>versatile</artifactId>
+                <version>${lib.versatile.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
