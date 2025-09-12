@@ -18,40 +18,103 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.LoggableSubscriber;
-import alpine.model.ConfigProperty;
+import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.event.NistMirrorEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
+import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerableSoftware;
+import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_NVD_ENABLED;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+
+import static org.datanucleus.PropertyNames.PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT;
 
 public class NistMirrorTask implements LoggableSubscriber {
 
-    private static final Logger LOGGER = Logger.getLogger(NistMirrorTask.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NistMirrorTask.class);
 
-    /**
-     * {@inheritDoc}
-     */
+    private final PluginManager pluginManager = PluginManager.getInstance();
+
     public void inform(final Event e) {
-        if (e instanceof NistMirrorEvent) {
-            try (final QueryManager qm = new QueryManager()) {
-                final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_NVD_ENABLED.getGroupName(), VULNERABILITY_SOURCE_NVD_ENABLED.getPropertyName());
-                final boolean isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
-                if (!isEnabled) {
-                    return;
+        if (!(e instanceof NistMirrorEvent)) {
+            return;
+        }
+
+        try (final var dataSource = pluginManager.getExtension(VulnDataSource.class, "nvd")) {
+            if (dataSource == null) {
+                return; // Likely disabled.
+            }
+
+            final var bovBatch = new ArrayList<Bom>(25);
+            while (dataSource.hasNext()) {
+                if (Thread.currentThread().isInterrupted()) {
+                    LOGGER.warn("Interrupted before all BOVs could be consumed");
+                    break;
                 }
 
-                final long start = System.currentTimeMillis();
-                LOGGER.info("Starting NIST mirroring task");
-                new KafkaEventDispatcher().dispatchEvent(new NistMirrorEvent()).join();
-                final long end = System.currentTimeMillis();
-                LOGGER.info("NIST mirroring complete. Time spent (total): " + (end - start) + "ms");
-            } catch (Exception ex) {
-                LOGGER.error("An unexpected error occurred while triggering NIST mirroring", ex);
+                bovBatch.add(dataSource.next());
+                if (bovBatch.size() == 25) {
+                    processBatch(dataSource, bovBatch);
+                    bovBatch.clear();
+                }
+            }
+
+            if (!bovBatch.isEmpty()) {
+                processBatch(dataSource, bovBatch);
+                bovBatch.clear();
             }
         }
     }
+
+    private void processBatch(final VulnDataSource dataSource, final Collection<Bom> bovs) {
+        LOGGER.info("Processing batch of {} BOVs", bovs.size());
+
+        final var vulns = new ArrayList<Vulnerability>(bovs.size());
+        final var vsListByVulnId = new HashMap<String, List<VulnerableSoftware>>(bovs.size());
+
+        for (final Bom bov : bovs) {
+            if (bov.getVulnerabilitiesCount() == 0) {
+                LOGGER.warn("BOV contains no vulnerabilities; Skipping");
+                continue;
+            }
+
+            if (bov.getVulnerabilitiesCount() > 1) {
+                LOGGER.warn("BOV contains more than one vulnerability; Skipping");
+                continue;
+            }
+
+            final Vulnerability vuln = BovModelConverter.convert(bov, bov.getVulnerabilities(0), true);
+            final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+            vulns.add(vuln);
+            vsListByVulnId.put(vuln.getVulnId(), vsList);
+        }
+
+        try (final var qm = new QueryManager()) {
+            qm.getPersistenceManager().setProperty(PROPERTY_PERSISTENCE_BY_REACHABILITY_AT_COMMIT, "false");
+
+            qm.runInTransaction(() -> {
+                for (final Vulnerability vuln : vulns) {
+                    LOGGER.debug("Synchronizing vulnerability {}", vuln.getVulnId());
+                    final Vulnerability persistentVuln = qm.synchronizeVulnerability(vuln, false);
+                    final List<VulnerableSoftware> vsList = vsListByVulnId.get(persistentVuln.getVulnId());
+                    qm.synchronizeVulnerableSoftware(persistentVuln, vsList, Vulnerability.Source.NVD);
+                }
+            });
+        }
+
+        for (final Bom bov : bovs) {
+            dataSource.markProcessed(bov);
+        }
+    }
+
 }

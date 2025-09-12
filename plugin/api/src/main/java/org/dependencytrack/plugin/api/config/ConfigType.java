@@ -18,6 +18,9 @@
  */
 package org.dependencytrack.plugin.api.config;
 
+import java.net.MalformedURLException;
+import java.net.URI;
+
 /**
  * @since 5.7.0
  */
@@ -154,6 +157,33 @@ public sealed interface ConfigType<T> {
         @Override
         public java.lang.String toString(final java.lang.String value) {
             return value;
+        }
+
+    }
+
+    record URL() implements ConfigType<java.net.URL> {
+
+        @Override
+        public Class<java.net.URL> clazz() {
+            return java.net.URL.class;
+        }
+
+        @Override
+        public java.net.URL fromString(final java.lang.String value) {
+            if (value == null) {
+                return null;
+            }
+
+            try {
+                return URI.create(value).toURL();
+            } catch (MalformedURLException e) {
+                throw new IllegalArgumentException("Invalid URL: " + value, e);
+            }
+        }
+
+        @Override
+        public java.lang.String toString(final java.net.URL value) {
+            return value != null ? value.toString() : null;
         }
 
     }

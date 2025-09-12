@@ -22,6 +22,7 @@ import alpine.model.IConfigProperty;
 import alpine.test.config.ConfigPropertyRule;
 import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.datasource.vuln.nvd.NvdVulnDataSourcePlugin;
 import org.dependencytrack.filestorage.FileStoragePlugin;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
@@ -48,7 +49,8 @@ public class PluginManagerTest extends PersistenceCapableTest {
         final List<Plugin> loadedPlugins = PluginManager.getInstance().getLoadedPlugins();
         assertThat(loadedPlugins).satisfiesExactlyInAnyOrder(
                 plugin -> assertThat(plugin).isOfAnyClassIn(DummyPlugin.class),
-                plugin -> assertThat(plugin).isInstanceOf(FileStoragePlugin.class));
+                plugin -> assertThat(plugin).isInstanceOf(FileStoragePlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(NvdVulnDataSourcePlugin.class));
         assertThat(loadedPlugins).isUnmodifiable();
     }
 
