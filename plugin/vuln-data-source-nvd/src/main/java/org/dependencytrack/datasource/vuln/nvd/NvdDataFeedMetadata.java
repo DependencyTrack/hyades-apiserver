@@ -16,27 +16,24 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.plugin.api.config;
+package org.dependencytrack.datasource.vuln.nvd;
 
-import java.net.URL;
-import java.nio.file.Path;
-import java.time.Duration;
 import java.time.Instant;
 
 /**
  * @since 5.7.0
  */
-public final class ConfigTypes {
+record NvdDataFeedMetadata(Instant lastModifiedAt) {
 
-    public static final ConfigType<Boolean> BOOLEAN = new ConfigType.Boolean();
-    public static final ConfigType<Duration> DURATION = new ConfigType.Duration();
-    public static final ConfigType<Instant> INSTANT = new ConfigType.Instant();
-    public static final ConfigType<Integer> INTEGER = new ConfigType.Integer();
-    public static final ConfigType<Path> PATH = new ConfigType.Path();
-    public static final ConfigType<String> STRING = new ConfigType.String();
-    public static final ConfigType<URL> URL = new ConfigType.URL();
+    static NvdDataFeedMetadata of(final String metadataString) {
+        final Instant lastModifiedAt = metadataString.lines()
+                .filter(line -> line.startsWith("lastModifiedDate:"))
+                .map(line -> line.substring("lastModifiedDate:".length()))
+                .map(Instant::parse)
+                .findAny()
+                .orElseThrow();
 
-    private ConfigTypes() {
+        return new NvdDataFeedMetadata(lastModifiedAt);
     }
 
 }
