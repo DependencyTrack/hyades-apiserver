@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.filestorage;
 
-import org.dependencytrack.plugin.api.config.ConfigRegistry;
+import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
 
@@ -48,7 +48,7 @@ public final class MemoryFileStorageFactory implements FileStorageFactory {
     }
 
     @Override
-    public void init(final ConfigRegistry configRegistry) {
+    public void init(final ExtensionContext ctx) {
         fileContentByKey = new ConcurrentHashMap<>();
     }
 

@@ -20,6 +20,8 @@ package org.dependencytrack.plugin;
 
 import alpine.common.logging.Logger;
 import org.dependencytrack.common.MdcScope;
+import org.dependencytrack.common.ProxySelector;
+import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.ExtensionPointSpec;
@@ -286,7 +288,7 @@ public class PluginManager {
 
         LOGGER.debug("Initializing extension");
         try {
-            extensionFactory.init(configRegistry);
+            extensionFactory.init(new ExtensionContext(configRegistry, new ProxySelector()));
         } catch (RuntimeException e) {
             throw new IllegalStateException(
                     "Failed to initialize extension %s from plugin %s".formatted(

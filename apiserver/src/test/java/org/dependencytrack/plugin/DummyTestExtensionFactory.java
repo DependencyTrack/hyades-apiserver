@@ -18,6 +18,7 @@
  */
 package org.dependencytrack.plugin;
 
+import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.config.ConfigDefinition;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
@@ -50,8 +51,8 @@ public class DummyTestExtensionFactory implements ExtensionFactory<TestExtension
     }
 
     @Override
-    public void init(final ConfigRegistry configRegistry) {
-        this.configRegistry = configRegistry;
+    public void init(final ExtensionContext ctx) {
+        this.configRegistry = ctx.configRegistry();
     }
 
     @Override

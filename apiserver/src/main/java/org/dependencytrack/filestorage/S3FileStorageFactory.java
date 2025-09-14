@@ -21,8 +21,9 @@ package org.dependencytrack.filestorage;
 import alpine.Config;
 import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
+import okhttp3.OkHttpClient;
+import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigDefinition;
-import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.ConfigTypes;
 import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
@@ -75,14 +76,20 @@ public final class S3FileStorageFactory implements FileStorageFactory {
     }
 
     @Override
-    public void init(final ConfigRegistry configRegistry) {
-        final String endpoint = configRegistry.getValue(CONFIG_ENDPOINT);
-        bucketName = configRegistry.getValue(CONFIG_BUCKET);
-        final Optional<String> optionalAccessKey = configRegistry.getOptionalValue(CONFIG_ACCESS_KEY);
-        final Optional<String> optionalSecretKey = configRegistry.getOptionalValue(CONFIG_SECRET_KEY);
-        final Optional<String> optionalRegion = configRegistry.getOptionalValue(CONFIG_REGION);
+    public void init(final ExtensionContext ctx) {
+        final String endpoint = ctx.configRegistry().getValue(CONFIG_ENDPOINT);
+        bucketName = ctx.configRegistry().getValue(CONFIG_BUCKET);
+        final Optional<String> optionalAccessKey = ctx.configRegistry().getOptionalValue(CONFIG_ACCESS_KEY);
+        final Optional<String> optionalSecretKey = ctx.configRegistry().getOptionalValue(CONFIG_SECRET_KEY);
+        final Optional<String> optionalRegion = ctx.configRegistry().getOptionalValue(CONFIG_REGION);
 
-        final var clientBuilder = MinioClient.builder().endpoint(endpoint);
+        final var httpClient = new OkHttpClient.Builder()
+                .proxySelector(ctx.proxySelector())
+                .build();
+
+        final var clientBuilder = MinioClient.builder()
+                .httpClient(httpClient, /* close */ true)
+                .endpoint(endpoint);
         if (optionalAccessKey.isPresent() && optionalSecretKey.isPresent()) {
             clientBuilder.credentials(optionalAccessKey.get(), optionalSecretKey.get());
         }
@@ -93,8 +100,8 @@ public final class S3FileStorageFactory implements FileStorageFactory {
                 Config.getInstance().getApplicationName(),
                 Config.getInstance().getApplicationVersion());
 
-        compressionThresholdBytes = configRegistry.getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES).orElse(4096);
-        compressionLevel = configRegistry.getOptionalValue(CONFIG_COMPRESSION_LEVEL).orElse(5);
+        compressionThresholdBytes = ctx.configRegistry().getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES).orElse(4096);
+        compressionLevel = ctx.configRegistry().getOptionalValue(CONFIG_COMPRESSION_LEVEL).orElse(5);
 
         LOGGER.debug("Verifying existence of bucket {}", bucketName);
         requireBucketExists(s3Client, bucketName);
