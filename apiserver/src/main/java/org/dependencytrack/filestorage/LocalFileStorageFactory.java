@@ -19,8 +19,8 @@
 package org.dependencytrack.filestorage;
 
 import alpine.Config;
+import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigDefinition;
-import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.ConfigTypes;
 import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
@@ -66,8 +66,8 @@ public final class LocalFileStorageFactory implements FileStorageFactory {
     }
 
     @Override
-    public void init(final ConfigRegistry configRegistry) {
-        directoryPath = configRegistry.getOptionalValue(CONFIG_DIRECTORY)
+    public void init(final ExtensionContext ctx) {
+        directoryPath = ctx.configRegistry().getOptionalValue(CONFIG_DIRECTORY)
                 .orElseGet(() -> Config.getInstance().getDataDirectorty().toPath().resolve("storage"))
                 .normalize()
                 .toAbsolutePath();
@@ -90,8 +90,8 @@ public final class LocalFileStorageFactory implements FileStorageFactory {
 
         LOGGER.debug("Files will be stored in {}", directoryPath);
 
-        compressionThresholdBytes = configRegistry.getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES).orElse(4096);
-        compressionLevel = configRegistry.getOptionalValue(CONFIG_COMPRESSION_LEVEL).orElse(5);
+        compressionThresholdBytes = ctx.configRegistry().getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES).orElse(4096);
+        compressionLevel = ctx.configRegistry().getOptionalValue(CONFIG_COMPRESSION_LEVEL).orElse(5);
     }
 
     @Override

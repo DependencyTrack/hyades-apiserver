@@ -19,6 +19,7 @@
 package org.dependencytrack.filestorage;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
@@ -65,8 +66,8 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void shouldStoreGetAndDeleteFile() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -91,9 +92,9 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void storeShouldCompressFileWithSizeAboveCompressionThreshold() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.ofEntries(
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()),
-                Map.entry(CONFIG_COMPRESSION_THRESHOLD_BYTES.name(), "64"))));
+                Map.entry(CONFIG_COMPRESSION_THRESHOLD_BYTES.name(), "64")))));
 
         final var storage = (LocalFileStorage) storageFactory.create();
 
@@ -119,8 +120,8 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void storeShouldOverwriteExistingFile() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -141,8 +142,8 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void storeShouldThrowWhenFileNameAttemptsTraversal() {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -157,8 +158,8 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void storeShouldThrowWhenFileHasInvalidName() {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -171,8 +172,8 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void getShouldThrowWhenFileLocationHasInvalidScheme() {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -188,8 +189,8 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void getShouldThrowWhenFileNameAttemptsTraversal() {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -208,8 +209,8 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void getShouldThrowWhenFileDoesNotExist() {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -225,8 +226,8 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void getShouldThrowWhenFileWithDigestMismatch() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -250,8 +251,8 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void deleteShouldReturnFalseWhenFileDoesNotExist() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
@@ -266,8 +267,8 @@ public class LocalFileStorageTest {
     @SuppressWarnings("resource")
     public void deleteShouldThrowWhenFileLocationHasInvalidScheme() {
         final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString())));
+        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
+                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
