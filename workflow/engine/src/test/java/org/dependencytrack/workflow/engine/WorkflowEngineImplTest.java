@@ -177,8 +177,6 @@ class WorkflowEngineImplTest {
 
                     assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED);
                 });
-
-        assertThat(engine.getRunInbox(runId)).isEmpty();
     }
 
     @Test
@@ -213,8 +211,6 @@ class WorkflowEngineImplTest {
                     assertThat(event.getRunCompleted().getFailure().getMessage()).isEqualTo("Ouch!");
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED));
-
-        assertThat(engine.getRunInbox(runId)).isEmpty();
     }
 
     @Test
@@ -299,8 +295,6 @@ class WorkflowEngineImplTest {
                     assertThat(entry.getRunCompleted().getFailure().getMessage()).isEqualTo("Stop it!");
                 },
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED));
-
-        assertThat(engine.getRunInbox(runId)).isEmpty();
     }
 
     @Test
@@ -330,8 +324,6 @@ class WorkflowEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.TIMER_ELAPSED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED));
-
-        assertThat(engine.getRunInbox(runId)).isEmpty();
     }
 
     @Test
@@ -369,8 +361,6 @@ class WorkflowEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.TIMER_ELAPSED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED));
-
-        assertThat(engine.getRunInbox(runId)).isEmpty();
     }
 
     @Test

@@ -126,51 +126,6 @@ public final class WorkflowDao extends AbstractDao {
                 .list();
     }
 
-    public Map<String, String> updateConcurrencyGroups(final Collection<String> concurrencyGroupIds) {
-        final Query query = jdbiHandle.createQuery("""
-                with
-                cte_next_run as (
-                    select distinct on (concurrency_group_id)
-                           concurrency_group_id
-                         , id
-                      from workflow_run
-                     where concurrency_group_id = any(:groupIds)
-                       and status = any('{CREATED, RUNNING, SUSPENDED}'::workflow_run_status[])
-                     order by concurrency_group_id
-                            , priority desc nulls last
-                            , id
-                ),
-                cte_updated_group as (
-                    update workflow_run_concurrency_group
-                       set next_run_id = cte_next_run.id
-                      from cte_next_run
-                     where workflow_run_concurrency_group.id = cte_next_run.concurrency_group_id
-                    returning workflow_run_concurrency_group.id
-                ),
-                cte_deleted_group as (
-                   delete
-                     from workflow_run_concurrency_group
-                    where id = any(:groupIds)
-                      and id != all(select id from cte_updated_group)
-                   returning id
-                )
-                select id
-                     , 'UPDATED' as status
-                  from cte_updated_group
-                 union all
-                select id
-                     , 'DELETED' as status
-                  from cte_deleted_group
-                """);
-
-        return query
-                .setMapKeyColumn("id")
-                .setMapValueColumn("status")
-                .bindArray("groupIds", String.class, concurrencyGroupIds)
-                .collectInto(new GenericType<>() {
-                });
-    }
-
     public List<WorkflowRunCountByNameAndStatusRow> getRunCountByNameAndStatus() {
         final Query query = jdbiHandle.createQuery("""
                 select workflow_name

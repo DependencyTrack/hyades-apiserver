@@ -1341,10 +1341,6 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
     }
 
-    public List<Event> getRunInbox(final UUID runId) {
-        return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunInboxByRunId(runId));
-    }
-
     public List<WorkflowRunCountByNameAndStatusRow> getRunStats() {
         return jdbi.withHandle(handle -> new WorkflowDao(handle).getRunCountByNameAndStatus());
     }
