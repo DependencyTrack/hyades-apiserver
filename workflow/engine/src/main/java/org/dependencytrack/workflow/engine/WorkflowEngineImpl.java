@@ -450,6 +450,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     @SuppressWarnings("unchecked")
     public List<UUID> createRuns(final Collection<CreateWorkflowRunRequest<?>> options) {
         final var now = Timestamps.now();
+        final var nowInstant = toInstant(now);
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>(options.size());
         final var createInboxEntryCommand = new ArrayList<CreateWorkflowRunInboxEntryCommand>(options.size());
 
@@ -466,7 +467,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                             option.workflowVersion(),
                             option.concurrencyGroupId(),
                             option.priority(),
-                            option.labels()));
+                            option.labels(),
+                            nowInstant));
 
             final var runCreatedBuilder = RunCreated.newBuilder()
                     .setWorkflowName(option.workflowName())
@@ -1029,6 +1031,9 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                                 newEvent));
             }
 
+            final var now = Timestamps.now();
+            final var nowInstant = toInstant(now);
+
             for (final WorkflowRunMessage message : run.pendingWorkflowMessages()) {
                 // If the outbound message is a RunCreated event, the recipient
                 // workflow run will need to be created first.
@@ -1053,7 +1058,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                                             : null,
                                     message.event().getRunCreated().getLabelsCount() > 0
                                             ? Map.copyOf(message.event().getRunCreated().getLabelsMap())
-                                            : null));
+                                            : null,
+                                    nowInstant));
                 }
 
                 createInboxEntryCommands.add(
@@ -1072,7 +1078,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                                     /* visibleFrom */ null,
                                     Event.newBuilder()
                                             .setId(-1)
-                                            .setTimestamp(Timestamps.now())
+                                            .setTimestamp(now)
                                             .setRunCanceled(RunCanceled.newBuilder()
                                                     .setReason("Parent canceled")
                                                     .build())

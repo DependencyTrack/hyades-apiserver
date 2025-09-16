@@ -45,7 +45,7 @@
             , labels jsonb
             , locked_by text
             , locked_until timestamptz(3)
-            , created_at timestamptz(3) not null default now()
+            , created_at timestamptz(3) not null
             , updated_at timestamptz(3)
             , started_at timestamptz(3)
             , completed_at timestamptz(3)

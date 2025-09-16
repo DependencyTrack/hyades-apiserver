@@ -69,6 +69,7 @@ public final class WorkflowDao extends AbstractDao {
                 , concurrency_group_id
                 , priority
                 , labels
+                , created_at
                 )
                 select *
                   from unnest (
@@ -79,6 +80,7 @@ public final class WorkflowDao extends AbstractDao {
                        , :concurrencyGroupIds
                        , :priorities
                        , cast(:labelsJsons as jsonb[])
+                       , :createdAts
                        )
                 returning id
                 """);
@@ -90,6 +92,7 @@ public final class WorkflowDao extends AbstractDao {
         final var concurrencyGroupIds = new ArrayList<@Nullable String>(commands.size());
         final var priorities = new ArrayList<@Nullable Integer>(commands.size());
         final var labelsJsons = new ArrayList<@Nullable String>(commands.size());
+        final var createdAts = new ArrayList<Instant>(commands.size());
 
         final TypedJsonMapper jsonMapper = jdbiHandle
                 .getConfig(JsonConfig.class).getJsonMapper()
@@ -111,6 +114,7 @@ public final class WorkflowDao extends AbstractDao {
             concurrencyGroupIds.add(command.concurrencyGroupId());
             priorities.add(command.priority());
             labelsJsons.add(labelsJson);
+            createdAts.add(command.createdAt());
         }
 
         return update
@@ -121,6 +125,7 @@ public final class WorkflowDao extends AbstractDao {
                 .bindArray("concurrencyGroupIds", String.class, concurrencyGroupIds)
                 .bindArray("priorities", Integer.class, priorities)
                 .bindArray("labelsJsons", String.class, labelsJsons)
+                .bindArray("createdAts", Instant.class, createdAts)
                 .executeAndReturnGeneratedKeys("id")
                 .mapTo(UUID.class)
                 .list();

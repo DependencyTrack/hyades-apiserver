@@ -20,6 +20,7 @@ package org.dependencytrack.workflow.engine.persistence.command;
 
 import org.jspecify.annotations.Nullable;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -30,5 +31,6 @@ public record CreateWorkflowRunCommand(
         int workflowVersion,
         @Nullable String concurrencyGroupId,
         @Nullable Integer priority,
-        @Nullable Map<String, String> labels) {
+        @Nullable Map<String, String> labels,
+        Instant createdAt) {
 }
