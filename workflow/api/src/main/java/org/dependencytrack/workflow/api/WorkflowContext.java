@@ -35,7 +35,7 @@ import java.util.function.Function;
  *
  * @param <A> Type of the workflow's argument.
  */
-public interface WorkflowContext<A> {
+public interface WorkflowContext<A extends @Nullable Object> {
 
     UUID runId();
 

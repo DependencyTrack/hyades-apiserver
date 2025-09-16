@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.api;
 
 import org.jspecify.annotations.Nullable;
 
-public interface ActivityExecutor<A, R> {
+public interface ActivityExecutor<A extends @Nullable Object, R extends @Nullable Object> {
 
     /**
      * Execute the activity.

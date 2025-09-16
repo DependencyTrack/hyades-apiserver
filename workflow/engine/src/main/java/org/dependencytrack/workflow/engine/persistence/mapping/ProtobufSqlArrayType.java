@@ -32,8 +32,7 @@ abstract class ProtobufSqlArrayType<T extends Message> implements SqlArrayType<T
     }
 
     @Override
-    @Nullable
-    public Object convertArrayElement(@Nullable final T element) {
+    public @Nullable Object convertArrayElement(final @Nullable T element) {
         if (element == null) {
             return null;
         }

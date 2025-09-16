@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.api;
 
 import org.jspecify.annotations.Nullable;
 
-public interface WorkflowExecutor<A, R> {
+public interface WorkflowExecutor<A extends @Nullable Object, R extends @Nullable Object> {
 
     /**
      * Execute the workflow.
@@ -35,6 +35,6 @@ public interface WorkflowExecutor<A, R> {
      *                          <strong>Must not</strong> be caught.
      */
     @Nullable
-    R execute(WorkflowContext<A> ctx, @Nullable A argument) throws Exception;
+    R execute(WorkflowContext<@Nullable A> ctx, @Nullable A argument) throws Exception;
 
 }

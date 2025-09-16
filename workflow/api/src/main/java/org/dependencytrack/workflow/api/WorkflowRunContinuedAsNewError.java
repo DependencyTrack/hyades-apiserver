@@ -27,15 +27,14 @@ import org.jspecify.annotations.Nullable;
  */
 public final class WorkflowRunContinuedAsNewError extends WorkflowRunError {
 
-    @Nullable private final Payload argument;
+    private final @Nullable Payload argument;
 
-    public WorkflowRunContinuedAsNewError(@Nullable final Payload argument) {
+    public WorkflowRunContinuedAsNewError(final @Nullable Payload argument) {
         super(null, null, false, false);
         this.argument = argument;
     }
 
-    @Nullable
-    public Payload getArgument() {
+    public @Nullable Payload getArgument() {
         return argument;
     }
 

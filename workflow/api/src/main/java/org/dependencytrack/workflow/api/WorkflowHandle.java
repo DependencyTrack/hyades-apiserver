@@ -19,8 +19,9 @@
 package org.dependencytrack.workflow.api;
 
 import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
+import org.jspecify.annotations.Nullable;
 
-public interface WorkflowHandle<A, R> {
+public interface WorkflowHandle<A extends @Nullable Object, R extends @Nullable Object> {
 
     /**
      * Call the workflow.
@@ -30,6 +31,6 @@ public interface WorkflowHandle<A, R> {
      * @param options Options of the call.
      * @return An {@link Awaitable} wrapping the workflow's result.
      */
-    Awaitable<R> call(WorkflowCallOptions<A> options);
+    Awaitable<@Nullable R> call(WorkflowCallOptions<@Nullable A> options);
 
 }

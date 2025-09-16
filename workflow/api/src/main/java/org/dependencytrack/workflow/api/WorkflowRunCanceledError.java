@@ -25,7 +25,7 @@ import org.jspecify.annotations.Nullable;
  */
 public final class WorkflowRunCanceledError extends WorkflowRunError {
 
-    public WorkflowRunCanceledError(@Nullable final String message) {
+    public WorkflowRunCanceledError(final @Nullable String message) {
         super(message);
     }
 

@@ -236,8 +236,7 @@ public class WorkflowEngineConfig {
     private final TaskDispatcherConfig workflowTaskDispatcherConfig = new TaskDispatcherConfig();
     private final TaskDispatcherConfig activityTaskDispatcherConfig = new TaskDispatcherConfig();
 
-    @Nullable
-    private MeterRegistry meterRegistry;
+    private @Nullable MeterRegistry meterRegistry;
 
     public WorkflowEngineConfig(final UUID instanceId, final DataSource dataSource) {
         this.instanceId = requireNonNull(instanceId, "instanceId must not be null");
@@ -307,8 +306,7 @@ public class WorkflowEngineConfig {
     /**
      * @return {@link MeterRegistry} to bind metrics to.
      */
-    @Nullable
-    public MeterRegistry meterRegistry() {
+    public @Nullable MeterRegistry meterRegistry() {
         return meterRegistry;
     }
 

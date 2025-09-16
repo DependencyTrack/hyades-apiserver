@@ -32,9 +32,8 @@ final class ProtobufPayloadConverter<T extends Message> implements PayloadConver
         this.clazz = clazz;
     }
 
-    @Nullable
     @Override
-    public Payload convertToPayload(@Nullable final T value) {
+    public @Nullable Payload convertToPayload(final @Nullable T value) {
         if (value == null) {
             return null;
         }
@@ -44,9 +43,8 @@ final class ProtobufPayloadConverter<T extends Message> implements PayloadConver
                 .build();
     }
 
-    @Nullable
     @Override
-    public T convertFromPayload(@Nullable final Payload payload) {
+    public @Nullable T convertFromPayload(final @Nullable Payload payload) {
         if (payload == null) {
             return null;
         }

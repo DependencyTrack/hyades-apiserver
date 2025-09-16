@@ -29,7 +29,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @param <T> Type of the result.
  */
-public interface Awaitable<T> {
+public interface Awaitable<T extends @Nullable Object> {
 
     /**
      * Await completion and retrieve the result.

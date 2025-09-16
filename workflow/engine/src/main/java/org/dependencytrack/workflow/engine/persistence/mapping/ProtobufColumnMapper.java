@@ -37,8 +37,7 @@ public final class ProtobufColumnMapper <T extends Message> implements ColumnMap
     }
 
     @Override
-    @Nullable
-    public T map(final ResultSet rs, final int columnNumber, final StatementContext ctx) throws SQLException {
+    public @Nullable T map(final ResultSet rs, final int columnNumber, final StatementContext ctx) throws SQLException {
         final byte[] valueBytes = rs.getBytes(columnNumber);
         if (rs.wasNull()) {
             return null;

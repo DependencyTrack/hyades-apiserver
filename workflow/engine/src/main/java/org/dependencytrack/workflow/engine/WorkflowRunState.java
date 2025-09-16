@@ -152,7 +152,7 @@ final class WorkflowRunState {
         return customStatus;
     }
 
-    void setCustomStatus(@Nullable final String customStatus) {
+    void setCustomStatus(final @Nullable String customStatus) {
         this.customStatus = customStatus;
     }
 

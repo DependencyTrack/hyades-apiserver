@@ -202,8 +202,7 @@ public final class WorkflowDao extends AbstractDao {
                 .list();
     }
 
-    @Nullable
-    public WorkflowRunMetadataRow getRunMetadataById(final UUID id) {
+    public @Nullable WorkflowRunMetadataRow getRunMetadataById(final UUID id) {
         final Query query = jdbiHandle.createQuery("""
                 select *
                   from workflow_run

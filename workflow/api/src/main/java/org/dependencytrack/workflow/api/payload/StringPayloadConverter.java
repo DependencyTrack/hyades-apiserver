@@ -27,9 +27,8 @@ final class StringPayloadConverter implements PayloadConverter<String> {
     private static final String MEDIA_TYPE = "text/plain";
     static final StringPayloadConverter INSTANCE = new StringPayloadConverter();
 
-    @Nullable
     @Override
-    public Payload convertToPayload(@Nullable final String value) {
+    public @Nullable Payload convertToPayload(final @Nullable String value) {
         if (value == null) {
             return null;
         }
@@ -42,9 +41,8 @@ final class StringPayloadConverter implements PayloadConverter<String> {
                 .build();
     }
 
-    @Nullable
     @Override
-    public String convertFromPayload(@Nullable final Payload payload) {
+    public @Nullable String convertFromPayload(final @Nullable Payload payload) {
         if (payload == null) {
             return null;
         }

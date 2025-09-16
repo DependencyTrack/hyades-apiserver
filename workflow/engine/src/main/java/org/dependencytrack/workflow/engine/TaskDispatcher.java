@@ -68,7 +68,7 @@ final class TaskDispatcher<T extends Task> implements Runnable {
             final int maxConcurrency,
             final Duration minPollInterval,
             final IntervalFunction pollBackoffIntervalFunction,
-            @Nullable final MeterRegistry meterRegistry) {
+            final @Nullable MeterRegistry meterRegistry) {
         this.engine = engine;
         this.taskExecutorService = taskExecutorService;
         this.taskManager = taskManager;

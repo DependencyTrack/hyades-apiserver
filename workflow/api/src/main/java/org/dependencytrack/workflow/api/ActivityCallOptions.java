@@ -22,7 +22,9 @@ import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
-public record ActivityCallOptions<A>(@Nullable A argument, RetryPolicy retryPolicy) {
+public record ActivityCallOptions<A extends @Nullable Object>(
+        @Nullable A argument,
+        RetryPolicy retryPolicy) {
 
     public ActivityCallOptions {
         requireNonNull(retryPolicy, "retryPolicy must not be null");
@@ -32,7 +34,7 @@ public record ActivityCallOptions<A>(@Nullable A argument, RetryPolicy retryPoli
         this(null, RetryPolicy.defaultRetryPolicy());
     }
 
-    public ActivityCallOptions<A> withArgument(@Nullable final A argument) {
+    public ActivityCallOptions<A> withArgument(final @Nullable A argument) {
         return new ActivityCallOptions<>(argument, this.retryPolicy);
     }
 

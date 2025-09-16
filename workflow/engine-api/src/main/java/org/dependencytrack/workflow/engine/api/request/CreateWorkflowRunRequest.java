@@ -57,22 +57,22 @@ public record CreateWorkflowRunRequest<A>(
         this(getWorkflowName(executorClass), getWorkflowVersion(executorClass));
     }
 
-    public CreateWorkflowRunRequest<A> withConcurrencyGroupId(@Nullable final String concurrencyGroupId) {
+    public CreateWorkflowRunRequest<A> withConcurrencyGroupId(final @Nullable String concurrencyGroupId) {
         return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion,
                 concurrencyGroupId, this.priority, this.labels, this.argument);
     }
 
-    public CreateWorkflowRunRequest<A> withPriority(@Nullable final Integer priority) {
+    public CreateWorkflowRunRequest<A> withPriority(final @Nullable Integer priority) {
         return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, priority, this.labels, this.argument);
     }
 
-    public CreateWorkflowRunRequest<A> withLabels(@Nullable final Map<String, String> labels) {
+    public CreateWorkflowRunRequest<A> withLabels(final @Nullable Map<String, String> labels) {
         return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, labels, this.argument);
     }
 
-    public CreateWorkflowRunRequest<A> withArgument(@Nullable final A argument) {
+    public CreateWorkflowRunRequest<A> withArgument(final @Nullable A argument) {
         return new CreateWorkflowRunRequest<>(this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, this.labels, argument);
     }

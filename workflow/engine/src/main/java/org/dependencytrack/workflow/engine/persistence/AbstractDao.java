@@ -35,8 +35,7 @@ abstract class AbstractDao {
         this.jdbiHandle = jdbiHandle;
     }
 
-    @Nullable
-    <T> String encodePageToken(@Nullable final T token) {
+    <T> @Nullable String encodePageToken(final @Nullable T token) {
         if (token == null) {
             return null;
         }
@@ -50,9 +49,8 @@ abstract class AbstractDao {
         return Base64.getUrlEncoder().encodeToString(pageTokenJson.getBytes());
     }
 
-    @Nullable
     @SuppressWarnings("unchecked")
-    <T> T decodePageToken(@Nullable final String token, final Class<T> tokenClass) {
+    <T> @Nullable T decodePageToken(final @Nullable String token, final Class<T> tokenClass) {
         if (token == null || token.isBlank()) {
             return null;
         }

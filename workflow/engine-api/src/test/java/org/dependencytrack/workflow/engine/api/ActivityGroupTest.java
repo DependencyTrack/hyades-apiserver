@@ -21,6 +21,7 @@ package org.dependencytrack.workflow.engine.api;
 import org.dependencytrack.workflow.api.ActivityContext;
 import org.dependencytrack.workflow.api.ActivityExecutor;
 import org.dependencytrack.workflow.api.annotation.Activity;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,7 +55,7 @@ class ActivityGroupTest {
     static class TestActivity implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Void execute(final ActivityContext ctx, final Void arg) {
+        public Void execute(final @NonNull ActivityContext ctx, final Void arg) {
             return null;
         }
 
@@ -71,7 +72,7 @@ class ActivityGroupTest {
     static class TestActivityWithoutAnnotation implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Void execute(final ActivityContext ctx, final Void arg) {
+        public Void execute(final @NonNull ActivityContext ctx, final Void arg) {
             return null;
         }
 

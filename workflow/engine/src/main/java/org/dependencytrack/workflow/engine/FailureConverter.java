@@ -164,9 +164,8 @@ final class FailureConverter {
 
         return failureBuilder.build();
     }
-
-    @Nullable
-    private static String serializeStackTrace(final StackTraceElement @Nullable [] stackTrace) {
+    
+    private static @Nullable String serializeStackTrace(final StackTraceElement @Nullable [] stackTrace) {
         if (stackTrace == null || stackTrace.length == 0) {
             return null;
         }
@@ -194,7 +193,7 @@ final class FailureConverter {
     private static final Pattern STACK_TRACE_ELEMENT_PATTERN = Pattern.compile(
             "^(?<className>[\\w.$]+)\\.(?<methodName>[\\w.$]+)(?:\\((?<fileName>[\\w.]+):(?<lineNumber>-?\\d+)\\))?$");
 
-    private static StackTraceElement @Nullable [] deserializeStackTrace(@Nullable final String stackTrace) {
+    private static StackTraceElement @Nullable [] deserializeStackTrace(final @Nullable String stackTrace) {
         if (stackTrace == null || stackTrace.isEmpty()) {
             return null;
         }

@@ -51,27 +51,27 @@ public record CreateWorkflowScheduleRequest(
         this(name, cron, workflowName, workflowVersion, null, null, null, null, null);
     }
 
-    public CreateWorkflowScheduleRequest withConcurrencyGroupId(@Nullable final String concurrencyGroupId) {
+    public CreateWorkflowScheduleRequest withConcurrencyGroupId(final @Nullable String concurrencyGroupId) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 concurrencyGroupId, this.priority, this.labels, this.argument, this.initialDelay);
     }
 
-    public CreateWorkflowScheduleRequest withPriority(@Nullable final Integer priority) {
+    public CreateWorkflowScheduleRequest withPriority(final @Nullable Integer priority) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, priority, this.labels, this.argument, this.initialDelay);
     }
 
-    public CreateWorkflowScheduleRequest withLabels(@Nullable final Map<String, String> labels) {
+    public CreateWorkflowScheduleRequest withLabels(final @Nullable Map<String, String> labels) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, labels, this.argument, this.initialDelay);
     }
 
-    public CreateWorkflowScheduleRequest withArgument(@Nullable final Payload argument) {
+    public CreateWorkflowScheduleRequest withArgument(final @Nullable Payload argument) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, this.labels, argument, this.initialDelay);
     }
 
-    public CreateWorkflowScheduleRequest withInitialDelay(@Nullable final Duration initialDelay) {
+    public CreateWorkflowScheduleRequest withInitialDelay(final @Nullable Duration initialDelay) {
         return new CreateWorkflowScheduleRequest(this.name, this.cron, this.workflowName, this.workflowVersion,
                 this.concurrencyGroupId, this.priority, this.labels, this.argument, initialDelay);
     }

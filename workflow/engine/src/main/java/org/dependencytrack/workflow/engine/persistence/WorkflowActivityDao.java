@@ -151,8 +151,7 @@ public final class WorkflowActivityDao extends AbstractDao {
                 .list();
     }
 
-    @Nullable
-    public Instant extendActivityTaskLock(
+    public @Nullable Instant extendActivityTaskLock(
             final UUID workerInstanceId,
             final ActivityTaskId activityTask,
             final Duration lockTimeout) {

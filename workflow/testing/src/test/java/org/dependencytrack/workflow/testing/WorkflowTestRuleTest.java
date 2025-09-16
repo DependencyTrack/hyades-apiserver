@@ -131,7 +131,7 @@ public class WorkflowTestRuleTest {
     public static class TestWorkflow implements WorkflowExecutor<Void, String> {
 
         @Override
-        public String execute(final WorkflowContext<Void> ctx, @Nullable final Void argument) {
+        public String execute(final WorkflowContext<Void> ctx, final @Nullable Void argument) {
             final String activityResult = ctx.activity(TestActivity.class).call(new ActivityCallOptions<>()).await();
             return "foo-" + activityResult;
         }
@@ -142,7 +142,7 @@ public class WorkflowTestRuleTest {
     public static class TestActivity implements ActivityExecutor<Void, String> {
 
         @Override
-        public String execute(final ActivityContext ctx, @Nullable final Void argument) {
+        public String execute(final ActivityContext ctx, final @Nullable Void argument) {
             return "bar";
         }
 

@@ -32,13 +32,13 @@ public abstract sealed class WorkflowRunError extends Error permits
         WorkflowRunContinuedAsNewError,
         WorkflowRunDeterminismError {
 
-    WorkflowRunError(@Nullable final String message) {
+    WorkflowRunError(final @Nullable String message) {
         super(message);
     }
 
     WorkflowRunError(
-            @Nullable final String message,
-            @Nullable final Throwable cause,
+            final @Nullable String message,
+            final @Nullable Throwable cause,
             final boolean enableSuppression,
             final boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);

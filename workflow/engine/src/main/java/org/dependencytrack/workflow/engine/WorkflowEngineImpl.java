@@ -520,8 +520,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
 
 
     @Override
-    @Nullable
-    public WorkflowRun getRun(final UUID id) {
+    public @Nullable WorkflowRun getRun(final UUID id) {
         final List<Event> eventHistory = jdbi.withHandle(handle -> {
             final var dao = new WorkflowRunDao(handle);
             final var events = new ArrayList<Event>();
@@ -564,8 +563,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 runState.eventHistory());
     }
 
-    @Nullable
-    public WorkflowRunMetadata getRunMetadata(final UUID runId) {
+    public @Nullable WorkflowRunMetadata getRunMetadata(final UUID runId) {
         final WorkflowRunMetadataRow metadataRow = jdbi.withHandle(
                 handle -> new WorkflowDao(handle).getRunMetadataById(runId));
         if (metadataRow == null) {
@@ -1188,7 +1186,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     }
 
     CompletableFuture<Void> completeActivityTask(
-            final ActivityTask task, @Nullable final Payload result) throws InterruptedException, TimeoutException {
+            final ActivityTask task, final @Nullable Payload result) throws InterruptedException, TimeoutException {
         return taskCommandBuffer.add(new CompleteActivityTaskCommand(task, result, Instant.now()));
     }
 

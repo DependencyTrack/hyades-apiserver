@@ -26,8 +26,8 @@ import org.jspecify.annotations.Nullable;
 public class TerminalApplicationFailureException extends ApplicationFailureException {
 
     public TerminalApplicationFailureException(
-            @Nullable final String message,
-            @Nullable final Throwable cause) {
+            final @Nullable String message,
+            final @Nullable Throwable cause) {
         super(message, cause, /* isTerminal */ true);
     }
 

@@ -28,16 +28,16 @@ public non-sealed class ApplicationFailureException extends FailureException {
     private final boolean isTerminal;
 
     public ApplicationFailureException(
-            @Nullable final String message,
-            @Nullable final Throwable cause,
+            final @Nullable String message,
+            final @Nullable Throwable cause,
             final boolean isTerminal) {
         super(message, null, cause);
         this.isTerminal = isTerminal;
     }
 
     public ApplicationFailureException(
-            @Nullable final String message,
-            @Nullable final Throwable cause) {
+            final @Nullable String message,
+            final @Nullable Throwable cause) {
         this(message, cause, false);
     }
 

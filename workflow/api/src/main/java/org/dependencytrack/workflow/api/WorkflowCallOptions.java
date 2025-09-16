@@ -20,17 +20,19 @@ package org.dependencytrack.workflow.api;
 
 import org.jspecify.annotations.Nullable;
 
-public record WorkflowCallOptions<A>(@Nullable A argument, @Nullable String concurrencyGroupId) {
+public record WorkflowCallOptions<A extends @Nullable Object>(
+        @Nullable A argument,
+        @Nullable String concurrencyGroupId) {
 
     public WorkflowCallOptions() {
         this(null, null);
     }
 
-    public WorkflowCallOptions<A> withArgument(@Nullable final A argument) {
+    public WorkflowCallOptions<A> withArgument(final @Nullable A argument) {
         return new WorkflowCallOptions<>(argument, this.concurrencyGroupId);
     }
 
-    public WorkflowCallOptions<A> withConcurrencyGroupId(@Nullable final String concurrencyGroupId) {
+    public WorkflowCallOptions<A> withConcurrencyGroupId(final @Nullable String concurrencyGroupId) {
         return new WorkflowCallOptions<>(this.argument, concurrencyGroupId);
     }
 

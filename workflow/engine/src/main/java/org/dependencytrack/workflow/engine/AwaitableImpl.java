@@ -54,9 +54,8 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
         this.resultConverter = resultConverter;
     }
 
-    @Nullable
     @Override
-    public T await() {
+    public @Nullable T await() {
         do {
             if (completed) {
                 if (exception != null) {
@@ -72,7 +71,7 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
         throw BLOCKED_ERROR;
     }
 
-    boolean complete(@Nullable final Payload result) {
+    boolean complete(final @Nullable Payload result) {
         if (completed) {
             return false;
         }

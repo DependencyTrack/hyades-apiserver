@@ -26,7 +26,7 @@ public record ContinueAsNewOptions<A>(@Nullable A argument) {
         this(null);
     }
 
-    public ContinueAsNewOptions<A> withArgument(@Nullable final A argument) {
+    public ContinueAsNewOptions<A> withArgument(final @Nullable A argument) {
         return new ContinueAsNewOptions<>(argument);
     }
 

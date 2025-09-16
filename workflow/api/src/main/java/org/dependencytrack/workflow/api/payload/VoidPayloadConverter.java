@@ -25,15 +25,13 @@ final class VoidPayloadConverter implements PayloadConverter<Void> {
 
     static final VoidPayloadConverter INSTANCE = new VoidPayloadConverter();
 
-    @Nullable
     @Override
-    public Payload convertToPayload(@Nullable final Void value) {
+    public @Nullable Payload convertToPayload(final @Nullable Void value) {
         return null;
     }
 
-    @Nullable
     @Override
-    public Void convertFromPayload(@Nullable final Payload payload) {
+    public @Nullable Void convertFromPayload(final @Nullable Payload payload) {
         return null;
     }
 

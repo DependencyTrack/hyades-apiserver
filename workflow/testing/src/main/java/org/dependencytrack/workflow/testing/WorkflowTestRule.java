@@ -48,11 +48,9 @@ public final class WorkflowTestRule implements TestRule {
 
     private final DataSource dataSource;
 
-    @Nullable
-    private WorkflowEngine engine;
+    private @Nullable WorkflowEngine engine;
 
-    @Nullable
-    private Consumer<WorkflowEngineConfig> configCustomizer;
+    private @Nullable Consumer<WorkflowEngineConfig> configCustomizer;
 
     public WorkflowTestRule(final DataSource dataSource) {
         this.dataSource = dataSource;
@@ -94,13 +92,12 @@ public final class WorkflowTestRule implements TestRule {
         return engine;
     }
 
-    public WorkflowTestRule withConfigCustomizer(@Nullable final Consumer<WorkflowEngineConfig> configCustomizer) {
+    public WorkflowTestRule withConfigCustomizer(final @Nullable Consumer<WorkflowEngineConfig> configCustomizer) {
         this.configCustomizer = configCustomizer;
         return this;
     }
 
-    @Nullable
-    public WorkflowRun awaitRunStatus(
+    public @Nullable WorkflowRun awaitRunStatus(
             final UUID runId,
             final WorkflowRunStatus expectedStatus,
             final Duration timeout) {
@@ -134,8 +131,7 @@ public final class WorkflowTestRule implements TestRule {
                 .until(() -> getEngine().getRun(runId), run -> run != null && run.status() == expectedStatus);
     }
 
-    @Nullable
-    public WorkflowRun awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
+    public @Nullable WorkflowRun awaitRunStatus(final UUID runId, final WorkflowRunStatus expectedStatus) {
         return awaitRunStatus(runId, expectedStatus, Duration.ofSeconds(5));
     }
 

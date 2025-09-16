@@ -33,7 +33,7 @@ abstract class ProtobufArgumentFactory<T extends Message> extends AbstractArgume
     }
 
     @Override
-    protected Argument build(@Nullable final T value, final ConfigRegistry config) {
+    protected Argument build(final @Nullable T value, final ConfigRegistry config) {
         return (position, statement, ctx) -> {
             if (value == null) {
                 statement.setNull(position, Types.LONGVARBINARY);

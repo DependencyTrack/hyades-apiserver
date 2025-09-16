@@ -35,8 +35,7 @@ final class MappingUtil {
     private MappingUtil() {
     }
 
-    @Nullable
-    static Integer mapNullableInteger(final ResultSet rs, final String columnName) throws SQLException {
+    static @Nullable Integer mapNullableInteger(final ResultSet rs, final String columnName) throws SQLException {
         final int priority = rs.getInt(columnName);
         if (rs.wasNull()) {
             return null;

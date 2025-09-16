@@ -93,7 +93,7 @@ public final class Buffer<T> implements Closeable {
             final Consumer<List<T>> batchConsumer,
             final Duration flushInterval,
             final int maxBatchSize,
-            @Nullable final MeterRegistry meterRegistry) {
+            final @Nullable MeterRegistry meterRegistry) {
         this(name, batchConsumer, flushInterval, maxBatchSize, Duration.ofSeconds(5), meterRegistry);
     }
 
@@ -103,7 +103,7 @@ public final class Buffer<T> implements Closeable {
             final Duration flushInterval,
             final int maxBatchSize,
             final Duration itemsQueueTimeout,
-            @Nullable final MeterRegistry meterRegistry) {
+            final @Nullable MeterRegistry meterRegistry) {
         this.name = name;
         this.batchConsumer = batchConsumer;
         this.maxBatchSize = maxBatchSize;

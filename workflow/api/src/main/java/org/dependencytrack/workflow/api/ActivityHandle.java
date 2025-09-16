@@ -19,8 +19,9 @@
 package org.dependencytrack.workflow.api;
 
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
+import org.jspecify.annotations.Nullable;
 
-public interface ActivityHandle<A, R> {
+public interface ActivityHandle<A extends @Nullable Object, R extends @Nullable Object> {
 
     /**
      * Call the activity.
@@ -30,6 +31,6 @@ public interface ActivityHandle<A, R> {
      * @param options Options of the call.
      * @return An {@link Awaitable} wrapping the activity's result.
      */
-    Awaitable<R> call(ActivityCallOptions<A> options);
+    Awaitable<@Nullable R> call(ActivityCallOptions<@Nullable A> options);
 
 }

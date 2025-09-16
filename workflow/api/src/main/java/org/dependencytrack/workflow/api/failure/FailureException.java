@@ -27,19 +27,18 @@ public abstract sealed class FailureException extends RuntimeException permits
         ChildWorkflowFailureException,
         SideEffectFailureException {
 
-    @Nullable
-    private final String originalMessage;
+    private final @Nullable String originalMessage;
 
     FailureException(
-            @Nullable final String message,
-            @Nullable final String originalMessage,
-            @Nullable final Throwable cause) {
+            final @Nullable String message,
+            final @Nullable String originalMessage,
+            final @Nullable Throwable cause) {
         super(message, cause);
         this.originalMessage = originalMessage != null ? originalMessage : message;
     }
 
-    @Nullable
-    public String getOriginalMessage() {
+
+    public @Nullable String getOriginalMessage() {
         return originalMessage;
     }
 

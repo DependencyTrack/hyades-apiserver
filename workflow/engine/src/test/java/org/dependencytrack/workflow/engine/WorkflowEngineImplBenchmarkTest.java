@@ -38,14 +38,12 @@ import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
-import org.jspecify.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -73,8 +71,6 @@ import static org.dependencytrack.workflow.api.payload.PayloadConverters.voidCon
 @Testcontainers
 public class WorkflowEngineImplBenchmarkTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkflowEngineImplBenchmarkTest.class);
-
     @Container
     private static final PostgresTestContainer postgresContainer = new PostgresTestContainer();
 
@@ -82,7 +78,7 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestActivityFoo implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Void execute(final ActivityContext ctx, @Nullable final Void argument) {
+        public Void execute(final @NonNull ActivityContext ctx, final Void argument) {
             return null;
         }
 
@@ -92,7 +88,7 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestActivityBar implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Void execute(final ActivityContext ctx, @Nullable final Void argument) {
+        public Void execute(final @NonNull ActivityContext ctx, final Void argument) {
             return null;
         }
 
@@ -102,7 +98,7 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestActivityBaz implements ActivityExecutor<Void, Void> {
 
         @Override
-        public Void execute(final ActivityContext ctx, @Nullable final Void argument) {
+        public Void execute(final @NonNull ActivityContext ctx, final Void argument) {
             return null;
         }
 
@@ -112,7 +108,7 @@ public class WorkflowEngineImplBenchmarkTest {
     public static class TestWorkflow implements WorkflowExecutor<Void, Void> {
 
         @Override
-        public Void execute(final WorkflowContext<Void> ctx, @Nullable final Void argument) {
+        public Void execute(final @NonNull WorkflowContext<Void> ctx, final Void argument) {
             ctx.activity(TestActivityFoo.class).call(new ActivityCallOptions<>()).await();
             ctx.activity(TestActivityBar.class).call(new ActivityCallOptions<>()).await();
             ctx.activity(TestActivityBaz.class).call(new ActivityCallOptions<>()).await();
@@ -204,17 +200,17 @@ public class WorkflowEngineImplBenchmarkTest {
                             .withLabels(labels));
         }
 
-        LOGGER.info("Creating {} runs", numRuns);
+        System.out.printf("Creating %d runs\n", numRuns);
         engine.createRuns(scheduleOptions);
 
         // Ensure table statistics are up to date.
         // Under normal circumstances, there would never be bulk inserts of that many runs at once.
-        LOGGER.info("Running ANALYZE");
+        System.out.println("Running ANALYZE");
         try (final Connection connection = postgresContainer.createConnection("")) {
             connection.createStatement().execute("ANALYZE");
         }
 
-        LOGGER.info("Starting engine");
+        System.out.println("Starting engine");
         engine.start();
 
         await("Workflow completion")
@@ -232,8 +228,6 @@ public class WorkflowEngineImplBenchmarkTest {
 
     private class StatsReporter implements Runnable {
 
-        private static final Logger LOGGER = LoggerFactory.getLogger(StatsReporter.class);
-
         private final MeterRegistry meterRegistry;
 
         private StatsReporter(final MeterRegistry meterRegistry) {
@@ -243,11 +237,11 @@ public class WorkflowEngineImplBenchmarkTest {
         @Override
         public void run() {
             if (engine == null || engine.status() != WorkflowEngineImpl.Status.RUNNING) {
-                LOGGER.info("Engine not ready yet");
+                System.out.println("Engine not ready yet");
                 return;
             }
 
-            LOGGER.info("==========");
+            System.out.println("==========");
 
             try {
                 final List<WorkflowRunCountByNameAndStatusRow> statusRows = engine.getRunStats();
@@ -255,7 +249,7 @@ public class WorkflowEngineImplBenchmarkTest {
                         .collect(Collectors.toMap(
                                 WorkflowRunCountByNameAndStatusRow::status,
                                 WorkflowRunCountByNameAndStatusRow::count));
-                LOGGER.info("Statuses: {}", countByStatus);
+                System.out.printf("Statuses: %s\n".formatted(countByStatus));
 
                 final Collection<Timer> taskDispatcherPollLatencies = meterRegistry.get(
                         "dtrack.workflow.engine.task.dispatcher.poll.latency").timers();
@@ -271,16 +265,16 @@ public class WorkflowEngineImplBenchmarkTest {
                         "cache.gets").tag("cache", "WorkflowEngine-RunHistoryCache").functionCounters();
 
                 for (final Timer timer : taskDispatcherPollLatencies) {
-                    LOGGER.info(
-                            "Dispatcher Poll Latency: taskType={}, taskManager={}, mean={}ms, max={}ms",
+                    System.out.printf(
+                            "Dispatcher Poll Latency: taskType=%s, taskManager=%s, mean=%.2fms, max=%.2fms\n",
                             timer.getId().getTag("taskType"),
                             timer.getId().getTag("taskManager"),
                             timer.mean(TimeUnit.MILLISECONDS),
                             timer.max(TimeUnit.MILLISECONDS));
                 }
                 for (final DistributionSummary summary : taskDispatcherPollTasks) {
-                    LOGGER.info(
-                            "Dispatcher Poll Tasks: taskType={}, taskManager={}, taskName={}, mean={}, max={}",
+                    System.out.printf(
+                            "Dispatcher Poll Tasks: taskType=%s, taskManager=%s, taskName=%s, mean=%.2f, max=%.2f\n",
                             summary.getId().getTag("taskType"),
                             summary.getId().getTag("taskManager"),
                             summary.getId().getTag("taskName"),
@@ -288,8 +282,8 @@ public class WorkflowEngineImplBenchmarkTest {
                             summary.max());
                 }
                 for (final Timer timer : taskProcessLatencies) {
-                    LOGGER.info(
-                            "Task Process Latency: taskType={}, taskManager={}, taskName={}, mean={}ms, max={}ms",
+                    System.out.printf(
+                            "Task Process Latency: taskType=%s, taskManager=%s, taskName=%s, mean=%.2fms, max=%.2fms\n",
                             timer.getId().getTag("taskType"),
                             timer.getId().getTag("taskManager"),
                             timer.getId().getTag("taskName"),
@@ -298,28 +292,28 @@ public class WorkflowEngineImplBenchmarkTest {
                 }
 
                 for (final Timer timer : bufferFlushLatencies) {
-                    LOGGER.info(
-                            "Buffer Flush Latency: buffer={}, mean={}ms, max={}ms",
+                    System.out.printf(
+                            "Buffer Flush Latency: buffer=%s, mean=%.2fms, max=%.2fms\n",
                             timer.getId().getTag("buffer"),
                             timer.mean(TimeUnit.MILLISECONDS),
                             timer.max(TimeUnit.MILLISECONDS));
                 }
                 for (final DistributionSummary summary : bufferBatchSizes) {
-                    LOGGER.info(
-                            "Buffer Batch Size: buffer={}, mean={}, max={}",
+                    System.out.printf(
+                            "Buffer Batch Size: buffer=%s, mean=%.2f, max=%.2f\n",
                             summary.getId().getTag("buffer"),
                             summary.mean(),
                             summary.max());
                 }
 
                 for (final FunctionCounter counter : historyCacheGets) {
-                    LOGGER.info(
-                            "History Cache Gets: result={}, count={}",
+                    System.out.printf(
+                            "History Cache Gets: result=%s, count=%.2f\n",
                             counter.getId().getTag("result"),
                             counter.count());
                 }
             } catch (MeterNotFoundException e) {
-                LOGGER.warn("Meters not ready yet");
+                System.out.println("Meters not ready yet");
             }
 
             try (final Connection connection = postgresContainer.createConnection("")) {
@@ -335,12 +329,12 @@ public class WorkflowEngineImplBenchmarkTest {
                         """);
                 final ResultSet rs = ps.executeQuery();
                 while (rs.next()) {
-                    LOGGER.info(
-                            "HOT Updates: table={}, updates={}, hot_updates={}, ratio={}",
+                    System.out.printf(
+                            "HOT Updates: table=%s, updates=%d, hot_updates=%d, ratio=%.2f\n",
                             rs.getString(1), rs.getLong(2), rs.getLong(3), rs.getDouble(4));
                 }
             } catch (SQLException e) {
-                LOGGER.warn("Database not ready yet", e);
+                System.out.println("Database not ready yet: " + e.getMessage());
             }
         }
     }

@@ -41,9 +41,8 @@ final class RetryingAwaitableImpl<T> extends AwaitableImpl<T> {
         this.retryAwaitableFunction = requireNonNull(retryAwaitableFunction, "retryAwaitableFunction must not be null");
     }
 
-    @Nullable
     @Override
-    public T await() {
+    public @Nullable T await() {
         try {
             return initialAwaitable.await();
         } catch (FailureException e) {

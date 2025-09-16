@@ -38,6 +38,7 @@ import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunHistoryE
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunMetadataRow;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
+import org.jdbi.v3.core.statement.SqlStatements;
 import org.jdbi.v3.freemarker.FreemarkerEngine;
 import org.jdbi.v3.jackson2.Jackson2Plugin;
 import org.jdbi.v3.postgres.PostgresPlugin;
@@ -57,6 +58,7 @@ public final class JdbiFactory {
                 .installPlugin(new Jackson2Plugin())
                 .installPlugin(new PostgresPlugin())
                 .setTemplateEngine(FreemarkerEngine.instance())
+                .configure(SqlStatements.class, statementsCfg -> statementsCfg.setQueryTimeout(10))
                 // Ensure all required mappings are registered *once*
                 // on startup. Defining these on a per-query basis imposes
                 // additional overhead that is worth avoiding given how

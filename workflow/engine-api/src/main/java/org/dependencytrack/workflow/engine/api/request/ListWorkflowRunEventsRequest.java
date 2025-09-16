@@ -40,7 +40,7 @@ public record ListWorkflowRunEventsRequest(
         this(runId, null, 10);
     }
 
-    public ListWorkflowRunEventsRequest withPageToken(@Nullable final String pageToken) {
+    public ListWorkflowRunEventsRequest withPageToken(final @Nullable String pageToken) {
         return new ListWorkflowRunEventsRequest(this.runId, pageToken, this.limit);
     }
 
