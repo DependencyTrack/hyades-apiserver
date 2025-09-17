@@ -24,6 +24,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -138,7 +140,7 @@ class ConfigTypeTest {
         private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
             return Stream.of(
                     Arguments.of(null, null),
-                    Arguments.of("1970-01-08T17:11:06Z", Instant.ofEpochSecond(666666)));
+                    Arguments.of("666666000", Instant.ofEpochSecond(666666)));
         }
 
         @ParameterizedTest
@@ -151,14 +153,14 @@ class ConfigTypeTest {
         @Test
         void fromStringShouldThrowForInvalidInputValue() {
             final var configType = new ConfigType.Instant();
-            assertThatExceptionOfType(DateTimeParseException.class)
+            assertThatExceptionOfType(NumberFormatException.class)
                     .isThrownBy(() -> configType.fromString("invalid"));
         }
 
         private static Stream<Arguments> toStringShouldReturnCorrectValueArguments() {
             return Stream.of(
                     Arguments.of(null, null),
-                    Arguments.of(Instant.ofEpochSecond(666666), "1970-01-08T17:11:06Z"));
+                    Arguments.of(Instant.ofEpochSecond(666666), "666666000"));
         }
 
         @ParameterizedTest
@@ -287,6 +289,50 @@ class ConfigTypeTest {
         @MethodSource("toStringShouldReturnCorrectValueArguments")
         void toStringShouldReturnCorrectValue(final String inputValue, final String expectedValue) {
             final var configType = new ConfigType.String();
+            assertThat(configType.toString(inputValue)).isEqualTo(expectedValue);
+        }
+
+    }
+
+    @Nested
+    class URLTest {
+
+        @Test
+        void shouldReturnCorrectTypeClass() {
+            final var configType = new ConfigType.URL();
+            assertThat(configType.clazz()).isEqualTo(URL.class);
+        }
+
+        private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() throws Exception {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of("https://example.com/foo", URI.create("https://example.com/foo").toURL()));
+        }
+
+        @ParameterizedTest
+        @MethodSource("fromStringShouldReturnCorrectValueArguments")
+        void fromStringShouldReturnCorrectValue(final String inputValue, final URL expectedValue) {
+            final var configType = new ConfigType.URL();
+            assertThat(configType.fromString(inputValue)).isEqualTo(expectedValue);
+        }
+
+        @Test
+        void fromStringShouldThrowForInvalidInputValue() {
+            final var configType = new ConfigType.URL();
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> configType.fromString("invalid"));
+        }
+
+        private static Stream<Arguments> toStringShouldReturnCorrectValueArguments() throws Exception {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of(URI.create("https://example.com/foo").toURL(), "https://example.com/foo"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("toStringShouldReturnCorrectValueArguments")
+        void toStringShouldReturnCorrectValue(final URL inputValue, final String expectedValue) {
+            final var configType = new ConfigType.URL();
             assertThat(configType.toString(inputValue)).isEqualTo(expectedValue);
         }
 

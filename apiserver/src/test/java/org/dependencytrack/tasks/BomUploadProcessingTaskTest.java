@@ -48,6 +48,7 @@ import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
@@ -118,6 +119,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
     @Override
     public void before() throws Exception {
         super.before();
+        // Required for file storage.
+        PluginManagerTestUtil.loadPlugins();
         // Enable processing of CycloneDX BOMs
         qm.createConfigProperty(ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getGroupName(),
                 ConfigPropertyConstants.ACCEPT_ARTIFACT_CYCLONEDX.getPropertyName(), "true",

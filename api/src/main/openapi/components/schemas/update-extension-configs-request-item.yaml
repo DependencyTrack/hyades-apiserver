@@ -30,4 +30,3 @@ properties:
     type: string
 required:
 - name
-- value

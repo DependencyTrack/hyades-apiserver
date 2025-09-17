@@ -22,10 +22,12 @@ import alpine.model.IConfigProperty;
 import alpine.test.config.ConfigPropertyRule;
 import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.datasource.vuln.nvd.NvdVulnDataSourcePlugin;
 import org.dependencytrack.filestorage.FileStoragePlugin;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
 import org.dependencytrack.plugin.api.Plugin;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -42,13 +44,22 @@ public class PluginManagerTest extends PersistenceCapableTest {
     @Rule
     public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
 
+    @Before
+    @Override
+    public void before() throws Exception {
+        super.before();
+
+        PluginManagerTestUtil.loadPlugins();
+    }
+
     @Test
     public void testGetLoadedPlugins() {
         final SequencedCollection<Plugin> loadedPlugins =
                 PluginManager.getInstance().getLoadedPlugins();
         assertThat(loadedPlugins).satisfiesExactlyInAnyOrder(
                 plugin -> assertThat(plugin).isOfAnyClassIn(DummyPlugin.class),
-                plugin -> assertThat(plugin).isInstanceOf(FileStoragePlugin.class));
+                plugin -> assertThat(plugin).isInstanceOf(FileStoragePlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(NvdVulnDataSourcePlugin.class));
         assertThat(loadedPlugins).isUnmodifiable();
     }
 

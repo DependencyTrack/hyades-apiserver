@@ -63,8 +63,6 @@ public abstract class PersistenceCapableTest {
         qm = new QueryManager();
 
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
-
-        PluginManagerTestUtil.loadPlugins();
     }
 
     @After
