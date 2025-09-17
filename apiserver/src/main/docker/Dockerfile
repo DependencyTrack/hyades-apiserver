@@ -29,9 +29,10 @@ FROM eclipse-temurin:21.0.8_9-jdk-alpine@sha256:df8ce8302ed2ed1690ef490c633981b0
 WORKDIR /work
 
 COPY --chmod=755 ./src/main/docker/create-jre.sh ./
-COPY ./target/dependency-track-apiserver.jar ./
+COPY ./target/lib ./lib
+COPY ./target/dependency-track-apiserver-dist.jar ./
 
-RUN ./create-jre.sh -i ./dependency-track-apiserver.jar -o ./jre
+RUN ./create-jre.sh -i ./dependency-track-apiserver-dist.jar -l ./lib -o ./jre
 
 FROM alpine:3.22@sha256:8a1f59ffb675680d47db6337b49d22281a139e9d709335b492be023728e11715
 
@@ -73,7 +74,8 @@ RUN mkdir -p ${APP_DIR} ${DATA_DIR} \
     && apk add --no-cache gcompat tzdata
 
 COPY --from=jre-build /work/jre ${JAVA_HOME}
-COPY ./target/dependency-track-apiserver.jar ./src/main/docker/logback-json.xml ${APP_DIR}/
+COPY ./target/lib ${APP_DIR}/lib
+COPY ./target/dependency-track-apiserver-dist.jar ./src/main/docker/logback-json.xml ${APP_DIR}/
 
 # Specify the user to run as (in numeric format for compatibility with Kubernetes/OpenShift's SCC)
 USER ${UID}
@@ -82,7 +84,7 @@ USER ${UID}
 WORKDIR ${APP_DIR}
 
 # Launch Dependency-Track
-CMD exec java ${JAVA_OPTIONS} ${EXTRA_JAVA_OPTIONS} --add-opens java.base/java.util.concurrent=ALL-UNNAMED -DdependencyTrack.logging.level=${LOGGING_LEVEL} -jar dependency-track-apiserver.jar -context ${CONTEXT}
+CMD exec java ${JAVA_OPTIONS} ${EXTRA_JAVA_OPTIONS} --add-opens java.base/java.util.concurrent=ALL-UNNAMED -DdependencyTrack.logging.level=${LOGGING_LEVEL} -jar dependency-track-apiserver-dist.jar -context ${CONTEXT}
 
 # Specify which port Dependency-Track listens on
 EXPOSE 8080

@@ -37,6 +37,7 @@
         <module>persistence-migration</module>
         <module>persistence-jooq</module>
         <module>apiserver</module>
+        <module>apiserver-dev</module>
         <module>coverage-report</module>
     </modules>
 

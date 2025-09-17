@@ -57,7 +57,6 @@
             <groupId>org.dependencytrack</groupId>
             <artifactId>apiserver</artifactId>
             <version>${project.version}</version>
-            <classifier>classes</classifier>
             <scope>provided</scope>
         </dependency>
         <dependency>
