@@ -164,7 +164,7 @@ final class FailureConverter {
 
         return failureBuilder.build();
     }
-    
+
     private static @Nullable String serializeStackTrace(final StackTraceElement @Nullable [] stackTrace) {
         if (stackTrace == null || stackTrace.length == 0) {
             return null;
@@ -175,7 +175,7 @@ final class FailureConverter {
             // Cut the stack trace off before it enters engine internals.
             // These are not necessary for communicating failures in user code.
             if (element.getClassName().equals(ActivityTaskManager.class.getName())
-                || element.getClassName().equals(WorkflowTaskManager.class.getName())) {
+                    || element.getClassName().equals(WorkflowTaskManager.class.getName())) {
                 break;
             }
 

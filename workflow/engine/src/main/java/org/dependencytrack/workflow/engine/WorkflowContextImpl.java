@@ -90,8 +90,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private final UUID runId;
     private final String workflowName;
     private final int workflowVersion;
-    @Nullable private final Integer priority;
-    @Nullable private final Map<String, String> labels;
+    private final @Nullable Integer priority;
+    private final @Nullable Map<String, String> labels;
     private final MetadataRegistry metadataRegistry;
     private final WorkflowExecutor<A, R> workflowExecutor;
     private final PayloadConverter<A> argumentConverter;
@@ -107,12 +107,12 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
     private final Logger logger;
     private int currentEventIndex;
     private int currentEventId;
-    @Nullable private Instant currentTime;
-    @Nullable private A argument;
+    private @Nullable Instant currentTime;
+    private @Nullable A argument;
     private boolean isInSideEffect;
     private boolean isReplaying;
     private boolean isSuspended;
-    @Nullable private String customStatus;
+    private @Nullable String customStatus;
 
     WorkflowContextImpl(
             final UUID runId,
@@ -244,8 +244,8 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                 initialAwaitable,
                 exception -> {
                     if (exception instanceof final ActivityFailureException activityException
-                        && activityException.getCause() instanceof final ApplicationFailureException applicationException
-                        && applicationException.isTerminal()) {
+                            && activityException.getCause() instanceof final ApplicationFailureException applicationException
+                            && applicationException.isTerminal()) {
                         throw exception;
                     } else if (retryPolicy.maxAttempts() > 0 && attempt + 1 > retryPolicy.maxAttempts()) {
                         logger().warn("Max retry attempts ({}) exceeded", retryPolicy.maxAttempts());
@@ -584,10 +584,10 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                     command.getClass().getSimpleName(),
                     CreateActivityRunCommand.class.getSimpleName()));
         } else if (!Objects.equals(eventSubject.getName(), concreteCommand.name())
-                   || (eventSubject.hasPriority()
-                       && !Objects.equals(eventSubject.getPriority(), concreteCommand.priority()))
-                   || (eventSubject.hasArgument()
-                       && !Objects.equals(eventSubject.getArgument(), concreteCommand.argument()))) {
+                || (eventSubject.hasPriority()
+                && !Objects.equals(eventSubject.getPriority(), concreteCommand.priority()))
+                || (eventSubject.hasArgument()
+                && !Objects.equals(eventSubject.getArgument(), concreteCommand.argument()))) {
             throw new WorkflowRunDeterminismError("""
                     Encountered %s event for ID %d, but it does not match \
                     the corresponding %s: event=%s, command=%s""".formatted(
@@ -683,15 +683,15 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                     command.getClass().getSimpleName(),
                     CreateChildRunCommand.class.getSimpleName()));
         } else if (!Objects.equals(eventSubject.getWorkflowName(), concreteCommand.workflowName())
-                   || !Objects.equals(eventSubject.getWorkflowVersion(), concreteCommand.workflowVersion())
-                   || (eventSubject.hasPriority()
-                       && !Objects.equals(eventSubject.getPriority(), concreteCommand.priority()))
-                   || (eventSubject.hasConcurrencyGroupId()
-                       && !Objects.equals(eventSubject.getConcurrencyGroupId(), concreteCommand.concurrencyGroupId()))
-                   || (eventSubject.getLabelsCount() > 0
-                       && !Objects.equals(eventSubject.getLabelsMap(), concreteCommand.labels()))
-                   || (eventSubject.hasArgument()
-                       && !Objects.equals(eventSubject.getArgument(), concreteCommand.argument()))) {
+                || !Objects.equals(eventSubject.getWorkflowVersion(), concreteCommand.workflowVersion())
+                || (eventSubject.hasPriority()
+                && !Objects.equals(eventSubject.getPriority(), concreteCommand.priority()))
+                || (eventSubject.hasConcurrencyGroupId()
+                && !Objects.equals(eventSubject.getConcurrencyGroupId(), concreteCommand.concurrencyGroupId()))
+                || (eventSubject.getLabelsCount() > 0
+                && !Objects.equals(eventSubject.getLabelsMap(), concreteCommand.labels()))
+                || (eventSubject.hasArgument()
+                && !Objects.equals(eventSubject.getArgument(), concreteCommand.argument()))) {
             throw new WorkflowRunDeterminismError("""
                     Encountered %s event for ID %d, but it does not match \
                     the corresponding %s: event=%s, command=%s""".formatted(
@@ -789,7 +789,7 @@ final class WorkflowContextImpl<A, R> implements WorkflowContext<A> {
                     command.getClass().getSimpleName(),
                     CreateTimerCommand.class.getSimpleName()));
         } else if (!Objects.equals(eventSubject.getName(), concreteCommand.name())
-                   || !Objects.equals(eventSubject.getElapseAt(), toTimestamp(concreteCommand.elapseAt()))) {
+                || !Objects.equals(eventSubject.getElapseAt(), toTimestamp(concreteCommand.elapseAt()))) {
             throw new WorkflowRunDeterminismError("""
                     Encountered %s event for ID %d, but it does not match \
                     the corresponding %s: event=%s, command=%s""".formatted(

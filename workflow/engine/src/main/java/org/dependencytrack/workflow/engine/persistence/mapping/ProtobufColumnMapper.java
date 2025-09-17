@@ -28,7 +28,7 @@ import org.jspecify.annotations.Nullable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public final class ProtobufColumnMapper <T extends Message> implements ColumnMapper<T> {
+public final class ProtobufColumnMapper<T extends Message> implements ColumnMapper<T> {
 
     private final Parser<T> parser;
 

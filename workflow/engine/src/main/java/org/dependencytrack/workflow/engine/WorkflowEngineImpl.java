@@ -169,14 +169,14 @@ final class WorkflowEngineImpl implements WorkflowEngine {
     private final List<WorkflowRunsCompletedEventListener> runsCompletedEventListeners = new ArrayList<>();
 
     private Status status = Status.CREATED;
-    @Nullable private ExecutorService taskDispatcherExecutor;
-    @Nullable private Map<String, ExecutorService> executorServiceByName;
-    @Nullable private ScheduledExecutorService schedulerExecutor;
-    @Nullable private ScheduledExecutorService retentionExecutor;
-    @Nullable private ExecutorService eventListenerExecutor;
-    @Nullable private Buffer<ExternalEvent> externalEventBuffer;
-    @Nullable private Buffer<TaskCommand> taskCommandBuffer;
-    @Nullable private Cache<UUID, CachedWorkflowRunHistory> runHistoryCache;
+    private @Nullable ExecutorService taskDispatcherExecutor;
+    private @Nullable Map<String, ExecutorService> executorServiceByName;
+    private @Nullable ScheduledExecutorService schedulerExecutor;
+    private @Nullable ScheduledExecutorService retentionExecutor;
+    private @Nullable ExecutorService eventListenerExecutor;
+    private @Nullable Buffer<ExternalEvent> externalEventBuffer;
+    private @Nullable Buffer<TaskCommand> taskCommandBuffer;
+    private @Nullable Cache<UUID, CachedWorkflowRunHistory> runHistoryCache;
 
     WorkflowEngineImpl(final WorkflowEngineConfig config) {
         this.config = requireNonNull(config);

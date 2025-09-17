@@ -12,9 +12,10 @@ and [Temporal](https://github.com/temporalio/temporal).
 * [`engine-migration`](engine-migration) contains database migrations of the engine.
 * [`engine`](engine) contains the actual engine implementation.
 * [`proto`](proto) contains Protobuf message definitions.
+* [`testing`](testing) contains supporting classes for testing workflows.
 
 `api` and `engine-api` have been separated from the core engine to make the respective
-API surfaces more obvious, and prevent internals from leaking into the API. 
+API surfaces more obvious, and prevent internals from leaking into the API.
 It is not intended that there exist other API implementations outside of `engine`.
 
 The [Java module system](https://dev.java/learn/modules/intro/) is used to enforce strong encapsulation.

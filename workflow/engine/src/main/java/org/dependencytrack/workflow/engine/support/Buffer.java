@@ -84,9 +84,9 @@ public final class Buffer<T> implements Closeable {
     private final ReentrantLock flushLock;
     private final ReentrantLock statusLock;
     private Status status = Status.CREATED;
-    @Nullable private final MeterRegistry meterRegistry;
-    @Nullable private DistributionSummary batchSizeDistribution;
-    @Nullable private Timer flushLatencyTimer;
+    private final @Nullable MeterRegistry meterRegistry;
+    private @Nullable DistributionSummary batchSizeDistribution;
+    private @Nullable Timer flushLatencyTimer;
 
     public Buffer(
             final String name,

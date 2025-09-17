@@ -43,8 +43,8 @@ import static org.awaitility.Awaitility.await;
 
 public final class WorkflowTestRule implements TestRule {
 
-    private static final ServiceLoader<WorkflowEngineFactory> ENGINE_FACTORY_LOADER =
-            ServiceLoader.load(WorkflowEngineFactory.class);
+    private static final WorkflowEngineFactory ENGINE_FACTORY =
+            ServiceLoader.load(WorkflowEngineFactory.class).findFirst().orElseThrow();
 
     private final DataSource dataSource;
 
@@ -72,9 +72,7 @@ public final class WorkflowTestRule implements TestRule {
                     configCustomizer.accept(engineConfig);
                 }
 
-                final WorkflowEngineFactory engineFactory = ENGINE_FACTORY_LOADER.findFirst().orElseThrow();
-
-                engine = engineFactory.create(engineConfig);
+                engine = ENGINE_FACTORY.create(engineConfig);
                 try {
                     statement.evaluate();
                 } finally {

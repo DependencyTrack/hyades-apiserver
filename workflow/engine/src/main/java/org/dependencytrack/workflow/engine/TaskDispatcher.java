@@ -54,12 +54,12 @@ final class TaskDispatcher<T extends Task> implements Runnable {
     private final BlockingQueue<Void> pollRequestQueue;
     private final long minPollIntervalMillis;
     private final IntervalFunction pollBackoffIntervalFunction;
-    @Nullable private final MeterRegistry meterRegistry;
-    @Nullable private Timer taskPollLatencyTimer;
-    @Nullable private Counter taskPollsCounter;
-    @Nullable private MeterProvider<DistributionSummary> taskPollDistributionProvider;
-    @Nullable private MeterProvider<Counter> tasksProcessedCounterProvider;
-    @Nullable private MeterProvider<Timer> taskProcessLatencyTimerProvider;
+    private final @Nullable MeterRegistry meterRegistry;
+    private @Nullable Timer taskPollLatencyTimer;
+    private @Nullable Counter taskPollsCounter;
+    private @Nullable MeterProvider<DistributionSummary> taskPollDistributionProvider;
+    private @Nullable MeterProvider<Counter> tasksProcessedCounterProvider;
+    private @Nullable MeterProvider<Timer> taskProcessLatencyTimerProvider;
 
     TaskDispatcher(
             final WorkflowEngineImpl engine,

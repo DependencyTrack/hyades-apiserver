@@ -39,7 +39,7 @@ final class ActivityContextImpl<T> implements ActivityContext, Closeable {
     private final int createdEventId;
     private final ActivityExecutor<T, ?> activityExecutor;
     private final Duration lockTimeout;
-    @Nullable private ScheduledExecutorService heartbeatExecutor;
+    private @Nullable ScheduledExecutorService heartbeatExecutor;
     private volatile Instant lockedUntil;
 
     ActivityContextImpl(

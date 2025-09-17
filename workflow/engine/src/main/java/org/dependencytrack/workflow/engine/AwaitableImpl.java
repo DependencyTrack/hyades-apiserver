@@ -41,11 +41,11 @@ sealed class AwaitableImpl<T> implements Awaitable<T> permits RetryingAwaitableI
     private final PayloadConverter<T> resultConverter;
     private boolean completed;
     private boolean canceled;
-    @Nullable private String cancelReason;
-    @Nullable private Consumer<@Nullable T> completeCallback;
-    @Nullable private Consumer<FailureException> errorCallback;
-    @Nullable private T result;
-    @Nullable private FailureException exception;
+    private @Nullable String cancelReason;
+    private @Nullable Consumer<@Nullable T> completeCallback;
+    private @Nullable Consumer<FailureException> errorCallback;
+    private @Nullable T result;
+    private @Nullable FailureException exception;
 
     AwaitableImpl(
             final WorkflowContextImpl<?, ?> workflowContext,

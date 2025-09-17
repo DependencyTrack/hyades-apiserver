@@ -64,28 +64,28 @@ import static org.dependencytrack.workflow.engine.support.ProtobufUtil.toTimesta
 final class WorkflowRunState {
 
     private final UUID id;
-    @Nullable private String workflowName;
+    private @Nullable String workflowName;
     @Nullable Integer workflowVersion;
-    @Nullable private String concurrencyGroupId;
+    private @Nullable String concurrencyGroupId;
     private final List<Event> eventHistory;
     private final List<Event> newEvents;
     private final List<Event> pendingActivityRunCreatedEvents;
     private final List<Event> pendingTimerElapsedEvents;
     private final List<WorkflowRunMessage> pendingMessages;
-    @Nullable private Event createdEvent;
-    @Nullable private Event startedEvent;
-    @Nullable private Event completedEvent;
-    @Nullable private Payload argument;
-    @Nullable private Payload result;
-    @Nullable private Failure failure;
-    @Nullable private WorkflowRunStatus status;
-    @Nullable private String customStatus;
-    @Nullable private Integer priority;
-    @Nullable private Map<String, String> labels;
-    @Nullable private Instant createdAt;
-    @Nullable private Instant updatedAt;
-    @Nullable private Instant startedAt;
-    @Nullable private Instant completedAt;
+    private @Nullable Event createdEvent;
+    private @Nullable Event startedEvent;
+    private @Nullable Event completedEvent;
+    private @Nullable Payload argument;
+    private @Nullable Payload result;
+    private @Nullable Failure failure;
+    private @Nullable WorkflowRunStatus status;
+    private @Nullable String customStatus;
+    private @Nullable Integer priority;
+    private @Nullable Map<String, String> labels;
+    private @Nullable Instant createdAt;
+    private @Nullable Instant updatedAt;
+    private @Nullable Instant startedAt;
+    private @Nullable Instant completedAt;
     private boolean continuedAsNew;
 
     WorkflowRunState(
