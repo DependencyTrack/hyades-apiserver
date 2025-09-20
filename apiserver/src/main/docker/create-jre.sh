@@ -25,14 +25,18 @@ function printHelp() {
   echo "Usage: ${0} [-i <INPUT_JAR_FILE>] [-o <OUTPUT_DIR>]"
   echo "Options:"
   echo " -i   Set the path to the input JAR file"
+  echo " -l   Set the path to the lib directory"
   echo " -o   Set the path to output the JRE to"
   echo ""
 }
 
-while getopts ":h:i:o:" opt; do
+while getopts ":h:i:l:o:" opt; do
   case $opt in
     i)
       input_jar="${OPTARG}"
+      ;;
+    l)
+      lib_dir="${OPTARG}"
       ;;
     o)
       output_dir="${OPTARG}"
@@ -53,6 +57,11 @@ if [ -z "${input_jar}" ]; then
   exit 1
 fi
 
+if [ -z "${lib_dir}" ]; then
+  echo '[x] no lib directory provided'
+  exit 1
+fi
+
 if [ -z "${output_dir}" ]; then
   echo '[x] no output directory provided'
   exit 1
@@ -65,16 +74,13 @@ work_dir="$(mktemp -d)"
 #   jdk.zipfs:     Required by code that reads files from JAR files at runtime.
 static_module_deps='jdk.crypto.ec,jdk.zipfs'
 
-echo "[+] extracting $(basename "${input_jar}") to ${work_dir}"
-unzip -qq "${input_jar}" -d "${work_dir}"
-
 echo '[+] detecting module dependencies'
 jdeps \
-  --class-path "${work_dir}:${work_dir}/WEB-INF/lib/*" \
+  --class-path "${lib_dir}/*" \
   --print-module-deps \
   --ignore-missing-deps \
   --multi-release 21 \
-  "${work_dir}/WEB-INF/classes" \
+  "${input_jar}" \
   > "${work_dir}/module-deps.txt"
 
 module_deps="$(cat "${work_dir}/module-deps.txt"),${static_module_deps}"
