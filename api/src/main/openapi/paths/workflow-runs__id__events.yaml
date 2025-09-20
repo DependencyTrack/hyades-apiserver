@@ -15,26 +15,32 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) OWASP Foundation. All Rights Reserved.
 get:
-  operationId: getWorkflowStates
-  summary: Retrieves workflow states associated with the token received from bom upload.
-  description: Requires permission <strong>BOM_UPLOAD</strong>
+  operationId: listWorkflowRunEvents
+  summary: List all events of a workflow run
+  description: |-
+    Returns a paginated list of a workflow run's events.
+    
+    Events are exposed for diagnostics purposes. 3rd party clients should not depend on them.
+    The event structure is to be considered an implementation detail that may change without further notice.
   tags:
   - Workflows
   parameters:
-  - name: token
+  - name: id
+    description: ID of the workflow run
     in: path
-    description: The token to query
     required: true
     schema:
       type: string
       format: uuid
+  - $ref: "../components/parameters/pagination-limit.yaml"
+  - $ref: "../components/parameters/page-token.yaml"
   responses:
     "200":
-      description: A list of workflow states
+      description: Paginated list of workflow run events
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/list-workflow-states-response.yaml"
+            $ref: "../components/schemas/list-workflow-run-events-response.yaml"
     "401":
       $ref: "../components/responses/generic-unauthorized-error.yaml"
     "403":
