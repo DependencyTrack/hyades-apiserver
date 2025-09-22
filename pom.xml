@@ -96,7 +96,7 @@
         <project.parentBaseDir>.</project.parentBaseDir>
 
         <!-- Dependency versions -->
-        <lib.assertj.version>3.27.4</lib.assertj.version>
+        <lib.assertj.version>3.27.5</lib.assertj.version>
         <lib.cel-java.version>0.5.3</lib.cel-java.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
         <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
@@ -115,7 +115,7 @@
         <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
-        <lib.postgresql.version>42.7.7</lib.postgresql.version>
+        <lib.postgresql.version>42.7.8</lib.postgresql.version>
         <lib.protobuf-java.version>4.32.1</lib.protobuf-java.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.13.4</lib.smallrye-config.version>
