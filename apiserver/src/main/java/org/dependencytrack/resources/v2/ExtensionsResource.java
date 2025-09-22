@@ -157,6 +157,7 @@ public class ExtensionsResource implements ExtensionsApi {
                                     case ConfigType.Integer ignored -> ExtensionConfigType.INTEGER;
                                     case ConfigType.Path ignored -> ExtensionConfigType.PATH;
                                     case ConfigType.String ignored -> ExtensionConfigType.STRING;
+                                    case ConfigType.URL ignored -> ExtensionConfigType.URL;
                                 })
                                 .isRequired(configDef.isRequired())
                                 .isSecret(configDef.isSecret())

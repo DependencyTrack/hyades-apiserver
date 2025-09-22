@@ -25,7 +25,6 @@ import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
 import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
-import org.dependencytrack.event.NistMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
 import org.dependencytrack.model.Vulnerability;
@@ -71,7 +70,6 @@ public final class KafkaEventConverter {
             case ComponentRepositoryMetaAnalysisEvent e -> convert(e);
             case ComponentVulnerabilityAnalysisEvent e -> convert(e);
             case GitHubAdvisoryMirrorEvent e -> convert(e);
-            case NistMirrorEvent e -> convert(e);
             case OsvMirrorEvent e -> convert(e);
             case EpssMirrorEvent e -> convert(e);
             default -> throw new IllegalArgumentException("Unable to convert event " + event);
@@ -150,11 +148,6 @@ public final class KafkaEventConverter {
 
     static KafkaEvent<String, String> convert(final GitHubAdvisoryMirrorEvent ignored) {
         final String key = Vulnerability.Source.GITHUB.name();
-        return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, null);
-    }
-
-    static KafkaEvent<String, String> convert(final NistMirrorEvent ignored) {
-        final String key = Vulnerability.Source.NVD.name();
         return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, null);
     }
 

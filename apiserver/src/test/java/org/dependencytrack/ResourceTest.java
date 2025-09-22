@@ -121,7 +121,6 @@ public abstract class ResourceTest {
 
         // Add a test user and team with API key. Optional if this is used, but its available to all tests.
         this.qm = new QueryManager();
-        PluginManagerTestUtil.loadPlugins();
         this.kafkaMockProducer = (MockProducer<byte[], byte[]>) KafkaProducerInitializer.getProducer();
         team = qm.createTeam("Test Users");
         this.apiKey = qm.createApiKey(team).getKey();
