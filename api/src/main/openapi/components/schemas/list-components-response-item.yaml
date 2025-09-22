@@ -22,6 +22,9 @@ properties:
   version:
     type: string
     maxLength: 255
+  latest_version:
+    type: string
+    maxLength: 255
   group:
     type: string
     maxLength: 255
@@ -30,12 +33,17 @@ properties:
     maxLength: 255
   hashes:
     $ref: "./hashes.yaml"
+  integrity_check_status:
+    type: string
+    maxLength: 255
   cpe:
     type: string
     maxLength: 255
   purl:
     type: string
     maxLength: 1024
+  published:
+    $ref: "./timestamp.yaml"
   swid_tag_id:
     type: string
     maxLength: 255
@@ -62,6 +70,10 @@ properties:
   last_inherited_risk_score:
     type: number
     format: double
+  vulnerabilities:
+    type: integer
+    format: int32
+    minimum: 0
   uuid:
     type: string
     format: uuid

@@ -28,7 +28,6 @@ import org.dependencytrack.api.v2.ProjectsApi;
 import org.dependencytrack.api.v2.model.ListComponentsResponse;
 import org.dependencytrack.api.v2.model.ListComponentsResponseItem;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.pagination.Page;
@@ -56,30 +55,34 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
                 throw new NotFoundException();
             }
             requireProjectAccess(handle, UUID.fromString(String.valueOf(uuid)));
-            final Page<Component> componentsPage = handle.attach(ComponentDao.class)
+            final Page<ComponentDao.ComponentRow> componentsPage = handle.attach(ComponentDao.class)
                     .listProjectComponents(projectId, onlyOutdated, onlyDirect, limit, pageToken);
 
             final var response = ListComponentsResponse.builder()
                     .components(componentsPage.items().stream()
                             .<ListComponentsResponseItem>map(
                                     componentRow -> ListComponentsResponseItem.builder()
-                                            .name(componentRow.getName())
-                                            .hashes(mapHashes(componentRow))
-                                            .classifier(componentRow.getClassifier() != null ? componentRow.getClassifier().name() : null)
-                                            .copyright(componentRow.getCopyright())
-                                            .cpe(componentRow.getCpe())
-                                            .group(componentRow.getGroup())
-                                            .internal(componentRow.isInternal())
-                                            .lastInheritedRiskScore(componentRow.getLastInheritedRiskScore())
-                                            .license(componentRow.getLicense())
-                                            .licenseExpression(componentRow.getLicenseExpression())
-                                            .licenseUrl(componentRow.getLicenseUrl())
-                                            .resolvedLicense(mapLicense(componentRow.getResolvedLicense()))
-                                            .occurrenceCount(componentRow.getOccurrenceCount())
-                                            .purl(componentRow.getPurl().toString())
-                                            .swidTagId(componentRow.getSwidTagId())
-                                            .uuid(componentRow.getUuid())
-                                            .version(componentRow.getVersion())
+                                            .name(componentRow.component().getName())
+                                            .hashes(mapHashes(componentRow.component()))
+                                            .classifier(componentRow.component().getClassifier() != null ? componentRow.component().getClassifier().name() : null)
+                                            .copyright(componentRow.component().getCopyright())
+                                            .cpe(componentRow.component().getCpe())
+                                            .group(componentRow.component().getGroup())
+                                            .internal(componentRow.component().isInternal())
+                                            .lastInheritedRiskScore(componentRow.component().getLastInheritedRiskScore())
+                                            .license(componentRow.component().getLicense())
+                                            .licenseExpression(componentRow.component().getLicenseExpression())
+                                            .licenseUrl(componentRow.component().getLicenseUrl())
+                                            .resolvedLicense(mapLicense(componentRow.component().getResolvedLicense()))
+                                            .occurrenceCount(componentRow.component().getOccurrenceCount())
+                                            .purl(componentRow.component().getPurl().toString())
+                                            .swidTagId(componentRow.component().getSwidTagId())
+                                            .uuid(componentRow.component().getUuid())
+                                            .version(componentRow.component().getVersion())
+                                            .published(componentRow.published() != null ? componentRow.published().getEpochSecond() : null)
+                                            .latestVersion(componentRow.latestVersion())
+                                            .integrityCheckStatus(componentRow.integrityCheckStatus() != null ? componentRow.integrityCheckStatus().name() : null)
+                                            .vulnerabilities(componentRow.vulnerabilities())
                                             .build())
                             .toList())
                     .pagination(createPaginationMetadata(uriInfo, componentsPage))

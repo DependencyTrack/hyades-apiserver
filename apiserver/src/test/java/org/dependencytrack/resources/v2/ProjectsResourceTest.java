@@ -24,17 +24,31 @@ import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
+import org.dependencytrack.model.DependencyMetrics;
+import org.dependencytrack.model.FetchStatus;
+import org.dependencytrack.model.IntegrityAnalysis;
+import org.dependencytrack.model.IntegrityMatchStatus;
+import org.dependencytrack.model.IntegrityMetaComponent;
 import org.dependencytrack.model.License;
 import org.dependencytrack.model.Project;
+import org.dependencytrack.model.RepositoryMetaComponent;
+import org.dependencytrack.model.RepositoryType;
+import org.dependencytrack.persistence.jdbi.MetricsTestDao;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.net.URI;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.UUID;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
+import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_UNKNOWN;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 
 public class ProjectsResourceTest extends ResourceTest {
 
@@ -57,17 +71,22 @@ public class ProjectsResourceTest extends ResourceTest {
         assertThatJson(responseJson.toString()).isEqualTo(/* language=JSON */ """
                 {
                   "components" : [ {
-                        "name" : "component-name",
+                        "name" : "bar",
                         "version" : "3.0",
-                        "group" : "component-group",
+                        "group" : "foo",
+                        "integrity_check_status":"HASH_MATCH_PASSED",
+                        "latest_version": "3.0",
                         "purl" : "pkg:maven/foo/bar@3.0",
+                        "published": "${json-unit.any-number}",
                         "internal" : false,
                         "occurrence_count" : 0,
-                        "uuid" : "${json-unit.any-string}"
+                        "uuid" : "${json-unit.any-string}",
+                        "vulnerabilities": 8
                       }, {
-                        "name" : "component-name",
+                        "name" : "bar",
                         "version" : "2.0",
-                        "group" : "component-group",
+                        "latest_version": "3.0",
+                        "group" : "foo",
                         "purl" : "pkg:maven/foo/bar@2.0",
                         "internal" : false,
                         "resolved_license" : {
@@ -79,7 +98,8 @@ public class ProjectsResourceTest extends ResourceTest {
                               "custom_license" : false
                         },
                         "occurrence_count" : 0,
-                        "uuid" : "${json-unit.any-string}"
+                        "uuid" : "${json-unit.any-string}",
+                        "vulnerabilities": 0
                       }
                   ],
                   "_pagination": {
@@ -105,16 +125,18 @@ public class ProjectsResourceTest extends ResourceTest {
         assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
                 {
                   "components" : [ {
-                       "name" : "component-name",
+                       "name" : "bar",
                        "version" : "1.0",
-                       "group" : "component-group",
+                       "latest_version": "3.0",
+                       "group" : "foo",
                        "purl" : "pkg:maven/foo/bar@1.0",
                        "internal" : false,
                        "occurrence_count" : 0,
                        "hashes": {
                             "md5": "hash-md5"
                        },
-                       "uuid" : "${json-unit.any-string}"
+                       "uuid" : "${json-unit.any-string}",
+                        "vulnerabilities": 0
                       }
                   ],
                   "_pagination": {
@@ -188,8 +210,8 @@ public class ProjectsResourceTest extends ResourceTest {
 
         Component component = new Component();
         component.setProject(project);
-        component.setGroup("component-group");
-        component.setName("component-name");
+        component.setGroup("foo");
+        component.setName("bar");
         component.setVersion("1.0");
         component.setPurl("pkg:maven/foo/bar@1.0");
         component.setMd5("hash-md5");
@@ -197,20 +219,61 @@ public class ProjectsResourceTest extends ResourceTest {
 
         component = new Component();
         component.setProject(project);
-        component.setGroup("component-group");
-        component.setName("component-name");
+        component.setGroup("foo");
+        component.setName("bar");
         component.setVersion("2.0");
         component.setPurl("pkg:maven/foo/bar@2.0");
         component.setResolvedLicense(license);
         qm.createComponent(component, false);
 
-        component = new Component();
-        component.setProject(project);
-        component.setGroup("component-group");
-        component.setName("component-name");
-        component.setVersion("3.0");
-        component.setPurl("pkg:maven/foo/bar@3.0");
-        qm.createComponent(component, false);
+        final var component3 = new Component();
+        component3.setProject(project);
+        component3.setGroup("foo");
+        component3.setName("bar");
+        component3.setVersion("3.0");
+        component3.setPurl("pkg:maven/foo/bar@3.0");
+        qm.createComponent(component3, false);
+
+        RepositoryMetaComponent meta = new RepositoryMetaComponent();
+        Date lastCheck = new Date();
+        meta.setLastCheck(lastCheck);
+        meta.setNamespace("foo");
+        meta.setName("bar");
+        meta.setLatestVersion("3.0");
+        meta.setRepositoryType(RepositoryType.MAVEN);
+        qm.persist(meta);
+
+        IntegrityAnalysis integrityAnalysis = new IntegrityAnalysis();
+        integrityAnalysis.setComponent(component3);
+        integrityAnalysis.setIntegrityCheckStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
+        Date published = new Date();
+        integrityAnalysis.setUpdatedAt(published);
+        integrityAnalysis.setId(component3.getId());
+        integrityAnalysis.setMd5HashMatchStatus(IntegrityMatchStatus.HASH_MATCH_PASSED);
+        integrityAnalysis.setSha1HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha256HashMatchStatus(HASH_MATCH_UNKNOWN);
+        integrityAnalysis.setSha512HashMatchStatus(HASH_MATCH_PASSED);
+        qm.persist(integrityAnalysis);
+
+        IntegrityMetaComponent integrityMetaComponent = new IntegrityMetaComponent();
+        integrityMetaComponent.setPurl(component3.getPurl().toString());
+        integrityMetaComponent.setPublishedAt(published);
+        integrityMetaComponent.setLastFetch(published);
+        integrityMetaComponent.setStatus(FetchStatus.PROCESSED);
+        qm.createIntegrityMetaComponent(integrityMetaComponent);
+
+        // Create metrics for component.
+        useJdbiHandle(handle ->  {
+            var dao = handle.attach(MetricsTestDao.class);
+            dao.createMetricsPartitionsForDate("DEPENDENCYMETRICS", LocalDate.of(2025, 1, 1));
+            var metrics = new DependencyMetrics();
+            metrics.setProjectId(project.getId());
+            metrics.setComponentId(component3.getId());
+            metrics.setVulnerabilities(8);
+            metrics.setFirstOccurrence(Date.from(Instant.now()));
+            metrics.setLastOccurrence(Date.from(Instant.now()));
+            dao.createDependencyMetrics(metrics);
+        });
 
         return project;
     }
