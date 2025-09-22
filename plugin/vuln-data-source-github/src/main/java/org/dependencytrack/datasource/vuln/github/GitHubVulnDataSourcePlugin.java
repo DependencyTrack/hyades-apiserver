@@ -16,24 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.tasks;
+package org.dependencytrack.datasource.vuln.github;
 
-import org.dependencytrack.event.NistMirrorEvent;
-import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
- * Task for mirroring vulnerability data from the national vulnerability database (NVD).
+ * @since 5.7.0
  */
-public class NistMirrorTask extends AbstractVulnDataSourceMirrorTask {
+public final class GitHubVulnDataSourcePlugin implements Plugin {
 
-    NistMirrorTask(PluginManager pluginManager) {
-        super(pluginManager, NistMirrorEvent.class, "nvd", Vulnerability.Source.NVD);
-    }
-
-    @SuppressWarnings("unused")
-    public NistMirrorTask() {
-        this(PluginManager.getInstance());
+    @Override
+    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+        return List.of(new GitHubVulnDataSourceFactory());
     }
 
 }
