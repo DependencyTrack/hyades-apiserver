@@ -155,8 +155,15 @@ public interface ComponentDao extends SqlObject {
                         "L"."UUID" AS "licenseUuid",
                         "L"."NAME" AS "licenseName",
                         "INTEGRITY_META_COMPONENT"."PUBLISHED_AT" AS "published",
+                        "INTEGRITY_META_COMPONENT"."LAST_FETCH" AS "lastFetched",
+                        "INTEGRITY_META_COMPONENT"."REPOSITORY_URL" AS "integrityRepoUrl",
                         "INTEGRITY_ANALYSIS"."INTEGRITY_CHECK_STATUS" AS "integrityCheckStatus",
                         "DEPENDENCYMETRICS"."VULNERABILITIES" AS "vulnCount",
+                        "DEPENDENCYMETRICS"."CRITICAL" AS "critical",
+                        "DEPENDENCYMETRICS"."HIGH" AS "high",
+                        "DEPENDENCYMETRICS"."MEDIUM" AS "medium",
+                        "DEPENDENCYMETRICS"."LOW" AS "low",
+                        "DEPENDENCYMETRICS"."UNASSIGNED_SEVERITY" AS "unassigned",
                         "R"."LATEST_VERSION" AS "latestVersion",
                         (SELECT COUNT(*) FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = "C"."ID") AS "occurrenceCount"
                 FROM "COMPONENT" "C"
@@ -164,7 +171,14 @@ public interface ComponentDao extends SqlObject {
                 LEFT JOIN "INTEGRITY_META_COMPONENT" ON "C"."PURL" = "INTEGRITY_META_COMPONENT"."PURL"
                 LEFT JOIN "INTEGRITY_ANALYSIS" ON "C"."ID" = "INTEGRITY_ANALYSIS"."COMPONENT_ID"
                 LEFT JOIN (
-                      SELECT DISTINCT ON ("COMPONENT_ID") "COMPONENT_ID", "VULNERABILITIES"
+                      SELECT DISTINCT ON ("COMPONENT_ID")
+                          "COMPONENT_ID",
+                          "VULNERABILITIES",
+                          "CRITICAL",
+                          "HIGH",
+                          "MEDIUM",
+                          "LOW",
+                          "UNASSIGNED_SEVERITY"
                       FROM "DEPENDENCYMETRICS"
                       ORDER BY "COMPONENT_ID", "LAST_OCCURRENCE" DESC
                     ) "DEPENDENCYMETRICS" ON "C"."ID" = "DEPENDENCYMETRICS"."COMPONENT_ID"
@@ -211,12 +225,16 @@ public interface ComponentDao extends SqlObject {
             Component component,
             String latestVersion,
             Instant published,
+            Instant lastFetched,
             IntegrityMatchStatus integrityCheckStatus,
-            int vulnerabilities
+            String integrityRepoUrl,
+            int vulnerabilities,
+            int critical,
+            int medium,
+            int high,
+            int low,
+            int unassigned
             ) {
-        public ComponentRow withLatestVersion(String latestVersion) {
-            return new ComponentRow(component, latestVersion, published, integrityCheckStatus, vulnerabilities);
-        }
     }
 
     class ComponentListRowMapper implements RowMapper<ComponentRow> {
@@ -239,20 +257,27 @@ public interface ComponentDao extends SqlObject {
             }
             maybeSet(rs, "occurrenceCount", ResultSet::getLong, component::setOccurrenceCount);
 
-            final String latestVersion = rs.getString("latestVersion");
             final Timestamp publishedTs = rs.getTimestamp("published");
             final Instant published = (publishedTs != null ? publishedTs.toInstant() : null);
+            final Timestamp lastFetchedTs = rs.getTimestamp("lastFetched");
+            final Instant lastFetched = (lastFetchedTs != null ? lastFetchedTs.toInstant() : null);
             final String integrityCheckStatus = rs.getString("integrityCheckStatus");
             final IntegrityMatchStatus integrityStatus =
                     (integrityCheckStatus != null ? IntegrityMatchStatus.valueOf(integrityCheckStatus) : null);
-            final int vulnerabilities = rs.getInt("vulnCount");
 
             return new ComponentRow(
                     component,
-                    latestVersion,
+                    rs.getString("latestVersion"),
                     published,
+                    lastFetched,
                     integrityStatus,
-                    vulnerabilities
+                    rs.getString("integrityRepoUrl"),
+                    rs.getInt("vulnCount"),
+                    rs.getInt("critical"),
+                    rs.getInt("high"),
+                    rs.getInt("medium"),
+                    rs.getInt("low"),
+                    rs.getInt("unassigned")
             );
         }
     }

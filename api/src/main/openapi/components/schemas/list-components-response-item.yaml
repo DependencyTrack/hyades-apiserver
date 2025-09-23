@@ -44,6 +44,8 @@ properties:
     maxLength: 1024
   published:
     $ref: "./timestamp.yaml"
+  last_fetched:
+    $ref: "./timestamp.yaml"
   swid_tag_id:
     type: string
     maxLength: 255
@@ -52,6 +54,9 @@ properties:
   copyright:
     type: string
     maxLength: 255
+  integrity_repo_url:
+    type: string
+    maxLength: 1024
   license:
     type: string
     maxLength: 255
@@ -71,6 +76,26 @@ properties:
     type: number
     format: double
   vulnerabilities:
+    type: integer
+    format: int32
+    minimum: 0
+  critical:
+    type: integer
+    format: int32
+    minimum: 0
+  high:
+    type: integer
+    format: int32
+    minimum: 0
+  medium:
+    type: integer
+    format: int32
+    minimum: 0
+  low:
+    type: integer
+    format: int32
+    minimum: 0
+  unassigned:
     type: integer
     format: int32
     minimum: 0
