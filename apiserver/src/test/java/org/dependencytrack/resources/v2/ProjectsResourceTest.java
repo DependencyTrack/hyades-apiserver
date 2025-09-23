@@ -78,10 +78,16 @@ public class ProjectsResourceTest extends ResourceTest {
                         "latest_version": "3.0",
                         "purl" : "pkg:maven/foo/bar@3.0",
                         "published": "${json-unit.any-number}",
+                        "last_fetched": "${json-unit.any-number}",
                         "internal" : false,
                         "occurrence_count" : 0,
                         "uuid" : "${json-unit.any-string}",
-                        "vulnerabilities": 8
+                        "vulnerabilities": 8,
+                        "critical": 5,
+                        "high": 0,
+                        "medium": 0,
+                        "low": 3,
+                        "unassigned": 0
                       }, {
                         "name" : "bar",
                         "version" : "2.0",
@@ -99,7 +105,12 @@ public class ProjectsResourceTest extends ResourceTest {
                         },
                         "occurrence_count" : 0,
                         "uuid" : "${json-unit.any-string}",
-                        "vulnerabilities": 0
+                        "vulnerabilities": 0,
+                        "critical": 0,
+                        "high": 0,
+                        "medium": 0,
+                        "low": 0,
+                        "unassigned": 0
                       }
                   ],
                   "_pagination": {
@@ -136,7 +147,12 @@ public class ProjectsResourceTest extends ResourceTest {
                             "md5": "hash-md5"
                        },
                        "uuid" : "${json-unit.any-string}",
-                        "vulnerabilities": 0
+                        "vulnerabilities": 0,
+                        "critical": 0,
+                        "high": 0,
+                        "medium": 0,
+                        "low": 0,
+                        "unassigned": 0
                       }
                   ],
                   "_pagination": {
@@ -270,6 +286,8 @@ public class ProjectsResourceTest extends ResourceTest {
             metrics.setProjectId(project.getId());
             metrics.setComponentId(component3.getId());
             metrics.setVulnerabilities(8);
+            metrics.setCritical(5);
+            metrics.setLow(3);
             metrics.setFirstOccurrence(Date.from(Instant.now()));
             metrics.setLastOccurrence(Date.from(Instant.now()));
             dao.createDependencyMetrics(metrics);
