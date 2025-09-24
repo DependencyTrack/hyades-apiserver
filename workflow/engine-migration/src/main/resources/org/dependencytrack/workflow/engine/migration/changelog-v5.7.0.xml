@@ -164,16 +164,22 @@
               group_ids text[];
               updated_group_ids text[];
             begin
-              select array_agg(distinct concurrency_group_id)
+              -- Identify concurrency group IDs for which runs have transitioned
+              -- from a non-terminal to a terminal status.
+              select array_agg(distinct new_table.concurrency_group_id)
                 into group_ids
                 from new_table
-               where status = any(cast('{CANCELED, COMPLETED, FAILED}' as workflow_run_status[]))
-                 and concurrency_group_id is not null;
+               inner join old_table
+                  on old_table.id = new_table.id
+               where old_table.status = any(cast('{CREATED, RUNNING, SUSPENDED}' as workflow_run_status[]))
+                 and new_table.status = any(cast('{CANCELED, COMPLETED, FAILED}' as workflow_run_status[]))
+                 and new_table.concurrency_group_id is not null;
 
               if coalesce(array_length(group_ids, 1), 0) = 0 then
                 return null;
               end if;
 
+              -- Identify and set the next run to execute for each concurrency group ID.
               with
               cte_next_run as (
                 select distinct on (concurrency_group_id)
@@ -201,6 +207,7 @@
                 return null;
               end if;
 
+              -- Delete concurrency groups for which no next run could be determined.
               delete
                 from workflow_run_concurrency_group
                where id = any(group_ids)
@@ -220,7 +227,7 @@
 
             create trigger trigger_update_workflow_run_concurrency_groups_on_run_completion
             after update on workflow_run
-            referencing new table as new_table
+            referencing old table as old_table new table as new_table
             for each statement
             execute function update_workflow_run_concurrency_groups_on_run_completion();
         </sql>
