@@ -59,6 +59,7 @@ import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
 import org.dependencytrack.parser.cyclonedx.CycloneDxValidator;
 import org.dependencytrack.persistence.jdbi.AnalysisDao;
+import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
 import org.dependencytrack.resources.v1.vo.BomSubmitRequest;
 import org.glassfish.jersey.client.ClientConfig;
@@ -136,6 +137,9 @@ public class BomResourceTest extends ResourceTest {
     @Override
     public void before() throws Exception {
         super.before();
+
+        // Required for file storage.
+        PluginManagerTestUtil.loadPlugins();
     }
 
     @Test
