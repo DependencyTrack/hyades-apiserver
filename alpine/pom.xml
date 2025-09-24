@@ -80,7 +80,7 @@
         <lib.caffeine.version>3.2.2</lib.caffeine.version>
         <lib.commons.collections4.version>4.5.0</lib.commons.collections4.version>
         <lib.commons.io.version>2.20.0</lib.commons.io.version>
-        <lib.commons.lang3.version>3.18.0</lib.commons.lang3.version>
+        <lib.commons.lang3.version>3.19.0</lib.commons.lang3.version>
         <lib.h2.version>2.3.232</lib.h2.version>
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
         <lib.javassist.version>3.30.2-GA</lib.javassist.version>
