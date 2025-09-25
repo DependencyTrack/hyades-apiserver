@@ -144,6 +144,19 @@ public class PluginManager {
     }
 
     @SuppressWarnings("unchecked")
+    public <T extends ExtensionPoint, U extends ExtensionFactory<T>> U getFactory(final Class<T> extensionPointClass, final String name) {
+        final var extensionIdentity = new ExtensionIdentity(extensionPointClass, name);
+        final ExtensionFactory<?> factory = factoryByExtensionIdentity.get(extensionIdentity);
+        if (factory == null) {
+            throw new NoSuchExtensionException(
+                    "No factory for extension named %s exists for the extension point %s".formatted(
+                            name, extensionPointClass.getName()));
+        }
+
+        return (U) factory;
+    }
+
+    @SuppressWarnings("unchecked")
     public <T extends ExtensionPoint, U extends ExtensionFactory<T>> SequencedCollection<U> getFactories(final Class<T> extensionPointClass) {
         final Set<String> extensionNames = extensionNamesByExtensionPointClass.get(extensionPointClass);
         if (extensionNames == null) {

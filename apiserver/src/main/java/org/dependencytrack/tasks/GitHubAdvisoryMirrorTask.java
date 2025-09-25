@@ -18,45 +18,22 @@
  */
 package org.dependencytrack.tasks;
 
-import alpine.common.logging.Logger;
-import alpine.event.framework.Event;
-import alpine.event.framework.LoggableSubscriber;
-import alpine.model.ConfigProperty;
 import org.dependencytrack.event.GitHubAdvisoryMirrorEvent;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
-import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.plugin.PluginManager;
 
-import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ACCESS_TOKEN;
-import static org.dependencytrack.model.ConfigPropertyConstants.VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ENABLED;
+/**
+ * Task for mirroring vulnerability data from the GitHub Advisory database.
+ */
+public class GitHubAdvisoryMirrorTask extends AbstractVulnDataSourceMirrorTask {
 
-public class GitHubAdvisoryMirrorTask implements LoggableSubscriber {
+    GitHubAdvisoryMirrorTask(final PluginManager pluginManager) {
+        super(pluginManager, GitHubAdvisoryMirrorEvent.class, "github", Vulnerability.Source.GITHUB);
+    }
 
-    private static final Logger LOGGER = Logger.getLogger(GitHubAdvisoryMirrorTask.class);
-    private final boolean isEnabled;
-    private String accessToken;
-
+    @SuppressWarnings("unused")
     public GitHubAdvisoryMirrorTask() {
-        try (final QueryManager qm = new QueryManager()) {
-            final ConfigProperty enabled = qm.getConfigProperty(VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ENABLED.getGroupName(), VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ENABLED.getPropertyName());
-            this.isEnabled = enabled != null && Boolean.valueOf(enabled.getPropertyValue());
-            final ConfigProperty accessToken = qm.getConfigProperty(VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ACCESS_TOKEN.getGroupName(), VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ACCESS_TOKEN.getPropertyName());
-            if (accessToken != null) {
-                this.accessToken = accessToken.getPropertyValue();
-            }
-        }
+        this(PluginManager.getInstance());
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public void inform(final Event e) {
-        if (e instanceof GitHubAdvisoryMirrorEvent && this.isEnabled) {
-            if (this.accessToken != null) {
-                LOGGER.info("Starting GitHub Advisory mirroring task");
-                new KafkaEventDispatcher().dispatchEvent(new GitHubAdvisoryMirrorEvent()).join();
-            } else {
-                LOGGER.warn("GitHub Advisory mirroring is enabled, but no personal access token is configured. Skipping.");
-            }
-        }
-    }
 }

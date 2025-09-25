@@ -86,8 +86,13 @@ final class NvdVulnDataSourceFactory implements VulnDataSourceFactory {
     }
 
     @Override
+    public boolean isDataSourceEnabled() {
+        return this.configRegistry.getOptionalValue(CONFIG_ENABLED).orElse(false);
+    }
+
+    @Override
     public VulnDataSource create() {
-        if (!configRegistry.getOptionalValue(CONFIG_ENABLED).orElse(false)) {
+        if (!isDataSourceEnabled()) {
             LOGGER.info("Disabled; Not creating an instance");
             return null;
         }
