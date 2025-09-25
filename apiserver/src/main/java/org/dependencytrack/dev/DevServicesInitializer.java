@@ -19,14 +19,14 @@
 package org.dependencytrack.dev;
 
 import alpine.common.logging.Logger;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.dependencytrack.event.kafka.KafkaTopics;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -166,7 +166,6 @@ public class DevServicesInitializer implements ServletContextListener {
         }
 
         final var topicsToCreate = new ArrayList<>(List.of(
-                new NewTopic(KafkaTopics.NEW_EPSS.name(), 1, (short) 1).configs(Map.of(CLEANUP_POLICY_CONFIG, CLEANUP_POLICY_COMPACT)),
                 new NewTopic(KafkaTopics.NEW_VULNERABILITY.name(), 1, (short) 1).configs(Map.of(CLEANUP_POLICY_CONFIG, CLEANUP_POLICY_COMPACT)),
                 new NewTopic(KafkaTopics.NOTIFICATION_ANALYZER.name(), 1, (short) 1),
                 new NewTopic(KafkaTopics.NOTIFICATION_BOM.name(), 1, (short) 1),

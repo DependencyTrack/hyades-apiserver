@@ -23,7 +23,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.EpssMirrorEvent;
 import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.kafka.KafkaTopics.Topic;
 import org.dependencytrack.model.Vulnerability;
@@ -69,7 +68,6 @@ public final class KafkaEventConverter {
             case ComponentRepositoryMetaAnalysisEvent e -> convert(e);
             case ComponentVulnerabilityAnalysisEvent e -> convert(e);
             case OsvMirrorEvent e -> convert(e);
-            case EpssMirrorEvent e -> convert(e);
             default -> throw new IllegalArgumentException("Unable to convert event " + event);
         };
     }
@@ -148,10 +146,6 @@ public final class KafkaEventConverter {
         final String key = Vulnerability.Source.OSV.name();
         final String value = event.ecosystem();
         return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, key, value);
-    }
-
-    static KafkaEvent<String, String> convert(final EpssMirrorEvent ignored) {
-        return new KafkaEvent<>(KafkaTopics.VULNERABILITY_MIRROR_COMMAND, "EPSS", null);
     }
 
     private static Topic<String, Notification> extractDestinationTopic(final Notification notification) {

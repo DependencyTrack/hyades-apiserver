@@ -260,7 +260,7 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
         epss.setCve("CVE-001");
         epss.setScore(BigDecimal.valueOf(0.6));
         epss.setPercentile(BigDecimal.valueOf(0.2));
-        qm.synchronizeEpss(epss);
+        qm.persist(epss);
 
         final Policy policy = qm.createPolicy("policy", Policy.Operator.ALL, Policy.ViolationState.INFO);
         qm.createPolicyCondition(policy, PolicyCondition.Subject.EXPRESSION, PolicyCondition.Operator.MATCHES, """
