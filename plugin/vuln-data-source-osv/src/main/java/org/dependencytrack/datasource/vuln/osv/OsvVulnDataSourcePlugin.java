@@ -16,12 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
+package org.dependencytrack.datasource.vuln.osv;
 
-import alpine.event.framework.Event;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
- * Defines an event used to start a mirror of Google OSV.
+ * @since 5.7.0
  */
-public record OsvMirrorEvent() implements Event {
+public final class OsvVulnDataSourcePlugin implements Plugin {
+
+    @Override
+    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+        return List.of(new OsvVulnDataSourceFactory());
+    }
+
 }

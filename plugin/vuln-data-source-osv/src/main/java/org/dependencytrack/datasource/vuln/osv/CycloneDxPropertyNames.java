@@ -16,12 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.event;
-
-import alpine.event.framework.Event;
+package org.dependencytrack.datasource.vuln.osv;
 
 /**
- * Defines an event used to start a mirror of Google OSV.
+ * @since 5.7.0
  */
-public record OsvMirrorEvent() implements Event {
+final class CycloneDxPropertyNames {
+
+    static final String PROPERTY_OSV_ECOSYSTEM = "internal:osv:ecosystem";
+
+    private CycloneDxPropertyNames() {
+    }
+
 }
