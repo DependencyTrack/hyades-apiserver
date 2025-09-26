@@ -25,7 +25,6 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.dependencytrack.event.ComponentRepositoryMetaAnalysisEvent;
 import org.dependencytrack.event.ComponentVulnerabilityAnalysisEvent;
-import org.dependencytrack.event.OsvMirrorEvent;
 import org.dependencytrack.event.PortfolioMetricsUpdateEvent;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityAnalysisLevel;
@@ -104,31 +103,10 @@ public class KafkaEventDispatcherTest {
     }
 
     @Test
-    public void testDispatchEventWithOsvMirrorEvent() {
-        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(new OsvMirrorEvent("Maven"));
-        assertThat(mockProducer.completeNext()).isTrue();
-        assertThat(future).isCompletedWithValueMatching(Objects::nonNull);
-
-        assertThat(mockProducer.history()).satisfiesExactly(record -> {
-            assertThat(record.topic()).isEqualTo(KafkaTopics.VULNERABILITY_MIRROR_COMMAND.name());
-            assertThat(record.key()).asString().isEqualTo("OSV");
-            assertThat(record.value()).asString().isEqualTo("Maven");
-            assertThat(record.headers()).isEmpty();
-        });
-    }
-
-    @Test
     public void testDispatchEventWithUnsupportedType() {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> eventDispatcher.dispatchEvent(new PortfolioMetricsUpdateEvent()))
                 .withMessageStartingWith("Unable to convert event");
-    }
-
-    @Test
-    public void testDispatchEventWithException() {
-        final CompletableFuture<RecordMetadata> future = eventDispatcher.dispatchEvent(new OsvMirrorEvent("Maven"));
-        assertThat(mockProducer.errorNext(new IllegalStateException())).isTrue();
-        assertThat(future).isCompletedExceptionally();
     }
 
     @Test

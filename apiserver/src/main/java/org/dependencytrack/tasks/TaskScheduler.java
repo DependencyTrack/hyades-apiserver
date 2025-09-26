@@ -83,7 +83,7 @@ public final class TaskScheduler extends BaseTaskScheduler {
                 Map.entry(new VulnerabilityPolicyFetchEvent(), getCronScheduleForTask(VulnerabilityPolicyFetchTask.class)),
                 Map.entry(new LdapSyncEvent(), getCronScheduleForTask(LdapSyncTask.class)),
                 Map.entry(new NistMirrorEvent(), getCronScheduleForTask(NistMirrorTask.class)),
-                Map.entry(new OsvMirrorEvent(null), getCronScheduleForTask(OsvMirrorTask.class)),
+                Map.entry(new OsvMirrorEvent(), getCronScheduleForTask(OsvMirrorTask.class)),
                 Map.entry(new GitHubAdvisoryMirrorEvent(), getCronScheduleForTask(GitHubAdvisoryMirrorTask.class)),
                 Map.entry(new EpssMirrorEvent(), getCronScheduleForTask(EpssMirrorTask.class)),
                 Map.entry(new PortfolioMetricsUpdateEvent(), getCronScheduleForTask(PortfolioMetricsUpdateTask.class)),
