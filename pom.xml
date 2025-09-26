@@ -35,6 +35,7 @@
         <module>workflow</module>
         <module>proto</module>
         <module>plugin/api</module>
+        <module>plugin/vuln-data-source-github</module>
         <module>plugin/vuln-data-source-nvd</module>
         <module>persistence-migration</module>
         <module>persistence-jooq</module>
@@ -100,10 +101,12 @@
         <lib.assertj.version>3.27.6</lib.assertj.version>
         <lib.cel-java.version>0.5.3</lib.cel-java.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
+        <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
         <lib.datanucleus-api-jdo.version>6.0.5</lib.datanucleus-api-jdo.version>
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
+        <lib.httpclient5.version>5.5</lib.httpclient5.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
         <lib.jackson.version>2.20.0</lib.jackson.version>
@@ -116,6 +119,7 @@
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
+        <lib.mockito.version>5.20.0</lib.mockito.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
         <lib.protobuf-java.version>4.32.1</lib.protobuf-java.version>
@@ -153,6 +157,12 @@
             </dependency>
 
             <dependency>
+                <groupId>us.springett</groupId>
+                <artifactId>cvss-calculator</artifactId>
+                <version>${lib.cvss-calculator.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.datanucleus</groupId>
                 <artifactId>datanucleus-api-jdo</artifactId>
                 <version>${lib.datanucleus-api-jdo.version}</version>
@@ -171,6 +181,12 @@
                 <groupId>org.datanucleus</groupId>
                 <artifactId>datanucleus-rdbms</artifactId>
                 <version>${lib.datanucleus-rdbms.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
+                <version>${lib.httpclient5.version}</version>
             </dependency>
 
             <dependency>
@@ -262,6 +278,14 @@
                 <groupId>org.liquibase</groupId>
                 <artifactId>liquibase-core</artifactId>
                 <version>${lib.liquibase.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-bom</artifactId>
+                <version>${lib.mockito.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
 
             <dependency>

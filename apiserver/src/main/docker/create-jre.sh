@@ -61,9 +61,10 @@ fi
 work_dir="$(mktemp -d)"
 
 # Module dependencies that jdeps fails to detect.
+#   java.net.http: Required for Java's HttpClient.
 #   jdk.crypto.ec: Required for TLS connections that use elliptic curve cryptography.
 #   jdk.zipfs:     Required by code that reads files from JAR files at runtime.
-static_module_deps='jdk.crypto.ec,jdk.zipfs'
+static_module_deps='java.net.http,jdk.crypto.ec,jdk.zipfs'
 
 echo "[+] extracting $(basename "${input_jar}") to ${work_dir}"
 unzip -qq "${input_jar}" -d "${work_dir}"

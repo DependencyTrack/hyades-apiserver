@@ -24,4 +24,10 @@ import org.dependencytrack.plugin.api.ExtensionFactory;
  * @since 5.7.0
  */
 public interface VulnDataSourceFactory extends ExtensionFactory<VulnDataSource> {
+
+    /**
+     * @return Whether the data source provided by this factory is enabled.
+     */
+    boolean isDataSourceEnabled();
+
 }

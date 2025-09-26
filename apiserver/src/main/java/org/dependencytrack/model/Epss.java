@@ -30,6 +30,8 @@ import jakarta.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
+import static java.util.Objects.requireNonNull;
+
 @PersistenceCapable
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Epss implements Serializable {
@@ -51,6 +53,15 @@ public class Epss implements Serializable {
     @Persistent
     @Column(name = "PERCENTILE", scale = 5)
     private BigDecimal percentile;
+
+    public Epss() {
+    }
+
+    public Epss(final String cve, final BigDecimal score, final BigDecimal percentile) {
+        this.cve = requireNonNull(cve, "cve must not be null");
+        this.score = requireNonNull(score, "score must not be null");
+        this.percentile = requireNonNull(percentile, "percentile must not be null");
+    }
 
     public long getId() {
         return id;

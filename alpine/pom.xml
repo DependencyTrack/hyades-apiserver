@@ -80,8 +80,8 @@
         <lib.caffeine.version>3.2.2</lib.caffeine.version>
         <lib.commons.collections4.version>4.5.0</lib.commons.collections4.version>
         <lib.commons.io.version>2.20.0</lib.commons.io.version>
-        <lib.commons.lang3.version>3.18.0</lib.commons.lang3.version>
-        <lib.h2.version>2.3.232</lib.h2.version>
+        <lib.commons.lang3.version>3.19.0</lib.commons.lang3.version>
+        <lib.h2.version>2.4.240</lib.h2.version>
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
         <lib.javassist.version>3.30.2-GA</lib.javassist.version>
         <lib.jaxb-runtime.version>4.0.6</lib.jaxb-runtime.version>
@@ -99,7 +99,6 @@
         <lib.swagger.version>2.2.37</lib.swagger.version>
         <!-- Unit test libraries -->
         <lib.junit-pioneer.version>2.3.0</lib.junit-pioneer.version>
-        <lib.mockito.version>5.20.0</lib.mockito.version>
         <lib.wiremock.version>2.35.2</lib.wiremock.version>
     </properties>
 
@@ -260,12 +259,6 @@
                         <artifactId>junit-platform-launcher</artifactId>
                     </exclusion>
                 </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>org.mockito</groupId>
-                <artifactId>mockito-core</artifactId>
-                <version>${lib.mockito.version}</version>
-                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>com.github.tomakehurst</groupId>

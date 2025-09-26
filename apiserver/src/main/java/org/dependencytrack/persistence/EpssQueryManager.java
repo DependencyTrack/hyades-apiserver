@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.dependencytrack.util.PersistenceUtil.applyIfChanged;
-
 final class EpssQueryManager extends QueryManager implements IQueryManager {
 
     /**
@@ -38,44 +36,6 @@ final class EpssQueryManager extends QueryManager implements IQueryManager {
      */
     EpssQueryManager(final PersistenceManager pm) {
         super(pm);
-    }
-
-    /**
-     * Synchronizes a Epss record. Method first checkes to see if the record already
-     * exists and if so, updates it. If the record does not already exist,
-     * this method will create a new Epss record.
-     * @param epss the Epss record to synchronize
-     * @return a Epss object
-     */
-    public Epss synchronizeEpss(Epss epss) {
-        Epss result = updateEpss(epss);
-        if (result == null) {
-            final Epss epssNew = pm.makePersistent(epss);
-            return epssNew;
-        }
-        return result;
-    }
-
-    /**
-     * Synchronizes a batch of Epss records.
-     * @param epssList the batch of Epss records to synchronize
-     */
-    public void synchronizeAllEpss(List<Epss> epssList) {
-        runInTransaction(() -> {
-            for (final Epss epss : epssList) {
-                synchronizeEpss(epss);
-            }
-        });
-    }
-
-    private Epss updateEpss(Epss epss) {
-        var epssExisting = getEpssByCveId(epss.getCve());
-        if (epssExisting != null) {
-            applyIfChanged(epssExisting, epss, Epss::getScore, epssExisting::setScore);
-            applyIfChanged(epssExisting, epss, Epss::getPercentile, epssExisting::setPercentile);
-            return epssExisting;
-        }
-        return null;
     }
 
     /**

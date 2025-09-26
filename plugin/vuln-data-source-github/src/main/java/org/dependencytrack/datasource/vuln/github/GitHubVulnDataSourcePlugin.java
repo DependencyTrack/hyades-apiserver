@@ -16,20 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.parser.dependencytrack;
+package org.dependencytrack.datasource.vuln.github;
 
-import org.dependencytrack.model.Epss;
-import org.dependencytrack.proto.mirror.v1.EpssItem;
+import org.dependencytrack.plugin.api.ExtensionFactory;
+import org.dependencytrack.plugin.api.ExtensionPoint;
+import org.dependencytrack.plugin.api.Plugin;
 
-import java.math.BigDecimal;
+import java.util.Collection;
+import java.util.List;
 
-public final class EpssModelConverter {
+/**
+ * @since 5.7.0
+ */
+public final class GitHubVulnDataSourcePlugin implements Plugin {
 
-    public static Epss convert(final EpssItem epssItem) {
-        final Epss epss = new Epss();
-        epss.setCve(epssItem.getCve());
-        epss.setScore(BigDecimal.valueOf(epssItem.getEpss()));
-        epss.setPercentile(BigDecimal.valueOf(epssItem.getPercentile()));
-        return epss;
+    @Override
+    public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
+        return List.of(new GitHubVulnDataSourceFactory());
     }
+
 }
