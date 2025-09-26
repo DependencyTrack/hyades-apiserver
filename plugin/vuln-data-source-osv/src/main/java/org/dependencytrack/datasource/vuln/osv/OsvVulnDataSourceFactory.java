@@ -20,6 +20,7 @@ package org.dependencytrack.datasource.vuln.osv;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
@@ -28,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URL;
+import java.net.http.HttpClient;
 import java.util.Collections;
 import java.util.List;
 import java.util.SequencedCollection;
@@ -35,7 +37,7 @@ import java.util.SequencedCollection;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_DATA_URL;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ECOSYSTEMS;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ENABLED;
-import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_WATERMARKS;
+import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_WATERMARK;
 
 /**
  * @since 5.7.0
@@ -46,6 +48,7 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
 
     private ConfigRegistry configRegistry;
     private ObjectMapper objectMapper;
+    private HttpClient httpClient;
 
     @Override
     public String extensionName() {
@@ -68,14 +71,22 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
                 CONFIG_ENABLED,
                 CONFIG_DATA_URL,
                 CONFIG_ECOSYSTEMS,
-                CONFIG_WATERMARKS);
+                CONFIG_WATERMARK);
     }
 
     @Override
-    public void init(final ConfigRegistry configRegistry) {
-        this.configRegistry = configRegistry;
+    public void init(ExtensionContext ctx) {
+        this.configRegistry = ctx.configRegistry();
+        this.httpClient = HttpClient.newBuilder()
+                .proxy(ctx.proxySelector())
+                .build();
         this.objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule());
+    }
+
+    @Override
+    public boolean isDataSourceEnabled() {
+        return this.configRegistry.getOptionalValue(CONFIG_ENABLED).orElse(false);
     }
 
     @Override
@@ -92,6 +103,14 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
         final var watermarkManager = WatermarkManager.create(configRegistry, objectMapper);
 
         return new OsvVulnDataSource(watermarkManager, objectMapper, dataUrl, ecosystems);
+    }
+
+    @Override
+    public void close() {
+        if (httpClient != null) {
+            httpClient.close();
+        }
+        VulnDataSourceFactory.super.close();
     }
 
 }

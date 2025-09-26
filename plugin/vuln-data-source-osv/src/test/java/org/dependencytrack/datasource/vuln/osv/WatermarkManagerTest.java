@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.datasource.vuln.github;
+package org.dependencytrack.datasource.vuln.osv;
 
 import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_WATERMARK;
+import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_WATERMARKS;
 
 class WatermarkManagerTest {
 
@@ -36,7 +36,7 @@ class WatermarkManagerTest {
         final var watermark = Instant.ofEpochSecond(666);
 
         final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARK, watermark);
+        configRegistry.setValue(CONFIG_WATERMARKS, watermark);
 
         final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), configRegistry);
         assertThat(watermarkManager).isNotNull();

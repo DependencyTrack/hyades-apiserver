@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.datasource.vuln.github;
+package org.dependencytrack.datasource.vuln.osv;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -39,7 +39,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class GitHubVulnDataSourceTest {
+class OsvVulnDataSourceTest {
 
     private GitHubSecurityAdvisoryClient advisoryClientMock;
     private WatermarkManager watermarkManagerMock;

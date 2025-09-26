@@ -51,6 +51,7 @@ import jakarta.ws.rs.ext.Provider;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.SequencedCollection;
 import java.util.function.Function;
@@ -157,6 +158,7 @@ public class ExtensionsResource implements ExtensionsApi {
                                     case ConfigType.Integer ignored -> ExtensionConfigType.INTEGER;
                                     case ConfigType.Path ignored -> ExtensionConfigType.PATH;
                                     case ConfigType.String ignored -> ExtensionConfigType.STRING;
+                                    case ConfigType.StringList ignored -> ExtensionConfigType.STRING;
                                     case ConfigType.URL ignored -> ExtensionConfigType.URL;
                                 })
                                 .isRequired(configDef.isRequired())

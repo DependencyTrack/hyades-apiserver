@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.datasource.vuln.github;
+package org.dependencytrack.datasource.vuln.osv;
 
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.MockConfigRegistry;
@@ -33,33 +33,34 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_API_TOKEN;
 import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_API_URL;
 import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_ENABLED;
+import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ENABLED;
 
-class GitHubVulnDataSourceFactoryTest {
+class OsvVulnDataSourceFactoryTest {
 
     @Test
     void extensionNameShouldBeGitHub() {
-        try (final var datasourceFactory = new GitHubVulnDataSourceFactory()) {
+        try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
             assertThat(datasourceFactory.extensionName()).isEqualTo("github");
         }
     }
 
     @Test
     void extensionClassShouldBeGitHubVulnDataSource() {
-        try (final var datasourceFactory = new GitHubVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.extensionClass()).isEqualTo(GitHubVulnDataSource.class);
+        try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
+            assertThat(datasourceFactory.extensionClass()).isEqualTo(OsvVulnDataSource.class);
         }
     }
 
     @Test
     void priorityShouldBeZero() {
-        try (final var datasourceFactory = new GitHubVulnDataSourceFactory()) {
+        try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
             assertThat(datasourceFactory.priority()).isZero();
         }
     }
 
     @Test
     void runtimeConfigsShouldHaveNameAndDescription() {
-        try (final var datasourceFactory = new GitHubVulnDataSourceFactory()) {
+        try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
             assertThat(datasourceFactory.runtimeConfigs()).allSatisfy(config -> {
                 assertThat(config.name()).isNotBlank();
                 assertThat(config.description()).isNotBlank();
@@ -73,7 +74,7 @@ class GitHubVulnDataSourceFactoryTest {
         final var configRegistry = new MockConfigRegistry();
         configRegistry.setValue(CONFIG_ENABLED, isEnabled);
 
-        try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
+        try (final var dataSourceFactory = new OsvVulnDataSourceFactory()) {
             dataSourceFactory.init(new ExtensionContext(configRegistry));
             assertThat(dataSourceFactory.isDataSourceEnabled()).isEqualTo(isEnabled);
         }
@@ -114,21 +115,6 @@ class GitHubVulnDataSourceFactoryTest {
         configRegistry.setValue(CONFIG_ENABLED, true);
         configRegistry.setValue(CONFIG_API_URL, null);
         configRegistry.setValue(CONFIG_API_TOKEN, "apiToken");
-
-        try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
-            dataSourceFactory.init(new ExtensionContext(configRegistry));
-
-            assertThatExceptionOfType(NoSuchElementException.class)
-                    .isThrownBy(dataSourceFactory::create);
-        }
-    }
-
-    @Test
-    void createShouldThrowWhenApiTokenIsNull() throws Exception {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_API_URL, URI.create("http://localhost:6666").toURL());
-        configRegistry.setValue(CONFIG_API_TOKEN, null);
 
         try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
             dataSourceFactory.init(new ExtensionContext(configRegistry));
