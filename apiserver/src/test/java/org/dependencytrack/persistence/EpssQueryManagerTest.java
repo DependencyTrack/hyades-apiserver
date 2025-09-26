@@ -51,43 +51,6 @@ public class EpssQueryManagerTest extends PersistenceCapableTest {
     }
 
     @Test
-    public void testExistingEpssIsSynchronized() {
-        Epss epss = new Epss();
-        epss.setCve("CVE-000");
-        epss.setScore(BigDecimal.valueOf(0.01));
-        epss.setPercentile(BigDecimal.valueOf(0.02));
-        qm.persist(epss);
-
-        Epss epssNew = new Epss();
-        epssNew.setCve("CVE-000");
-        epssNew.setScore(BigDecimal.valueOf(0.01));
-        epssNew.setPercentile(BigDecimal.valueOf(1.02));
-        qm.synchronizeEpss(epssNew);
-
-        assertThat(qm.getEpssByCveId("CVE-000")).satisfies(
-                epssSynchronized -> {
-                    assertThat(epssSynchronized.getScore()).isEqualByComparingTo("0.01");
-                    assertThat(epssSynchronized.getPercentile()).isEqualByComparingTo("1.02");
-                }
-        );
-    }
-
-    @Test
-    public void testNewEpssIsSynchronized() {
-        Epss epss = new Epss();
-        epss.setCve("CVE-000");
-        epss.setScore(BigDecimal.valueOf(0.01));
-        epss.setPercentile(BigDecimal.valueOf(0.02));
-        qm.synchronizeEpss(epss);
-        assertThat(qm.getEpssByCveId("CVE-000")).satisfies(
-                epssSynchronized -> {
-                    assertThat(epssSynchronized.getScore()).isEqualByComparingTo("0.01");
-                    assertThat(epssSynchronized.getPercentile()).isEqualByComparingTo("0.02");
-                }
-        );
-    }
-
-    @Test
     public void testGetEpssForCveIds() {
         Epss epss1 = new Epss();
         epss1.setCve("CVE-000");

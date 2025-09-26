@@ -257,7 +257,7 @@ public class CelPolicyDaoTest extends PersistenceCapableTest {
         epss.setCve("CVE-001");
         epss.setScore(BigDecimal.valueOf(0.6));
         epss.setPercentile(BigDecimal.valueOf(0.2));
-        qm.synchronizeEpss(epss);
+        qm.persist(epss);
 
         final var requirements = new HashSetValuedHashMap<Type, String>();
         requirements.putAll(TYPE_VULNERABILITY, org.dependencytrack.proto.policy.v1.Vulnerability.getDescriptor().getFields().stream()

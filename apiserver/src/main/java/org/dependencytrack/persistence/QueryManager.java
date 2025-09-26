@@ -1613,14 +1613,6 @@ public class QueryManager extends AlpineQueryManager {
         return singleResult(query.execute());
     }
 
-    public Epss synchronizeEpss(Epss epss) {
-        return getEpssQueryManager().synchronizeEpss(epss);
-    }
-
-    public void synchronizeAllEpss(List<Epss> epssList) {
-        getEpssQueryManager().synchronizeAllEpss(epssList);
-    }
-
     public Epss getEpssByCveId(String cveId) {
         return getEpssQueryManager().getEpssByCveId(cveId);
     }
