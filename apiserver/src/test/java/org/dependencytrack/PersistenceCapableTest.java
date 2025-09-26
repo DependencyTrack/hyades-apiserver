@@ -117,11 +117,17 @@ public abstract class PersistenceCapableTest {
              final Statement statement = connection.createStatement()) {
             statement.execute("""
                     DO $$ DECLARE
-                        r RECORD;
+                        table_name TEXT;
                     BEGIN
-                        FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = CURRENT_SCHEMA()) LOOP
-                            EXECUTE 'TRUNCATE TABLE ' || QUOTE_IDENT(r.tablename) || ' CASCADE';
-                        END LOOP;
+                      FOR table_name IN
+                        SELECT tablename
+                          FROM pg_tables
+                         WHERE schemaname = CURRENT_SCHEMA()
+                           AND tablename !~ '.*databasechangelog$'
+                           AND tablename !~ '.*databasechangeloglock$'
+                      LOOP
+                        EXECUTE 'TRUNCATE TABLE ' || QUOTE_IDENT(table_name) || ' CASCADE';
+                      END LOOP;
                     END $$;
                     """);
 
