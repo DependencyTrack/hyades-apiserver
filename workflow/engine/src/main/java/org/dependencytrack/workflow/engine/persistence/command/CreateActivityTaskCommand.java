@@ -16,37 +16,20 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine;
+package org.dependencytrack.workflow.engine.persistence.command;
 
-import io.micrometer.core.instrument.Tag;
 import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
-import java.util.Set;
 import java.util.UUID;
 
-/**
- * Unit of work for the execution of an activity.
- *
- * @param workflowRunId  ID of the workflow run the activity belongs to.
- * @param createdEventId ID of the event that created the activity execution.
- * @param activityName   Name of the activity.
- * @param queueName      Name of the queue.
- * @param argument       Argument of the activity.
- * @param lockedUntil    Timestamp until when the activity is locked for execution.
- */
-record ActivityTask(
+public record CreateActivityTaskCommand(
         UUID workflowRunId,
         int createdEventId,
         String activityName,
         String queueName,
+        @Nullable Integer priority,
         @Nullable Payload argument,
-        Instant lockedUntil) implements Task {
-
-    @Override
-    public Set<Tag> meterTags() {
-        return Set.of(Tag.of("activityName", activityName));
-    }
-
+        @Nullable Instant visibleFrom) {
 }

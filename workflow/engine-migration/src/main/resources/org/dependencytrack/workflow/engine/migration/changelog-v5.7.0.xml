@@ -78,10 +78,24 @@
             , constraint workflow_run_inbox_pk primary key (id)
             ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
-            create table workflow_activity_run (
+            create type workflow_queue_status as enum (
+              'ACTIVE'
+            , 'PAUSED'
+            );
+
+            create table workflow_activity_task_queue (
+              name text
+            , status workflow_queue_status not null default 'ACTIVE'
+            , created_at timestamptz(3) not null default now()
+            , updated_at timestamptz(3)
+            , constraint workflow_activity_task_queue_pk primary key (name)
+            );
+
+            create table workflow_activity_task (
               workflow_run_id uuid
             , created_event_id int
             , activity_name text not null
+            , queue_name text not null
             , priority smallint
             , argument bytea
             , visible_from timestamptz(3)
@@ -89,8 +103,9 @@
             , locked_until timestamptz(3)
             , created_at timestamptz(3) not null default now()
             , updated_at timestamptz(3)
-            , constraint workflow_activity_run_pk primary key (workflow_run_id, created_event_id)
-            , constraint workflow_activity_run_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
+            , constraint workflow_activity_task_pk primary key (workflow_run_id, created_event_id)
+            , constraint workflow_activity_task_workflow_run_fk foreign key (workflow_run_id) references workflow_run (id) on delete cascade
+            , constraint workflow_activity_task_queue_fk foreign key (queue_name) references workflow_activity_task_queue (name)
             ) with (autovacuum_vacuum_scale_factor = 0.02, fillfactor = 90);
 
             create table workflow_schedule (
@@ -132,8 +147,8 @@
             create index workflow_run_inbox_workflow_run_id_idx
                 on workflow_run_inbox (workflow_run_id);
 
-            create index workflow_activity_run_poll_idx
-                on workflow_activity_run (priority desc nulls last, created_at, activity_name);
+            create index workflow_activity_task_poll_idx
+                on workflow_activity_task (priority desc nulls last, created_at, activity_name, queue_name);
         </sql>
 
         <sql splitStatements="false">

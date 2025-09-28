@@ -28,6 +28,7 @@ public record PolledActivityTask(
         UUID workflowRunId,
         int createdEventId,
         String activityName,
+        String queueName,
         @Nullable Integer priority,
         @Nullable Payload argument,
         Instant lockedUntil) {

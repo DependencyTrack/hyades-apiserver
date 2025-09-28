@@ -28,6 +28,8 @@ import org.jspecify.annotations.Nullable;
 import java.time.Instant;
 import java.util.Map;
 
+import static java.util.Objects.requireNonNull;
+
 sealed interface WorkflowCommand {
 
     record CompleteRunCommand(
@@ -36,6 +38,11 @@ sealed interface WorkflowCommand {
             @Nullable String customStatus,
             @Nullable Payload result,
             @Nullable Failure failure) implements WorkflowCommand {
+
+        public CompleteRunCommand {
+            requireNonNull(status, "status must not be null");
+        }
+
     }
 
     record ContinueRunAsNewCommand(
@@ -47,15 +54,26 @@ sealed interface WorkflowCommand {
             String name,
             int eventId,
             @Nullable Payload result) implements WorkflowCommand {
+
+        public RecordSideEffectResultCommand {
+            requireNonNull(name, "name must not be null");
+        }
+
     }
 
-    record CreateActivityRunCommand(
+    record CreateActivityTaskCommand(
             int eventId,
             String name,
-            int version,
+            String queueName,
             @Nullable Integer priority,
             @Nullable Payload argument,
             @Nullable Instant scheduleFor) implements WorkflowCommand {
+
+        public CreateActivityTaskCommand {
+            requireNonNull(name, "name must not be null");
+            requireNonNull(queueName, "queueName must not be null");
+        }
+
     }
 
     record CreateChildRunCommand(
@@ -66,6 +84,11 @@ sealed interface WorkflowCommand {
             @Nullable Integer priority,
             @Nullable Map<String, String> labels,
             @Nullable Payload argument) implements WorkflowCommand {
+
+        public CreateChildRunCommand {
+            requireNonNull(workflowName, "workflowName must not be null");
+        }
+
     }
 
     /**
@@ -79,6 +102,12 @@ sealed interface WorkflowCommand {
             int elapsedEventId,
             String name,
             Instant elapseAt) implements WorkflowCommand {
+
+        public CreateTimerCommand {
+            requireNonNull(name, "name must not be null");
+            requireNonNull(elapseAt, "elapseAt must not be null");
+        }
+
     }
 
 }

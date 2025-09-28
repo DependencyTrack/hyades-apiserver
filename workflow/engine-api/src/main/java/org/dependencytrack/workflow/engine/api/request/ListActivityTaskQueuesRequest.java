@@ -16,19 +16,28 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.engine.persistence.command;
+package org.dependencytrack.workflow.engine.api.request;
 
-import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
-import java.time.Instant;
-import java.util.UUID;
+public record ListActivityTaskQueuesRequest(@Nullable String pageToken, int limit) {
 
-public record CreateActivityRunCommand(
-        UUID workflowRunId,
-        int createdEventId,
-        String activityName,
-        @Nullable Integer priority,
-        @Nullable Payload argument,
-        @Nullable Instant visibleFrom) {
+    public ListActivityTaskQueuesRequest {
+        if (limit <= 0) {
+            throw new IllegalArgumentException("limit must be greater than 0");
+        }
+    }
+
+    public ListActivityTaskQueuesRequest() {
+        this(null, 10);
+    }
+
+    public ListActivityTaskQueuesRequest withPageToken(@Nullable String pageToken) {
+        return new ListActivityTaskQueuesRequest(pageToken, this.limit);
+    }
+
+    public ListActivityTaskQueuesRequest withLimit(int limit) {
+        return new ListActivityTaskQueuesRequest(this.pageToken, limit);
+    }
+
 }

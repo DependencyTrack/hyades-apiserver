@@ -38,6 +38,7 @@ public final class PolledActivityTaskRowMapper implements RowMapper<PolledActivi
                 rs.getObject("workflow_run_id", UUID.class),
                 rs.getInt("created_event_id"),
                 rs.getString("activity_name"),
+                rs.getString("queue_name"),
                 mapNullableInteger(rs, "priority"),
                 ctx.findColumnMapperFor(Payload.class).orElseThrow().map(rs, "argument", ctx),
                 ctx.findColumnMapperFor(Instant.class).orElseThrow().map(rs, "locked_until", ctx));

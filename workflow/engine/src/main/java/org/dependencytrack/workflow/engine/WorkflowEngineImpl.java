@@ -28,8 +28,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import org.dependencytrack.proto.workflow.event.v1.ActivityRunCompleted;
-import org.dependencytrack.proto.workflow.event.v1.ActivityRunFailed;
+import org.dependencytrack.proto.workflow.event.v1.ActivityTaskCompleted;
+import org.dependencytrack.proto.workflow.event.v1.ActivityTaskFailed;
 import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.dependencytrack.proto.workflow.event.v1.ExternalEventReceived;
 import org.dependencytrack.proto.workflow.event.v1.RunCanceled;
@@ -47,6 +47,7 @@ import org.dependencytrack.workflow.engine.TaskCommand.CompleteActivityTaskComma
 import org.dependencytrack.workflow.engine.TaskCommand.CompleteWorkflowTaskCommand;
 import org.dependencytrack.workflow.engine.TaskCommand.FailActivityTaskCommand;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
+import org.dependencytrack.workflow.engine.api.ActivityTaskQueue;
 import org.dependencytrack.workflow.engine.api.ExternalEvent;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowEngineConfig;
@@ -63,6 +64,7 @@ import org.dependencytrack.workflow.engine.api.event.WorkflowRunsCompletedEventL
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
+import org.dependencytrack.workflow.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
@@ -71,7 +73,7 @@ import org.dependencytrack.workflow.engine.persistence.WorkflowActivityDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowRunDao;
 import org.dependencytrack.workflow.engine.persistence.WorkflowScheduleDao;
-import org.dependencytrack.workflow.engine.persistence.command.CreateActivityRunCommand;
+import org.dependencytrack.workflow.engine.persistence.command.CreateActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunInboxEntryCommand;
@@ -750,6 +752,25 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         return jdbi.withHandle(handle -> new WorkflowScheduleDao(handle).listSchedules(request));
     }
 
+    @Override
+    public Page<ActivityTaskQueue> listActivityTaskQueues(final ListActivityTaskQueuesRequest request) {
+        return jdbi.withHandle(handle -> new WorkflowActivityDao(handle).listActivityTaskQueues(request));
+    }
+
+    @Override
+    public boolean pauseActivityTaskQueue(final String queueName) {
+        return jdbi.inTransaction(
+                handle -> new WorkflowActivityDao(handle).setActivityTaskQueueStatus(
+                        queueName, ActivityTaskQueue.Status.PAUSED));
+    }
+
+    @Override
+    public boolean resumeActivityTaskQueue(final String queueName) {
+        return jdbi.inTransaction(
+                handle -> new WorkflowActivityDao(handle).setActivityTaskQueueStatus(
+                        queueName, ActivityTaskQueue.Status.ACTIVE));
+    }
+
     private void startWorkflowGroup(final WorkflowGroup group) {
         requireStatusAnyOf(Status.STARTING);
         requireNonNull(group, "group must not be null");
@@ -993,7 +1014,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         final var createInboxEntryCommands = new ArrayList<CreateWorkflowRunInboxEntryCommand>(commands.size() * 2);
         final var createWorkflowRunCommands = new ArrayList<CreateWorkflowRunCommand>();
         final var continuedAsNewRunIds = new ArrayList<UUID>();
-        final var createActivityRunCommands = new ArrayList<CreateActivityRunCommand>();
+        final var createActivityTaskCommands = new ArrayList<CreateActivityTaskCommand>();
         final var completedRuns = new ArrayList<WorkflowRunMetadata>();
 
         for (final WorkflowRunState run : actionableRuns) {
@@ -1086,20 +1107,21 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                 }
             }
 
-            for (final Event newEvent : run.pendingActivityRunCreatedEvents()) {
-                createActivityRunCommands.add(
-                        new CreateActivityRunCommand(
+            for (final Event newEvent : run.pendingActivityTaskCreatedEvents()) {
+                createActivityTaskCommands.add(
+                        new CreateActivityTaskCommand(
                                 run.id(),
                                 newEvent.getId(),
-                                newEvent.getActivityRunCreated().getName(),
-                                newEvent.getActivityRunCreated().hasPriority()
-                                        ? newEvent.getActivityRunCreated().getPriority()
+                                newEvent.getActivityTaskCreated().getName(),
+                                newEvent.getActivityTaskCreated().getQueueName(),
+                                newEvent.getActivityTaskCreated().hasPriority()
+                                        ? newEvent.getActivityTaskCreated().getPriority()
                                         : null,
-                                newEvent.getActivityRunCreated().hasArgument()
-                                        ? newEvent.getActivityRunCreated().getArgument()
+                                newEvent.getActivityTaskCreated().hasArgument()
+                                        ? newEvent.getActivityTaskCreated().getArgument()
                                         : null,
-                                newEvent.getActivityRunCreated().hasScheduledFor()
-                                        ? toInstant(newEvent.getActivityRunCreated().getScheduledFor())
+                                newEvent.getActivityTaskCreated().hasScheduledFor()
+                                        ? toInstant(newEvent.getActivityTaskCreated().getScheduledFor())
                                         : null));
             }
 
@@ -1133,11 +1155,11 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                     createdInboxEvents, createInboxEntryCommands.size());
         }
 
-        if (!createActivityRunCommands.isEmpty()) {
-            final int createdActivityTasks = activityDao.createActivityRuns(createActivityRunCommands);
-            assert createdActivityTasks == createActivityRunCommands.size()
+        if (!createActivityTaskCommands.isEmpty()) {
+            final int createdActivityTasks = activityDao.createActivityTasks(createActivityTaskCommands);
+            assert createdActivityTasks == createActivityTaskCommands.size()
                     : "Created activity tasks: actual=%d, expected=%d".formatted(
-                    createdActivityTasks, createActivityRunCommands.size());
+                    createdActivityTasks, createActivityTaskCommands.size());
         }
 
         final int deletedInboxEvents = workflowDao.deleteRunInboxEvents(
@@ -1156,16 +1178,23 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         }
     }
 
-    List<ActivityTask> pollActivityTasks(final Collection<PollActivityTaskCommand> commands, final int limit) {
+    List<ActivityTask> pollActivityTasks(
+            final String queueName,
+            final Collection<PollActivityTaskCommand> commands,
+            final int limit) {
         return jdbi.inTransaction(handle -> {
             final var activityDao = new WorkflowActivityDao(handle);
 
             return activityDao.pollAndLockActivityTasks(
-                            this.config.instanceId(), commands, limit).stream()
+                            this.config.instanceId(),
+                            queueName,
+                            commands,
+                            limit).stream()
                     .map(polledTask -> new ActivityTask(
                             polledTask.workflowRunId(),
                             polledTask.createdEventId(),
                             polledTask.activityName(),
+                            polledTask.queueName(),
                             polledTask.argument(),
                             polledTask.lockedUntil()))
                     .toList();
@@ -1211,8 +1240,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
         for (final CompleteActivityTaskCommand command : commands) {
             tasksToDelete.add(new ActivityTaskId(command.task().workflowRunId(), command.task().createdEventId()));
 
-            final var taskCompletedBuilder = ActivityRunCompleted.newBuilder()
-                    .setActivityRunCreatedEventId(command.task().createdEventId());
+            final var taskCompletedBuilder = ActivityTaskCompleted.newBuilder()
+                    .setActivityTaskCreatedEventId(command.task().createdEventId());
             if (command.result() != null) {
                 taskCompletedBuilder.setResult(command.result());
             }
@@ -1223,7 +1252,7 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                             Event.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(toTimestamp(command.timestamp()))
-                                    .setActivityRunCompleted(taskCompletedBuilder.build())
+                                    .setActivityTaskCompleted(taskCompletedBuilder.build())
                                     .build()));
         }
 
@@ -1255,8 +1284,8 @@ final class WorkflowEngineImpl implements WorkflowEngine {
                             Event.newBuilder()
                                     .setId(-1)
                                     .setTimestamp(toTimestamp(command.timestamp()))
-                                    .setActivityRunFailed(ActivityRunFailed.newBuilder()
-                                            .setActivityRunCreatedEventId(command.task().createdEventId())
+                                    .setActivityTaskFailed(ActivityTaskFailed.newBuilder()
+                                            .setActivityTaskCreatedEventId(command.task().createdEventId())
                                             .setFailure(FailureConverter.toFailure(command.exception()))
                                             .build())
                                     .build()));

@@ -74,6 +74,7 @@ class WorkflowEngineImplTest {
 
     @Container
     private static final PostgresTestContainer postgresContainer = new PostgresTestContainer();
+    private static final String DEFAULT_ACTIVITY_QUEUE_NAME = "default";
 
     private WorkflowEngineImpl engine;
 
@@ -219,10 +220,10 @@ class WorkflowEngineImplTest {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             if (executionCounter.incrementAndGet() == 1) {
                 ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                        "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+                        "abc", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             } else {
                 ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                        "def", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+                        "def", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             }
             return null;
         });
@@ -240,11 +241,11 @@ class WorkflowEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_CREATED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_STARTED),
-                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
+                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_CREATED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED),
                 event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
-                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_COMPLETED),
-                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
+                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_COMPLETED),
+                event -> assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_CREATED),
                 event -> {
                     assertThat(event.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_COMPLETED);
                     assertThat(event.getRunCompleted().getStatus()).isEqualTo(WORKFLOW_RUN_STATUS_FAILED);
@@ -751,7 +752,7 @@ class WorkflowEngineImplTest {
     void shouldCallActivity() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                    "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+                    "abc", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
@@ -769,10 +770,10 @@ class WorkflowEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED));
     }
@@ -781,8 +782,8 @@ class WorkflowEngineImplTest {
     void shouldCreateMultipleActivitiesConcurrently() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), stringConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             final List<Awaitable<String>> awaitables = List.of(
-                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", "first", stringConverter(), stringConverter(), defaultRetryPolicy()),
-                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", "second", stringConverter(), stringConverter(), defaultRetryPolicy()));
+                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", DEFAULT_ACTIVITY_QUEUE_NAME, "first", stringConverter(), stringConverter(), defaultRetryPolicy()),
+                    ((WorkflowContextImpl<?, ?>) ctx).callActivity("abc", DEFAULT_ACTIVITY_QUEUE_NAME, "second", stringConverter(), stringConverter(), defaultRetryPolicy()));
 
             return awaitables.stream()
                     .map(Awaitable::await)
@@ -803,12 +804,12 @@ class WorkflowEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_CREATED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_COMPLETED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_COMPLETED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED));
     }
@@ -821,7 +822,7 @@ class WorkflowEngineImplTest {
 
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                    "abc", null, voidConverter(), stringConverter(), retryPolicy).await();
+                    "abc", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), stringConverter(), retryPolicy).await();
             return null;
         });
 
@@ -841,18 +842,18 @@ class WorkflowEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_FAILED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_FAILED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_FAILED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_FAILED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_FAILED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_FAILED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED));
     }
@@ -861,7 +862,7 @@ class WorkflowEngineImplTest {
     void shouldNotRetryActivityFailingWithTerminalException() {
         engine.registerWorkflowInternal("test", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
             ((WorkflowContextImpl<?, ?>) ctx).callActivity(
-                    "abc", null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
+                    "abc", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), stringConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
@@ -881,11 +882,11 @@ class WorkflowEngineImplTest {
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_STARTED),
-                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_CREATED),
+                entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_CREATED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_COMPLETED),
                 entry -> assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.EXECUTION_STARTED),
                 entry -> {
-                    assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_RUN_FAILED);
+                    assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.ACTIVITY_TASK_FAILED);
                 },
                 entry -> {
                     assertThat(entry.getSubjectCase()).isEqualTo(Event.SubjectCase.RUN_COMPLETED);
@@ -915,7 +916,7 @@ class WorkflowEngineImplTest {
         });
 
         engine.registerWorkflowInternal("baz", 1, voidConverter(), voidConverter(), Duration.ofSeconds(5), (ctx, arg) -> {
-            ((WorkflowContextImpl<?, ?>) ctx).callActivity("qux", null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
+            ((WorkflowContextImpl<?, ?>) ctx).callActivity("qux", DEFAULT_ACTIVITY_QUEUE_NAME, null, voidConverter(), voidConverter(), defaultRetryPolicy()).await();
             return null;
         });
 
@@ -1260,8 +1261,8 @@ class WorkflowEngineImplTest {
                     }
 
                     return currentStatus.isTerminal()
-                           && expectedStatus.isTerminal()
-                           && currentStatus != expectedStatus;
+                            && expectedStatus.isTerminal()
+                            && currentStatus != expectedStatus;
                 })
                 .until(() -> engine.getRunMetadata(runId), run -> run.status() == expectedStatus);
     }

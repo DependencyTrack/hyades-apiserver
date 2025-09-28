@@ -58,13 +58,14 @@ final class ActivityTaskManager implements TaskManager<ActivityTask> {
 
     @Override
     public List<ActivityTask> poll(final int limit) {
-        return engine.pollActivityTasks(pollCommands, limit);
+        return engine.pollActivityTasks(activityGroup.queueName(), pollCommands, limit);
     }
 
     @Override
     public void process(final ActivityTask task) {
-        try (var ignoredMdcWorkflowRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString());
-             var ignoredMdcWorkflowActivityName = MDC.putCloseable("workflowActivityName", task.activityName())) {
+        try (var ignoredMdcRunId = MDC.putCloseable("workflowRunId", task.workflowRunId().toString());
+             var ignoredMdcActivityName = MDC.putCloseable("workflowActivityName", task.activityName());
+             var ignoredMdcActivityQueueName = MDC.putCloseable("workflowActivityQueueName", task.queueName())) {
             processInternal(task);
         } catch (RuntimeException e) {
             LOGGER.error("Failed to process task; Abandoning it", e);

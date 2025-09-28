@@ -20,7 +20,7 @@ package org.dependencytrack.workflow.engine;
 
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.util.Timestamps;
-import org.dependencytrack.proto.workflow.event.v1.ActivityRunCreated;
+import org.dependencytrack.proto.workflow.event.v1.ActivityTaskCreated;
 import org.dependencytrack.proto.workflow.event.v1.ChildRunCompleted;
 import org.dependencytrack.proto.workflow.event.v1.ChildRunCreated;
 import org.dependencytrack.proto.workflow.event.v1.ChildRunFailed;
@@ -34,7 +34,7 @@ import org.dependencytrack.proto.workflow.failure.v1.Failure;
 import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ContinueRunAsNewCommand;
-import org.dependencytrack.workflow.engine.WorkflowCommand.CreateActivityRunCommand;
+import org.dependencytrack.workflow.engine.WorkflowCommand.CreateActivityTaskCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CreateChildRunCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CreateTimerCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResultCommand;
@@ -69,7 +69,7 @@ final class WorkflowRunState {
     private @Nullable String concurrencyGroupId;
     private final List<Event> eventHistory;
     private final List<Event> newEvents;
-    private final List<Event> pendingActivityRunCreatedEvents;
+    private final List<Event> pendingActivityTaskCreatedEvents;
     private final List<Event> pendingTimerElapsedEvents;
     private final List<WorkflowRunMessage> pendingMessages;
     private @Nullable Event createdEvent;
@@ -94,7 +94,7 @@ final class WorkflowRunState {
         this.id = id;
         this.eventHistory = new ArrayList<>(eventHistory.size());
         this.newEvents = new ArrayList<>();
-        this.pendingActivityRunCreatedEvents = new ArrayList<>();
+        this.pendingActivityTaskCreatedEvents = new ArrayList<>();
         this.pendingTimerElapsedEvents = new ArrayList<>();
         this.pendingMessages = new ArrayList<>();
 
@@ -130,8 +130,8 @@ final class WorkflowRunState {
         return newEvents;
     }
 
-    List<Event> pendingActivityRunCreatedEvents() {
-        return pendingActivityRunCreatedEvents;
+    List<Event> pendingActivityTaskCreatedEvents() {
+        return pendingActivityTaskCreatedEvents;
     }
 
     List<Event> pendingTimerElapsedEvents() {
@@ -297,7 +297,7 @@ final class WorkflowRunState {
             case CompleteRunCommand it -> processCompleteRunCommand(it);
             case ContinueRunAsNewCommand it -> processContinueAsNewCommand(it);
             case RecordSideEffectResultCommand it -> processRecordSideEffectResultCommand(it);
-            case CreateActivityRunCommand it -> processCreateActivityRunCommand(it);
+            case CreateActivityTaskCommand it -> processCreateActivityTaskCommand(it);
             case CreateChildRunCommand it -> processCreateChildRunCommand(it);
             case CreateTimerCommand it -> processCreateTimerCommand(it);
             default -> throw new IllegalStateException("Unexpected command: " + command);
@@ -378,7 +378,7 @@ final class WorkflowRunState {
         this.continuedAsNew = true;
         this.eventHistory.clear();
         this.newEvents.clear();
-        this.pendingActivityRunCreatedEvents.clear();
+        this.pendingActivityTaskCreatedEvents.clear();
         this.pendingTimerElapsedEvents.clear();
         this.pendingMessages.clear();
         this.pendingMessages.add(new WorkflowRunMessage(
@@ -405,10 +405,10 @@ final class WorkflowRunState {
                 .build());
     }
 
-    private void processCreateActivityRunCommand(final CreateActivityRunCommand command) {
-        final var subjectBuilder = ActivityRunCreated.newBuilder()
+    private void processCreateActivityTaskCommand(final CreateActivityTaskCommand command) {
+        final var subjectBuilder = ActivityTaskCreated.newBuilder()
                 .setName(command.name())
-                .setVersion(command.version());
+                .setQueueName(command.queueName());
         if (command.priority() != null) {
             subjectBuilder.setPriority(command.priority());
         }
@@ -419,13 +419,13 @@ final class WorkflowRunState {
             subjectBuilder.setScheduledFor(toTimestamp(command.scheduleFor()));
         }
 
-        final var activityRunCreatedEvent = Event.newBuilder()
+        final var activityTaskCreatedEvent = Event.newBuilder()
                 .setId(command.eventId())
                 .setTimestamp(Timestamps.now())
-                .setActivityRunCreated(subjectBuilder.build())
+                .setActivityTaskCreated(subjectBuilder.build())
                 .build();
-        applyEvent(activityRunCreatedEvent, /* isNew */ true);
-        pendingActivityRunCreatedEvents.add(activityRunCreatedEvent);
+        applyEvent(activityTaskCreatedEvent, /* isNew */ true);
+        pendingActivityTaskCreatedEvents.add(activityTaskCreatedEvent);
     }
 
     private void processCreateChildRunCommand(final CreateChildRunCommand command) {

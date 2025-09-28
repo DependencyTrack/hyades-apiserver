@@ -48,6 +48,7 @@ final class ActivityHandleImpl<A, R> implements ActivityHandle<A, R> {
         requireNonNull(options, "options must not be null");
         return workflowContext.callActivity(
                 this.activityName,
+                options.queueName(),
                 options.argument(),
                 this.argumentConverter,
                 this.resultConverter,

@@ -29,6 +29,7 @@ import org.dependencytrack.workflow.engine.api.event.WorkflowEngineEventListener
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowRunRequest;
 import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleRequest;
+import org.dependencytrack.workflow.engine.api.request.ListActivityTaskQueuesRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
@@ -241,5 +242,29 @@ public interface WorkflowEngine extends Closeable {
     }
 
     Page<WorkflowSchedule> listSchedules(ListWorkflowSchedulesRequest request);
+
+    /**
+     * List all activity task queues known to the engine.
+     *
+     * @param request The request.
+     * @return A {@link Page} containing {@link ActivityTaskQueue}s.
+     */
+    Page<ActivityTaskQueue> listActivityTaskQueues(ListActivityTaskQueuesRequest request);
+
+    /**
+     * Pause a given activity task queue.
+     *
+     * @param queueName Name of the queue to pause.
+     * @return {@code true} when the queue was paused, otherwise {@code false}.
+     */
+    boolean pauseActivityTaskQueue(String queueName);
+
+    /**
+     * Resume a given activity task queue.
+     *
+     * @param queueName Name of the queue to resume.
+     * @return {@code true} when the queue was resumed, otherwise {@code false}.
+     */
+    boolean resumeActivityTaskQueue(String queueName);
 
 }

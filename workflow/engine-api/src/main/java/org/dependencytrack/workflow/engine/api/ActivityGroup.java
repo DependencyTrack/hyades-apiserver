@@ -31,13 +31,15 @@ import static java.util.Objects.requireNonNull;
  *
  * @param name           Name of the group.
  * @param activityNames  Names of activities in this group.
+ * @param queueName      Name of the queue that this group consumes from.
  * @param maxConcurrency Number of activities in this group that can be executed concurrently.
  */
-public record ActivityGroup(String name, Set<String> activityNames, int maxConcurrency) {
+public record ActivityGroup(String name, Set<String> activityNames, String queueName, int maxConcurrency) {
 
     public ActivityGroup {
         requireNonNull(name, "name must not be null");
         requireNonNull(activityNames, "activityNames must not be null");
+        requireNonNull(queueName, "queueName must not be null");
         if (maxConcurrency < 1) {
             throw new IllegalArgumentException("maxConcurrency must be greater than 0");
         }
@@ -45,13 +47,13 @@ public record ActivityGroup(String name, Set<String> activityNames, int maxConcu
     }
 
     public ActivityGroup(final String name) {
-        this(name, new HashSet<>(), 1);
+        this(name, new HashSet<>(), "default", 1);
     }
 
     public ActivityGroup withActivity(final String activityName) {
         final var activityNames = new HashSet<>(this.activityNames);
         activityNames.add(activityName);
-        return new ActivityGroup(this.name, activityNames, this.maxConcurrency);
+        return new ActivityGroup(this.name, activityNames, this.queueName, this.maxConcurrency);
     }
 
     public ActivityGroup withActivity(final Class<? extends ActivityExecutor<?, ?>> executorClass) {
@@ -66,8 +68,12 @@ public record ActivityGroup(String name, Set<String> activityNames, int maxConcu
         return withActivity(activityAnnotation.name());
     }
 
+    public ActivityGroup withQueueName(final String queueName) {
+        return new ActivityGroup(this.name, this.activityNames, queueName, this.maxConcurrency);
+    }
+
     public ActivityGroup withMaxConcurrency(final int maxConcurrency) {
-        return new ActivityGroup(this.name, this.activityNames, maxConcurrency);
+        return new ActivityGroup(this.name, this.activityNames, this.queueName, maxConcurrency);
     }
 
 }
