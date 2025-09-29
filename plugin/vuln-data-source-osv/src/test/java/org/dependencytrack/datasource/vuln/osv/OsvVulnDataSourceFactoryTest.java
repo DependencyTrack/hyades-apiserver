@@ -26,26 +26,26 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.URI;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_API_TOKEN;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_API_URL;
-import static org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourceConfigs.CONFIG_ENABLED;
+import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_DATA_URL;
+import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ECOSYSTEMS;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ENABLED;
 
 class OsvVulnDataSourceFactoryTest {
 
     @Test
-    void extensionNameShouldBeGitHub() {
+    void extensionNameShouldBeOsv() {
         try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.extensionName()).isEqualTo("github");
+            assertThat(datasourceFactory.extensionName()).isEqualTo("osv");
         }
     }
 
     @Test
-    void extensionClassShouldBeGitHubVulnDataSource() {
+    void extensionClassShouldBeOsvVulnDataSource() {
         try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
             assertThat(datasourceFactory.extensionClass()).isEqualTo(OsvVulnDataSource.class);
         }
@@ -54,7 +54,7 @@ class OsvVulnDataSourceFactoryTest {
     @Test
     void priorityShouldBeZero() {
         try (final var datasourceFactory = new OsvVulnDataSourceFactory()) {
-            assertThat(datasourceFactory.priority()).isZero();
+            assertThat(datasourceFactory.priority()).isEqualTo(100);
         }
     }
 
@@ -84,10 +84,10 @@ class OsvVulnDataSourceFactoryTest {
     void createShouldReturnNullWhenDisabled() throws Exception {
         final var configRegistry = new MockConfigRegistry();
         configRegistry.setValue(CONFIG_ENABLED, false);
-        configRegistry.setValue(CONFIG_API_URL, URI.create("http://localhost:6666").toURL());
-        configRegistry.setValue(CONFIG_API_TOKEN, "apiToken");
+        configRegistry.setValue(CONFIG_DATA_URL, null);
+        configRegistry.setValue(CONFIG_ECOSYSTEMS, List.of("Go", "Maven", "npm", "NuGet", "PyPI"));
 
-        try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
+        try (final var dataSourceFactory = new OsvVulnDataSourceFactory()) {
             dataSourceFactory.init(new ExtensionContext(configRegistry));
             assertThat(dataSourceFactory.create()).isNull();
         }
@@ -97,10 +97,10 @@ class OsvVulnDataSourceFactoryTest {
     void createShouldReturnDataSource() throws Exception {
         final var configRegistry = new MockConfigRegistry();
         configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_API_URL, URI.create("http://localhost:6666").toURL());
-        configRegistry.setValue(CONFIG_API_TOKEN, "apiToken");
+        configRegistry.setValue(CONFIG_DATA_URL, URI.create("http://localhost:6666").toURL());
+        configRegistry.setValue(CONFIG_ECOSYSTEMS, List.of("Go", "Maven", "npm", "NuGet", "PyPI"));
 
-        try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
+        try (final var dataSourceFactory = new OsvVulnDataSourceFactory()) {
             dataSourceFactory.init(new ExtensionContext(configRegistry));
 
             final VulnDataSource dataSource = dataSourceFactory.create();
@@ -113,10 +113,10 @@ class OsvVulnDataSourceFactoryTest {
     void createShouldThrowWhenApiUrlIsNull() {
         final var configRegistry = new MockConfigRegistry();
         configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_API_URL, null);
-        configRegistry.setValue(CONFIG_API_TOKEN, "apiToken");
+        configRegistry.setValue(CONFIG_DATA_URL, null);
+        configRegistry.setValue(CONFIG_ECOSYSTEMS, List.of("Go", "Maven", "npm", "NuGet", "PyPI"));
 
-        try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {
+        try (final var dataSourceFactory = new OsvVulnDataSourceFactory()) {
             dataSourceFactory.init(new ExtensionContext(configRegistry));
 
             assertThatExceptionOfType(NoSuchElementException.class)

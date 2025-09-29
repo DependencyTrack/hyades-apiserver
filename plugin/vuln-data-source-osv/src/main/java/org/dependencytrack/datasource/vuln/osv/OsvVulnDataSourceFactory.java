@@ -37,7 +37,7 @@ import java.util.SequencedCollection;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_DATA_URL;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ECOSYSTEMS;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ENABLED;
-import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_WATERMARK;
+import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_WATERMARKS;
 
 /**
  * @since 5.7.0
@@ -71,7 +71,7 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
                 CONFIG_ENABLED,
                 CONFIG_DATA_URL,
                 CONFIG_ECOSYSTEMS,
-                CONFIG_WATERMARK);
+                CONFIG_WATERMARKS);
     }
 
     @Override

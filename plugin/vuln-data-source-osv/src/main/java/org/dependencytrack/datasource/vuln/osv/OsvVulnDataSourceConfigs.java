@@ -24,7 +24,6 @@ import org.dependencytrack.plugin.api.config.RuntimeConfigDefinition;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -35,7 +34,7 @@ final class OsvVulnDataSourceConfigs {
     static final RuntimeConfigDefinition<Boolean> CONFIG_ENABLED;
     static final RuntimeConfigDefinition<URL> CONFIG_DATA_URL;
     static final RuntimeConfigDefinition<List<String>> CONFIG_ECOSYSTEMS;
-    static final RuntimeConfigDefinition<Instant> CONFIG_WATERMARK;
+    static final RuntimeConfigDefinition<String> CONFIG_WATERMARKS;
 
     static {
         final URL dataUrl;
@@ -46,32 +45,13 @@ final class OsvVulnDataSourceConfigs {
         }
 
         CONFIG_ENABLED = new RuntimeConfigDefinition<>(
-                "enabled",
-                "Whether the OSV data source should be enabled",
-                ConfigTypes.BOOLEAN,
-                false,
-                false,
-                false);
+                "enabled", "Whether the OSV data source should be enabled", ConfigTypes.BOOLEAN, true, false, false);
         CONFIG_DATA_URL = new RuntimeConfigDefinition<>(
-                "data.url",
-                "Base URL for OSV",
-                ConfigTypes.URL, dataUrl,
-                true,
-                false);
+                "data.url", "Data URL of OSV", ConfigTypes.URL, dataUrl, true, false);
         CONFIG_ECOSYSTEMS = new RuntimeConfigDefinition<>(
-                "ecosystems",
-                "List of OSV ecosystems to mirror",
-                ConfigTypes.STRING_LIST,
-                List.of("Go", "Maven", "npm", "NuGet", "PyPI"),
-                false,
-                false);
-        CONFIG_WATERMARK = new RuntimeConfigDefinition<>(
-                "watermark",
-                "Highest observed modification timestamp of processed vulnerabilities",
-                ConfigTypes.INSTANT,
-                /* defaultValue */ null,
-                /* isRequired */ false,
-                /* isSecret */ false);
+                "ecosystems", "List of ecosystems", ConfigTypes.STRING_LIST, List.of("Go", "Maven", "npm", "NuGet", "PyPI"), false, false);
+        CONFIG_WATERMARKS = new RuntimeConfigDefinition<>(
+                "watermarks", "Serialised form of Highest observed modification timestamps of processed vulnerabilities for all ecosystems", ConfigTypes.STRING, null, false, false);
     }
 
     private OsvVulnDataSourceConfigs() {

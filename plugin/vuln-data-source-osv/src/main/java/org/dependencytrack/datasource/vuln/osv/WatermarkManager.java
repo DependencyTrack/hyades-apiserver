@@ -71,6 +71,12 @@ final class WatermarkManager {
         return committedWatermarkByEcosystem.get(ecosystem);
     }
 
+    long getWatermarksCount() {
+        return configRegistry.getOptionalValue(CONFIG_WATERMARKS)
+                .map(value -> deserializeWatermarks(objectMapper, value).size())
+                .orElse(0);
+    }
+
     void maybeAdvance(final String ecosystem, final Instant watermark) {
         pendingWatermarkByEcosystem.compute(ecosystem, (ignored, oldWatermark) -> {
             if (oldWatermark != null && oldWatermark.isAfter(watermark)) {

@@ -18,115 +18,80 @@
  */
 package org.dependencytrack.datasource.vuln.osv;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.dependencytrack.plugin.api.config.ConfigRegistry;
 import org.dependencytrack.plugin.api.config.MockConfigRegistry;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_WATERMARKS;
 
 class WatermarkManagerTest {
 
+    private static ConfigRegistry configRegistry;
+    private static ObjectMapper mapper;
+
+    @BeforeAll
+    static void beforeClass() {
+        configRegistry = new MockConfigRegistry();
+        mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    }
+
     @Test
-    void createShouldInitializeWatermarkWhenAvailable() {
-        final var watermark = Instant.ofEpochSecond(666);
+    void createShouldInitializeWatermarkWhenAvailable() throws Exception {
+        final var watermarks = Map.of("maven", Instant.ofEpochSecond(666),
+                "npm", Instant.ofEpochSecond(555));
 
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARKS, watermark);
+        configRegistry.setValue(CONFIG_WATERMARKS, mapper.writeValueAsString(watermarks));
 
-        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), configRegistry);
+        final var watermarkManager = WatermarkManager.create(configRegistry, mapper);
         assertThat(watermarkManager).isNotNull();
-        assertThat(watermarkManager.getWatermark()).isEqualTo(watermark);
+        assertThat(watermarkManager.getWatermarksCount()).isEqualTo(2);
+        assertThat(watermarkManager.getWatermark("maven")).isEqualTo(Instant.ofEpochSecond(666));
+        assertThat(watermarkManager.getWatermark("npm")).isEqualTo(Instant.ofEpochSecond(555));
     }
 
     @Test
     void createShouldNotInitializeWatermarkWhenNotAvailable() {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARK, null);
+        configRegistry.setValue(CONFIG_WATERMARKS, null);
 
-        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), configRegistry);
+        final var watermarkManager = WatermarkManager.create(configRegistry, mapper);
         assertThat(watermarkManager).isNotNull();
-        assertThat(watermarkManager.getWatermark()).isNull();
+        assertThat(watermarkManager.getWatermarksCount()).isZero();
     }
 
     @Test
     void shouldAdvanceWatermarkWhenInitialWatermarkIsNull() {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARK, null);
+        configRegistry.setValue(CONFIG_WATERMARKS, null);
 
-        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), configRegistry);
+        final var watermarkManager = WatermarkManager.create(configRegistry, mapper);
 
-        watermarkManager.maybeAdvance(Instant.ofEpochSecond(666));
-        assertThat(watermarkManager.getWatermark()).isNull();
+        watermarkManager.maybeAdvance("maven", Instant.ofEpochSecond(666));
+        assertThat(watermarkManager.getWatermarksCount()).isZero();
 
-        watermarkManager.maybeCommit(true);
-        assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(666));
+        watermarkManager.maybeCommit(List.of("maven"));
+        assertThat(watermarkManager.getWatermarksCount()).isEqualTo(1);
+        assertThat(watermarkManager.getWatermark("maven")).isEqualTo(Instant.ofEpochSecond(666));
     }
 
     @Test
-    void shouldAdvanceWatermarkWhenInitialWatermarkIsEarlier() {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARK, Instant.ofEpochSecond(666));
+    void shouldAdvanceWatermarkWhenInitialWatermarkIsEarlier() throws Exception {
+        final var watermarks = Map.of("maven", Instant.ofEpochSecond(666));
 
-        final var watermarkManager = WatermarkManager.create(Clock.systemUTC(), configRegistry);
+        configRegistry.setValue(CONFIG_WATERMARKS, mapper.writeValueAsString(watermarks));
 
-        watermarkManager.maybeAdvance(Instant.ofEpochSecond(667));
-        assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(666));
+        final var watermarkManager = WatermarkManager.create(configRegistry, mapper);
 
-        watermarkManager.maybeCommit(true);
-        assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(667));
+        watermarkManager.maybeAdvance("maven", Instant.ofEpochSecond(667));
+        assertThat(watermarkManager.getWatermark("maven")).isEqualTo(Instant.ofEpochSecond(666));
+
+        watermarkManager.maybeCommit(List.of("maven"));
+        assertThat(watermarkManager.getWatermark("maven")).isEqualTo(Instant.ofEpochSecond(667));
     }
-
-    @Test
-    void maybeCommitShouldNotCommitWhenLastCommitWasLessThanThreeSecondsBack() {
-        final var configRegistry = new MockConfigRegistry();
-        configRegistry.setValue(CONFIG_WATERMARK, Instant.ofEpochSecond(111));
-
-        final var clock = new MutableClock(Instant.ofEpochSecond(666));
-        final var watermarkManager = WatermarkManager.create(clock, configRegistry);
-
-        watermarkManager.maybeAdvance(Instant.ofEpochSecond(222));
-        assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(111));
-
-        watermarkManager.maybeCommit(false);
-        assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(111));
-
-        clock.advance(Duration.ofSeconds(3));
-        watermarkManager.maybeCommit(false);
-        assertThat(watermarkManager.getWatermark()).isEqualTo(Instant.ofEpochSecond(222));
-    }
-
-    private static class MutableClock extends Clock {
-
-        private Instant currentInstant;
-
-        private MutableClock(final Instant initialInstant) {
-            this.currentInstant = initialInstant;
-        }
-
-        private void advance(final Duration duration) {
-            currentInstant = currentInstant.plus(duration);
-        }
-
-        @Override
-        public ZoneId getZone() {
-            return Clock.systemUTC().getZone();
-        }
-
-        @Override
-        public Clock withZone(final ZoneId zone) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Instant instant() {
-            return currentInstant;
-        }
-
-    }
-
 }
