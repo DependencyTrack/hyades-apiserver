@@ -21,14 +21,13 @@ package org.dependencytrack.datasource.vuln.osv;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.protobuf.util.JsonFormat;
-import io.github.jeremylong.openvulnerability.client.ghsa.GitHubSecurityAdvisoryClient;
-import io.github.jeremylong.openvulnerability.client.ghsa.SecurityAdvisory;
 import net.javacrumbs.jsonunit.core.Option;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.net.http.HttpClient;
 import java.time.Instant;
 import java.util.List;
 
@@ -41,16 +40,16 @@ import static org.mockito.Mockito.when;
 
 class OsvVulnDataSourceTest {
 
-    private GitHubSecurityAdvisoryClient advisoryClientMock;
     private WatermarkManager watermarkManagerMock;
-    private GitHubVulnDataSource vulnDataSource;
+    private OsvVulnDataSource vulnDataSource;
     private ObjectMapper objectMapper;
+    private HttpClient httpClientMock;
 
     @BeforeEach
-    void beforeEach() {
-        advisoryClientMock = mock(GitHubSecurityAdvisoryClient.class);
+    void beforeEach() throws Exception {
         watermarkManagerMock = mock(WatermarkManager.class);
-        vulnDataSource = new GitHubVulnDataSource(watermarkManagerMock, advisoryClientMock, true);
+        httpClientMock = mock(HttpClient.class);
+        vulnDataSource = new OsvVulnDataSource(watermarkManagerMock, objectMapper, , List.of("maven"), false);
         objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule());
     }
@@ -150,5 +149,6 @@ class OsvVulnDataSourceTest {
         verify(watermarkManagerMock).maybeAdvance(eq(Instant.parse("2021-12-03T14:54:43Z")));
         verify(watermarkManagerMock).maybeCommit(eq(false));
     }
+
 
 }

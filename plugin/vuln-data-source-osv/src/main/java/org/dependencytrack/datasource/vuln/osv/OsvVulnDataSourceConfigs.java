@@ -35,6 +35,7 @@ final class OsvVulnDataSourceConfigs {
     static final RuntimeConfigDefinition<URL> CONFIG_DATA_URL;
     static final RuntimeConfigDefinition<List<String>> CONFIG_ECOSYSTEMS;
     static final RuntimeConfigDefinition<String> CONFIG_WATERMARKS;
+    static final RuntimeConfigDefinition<Boolean> CONFIG_ALIAS_SYNC_ENABLED;
 
     static {
         final URL dataUrl;
@@ -45,13 +46,40 @@ final class OsvVulnDataSourceConfigs {
         }
 
         CONFIG_ENABLED = new RuntimeConfigDefinition<>(
-                "enabled", "Whether the OSV data source should be enabled", ConfigTypes.BOOLEAN, true, false, false);
+                "enabled",
+                "Whether the OSV data source should be enabled",
+                ConfigTypes.BOOLEAN,
+                true,
+                false,
+                false);
         CONFIG_DATA_URL = new RuntimeConfigDefinition<>(
-                "data.url", "Data URL of OSV", ConfigTypes.URL, dataUrl, true, false);
+                "data.url",
+                "Data URL of OSV",
+                ConfigTypes.URL,
+                dataUrl,
+                true,
+                false);
         CONFIG_ECOSYSTEMS = new RuntimeConfigDefinition<>(
-                "ecosystems", "List of ecosystems", ConfigTypes.STRING_LIST, List.of("Go", "Maven", "npm", "NuGet", "PyPI"), false, false);
+                "ecosystems",
+                "List of ecosystems",
+                ConfigTypes.STRING_LIST,
+                List.of("Go", "Maven", "npm", "NuGet", "PyPI"),
+                false,
+                false);
         CONFIG_WATERMARKS = new RuntimeConfigDefinition<>(
-                "watermarks", "Serialised form of Highest observed modification timestamps of processed vulnerabilities for all ecosystems", ConfigTypes.STRING, null, false, false);
+                "watermarks",
+                "Serialised form of Highest observed modification timestamps of processed vulnerabilities for all ecosystems",
+                ConfigTypes.STRING,
+                null,
+                false,
+                false);
+        CONFIG_ALIAS_SYNC_ENABLED =  new RuntimeConfigDefinition<>(
+                "alias.sync.enabled",
+                "Whether to include alias information in vulnerability data",
+                ConfigTypes.BOOLEAN,
+                /* defaultValue */ false,
+                /* isRequired */ false,
+                /* isSecret */ false);
     }
 
     private OsvVulnDataSourceConfigs() {

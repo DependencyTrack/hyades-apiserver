@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.SequencedCollection;
 
+import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ALIAS_SYNC_ENABLED;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_DATA_URL;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ECOSYSTEMS;
 import static org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourceConfigs.CONFIG_ENABLED;
@@ -71,7 +72,8 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
                 CONFIG_ENABLED,
                 CONFIG_DATA_URL,
                 CONFIG_ECOSYSTEMS,
-                CONFIG_WATERMARKS);
+                CONFIG_WATERMARKS,
+                CONFIG_ALIAS_SYNC_ENABLED);
     }
 
     @Override
@@ -101,8 +103,9 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
                 .getOptionalValue(CONFIG_ECOSYSTEMS)
                 .orElseGet(Collections::emptyList);
         final var watermarkManager = WatermarkManager.create(configRegistry, objectMapper);
+        final boolean isAliasSyncEnabled = this.configRegistry.getOptionalValue(CONFIG_ALIAS_SYNC_ENABLED).orElse(false);
 
-        return new OsvVulnDataSource(watermarkManager, objectMapper, dataUrl, ecosystems);
+        return new OsvVulnDataSource(watermarkManager, objectMapper, dataUrl, ecosystems, isAliasSyncEnabled);
     }
 
     @Override

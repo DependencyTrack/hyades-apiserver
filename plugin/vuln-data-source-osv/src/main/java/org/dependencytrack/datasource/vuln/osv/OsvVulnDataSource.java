@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.util.Timestamps;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Property;
-import org.cyclonedx.proto.v1_6.Source;
 import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.dependencytrack.datasource.vuln.osv.schema.OsvSchema;
 import org.dependencytrack.plugin.api.datasource.vuln.VulnDataSource;
@@ -78,16 +77,19 @@ final class OsvVulnDataSource implements VulnDataSource {
     private Iterator<Path> currentEcosystemFileIterator;
     private boolean hasNextCalled;
     private Bom nextItem;
+    private final boolean isAliasSyncEnabled;
 
     OsvVulnDataSource(
             final WatermarkManager watermarkManager,
             final ObjectMapper objectMapper,
             final URL dataUrl,
-            final List<String> ecosystems) {
+            final List<String> ecosystems,
+            final boolean isAliasSyncEnabled) {
         this.watermarkManager = watermarkManager;
         this.objectMapper = objectMapper;
         this.dataUrl = dataUrl;
         this.ecosystems = ecosystems;
+        this.isAliasSyncEnabled = isAliasSyncEnabled;
         this.successfullyCompletedEcosystems = new HashSet<>();
         this.httpClient = HttpClient.newHttpClient();
     }
@@ -182,28 +184,14 @@ final class OsvVulnDataSource implements VulnDataSource {
         }
 
         final Path filePath = currentEcosystemFileIterator.next();
-        final OsvSchema schema;
+        final OsvSchema schemaInput;
         try {
-            schema = objectMapper.readValue(filePath.toFile(), OsvSchema.class);
+            schemaInput = objectMapper.readValue(filePath.toFile(), OsvSchema.class);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to read OSV advisory", e);
         }
 
-        // TODO: Port conversion logic from hyades codebase.
-        return Bom.newBuilder()
-                .addVulnerabilities(
-                        Vulnerability.newBuilder()
-                                .setId(schema.getId())
-                                .setSource(Source.newBuilder().setName("NVD").build()) // TODO: Just for testing.
-                                .setUpdated(Timestamps.fromDate(schema.getModified()))
-                                .setPublished(Timestamps.fromDate(schema.getPublished()))
-                                .addProperties(
-                                        Property.newBuilder()
-                                                .setName(PROPERTY_OSV_ECOSYSTEM)
-                                                .setValue(currentEcosystem)
-                                                .build())
-                                .build())
-                .build();
+        return ModelConverter.convert(schemaInput, isAliasSyncEnabled);
     }
 
     private boolean openNextEcosystem() {
