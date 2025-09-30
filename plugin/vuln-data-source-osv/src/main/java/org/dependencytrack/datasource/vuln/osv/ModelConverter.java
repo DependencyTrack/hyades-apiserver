@@ -79,7 +79,6 @@ import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_LOW;
 import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_MEDIUM;
 import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_NONE;
 import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_UNKNOWN;
-import static org.dependencytrack.util.VulnerabilityUtil.normalizedCvssV2Score;
 
 /**
  * @since 5.7.0
@@ -91,19 +90,18 @@ final class ModelConverter {
     private static final Pattern WILDCARD_VERS_PATTERN = Pattern.compile("^vers:\\w+/\\*$");
     private static final String TITLE_PROPERTY_NAME = "dependency-track:vuln:title";
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    static Bom.Builder cyclonedxBom = Bom.newBuilder();
 
     static Bom convert(final OsvSchema schemaInput, final boolean isAliasSyncEnabled) {
         if (schemaInput.getWithdrawn() != null) {
             return null;
         }
-
+        Bom.Builder cyclonedxBom = Bom.newBuilder();
         return cyclonedxBom
-                .addVulnerabilities(extractVulnerability(schemaInput, isAliasSyncEnabled))
+                .addVulnerabilities(extractVulnerability(schemaInput, isAliasSyncEnabled, cyclonedxBom))
                 .build();
     }
 
-    private static Vulnerability extractVulnerability(final OsvSchema schemaInput, final boolean isAliasSyncEnabled) {
+    private static Vulnerability extractVulnerability(final OsvSchema schemaInput, final boolean isAliasSyncEnabled, Bom.Builder cyclonedxBom) {
         Vulnerability.Builder vulnerability = Vulnerability.newBuilder();
         var severity = SEVERITY_UNKNOWN;
 
@@ -161,7 +159,7 @@ final class ModelConverter {
         return vulnerability.build();
     }
 
-    private static String trimSummary(String summary) {
+    static String trimSummary(String summary) {
         int MAX_LEN = 255;
         if (summary != null && summary.length() > 255) {
             return StringUtils.substring(summary, 0, MAX_LEN - 2) + "..";
@@ -247,7 +245,7 @@ final class ModelConverter {
     }
 
     private static VulnerabilityCredits mapCredits(List<Credit> credits) {
-        if (credits == null) {
+        if (credits == null || credits.isEmpty()) {
             return null;
         }
         var vulnerabilityCredits = VulnerabilityCredits.newBuilder();
@@ -257,7 +255,9 @@ final class ModelConverter {
             orgContact.setName(credit.getName());
             if (credit.getContact() != null) {
                 String contactLink = String.join(";", credit.getContact());
-                orgContact.setEmail(contactLink);
+                if (!contactLink.isEmpty()) {
+                    orgContact.setEmail(contactLink);
+                }
             }
             creditArray.add(orgContact.build());
         });
@@ -466,11 +466,23 @@ final class ModelConverter {
         }
     }
 
+    public static Severity normalizedCvssV2Score(final double score) {
+        if (score >= 7) {
+            return SEVERITY_HIGH;
+        } else if (score >= 4) {
+            return SEVERITY_MEDIUM;
+        } else if (score > 0) {
+            return SEVERITY_LOW;
+        } else {
+            return SEVERITY_UNKNOWN;
+        }
+    }
+
     private static List<VulnerabilityRating> parseCvssRatings(OsvSchema osvSchema, Severity severity) {
         List<VulnerabilityRating> ratings = new ArrayList<>();
         final List<org.dependencytrack.datasource.vuln.osv.schema.Severity> cvssList = osvSchema.getSeverity();
 
-        if (cvssList == null) {
+        if (cvssList == null || cvssList.isEmpty()) {
             var rating = VulnerabilityRating.newBuilder()
                     .setSeverity(severity).build();
             ratings.add(rating);
@@ -500,15 +512,15 @@ final class ModelConverter {
             switch (cvss) {
                 case CvssV3_1 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV31);
-                    rating.setSeverity(mapSeverity(String.valueOf(normalizedCvssV3Score(score))));
+                    rating.setSeverity(normalizedCvssV3Score(score));
                 }
                 case CvssV3 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV3);
-                    rating.setSeverity(mapSeverity(String.valueOf(normalizedCvssV3Score(score))));
+                    rating.setSeverity(normalizedCvssV3Score(score));
                 }
                 case CvssV2 ignored -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_CVSSV2);
-                    rating.setSeverity(mapSeverity(String.valueOf(normalizedCvssV2Score(score))));
+                    rating.setSeverity(normalizedCvssV2Score(score));
                 }
                 default -> {
                     rating.setMethod(ScoreMethod.SCORE_METHOD_OTHER);
@@ -520,5 +532,4 @@ final class ModelConverter {
         });
         return ratings;
     }
-
 }
