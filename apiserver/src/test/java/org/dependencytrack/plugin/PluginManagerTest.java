@@ -24,6 +24,7 @@ import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourcePlugin;
 import org.dependencytrack.datasource.vuln.nvd.NvdVulnDataSourcePlugin;
+import org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourcePlugin;
 import org.dependencytrack.filestorage.FileStoragePlugin;
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
@@ -61,7 +62,8 @@ public class PluginManagerTest extends PersistenceCapableTest {
                 plugin -> assertThat(plugin).isOfAnyClassIn(DummyPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(FileStoragePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(GitHubVulnDataSourcePlugin.class),
-                plugin -> assertThat(plugin).isInstanceOf(NvdVulnDataSourcePlugin.class));
+                plugin -> assertThat(plugin).isInstanceOf(NvdVulnDataSourcePlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(OsvVulnDataSourcePlugin.class));
         assertThat(loadedPlugins).isUnmodifiable();
     }
 
