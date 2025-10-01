@@ -49,7 +49,7 @@ final class OsvVulnDataSourceConfigs {
                 "enabled",
                 "Whether the OSV data source should be enabled",
                 ConfigTypes.BOOLEAN,
-                true,
+                false,
                 false,
                 false);
         CONFIG_DATA_URL = new RuntimeConfigDefinition<>(
