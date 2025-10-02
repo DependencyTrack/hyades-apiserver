@@ -128,18 +128,42 @@ public sealed interface ConfigType<T> {
 
     }
 
-    record StringList() implements ConfigType<List<java.lang.String>> {
+    record StringList(java.util.Set<java.lang.String> allowedValues) implements ConfigType<List<java.lang.String>> {
 
         @Override
         public List<java.lang.String> fromString(final java.lang.String value) {
-            return value != null
-                    ? Arrays.stream(value.split(",")).map(java.lang.String::trim).toList()
-                    : null;
+            if (value == null) {
+                return null;
+            }
+
+            return Arrays.stream(value.split(","))
+                    .map(java.lang.String::trim)
+                    .peek(v -> {
+                        if (allowedValues != null && !allowedValues.contains(v)) {
+                            throw new IllegalArgumentException(
+                                    "Invalid value: " + v + ". Allowed values are: " + allowedValues
+                            );
+                        }
+                    })
+                    .toList();
         }
 
         @Override
         public java.lang.String toString(final List<java.lang.String> value) {
-            return value != null ? java.lang.String.join(",", value) : null;
+            if (value == null) {
+                return null;
+            }
+            if (allowedValues != null) {
+                for (java.lang.String v : value) {
+                    if (!allowedValues.contains(v)) {
+                        throw new IllegalArgumentException(
+                                "Invalid value: " + v + ". Allowed values are: " + allowedValues
+                        );
+                    }
+                }
+            }
+
+            return java.lang.String.join(",", value);
         }
 
     }

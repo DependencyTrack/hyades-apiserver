@@ -57,7 +57,7 @@ public class ModelConverterTest {
                 .isEqualTo("""
                         {
                             "components": [{
-                              "bomRef": "1697132c-6230-5a5c-938d-f918e9c67279",
+                              "bomRef": "${json-unit.any-string}",
                               "name": "org.springframework.security.oauth:spring-security-oauth",
                               "purl": "pkg:maven/org.springframework.security.oauth/spring-security-oauth"
                             }],
@@ -90,7 +90,7 @@ public class ModelConverterTest {
                                 }]
                               },
                               "affects": [{
-                                "ref": "1697132c-6230-5a5c-938d-f918e9c67279",
+                                "ref": "${json-unit.any-string}",
                                 "versions": [{
                                   "range": "vers:maven/>=0|<2.0.17"
                                 }]
@@ -136,11 +136,11 @@ public class ModelConverterTest {
                 .isEqualTo("""
                         {
                            "components": [{
-                             "bomRef": "5db9b99f-8362-5c69-bddb-5c9258f8d93e",
+                             "bomRef": "${json-unit.any-string}",
                              "name": "org.springframework.security.oauth:spring-security-oauth2",
                              "purl": "pkg:maven/org.springframework.security.oauth/spring-security-oauth2"
                            }, {
-                             "bomRef": "1697132c-6230-5a5c-938d-f918e9c67279",
+                             "bomRef": "${json-unit.any-string}",
                              "name": "org.springframework.security.oauth:spring-security-oauth",
                              "purl": "pkg:maven/org.springframework.security.oauth/spring-security-oauth"
                            }],
@@ -156,40 +156,40 @@ public class ModelConverterTest {
                              "published": "2022-01-09T02:46:05Z",
                              "updated": "2022-01-09T11:37:01Z",
                              "affects": [{
-                                "ref": "5db9b99f-8362-5c69-bddb-5c9258f8d93e",
+                                "ref": "${json-unit.any-string}",
                                 "versions": [
                                     {"version": "1.0.0.RELEASE"},
                                     {"version": "1.0.1.RELEASE"}
                                 ]
                              }, {
-                               "ref": "1697132c-6230-5a5c-938d-f918e9c67279",
+                               "ref": "${json-unit.any-string}",
                                "versions": [
                                     { "range": "vers:maven/>=0|<2.0.17" }
                                 ]
                              }, {
-                               "ref": "1697132c-6230-5a5c-938d-f918e9c67279",
+                               "ref": "${json-unit.any-string}",
                                "versions": [
                                     { "range": "vers:maven/>=1|<2|>=3|<4"}, 
                                     { "range":"vers:maven/>=0|<1" }
                                ]
                              }, {
-                                "ref": "1697132c-6230-5a5c-938d-f918e9c67279",
+                                "ref": "${json-unit.any-string}",
                                 "versions": [
                                     {"version":"1.0.0.RELEASE"}, 
                                     {"version":"2.0.9.RELEASE"}
                                 ]
                              }, {
-                               "ref": "1697132c-6230-5a5c-938d-f918e9c67279",
+                               "ref": "${json-unit.any-string}",
                                "versions": [{
                                  "range": "vers:maven/>=3.1.0|<3.3.0"
                                }]
                              }, {
-                               "ref": "1697132c-6230-5a5c-938d-f918e9c67279",
+                               "ref": "${json-unit.any-string}",
                                "versions": [{
                                  "range": "vers:maven/>=10|<13"
                                }]
                              }, {
-                               "ref": "1697132c-6230-5a5c-938d-f918e9c67279",
+                               "ref": "${json-unit.any-string}",
                                "versions": [
                                 { "range": "vers:maven/>=10|<=29.0" }
                                ]
@@ -270,7 +270,7 @@ public class ModelConverterTest {
                 .isEqualTo("""
                         {
                            "components": [{
-                             "bomRef": "0b2df828-6b6c-554d-a0a5-70b7bfa9c7ea",
+                             "bomRef": "${json-unit.any-string}",
                              "name": "radare2",
                              "purl": "pkg:generic/radare2"
                            }],
@@ -289,7 +289,7 @@ public class ModelConverterTest {
                              "published": "2022-06-19T00:00:52Z",
                              "updated": "2022-06-19T00:00:52Z",
                              "affects": [{
-                               "ref": "0b2df828-6b6c-554d-a0a5-70b7bfa9c7ea",
+                               "ref": "${json-unit.any-string}",
                                "versions": [{
                                  "version": "5.4.0-git"
                                }, {
@@ -321,7 +321,7 @@ public class ModelConverterTest {
                         {
                           "components": [
                             {
-                              "bomRef": "c344ac2f-bbd6-5884-96eb-9aa2e4f73c9f",
+                              "bomRef": "${json-unit.any-string}",
                               "name": "k8s.io/kubernetes",
                               "purl": "pkg:golang/k8s.io/kubernetes"
                             }
@@ -339,7 +339,7 @@ public class ModelConverterTest {
                               ],
                               "affects": [
                                 {
-                                  "ref": "c344ac2f-bbd6-5884-96eb-9aa2e4f73c9f",
+                                  "ref": "${json-unit.any-string}",
                                   "versions": [
                                     {
                                       "range": "vers:golang/>=0|<1.18.18"
@@ -368,7 +368,7 @@ public class ModelConverterTest {
                         {
                           "components": [
                             {
-                              "bomRef": "41c6bd3e-0f2d-5e64-bf6e-60e9648766ce",
+                              "bomRef": "${json-unit.any-string}",
                               "name": "github.com/blevesearch/bleve",
                               "purl": "pkg:golang/github.com/blevesearch/bleve"
                             }
@@ -386,7 +386,7 @@ public class ModelConverterTest {
                               ],
                               "affects": [
                                 {
-                                  "ref": "41c6bd3e-0f2d-5e64-bf6e-60e9648766ce",
+                                  "ref": "${json-unit.any-string}",
                                   "versions": [
                                     {
                                       "range": "vers:golang/>=0"
@@ -415,7 +415,7 @@ public class ModelConverterTest {
                         {
                           "components": [
                             {
-                              "bomRef": "fecdf35f-ecf3-53bc-8092-957aed047cb5",
+                              "bomRef": "${json-unit.any-string}",
                               "name": "yandex-yt-yson-bindings",
                               "purl": "pkg:npm/yandex-yt-yson-bindings"
                             }
@@ -433,7 +433,7 @@ public class ModelConverterTest {
                               ],
                               "affects": [
                                 {
-                                  "ref": "fecdf35f-ecf3-53bc-8092-957aed047cb5",
+                                  "ref": "${json-unit.any-string}",
                                   "versions": [
                                     {
                                       "version":"103.99.99"
@@ -462,7 +462,7 @@ public class ModelConverterTest {
                         {
                           "components": [
                             {
-                              "bomRef": "3ebcee89-c618-50f3-9123-b2d46d76c360",
+                              "bomRef": "${json-unit.any-string}",
                               "name": "github.com/argoproj/argo-cd",
                               "purl": "pkg:golang/github.com/argoproj/argo-cd"
                             }
@@ -480,7 +480,7 @@ public class ModelConverterTest {
                               ],
                               "affects": [
                                 {
-                                  "ref": "3ebcee89-c618-50f3-9123-b2d46d76c360",
+                                  "ref": "${json-unit.any-string}",
                                   "versions": [
                                     {
                                       "range": "vers:golang/>=1.0.0|<2.1.16"

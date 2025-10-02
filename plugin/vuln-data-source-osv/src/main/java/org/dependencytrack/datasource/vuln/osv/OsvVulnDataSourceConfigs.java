@@ -62,7 +62,7 @@ final class OsvVulnDataSourceConfigs {
         CONFIG_ECOSYSTEMS = new RuntimeConfigDefinition<>(
                 "ecosystems",
                 "List of ecosystems",
-                ConfigTypes.STRING_LIST,
+                ConfigTypes.STRING_LIST(OsvEcosystem.getOsvEcosystems()),
                 List.of("Go", "Maven", "npm", "NuGet", "PyPI"),
                 false,
                 false);

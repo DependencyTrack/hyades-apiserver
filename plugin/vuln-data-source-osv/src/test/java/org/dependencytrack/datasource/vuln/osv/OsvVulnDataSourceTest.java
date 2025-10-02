@@ -28,12 +28,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.URL;
+import java.net.http.HttpClient;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -57,12 +58,13 @@ class OsvVulnDataSourceTest {
                 objectMapper,
                 url,
                 List.of("maven"),
+                mock(HttpClient.class),
                 false
         );
     }
 
     @Test
-    void markProcessed_shouldAdvanceWatermark() {
+    void testAdvanceWatermarkWhenProcessed() {
         Instant updatedAt = Instant.parse("2024-01-01T12:00:00Z");
 
         Bom bom = Bom.newBuilder()
@@ -80,7 +82,7 @@ class OsvVulnDataSourceTest {
     }
 
     @Test
-    void markProcessed_shouldThrowWhenMultipleVulns() {
+    void testExceptionWithMultipleVulns() {
         Vulnerability v1 = Vulnerability.newBuilder().build();
         Vulnerability v2 = Vulnerability.newBuilder().build();
 
@@ -95,7 +97,7 @@ class OsvVulnDataSourceTest {
     }
 
     @Test
-    void markProcessed_shouldThrowWhenMissingEcosystem() {
+    void testExceptionWhenMissingEcosystem() {
         Instant updatedAt = Instant.parse("2024-01-01T12:00:00Z");
 
         Vulnerability vuln = Vulnerability.newBuilder()
@@ -106,11 +108,12 @@ class OsvVulnDataSourceTest {
                 .addVulnerabilities(vuln)
                 .build();
 
-        assertThrows(IllegalArgumentException.class, () -> vulnDataSource.markProcessed(bom));
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> vulnDataSource.markProcessed(bom));
     }
 
     @Test
-    void markProcessed_shouldThrowWhenMissingUpdated() {
+    void testExceptionWhenMissingUpdated() {
         Vulnerability vuln = Vulnerability.newBuilder()
                 .addProperties(Property.newBuilder()
                         .setName(CycloneDxPropertyNames.PROPERTY_OSV_ECOSYSTEM)
@@ -121,11 +124,12 @@ class OsvVulnDataSourceTest {
                 .addVulnerabilities(vuln)
                 .build();
 
-        assertThrows(IllegalArgumentException.class, () -> vulnDataSource.markProcessed(bom));
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> vulnDataSource.markProcessed(bom));
     }
 
     @Test
-    void close_shouldCommitCompletedEcosystems() {
+    void testCloseWithCompletedEcosystems() {
         vulnDataSource.close();
         verify(watermarkManagerMock).maybeCommit(any(Set.class));
     }

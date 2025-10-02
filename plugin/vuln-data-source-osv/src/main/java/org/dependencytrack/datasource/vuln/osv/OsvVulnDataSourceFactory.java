@@ -105,7 +105,7 @@ final class OsvVulnDataSourceFactory implements VulnDataSourceFactory {
         final var watermarkManager = WatermarkManager.create(configRegistry, objectMapper);
         final boolean isAliasSyncEnabled = this.configRegistry.getOptionalValue(CONFIG_ALIAS_SYNC_ENABLED).orElse(false);
 
-        return new OsvVulnDataSource(watermarkManager, objectMapper, dataUrl, ecosystems, isAliasSyncEnabled);
+        return new OsvVulnDataSource(watermarkManager, objectMapper, dataUrl, ecosystems, httpClient, isAliasSyncEnabled);
     }
 
     @Override

@@ -20,7 +20,6 @@ package org.dependencytrack.datasource.vuln.osv;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.uuid.Generators;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import com.google.protobuf.Timestamp;
@@ -58,6 +57,7 @@ import us.springett.cvss.CvssV3_1;
 import us.springett.cvss.MalformedVectorException;
 import us.springett.cvss.Score;
 
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -328,7 +328,7 @@ final class ModelConverter {
     }
 
     private static Component createNewComponentWithPurl(Package packageObj, String purl) {
-        UUID uuid = Generators.nameBasedGenerator(UUID_V5_NAMESPACE).generate(purl);
+        UUID uuid = UUID.nameUUIDFromBytes((purl).getBytes(StandardCharsets.UTF_8));
         Component.Builder component = Component.newBuilder().setBomRef(uuid.toString());
         Optional.ofNullable(packageObj.getName()).ifPresent(component::setName);
         Optional.ofNullable(purl).ifPresent(component::setPurl);

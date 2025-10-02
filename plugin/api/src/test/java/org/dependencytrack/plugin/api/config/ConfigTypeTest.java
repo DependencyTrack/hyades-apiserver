@@ -31,6 +31,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -271,8 +272,17 @@ class ConfigTypeTest {
         @ParameterizedTest
         @MethodSource("fromStringShouldReturnCorrectValueArguments")
         void fromStringShouldReturnCorrectValue(final String inputValue, final List<String> expectedValue) {
-            final var configType = new ConfigType.StringList();
+            final var configType = new ConfigType.StringList(null);
             assertThat(configType.fromString(inputValue)).isEqualTo(expectedValue);
+        }
+
+        @ParameterizedTest
+        @MethodSource("fromStringShouldReturnCorrectValueArguments")
+        void fromStringShouldReturnCorrectValueWithAllowedValues() {
+            final var configType = new ConfigType.StringList(Set.of("foo", "bar"));
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> configType.fromString("foo, invalid"))
+                    .withMessage("Invalid value: invalid. Allowed values are: [bar, foo]");
         }
 
         private static Stream<Arguments> toStringShouldReturnCorrectValueArguments() {
@@ -284,8 +294,17 @@ class ConfigTypeTest {
         @ParameterizedTest
         @MethodSource("toStringShouldReturnCorrectValueArguments")
         void toStringShouldReturnCorrectValue(final List<String> inputValue, final String expectedValue) {
-            final var configType = new ConfigType.StringList();
+            final var configType = new ConfigType.StringList(null);
             assertThat(configType.toString(inputValue)).isEqualTo(expectedValue);
+        }
+
+        @ParameterizedTest
+        @MethodSource("toStringShouldReturnCorrectValueArguments")
+        void toStringShouldReturnCorrectValueWithAllowedValues() {
+            final var configType = new ConfigType.StringList(Set.of("foo", "bar"));
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> configType.toString(List.of("foo", "invalid")))
+                    .withMessage("Invalid value: invalid. Allowed values are: [bar, foo]");
         }
 
     }

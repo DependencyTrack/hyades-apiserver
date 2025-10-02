@@ -84,6 +84,7 @@ final class OsvVulnDataSource implements VulnDataSource {
             final ObjectMapper objectMapper,
             final URL dataUrl,
             final List<String> ecosystems,
+            final HttpClient httpClient,
             final boolean isAliasSyncEnabled) {
         this.watermarkManager = watermarkManager;
         this.objectMapper = objectMapper;
@@ -91,7 +92,7 @@ final class OsvVulnDataSource implements VulnDataSource {
         this.ecosystems = ecosystems;
         this.isAliasSyncEnabled = isAliasSyncEnabled;
         this.successfullyCompletedEcosystems = new HashSet<>();
-        this.httpClient = HttpClient.newHttpClient();
+        this.httpClient = httpClient;
     }
 
     @Override

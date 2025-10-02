@@ -91,11 +91,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.fasterxml.uuid</groupId>
-            <artifactId>java-uuid-generator</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>us.springett</groupId>
             <artifactId>cvss-calculator</artifactId>
         </dependency>
