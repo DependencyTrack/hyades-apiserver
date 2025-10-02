@@ -106,18 +106,18 @@
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
-        <lib.httpclient5.version>5.5</lib.httpclient5.version>
+        <lib.httpclient5.version>5.5.1</lib.httpclient5.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.1.1</lib.java-uuid-generator.version>
         <lib.jackson.version>2.20.0</lib.jackson.version>
         <lib.jdbi.version>3.49.5</lib.jdbi.version>
         <lib.jersey.version>3.1.11</lib.jersey.version>
         <lib.jetty.version>12.1.1</lib.jetty.version>
-        <lib.jooq.version>3.20.7</lib.jooq.version>
+        <lib.jooq.version>3.20.8</lib.jooq.version>
         <lib.json-unit.version>4.1.1</lib.json-unit.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
-        <lib.junit-jupiter.version>5.13.4</lib.junit-jupiter.version>
+        <lib.junit-jupiter.version>6.0.0</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
