@@ -105,7 +105,7 @@
         <lib.datanucleus-core.version>6.0.11</lib.datanucleus-core.version>
         <lib.datanucleus-javax-jdo.version>3.2.1</lib.datanucleus-javax-jdo.version>
         <lib.datanucleus-rdbms.version>6.0.10</lib.datanucleus-rdbms.version>
-        <lib.httpclient5.version>5.5</lib.httpclient5.version>
+        <lib.httpclient5.version>5.5.1</lib.httpclient5.version>
         <lib.jakarta-ee.version>10.0.0</lib.jakarta-ee.version>
         <lib.java-uuid-generator.version>5.1.1</lib.java-uuid-generator.version>
         <lib.jackson.version>2.20.0</lib.jackson.version>
