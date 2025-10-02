@@ -16,23 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.workflow.api.failure;
-
-import org.jspecify.annotations.Nullable;
+package org.dependencytrack.workflow;
 
 /**
- * A {@link FailureException} indicating a terminal failure in application code that shall not be retried.
+ * @since 5.7.0
  */
-public class TerminalApplicationFailureException extends ApplicationFailureException {
+public final class WorkflowLabels {
 
-    public TerminalApplicationFailureException(
-            final @Nullable String message,
-            final @Nullable Throwable cause) {
-        super(message, cause, /* isTerminal */ true);
-    }
+    public static final String LABEL_PROJECT_UUID = "project_uuid";
 
-    public TerminalApplicationFailureException(final @Nullable String message) {
-        this(message, /* cause */ null);
+    private WorkflowLabels() {
     }
 
 }
