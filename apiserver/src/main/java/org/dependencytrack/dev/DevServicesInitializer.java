@@ -166,6 +166,7 @@ public class DevServicesInitializer implements ServletContextListener {
         }
 
         final var topicsToCreate = new ArrayList<>(List.of(
+                new NewTopic(KafkaTopics.NEW_CSAF_DOCUMENT.name(), 1, (short) 1).configs(Map.of(CLEANUP_POLICY_CONFIG, CLEANUP_POLICY_COMPACT)),
                 new NewTopic(KafkaTopics.NEW_VULNERABILITY.name(), 1, (short) 1).configs(Map.of(CLEANUP_POLICY_CONFIG, CLEANUP_POLICY_COMPACT)),
                 new NewTopic(KafkaTopics.NOTIFICATION_ANALYZER.name(), 1, (short) 1),
                 new NewTopic(KafkaTopics.NOTIFICATION_BOM.name(), 1, (short) 1),

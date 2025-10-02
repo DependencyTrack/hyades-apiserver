@@ -38,6 +38,8 @@ public class ProcessorInitializer implements ServletContextListener {
                 KafkaTopics.NEW_VULNERABILITY, new VulnerabilityMirrorProcessor());
         PROCESSOR_MANAGER.registerProcessor(RepositoryMetaResultProcessor.PROCESSOR_NAME,
                 KafkaTopics.REPO_META_ANALYSIS_RESULT, new RepositoryMetaResultProcessor());
+        PROCESSOR_MANAGER.registerBatchProcessor(CsafMirrorProcessor.PROCESSOR_NAME,
+                KafkaTopics.NEW_CSAF_DOCUMENT, new CsafMirrorProcessor());
         PROCESSOR_MANAGER.registerProcessor(VulnerabilityScanResultProcessor.PROCESSOR_NAME,
                 KafkaTopics.VULN_ANALYSIS_RESULT, new VulnerabilityScanResultProcessor());
         PROCESSOR_MANAGER.registerBatchProcessor(ProcessedVulnerabilityScanResultProcessor.PROCESSOR_NAME,

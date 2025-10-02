@@ -152,6 +152,7 @@ public final class DatabaseSeedingInitTask implements InitTask {
             seedDefaultLicenses(handle);
             seedDefaultNotificationPublishers(handle);
             seedDefaultRepositories(handle);
+            seedCSAFDefaultAggregator(handle);
 
             final boolean isFirstExecution = defaultObjectsVersion == null;
             if (isFirstExecution) {
@@ -503,6 +504,23 @@ public final class DatabaseSeedingInitTask implements InitTask {
 
         final int reposCreated = Arrays.stream(preparedBatch.execute()).sum();
         LOGGER.debug("Created {} repositories", reposCreated);
+    }
+
+    public static void seedCSAFDefaultAggregator(final Handle jdbiHandle) {
+        final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
+                INSERT INTO "CSAFSOURCEENTITY"(
+                  "NAME", "URL", "ENABLED", "AGGREGATOR", "DISCOVERY", "DOMAIN", "SEEN")
+                VALUES (
+                  :name, :url, FALSE, TRUE, FALSE, FALSE, FALSE)
+                ON CONFLICT ("URL") DO NOTHING
+                """);
+
+        preparedBatch.bind("name", "BSI WID Aggregator");
+        preparedBatch.bind("url", "https://wid.cert-bund.de/.well-known/csaf-aggregator/aggregator.json");
+        preparedBatch.add();
+
+        final int csafAggCreated = Arrays.stream(preparedBatch.execute()).sum();
+        LOGGER.debug("Created {} CSAF aggregators", csafAggCreated);
     }
 
 }

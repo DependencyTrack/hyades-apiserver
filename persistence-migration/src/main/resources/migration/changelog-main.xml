@@ -15,4 +15,7 @@
     <include file="migration/changelog-v5.6.0.xml"/>
     <include file="migration/changelog-v5.7.0.xml"/>
     <include file="migration/changelog-procedures.xml"/>
+
+    <!-- CSAF -->
+    <include file="migration/changelog-csaf.xml"/>
 </databaseChangeLog>

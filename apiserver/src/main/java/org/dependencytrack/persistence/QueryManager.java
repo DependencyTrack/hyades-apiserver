@@ -48,11 +48,14 @@ import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalyzerIdentity;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Classifier;
+import org.dependencytrack.model.CsafMapping;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.CsafDocumentEntity;
+import org.dependencytrack.model.CsafSourceEntity;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -94,6 +97,7 @@ import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
+import javax.annotation.Nullable;
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -150,6 +154,7 @@ public class QueryManager extends AlpineQueryManager {
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
+    private CsafQueryManager csafQueryManager;
 
     /**
      * Default constructor.
@@ -405,6 +410,17 @@ public class QueryManager extends AlpineQueryManager {
             metricsQueryManager = (request == null) ? new MetricsQueryManager(getPersistenceManager()) : new MetricsQueryManager(getPersistenceManager(), request);
         }
         return metricsQueryManager;
+    }
+
+    /**
+     * Lazy instantiation of CsafQueryManager.
+     * @return a CsafQueryManager object
+     */
+    private CsafQueryManager getCsafQueryManager() {
+        if(csafQueryManager == null) {
+            csafQueryManager = (request == null) ? new CsafQueryManager(getPersistenceManager()) : new CsafQueryManager(getPersistenceManager(), request);
+        }
+        return csafQueryManager;
     }
 
     /**
@@ -1049,6 +1065,54 @@ public class QueryManager extends AlpineQueryManager {
 
     public void synchronizeVulnerabilityMetrics(List<VulnerabilityMetrics> metrics) {
         getMetricsQueryManager().synchronizeVulnerabilityMetrics(metrics);
+    }
+
+    public PaginatedResult getCsafSources(boolean isAggregator, boolean isDiscovery) {
+        return getCsafQueryManager().getCsafSources(isAggregator, isDiscovery);
+    }
+
+    public CsafSourceEntity createCsafSource(String name, String url, boolean enabled, boolean aggregator) {
+        return getCsafQueryManager().createCsafSource(name, url, enabled, aggregator);
+    }
+
+    public CsafSourceEntity createCsafSourceFromFile(String name, String contents, boolean enabled, boolean aggregator) {
+        return getCsafQueryManager().createCsafSourceFromFile(name, contents, enabled, aggregator);
+    }
+
+    public CsafSourceEntity updateCsafSource(CsafSourceEntity source) {
+        return getCsafQueryManager().updateCsafSource(source);
+    }
+
+    public PaginatedResult getCsafDocuments() {
+        return getCsafQueryManager().getCsafDocuments();
+    }
+
+    public PaginatedResult searchCsafDocuments(String searchText, int pageSize, int pageNumber, String sortName, String sortOrder) {
+        return getCsafQueryManager().searchCsafDocuments(searchText, pageSize, pageNumber, sortName, sortOrder);
+    }
+
+    public void synchronizeAllCsafDocuments(List<CsafDocumentEntity> list) {
+        getCsafQueryManager().synchronizeAllCsafDocuments(list);
+    }
+
+    public CsafDocumentEntity synchronizeCsafDocument(CsafDocumentEntity csaf) {
+        return getCsafQueryManager().synchronizeCsafDocument(csaf);
+    }
+
+    public CsafDocumentEntity updateCsafDocument(CsafDocumentEntity csaf) {
+        return getCsafQueryManager().updateCsafDocument(csaf);
+    }
+
+    public void toggleCsafDocumentSeen(CsafDocumentEntity csafDocument) {
+        getCsafQueryManager().toggleCsafDocumentSeen(csafDocument);
+    }
+
+    public @Nullable CsafDocumentEntity getCsafDocumentByPublisherNamespaceAndTrackingID(String publisherNamespace, String trackingID) {
+        return getCsafQueryManager().getCsafDocumentByPublisherNamespaceAndTrackingID(publisherNamespace, trackingID);
+    }
+
+    public CsafMapping createCsafMapping(Vulnerability synchronizedVulnerability, CsafDocumentEntity referenceDoc) {
+        return getCsafQueryManager().createCsafMapping(synchronizedVulnerability, referenceDoc);
     }
 
     public PaginatedResult getRepositories() {
