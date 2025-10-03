@@ -19,7 +19,6 @@
 package org.dependencytrack.datasource.vuln.osv;
 
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -78,7 +77,7 @@ public enum OsvEcosystem {
     public static Set<String> getOsvEcosystems() {
         return Arrays.stream(OsvEcosystem.values())
                 .map(OsvEcosystem::getName)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+                .collect(Collectors.toSet());
     }
 }
 
