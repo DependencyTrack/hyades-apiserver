@@ -122,7 +122,7 @@
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
         <lib.protobuf-java.version>4.32.1</lib.protobuf-java.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
-        <lib.smallrye-config.version>3.14.0</lib.smallrye-config.version>
+        <lib.smallrye-config.version>3.14.1</lib.smallrye-config.version>
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
