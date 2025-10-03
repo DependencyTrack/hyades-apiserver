@@ -19,6 +19,10 @@
 package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.ExtensionsApi;
 import org.dependencytrack.api.v2.model.ExtensionConfig;
 import org.dependencytrack.api.v2.model.ExtensionConfigType;
@@ -44,10 +48,6 @@ import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.inject.Inject;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.ext.Provider;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -157,11 +157,13 @@ public class ExtensionsResource implements ExtensionsApi {
                                     case ConfigType.Integer ignored -> ExtensionConfigType.INTEGER;
                                     case ConfigType.Path ignored -> ExtensionConfigType.PATH;
                                     case ConfigType.String ignored -> ExtensionConfigType.STRING;
+                                    case ConfigType.StringList ignored -> ExtensionConfigType.STRING_LIST;
                                     case ConfigType.URL ignored -> ExtensionConfigType.URL;
                                 })
                                 .isRequired(configDef.isRequired())
                                 .isSecret(configDef.isSecret())
                                 .value(getConfigValue(configRegistry, configDef))
+                                .allowedValues(configDef.allowedValues())
                                 .build())
                 .toList();
 

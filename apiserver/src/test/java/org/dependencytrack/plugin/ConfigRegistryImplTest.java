@@ -53,7 +53,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
         );
 
         final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
-        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, false);
+        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, false, null);
         final Optional<String> optionalProperty = configRegistry.getOptionalValue(configDef);
         assertThat(optionalProperty).contains("qux");
     }
@@ -61,7 +61,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
     @Test
     public void testGetRuntimeConfigValueThatDoesNotExist() {
         final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
-        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, false);
+        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, false, null);
         final Optional<String> optionalProperty = configRegistry.getOptionalValue(configDef);
         assertThat(optionalProperty).isNotPresent();
     }
@@ -69,7 +69,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
     @Test
     public void testGetRequiredRuntimeConfigValueThatDoesNotExist() {
         final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
-        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, true, false);
+        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, true, false, null);
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> configRegistry.getOptionalValue(configDef))
                 .withMessage("Config baz is defined as required, but no value has been found");
@@ -86,7 +86,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
         );
 
         final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
-        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, true);
+        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, true, null);
         final Optional<String> optionalProperty = configRegistry.getOptionalValue(configDef);
         assertThat(optionalProperty).contains("qux");
     }
@@ -102,7 +102,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
         );
 
         final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
-        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, true);
+        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, true, null);
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> configRegistry.getOptionalValue(configDef))
                 .withMessage("Config baz is defined as secret, but its value is not encrypted");
@@ -137,7 +137,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
     @Test
     public void testSetValue() {
         final var configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
-        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, false);
+        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, false, null);
         configRegistry.createWithDefaultsIfNotExist(List.of(configDef));
         configRegistry.setValue(configDef, "qux");
         assertThat(configRegistry.getOptionalValue(configDef)).contains("qux");
@@ -146,7 +146,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
     @Test
     public void testSetValueWhenRequiredAndNull() {
         final ConfigRegistry configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
-        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, true, false);
+        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, true, false, null);
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> configRegistry.setValue(configDef, null))
                 .withMessage("Config baz is defined as required, but value is null");
@@ -155,7 +155,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
     @Test
     public void testSetValueWhenSecret() {
         final var configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
-        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, true);
+        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, true, null);
         configRegistry.createWithDefaultsIfNotExist(List.of(configDef));
         configRegistry.setValue(configDef, "qux");
         assertThat(configRegistry.getOptionalValue(configDef)).contains("qux");
@@ -164,7 +164,7 @@ public class ConfigRegistryImplTest extends PersistenceCapableTest {
     @Test
     public void testSetValueWhenNotExists() {
         final var configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
-        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, true);
+        final var configDef = new RuntimeConfigDefinition<>("baz", "description", ConfigTypes.STRING, null, false, true, null);
         assertThatExceptionOfType(NoSuchElementException.class)
                 .isThrownBy(() -> configRegistry.setValue(configDef, "qux"));
     }

@@ -21,8 +21,6 @@ package org.dependencytrack.tasks;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.NistMirrorEvent;
-import org.dependencytrack.event.kafka.processor.VulnerabilityMirrorProcessor;
-import org.dependencytrack.event.kafka.processor.VulnerabilityMirrorProcessorTest;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.plugin.PluginManager;
@@ -37,12 +35,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-/**
- * TODO: This test is an almost identical copy of {@link VulnerabilityMirrorProcessorTest}.
- *  Once all vulnerability sources have been migrated and {@link VulnerabilityMirrorProcessor}
- *  has been removed, this test should cover all sources.
- */
-public class NistMirrorTaskTest extends PersistenceCapableTest {
+public class VulnDataSourceMirrorTaskTest extends PersistenceCapableTest {
 
     private VulnDataSource dataSourceMock;
     private NistMirrorTask task;

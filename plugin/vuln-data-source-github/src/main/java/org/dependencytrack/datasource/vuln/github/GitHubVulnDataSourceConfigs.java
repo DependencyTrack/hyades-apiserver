@@ -51,35 +51,40 @@ public final class GitHubVulnDataSourceConfigs {
                 ConfigTypes.BOOLEAN,
                 /* defaultValue */ false,
                 /* isRequired */ false,
-                /* isSecret */ false);
+                /* isSecret */ false,
+                null);
         CONFIG_ALIAS_SYNC_ENABLED =  new RuntimeConfigDefinition<>(
                 "alias.sync.enabled",
                 "Whether to include alias information in vulnerability data",
                 ConfigTypes.BOOLEAN,
                 /* defaultValue */ false,
                 /* isRequired */ false,
-                /* isSecret */ false);
+                /* isSecret */ false,
+                null);
         CONFIG_API_URL = new RuntimeConfigDefinition<>(
                 "api.url",
                 "Base URL of GitHub's GraphQL API",
                 ConfigTypes.URL,
                 /* defaultValue */ defaultApiUrl,
                 /* isRequired */ true,
-                /* isSecret */ false);
+                /* isSecret */ false,
+                null);
         CONFIG_API_TOKEN = new RuntimeConfigDefinition<>(
                 "api.token",
                 "Access token to authenticate with the GitHub API",
                 ConfigTypes.STRING,
                 /* defaultValue */ null,
                 /* isRequired */ false,
-                /* isSecret */ true);
+                /* isSecret */ true,
+                null);
         CONFIG_WATERMARK = new RuntimeConfigDefinition<>(
                 "watermark",
                 "Highest observed modification timestamp of processed vulnerabilities",
                 ConfigTypes.INSTANT,
                 /* defaultValue */ null,
                 /* isRequired */ false,
-                /* isSecret */ false);
+                /* isSecret */ false,
+                null);
     }
 
     private GitHubVulnDataSourceConfigs() {

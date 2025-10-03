@@ -36,6 +36,7 @@
         <module>plugin/api</module>
         <module>plugin/vuln-data-source-github</module>
         <module>plugin/vuln-data-source-nvd</module>
+        <module>plugin/vuln-data-source-osv</module>
         <module>persistence-migration</module>
         <module>persistence-jooq</module>
         <module>apiserver</module>
