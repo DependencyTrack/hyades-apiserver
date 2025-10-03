@@ -51,35 +51,40 @@ final class OsvVulnDataSourceConfigs {
                 ConfigTypes.BOOLEAN,
                 false,
                 false,
-                false);
+                false,
+                null);
         CONFIG_DATA_URL = new RuntimeConfigDefinition<>(
                 "data.url",
                 "Data URL of OSV",
                 ConfigTypes.URL,
                 dataUrl,
                 true,
-                false);
+                false,
+                null);
         CONFIG_ECOSYSTEMS = new RuntimeConfigDefinition<>(
                 "ecosystems",
                 "List of ecosystems",
                 ConfigTypes.STRING_LIST(OsvEcosystem.getOsvEcosystems()),
                 List.of("Go", "Maven", "npm", "NuGet", "PyPI"),
                 false,
-                false);
+                false,
+                OsvEcosystem.getOsvEcosystems());
         CONFIG_WATERMARKS = new RuntimeConfigDefinition<>(
                 "watermarks",
                 "Serialised form of Highest observed modification timestamps of processed vulnerabilities for all ecosystems",
                 ConfigTypes.STRING,
                 null,
                 false,
-                false);
+                false,
+                null);
         CONFIG_ALIAS_SYNC_ENABLED =  new RuntimeConfigDefinition<>(
                 "alias.sync.enabled",
                 "Whether to include alias information in vulnerability data",
                 ConfigTypes.BOOLEAN,
                 /* defaultValue */ false,
                 /* isRequired */ false,
-                /* isSecret */ false);
+                /* isSecret */ false,
+                null);
     }
 
     private OsvVulnDataSourceConfigs() {

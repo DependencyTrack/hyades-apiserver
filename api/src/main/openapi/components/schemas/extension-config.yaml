@@ -35,11 +35,18 @@ properties:
     type: boolean
   value:
     description: |-
-      Value of the config.
-      
+      Value of the config.     
       If the config is a secret, and the value is non-`null`, the value
       returned by the API will be `***SECRET-PLACEHOLDER***`.
     type: string
+  allowed_values:
+    description: >-
+      Optional list of values allowed for the config.
+    type: array
+    items:
+      type: string
+      maxLength: 255
+    uniqueItems: true
 required:
 - name
 - description

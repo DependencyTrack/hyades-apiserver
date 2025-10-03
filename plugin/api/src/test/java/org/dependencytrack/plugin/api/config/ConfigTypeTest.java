@@ -282,7 +282,7 @@ class ConfigTypeTest {
             final var configType = new ConfigType.StringList(Set.of("foo", "bar"));
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> configType.fromString("foo, invalid"))
-                    .withMessage("Invalid value: invalid. Allowed values are: [bar, foo]");
+                    .withMessage("Invalid value: invalid. Allowed values are: [foo, bar]");
         }
 
         private static Stream<Arguments> toStringShouldReturnCorrectValueArguments() {
@@ -304,7 +304,7 @@ class ConfigTypeTest {
             final var configType = new ConfigType.StringList(Set.of("foo", "bar"));
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> configType.toString(List.of("foo", "invalid")))
-                    .withMessage("Invalid value: invalid. Allowed values are: [bar, foo]");
+                    .withMessage("Invalid value: invalid. Allowed values are: [foo, bar]");
         }
 
     }

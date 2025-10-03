@@ -163,6 +163,7 @@ public class ExtensionsResource implements ExtensionsApi {
                                 .isRequired(configDef.isRequired())
                                 .isSecret(configDef.isSecret())
                                 .value(getConfigValue(configRegistry, configDef))
+                                .allowedValues(configDef.allowedValues())
                                 .build())
                 .toList();
 
