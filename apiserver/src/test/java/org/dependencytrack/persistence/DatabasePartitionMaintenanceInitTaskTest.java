@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.persistence;
 
-import alpine.Config;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.init.InitTaskContext;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 
@@ -31,7 +31,6 @@ import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
-import static org.mockito.Mockito.mock;
 
 public class DatabasePartitionMaintenanceInitTaskTest extends PersistenceCapableTest {
 
@@ -42,7 +41,7 @@ public class DatabasePartitionMaintenanceInitTaskTest extends PersistenceCapable
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
 
-        new DatabasePartitionMaintenanceInitTask().execute(new InitTaskContext(mock(Config.class), dataSource));
+        new DatabasePartitionMaintenanceInitTask().execute(new InitTaskContext(ConfigProvider.getConfig(), dataSource));
 
         var today = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         var tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);

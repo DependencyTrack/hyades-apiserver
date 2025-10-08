@@ -342,6 +342,7 @@ public final class NotificationModelConverter {
                 .orElseGet(Collections::emptySet).stream()
                 .map(Tag::getName)
                 .forEach(builder::addTags);
+        Optional.ofNullable(project.isActive()).ifPresent(builder::setIsActive);
 
         return builder.build();
     }

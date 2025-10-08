@@ -18,10 +18,12 @@
  */
 package org.dependencytrack.plugin;
 
+import java.util.NoSuchElementException;
+
 /**
  * @since 5.6.0
  */
-public class NoSuchExtensionException extends RuntimeException {
+public class NoSuchExtensionException extends NoSuchElementException {
 
     NoSuchExtensionException(final String message) {
         super(message);

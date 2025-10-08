@@ -41,7 +41,6 @@ import org.dependencytrack.event.IntegrityAnalysisEvent;
 import org.dependencytrack.event.ProjectMetricsUpdateEvent;
 import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.event.kafka.componentmeta.AbstractMetaHandler;
-import org.dependencytrack.filestorage.FileStorage;
 import org.dependencytrack.model.Bom;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -65,6 +64,7 @@ import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.persistence.jdbi.WorkflowDao;
 import org.dependencytrack.plugin.PluginManager;
+import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.util.InternalComponentIdentifier;
 import org.json.JSONArray;
 import org.slf4j.MDC;
@@ -876,14 +876,6 @@ public class BomUploadProcessingTask implements Subscriber {
 
         final PersistenceManager pm = qm.getPersistenceManager();
         LOGGER.info("Deleting %d component(s) that are no longer part of the project".formatted(componentIds.size()));
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.AnalysisComment WHERE :ids.contains(analysis.component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.Analysis WHERE :ids.contains(component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysisComment WHERE :ids.contains(violationAnalysis.component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.ViolationAnalysis WHERE :ids.contains(component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.DependencyMetrics WHERE :ids.contains(component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.FindingAttribution WHERE :ids.contains(component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.PolicyViolation WHERE :ids.contains(component.id)").execute(componentIds);
-        pm.newQuery(Query.JDOQL, "DELETE FROM org.dependencytrack.model.IntegrityAnalysis WHERE :ids.contains(component.id)").execute(componentIds);
         return pm.newQuery(Component.class, ":ids.contains(id)").deletePersistentAll(componentIds);
     }
 

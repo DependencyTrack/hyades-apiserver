@@ -46,6 +46,12 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>alpine-test</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
@@ -74,6 +80,18 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>persistence-migration</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>plugin-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>smallrye-config-source-memory</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>

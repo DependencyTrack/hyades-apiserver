@@ -18,15 +18,12 @@
  */
 package org.dependencytrack.init;
 
-import alpine.Config;
+import org.eclipse.microprofile.config.Config;
 
 import javax.sql.DataSource;
 
 /**
  * Context available to {@link InitTask}s.
- * <p>
- * TODO: Introduce a tiny abstraction over {@link Config} such that
- *  Alpine specifics don't bleed through to {@link InitTask}s.
  *
  * @param config     A {@link Config} instance to read application configuration.
  * @param dataSource A {@link DataSource} which may be used for database interactions.

@@ -18,16 +18,15 @@
  */
 package org.dependencytrack.tasks;
 
+import alpine.test.config.ConfigPropertyRule;
 import org.dependencytrack.PersistenceCapableTest;
 import org.dependencytrack.event.IntegrityAnalysisEvent;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.FetchStatus;
 import org.dependencytrack.model.IntegrityAnalysis;
 import org.dependencytrack.model.IntegrityMetaComponent;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -40,14 +39,8 @@ import static org.dependencytrack.model.IntegrityMatchStatus.HASH_MATCH_PASSED;
 public class IntegrityAnalysisTaskTest extends PersistenceCapableTest {
 
     @Rule
-    public EnvironmentVariables environmentVariables = new EnvironmentVariables();
-
-    @Before
-    public void before() throws Exception {
-        super.before();
-
-        environmentVariables.set("INTEGRITY_CHECK_ENABLED", "true");
-    }
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule()
+            .withProperty("integrity.check.enabled", "true");
 
     @Test
     public void shouldPerformIntegrityAnalysisIfMetaDataExists() {

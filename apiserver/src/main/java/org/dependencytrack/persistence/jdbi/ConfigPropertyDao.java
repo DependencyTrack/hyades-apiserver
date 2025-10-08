@@ -18,9 +18,11 @@
  */
 package org.dependencytrack.persistence.jdbi;
 
-import alpine.model.IConfigProperty;
+import alpine.model.ConfigProperty;
+import alpine.model.IConfigProperty.PropertyType;
 import alpine.security.crypto.DataEncryption;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindBean;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
@@ -34,17 +36,35 @@ import java.util.Optional;
  */
 public interface ConfigPropertyDao {
 
-    @SqlQuery("""
-            SELECT "PROPERTYVALUE"
-              FROM "CONFIGPROPERTY"
-             WHERE "GROUPNAME" = :groupName
-               AND "PROPERTYNAME" = :propertyName
+    @SqlUpdate("""
+            INSERT INTO "CONFIGPROPERTY" ("GROUPNAME", "PROPERTYNAME", "PROPERTYTYPE", "DESCRIPTION", "PROPERTYVALUE")
+            VALUES (:group, :name, :type, :description, :value)
+            ON CONFLICT ("GROUPNAME", "PROPERTYNAME") DO NOTHING
             """)
-    Optional<String> getOptionalRawValue(@BindBean ConfigPropertyConstants property);
+    void maybeCreate(
+            @Bind String group,
+            @Bind String name,
+            @Bind PropertyType type,
+            @Bind String description,
+            @Bind String value);
+
+    @SqlQuery("""
+            SELECT *
+              FROM "CONFIGPROPERTY"
+             WHERE "GROUPNAME" = :group
+               AND "PROPERTYNAME" = :name
+            """)
+    @RegisterBeanMapper(ConfigProperty.class)
+    Optional<ConfigProperty> getOptional(@Bind String group, @Bind String name);
+
+    default Optional<String> getOptionalRawValue(@BindBean ConfigPropertyConstants property) {
+        return getOptional(property.getGroupName(), property.getPropertyName())
+                .map(ConfigProperty::getPropertyValue);
+    }
 
     default Optional<String> getOptionalValue(final ConfigPropertyConstants property) {
         final Optional<String> optionalRawValue = getOptionalRawValue(property);
-        if (optionalRawValue.isEmpty() || property.getPropertyType() != IConfigProperty.PropertyType.ENCRYPTEDSTRING) {
+        if (optionalRawValue.isEmpty() || property.getPropertyType() != PropertyType.ENCRYPTEDSTRING) {
             return optionalRawValue;
         }
 
@@ -87,9 +107,13 @@ public interface ConfigPropertyDao {
     @SqlUpdate("""
             UPDATE "CONFIGPROPERTY"
                SET "PROPERTYVALUE" = :value
-             WHERE "GROUPNAME" = :groupName
-               AND "PROPERTYNAME" = :propertyName
+             WHERE "GROUPNAME" = :group
+               AND "PROPERTYNAME" = :name
             """)
-    void setValue(@BindBean ConfigPropertyConstants property, @Bind String value);
+    boolean setValue(@Bind String group, @Bind String name, @Bind String value);
+
+    default void setValue(@BindBean ConfigPropertyConstants property, @Bind String value) {
+        setValue(property.getGroupName(), property.getPropertyName(), value);
+    }
 
 }
