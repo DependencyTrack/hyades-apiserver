@@ -18,20 +18,21 @@
  */
 package org.dependencytrack.event.kafka;
 
+import alpine.test.config.ConfigPropertyRule;
+import alpine.test.config.WithConfigProperty;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class KafkaTopicsTest {
 
     @Rule
-    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
 
     @Test
+    @WithConfigProperty("dt.kafka.topic.prefix=foo-bar.baz.")
     public void testTopicNameWithPrefix() {
-        environmentVariables.set("DT_KAFKA_TOPIC_PREFIX", "foo-bar.baz.");
         assertThat(KafkaTopics.VULN_ANALYSIS_RESULT.name()).isEqualTo("foo-bar.baz.dtrack.vuln-analysis.result");
     }
 

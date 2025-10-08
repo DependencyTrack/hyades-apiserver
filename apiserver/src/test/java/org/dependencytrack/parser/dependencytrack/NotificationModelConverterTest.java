@@ -596,6 +596,7 @@ public class NotificationModelConverterTest {
         assertThat(project.getDescription()).isEqualTo(project.getDescription());
         assertThat(project.getPurl()).isEqualTo("pkg:maven/org.acme/acme-app@projectVersion");
         assertThat(project.getTagsList()).containsOnly("tag1", "tag2");
+        assertThat(project.getIsActive()).isTrue();
     }
 
     private org.dependencytrack.model.Component createComponent(final org.dependencytrack.model.Project project) {

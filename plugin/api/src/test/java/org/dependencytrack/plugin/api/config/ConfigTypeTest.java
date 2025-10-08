@@ -1,0 +1,295 @@
+/*
+ * This file is part of Dependency-Track.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
+ */
+package org.dependencytrack.plugin.api.config;
+
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+class ConfigTypeTest {
+
+    @Nested
+    class BooleanTest {
+
+        @Test
+        void shouldReturnCorrectTypeClass() {
+            final var configType = new ConfigType.Boolean();
+            assertThat(configType.clazz()).isEqualTo(Boolean.class);
+        }
+
+        private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of("false", false),
+                    Arguments.of("true", true));
+        }
+
+        @ParameterizedTest
+        @MethodSource("fromStringShouldReturnCorrectValueArguments")
+        void fromStringShouldReturnCorrectValue(final String inputValue, final Boolean expectedValue) {
+            final var configType = new ConfigType.Boolean();
+            assertThat(configType.fromString(inputValue)).isEqualTo(expectedValue);
+        }
+
+        @Test
+        void fromStringShouldReturnFalseForInvalidInputValue() {
+            final var configType = new ConfigType.Boolean();
+            assertThat(configType.fromString("invalid")).isEqualTo(false);
+        }
+
+        private static Stream<Arguments> toStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of(false, "false"),
+                    Arguments.of(true, "true"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("toStringShouldReturnCorrectValueArguments")
+        void toStringShouldReturnCorrectValue(final Boolean inputValue, final String expectedValue) {
+            final var configType = new ConfigType.Boolean();
+            assertThat(configType.toString(inputValue)).isEqualTo(expectedValue);
+        }
+
+    }
+
+    @Nested
+    class DurationTest {
+
+        @Test
+        void shouldReturnCorrectTypeClass() {
+            final var configType = new ConfigType.Duration();
+            assertThat(configType.clazz()).isEqualTo(Duration.class);
+        }
+
+        private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of("PT0.5S", Duration.ofMillis(500)),
+                    Arguments.of("PT5M", Duration.ofMinutes(5)));
+        }
+
+        @ParameterizedTest
+        @MethodSource("fromStringShouldReturnCorrectValueArguments")
+        void fromStringShouldReturnCorrectValue(final String inputValue, final Duration expectedValue) {
+            final var configType = new ConfigType.Duration();
+            assertThat(configType.fromString(inputValue)).isEqualTo(expectedValue);
+        }
+
+        @Test
+        void fromStringShouldThrowForInvalidInputValue() {
+            final var configType = new ConfigType.Duration();
+            assertThatExceptionOfType(DateTimeParseException.class)
+                    .isThrownBy(() -> configType.fromString("invalid"));
+        }
+
+        private static Stream<Arguments> toStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of(Duration.ofMillis(500), "PT0.5S"),
+                    Arguments.of(Duration.ofMinutes(5), "PT5M"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("toStringShouldReturnCorrectValueArguments")
+        void toStringShouldReturnCorrectValue(final Duration inputValue, final String expectedValue) {
+            final var configType = new ConfigType.Duration();
+            assertThat(configType.toString(inputValue)).isEqualTo(expectedValue);
+        }
+
+    }
+
+    @Nested
+    class InstantTest {
+
+        @Test
+        void shouldReturnCorrectTypeClass() {
+            final var configType = new ConfigType.Instant();
+            assertThat(configType.clazz()).isEqualTo(Instant.class);
+        }
+
+        private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of("1970-01-08T17:11:06Z", Instant.ofEpochSecond(666666)));
+        }
+
+        @ParameterizedTest
+        @MethodSource("fromStringShouldReturnCorrectValueArguments")
+        void fromStringShouldReturnCorrectValue(final String inputValue, final Instant expectedValue) {
+            final var configType = new ConfigType.Instant();
+            assertThat(configType.fromString(inputValue)).isEqualTo(expectedValue);
+        }
+
+        @Test
+        void fromStringShouldThrowForInvalidInputValue() {
+            final var configType = new ConfigType.Instant();
+            assertThatExceptionOfType(DateTimeParseException.class)
+                    .isThrownBy(() -> configType.fromString("invalid"));
+        }
+
+        private static Stream<Arguments> toStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of(Instant.ofEpochSecond(666666), "1970-01-08T17:11:06Z"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("toStringShouldReturnCorrectValueArguments")
+        void toStringShouldReturnCorrectValue(final Instant inputValue, final String expectedValue) {
+            final var configType = new ConfigType.Instant();
+            assertThat(configType.toString(inputValue)).isEqualTo(expectedValue);
+        }
+
+    }
+
+    @Nested
+    class IntegerTest {
+
+        @Test
+        void shouldReturnCorrectTypeClass() {
+            final var configType = new ConfigType.Integer();
+            assertThat(configType.clazz()).isEqualTo(Integer.class);
+        }
+
+        private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of("123", 123),
+                    Arguments.of("-123", -123));
+        }
+
+        @ParameterizedTest
+        @MethodSource("fromStringShouldReturnCorrectValueArguments")
+        void fromStringShouldReturnCorrectValue(final String inputValue, final Integer expectedValue) {
+            final var configType = new ConfigType.Integer();
+            assertThat(configType.fromString(inputValue)).isEqualTo(expectedValue);
+        }
+
+        @Test
+        void fromStringShouldThrowForInvalidInputValue() {
+            final var configType = new ConfigType.Integer();
+            assertThatExceptionOfType(NumberFormatException.class)
+                    .isThrownBy(() -> configType.fromString("invalid"));
+        }
+
+        private static Stream<Arguments> toStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of(123, "123"),
+                    Arguments.of(-123, "-123"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("toStringShouldReturnCorrectValueArguments")
+        void toStringShouldReturnCorrectValue(final Integer inputValue, final String expectedValue) {
+            final var configType = new ConfigType.Integer();
+            assertThat(configType.toString(inputValue)).isEqualTo(expectedValue);
+        }
+
+    }
+
+    @Nested
+    class PathTest {
+
+        @Test
+        void shouldReturnCorrectTypeClass() {
+            final var configType = new ConfigType.Path();
+            assertThat(configType.clazz()).isEqualTo(Path.class);
+        }
+
+        private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of("foo", Path.of("foo")),
+                    Arguments.of("/foo/bar", Path.of("/foo/bar")));
+        }
+
+        @ParameterizedTest
+        @MethodSource("fromStringShouldReturnCorrectValueArguments")
+        void fromStringShouldReturnCorrectValue(final String inputValue, final Path expectedValue) {
+            final var configType = new ConfigType.Path();
+            assertThat(configType.fromString(inputValue)).isEqualTo(expectedValue);
+        }
+
+        private static Stream<Arguments> toStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of(Path.of("foo"), "foo"),
+                    Arguments.of(Path.of("/foo/bar"), "/foo/bar"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("toStringShouldReturnCorrectValueArguments")
+        void toStringShouldReturnCorrectValue(final Path inputValue, final String expectedValue) {
+            final var configType = new ConfigType.Path();
+            assertThat(configType.toString(inputValue)).isEqualTo(expectedValue);
+        }
+
+    }
+
+    @Nested
+    class StringTest {
+
+        @Test
+        void shouldReturnCorrectTypeClass() {
+            final var configType = new ConfigType.String();
+            assertThat(configType.clazz()).isEqualTo(String.class);
+        }
+
+        private static Stream<Arguments> fromStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of("foo", "foo"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("fromStringShouldReturnCorrectValueArguments")
+        void fromStringShouldReturnCorrectValue(final String inputValue, final String expectedValue) {
+            final var configType = new ConfigType.String();
+            assertThat(configType.fromString(inputValue)).isEqualTo(expectedValue);
+        }
+
+        private static Stream<Arguments> toStringShouldReturnCorrectValueArguments() {
+            return Stream.of(
+                    Arguments.of(null, null),
+                    Arguments.of("foo", "foo"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("toStringShouldReturnCorrectValueArguments")
+        void toStringShouldReturnCorrectValue(final String inputValue, final String expectedValue) {
+            final var configType = new ConfigType.String();
+            assertThat(configType.toString(inputValue)).isEqualTo(expectedValue);
+        }
+
+    }
+
+}

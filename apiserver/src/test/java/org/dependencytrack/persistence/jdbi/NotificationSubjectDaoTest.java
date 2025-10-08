@@ -122,6 +122,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                                       "description": "projectDescription",
                                       "name": "projectName",
                                       "purl": "projectPurl",
+                                      "isActive":true,
                                       "tags": [
                                         "projecttaga",
                                         "projecttagb"
@@ -145,6 +146,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                                     "description": "projectDescription",
                                     "name": "projectName",
                                     "purl": "projectPurl",
+                                    "isActive":true,
                                     "tags": [
                                       "projecttaga",
                                       "projecttagb"
@@ -249,7 +251,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                           },
                           "project": {
                             "uuid": "${json-unit.matches:projectUuid}",
-                            "name": "projectName"
+                            "name": "projectName",
+                            "isActive":true
                           },
                           "vulnerability": {
                             "uuid": "${json-unit.matches:vulnUuid}",
@@ -263,7 +266,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                           "affectedProjects": [
                             {
                               "uuid": "${json-unit.matches:projectUuid}",
-                              "name": "projectName"
+                              "name": "projectName",
+                              "isActive":true
                             }
                           ],
                           "affectedProjectsReference": {
@@ -362,6 +366,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                             "version": "projectVersion",
                             "description": "projectDescription",
                             "purl": "projectPurl",
+                            "isActive":true,
                             "tags": [
                               "projecttaga",
                               "projecttagb"
@@ -460,7 +465,8 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                           },
                           "project": {
                             "uuid": "${json-unit.matches:projectUuid}",
-                            "name": "projectName"
+                            "name": "projectName",
+                            "isActive":true
                           },
                           "vulnerabilities": [
                             {
@@ -559,6 +565,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                                          "name": "projectName",
                                          "version": "projectVersion",
                                          "description": "projectDescription",
+                                         "isActive":true,
                                          "purl": "projectPurl",
                                          "tags": [
                                              "projecttaga",
@@ -617,6 +624,7 @@ public class NotificationSubjectDaoTest extends PersistenceCapableTest {
                                              "version": "projectVersion",
                                              "description": "projectDescription",
                                              "purl": "projectPurl",
+                                             "isActive":true,
                                              "tags": [
                                                  "projecttaga",
                                                  "projecttagb"

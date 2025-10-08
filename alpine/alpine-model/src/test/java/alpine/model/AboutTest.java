@@ -33,7 +33,7 @@ public class AboutTest {
         Assertions.assertEquals("Unknown Alpine Application", about.getApplication());
         Assertions.assertEquals("0.0.0", about.getVersion());
         Assertions.assertEquals("1970-01-01 00:00:00", about.getTimestamp());
-        Assertions.assertNull(about.getUuid());
+        Assertions.assertEquals("00000000-0000-0000-0000-000000000000", about.getUuid());
 
         Assertions.assertEquals("alpine-model", about.getFramework().getName());
         //Assertions.assertTrue(about.getFramework().getVersion().startsWith("3."));

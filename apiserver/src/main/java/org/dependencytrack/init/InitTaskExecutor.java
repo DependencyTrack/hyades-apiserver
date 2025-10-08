@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.init;
 
-import alpine.Config;
+import org.eclipse.microprofile.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +30,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -39,7 +38,6 @@ import java.util.function.Predicate;
 import static java.util.Comparator.comparing;
 import static java.util.Comparator.reverseOrder;
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.util.ConfigUtil.getPassThroughProperties;
 
 /**
  * @since 5.6.0
@@ -170,11 +168,8 @@ final class InitTaskExecutor implements ServletContextListener {
     }
 
     private Predicate<InitTask> isTaskEnabled() {
-        return task -> {
-            final String propertyPrefix = "init.task." + task.name();
-            final Map<String, String> properties = getPassThroughProperties(config, propertyPrefix);
-            return !"false".equals(properties.get(propertyPrefix + ".enabled"));
-        };
+        return task -> config.getOptionalValue(
+                "init.task.%s.enabled".formatted(task.name()), Boolean.class).orElse(true);
     }
 
 }

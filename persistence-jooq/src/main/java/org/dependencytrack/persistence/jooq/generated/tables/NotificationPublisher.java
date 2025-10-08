@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.dependencytrack.persistence.jooq.generated.DefaultSchema;
+import org.dependencytrack.persistence.jooq.generated.Indexes;
 import org.dependencytrack.persistence.jooq.generated.Keys;
 import org.dependencytrack.persistence.jooq.generated.tables.NotificationRule.NotificationRulePath;
 import org.dependencytrack.persistence.jooq.generated.tables.records.NotificationPublisherRecord;
@@ -17,6 +18,7 @@ import org.jooq.Condition;
 import org.jooq.Field;
 import org.jooq.ForeignKey;
 import org.jooq.Identity;
+import org.jooq.Index;
 import org.jooq.InverseForeignKey;
 import org.jooq.Name;
 import org.jooq.Path;
@@ -42,7 +44,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class NotificationPublisher extends TableImpl<NotificationPublisherRecord> {
 
-    private static final long serialVersionUID = 885777098;
+    private static final long serialVersionUID = 1227807729;
 
     /**
      * The reference instance of <code>NOTIFICATIONPUBLISHER</code>
@@ -135,7 +137,7 @@ public class NotificationPublisher extends TableImpl<NotificationPublisherRecord
      */
     public static class NotificationPublisherPath extends NotificationPublisher implements Path<NotificationPublisherRecord> {
 
-        private static final long serialVersionUID = 885777098;
+        private static final long serialVersionUID = 1227807729;
         public <O extends Record> NotificationPublisherPath(Table<O> path, ForeignKey<O, NotificationPublisherRecord> childPath, InverseForeignKey<O, NotificationPublisherRecord> parentPath) {
             super(path, childPath, parentPath);
         }
@@ -162,6 +164,11 @@ public class NotificationPublisher extends TableImpl<NotificationPublisherRecord
     @Override
     public Schema getSchema() {
         return aliased() ? null : DefaultSchema.DEFAULT_SCHEMA;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.NOTIFICATIONPUBLISHER_NAME_IDX);
     }
 
     @Override

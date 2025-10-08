@@ -19,7 +19,6 @@
 package org.dependencytrack.util;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
-import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.io.IOUtils;
@@ -41,12 +40,12 @@ public final class CompressUtil {
      */
     public static byte[] optionallyDecompress(final byte[] input) {
         try (final ByteArrayInputStream bis = new ByteArrayInputStream(input);
-             final ArchiveInputStream ais = new ArchiveStreamFactory().createArchiveInputStream(bis)) {
+             final ArchiveInputStream<? extends ArchiveEntry> ais = new ArchiveStreamFactory().createArchiveInputStream(bis)) {
             final ArchiveEntry entry = ais.getNextEntry();
             if (ais.canReadEntryData(entry)) {
                 return IOUtils.toByteArray(ais);
             }
-        } catch (ArchiveException | IOException e) {
+        } catch (IOException e) {
             // throw it away and return the original byte array
         }
         return input;

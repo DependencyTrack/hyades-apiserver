@@ -73,6 +73,7 @@ import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ComponentMetaDao;
 import org.dependencytrack.persistence.jdbi.VulnerabilityScanDao;
 import org.dependencytrack.proto.repometaanalysis.v1.FetchMeta;
+import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.resources.v1.problems.ProblemDetails;
 import org.dependencytrack.util.InternalComponentIdentifier;

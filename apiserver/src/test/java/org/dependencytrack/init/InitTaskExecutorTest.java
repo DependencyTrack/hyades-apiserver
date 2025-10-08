@@ -18,9 +18,11 @@
  */
 package org.dependencytrack.init;
 
-import alpine.Config;
+import alpine.test.config.ConfigPropertyRule;
 import org.dependencytrack.PersistenceCapableTest;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 
@@ -29,30 +31,33 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.mockito.Mockito.mock;
 
 public class InitTaskExecutorTest extends PersistenceCapableTest {
 
-    private Config configMock;
+    @Rule
+    public final ConfigPropertyRule configPropertyRule = new ConfigPropertyRule();
+
     private PGSimpleDataSource dataSource;
 
     @Before
     public void before() throws Exception {
         super.before();
 
-        configMock = mock(Config.class);
-
         dataSource = new PGSimpleDataSource();
         dataSource.setUrl(postgresContainer.getJdbcUrl());
         dataSource.setUser(postgresContainer.getUsername());
         dataSource.setPassword(postgresContainer.getPassword());
+
+        configPropertyRule.setProperty("testcontainers.postgres.jdbc-url",  dataSource.getUrl());
+        configPropertyRule.setProperty("testcontainers.postgres.username", dataSource.getUser());
+        configPropertyRule.setProperty("testcontainers.postgres.password", dataSource.getPassword());
     }
 
     @Test
     public void shouldExecuteTasksInPriorityOrder() {
         final var executedTaskNames = new ArrayList<String>(3);
 
-        final var executor = new InitTaskExecutor(configMock, dataSource, List.of(
+        final var executor = new InitTaskExecutor(ConfigProvider.getConfig(), dataSource, List.of(
                 new TestInitTask(1, "a", () -> executedTaskNames.add("a")),
                 new TestInitTask(5, "b", () -> executedTaskNames.add("b")),
                 new TestInitTask(3, "c", () -> executedTaskNames.add("c"))));
@@ -63,7 +68,7 @@ public class InitTaskExecutorTest extends PersistenceCapableTest {
 
     @Test
     public void shouldThrowWhenTaskExecutionFails() {
-        final var executor = new InitTaskExecutor(configMock, dataSource, List.of(
+        final var executor = new InitTaskExecutor(ConfigProvider.getConfig(), dataSource, List.of(
                 new TestInitTask(1, "test", () -> {
                     throw new IllegalStateException("boom");
                 })));
@@ -76,7 +81,7 @@ public class InitTaskExecutorTest extends PersistenceCapableTest {
 
     @Test
     public void shouldThrowOnDuplicateTaskName() {
-        final var executor = new InitTaskExecutor(configMock, dataSource, List.of(
+        final var executor = new InitTaskExecutor(ConfigProvider.getConfig(), dataSource, List.of(
                 new TestInitTask(1, "test"),
                 new TestInitTask(2, "test")));
 
@@ -91,7 +96,7 @@ public class InitTaskExecutorTest extends PersistenceCapableTest {
 
     @Test
     public void shouldThrowOnInvalidTaskPriority() {
-        final var executor = new InitTaskExecutor(configMock, dataSource, List.of(
+        final var executor = new InitTaskExecutor(ConfigProvider.getConfig(), dataSource, List.of(
                 new TestInitTask(-1, "test")));
 
         assertThatExceptionOfType(IllegalStateException.class)
