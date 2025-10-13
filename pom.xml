@@ -112,7 +112,7 @@
         <lib.jackson.version>2.20.0</lib.jackson.version>
         <lib.jdbi.version>3.49.5</lib.jdbi.version>
         <lib.jersey.version>3.1.11</lib.jersey.version>
-        <lib.jetty.version>12.1.1</lib.jetty.version>
+        <lib.jetty.version>12.1.2</lib.jetty.version>
         <lib.jooq.version>3.20.8</lib.jooq.version>
         <lib.json-unit.version>4.1.1</lib.json-unit.version>
         <lib.jspecify.version>1.0.0</lib.jspecify.version>
@@ -124,7 +124,7 @@
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
         <lib.protobuf-java.version>4.32.1</lib.protobuf-java.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
-        <lib.smallrye-config.version>3.14.0</lib.smallrye-config.version>
+        <lib.smallrye-config.version>3.14.1</lib.smallrye-config.version>
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
@@ -449,7 +449,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>11.0.1</version>
+                        <version>12.0.0</version>
                     </dependency>
                 </dependencies>
             </plugin>
