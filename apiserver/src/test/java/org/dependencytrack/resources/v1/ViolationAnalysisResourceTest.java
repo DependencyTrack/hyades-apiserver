@@ -382,7 +382,7 @@ public class ViolationAnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisUpdateExistingNoChangesTest() throws Exception {
+    public void updateAnalysisUpdateExistingNoChangesTest() {
         initializeWithPermissions(Permissions.POLICY_VIOLATION_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);

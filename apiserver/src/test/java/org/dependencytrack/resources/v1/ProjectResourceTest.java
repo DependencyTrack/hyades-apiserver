@@ -53,6 +53,9 @@ import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.ExternalReference;
 import org.dependencytrack.model.OrganizationalContact;
 import org.dependencytrack.model.OrganizationalEntity;
+import org.dependencytrack.model.Policy;
+import org.dependencytrack.model.PolicyCondition;
+import org.dependencytrack.model.PolicyViolation;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetadata;
 import org.dependencytrack.model.ProjectMetrics;
@@ -60,6 +63,9 @@ import org.dependencytrack.model.ProjectProperty;
 import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.model.ViolationAnalysis;
+import org.dependencytrack.model.ViolationAnalysisComment;
+import org.dependencytrack.model.ViolationAnalysisState;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
@@ -2903,6 +2909,40 @@ public class ProjectResourceTest extends ResourceTest {
                 .bind("analysisId", analysis.getId())
                 .execute());
 
+        final var policy = new Policy();
+        policy.setName("foo");
+        policy.setOperator(Policy.Operator.ALL);
+        policy.setViolationState(Policy.ViolationState.INFO);
+        qm.persist(policy);
+
+        final var policyCondition = new PolicyCondition();
+        policyCondition.setPolicy(policy);
+        policyCondition.setSubject(PolicyCondition.Subject.PACKAGE_URL);
+        policyCondition.setOperator(PolicyCondition.Operator.IS);
+        policyCondition.setValue("value");
+        qm.persist(policyCondition);
+
+        final var policyViolation = new PolicyViolation();
+        policyViolation.setPolicyCondition(policyCondition);
+        policyViolation.setComponent(componentB);
+        policyViolation.setType(PolicyViolation.Type.OPERATIONAL);
+        policyViolation.setText("text");
+        policyViolation.setTimestamp(new Date());
+        qm.persist(policyViolation);
+
+        final var violationAnalysis = new ViolationAnalysis();
+        violationAnalysis.setPolicyViolation(policyViolation);
+        violationAnalysis.setComponent(componentB);
+        violationAnalysis.setViolationAnalysisState(ViolationAnalysisState.APPROVED);
+        violationAnalysis.setSuppressed(true);
+        qm.persist(violationAnalysis);
+
+        final var violationAnalysisComment = new ViolationAnalysisComment();
+        violationAnalysisComment.setViolationAnalysis(violationAnalysis);
+        violationAnalysisComment.setComment("comment");
+        violationAnalysisComment.setCommenter("commenter");
+        violationAnalysisComment.setTimestamp(new Date());
+        qm.persist(violationAnalysisComment);
 
         final Response response = jersey.target("%s/clone".formatted(V1_PROJECT)).request()
                 .header(X_API_KEY, apiKey)
@@ -2914,6 +2954,7 @@ public class ProjectResourceTest extends ResourceTest {
                           "includeAuditHistory": true,
                           "includeComponents": true,
                           "includeProperties": true,
+                          "includePolicyViolations": true,
                           "includeServices": true,
                           "includeTags": true
                         }
@@ -2992,6 +3033,18 @@ public class ProjectResourceTest extends ResourceTest {
                     assertThat(clonedComponent.getSwidTagId()).isEqualTo("swidTagId");
                     assertThat(clonedComponent.getSupplier()).isNotNull();
                     assertThat(clonedComponent.getSupplier().getName()).isEqualTo("componentSupplier");
+                    assertThatJson(clonedComponent.getDirectDependencies())
+                            .withMatcher("notSourceComponentUuid", not(equalTo(componentB.getUuid().toString())))
+                            .isEqualTo(/* language=JSON */ """
+                                    [
+                                      {
+                                        "objectType": "COMPONENT",
+                                        "uuid": "${json-unit.matches:notSourceComponentUuid}",
+                                        "name": "acme-lib-b",
+                                        "version": "2.1.0"
+                                      }
+                                    ]
+                                    """);
 
                     assertThat(clonedComponent.getOccurrences()).satisfiesExactly(occurrence -> {
                         assertThat(occurrence.getLocation()).isEqualTo("location");
@@ -3023,6 +3076,26 @@ public class ProjectResourceTest extends ResourceTest {
                     assertThat(clonedComponent.getUuid()).isNotEqualTo(componentA.getUuid());
                     assertThat(clonedComponent.getName()).isEqualTo("acme-lib-b");
                     assertThat(clonedComponent.getVersion()).isEqualTo("2.1.0");
+
+                    assertThat(qm.getAllPolicyViolations(clonedComponent)).satisfiesExactly(clonedViolation -> {
+                        assertThat(clonedViolation.getProject().getId()).isEqualTo(clonedProject.getId());
+                        assertThat(clonedViolation.getPolicyCondition().getId()).isEqualTo(policyCondition.getId());
+                        assertThat(clonedViolation.getType()).isEqualTo(PolicyViolation.Type.OPERATIONAL);
+                        assertThat(clonedViolation.getText()).isEqualTo("text");
+                        assertThat(clonedViolation.getTimestamp()).isNotNull();
+
+                        final ViolationAnalysis clonedViolationAnalysis = clonedViolation.getAnalysis();
+                        assertThat(clonedViolationAnalysis).isNotNull();
+                        assertThat(clonedViolationAnalysis.getProject().getId()).isEqualTo(clonedProject.getId());
+                        assertThat(clonedViolationAnalysis.getComponent().getId()).isEqualTo(clonedComponent.getId());
+                        assertThat(clonedViolationAnalysis.getAnalysisState()).isEqualTo(ViolationAnalysisState.APPROVED);
+                        assertThat(clonedViolationAnalysis.isSuppressed()).isTrue();
+                        assertThat(clonedViolationAnalysis.getAnalysisComments()).satisfiesExactly(clonedComment -> {
+                           assertThat(clonedComment.getComment()).isEqualTo("comment");
+                           assertThat(clonedComment.getCommenter()).isEqualTo("commenter");
+                           assertThat(clonedComment.getTimestamp()).isNotNull();
+                        });
+                    });
                 });
 
         assertThat(qm.getAllServiceComponents(clonedProject)).satisfiesExactly(clonedService -> {

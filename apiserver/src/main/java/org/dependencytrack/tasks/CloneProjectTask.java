@@ -22,9 +22,10 @@ import alpine.common.logging.Logger;
 import alpine.event.framework.Event;
 import alpine.event.framework.Subscriber;
 import org.dependencytrack.event.CloneProjectEvent;
-import org.dependencytrack.model.Project;
 import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.persistence.QueryManager;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.resources.v1.vo.CloneProjectRequest;
 import org.slf4j.MDC;
 
@@ -35,6 +36,7 @@ import static org.dependencytrack.common.MdcKeys.MDC_EVENT_TOKEN;
 import static org.dependencytrack.common.MdcKeys.MDC_PROJECT_UUID;
 import static org.dependencytrack.model.WorkflowStatus.PENDING;
 import static org.dependencytrack.model.WorkflowStep.PROJECT_CLONE;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 
 public class CloneProjectTask implements Subscriber {
 
@@ -64,21 +66,26 @@ public class CloneProjectTask implements Subscriber {
 
                 try {
                     LOGGER.info("Cloning project for version %s".formatted(request.getVersion()));
-                    final Project project = qm.clone(
-                            UUID.fromString(request.getProject()),
-                            request.getVersion(),
-                            request.includeTags(),
-                            request.includeProperties(),
-                            request.includeComponents(),
-                            request.includeServices(),
-                            request.includeAuditHistory(),
-                            request.includeACL(),
-                            request.includePolicyViolations(),
-                            request.makeCloneLatest()
-                    );
+                    final UUID clonedProjectUuid = inJdbiTransaction(
+                            handle -> handle.attach(ProjectDao.class).cloneProject(
+                                    new CloneProjectCommand(
+                                            UUID.fromString(request.getProject()),
+                                            request.getVersion(),
+                                            request.makeCloneLatest(),
+                                            request.includeACL(),
+                                            request.includeComponents(),
+                                            // NB: For legacy reasons, includeAuditHistory implies includeFindings.
+                                            /* includeFindings */ request.includeAuditHistory(),
+                                            /* includeFindingsAuditHistory */ request.includeAuditHistory(),
+                                            // NB: For legacy reasons, includePolicyViolations implies includePolicyViolationsAuditHistory.
+                                            request.includePolicyViolations(),
+                                            /* includePolicyViolationsAuditHistory */ request.includePolicyViolations(),
+                                            request.includeProperties(),
+                                            request.includeServices(),
+                                            request.includeTags())));
 
                     qm.updateWorkflowStateToComplete(workflowState);
-                    LOGGER.info("Cloned project for version %s into project %s".formatted(project.getVersion(), project.getUuid()));
+                    LOGGER.info("Cloned project for version %s into project %s".formatted(request.getVersion(), clonedProjectUuid));
                 } catch (Exception ex) {
                     LOGGER.error("Failed to clone project", ex);
                     qm.updateWorkflowStateToFailed(workflowState, ex.getMessage());

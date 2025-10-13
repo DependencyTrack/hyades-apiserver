@@ -22,17 +22,23 @@ import alpine.model.Team;
 import alpine.persistence.PaginatedResult;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.core.type.TypeReference;
+import jakarta.annotation.Nullable;
+import org.dependencytrack.exception.AlreadyExistsException;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.ProjectMetrics;
 import org.dependencytrack.model.Tag;
+import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.persistence.jdbi.mapping.ExternalReferenceMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalContactMapper;
 import org.dependencytrack.persistence.jdbi.mapping.OrganizationalEntityMapper;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.mapper.reflect.BeanMapper;
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
+import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.StatementContext;
+import org.jdbi.v3.core.statement.UnableToExecuteStatementException;
 import org.jdbi.v3.json.Json;
+import org.jdbi.v3.sqlobject.SqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterColumnMapper;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
@@ -42,13 +48,14 @@ import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+import org.postgresql.util.PSQLException;
 
-import jakarta.annotation.Nullable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -62,7 +69,7 @@ import static org.dependencytrack.persistence.jdbi.mapping.RowMapperUtil.maybeSe
  * @since 5.5.0
  */
 @RegisterConstructorMapper(ProjectDao.ConciseProjectListRow.class)
-public interface ProjectDao {
+public interface ProjectDao extends SqlObject {
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="nameFilter" type="Boolean" -->
@@ -464,6 +471,51 @@ public interface ProjectDao {
              WHERE "UUID" = :projectUuid
             """)
     Boolean isAccessible(@Bind UUID projectUuid);
+
+    /**
+     * @param command The clone command.
+     * @return The {@link UUID} of the cloned project.
+     * @throws NoSuchElementException When the source project does not exist.
+     * @throws AlreadyExistsException When a project with the target version already exists.
+     * @since 5.7.0
+     */
+    default UUID cloneProject(final CloneProjectCommand command) {
+        final Query query = getHandle().createQuery(/* language=SQL */ """
+                SELECT clone_project(
+                  :sourceProjectUuid
+                , :targetProjectVersion
+                , :targetProjectVersionIsLatest
+                , :includeAcl
+                , :includeComponents
+                , :includeFindings
+                , :includeFindingsAuditHistory
+                , :includePolicyViolations
+                , :includePolicyViolationsAuditHistory
+                , :includeProperties
+                , :includeServices
+                , :includeTags
+                );
+                """);
+
+        try {
+            return query
+                    .bindMethods(command)
+                    .mapTo(UUID.class)
+                    .one();
+        } catch (UnableToExecuteStatementException e) {
+            if (e.getCause() instanceof final PSQLException pe
+                    && pe.getServerErrorMessage() != null
+                    && pe.getServerErrorMessage().getMessage() != null) {
+                if (pe.getServerErrorMessage().getMessage().startsWith("Source project does not exist")) {
+                    throw new NoSuchElementException(pe.getServerErrorMessage().getMessage(), pe);
+                } else if (pe.getServerErrorMessage().getMessage().startsWith("Target project version already exists")) {
+                    throw new AlreadyExistsException(pe.getServerErrorMessage().getMessage(), pe);
+                }
+            }
+
+            throw e;
+        }
+    }
 
     class ProjectListRowMapper implements RowMapper<ProjectListRow> {
 

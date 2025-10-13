@@ -19,6 +19,7 @@
 package org.dependencytrack.resources.v2;
 
 import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -174,6 +175,157 @@ public class ProjectsResourceTest extends ResourceTest {
                   "status": 404,
                   "title": "Not Found",
                   "detail": "The requested resource could not be found."
+                }
+                """);
+    }
+
+    @Test
+    public void cloneProjectShouldReturnUuidOfClonedProject() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        final Response response = jersey.target("/projects/%s/clone".formatted(project.getUuid()))
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "version": "2.0.0"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThat(responseJson).containsOnlyKeys("uuid");
+
+        final String clonedProjectUuid = responseJson.getString("uuid");
+        assertThat(response.getLocation()).isNotNull();
+        assertThat(response.getLocation().getPath()).endsWith("/projects/" + clonedProjectUuid);
+
+        final Project clonedProject = qm.getObjectByUuid(Project.class, clonedProjectUuid);
+        assertThat(clonedProject).isNotNull();
+        assertThat(clonedProject.getName()).isEqualTo("acme-app");
+        assertThat(clonedProject.getVersion()).isEqualTo("2.0.0");
+    }
+
+    @Test
+    public void cloneProjectShouldMarkNewProjectAsLatestWhenRequested() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        project.setIsLatest(true);
+        qm.persist(project);
+
+        final Response response = jersey.target("/projects/%s/clone".formatted(project.getUuid()))
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "version": "2.0.0",
+                          "version_is_latest": true
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(201);
+
+        final JsonObject responseJson = parseJsonObject(response);
+        assertThat(responseJson).containsOnlyKeys("uuid");
+
+        final String clonedProjectUuid = responseJson.getString("uuid");
+        assertThat(response.getLocation()).isNotNull();
+        assertThat(response.getLocation().getPath()).endsWith("/projects/" + clonedProjectUuid);
+
+        final Project clonedProject = qm.getObjectByUuid(Project.class, clonedProjectUuid);
+        assertThat(clonedProject).isNotNull();
+        assertThat(clonedProject.getName()).isEqualTo("acme-app");
+        assertThat(clonedProject.getVersion()).isEqualTo("2.0.0");
+        assertThat(clonedProject.isLatest()).isTrue();
+
+        qm.getPersistenceManager().evictAll(project);
+        assertThat(project.isLatest()).isFalse();
+    }
+
+    @Test
+    public void cloneProjectShouldReturnForbiddenWhenAclIsEnabledAndProjectIsNotAccessible() {
+        enablePortfolioAccessControl();
+
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        final Response response = jersey.target("/projects/%s/clone".formatted(project.getUuid()))
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "version": "2.0.0"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type": "about:blank",
+                  "status": 403,
+                  "title": "Project access denied",
+                  "detail": "Access to the requested project is forbidden"
+                }
+                """);
+    }
+
+    @Test
+    public void cloneProjectShouldReturnNotFoundWhenProjectDoesNotExist() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
+        final Response response = jersey.target("/projects/c5b13f13-f2f0-4a30-97b5-94d164a345f6/clone")
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "version": "2.0.0"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type": "about:blank",
+                  "status": 404,
+                  "title": "Resource does not exist",
+                  "detail": "Project could not be found"
+                }
+                """);
+    }
+
+    @Test
+    public void cloneProjectShouldReturnConflictWhenNewVersionAlreadyExists() {
+        initializeWithPermissions(Permissions.PORTFOLIO_MANAGEMENT);
+
+        final var project = new Project();
+        project.setName("acme-app");
+        project.setVersion("1.0.0");
+        qm.persist(project);
+
+        final Response response = jersey.target("/projects/%s/clone".formatted(project.getUuid()))
+                .request()
+                .header(X_API_KEY, apiKey)
+                .post(Entity.json(/* language=JSON */ """
+                        {
+                          "version": "1.0.0"
+                        }
+                        """));
+        assertThat(response.getStatus()).isEqualTo(409);
+        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+                {
+                  "type": "about:blank",
+                  "status": 409,
+                  "title": "Resource already exists",
+                  "detail": "Target project version already exists: 1.0.0"
                 }
                 """);
     }
