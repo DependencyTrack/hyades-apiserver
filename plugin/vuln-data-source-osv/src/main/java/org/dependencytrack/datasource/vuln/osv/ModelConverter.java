@@ -86,27 +86,29 @@ import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_UNKNOWN;
 final class ModelConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ModelConverter.class);
-    private static final UUID UUID_V5_NAMESPACE = UUID.fromString("ffbefd63-724d-47b6-8d98-3deb06361885");
     private static final Pattern WILDCARD_VERS_PATTERN = Pattern.compile("^vers:\\w+/\\*$");
     private static final String TITLE_PROPERTY_NAME = "dependency-track:vuln:title";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    static Bom convert(final OsvSchema schemaInput, final boolean isAliasSyncEnabled) {
+    static Bom convert(final OsvSchema schemaInput, final boolean isAliasSyncEnabled, final String currentEcosystem) {
         if (schemaInput.getWithdrawn() != null) {
             return null;
         }
         Bom.Builder cyclonedxBom = Bom.newBuilder();
         return cyclonedxBom
-                .addVulnerabilities(extractVulnerability(schemaInput, isAliasSyncEnabled, cyclonedxBom))
+                .addVulnerabilities(extractVulnerability(schemaInput, isAliasSyncEnabled, cyclonedxBom, currentEcosystem))
                 .build();
     }
 
-    private static Vulnerability extractVulnerability(final OsvSchema schemaInput, final boolean isAliasSyncEnabled, Bom.Builder cyclonedxBom) {
+    private static Vulnerability extractVulnerability(final OsvSchema schemaInput, final boolean isAliasSyncEnabled, Bom.Builder cyclonedxBom, final String currentEcosystem) {
         Vulnerability.Builder vulnerability = Vulnerability.newBuilder();
         var severity = SEVERITY_UNKNOWN;
 
         Optional.ofNullable(schemaInput.getId()).ifPresent(vulnerability::setId);
         vulnerability.setSource(extractSource(schemaInput.getId()));
+        vulnerability.addProperties(Property.newBuilder()
+                .setName(CycloneDxPropertyNames.PROPERTY_OSV_ECOSYSTEM)
+                .setValue(currentEcosystem));
         Optional.ofNullable(schemaInput.getSummary()).ifPresent(summary -> vulnerability.addProperties(
                 Property.newBuilder().setName(TITLE_PROPERTY_NAME).setValue(trimSummary(summary)).build()));
         Optional.ofNullable(schemaInput.getDetails()).ifPresent(vulnerability::setDescription);

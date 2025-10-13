@@ -192,7 +192,7 @@ final class OsvVulnDataSource implements VulnDataSource {
             throw new UncheckedIOException("Failed to read OSV advisory", e);
         }
 
-        return ModelConverter.convert(schemaInput, isAliasSyncEnabled);
+        return ModelConverter.convert(schemaInput, isAliasSyncEnabled, currentEcosystem);
     }
 
     private boolean openNextEcosystem() {

@@ -148,22 +148,26 @@ public class ExtensionsResource implements ExtensionsApi {
         var responseItems = extensionFactory.runtimeConfigs().stream()
                 .<ExtensionConfig>map(
                         configDef -> ExtensionConfig.builder()
-                                .name(configDef.name())
-                                .description(configDef.description())
-                                .type(switch (configDef.type()) {
-                                    case ConfigType.Boolean ignored -> ExtensionConfigType.BOOLEAN;
-                                    case ConfigType.Duration ignored -> ExtensionConfigType.DURATION;
-                                    case ConfigType.Instant ignored -> ExtensionConfigType.INSTANT;
-                                    case ConfigType.Integer ignored -> ExtensionConfigType.INTEGER;
-                                    case ConfigType.Path ignored -> ExtensionConfigType.PATH;
-                                    case ConfigType.String ignored -> ExtensionConfigType.STRING;
-                                    case ConfigType.StringList ignored -> ExtensionConfigType.STRING_LIST;
-                                    case ConfigType.URL ignored -> ExtensionConfigType.URL;
-                                })
-                                .isRequired(configDef.isRequired())
-                                .isSecret(configDef.isSecret())
-                                .value(getConfigValue(configRegistry, configDef))
-                                .allowedValues(configDef.allowedValues())
+                                    .name(configDef.name())
+                                    .description(configDef.description())
+                                    .type(switch (configDef.type()) {
+                                        case ConfigType.Boolean ignored -> ExtensionConfigType.BOOLEAN;
+                                        case ConfigType.Duration ignored -> ExtensionConfigType.DURATION;
+                                        case ConfigType.Instant ignored -> ExtensionConfigType.INSTANT;
+                                        case ConfigType.Integer ignored -> ExtensionConfigType.INTEGER;
+                                        case ConfigType.Path ignored -> ExtensionConfigType.PATH;
+                                        case ConfigType.String ignored -> ExtensionConfigType.STRING;
+                                        case ConfigType.StringList ignored -> ExtensionConfigType.STRING_LIST;
+                                        case ConfigType.URL ignored -> ExtensionConfigType.URL;
+                                    })
+                                    .isRequired(configDef.isRequired())
+                                    .isSecret(configDef.isSecret())
+                                    .value(getConfigValue(configRegistry, configDef))
+                                    .allowedValues(
+                                        switch (configDef.type()) {
+                                            case ConfigType.StringList s -> s.allowedValues();
+                                            default -> null;
+                                        })
                                 .build())
                 .toList();
 

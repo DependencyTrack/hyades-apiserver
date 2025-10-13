@@ -20,21 +20,35 @@ package org.dependencytrack.datasource.vuln.osv;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.Timestamps;
+import net.javacrumbs.jsonunit.core.Option;
 import org.cyclonedx.proto.v1_6.Bom;
 import org.cyclonedx.proto.v1_6.Property;
 import org.cyclonedx.proto.v1_6.Vulnerability;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -51,7 +65,7 @@ class OsvVulnDataSourceTest {
         watermarkManagerMock = mock(WatermarkManager.class);
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
-        URL url = new URL("http://localhost");
+        URL url = URI.create("http://localhost").toURL();
 
         vulnDataSource = new OsvVulnDataSource(
                 watermarkManagerMock,
@@ -133,4 +147,85 @@ class OsvVulnDataSourceTest {
         vulnDataSource.close();
         verify(watermarkManagerMock).maybeCommit(any(Set.class));
     }
+
+    @Test
+    void testDownloadAndExtractEcosystemFiles() throws Exception {
+
+        var wireMockServer = new WireMockServer();
+        wireMockServer.start();
+        WireMock.configureFor("localhost", wireMockServer.port());
+        final String ecosystem = "maven";
+
+        // Create in-memory ZIP with one advisory JSON
+        ByteArrayOutputStream zipBytes = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(zipBytes)) {
+            ZipEntry entry = new ZipEntry("osv-advisory.json");
+            zos.putNextEntry(entry);
+            String advisoryJson = """
+                {
+                    "id": "OSV-789",
+                    "summary": "Test vulnerability",
+                    "affected": [],
+                    "modified": "2022-06-09T07:01:32.587163Z"
+                }
+                """;
+            zos.write(advisoryJson.getBytes());
+            zos.closeEntry();
+        }
+
+        stubFor(get(urlEqualTo("/" + ecosystem + "/all.zip"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody(zipBytes.toByteArray())
+                        .withHeader("Content-Type", "application/zip")));
+
+        URL url = new URL("http://localhost:" + wireMockServer.port());
+
+        OsvVulnDataSource dataSource = new OsvVulnDataSource(
+                watermarkManagerMock,
+                objectMapper,
+                url,
+                List.of(ecosystem),
+                HttpClient.newHttpClient(),
+                false
+        );
+
+        assertTrue(dataSource.hasNext());
+        var bom = dataSource.next();
+        assertThatJson(JsonFormat.printer().print(bom))
+                .when(Option.IGNORING_ARRAY_ORDER)
+                .isEqualTo("""
+                        {
+                           "vulnerabilities" : [
+                                {
+                                     "id" : "OSV-789",
+                                     "source" : {
+                                       "name" : "OSV"
+                                     },
+                                     "ratings" : [ {
+                                       "severity" : "SEVERITY_UNKNOWN"
+                                     } ],
+                                     "updated": "2022-06-09T07:01:32Z",
+                                     "properties" : [
+                                         {
+                                           "name" : "dependency-track:vuln:title",
+                                           "value" : "Test vulnerability"
+                                         },
+                                         {
+                                            "name": "internal:osv:ecosystem",
+                                            "value": "maven"
+                                         }
+                                     ]
+                                }
+                           ]
+                        }
+        """);
+
+        dataSource.markProcessed(bom);
+        verify(watermarkManagerMock).maybeAdvance(eq(ecosystem), any());
+
+        dataSource.close();
+        verify(watermarkManagerMock).maybeCommit(any());
+    }
+
 }

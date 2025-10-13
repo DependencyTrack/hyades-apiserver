@@ -49,24 +49,21 @@ public final class NvdVulnDataSourceConfigs {
                 ConfigTypes.BOOLEAN,
                 /* defaultValue */ true,
                 /* isRequired */ false,
-                /* isSecret */ false,
-                null);
+                /* isSecret */ false);
         CONFIG_FEEDS_URL = new RuntimeConfigDefinition<>(
                 "feeds.url",
                 "Base URL of NVD feeds",
                 ConfigTypes.URL,
                 /* defaultValue */ defaultFeedsUrl,
                 /* isRequired */ true,
-                /* isSecret */ false,
-                null);
+                /* isSecret */ false);
         CONFIG_WATERMARK = new RuntimeConfigDefinition<>(
                 "watermark",
                 "Highest observed modification timestamp of processed vulnerabilities",
                 ConfigTypes.INSTANT,
                 /* defaultValue */ null,
                 /* isRequired */ false,
-                /* isSecret */ false,
-                null);
+                /* isSecret */ false);
     }
 
     private NvdVulnDataSourceConfigs() {

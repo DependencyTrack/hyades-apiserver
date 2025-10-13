@@ -49,7 +49,7 @@ public class ModelConverterTest {
         var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-GHSA-77rv-6vfw-x4gc.json"), OsvSchema.class);
 
         //when
-        Bom bom = ModelConverter.convert(osvSchemaInput, true);
+        Bom bom = ModelConverter.convert(osvSchemaInput, true, "maven");
 
         //then
         assertThatJson(JsonFormat.printer().print(bom))
@@ -95,10 +95,15 @@ public class ModelConverterTest {
                                   "range": "vers:maven/>=0|<2.0.17"
                                 }]
                               }],
-                              "properties": [{
-                                "name": "dependency-track:vuln:title",
-                                "value": "Critical severity vulnerability that affects org.springframework.security.oauth:spring-security-oauth and org.springframework.security.oauth:spring-security-oauth2"
-                              }]
+                              "properties": [
+                                {
+                                   "name": "dependency-track:vuln:title",
+                                   "value": "Critical severity vulnerability that affects org.springframework.security.oauth:spring-security-oauth and org.springframework.security.oauth:spring-security-oauth2"
+                                },
+                                {
+                                    "name": "internal:osv:ecosystem",
+                                    "value": "maven"
+                                }]
                             }]
                           }
                         """);
@@ -110,7 +115,7 @@ public class ModelConverterTest {
         var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-GHSA-77rv-6vfw-x4gc.json"), OsvSchema.class);
 
         //when
-        Bom bom = ModelConverter.convert(osvSchemaInput, false);
+        Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
 
         //then
         assertNotNull(bom);
@@ -128,7 +133,7 @@ public class ModelConverterTest {
         var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-with-ranges.json"), OsvSchema.class);
 
         //when
-        Bom bom = ModelConverter.convert(osvSchemaInput, false);
+        Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
 
         //then
         assertThatJson(JsonFormat.printer().print(bom))
@@ -194,10 +199,15 @@ public class ModelConverterTest {
                                 { "range": "vers:maven/>=10|<=29.0" }
                                ]
                              }],
-                             "properties": [{
-                               "name": "dependency-track:vuln:title",
-                               "value": "faker.js 6.6.6 is broken and the developer has wiped the original GitHub repo"
-                             }]
+                             "properties": [
+                                {
+                                   "name": "dependency-track:vuln:title",
+                                   "value": "faker.js 6.6.6 is broken and the developer has wiped the original GitHub repo"
+                                },
+                                {
+                                    "name": "internal:osv:ecosystem",
+                                    "value": "maven"
+                                }]
                            }]
                          }
                         """);
@@ -209,7 +219,7 @@ public class ModelConverterTest {
         var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-no-range.json"), OsvSchema.class);
 
         //when
-        Bom bom = ModelConverter.convert(osvSchemaInput, true);
+        Bom bom = ModelConverter.convert(osvSchemaInput, true, "maven");
 
         //Then
         assertThatJson(JsonFormat.printer().print(bom))
@@ -227,10 +237,15 @@ public class ModelConverterTest {
                              "description": "faker.js had it's version updated to 6.6.6 in NPM (which reports it as having 2,571 dependent packages that rely upon it) and the GitHub repo has been wiped of content. This appears to have been done intentionally as the repo only has a single commit (so it was likjely deleted, recreated and a single commit with \\"endgame\\" added). It appears that both GitHub and NPM have locked out the original developer accountbut that the faker.js package is still broken. Please note that this issue is directly related to GSD-2022-1000007 and appears to be part of the same incident. A fork of the repo with the original code appears to now be available at https://github.com/faker-js/faker",
                              "published": "2022-01-09T02:46:05Z",
                              "updated": "2022-01-09T11:37:01Z",
-                             "properties": [{
-                               "name": "dependency-track:vuln:title",
-                               "value": "faker.js 6.6.6 is broken and the developer has wiped the original GitHub repo"
-                             }]
+                             "properties": [
+                                {
+                                   "name": "dependency-track:vuln:title",
+                                   "value": "faker.js 6.6.6 is broken and the developer has wiped the original GitHub repo"
+                                },
+                                {
+                                    "name": "internal:osv:ecosystem",
+                                    "value": "maven"
+                                }]
                            }]
                          }
                         """);
@@ -262,7 +277,7 @@ public class ModelConverterTest {
         var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-commit-hash-ranges.json"), OsvSchema.class);
 
         //when
-        Bom bom = ModelConverter.convert(osvSchemaInput, true);
+        Bom bom = ModelConverter.convert(osvSchemaInput, true, "maven");
 
         //then
         assertThatJson(JsonFormat.printer().print(bom))
@@ -296,10 +311,15 @@ public class ModelConverterTest {
                                  "version": "release-5.0.0"
                                }]
                              }],
-                             "properties": [{
-                               "name": "dependency-track:vuln:title",
-                               "value": "Heap-buffer-overflow in r_str_utf8_codepoint"
-                             }]
+                             "properties": [
+                                {
+                                   "name": "dependency-track:vuln:title",
+                                   "value": "Heap-buffer-overflow in r_str_utf8_codepoint"
+                                },
+                                {
+                                    "name": "internal:osv:ecosystem",
+                                    "value": "maven"
+                                }]
                            }]
                          }
                         """);
@@ -312,7 +332,7 @@ public class ModelConverterTest {
         var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-upper-bound-range.json"), OsvSchema.class);
 
         //when
-        Bom bom = ModelConverter.convert(osvSchemaInput, false);
+        Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
 
         //then
         assertThatJson(JsonFormat.printer().print(bom))
@@ -346,7 +366,12 @@ public class ModelConverterTest {
                                     }
                                   ]
                                 }
-                              ]
+                              ],
+                              "properties": [
+                                {
+                                    "name": "internal:osv:ecosystem",
+                                    "value": "maven"
+                                }]
                             }
                           ]
                         }
@@ -359,7 +384,7 @@ public class ModelConverterTest {
         var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-no-upper-bound-range.json"), OsvSchema.class);
 
         //when
-        Bom bom = ModelConverter.convert(osvSchemaInput, false);
+        Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
 
         //then
         assertThatJson(JsonFormat.printer().print(bom))
@@ -393,7 +418,12 @@ public class ModelConverterTest {
                                     }
                                   ]
                                 }
-                              ]
+                              ],
+                              "properties": [
+                                {
+                                    "name": "internal:osv:ecosystem",
+                                    "value": "maven"
+                                }]
                             }
                           ]
                         }
@@ -406,7 +436,7 @@ public class ModelConverterTest {
         var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-exact-version.json"), OsvSchema.class);
 
         //when
-        Bom bom = ModelConverter.convert(osvSchemaInput, false);
+        Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
 
         //then
         assertThatJson(JsonFormat.printer().print(bom))
@@ -440,7 +470,12 @@ public class ModelConverterTest {
                                     }
                                   ]
                                 }
-                              ]
+                              ],
+                              "properties": [
+                                {
+                                    "name": "internal:osv:ecosystem",
+                                    "value": "maven"
+                                }]
                             }
                           ]
                         }
@@ -453,7 +488,7 @@ public class ModelConverterTest {
         var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-git-conflict-upper-bound-range.json"), OsvSchema.class);
 
         //when
-        Bom bom = ModelConverter.convert(osvSchemaInput, false);
+        Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
 
         //then
         assertThatJson(JsonFormat.printer().print(bom))
@@ -487,7 +522,12 @@ public class ModelConverterTest {
                                     }
                                   ]
                                 }
-                              ]
+                              ],
+                              "properties": [
+                                {
+                                    "name": "internal:osv:ecosystem",
+                                    "value": "maven"
+                                }]
                             }
                           ]
                         }
@@ -500,7 +540,7 @@ public class ModelConverterTest {
         var osvSchemaInput = MAPPER.readValue(getClass().getResource("/osv-vulnerability-invalid-cvss.json"), OsvSchema.class);
 
         //when
-        Bom bom = ModelConverter.convert(osvSchemaInput, false);
+        Bom bom = ModelConverter.convert(osvSchemaInput, false, "maven");
 
         //then
         assertThatJson(JsonFormat.printer().print(bom))
@@ -526,7 +566,12 @@ public class ModelConverterTest {
                                   "method": "SCORE_METHOD_CVSSV2",
                                   "vector": "AV:N/AC:H/Au:N/C:P/I:N/A:N"
                                 }
-                              ]
+                              ],
+                              "properties": [
+                                {
+                                    "name": "internal:osv:ecosystem",
+                                    "value": "maven"
+                                }]
                             }
                           ]
                         }

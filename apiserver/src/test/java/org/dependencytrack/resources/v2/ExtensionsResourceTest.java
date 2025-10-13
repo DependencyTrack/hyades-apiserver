@@ -147,9 +147,9 @@ public class ExtensionsResourceTest extends ResourceTest {
 
         final var extensionPointSpec = new DummyExtensionPointSpec("foo");
         final var extensionFactory = new DummyExtensionFactory("bar", List.of(
-                new RuntimeConfigDefinition<>("enabled", "", ConfigTypes.BOOLEAN, true, true, false, null),
-                new RuntimeConfigDefinition<>("access.token", "", ConfigTypes.STRING, "secretValue", true, true, null),
-                new RuntimeConfigDefinition<>("ecosystems", "", ConfigTypes.STRING_LIST(Set.of("eco1")), List.of("eco1"), false, false, Set.of("eco1", "eco2"))));
+                new RuntimeConfigDefinition<>("enabled", "", ConfigTypes.BOOLEAN, true, true, false),
+                new RuntimeConfigDefinition<>("access.token", "", ConfigTypes.STRING, "secretValue", true, true),
+                new RuntimeConfigDefinition<>("ecosystems", "", ConfigTypes.stringList(Set.of("eco1", "eco2")), List.of("eco1"), false, false)));
         final var configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
         configRegistry.createWithDefaultsIfNotExist(extensionFactory.runtimeConfigs());
 
@@ -246,8 +246,8 @@ public class ExtensionsResourceTest extends ResourceTest {
 
         final var extensionPointSpec = new DummyExtensionPointSpec("foo");
         final var extensionFactory = new DummyExtensionFactory("bar", List.of(
-                new RuntimeConfigDefinition<>("enabled", "", ConfigTypes.BOOLEAN, null, true, false, null),
-                new RuntimeConfigDefinition<>("access.token", "", ConfigTypes.STRING, null, true, true, null)));
+                new RuntimeConfigDefinition<>("enabled", "", ConfigTypes.BOOLEAN, null, true, false),
+                new RuntimeConfigDefinition<>("access.token", "", ConfigTypes.STRING, null, true, true)));
         final var configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
         configRegistry.createWithDefaultsIfNotExist(extensionFactory.runtimeConfigs());
 
@@ -290,8 +290,8 @@ public class ExtensionsResourceTest extends ResourceTest {
 
         final var extensionPointSpec = new DummyExtensionPointSpec("foo");
         final var extensionFactory = new DummyExtensionFactory("bar", List.of(
-                new RuntimeConfigDefinition<>("enabled", "", ConfigTypes.BOOLEAN, null, true, false, null),
-                new RuntimeConfigDefinition<>("some.number", "", ConfigTypes.INTEGER, null, false, false, null)));
+                new RuntimeConfigDefinition<>("enabled", "", ConfigTypes.BOOLEAN, null, true, false),
+                new RuntimeConfigDefinition<>("some.number", "", ConfigTypes.INTEGER, null, false, false)));
         final var configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
         configRegistry.createWithDefaultsIfNotExist(extensionFactory.runtimeConfigs());
 

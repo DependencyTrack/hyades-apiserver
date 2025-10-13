@@ -22,7 +22,11 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public enum OsvEcosystem {
+/**
+ * The ecosystems are defined at https://ossf.github.io/osv-schema/#defined-ecosystems
+ * Update this enum if the source definition changes.
+ */
+enum OsvEcosystem {
 
     ALMALINUX("AlmaLinux"),
     ALPAQUITA("Alpaquita"),

@@ -18,8 +18,6 @@
  */
 package org.dependencytrack.plugin.api.config;
 
-import java.util.Set;
-
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -34,7 +32,6 @@ import static java.util.Objects.requireNonNull;
  * @param defaultValue  Default value of the config.
  * @param isRequired    Whether the config is required (value must not be {@code null}).
  * @param isSecret      Whether the config is secret (value should be stored in encrypted form).
- * @param allowedValues Optional list of allowed values.
  * @since 5.7.0
  */
 public record RuntimeConfigDefinition<T>(
@@ -43,8 +40,7 @@ public record RuntimeConfigDefinition<T>(
         ConfigType<T> type,
         T defaultValue,
         boolean isRequired,
-        boolean isSecret,
-        Set<String> allowedValues) implements ConfigDefinition<T> {
+        boolean isSecret) implements ConfigDefinition<T> {
 
     public RuntimeConfigDefinition {
         requireNonNull(name, "name must not be null");
