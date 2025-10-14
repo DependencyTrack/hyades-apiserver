@@ -61,6 +61,7 @@ import org.dependencytrack.model.RepositoryType;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.notification.NotificationConstants;
@@ -2924,110 +2925,111 @@ public class ProjectResourceTest extends ResourceTest {
         Assert.assertNotNull(json.getString("token"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("token")));
         UUID uuid = UUID.fromString(json.getString("token"));
-        assertThat(qm.getAllWorkflowStatesForAToken(uuid)).satisfiesExactly(
-                workflowState -> {
-                    assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.PROJECT_CLONE);
-                    assertThat(workflowState.getToken()).isEqualTo(uuid);
-                    assertThat(workflowState.getParent()).isNull();
-                    assertThat(workflowState.getStatus()).isEqualTo(WorkflowStatus.PENDING);
-                    assertThat(workflowState.getStartedAt()).isNotNull();
-                    assertThat(workflowState.getUpdatedAt()).isNotNull();
-                }
-        );
 
         await("Cloning completion")
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(50))
                 .untilAsserted(() -> {
-                    final Project clonedProject = qm.getProject("acme-app", "1.1.0");
-                    assertThat(clonedProject).isNotNull();
-                    assertThat(clonedProject.getUuid()).isNotEqualTo(project.getUuid());
-                    assertThat(clonedProject.getSupplier()).isNotNull();
-                    assertThat(clonedProject.getSupplier().getName()).isEqualTo("projectSupplier");
-                    assertThat(clonedProject.getManufacturer()).isNotNull();
-                    assertThat(clonedProject.getManufacturer().getName()).isEqualTo("projectManufacturer");
-                    assertThat(clonedProject.getAccessTeams()).containsOnly(team);
-                    assertThatJson(clonedProject.getDirectDependencies())
-                            .withMatcher("notSourceComponentUuid", not(equalTo(componentA.getUuid().toString())))
-                            .isEqualTo(/* language=JSON */ """
-                                    [
-                                      {
-                                        "objectType": "COMPONENT",
-                                        "uuid": "${json-unit.matches:notSourceComponentUuid}",
-                                        "name": "acme-lib-a",
-                                        "version": "2.0.0",
-                                        "swidTagId":"swidTagId"
-                                      }
-                                    ]
-                                    """);
-
-                    final List<ProjectProperty> clonedProperties = qm.getProjectProperties(clonedProject);
-                    assertThat(clonedProperties).satisfiesExactly(clonedProperty -> {
-                        assertThat(clonedProperty.getId()).isNotEqualTo(projectProperty.getId());
-                        assertThat(clonedProperty.getGroupName()).isEqualTo("group");
-                        assertThat(clonedProperty.getPropertyName()).isEqualTo("name");
-                        assertThat(clonedProperty.getPropertyValue()).isEqualTo("value");
-                        assertThat(clonedProperty.getPropertyType()).isEqualTo(PropertyType.STRING);
-                        assertThat(clonedProperty.getDescription()).isEqualTo("description");
-                    });
-
-                    assertThat(clonedProject.getTags()).extracting(Tag::getName)
-                            .containsOnly("tag-a", "tag-b");
-
-                    final ProjectMetadata clonedMetadata = clonedProject.getMetadata();
-                    assertThat(clonedMetadata).isNotNull();
-                    assertThat(clonedMetadata.getAuthors())
-                            .satisfiesExactly(contact -> assertThat(contact.getName()).isEqualTo("metadataAuthor"));
-                    assertThat(clonedMetadata.getSupplier())
-                            .satisfies(entity -> assertThat(entity.getName()).isEqualTo("metadataSupplier"));
-
-                    assertThat(qm.getAllComponents(clonedProject)).satisfiesExactlyInAnyOrder(
-                            clonedComponent -> {
-                                assertThat(clonedComponent.getUuid()).isNotEqualTo(componentA.getUuid());
-                                assertThat(clonedComponent.getName()).isEqualTo("acme-lib-a");
-                                assertThat(clonedComponent.getVersion()).isEqualTo("2.0.0");
-                                assertThat(clonedComponent.getSwidTagId()).isEqualTo("swidTagId");
-                                assertThat(clonedComponent.getSupplier()).isNotNull();
-                                assertThat(clonedComponent.getSupplier().getName()).isEqualTo("componentSupplier");
-
-                                assertThat(clonedComponent.getOccurrences()).satisfiesExactly(occurrence -> {
-                                    assertThat(occurrence.getLocation()).isEqualTo("location");
-                                    assertThat(occurrence.getLine()).isEqualTo(666);
-                                    assertThat(occurrence.getOffset()).isEqualTo(123);
-                                    assertThat(occurrence.getSymbol()).isEqualTo("symbol");
-                                });
-
-                                assertThat(clonedComponent.getProperties()).satisfiesExactly(property -> {
-                                    assertThat(property.getGroupName()).isEqualTo("groupName");
-                                    assertThat(property.getPropertyName()).isEqualTo("propertyName");
-                                    assertThat(property.getPropertyValue()).isEqualTo("propertyValue");
-                                    assertThat(property.getPropertyType()).isEqualTo(PropertyType.STRING);
-                                });
-
-                                assertThat(qm.getAllVulnerabilities(clonedComponent)).containsOnly(vuln);
-
-                                assertThat(qm.getAnalysis(clonedComponent, vuln)).satisfies(clonedAnalysis -> {
-                                    assertThat(clonedAnalysis.getId()).isNotEqualTo(analysis.getId());
-                                    assertThat(clonedAnalysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
-                                    assertThat(clonedAnalysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.REQUIRES_ENVIRONMENT);
-                                    assertThat(clonedAnalysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
-                                    assertThat(clonedAnalysis.getAnalysisDetails()).isEqualTo("details");
-                                    assertThat(clonedAnalysis.isSuppressed()).isFalse();
-                                    assertThat(clonedAnalysis.getVulnerabilityPolicyId()).isNotNull();
-                                });
-                            },
-                            clonedComponent -> {
-                                assertThat(clonedComponent.getUuid()).isNotEqualTo(componentA.getUuid());
-                                assertThat(clonedComponent.getName()).isEqualTo("acme-lib-b");
-                                assertThat(clonedComponent.getVersion()).isEqualTo("2.1.0");
+                    qm.getPersistenceManager().evictAll(false, WorkflowState.class);
+                    assertThat(qm.getAllWorkflowStatesForAToken(uuid)).satisfiesExactly(
+                            workflowState -> {
+                                assertThat(workflowState.getStep()).isEqualTo(WorkflowStep.PROJECT_CLONE);
+                                assertThat(workflowState.getToken()).isEqualTo(uuid);
+                                assertThat(workflowState.getParent()).isNull();
+                                assertThat(workflowState.getStatus()).isEqualTo(WorkflowStatus.COMPLETED);
+                                assertThat(workflowState.getStartedAt()).isNotNull();
+                                assertThat(workflowState.getUpdatedAt()).isNotNull();
                             });
-
-                    assertThat(qm.getAllServiceComponents(clonedProject)).satisfiesExactly(clonedService -> {
-                        assertThat(clonedService.getUuid()).isNotEqualTo(service.getUuid());
-                        assertThat(clonedService.getName()).isEqualTo("acme-service");
-                        assertThat(clonedService.getVersion()).isEqualTo("3.0.0");
-                    });
                 });
+
+        final Project clonedProject = qm.getProject("acme-app", "1.1.0");
+        assertThat(clonedProject).isNotNull();
+        assertThat(clonedProject.getUuid()).isNotEqualTo(project.getUuid());
+        assertThat(clonedProject.getSupplier()).isNotNull();
+        assertThat(clonedProject.getSupplier().getName()).isEqualTo("projectSupplier");
+        assertThat(clonedProject.getManufacturer()).isNotNull();
+        assertThat(clonedProject.getManufacturer().getName()).isEqualTo("projectManufacturer");
+        assertThat(clonedProject.getAccessTeams()).containsOnly(team);
+        assertThatJson(clonedProject.getDirectDependencies())
+                .withMatcher("notSourceComponentUuid", not(equalTo(componentA.getUuid().toString())))
+                .isEqualTo(/* language=JSON */ """
+                        [
+                          {
+                            "objectType": "COMPONENT",
+                            "uuid": "${json-unit.matches:notSourceComponentUuid}",
+                            "name": "acme-lib-a",
+                            "version": "2.0.0",
+                            "swidTagId":"swidTagId"
+                          }
+                        ]
+                        """);
+
+        final List<ProjectProperty> clonedProperties = qm.getProjectProperties(clonedProject);
+        assertThat(clonedProperties).satisfiesExactly(clonedProperty -> {
+            assertThat(clonedProperty.getId()).isNotEqualTo(projectProperty.getId());
+            assertThat(clonedProperty.getGroupName()).isEqualTo("group");
+            assertThat(clonedProperty.getPropertyName()).isEqualTo("name");
+            assertThat(clonedProperty.getPropertyValue()).isEqualTo("value");
+            assertThat(clonedProperty.getPropertyType()).isEqualTo(PropertyType.STRING);
+            assertThat(clonedProperty.getDescription()).isEqualTo("description");
+        });
+
+        assertThat(clonedProject.getTags()).extracting(Tag::getName)
+                .containsOnly("tag-a", "tag-b");
+
+        final ProjectMetadata clonedMetadata = clonedProject.getMetadata();
+        assertThat(clonedMetadata).isNotNull();
+        assertThat(clonedMetadata.getAuthors())
+                .satisfiesExactly(contact -> assertThat(contact.getName()).isEqualTo("metadataAuthor"));
+        assertThat(clonedMetadata.getSupplier())
+                .satisfies(entity -> assertThat(entity.getName()).isEqualTo("metadataSupplier"));
+
+        assertThat(qm.getAllComponents(clonedProject)).satisfiesExactlyInAnyOrder(
+                clonedComponent -> {
+                    assertThat(clonedComponent.getUuid()).isNotEqualTo(componentA.getUuid());
+                    assertThat(clonedComponent.getName()).isEqualTo("acme-lib-a");
+                    assertThat(clonedComponent.getVersion()).isEqualTo("2.0.0");
+                    assertThat(clonedComponent.getSwidTagId()).isEqualTo("swidTagId");
+                    assertThat(clonedComponent.getSupplier()).isNotNull();
+                    assertThat(clonedComponent.getSupplier().getName()).isEqualTo("componentSupplier");
+
+                    assertThat(clonedComponent.getOccurrences()).satisfiesExactly(occurrence -> {
+                        assertThat(occurrence.getLocation()).isEqualTo("location");
+                        assertThat(occurrence.getLine()).isEqualTo(666);
+                        assertThat(occurrence.getOffset()).isEqualTo(123);
+                        assertThat(occurrence.getSymbol()).isEqualTo("symbol");
+                    });
+
+                    assertThat(clonedComponent.getProperties()).satisfiesExactly(property -> {
+                        assertThat(property.getGroupName()).isEqualTo("groupName");
+                        assertThat(property.getPropertyName()).isEqualTo("propertyName");
+                        assertThat(property.getPropertyValue()).isEqualTo("propertyValue");
+                        assertThat(property.getPropertyType()).isEqualTo(PropertyType.STRING);
+                    });
+
+                    assertThat(qm.getAllVulnerabilities(clonedComponent)).containsOnly(vuln);
+
+                    assertThat(qm.getAnalysis(clonedComponent, vuln)).satisfies(clonedAnalysis -> {
+                        assertThat(clonedAnalysis.getId()).isNotEqualTo(analysis.getId());
+                        assertThat(clonedAnalysis.getAnalysisState()).isEqualTo(AnalysisState.NOT_AFFECTED);
+                        assertThat(clonedAnalysis.getAnalysisJustification()).isEqualTo(AnalysisJustification.REQUIRES_ENVIRONMENT);
+                        assertThat(clonedAnalysis.getAnalysisResponse()).isEqualTo(AnalysisResponse.WILL_NOT_FIX);
+                        assertThat(clonedAnalysis.getAnalysisDetails()).isEqualTo("details");
+                        assertThat(clonedAnalysis.isSuppressed()).isFalse();
+                        assertThat(clonedAnalysis.getVulnerabilityPolicyId()).isNotNull();
+                    });
+                },
+                clonedComponent -> {
+                    assertThat(clonedComponent.getUuid()).isNotEqualTo(componentA.getUuid());
+                    assertThat(clonedComponent.getName()).isEqualTo("acme-lib-b");
+                    assertThat(clonedComponent.getVersion()).isEqualTo("2.1.0");
+                });
+
+        assertThat(qm.getAllServiceComponents(clonedProject)).satisfiesExactly(clonedService -> {
+            assertThat(clonedService.getUuid()).isNotEqualTo(service.getUuid());
+            assertThat(clonedService.getName()).isEqualTo("acme-service");
+            assertThat(clonedService.getVersion()).isEqualTo("3.0.0");
+        });
     }
 
     @Test

@@ -34,6 +34,24 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -67,30 +85,13 @@ import org.glassfish.jersey.media.multipart.BodyPartEntity;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonReader;
-import jakarta.json.JsonString;
-import jakarta.validation.Validator;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.ForbiddenException;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -326,6 +327,7 @@ public class BomResource extends AbstractApiResource {
     public Response uploadBom(@Parameter(required = true) BomSubmitRequest request) {
         final Validator validator = getValidator();
         final ProcessingResult processingResult;
+        final var notifications = new ArrayList<Notification>(1);
         if (request.getProject() != null) { // behavior in v3.0.0
             failOnValidationError(
                     validator.validateProperty(request, "project"),
@@ -381,6 +383,14 @@ public class BomResource extends AbstractApiResource {
                                     null, null, request.isLatestProjectVersion(), true);
                             Principal principal = getPrincipal();
                             qm.updateNewProjectACL(project, principal);
+                            notifications.add(
+                                    new Notification()
+                                            .scope(NotificationScope.PORTFOLIO)
+                                            .group(NotificationGroup.PROJECT_CREATED)
+                                            .level(NotificationLevel.INFORMATIONAL)
+                                            .title(NotificationConstants.Title.PROJECT_CREATED)
+                                            .content(project.getName() + " was created")
+                                            .subject(project));
                         } else {
                             final var response = Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                             return new ProcessingResult(response, null);
@@ -393,6 +403,10 @@ public class BomResource extends AbstractApiResource {
 
         if (processingResult.event() != null) {
             Event.dispatch(processingResult.event());
+        }
+
+        for (final Notification notification : notifications) {
+            new KafkaEventDispatcher().dispatchNotification(notification);
         }
 
         return processingResult.response();
@@ -457,6 +471,7 @@ public class BomResource extends AbstractApiResource {
             @Parameter(schema = @Schema(type = "string")) @FormDataParam("bom") final List<FormDataBodyPart> artifactParts
     ) {
         final ProcessingResult processingResult;
+        final var notifications = new ArrayList<Notification>(1);
         if (projectUuid != null) { // behavior in v3.0.0
             try (QueryManager qm = new QueryManager()) {
                 processingResult = qm.callInTransaction(() -> {
@@ -501,6 +516,14 @@ public class BomResource extends AbstractApiResource {
                             project = qm.createProject(trimmedProjectName, null, trimmedProjectVersion, tags, parent, null, null, isLatest, true);
                             Principal principal = getPrincipal();
                             qm.updateNewProjectACL(project, principal);
+                            notifications.add(
+                                    new Notification()
+                                            .scope(NotificationScope.PORTFOLIO)
+                                            .group(NotificationGroup.PROJECT_CREATED)
+                                            .level(NotificationLevel.INFORMATIONAL)
+                                            .title(NotificationConstants.Title.PROJECT_CREATED)
+                                            .content(project.getName() + " was created")
+                                            .subject(project));
                         } else {
                             final var response = Response.status(Response.Status.UNAUTHORIZED).entity("The principal does not have permission to create project.").build();
                             return new ProcessingResult(response, null);
@@ -513,6 +536,10 @@ public class BomResource extends AbstractApiResource {
 
         if (processingResult.event() != null) {
             Event.dispatch(processingResult.event());
+        }
+
+        for (final Notification notification : notifications) {
+            new KafkaEventDispatcher().dispatchNotification(notification);
         }
 
         return processingResult.response();

@@ -22,8 +22,6 @@ import alpine.common.logging.Logger;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
-import alpine.notification.Notification;
-import alpine.notification.NotificationLevel;
 import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.fasterxml.jackson.core.JsonParser;
@@ -33,7 +31,6 @@ import com.github.packageurl.PackageURL;
 import org.apache.commons.collections4.CollectionUtils;
 import org.datanucleus.api.jdo.JDOQuery;
 import org.dependencytrack.auth.Permissions;
-import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Analysis;
 import org.dependencytrack.model.AnalysisComment;
 import org.dependencytrack.model.Classifier;
@@ -51,9 +48,6 @@ import org.dependencytrack.model.ProjectVersion;
 import org.dependencytrack.model.ServiceComponent;
 import org.dependencytrack.model.Tag;
 import org.dependencytrack.model.Vulnerability;
-import org.dependencytrack.notification.NotificationConstants;
-import org.dependencytrack.notification.NotificationGroup;
-import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.jdbi.MetricsDao;
 
 import javax.jdo.PersistenceManager;
@@ -72,7 +66,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -257,29 +250,26 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     @Override
     public Project createProject(final Project project, Collection<Tag> tags, boolean commitIndex) {
-        if (project.getParent() != null && project.getParent().getInactiveSince() != null) {
-            throw new IllegalArgumentException("An inactive Parent cannot be selected as parent");
-        }
-        final Project oldLatestProject = project.isLatest() ? getLatestProjectVersion(project.getName()) : null;
-        final Project result = callInTransaction(() -> {
-            // Remove isLatest flag from current latest project version, if the new project will be the latest
-            if(oldLatestProject != null) {
-                oldLatestProject.setIsLatest(false);
-                persist(oldLatestProject);
+        return callInTransaction(() -> {
+            if (project.getParent() != null && project.getParent().getInactiveSince() != null) {
+                throw new IllegalArgumentException("An inactive Parent cannot be selected as parent");
             }
+
+            // Remove isLatest flag from current latest project version, if the new project will be the latest
+            final Project oldLatestProject = project.isLatest() ? getLatestProjectVersion(project.getName()) : null;
+            if (oldLatestProject != null) {
+                oldLatestProject.setIsLatest(false);
+
+                // Ensure the change is flushed to the database before the new project
+                // record is created. Necessary to prevent unique constraint violation.
+                pm.flush();
+            }
+
             final Project newProject = persist(project);
             final Set<Tag> resolvedTags = resolveTags(tags);
             bind(project, resolvedTags);
             return newProject;
         });
-        new KafkaEventDispatcher().dispatchNotification(new Notification()
-                .scope(NotificationScope.PORTFOLIO)
-                .group(NotificationGroup.PROJECT_CREATED)
-                .level(NotificationLevel.INFORMATIONAL)
-                .title(NotificationConstants.Title.PROJECT_CREATED)
-                .content(result.getName() + " was created")
-                .subject(pm.detachCopy(result)));
-        return result;
     }
 
     /**
@@ -291,63 +281,61 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
      */
     @Override
     public Project updateProject(Project transientProject, boolean commitIndex) {
-        final Project project = getObjectByUuid(Project.class, transientProject.getUuid());
-        project.setAuthors(transientProject.getAuthors());
-        project.setPublisher(transientProject.getPublisher());
-        project.setManufacturer(transientProject.getManufacturer());
-        project.setSupplier(transientProject.getSupplier());
-        project.setGroup(transientProject.getGroup());
-        project.setName(transientProject.getName());
-        project.setDescription(transientProject.getDescription());
-        project.setVersion(transientProject.getVersion());
-        project.setClassifier(transientProject.getClassifier());
-        project.setCpe(transientProject.getCpe());
-        project.setPurl(transientProject.getPurl());
-        project.setSwidTagId(transientProject.getSwidTagId());
-        project.setExternalReferences(transientProject.getExternalReferences());
+        return callInTransaction(() -> {
+            final Project project = getObjectByUuid(Project.class, transientProject.getUuid());
+            project.setAuthors(transientProject.getAuthors());
+            project.setPublisher(transientProject.getPublisher());
+            project.setManufacturer(transientProject.getManufacturer());
+            project.setSupplier(transientProject.getSupplier());
+            project.setGroup(transientProject.getGroup());
+            project.setName(transientProject.getName());
+            project.setDescription(transientProject.getDescription());
+            project.setVersion(transientProject.getVersion());
+            project.setClassifier(transientProject.getClassifier());
+            project.setCpe(transientProject.getCpe());
+            project.setPurl(transientProject.getPurl());
+            project.setSwidTagId(transientProject.getSwidTagId());
+            project.setExternalReferences(transientProject.getExternalReferences());
 
-        if (project.isActive() && !transientProject.isActive() && hasActiveChild(project)) {
-            throw new IllegalArgumentException("Project cannot be set to inactive if active children are present.");
-        }
-        project.setActive(transientProject.isActive());
-
-        final Project oldLatestProject;
-        if(Boolean.TRUE.equals(transientProject.isLatest()) && Boolean.FALSE.equals(project.isLatest())) {
-            oldLatestProject = getLatestProjectVersion(project.getName());
-        } else {
-            oldLatestProject = null;
-        }
-        project.setIsLatest(transientProject.isLatest());
-
-        if (transientProject.getParent() != null && transientProject.getParent().getUuid() != null) {
-            if (project.getUuid().equals(transientProject.getParent().getUuid())) {
-                throw new IllegalArgumentException("A project cannot select itself as a parent");
+            if (project.isActive() && !transientProject.isActive() && hasActiveChild(project)) {
+                throw new IllegalArgumentException("Project cannot be set to inactive if active children are present.");
             }
-            Project parent = getObjectByUuid(Project.class, transientProject.getParent().getUuid());
-            if (parent.getInactiveSince() != null) {
-                throw new IllegalArgumentException("An inactive project cannot be selected as a parent");
-            } else if (isChildOf(parent, transientProject.getUuid())) {
-                throw new IllegalArgumentException("The new parent project cannot be a child of the current project.");
-            } else {
-                project.setParent(parent);
-            }
-            project.setParent(parent);
-        } else {
-            project.setParent(null);
-        }
+            project.setActive(transientProject.isActive());
 
-        final Project result = callInTransaction(() -> {
             // Remove isLatest flag from current latest project version, if this project will be the latest now
-            if(oldLatestProject != null) {
-                oldLatestProject.setIsLatest(false);
-                persist(oldLatestProject);
+            if (transientProject.isLatest() && !project.isLatest()) {
+                final Project oldLatestProject = getLatestProjectVersion(project.getName());
+                if (oldLatestProject != null) {
+                    oldLatestProject.setIsLatest(false);
+
+                    // Ensure the change is flushed to the database before the project
+                    // record is updated. Necessary to prevent unique constraint violation.
+                    pm.flush();
+                }
+            }
+            project.setIsLatest(transientProject.isLatest());
+
+            if (transientProject.getParent() != null && transientProject.getParent().getUuid() != null) {
+                if (project.getUuid().equals(transientProject.getParent().getUuid())) {
+                    throw new IllegalArgumentException("A project cannot select itself as a parent");
+                }
+                Project parent = getObjectByUuid(Project.class, transientProject.getParent().getUuid());
+                if (parent.getInactiveSince() != null) {
+                    throw new IllegalArgumentException("An inactive project cannot be selected as a parent");
+                } else if (isChildOf(parent, transientProject.getUuid())) {
+                    throw new IllegalArgumentException("The new parent project cannot be a child of the current project.");
+                } else {
+                    project.setParent(parent);
+                }
+                project.setParent(parent);
+            } else {
+                project.setParent(null);
             }
 
             final Set<Tag> resolvedTags = resolveTags(transientProject.getTags());
             bind(project, resolvedTags);
             return persist(project);
         });
-        return result;
     }
 
     @Override
@@ -363,7 +351,6 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             final boolean includePolicyViolations,
             final boolean makeCloneLatest
     ) {
-        final AtomicReference<Project> oldLatestProject = new AtomicReference<>();
         final var jsonMapper = new JsonMapper();
         return callInTransaction(() -> {
             final Project source = getObjectByUuid(Project.class, from, Project.FetchGroup.ALL.name());
@@ -378,10 +365,11 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
                         Project was supposed to be cloned to version %s, \
                         but that version already exists""".formatted(newVersion));
             }
+            final Project oldLatestProject;
             if(makeCloneLatest) {
-                oldLatestProject.set(source.isLatest() ? source : getLatestProjectVersion(source.getName()));
+                oldLatestProject = source.isLatest() ? source : getLatestProjectVersion(source.getName());
             } else {
-                oldLatestProject.set(null);
+                oldLatestProject = null;
             }
             Project project = new Project();
             project.setAuthors(source.getAuthors());
@@ -403,9 +391,12 @@ final class ProjectQueryManager extends QueryManager implements IQueryManager {
             }
             project.setParent(source.getParent());
             // Remove isLatest flag from current latest project version, if this project will be the latest now
-            if(oldLatestProject.get() != null) {
-                oldLatestProject.get().setIsLatest(false);
-                persist(oldLatestProject.get());
+            if(oldLatestProject != null) {
+                oldLatestProject.setIsLatest(false);
+
+                // Ensure the change is flushed to the database before the new project
+                // record is created. Necessary to prevent unique constraint violation.
+                pm.flush();
             }
             project = persist(project);
 
