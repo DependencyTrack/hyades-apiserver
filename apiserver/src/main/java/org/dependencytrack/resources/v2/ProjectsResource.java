@@ -25,14 +25,21 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.ProjectsApi;
+import org.dependencytrack.api.v2.model.CloneProjectInclude;
+import org.dependencytrack.api.v2.model.CloneProjectRequest;
+import org.dependencytrack.api.v2.model.CloneProjectResponse;
 import org.dependencytrack.api.v2.model.ListComponentsResponse;
 import org.dependencytrack.api.v2.model.ListComponentsResponseItem;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.persistence.jdbi.ComponentDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.persistence.pagination.Page;
 import org.dependencytrack.resources.AbstractApiResource;
+import org.owasp.security.logging.SecurityMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -43,6 +50,8 @@ import static org.dependencytrack.resources.v2.mapping.ModelMapper.mapLicense;
 
 @Provider
 public class ProjectsResource extends AbstractApiResource implements ProjectsApi {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProjectsResource.class);
 
     @Context
     private UriInfo uriInfo;
@@ -87,4 +96,44 @@ public class ProjectsResource extends AbstractApiResource implements ProjectsApi
             return Response.ok(response).build();
         });
     }
+
+    @Override
+    @PermissionRequired(Permissions.Constants.PORTFOLIO_MANAGEMENT)
+    public Response cloneProject(final UUID projectUuid, final CloneProjectRequest request) {
+        final UUID clonedProjectUuid = inJdbiTransaction(getAlpineRequest(), handle -> {
+            requireProjectAccess(handle, projectUuid);
+
+            LOGGER.info(
+                    SecurityMarkers.SECURITY_AUDIT,
+                    "Cloning project {} to version {}",
+                    projectUuid,
+                    request.getVersion());
+
+            return handle.attach(ProjectDao.class).cloneProject(
+                    new CloneProjectCommand(
+                            projectUuid,
+                            request.getVersion(),
+                            request.getVersionIsLatest(),
+                            request.getIncludes().contains(CloneProjectInclude.ACL),
+                            request.getIncludes().contains(CloneProjectInclude.COMPONENTS),
+                            request.getIncludes().contains(CloneProjectInclude.FINDINGS),
+                            request.getIncludes().contains(CloneProjectInclude.FINDINGS_AUDIT_HISTORY),
+                            request.getIncludes().contains(CloneProjectInclude.POLICY_VIOLATIONS),
+                            request.getIncludes().contains(CloneProjectInclude.POLICY_VIOLATIONS_AUDIT_HISTORY),
+                            request.getIncludes().contains(CloneProjectInclude.PROPERTIES),
+                            request.getIncludes().contains(CloneProjectInclude.SERVICES),
+                            request.getIncludes().contains(CloneProjectInclude.TAGS)));
+        });
+
+        return Response
+                .created(uriInfo.getBaseUriBuilder()
+                        .path("/projects")
+                        .path(clonedProjectUuid.toString())
+                        .build())
+                .entity(CloneProjectResponse.builder()
+                        .uuid(clonedProjectUuid)
+                        .build())
+                .build();
+    }
+
 }

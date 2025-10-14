@@ -89,11 +89,6 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
         new RepositoryMetaAnalysisTask().inform(new PortfolioRepositoryMetaAnalysisEvent());
 
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectA
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectB
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectC
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectD
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()), // projectE
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
@@ -160,7 +155,6 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
         new RepositoryMetaAnalysisTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
 
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
                     final var command = deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
@@ -195,10 +189,8 @@ public class RepositoryMetaAnalysisTaskTest extends PersistenceCapableTest {
 
         new RepositoryMetaAnalysisTask().inform(new ProjectRepositoryMetaAnalysisEvent(project.getUuid()));
 
-        assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name())
-                // Component of inactive project must not have been submitted for analysis
-        );
+        // Component of inactive project must not have been submitted for analysis
+        assertThat(kafkaMockProducer.history()).isEmpty();
     }
 
     @Test

@@ -54,6 +54,8 @@ paths:
     $ref: "./paths/extension-points__name__extensions.yaml"
   /extension-points/{extensionPointName}/extensions/{extensionName}/configs:
     $ref: "./paths/extension-points__name__extensions__name__configs.yaml"
+  /projects/{uuid}/clone:
+    $ref: "./paths/projects__uuid__clone.yaml"
   /projects/{uuid}/components:
     $ref: "./paths/projects_uuid_components.yaml"
   /metrics/portfolio/current:

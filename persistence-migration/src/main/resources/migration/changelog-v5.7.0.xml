@@ -184,4 +184,33 @@
                 CHECK ("CLASSIFIER" IS NULL OR "CLASSIFIER"::TEXT = ANY(ARRAY['APPLICATION', 'CONTAINER', 'DATA', 'DEVICE', 'DEVICE_DRIVER', 'FILE', 'FIRMWARE', 'FRAMEWORK', 'LIBRARY', 'MACHINE_LEARNING_MODEL', 'OPERATING_SYSTEM', 'PLATFORM']));
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-10" author="nscuro">
+        <dropIndex tableName="PROJECT" indexName="PROJECT_IS_LATEST_IDX"/>
+
+        <!--
+          For projects where currently multiple versions are flagged as latest,
+          keep the flag only for the version with the most recent BOM upload.
+        -->
+        <sql>
+            WITH dupe_latest_project AS (
+              SELECT "ID" AS id
+                   , ROW_NUMBER() OVER(PARTITION BY "NAME" ORDER BY "LAST_BOM_IMPORTED" DESC) AS rn
+                FROM "PROJECT"
+               WHERE "IS_LATEST"
+            )
+            UPDATE "PROJECT"
+               SET "IS_LATEST" = FALSE
+              FROM dupe_latest_project
+             WHERE "ID" = dupe_latest_project.id
+               AND dupe_latest_project.rn > 1
+        </sql>
+
+        <!-- Enforce that only a single version can be marked as latest. -->
+        <sql>
+            CREATE UNIQUE INDEX "PROJECT_IS_LATEST_IDX"
+                ON "PROJECT" ("NAME", "IS_LATEST")
+             WHERE "IS_LATEST"
+        </sql>
+    </changeSet>
 </databaseChangeLog>

@@ -22,6 +22,11 @@ import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
 import alpine.server.auth.PermissionRequired;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.TeamsApi;
 import org.dependencytrack.api.v2.model.CreateTeamMembershipRequest;
 import org.dependencytrack.api.v2.model.CreateTeamRequest;
@@ -31,6 +36,7 @@ import org.dependencytrack.api.v2.model.ListTeamMembershipsResponseItem;
 import org.dependencytrack.api.v2.model.ListTeamsResponse;
 import org.dependencytrack.api.v2.model.ListTeamsResponseItem;
 import org.dependencytrack.auth.Permissions;
+import org.dependencytrack.exception.AlreadyExistsException;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.TeamDao;
 import org.dependencytrack.persistence.jdbi.TeamDao.ListTeamMembershipsRow;
@@ -40,12 +46,6 @@ import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.ws.rs.ClientErrorException;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
-import jakarta.ws.rs.ext.Provider;
 import java.util.List;
 
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
@@ -118,7 +118,7 @@ public class TeamsResource implements TeamsApi {
             });
         } catch (RuntimeException e) {
             if (isUniqueConstraintViolation(e)) {
-                throw new ClientErrorException(Response.Status.CONFLICT);
+                throw new AlreadyExistsException("Team already exists", e);
             }
 
             throw e;
@@ -188,7 +188,7 @@ public class TeamsResource implements TeamsApi {
             });
         } catch (RuntimeException e) {
             if (isUniqueConstraintViolation(e)) {
-                throw new ClientErrorException(Response.Status.CONFLICT);
+                throw new AlreadyExistsException("Team membership already exists", e);
             }
 
             throw e;

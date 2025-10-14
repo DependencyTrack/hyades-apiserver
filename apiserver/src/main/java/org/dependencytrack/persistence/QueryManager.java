@@ -583,13 +583,6 @@ public class QueryManager extends AlpineQueryManager {
         return getProjectQueryManager().updateNewProjectACL(transientProject, principal);
     }
 
-    public Project clone(UUID from, String newVersion, boolean includeTags, boolean includeProperties,
-                         boolean includeComponents, boolean includeServices, boolean includeAuditHistory,
-                         boolean includeACL, boolean includePolicyViolations, boolean makeCloneLatest) {
-        return getProjectQueryManager().clone(from, newVersion, includeTags, includeProperties,
-                includeComponents, includeServices, includeAuditHistory, includeACL, includePolicyViolations, makeCloneLatest);
-    }
-
     public ProjectProperty createProjectProperty(final Project project, final String groupName, final String propertyName,
                                                  final String propertyValue, final ProjectProperty.PropertyType propertyType,
                                                  final String description) {
@@ -630,10 +623,6 @@ public class QueryManager extends AlpineQueryManager {
 
     public Component createComponent(Component component, boolean commitIndex) {
         return getComponentQueryManager().createComponent(component, commitIndex);
-    }
-
-    public Component cloneComponent(Component sourceComponent, Project destinationProject, boolean commitIndex) {
-        return getComponentQueryManager().cloneComponent(sourceComponent, destinationProject, commitIndex);
     }
 
     public Component updateComponent(Component transientComponent, boolean commitIndex) {

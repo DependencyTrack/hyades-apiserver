@@ -23,6 +23,8 @@ import alpine.event.framework.Event;
 import alpine.model.ApiKey;
 import alpine.model.Team;
 import alpine.model.User;
+import alpine.notification.Notification;
+import alpine.notification.NotificationLevel;
 import alpine.persistence.PaginatedResult;
 import alpine.server.auth.PermissionRequired;
 import alpine.server.filters.ResourceAccessRequired;
@@ -55,6 +57,7 @@ import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.event.CloneProjectEvent;
+import org.dependencytrack.event.kafka.KafkaEventDispatcher;
 import org.dependencytrack.model.Classifier;
 import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Tag;
@@ -62,6 +65,9 @@ import org.dependencytrack.model.WorkflowState;
 import org.dependencytrack.model.WorkflowStatus;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.model.validation.ValidUuid;
+import org.dependencytrack.notification.NotificationConstants;
+import org.dependencytrack.notification.NotificationGroup;
+import org.dependencytrack.notification.NotificationScope;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.persistence.jdbi.ProjectDao;
 import org.dependencytrack.persistence.jdbi.ProjectDao.ConciseProjectListRow;
@@ -572,6 +578,13 @@ public class ProjectResource extends AbstractApiResource {
             });
 
             LOGGER.info("Project " + createdProject + " created by " + super.getPrincipal().getName());
+            new KafkaEventDispatcher().dispatchNotification(new Notification()
+                    .scope(NotificationScope.PORTFOLIO)
+                    .group(NotificationGroup.PROJECT_CREATED)
+                    .level(NotificationLevel.INFORMATIONAL)
+                    .title(NotificationConstants.Title.PROJECT_CREATED)
+                    .content(createdProject.getName() + " was created")
+                    .subject(createdProject));
             return Response.status(Response.Status.CREATED).entity(createdProject).build();
         }
     }
@@ -901,11 +914,14 @@ public class ProjectResource extends AbstractApiResource {
 
     @PUT
     @Path("/clone")
+    @Deprecated(since = "5.7.0")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Clones a project",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"
+            description = """
+                    <p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>
+                    <p><strong>Deprecated</strong>! Use <code>/api/v2/projects/{uuid}/clone</code> instead.</p>"""
     )
     @ApiResponses(value = {
             @ApiResponse(

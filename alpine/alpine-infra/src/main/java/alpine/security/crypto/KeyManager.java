@@ -37,6 +37,8 @@ import java.nio.file.Paths;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Class that manages Alpine-generated default secret key.
@@ -55,7 +57,8 @@ public final class KeyManager {
 
     private static final Logger LOGGER = Logger.getLogger(KeyManager.class);
     private static final KeyManager INSTANCE = new KeyManager();
-    private SecretKey secretKey;
+    private final Lock lock = new ReentrantLock();
+    private volatile SecretKey secretKey;
 
     /**
      * Private constructor.
@@ -78,18 +81,22 @@ public final class KeyManager {
      * Initializes the KeyManager
      */
     private void initialize() {
-        createKeysIfNotExist();
-        if (secretKey == null) {
-            try {
-                if (secretKeyHasOldFormat()) {
-                    loadSecretKey();
-                } else {
-                    loadEncodedSecretKey();
+        lock.lock();
+        try {
+            createKeysIfNotExist();
+            if (secretKey == null) {
+                try {
+                    if (secretKeyHasOldFormat()) {
+                        loadSecretKey();
+                    } else {
+                        loadEncodedSecretKey();
+                    }
+                } catch (IOException | ClassNotFoundException e) {
+                    LOGGER.error("An error occurred loading secret key", e);
                 }
-            } catch (IOException | ClassNotFoundException e) {
-                LOGGER.error("An error occurred loading secret key");
-                LOGGER.error(e.getMessage());
             }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -102,11 +109,9 @@ public final class KeyManager {
                 final SecretKey secretKey = generateSecretKey();
                 saveEncoded(secretKey);
             } catch (NoSuchAlgorithmException e) {
-                LOGGER.error("An error occurred generating new secret key");
-                LOGGER.error(e.getMessage());
+                LOGGER.error("An error occurred generating new secret key", e);
             } catch (IOException e) {
-                LOGGER.error("An error occurred saving newly generated secret key");
-                LOGGER.error(e.getMessage());
+                LOGGER.error("An error occurred saving newly generated secret key", e);
             }
         }
     }
@@ -118,11 +123,16 @@ public final class KeyManager {
      * @throws NoSuchAlgorithmException if the algorithm cannot be found
      * @since 1.0.0
      */
-    public SecretKey generateSecretKey() throws NoSuchAlgorithmException {
-        final KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-        final SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
-        keyGen.init(256, random);
-        return this.secretKey = keyGen.generateKey();
+    SecretKey generateSecretKey() throws NoSuchAlgorithmException {
+        lock.lock();
+        try {
+            final KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+            final SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
+            keyGen.init(256, random);
+            return this.secretKey = keyGen.generateKey();
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -165,12 +175,17 @@ public final class KeyManager {
      * @deprecated Use {@link #saveEncoded(SecretKey)} instead
      */
     @Deprecated(forRemoval = true)
-    public void save(final SecretKey key) throws IOException {
-        final File keyFile = getKeyPath(key);
-        keyFile.getParentFile().mkdirs(); // make directories if they do not exist
-        try (OutputStream fos = Files.newOutputStream(keyFile.toPath());
-             ObjectOutputStream oout = new ObjectOutputStream(fos)) {
-            oout.writeObject(key);
+    void save(final SecretKey key) throws IOException {
+        lock.lock();
+        try {
+            final File keyFile = getKeyPath(key);
+            keyFile.getParentFile().mkdirs(); // make directories if they do not exist
+            try (OutputStream fos = Files.newOutputStream(keyFile.toPath());
+                 ObjectOutputStream oout = new ObjectOutputStream(fos)) {
+                oout.writeObject(key);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -181,11 +196,16 @@ public final class KeyManager {
      * @throws IOException if the file cannot be written
      * @since 2.2.0
      */
-    public void saveEncoded(final SecretKey key) throws IOException {
-        final File keyFile = getKeyPath(key);
-        keyFile.getParentFile().mkdirs(); // make directories if they do not exist
-        try (OutputStream fos = Files.newOutputStream(keyFile.toPath())) {
-            fos.write(key.getEncoded());
+    void saveEncoded(final SecretKey key) throws IOException {
+        lock.lock();
+        try {
+            final File keyFile = getKeyPath(key);
+            keyFile.getParentFile().mkdirs(); // make directories if they do not exist
+            try (OutputStream fos = Files.newOutputStream(keyFile.toPath())) {
+                fos.write(key.getEncoded());
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -229,7 +249,7 @@ public final class KeyManager {
      * @return true if secret key exists, false if not
      * @since 1.0.0
      */
-    public boolean secretKeyExists() {
+    boolean secretKeyExists() {
         return getKeyPath(KeyType.SECRET).exists();
     }
 
