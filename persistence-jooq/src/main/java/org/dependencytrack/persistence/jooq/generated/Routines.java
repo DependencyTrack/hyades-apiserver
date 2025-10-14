@@ -4,9 +4,6 @@
 package org.dependencytrack.persistence.jooq.generated;
 
 
-import java.math.BigDecimal;
-import java.util.UUID;
-
 import org.dependencytrack.persistence.jooq.generated.routines.CalcRiskScore;
 import org.dependencytrack.persistence.jooq.generated.routines.HasProjectAccess;
 import org.dependencytrack.persistence.jooq.generated.routines.HasUserProjectAccess;
@@ -17,6 +14,9 @@ import org.dependencytrack.persistence.jooq.generated.routines.UpdateProjectMetr
 import org.jooq.Configuration;
 import org.jooq.Field;
 import org.jooq.JSONB;
+
+import java.math.BigDecimal;
+import java.util.UUID;
 
 
 /**

@@ -564,4 +564,82 @@ public class PermissionResourceTest extends ResourceTest {
         Assert.assertEquals(304, response.getStatus(), 0);
         Assert.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
     }
+
+    @Test
+    public void setRolePermissionsTest() {
+        // Arrange: create a role and permissions
+        Role role = qm.createRole("testRole", Collections.emptyList());
+        String roleUuid = role.getUuid().toString();
+
+        List<Permission> permissionSet1 = List.of(
+                qm.getPermission("ACCESS_MANAGEMENT"),
+                qm.getPermission("ACCESS_MANAGEMENT_CREATE"),
+                qm.getPermission("ACCESS_MANAGEMENT_DELETE"));
+
+        List<Permission> permissionSet2 = List.of(
+                qm.getPermission("BOM_UPLOAD"),
+                qm.getPermission("VIEW_PORTFOLIO"),
+                qm.getPermission("PORTFOLIO_MANAGEMENT"));
+
+        JsonObject request1 = Json.createObjectBuilder()
+                .add("role", roleUuid)
+                .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Permission::getName).toList()))
+                .build();
+
+        JsonObject request2 = Json.createObjectBuilder()
+                .add("role", roleUuid)
+                .add("permissions", Json.createArrayBuilder(permissionSet2.stream().map(Permission::getName).toList()))
+                .build();
+
+        String endpoint = V1_PERMISSION + "/role";
+
+        // Act & Assert: assign first set
+        Response response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(request1.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+        Role updatedRole = qm.getObjectByUuid(Role.class, role.getUuid());
+        Assert.assertTrue(updatedRole.getPermissions().containsAll(permissionSet1));
+
+        // Assign second set (replace)
+        response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(request2.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(200, response.getStatus());
+        updatedRole = qm.getObjectByUuid(Role.class, role.getUuid());
+        Assert.assertTrue(updatedRole.getPermissions().containsAll(permissionSet2));
+        Assert.assertTrue(updatedRole.getPermissions().stream().noneMatch(p -> permissionSet1.contains(p)));
+
+        // Assign same set again (should return 304)
+        response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(request2.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(304, response.getStatus());
+
+        // Invalid role UUID
+        JsonObject invalidRoleRequest = Json.createObjectBuilder()
+                .add("role", UUID.randomUUID().toString())
+                .add("permissions", Json.createArrayBuilder(permissionSet1.stream().map(Permission::getName).toList()))
+                .build();
+        response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(invalidRoleRequest.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(404, response.getStatus());
+
+        // Invalid permissions
+        JsonObject invalidPermRequest = Json.createObjectBuilder()
+                .add("role", roleUuid)
+                .add("permissions", Json.createArrayBuilder().add("INVALID_PERMISSION"))
+                .build();
+        response = jersey.target(endpoint)
+                .request()
+                .header(X_API_KEY, apiKey)
+                .put(Entity.entity(invalidPermRequest.toString(), MediaType.APPLICATION_JSON));
+        Assert.assertEquals(400, response.getStatus());
+    }
+
 }

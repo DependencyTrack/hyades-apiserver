@@ -42,9 +42,9 @@ import java.util.Date;
  */
 @PersistenceCapable
 @Inheritance(strategy = InheritanceStrategy.SUPERCLASS_TABLE)
-@Discriminator(value = "MANAGED")
+@Discriminator("MANAGED")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder(value = {
+@JsonPropertyOrder({
         "username",
         "lastPasswordChange",
         "fullname",
