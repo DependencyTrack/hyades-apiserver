@@ -20,6 +20,10 @@ package org.dependencytrack.tasks;
 
 import alpine.model.IConfigProperty.PropertyType;
 import com.github.packageurl.PackageURL;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.cyclonedx.proto.v1_6.Classification;
 import org.cyclonedx.proto.v1_6.Dependency;
@@ -59,10 +63,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonReader;
 import javax.jdo.JDOObjectNotFoundException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
@@ -141,7 +141,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
@@ -302,7 +301,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
@@ -385,7 +383,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name())
         );
@@ -443,7 +440,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         new BomUploadProcessingTask().inform(bomUploadEvent);
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> {
                     assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
                     final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
@@ -843,7 +839,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
         new BomUploadProcessingTask(new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> {
                     assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
                     final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
@@ -865,7 +860,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         new BomUploadProcessingTask(new KafkaEventDispatcher(), /* delayBomProcessedNotification */ true).inform(bomUploadEvent);
         assertBomProcessedNotification();
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> {
                     assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name());
                     final Notification notification = deserializeValue(KafkaTopics.NOTIFICATION_BOM, event);
@@ -889,7 +883,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
@@ -914,7 +907,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),
@@ -952,7 +944,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
@@ -980,7 +971,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
@@ -1004,7 +994,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
@@ -1241,7 +1230,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         assertBomProcessedNotification();
 
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name())
@@ -1762,7 +1750,6 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
         assertThat(kafkaMockProducer.history()).satisfiesExactly(
-                event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.NOTIFICATION_BOM.name()),
                 event -> assertThat(event.topic()).isEqualTo(KafkaTopics.VULN_ANALYSIS_COMMAND.name()),

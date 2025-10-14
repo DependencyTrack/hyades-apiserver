@@ -21,6 +21,11 @@ package org.dependencytrack.resources.v1;
 import alpine.common.util.UuidUtil;
 import alpine.server.filters.ApiFilter;
 import alpine.server.filters.AuthenticationFeature;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
@@ -42,11 +47,6 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import javax.jdo.JDOObjectNotFoundException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -709,7 +709,6 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals("SampleAuthor" ,json.getJsonArray("authors").getJsonObject(0).getString("name"));
         Assert.assertTrue(UuidUtil.isValidUUID(json.getString("uuid")));
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
                     final var command = KafkaTestUtil.deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
@@ -823,7 +822,6 @@ public class ComponentResourceTest extends ResourceTest {
         Assert.assertEquals("Test component", json.getString("description"));
         Assert.assertEquals(1, json.getJsonArray("externalReferences").size());
         assertThat(kafkaMockProducer.history()).satisfiesExactlyInAnyOrder(
-                record -> assertThat(record.topic()).isEqualTo(KafkaTopics.NOTIFICATION_PROJECT_CREATED.name()),
                 record -> {
                     assertThat(record.topic()).isEqualTo(KafkaTopics.REPO_META_ANALYSIS_COMMAND.name());
                     final var command = KafkaTestUtil.deserializeValue(KafkaTopics.REPO_META_ANALYSIS_COMMAND, record);
