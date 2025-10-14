@@ -914,11 +914,14 @@ public class ProjectResource extends AbstractApiResource {
 
     @PUT
     @Path("/clone")
+    @Deprecated(since = "5.7.0")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
             summary = "Clones a project",
-            description = "<p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>"
+            description = """
+                    <p>Requires permission <strong>PORTFOLIO_MANAGEMENT</strong> or <strong>PORTFOLIO_MANAGEMENT_CREATE</strong></p>
+                    <p><strong>Deprecated</strong>! Use <code>/api/v2/projects/{uuid}/clone</code> instead.</p>"""
     )
     @ApiResponses(value = {
             @ApiResponse(

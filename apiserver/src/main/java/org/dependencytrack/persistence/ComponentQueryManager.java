@@ -24,6 +24,9 @@ import alpine.persistence.PaginatedResult;
 import alpine.resources.AlpineRequest;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonValue;
 import org.apache.commons.lang3.tuple.Pair;
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentIdentity;
@@ -42,9 +45,6 @@ import org.dependencytrack.persistence.jdbi.RepositoryMetaDao;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonValue;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.StringReader;
@@ -441,45 +441,6 @@ final class ComponentQueryManager extends QueryManager implements IQueryManager 
     public Component createComponent(Component component, boolean commitIndex) {
         final Component result = persist(component);
         return result;
-    }
-
-    public Component cloneComponent(Component sourceComponent, Project destinationProject, boolean commitIndex) {
-        final Component component = new Component();
-        component.setGroup(sourceComponent.getGroup());
-        component.setName(sourceComponent.getName());
-        component.setVersion(sourceComponent.getVersion());
-        component.setClassifier(sourceComponent.getClassifier());
-        component.setFilename(sourceComponent.getFilename());
-        component.setExtension(sourceComponent.getExtension());
-        component.setMd5(sourceComponent.getMd5());
-        component.setSha1(sourceComponent.getSha1());
-        component.setSha256(sourceComponent.getSha256());
-        component.setSha384(sourceComponent.getSha384());
-        component.setSha512(sourceComponent.getSha512());
-        component.setSha3_256(sourceComponent.getSha3_256());
-        component.setSha3_384(sourceComponent.getSha3_384());
-        component.setSha3_512(sourceComponent.getSha3_512());
-        component.setBlake2b_256(sourceComponent.getBlake2b_256());
-        component.setBlake2b_384(sourceComponent.getBlake2b_384());
-        component.setBlake2b_512(sourceComponent.getBlake2b_512());
-        component.setBlake3(sourceComponent.getBlake3());
-        component.setCpe(sourceComponent.getCpe());
-        component.setPurl(sourceComponent.getPurl());
-        component.setPurlCoordinates(sourceComponent.getPurlCoordinates());
-        component.setSwidTagId(sourceComponent.getSwidTagId());
-        component.setInternal(sourceComponent.isInternal());
-        component.setDescription(sourceComponent.getDescription());
-        component.setCopyright(sourceComponent.getCopyright());
-        component.setLicense(sourceComponent.getLicense());
-        component.setLicenseExpression(sourceComponent.getLicenseExpression());
-        component.setLicenseUrl(sourceComponent.getLicenseUrl());
-        component.setResolvedLicense(sourceComponent.getResolvedLicense());
-        component.setAuthors(sourceComponent.getAuthors());
-        component.setSupplier(sourceComponent.getSupplier());
-        component.setDirectDependencies(sourceComponent.getDirectDependencies());
-        // TODO Add support for parent component and children components
-        component.setProject(destinationProject);
-        return createComponent(component, commitIndex);
     }
 
     /**

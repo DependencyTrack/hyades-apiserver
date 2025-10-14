@@ -586,7 +586,7 @@ public class AnalysisResourceTest extends ResourceTest {
     }
 
     @Test
-    public void updateAnalysisWithNoChangesTest() throws Exception {
+    public void updateAnalysisWithNoChangesTest() {
         initializeWithPermissions(Permissions.VULNERABILITY_ANALYSIS);
 
         final Project project = qm.createProject("Acme Example", null, "1.0", null, null, null, null, false);

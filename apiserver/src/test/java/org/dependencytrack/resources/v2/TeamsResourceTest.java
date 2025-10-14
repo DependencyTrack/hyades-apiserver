@@ -21,15 +21,15 @@ package org.dependencytrack.resources.v2;
 import alpine.model.Permission;
 import alpine.model.Team;
 import alpine.model.User;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.json.JsonObject;
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.util.List;
 
@@ -159,8 +159,8 @@ public class TeamsResourceTest extends ResourceTest {
                 {
                   "type":"about:blank",
                   "status":409,
-                  "title": "Conflict",
-                  "detail": "The resource already exists."
+                  "title": "Resource already exists",
+                  "detail": "Team already exists"
                 }
                 """);
 
@@ -438,8 +438,8 @@ public class TeamsResourceTest extends ResourceTest {
                 {
                   "type":"about:blank",
                   "status":409,
-                  "title": "Conflict",
-                  "detail": "The resource already exists."
+                  "title": "Resource already exists",
+                  "detail": "Team membership already exists"
                 }
                 """);
     }

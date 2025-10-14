@@ -55,7 +55,7 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
 
     @Test
     public void testCloneProjectDoesNotExist() {
-        var uuid = UUID.randomUUID();
+        var uuid = UUID.fromString("2a5ede59-e7d9-40c5-bb41-c9262b56e6cc");
         CloneProjectRequest request = new CloneProjectRequest(uuid.toString(), "1.1", false, false, false, false, false, false, false, false, false);
         final var cloneProjectEvent = new CloneProjectEvent(request);
         new CloneProjectTask().inform(cloneProjectEvent);
@@ -67,7 +67,8 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
                     assertThat(state.getStatus()).isEqualTo(FAILED);
                     assertThat(state.getStartedAt()).isNotNull();
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
-                    assertThat(state.getFailureReason()).contains("Project was supposed to be cloned, but it does not exist anymore");
+                    assertThat(state.getFailureReason()).contains(
+                            "Source project does not exist");
                 });
     }
 
@@ -84,7 +85,7 @@ public class CloneProjectTaskTest extends PersistenceCapableTest {
                     assertThat(state.getStatus()).isEqualTo(FAILED);
                     assertThat(state.getStartedAt()).isNotNull();
                     assertThat(state.getUpdatedAt()).isBefore(Date.from(Instant.now()));
-                    assertThat(state.getFailureReason()).contains("Project was supposed to be cloned to version 1.0, but that version already exists");
+                    assertThat(state.getFailureReason()).contains("Target project version already exists");
                 });
     }
 }

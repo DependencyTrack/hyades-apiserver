@@ -51,6 +51,8 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.VulnerabilityScan;
 import org.dependencytrack.model.WorkflowStep;
 import org.dependencytrack.persistence.DatabaseSeedingInitTask;
+import org.dependencytrack.persistence.jdbi.ProjectDao;
+import org.dependencytrack.persistence.jdbi.command.CloneProjectCommand;
 import org.dependencytrack.plugin.PluginManager;
 import org.dependencytrack.plugin.PluginManagerTestUtil;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
@@ -100,6 +102,7 @@ import static org.dependencytrack.model.WorkflowStep.BOM_PROCESSING;
 import static org.dependencytrack.model.WorkflowStep.METRICS_UPDATE;
 import static org.dependencytrack.model.WorkflowStep.POLICY_EVALUATION;
 import static org.dependencytrack.model.WorkflowStep.VULN_ANALYSIS;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.inJdbiTransaction;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSED;
 import static org.dependencytrack.proto.notification.v1.Group.GROUP_BOM_PROCESSING_FAILED;
@@ -1509,7 +1512,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
         new BomUploadProcessingTask().inform(bomUploadEvent);
         assertBomProcessedNotification();
 
-        final Project clonedProject = qm.clone(project.getUuid(), "3.2.1", true, true, true, true, true, true, true, false);
+        final UUID clonedProjectUuid = inJdbiTransaction(handle -> handle.attach(ProjectDao.class).cloneProject(
+                new CloneProjectCommand(project.getUuid(), "3.2.1", true, true, true, true, true, true, true, true, true, true)));
 
         bomBytes = """
                 {
@@ -1533,6 +1537,8 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
                   ]
                 }
                 """.getBytes(StandardCharsets.UTF_8);
+
+        final Project clonedProject = qm.getObjectByUuid(Project.class, clonedProjectUuid);
 
         bomUploadEvent = new BomUploadEvent(qm.detach(Project.class, clonedProject.getId()), storeBomFile(bomBytes));
         qm.createWorkflowSteps(bomUploadEvent.getChainIdentifier());

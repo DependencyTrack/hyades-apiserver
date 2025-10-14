@@ -117,7 +117,9 @@ public abstract class AbstractApiResource extends AlpineResource {
     protected void requireProjectAccess(final Handle jdbiHandle, final UUID projectUuid) {
         final var dao = jdbiHandle.attach(ProjectDao.class);
         final Boolean isAccessible = dao.isAccessible(projectUuid);
-        if (!isAccessible) {
+        if (isAccessible == null) {
+            throw new NoSuchElementException("Project could not be found");
+        } else if (!isAccessible) {
             try (var ignored = new MdcScope(Map.of(MDC_PROJECT_UUID, projectUuid.toString()))) {
                 logSecurityEvent(logger, SecurityMarkers.SECURITY_FAILURE, "Unauthorized project access attempt");
             }
