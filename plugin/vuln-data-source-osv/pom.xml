@@ -33,8 +33,6 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
-        <!-- Unit test library -->
-        <lib.wiremock.version>2.35.2</lib.wiremock.version>
     </properties>
 
     <dependencies>
@@ -88,9 +86,8 @@
         </dependency>
 
         <dependency>
-            <groupId>com.github.tomakehurst</groupId>
-            <artifactId>wiremock-jre8-standalone</artifactId>
-            <version>${lib.wiremock.version}</version>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
             <scope>test</scope>
         </dependency>
 

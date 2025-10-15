@@ -99,6 +99,7 @@
 
         <!-- Dependency versions -->
         <lib.assertj.version>3.27.6</lib.assertj.version>
+        <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.cel-java.version>0.5.3</lib.cel-java.version>
         <lib.cpe-parser.version>3.0.0</lib.cpe-parser.version>
         <lib.cvss-calculator.version>1.4.3</lib.cvss-calculator.version>
@@ -118,14 +119,18 @@
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>6.0.0</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
+        <lib.micrometer.version>1.15.5</lib.micrometer.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
+        <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
         <lib.protobuf-java.version>4.32.1</lib.protobuf-java.version>
+        <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.14.1</lib.smallrye-config.version>
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
+        <lib.wiremock.version>3.13.1</lib.wiremock.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
 
@@ -139,6 +144,12 @@
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
                 <version>${lib.assertj.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.awaitility</groupId>
+                <artifactId>awaitility</artifactId>
+                <version>${lib.awaitility.version}</version>
             </dependency>
 
             <dependency>
@@ -274,6 +285,14 @@
             </dependency>
 
             <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-bom</artifactId>
+                <version>${lib.micrometer.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-bom</artifactId>
                 <version>${lib.mockito.version}</version>
@@ -285,6 +304,12 @@
                 <groupId>io.github.jeremylong</groupId>
                 <artifactId>open-vulnerability-clients</artifactId>
                 <version>${lib.open-vulnerability-clients.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.github.package-url</groupId>
+                <artifactId>packageurl-java</artifactId>
+                <version>${lib.packageurl.version}</version>
             </dependency>
 
             <dependency>
@@ -305,19 +330,19 @@
             </dependency>
 
             <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-api</artifactId>
-                <version>${lib.slf4j.version}</version>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-bom</artifactId>
+                <version>${lib.resilience4j.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
+
             <dependency>
                 <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-nop</artifactId>
+                <artifactId>slf4j-bom</artifactId>
                 <version>${lib.slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-simple</artifactId>
-                <version>${lib.slf4j.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
 
             <dependency>
@@ -340,6 +365,12 @@
                 <groupId>io.github.nscuro</groupId>
                 <artifactId>versatile</artifactId>
                 <version>${lib.versatile.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.wiremock</groupId>
+                <artifactId>wiremock-standalone</artifactId>
+                <version>${lib.wiremock.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
