@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
-import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunCommand;
 import org.dependencytrack.workflow.engine.persistence.command.CreateWorkflowRunHistoryEntryCommand;
@@ -33,6 +32,7 @@ import org.dependencytrack.workflow.engine.persistence.model.PolledWorkflowRun;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunCountByNameAndStatusRow;
 import org.dependencytrack.workflow.engine.persistence.model.WorkflowRunMetadataRow;
 import org.dependencytrack.workflow.engine.persistence.request.GetWorkflowRunHistoryRequest;
+import org.dependencytrack.workflow.proto.event.v1.Event;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.statement.Query;

@@ -18,7 +18,6 @@
  */
 package org.dependencytrack.workflow.engine.persistence;
 
-import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.api.ActivityTaskQueue;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListActivityTaskQueuesRequest;
@@ -26,6 +25,7 @@ import org.dependencytrack.workflow.engine.persistence.command.CreateActivityTas
 import org.dependencytrack.workflow.engine.persistence.command.PollActivityTaskCommand;
 import org.dependencytrack.workflow.engine.persistence.model.ActivityTaskId;
 import org.dependencytrack.workflow.engine.persistence.model.PolledActivityTask;
+import org.dependencytrack.workflow.proto.payload.v1.Payload;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.Query;
 import org.jdbi.v3.core.statement.Update;

@@ -21,7 +21,7 @@ syntax = "proto3";
 package org.dependencytrack.workflow.failure.v1;
 
 option java_multiple_files = true;
-option java_package = "org.dependencytrack.proto.workflow.failure.v1";
+option java_package = "org.dependencytrack.workflow.proto.failure.v1";
 
 message Failure {
   optional string message = 1;

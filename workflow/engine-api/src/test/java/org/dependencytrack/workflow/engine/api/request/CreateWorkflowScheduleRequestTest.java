@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.api.request;
 
-import org.dependencytrack.proto.workflow.payload.v1.Payload;
+import org.dependencytrack.workflow.proto.payload.v1.Payload;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;

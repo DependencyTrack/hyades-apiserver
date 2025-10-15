@@ -19,13 +19,13 @@
 package org.dependencytrack.workflow.engine;
 
 import com.google.protobuf.util.Timestamps;
-import org.dependencytrack.proto.workflow.event.v1.Event;
-import org.dependencytrack.proto.workflow.event.v1.ExecutionCompleted;
-import org.dependencytrack.proto.workflow.event.v1.ExecutionStarted;
-import org.dependencytrack.proto.workflow.event.v1.RunStarted;
 import org.dependencytrack.workflow.engine.MetadataRegistry.WorkflowMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowGroup;
 import org.dependencytrack.workflow.engine.persistence.command.PollWorkflowTaskCommand;
+import org.dependencytrack.workflow.proto.event.v1.Event;
+import org.dependencytrack.workflow.proto.event.v1.ExecutionCompleted;
+import org.dependencytrack.workflow.proto.event.v1.ExecutionStarted;
+import org.dependencytrack.workflow.proto.event.v1.RunStarted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;

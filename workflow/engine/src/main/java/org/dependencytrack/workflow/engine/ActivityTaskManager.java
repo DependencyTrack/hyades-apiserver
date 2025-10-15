@@ -18,10 +18,10 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.MetadataRegistry.ActivityMetadata;
 import org.dependencytrack.workflow.engine.api.ActivityGroup;
 import org.dependencytrack.workflow.engine.persistence.command.PollActivityTaskCommand;
+import org.dependencytrack.workflow.proto.payload.v1.Payload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;

@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.serialization;
 
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.dependencytrack.proto.workflow.event.v1.Event;
+import org.dependencytrack.workflow.proto.event.v1.Event;
 
 /**
  * @since 5.7.0

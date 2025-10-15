@@ -19,18 +19,18 @@
 package org.dependencytrack.workflow.engine;
 
 import com.google.protobuf.DebugFormat;
-import org.dependencytrack.proto.workflow.failure.v1.ActivityFailureDetails;
-import org.dependencytrack.proto.workflow.failure.v1.ApplicationFailureDetails;
-import org.dependencytrack.proto.workflow.failure.v1.CancellationFailureDetails;
-import org.dependencytrack.proto.workflow.failure.v1.ChildWorkflowFailureDetails;
-import org.dependencytrack.proto.workflow.failure.v1.Failure;
-import org.dependencytrack.proto.workflow.failure.v1.SideEffectFailureDetails;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
 import org.dependencytrack.workflow.api.failure.ApplicationFailureException;
 import org.dependencytrack.workflow.api.failure.CancellationFailureException;
 import org.dependencytrack.workflow.api.failure.ChildWorkflowFailureException;
 import org.dependencytrack.workflow.api.failure.FailureException;
 import org.dependencytrack.workflow.api.failure.SideEffectFailureException;
+import org.dependencytrack.workflow.proto.failure.v1.ActivityFailureDetails;
+import org.dependencytrack.workflow.proto.failure.v1.ApplicationFailureDetails;
+import org.dependencytrack.workflow.proto.failure.v1.CancellationFailureDetails;
+import org.dependencytrack.workflow.proto.failure.v1.ChildWorkflowFailureDetails;
+import org.dependencytrack.workflow.proto.failure.v1.Failure;
+import org.dependencytrack.workflow.proto.failure.v1.SideEffectFailureDetails;
 import org.jspecify.annotations.Nullable;
 
 import java.util.StringJoiner;

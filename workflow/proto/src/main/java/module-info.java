@@ -18,10 +18,10 @@
  */
 @SuppressWarnings("requires-transitive-automatic")
 module org.dependencytrack.workflow.proto {
-    exports org.dependencytrack.proto.workflow.common.v1;
-    exports org.dependencytrack.proto.workflow.event.v1;
-    exports org.dependencytrack.proto.workflow.failure.v1;
-    exports org.dependencytrack.proto.workflow.payload.v1;
+    exports org.dependencytrack.workflow.proto.common.v1;
+    exports org.dependencytrack.workflow.proto.event.v1;
+    exports org.dependencytrack.workflow.proto.failure.v1;
+    exports org.dependencytrack.workflow.proto.payload.v1;
 
     requires transitive com.google.protobuf;
 }

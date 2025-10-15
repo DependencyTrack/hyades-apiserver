@@ -19,7 +19,7 @@
 package org.dependencytrack.workflow.engine;
 
 import io.micrometer.core.instrument.Tag;
-import org.dependencytrack.proto.workflow.event.v1.Event;
+import org.dependencytrack.workflow.proto.event.v1.Event;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;

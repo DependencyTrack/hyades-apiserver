@@ -18,7 +18,7 @@
  */
 package org.dependencytrack.workflow.engine.persistence.command;
 
-import org.dependencytrack.proto.workflow.event.v1.Event;
+import org.dependencytrack.workflow.proto.event.v1.Event;
 
 import java.util.UUID;
 

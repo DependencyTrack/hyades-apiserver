@@ -18,11 +18,11 @@
  */
 package org.dependencytrack.workflow.engine;
 
-import org.dependencytrack.proto.workflow.event.v1.TimerCreated;
-import org.dependencytrack.proto.workflow.event.v1.TimerElapsed;
-import org.dependencytrack.proto.workflow.failure.v1.Failure;
-import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
+import org.dependencytrack.workflow.proto.event.v1.TimerCreated;
+import org.dependencytrack.workflow.proto.event.v1.TimerElapsed;
+import org.dependencytrack.workflow.proto.failure.v1.Failure;
+import org.dependencytrack.workflow.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;

@@ -19,7 +19,6 @@
 package org.dependencytrack.workflow.engine;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import org.dependencytrack.proto.workflow.event.v1.Event;
 import org.dependencytrack.workflow.api.Awaitable;
 import org.dependencytrack.workflow.api.ContinueAsNewOptions;
 import org.dependencytrack.workflow.api.failure.ActivityFailureException;
@@ -41,6 +40,7 @@ import org.dependencytrack.workflow.engine.api.request.CreateWorkflowScheduleReq
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowSchedulesRequest;
+import org.dependencytrack.workflow.proto.event.v1.Event;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,12 +62,12 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
-import static org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELED;
-import static org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
-import static org.dependencytrack.proto.workflow.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 import static org.dependencytrack.workflow.api.RetryPolicy.defaultRetryPolicy;
 import static org.dependencytrack.workflow.api.payload.PayloadConverters.stringConverter;
 import static org.dependencytrack.workflow.api.payload.PayloadConverters.voidConverter;
+import static org.dependencytrack.workflow.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_CANCELED;
+import static org.dependencytrack.workflow.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_COMPLETED;
+import static org.dependencytrack.workflow.proto.common.v1.WorkflowRunStatus.WORKFLOW_RUN_STATUS_FAILED;
 
 @Testcontainers
 class WorkflowEngineImplTest {

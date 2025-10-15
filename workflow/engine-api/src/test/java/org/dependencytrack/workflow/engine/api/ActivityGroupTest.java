@@ -24,6 +24,8 @@ import org.dependencytrack.workflow.api.annotation.Activity;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
+import java.util.Set;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -39,8 +41,15 @@ class ActivityGroupTest {
     @Test
     void shouldThrowWhenActivityNamesIsNull() {
         assertThatExceptionOfType(NullPointerException.class)
-                .isThrownBy(() -> new ActivityGroup("name", null, 1))
+                .isThrownBy(() -> new ActivityGroup("name", null, "queue", 1))
                 .withMessage("activityNames must not be null");
+    }
+
+    @Test
+    void shouldThrowWhenQueueNameIsNull() {
+        assertThatExceptionOfType(NullPointerException.class)
+                .isThrownBy(() -> new ActivityGroup("name", Set.of("activity"), null, 1))
+                .withMessage("queueName must not be null");
     }
 
     @Test

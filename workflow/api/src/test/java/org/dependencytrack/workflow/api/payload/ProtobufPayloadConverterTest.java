@@ -19,9 +19,9 @@
 package org.dependencytrack.workflow.api.payload;
 
 import com.google.protobuf.Any;
-import org.dependencytrack.proto.workflow.event.v1.Event;
-import org.dependencytrack.proto.workflow.failure.v1.Failure;
-import org.dependencytrack.proto.workflow.payload.v1.Payload;
+import org.dependencytrack.workflow.proto.event.v1.Event;
+import org.dependencytrack.workflow.proto.failure.v1.Failure;
+import org.dependencytrack.workflow.proto.payload.v1.Payload;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -86,7 +86,7 @@ class ProtobufPayloadConverterTest {
         assertThatExceptionOfType(PayloadConversionException.class)
                 .isThrownBy(() -> converter.convertFromPayload(payload))
                 .withMessage("""
-                        Expected Protobuf payload to be of type org.dependencytrack.proto.workflow.event.v1.Event, \
+                        Expected Protobuf payload to be of type org.dependencytrack.workflow.proto.event.v1.Event, \
                         but was type.googleapis.com/org.dependencytrack.workflow.failure.v1.Failure""");
     }
 

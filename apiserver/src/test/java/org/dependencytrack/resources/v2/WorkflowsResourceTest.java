@@ -19,22 +19,22 @@
 package org.dependencytrack.resources.v2;
 
 import com.google.protobuf.util.Timestamps;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.proto.workflow.event.v1.Event;
-import org.dependencytrack.proto.workflow.event.v1.RunCreated;
 import org.dependencytrack.workflow.engine.api.WorkflowEngine;
 import org.dependencytrack.workflow.engine.api.WorkflowRunMetadata;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
 import org.dependencytrack.workflow.engine.api.pagination.Page;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunEventsRequest;
 import org.dependencytrack.workflow.engine.api.request.ListWorkflowRunsRequest;
+import org.dependencytrack.workflow.proto.event.v1.Event;
+import org.dependencytrack.workflow.proto.event.v1.RunCreated;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;

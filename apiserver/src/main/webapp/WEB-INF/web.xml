@@ -36,9 +36,6 @@
         <listener-class>alpine.server.persistence.PersistenceManagerFactory</listener-class>
     </listener>
     <listener>
-        <listener-class>org.dependencytrack.workflow.WorkflowEngineInitializer</listener-class>
-    </listener>
-    <listener>
         <listener-class>org.dependencytrack.plugin.PluginInitializer</listener-class>
     </listener>
     <listener>
@@ -52,6 +49,9 @@
     </listener>
     <listener>
         <listener-class>org.dependencytrack.event.kafka.processor.ProcessorInitializer</listener-class>
+    </listener>
+    <listener>
+        <listener-class>org.dependencytrack.workflow.WorkflowEngineInitializer</listener-class>
     </listener>
     <listener>
         <listener-class>org.dependencytrack.event.PurlMigrator</listener-class>

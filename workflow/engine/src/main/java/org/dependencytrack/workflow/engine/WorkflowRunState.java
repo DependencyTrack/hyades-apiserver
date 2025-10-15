@@ -20,18 +20,6 @@ package org.dependencytrack.workflow.engine;
 
 import com.google.protobuf.DebugFormat;
 import com.google.protobuf.util.Timestamps;
-import org.dependencytrack.proto.workflow.event.v1.ActivityTaskCreated;
-import org.dependencytrack.proto.workflow.event.v1.ChildRunCompleted;
-import org.dependencytrack.proto.workflow.event.v1.ChildRunCreated;
-import org.dependencytrack.proto.workflow.event.v1.ChildRunFailed;
-import org.dependencytrack.proto.workflow.event.v1.Event;
-import org.dependencytrack.proto.workflow.event.v1.RunCompleted;
-import org.dependencytrack.proto.workflow.event.v1.RunCreated;
-import org.dependencytrack.proto.workflow.event.v1.SideEffectExecuted;
-import org.dependencytrack.proto.workflow.event.v1.TimerCreated;
-import org.dependencytrack.proto.workflow.event.v1.TimerElapsed;
-import org.dependencytrack.proto.workflow.failure.v1.Failure;
-import org.dependencytrack.proto.workflow.payload.v1.Payload;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CompleteRunCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.ContinueRunAsNewCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.CreateActivityTaskCommand;
@@ -39,6 +27,18 @@ import org.dependencytrack.workflow.engine.WorkflowCommand.CreateChildRunCommand
 import org.dependencytrack.workflow.engine.WorkflowCommand.CreateTimerCommand;
 import org.dependencytrack.workflow.engine.WorkflowCommand.RecordSideEffectResultCommand;
 import org.dependencytrack.workflow.engine.api.WorkflowRunStatus;
+import org.dependencytrack.workflow.proto.event.v1.ActivityTaskCreated;
+import org.dependencytrack.workflow.proto.event.v1.ChildRunCompleted;
+import org.dependencytrack.workflow.proto.event.v1.ChildRunCreated;
+import org.dependencytrack.workflow.proto.event.v1.ChildRunFailed;
+import org.dependencytrack.workflow.proto.event.v1.Event;
+import org.dependencytrack.workflow.proto.event.v1.RunCompleted;
+import org.dependencytrack.workflow.proto.event.v1.RunCreated;
+import org.dependencytrack.workflow.proto.event.v1.SideEffectExecuted;
+import org.dependencytrack.workflow.proto.event.v1.TimerCreated;
+import org.dependencytrack.workflow.proto.event.v1.TimerElapsed;
+import org.dependencytrack.workflow.proto.failure.v1.Failure;
+import org.dependencytrack.workflow.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;

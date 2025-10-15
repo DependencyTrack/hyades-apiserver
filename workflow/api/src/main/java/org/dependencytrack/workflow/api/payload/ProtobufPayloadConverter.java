@@ -21,7 +21,7 @@ package org.dependencytrack.workflow.api.payload;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
-import org.dependencytrack.proto.workflow.payload.v1.Payload;
+import org.dependencytrack.workflow.proto.payload.v1.Payload;
 import org.jspecify.annotations.Nullable;
 
 final class ProtobufPayloadConverter<T extends Message> implements PayloadConverter<T> {
