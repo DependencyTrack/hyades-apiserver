@@ -118,7 +118,7 @@
         <lib.json-unit.version>4.1.1</lib.json-unit.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>6.0.0</lib.junit-jupiter.version>
-        <lib.liquibase.version>4.33.0</lib.liquibase.version>
+        <lib.liquibase.version>5.0.1</lib.liquibase.version>
         <lib.micrometer.version>1.15.5</lib.micrometer.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
