@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.resources.v2;
 
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestRule;
 import org.dependencytrack.ResourceTest;
 import org.dependencytrack.auth.Permissions;
@@ -35,12 +37,12 @@ import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiHandle;
 import static org.mockito.ArgumentMatchers.eq;
@@ -146,7 +148,8 @@ public class ExtensionsResourceTest extends ResourceTest {
         final var extensionPointSpec = new DummyExtensionPointSpec("foo");
         final var extensionFactory = new DummyExtensionFactory("bar", List.of(
                 new RuntimeConfigDefinition<>("enabled", "", ConfigTypes.BOOLEAN, true, true, false),
-                new RuntimeConfigDefinition<>("access.token", "", ConfigTypes.STRING, "secretValue", true, true)));
+                new RuntimeConfigDefinition<>("access.token", "", ConfigTypes.STRING, "secretValue", true, true),
+                new RuntimeConfigDefinition<>("ecosystems", "", ConfigTypes.stringList(Set.of("eco1", "eco2")), List.of("eco1"), false, false)));
         final var configRegistry = ConfigRegistryImpl.forExtension("foo", "bar");
         configRegistry.createWithDefaultsIfNotExist(extensionFactory.runtimeConfigs());
 
@@ -158,7 +161,9 @@ public class ExtensionsResourceTest extends ResourceTest {
                 .header(X_API_KEY, apiKey)
                 .get();
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThatJson(getPlainTextBody(response)).isEqualTo(/* language=JSON */ """
+        assertThatJson(getPlainTextBody(response))
+                .when(IGNORING_ARRAY_ORDER)
+                .isEqualTo(/* language=JSON */ """
                 {
                   "configs": [
                     {
@@ -176,6 +181,15 @@ public class ExtensionsResourceTest extends ResourceTest {
                       "is_required": true,
                       "is_secret": true,
                       "value": "***SECRET-PLACEHOLDER***"
+                    },
+                    {
+                      "description": "",
+                      "is_required": false,
+                      "is_secret": false,
+                      "name": "ecosystems",
+                      "type": "STRING_LIST",
+                      "value": "eco1",
+                      "allowed_values": ["eco1", "eco2"]
                     }
                   ]
                 }

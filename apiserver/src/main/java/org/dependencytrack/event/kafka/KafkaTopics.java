@@ -21,7 +21,6 @@ package org.dependencytrack.event.kafka;
 import alpine.Config;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.cyclonedx.proto.v1_6.Bom;
 import org.dependencytrack.common.ConfigKey;
 import org.dependencytrack.event.kafka.serialization.KafkaProtobufSerde;
 import org.dependencytrack.proto.notification.v1.Notification;
@@ -47,8 +46,6 @@ public final class KafkaTopics {
     public static final Topic<String, Notification> NOTIFICATION_REPOSITORY;
     public static final Topic<String, Notification> NOTIFICATION_VEX;
     public static final Topic<String, Notification> NOTIFICATION_USER;
-    public static final Topic<String, String> VULNERABILITY_MIRROR_COMMAND;
-    public static final Topic<String, Bom> NEW_VULNERABILITY;
     public static final Topic<String, AnalysisCommand> REPO_META_ANALYSIS_COMMAND;
     public static final Topic<String, AnalysisResult> REPO_META_ANALYSIS_RESULT;
     public static final Topic<ScanKey, ScanCommand> VULN_ANALYSIS_COMMAND;
@@ -72,8 +69,6 @@ public final class KafkaTopics {
         NOTIFICATION_PROJECT_CREATED = new Topic<>("dtrack.notification.project-created", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_REPOSITORY = new Topic<>("dtrack.notification.repository", Serdes.String(), NOTIFICATION_SERDE);
         NOTIFICATION_VEX = new Topic<>("dtrack.notification.vex", Serdes.String(), NOTIFICATION_SERDE);
-        VULNERABILITY_MIRROR_COMMAND = new Topic<>("dtrack.vulnerability.mirror.command", Serdes.String(), Serdes.String());
-        NEW_VULNERABILITY = new Topic<>("dtrack.vulnerability", Serdes.String(), new KafkaProtobufSerde<>(Bom.parser()));
         REPO_META_ANALYSIS_COMMAND = new Topic<>("dtrack.repo-meta-analysis.component", Serdes.String(), new KafkaProtobufSerde<>(AnalysisCommand.parser()));
         REPO_META_ANALYSIS_RESULT = new Topic<>("dtrack.repo-meta-analysis.result", Serdes.String(), new KafkaProtobufSerde<>(AnalysisResult.parser()));
         VULN_ANALYSIS_COMMAND = new Topic<>("dtrack.vuln-analysis.component", new KafkaProtobufSerde<>(ScanKey.parser()), new KafkaProtobufSerde<>(ScanCommand.parser()));

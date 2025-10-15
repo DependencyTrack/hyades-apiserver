@@ -116,6 +116,11 @@
             <artifactId>vuln-data-source-nvd</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>vuln-data-source-osv</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Alpine -->
         <dependency>

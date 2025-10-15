@@ -24,6 +24,7 @@ description: |-
   * `INTEGER` represents an integer, e.g. `666`.
   * `PATH` represents a file path, e.g. `/foo/bar.baz`.
   * `STRING` represents a simple string, e.g. `foo bar baz`.
+  * `STRING_LIST` represents a list of strings, e.g. `foo,bar,baz`.
   * `URL` represents a uniform resource locator, e.g. `https://example.com`.
 enum:
 - BOOLEAN
@@ -33,3 +34,4 @@ enum:
 - PATH
 - STRING
 - URL
+- STRING_LIST

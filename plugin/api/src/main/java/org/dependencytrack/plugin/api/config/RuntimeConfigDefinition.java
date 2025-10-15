@@ -26,12 +26,12 @@ import static java.util.Objects.requireNonNull;
  * Configurations of this type are mutable and may be changed by users and / or extensions
  * while the application is running.
  *
- * @param name         Name of the config.
- * @param description  Description of the config.
- * @param type         Type of the config.
- * @param defaultValue Default value of the config.
- * @param isRequired   Whether the config is required (value must not be {@code null}).
- * @param isSecret     Whether the config is secret (value should be stored in encrypted form).
+ * @param name          Name of the config.
+ * @param description   Description of the config.
+ * @param type          Type of the config.
+ * @param defaultValue  Default value of the config.
+ * @param isRequired    Whether the config is required (value must not be {@code null}).
+ * @param isSecret      Whether the config is secret (value should be stored in encrypted form).
  * @since 5.7.0
  */
 public record RuntimeConfigDefinition<T>(
