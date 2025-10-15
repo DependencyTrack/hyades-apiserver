@@ -24,8 +24,7 @@
         <hashAlgorithm>XX</hashAlgorithm>
         <attachedOutputs>
             <dirNames>
-                <!-- Required by Jetty plugin. -->
-                <dirName>classes</dirName>
+                <dirName>lib</dirName>
             </dirNames>
         </attachedOutputs>
     </configuration>
@@ -39,17 +38,6 @@
     </input>
     <executionControl>
         <runAlways>
-            <executions>
-                <execution artifactId="maven-antrun-plugin">
-                    <execIds>
-                        <!--
-                          The build cache only restores the API server WAR file,
-                          but the JAR file is required for container image builds.
-                        -->
-                        <execId>rename-war-file</execId>
-                    </execIds>
-                </execution>
-            </executions>
             <goalsLists>
                 <!--
                   https://github.com/ascopes/protobuf-maven-plugin/issues/472

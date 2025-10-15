@@ -23,6 +23,7 @@
           <option name="profilesMap">
             <map>
               <entry key="quick" value="true" />
+              <entry key="distribution" value="true" />
             </map>
           </option>
           <option name="projectsCmdOptionValues">
