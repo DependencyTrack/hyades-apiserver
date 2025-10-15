@@ -20,16 +20,13 @@ package org.dependencytrack.plugin.api.config;
 
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @since 5.7.0
  */
 public sealed interface ConfigType<T> {
-
-    /**
-     * @return The Java class backing this type.
-     */
-    Class<T> clazz();
 
     /**
      * Convert a given {@link java.lang.String} to the corresponding {@code T} value.
@@ -50,11 +47,6 @@ public sealed interface ConfigType<T> {
     record Boolean() implements ConfigType<java.lang.Boolean> {
 
         @Override
-        public Class<java.lang.Boolean> clazz() {
-            return java.lang.Boolean.class;
-        }
-
-        @Override
         public java.lang.Boolean fromString(final java.lang.String value) {
             return value != null ? java.lang.Boolean.parseBoolean(value) : null;
         }
@@ -67,11 +59,6 @@ public sealed interface ConfigType<T> {
     }
 
     record Duration() implements ConfigType<java.time.Duration> {
-
-        @Override
-        public Class<java.time.Duration> clazz() {
-            return java.time.Duration.class;
-        }
 
         @Override
         public java.time.Duration fromString(final java.lang.String value) {
@@ -88,11 +75,6 @@ public sealed interface ConfigType<T> {
     record Instant() implements ConfigType<java.time.Instant> {
 
         @Override
-        public Class<java.time.Instant> clazz() {
-            return java.time.Instant.class;
-        }
-
-        @Override
         public java.time.Instant fromString(final java.lang.String value) {
             return value != null ? java.time.Instant.ofEpochMilli(java.lang.Long.parseLong(value)) : null;
         }
@@ -105,11 +87,6 @@ public sealed interface ConfigType<T> {
     }
 
     record Integer() implements ConfigType<java.lang.Integer> {
-
-        @Override
-        public Class<java.lang.Integer> clazz() {
-            return java.lang.Integer.class;
-        }
 
         @Override
         public java.lang.Integer fromString(final java.lang.String value) {
@@ -126,11 +103,6 @@ public sealed interface ConfigType<T> {
     record Path() implements ConfigType<java.nio.file.Path> {
 
         @Override
-        public Class<java.nio.file.Path> clazz() {
-            return java.nio.file.Path.class;
-        }
-
-        @Override
         public java.nio.file.Path fromString(final java.lang.String value) {
             return value != null ? java.nio.file.Path.of(value) : null;
         }
@@ -145,11 +117,6 @@ public sealed interface ConfigType<T> {
     record String() implements ConfigType<java.lang.String> {
 
         @Override
-        public Class<java.lang.String> clazz() {
-            return java.lang.String.class;
-        }
-
-        @Override
         public java.lang.String fromString(final java.lang.String value) {
             return value;
         }
@@ -161,12 +128,47 @@ public sealed interface ConfigType<T> {
 
     }
 
-    record URL() implements ConfigType<java.net.URL> {
+    record StringList(java.util.Set<java.lang.String> allowedValues) implements ConfigType<List<java.lang.String>> {
 
         @Override
-        public Class<java.net.URL> clazz() {
-            return java.net.URL.class;
+        public List<java.lang.String> fromString(final java.lang.String value) {
+            if (value == null) {
+                return null;
+            }
+
+            return Arrays.stream(value.split(","))
+                    .map(java.lang.String::trim)
+                    .peek(v -> {
+                        if (allowedValues != null && !allowedValues.contains(v)) {
+                            throw new IllegalArgumentException(
+                                    "Invalid value: " + v + ". Allowed values are: " + allowedValues
+                            );
+                        }
+                    })
+                    .toList();
         }
+
+        @Override
+        public java.lang.String toString(final List<java.lang.String> value) {
+            if (value == null) {
+                return null;
+            }
+            if (allowedValues != null) {
+                for (java.lang.String v : value) {
+                    if (!allowedValues.contains(v)) {
+                        throw new IllegalArgumentException(
+                                "Invalid value: " + v + ". Allowed values are: " + allowedValues
+                        );
+                    }
+                }
+            }
+
+            return java.lang.String.join(",", value);
+        }
+
+    }
+
+    record URL() implements ConfigType<java.net.URL> {
 
         @Override
         public java.net.URL fromString(final java.lang.String value) {

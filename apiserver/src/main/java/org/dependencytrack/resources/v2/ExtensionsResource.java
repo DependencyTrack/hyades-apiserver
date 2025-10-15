@@ -19,6 +19,10 @@
 package org.dependencytrack.resources.v2;
 
 import alpine.server.auth.PermissionRequired;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.api.v2.ExtensionsApi;
 import org.dependencytrack.api.v2.model.ExtensionConfig;
 import org.dependencytrack.api.v2.model.ExtensionConfigType;
@@ -44,10 +48,6 @@ import org.owasp.security.logging.SecurityMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.inject.Inject;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.ext.Provider;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -148,20 +148,26 @@ public class ExtensionsResource implements ExtensionsApi {
         var responseItems = extensionFactory.runtimeConfigs().stream()
                 .<ExtensionConfig>map(
                         configDef -> ExtensionConfig.builder()
-                                .name(configDef.name())
-                                .description(configDef.description())
-                                .type(switch (configDef.type()) {
-                                    case ConfigType.Boolean ignored -> ExtensionConfigType.BOOLEAN;
-                                    case ConfigType.Duration ignored -> ExtensionConfigType.DURATION;
-                                    case ConfigType.Instant ignored -> ExtensionConfigType.INSTANT;
-                                    case ConfigType.Integer ignored -> ExtensionConfigType.INTEGER;
-                                    case ConfigType.Path ignored -> ExtensionConfigType.PATH;
-                                    case ConfigType.String ignored -> ExtensionConfigType.STRING;
-                                    case ConfigType.URL ignored -> ExtensionConfigType.URL;
-                                })
-                                .isRequired(configDef.isRequired())
-                                .isSecret(configDef.isSecret())
-                                .value(getConfigValue(configRegistry, configDef))
+                                    .name(configDef.name())
+                                    .description(configDef.description())
+                                    .type(switch (configDef.type()) {
+                                        case ConfigType.Boolean ignored -> ExtensionConfigType.BOOLEAN;
+                                        case ConfigType.Duration ignored -> ExtensionConfigType.DURATION;
+                                        case ConfigType.Instant ignored -> ExtensionConfigType.INSTANT;
+                                        case ConfigType.Integer ignored -> ExtensionConfigType.INTEGER;
+                                        case ConfigType.Path ignored -> ExtensionConfigType.PATH;
+                                        case ConfigType.String ignored -> ExtensionConfigType.STRING;
+                                        case ConfigType.StringList ignored -> ExtensionConfigType.STRING_LIST;
+                                        case ConfigType.URL ignored -> ExtensionConfigType.URL;
+                                    })
+                                    .isRequired(configDef.isRequired())
+                                    .isSecret(configDef.isSecret())
+                                    .value(getConfigValue(configRegistry, configDef))
+                                    .allowedValues(
+                                        switch (configDef.type()) {
+                                            case ConfigType.StringList s -> s.allowedValues();
+                                            default -> null;
+                                        })
                                 .build())
                 .toList();
 
