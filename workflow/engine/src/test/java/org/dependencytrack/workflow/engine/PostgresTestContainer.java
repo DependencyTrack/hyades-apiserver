@@ -65,11 +65,7 @@ public final class PostgresTestContainer extends PostgreSQLContainer<PostgresTes
         dataSource.setUser(getUsername());
         dataSource.setPassword(getPassword());
 
-        try {
-            new MigrationExecutor(dataSource).executeMigration();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to execute migrations", e);
-        }
+        new MigrationExecutor(dataSource).execute();
     }
 
     @Override

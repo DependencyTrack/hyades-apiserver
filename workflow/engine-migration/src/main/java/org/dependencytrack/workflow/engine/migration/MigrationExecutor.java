@@ -18,14 +18,26 @@
  */
 package org.dependencytrack.workflow.engine.migration;
 
+import org.flywaydb.core.Flyway;
+
 import javax.sql.DataSource;
 
-public final class MigrationExecutor extends org.dependencytrack.support.liquibase.MigrationExecutor {
+public final class MigrationExecutor {
+
+    private final Flyway flyway;
 
     public MigrationExecutor(final DataSource dataSource) {
-        super(dataSource, "/org/dependencytrack/workflow/engine/migration/changelog-main.xml");
-        withChangeLogTableName("workflow_engine_databasechangelog");
-        withChangeLogLockTableName("workflow_engine_databasechangeloglock");
+        this.flyway = Flyway.configure()
+                .dataSource(dataSource)
+                .baselineOnMigrate(true)
+                .table("workflow_engine_flyway_schema_history")
+                .locations("classpath:org/dependencytrack/workflow/engine/migration")
+                .loggers("slf4j")
+                .load();
+    }
+
+    public void execute() {
+        flyway.migrate();
     }
 
 }

@@ -65,7 +65,7 @@ public final class WorkflowTestRule implements TestRule {
         return new Statement() {
             @Override
             public void evaluate() throws Throwable {
-                new MigrationExecutor(dataSource).executeMigration();
+                new MigrationExecutor(dataSource).execute();
 
                 final var engineConfig = new WorkflowEngineConfig(UUID.randomUUID(), dataSource);
                 if (configCustomizer != null) {

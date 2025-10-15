@@ -32,13 +32,22 @@
 
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
+
+        <!-- Dependency versions -->
+        <lib.flyway.version>11.14.1</lib.flyway.version>
+        <lib.flyway-postgresql.version>11.14.0</lib.flyway-postgresql.version>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>org.dependencytrack</groupId>
-            <artifactId>liquibase-support</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <version>${lib.flyway.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <version>${lib.flyway-postgresql.version}</version>
         </dependency>
 
         <dependency>
@@ -47,13 +56,4 @@
         </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.liquibase</groupId>
-                <artifactId>liquibase-maven-plugin</artifactId>
-                <version>${lib.liquibase.version}</version>
-            </plugin>
-        </plugins>
-    </build>
 </project>

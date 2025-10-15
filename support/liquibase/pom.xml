@@ -81,37 +81,4 @@
         </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <executions>
-                    <!--
-                      Module path cannot be used due to testcontainers incompatibility:
-                      https://github.com/testcontainers/testcontainers-java/issues/7337
-                    -->
-                    <execution>
-                        <id>default-testCompile</id>
-                        <configuration>
-                            <useModulePath>false</useModulePath>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <!--
-                      Module path cannot be used due to testcontainers incompatibility:
-                      https://github.com/testcontainers/testcontainers-java/issues/7337
-                    -->
-                    <useModulePath>false</useModulePath>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-
 </project>
