@@ -16,27 +16,29 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.filestorage.s3;
 
-import com.github.luben.zstd.Zstd;
 import io.minio.GetObjectArgs;
 import io.minio.GetObjectResponse;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.errors.ErrorResponseException;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.http.client.utils.URIBuilder;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.NoSuchFileException;
-import java.util.Arrays;
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.plugin.api.filestorage.FileStorage.requireValidFileName;
@@ -50,18 +52,10 @@ final class S3FileStorage implements FileStorage {
 
     private final MinioClient s3Client;
     private final String bucketName;
-    private final int compressionThresholdBytes;
-    private final int compressionLevel;
 
-    S3FileStorage(
-            final MinioClient s3Client,
-            final String bucketName,
-            final int compressionThresholdBytes,
-            final int compressionLevel) {
+    S3FileStorage(final MinioClient s3Client, final String bucketName) {
         this.s3Client = s3Client;
         this.bucketName = bucketName;
-        this.compressionThresholdBytes = compressionThresholdBytes;
-        this.compressionLevel = compressionLevel;
     }
 
     private record S3FileLocation(String bucket, String object) {
@@ -87,38 +81,39 @@ final class S3FileStorage implements FileStorage {
         }
 
         private URI asURI() {
-            try {
-                return new URIBuilder()
-                        .setScheme(EXTENSION_NAME)
-                        .setHost(bucket)
-                        .setPath(object)
-                        .build();
-            } catch (URISyntaxException e) {
-                throw new IllegalStateException("Failed to build URI for " + this, e);
-            }
+            return URI.create("%s://%s/%s".formatted(EXTENSION_NAME, bucket, object));
         }
 
     }
 
     @Override
-    public FileMetadata store(final String fileName, final String mediaType, final byte[] content) throws IOException {
+    public FileMetadata store(final String fileName, final String mediaType, final InputStream contentStream) throws IOException {
         requireValidFileName(fileName);
-        requireNonNull(content, "content must not be null");
+        requireNonNull(contentStream, "contentStream must not be null");
 
         final var fileLocation = new S3FileLocation(bucketName, fileName);
         final URI locationUri = fileLocation.asURI();
 
-        final byte[] maybeCompressedContent = content.length >= compressionThresholdBytes
-                ? Zstd.compress(content, compressionLevel)
-                : content;
+        final MessageDigest messageDigest;
+        try {
+            messageDigest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
 
-        final byte[] contentDigest = DigestUtils.sha256(maybeCompressedContent);
+        final var byteArrayOutputStream = new ByteArrayOutputStream();
+        try (final var digestOutputStream = new DigestOutputStream(byteArrayOutputStream, messageDigest);
+             final var gzipOutputStream = new GZIPOutputStream(digestOutputStream)) {
+            contentStream.transferTo(gzipOutputStream);
+        }
+
+        final byte[] compressedContent = byteArrayOutputStream.toByteArray();
 
         try {
             s3Client.putObject(PutObjectArgs.builder()
                     .bucket(fileLocation.bucket())
                     .object(fileLocation.object())
-                    .stream(new ByteArrayInputStream(maybeCompressedContent), maybeCompressedContent.length, -1)
+                    .stream(new ByteArrayInputStream(compressedContent), compressedContent.length, -1)
                     .build());
         } catch (Exception e) {
             if (e instanceof final IOException ioe) {
@@ -131,25 +126,23 @@ final class S3FileStorage implements FileStorage {
         return FileMetadata.newBuilder()
                 .setLocation(locationUri.toString())
                 .setMediaType(mediaType)
-                .setSha256Digest(HexFormat.of().formatHex(contentDigest))
+                .setSha256Digest(HexFormat.of().formatHex(messageDigest.digest()))
                 .build();
     }
 
     @Override
-    public byte[] get(final FileMetadata fileMetadata) throws IOException {
+    public InputStream get(final FileMetadata fileMetadata) throws IOException {
         requireNonNull(fileMetadata, "fileMetadata must not be null");
 
         final var fileLocation = S3FileLocation.from(fileMetadata);
 
-        final byte[] maybeCompressedContent;
+        final GetObjectResponse response;
         try {
-            try (final GetObjectResponse response = s3Client.getObject(
+            response = s3Client.getObject(
                     GetObjectArgs.builder()
                             .bucket(fileLocation.bucket())
                             .object(fileLocation.object())
-                            .build())) {
-                maybeCompressedContent = response.readAllBytes();
-            }
+                            .build());
         } catch (ErrorResponseException e) {
             // https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList
             if ("NoSuchKey".equalsIgnoreCase(e.errorResponse().code())) {
@@ -165,20 +158,7 @@ final class S3FileStorage implements FileStorage {
             throw new IOException(e);
         }
 
-        final byte[] actualContentDigest = DigestUtils.sha256(maybeCompressedContent);
-        final byte[] expectedContentDigest = HexFormat.of().parseHex(fileMetadata.getSha256Digest());
-
-        if (!Arrays.equals(actualContentDigest, expectedContentDigest)) {
-            throw new IOException("SHA256 digest mismatch: actual=%s, expected=%s".formatted(
-                    HexFormat.of().formatHex(actualContentDigest), fileMetadata.getSha256Digest()));
-        }
-
-        final long decompressedSize = Zstd.decompressedSize(maybeCompressedContent);
-        if (Zstd.decompressedSize(maybeCompressedContent) <= 0) {
-            return maybeCompressedContent; // Not compressed.
-        }
-
-        return Zstd.decompress(maybeCompressedContent, Math.toIntExact(decompressedSize));
+        return new GZIPInputStream(response);
     }
 
     @Override

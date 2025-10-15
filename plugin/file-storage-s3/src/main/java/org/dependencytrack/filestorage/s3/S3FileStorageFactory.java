@@ -16,9 +16,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.filestorage.s3;
 
-import alpine.Config;
 import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
 import okhttp3.OkHttpClient;
@@ -50,15 +49,9 @@ public final class S3FileStorageFactory implements FileStorageFactory {
             new DeploymentConfigDefinition<>("secret.key", ConfigTypes.STRING, /* isRequired */ false);
     static final ConfigDefinition<String> CONFIG_REGION =
             new DeploymentConfigDefinition<>("region", ConfigTypes.STRING, /* isRequired */ false);
-    static final ConfigDefinition<Integer> CONFIG_COMPRESSION_THRESHOLD_BYTES =
-            new DeploymentConfigDefinition<>("compression.threshold.bytes", ConfigTypes.INTEGER, /* isRequired */ false);
-    static final ConfigDefinition<Integer> CONFIG_COMPRESSION_LEVEL =
-            new DeploymentConfigDefinition<>("compression.level", ConfigTypes.INTEGER, /* isRequired */ false);
 
     private MinioClient s3Client;
     private String bucketName;
-    private int compressionThresholdBytes;
-    private int compressionLevel;
 
     @Override
     public String extensionName() {
@@ -96,20 +89,13 @@ public final class S3FileStorageFactory implements FileStorageFactory {
         optionalRegion.ifPresent(clientBuilder::region);
         s3Client = clientBuilder.build();
 
-        s3Client.setAppInfo(
-                Config.getInstance().getApplicationName(),
-                Config.getInstance().getApplicationVersion());
-
-        compressionThresholdBytes = ctx.configRegistry().getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES).orElse(4096);
-        compressionLevel = ctx.configRegistry().getOptionalValue(CONFIG_COMPRESSION_LEVEL).orElse(5);
-
         LOGGER.debug("Verifying existence of bucket {}", bucketName);
         requireBucketExists(s3Client, bucketName);
     }
 
     @Override
     public FileStorage create() {
-        return new S3FileStorage(s3Client, bucketName, compressionThresholdBytes, compressionLevel);
+        return new S3FileStorage(s3Client, bucketName);
     }
 
     @Override

@@ -16,43 +16,41 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.filestorage.s3;
 
-import io.minio.GetObjectArgs;
-import io.minio.GetObjectResponse;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ConnectException;
 import java.nio.file.NoSuchFileException;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.filestorage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
-import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_ACCESS_KEY;
-import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_BUCKET;
-import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_ENDPOINT;
-import static org.dependencytrack.filestorage.S3FileStorageFactory.CONFIG_SECRET_KEY;
+import static org.dependencytrack.filestorage.s3.S3FileStorageFactory.CONFIG_ACCESS_KEY;
+import static org.dependencytrack.filestorage.s3.S3FileStorageFactory.CONFIG_BUCKET;
+import static org.dependencytrack.filestorage.s3.S3FileStorageFactory.CONFIG_ENDPOINT;
+import static org.dependencytrack.filestorage.s3.S3FileStorageFactory.CONFIG_SECRET_KEY;
 
-public class S3FileStorageTest {
+class S3FileStorageTest {
 
     private MinIOContainer minioContainer;
     private MinioClient s3Client;
 
-    @Before
-    public void before() throws Exception {
+    @BeforeEach
+    void beforeEach() throws Exception {
         minioContainer = new MinIOContainer(DockerImageName.parse("minio/minio:latest"));
         minioContainer.start();
 
@@ -66,8 +64,8 @@ public class S3FileStorageTest {
                 .build());
     }
 
-    @After
-    public void after() throws Exception {
+    @AfterEach
+    void afterEach() throws Exception {
         if (s3Client != null) {
             s3Client.close();
         }
@@ -77,21 +75,21 @@ public class S3FileStorageTest {
     }
 
     @Test
-    public void shouldHaveNameS3() {
+    void shouldHaveNameS3() {
         try (final var storageFactory = new S3FileStorageFactory()) {
             assertThat(storageFactory.extensionName()).isEqualTo("s3");
         }
     }
 
     @Test
-    public void shouldHavePriority120() {
+    void shouldHavePriority120() {
         try (final var storageFactory = new S3FileStorageFactory()) {
             assertThat(storageFactory.priority()).isEqualTo(120);
         }
     }
 
     @Test
-    public void initShouldThrowWhenBucketDoesNotExist() {
+    void initShouldThrowWhenBucketDoesNotExist() {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
                 Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
@@ -106,7 +104,7 @@ public class S3FileStorageTest {
     }
 
     @Test
-    public void initShouldThrowWhenBucketExistenceCheckFailed() {
+    void initShouldThrowWhenBucketExistenceCheckFailed() {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
                 Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
@@ -123,7 +121,7 @@ public class S3FileStorageTest {
     }
 
     @Test
-    public void shouldStoreAndGetAndDeleteFile() throws Exception {
+    void shouldStoreAndGetAndDeleteFile() throws Exception {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
                 Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
@@ -135,14 +133,14 @@ public class S3FileStorageTest {
 
             final FileStorage storage = storageFactory.create();
 
-            final FileMetadata fileMetadata = storage.store("foo/bar", "baz".getBytes());
+            final FileMetadata fileMetadata = storage.store("foo/bar", new ByteArrayInputStream("baz".getBytes()));
             assertThat(fileMetadata.getLocation()).isEqualTo("s3://test/foo/bar");
             assertThat(fileMetadata.getMediaType()).isEqualTo("application/octet-stream");
-            assertThat(fileMetadata.getSha256Digest()).isEqualTo("baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096");
+            assertThat(fileMetadata.getSha256Digest()).isEqualTo("907533ab5846b12a6ef7a1f2ac1c0168f652dcecf4f6a54c1286ba2ef8a82579");
 
-            final byte[] fileContent = storage.get(fileMetadata);
-            assertThat(fileContent).isNotNull();
-            assertThat(fileContent).asString().isEqualTo("baz");
+            final InputStream fileStream = storage.get(fileMetadata);
+            assertThat(fileStream).isNotNull();
+            assertThat(fileStream.readAllBytes()).asString().isEqualTo("baz");
 
             assertThat(storage.delete(fileMetadata)).isTrue();
             assertThatExceptionOfType(NoSuchFileException.class).isThrownBy(() -> storage.get(fileMetadata));
@@ -150,44 +148,7 @@ public class S3FileStorageTest {
     }
 
     @Test
-    public void storeShouldCompressFileWithSizeAboveCompressionThreshold() throws Exception {
-        final var configRegistry = new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
-                Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
-                Map.entry(CONFIG_SECRET_KEY.name(), minioContainer.getPassword()),
-                Map.entry(CONFIG_BUCKET.name(), "test"),
-                Map.entry(CONFIG_COMPRESSION_THRESHOLD_BYTES.name(), "64")));
-
-        try (final var storageFactory = new S3FileStorageFactory()) {
-            storageFactory.init(new ExtensionContext(configRegistry));
-
-            final FileStorage storage = storageFactory.create();
-
-            final byte[] fileContent = "a".repeat(256).getBytes();
-            final String fileContentDigestHex = DigestUtils.sha256Hex(fileContent);
-
-            final FileMetadata fileMetadata = storage.store("foo/bar", fileContent);
-            assertThat(fileMetadata).isNotNull();
-
-            // Digest must be calculated on the compressed file content.
-            assertThat(fileMetadata.getSha256Digest()).isNotEqualTo(fileContentDigestHex);
-
-            // File on disk must in fact be smaller as a result of compression.
-            final GetObjectResponse response = s3Client.getObject(
-                    GetObjectArgs.builder()
-                            .bucket("test")
-                            .object("foo/bar")
-                            .build());
-            assertThat(response.readAllBytes()).hasSizeLessThan(32);
-
-            // File must be transparently decompressed during retrieval.
-            final byte[] retrievedFileContent = storage.get(fileMetadata);
-            assertThat(retrievedFileContent).isEqualTo(fileContent);
-        }
-    }
-
-    @Test
-    public void storeShouldOverwriteExistingFile() throws Exception {
+    void storeShouldOverwriteExistingFile() throws Exception {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
                 Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
@@ -199,22 +160,16 @@ public class S3FileStorageTest {
 
             final FileStorage storage = storageFactory.create();
 
-            final FileMetadata fileMetadataA = storage.store("foo/bar", "baz".getBytes());
-            final FileMetadata fileMetadataB = storage.store("foo/bar", "qux".getBytes());
+            final FileMetadata fileMetadataA = storage.store("foo/bar", new ByteArrayInputStream("baz".getBytes()));
+            final FileMetadata fileMetadataB = storage.store("foo/bar", new ByteArrayInputStream("qux".getBytes()));
 
-            assertThatExceptionOfType(IOException.class)
-                    .isThrownBy(() -> storage.get(fileMetadataA))
-                    .withMessage("""
-                            SHA256 digest mismatch: \
-                            actual=21f58d27f827d295ffcd860c65045685e3baf1ad4506caa0140113b316647534, \
-                            expected=baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096""");
-
-            assertThat(storage.get(fileMetadataB)).asString().isEqualTo("qux");
+            assertThat(storage.get(fileMetadataA).readAllBytes()).asString().isEqualTo("qux");
+            assertThat(storage.get(fileMetadataB).readAllBytes()).asString().isEqualTo("qux");
         }
     }
 
     @Test
-    public void storeShouldThrowWhenFileHasInvalidName() {
+    void storeShouldThrowWhenFileHasInvalidName() {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
                 Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
@@ -229,13 +184,13 @@ public class S3FileStorageTest {
             minioContainer.stop();
 
             assertThatExceptionOfType(IllegalArgumentException.class)
-                    .isThrownBy(() -> storage.store("foo$bar", "bar".getBytes()))
+                    .isThrownBy(() -> storage.store("foo$bar", new ByteArrayInputStream("bar".getBytes())))
                     .withMessage("fileName must match pattern: [a-zA-Z0-9_/\\-.]+");
         }
     }
 
     @Test
-    public void storeShouldThrowWhenHostIsUnavailable() {
+    void storeShouldThrowWhenHostIsUnavailable() {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
                 Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
@@ -250,12 +205,12 @@ public class S3FileStorageTest {
             minioContainer.stop();
 
             assertThatExceptionOfType(IOException.class)
-                    .isThrownBy(() -> storage.store("foo", "bar".getBytes()));
+                    .isThrownBy(() -> storage.store("foo", new ByteArrayInputStream("bar".getBytes())));
         }
     }
 
     @Test
-    public void getShouldThrowWhenFileDoesNotExist() {
+    void getShouldThrowWhenFileDoesNotExist() {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
                 Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
@@ -277,7 +232,7 @@ public class S3FileStorageTest {
     }
 
     @Test
-    public void getShouldThrowWhenHostIsUnavailable() throws Exception {
+    void getShouldThrowWhenHostIsUnavailable() throws Exception {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
                 Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
@@ -289,7 +244,7 @@ public class S3FileStorageTest {
 
             final FileStorage storage = storageFactory.create();
 
-            final FileMetadata fileMetadata = storage.store("foo", "bar".getBytes());
+            final FileMetadata fileMetadata = storage.store("foo", new ByteArrayInputStream("bar".getBytes()));
 
             minioContainer.stop();
 
@@ -300,7 +255,7 @@ public class S3FileStorageTest {
     }
 
     @Test
-    public void deleteShouldReturnTrueWhenFileDoesNotExist() throws Exception {
+    void deleteShouldReturnTrueWhenFileDoesNotExist() throws Exception {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
                 Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
@@ -320,7 +275,7 @@ public class S3FileStorageTest {
     }
 
     @Test
-    public void deleteShouldThrowWhenHostIsUnavailable() throws Exception {
+    void deleteShouldThrowWhenHostIsUnavailable() throws Exception {
         final var configRegistry = new MockConfigRegistry(Map.ofEntries(
                 Map.entry(CONFIG_ENDPOINT.name(), minioContainer.getS3URL()),
                 Map.entry(CONFIG_ACCESS_KEY.name(), minioContainer.getUserName()),
@@ -332,7 +287,7 @@ public class S3FileStorageTest {
 
             final FileStorage storage = storageFactory.create();
 
-            final FileMetadata fileMetadata = storage.store("foo", "bar".getBytes());
+            final FileMetadata fileMetadata = storage.store("foo", new ByteArrayInputStream("bar".getBytes()));
 
             minioContainer.stop();
 

@@ -16,72 +16,70 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.filestorage.local;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.MockConfigRegistry;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.HexFormat;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.filestorage.LocalFileStorageFactory.CONFIG_COMPRESSION_THRESHOLD_BYTES;
-import static org.dependencytrack.filestorage.LocalFileStorageFactory.CONFIG_DIRECTORY;
+import static org.dependencytrack.filestorage.local.LocalFileStorageFactory.CONFIG_DIRECTORY;
 
-public class LocalFileStorageTest {
+class LocalFileStorageTest {
 
     private Path tempDirPath;
 
-    @Before
-    public void before() throws Exception {
+    @BeforeEach
+    void before() throws Exception {
         tempDirPath = Files.createTempDirectory(null);
         tempDirPath.toFile().deleteOnExit();
     }
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldHaveNameLocal() {
+    void shouldHaveNameLocal() {
         final var storageFactory = new LocalFileStorageFactory();
         assertThat(storageFactory.extensionName()).isEqualTo("local");
     }
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldHavePriority100() {
+    void shouldHavePriority100() {
         final var storageFactory = new LocalFileStorageFactory();
         assertThat(storageFactory.priority()).isEqualTo(100);
     }
 
     @Test
     @SuppressWarnings("resource")
-    public void shouldStoreGetAndDeleteFile() throws Exception {
+    void shouldStoreGetAndDeleteFile() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
                 CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
-        final FileMetadata fileMetadata = storage.store("foo/bar", "baz".getBytes());
+        final FileMetadata fileMetadata = storage.store("foo/bar", new ByteArrayInputStream("baz".getBytes()));
         assertThat(fileMetadata).isNotNull();
         assertThat(fileMetadata.getLocation()).isEqualTo("local:///foo/bar");
         assertThat(fileMetadata.getMediaType()).isEqualTo("application/octet-stream");
-        assertThat(fileMetadata.getSha256Digest()).isEqualTo("baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096");
+        assertThat(fileMetadata.getSha256Digest()).isEqualTo("907533ab5846b12a6ef7a1f2ac1c0168f652dcecf4f6a54c1286ba2ef8a82579");
 
         assertThat(tempDirPath.resolve("foo/bar")).exists();
 
-        final byte[] fileContent = storage.get(fileMetadata);
-        assertThat(fileContent).isNotNull();
-        assertThat(fileContent).asString().isEqualTo("baz");
+        final InputStream fileStream = storage.get(fileMetadata);
+        assertThat(fileStream).isNotNull();
+        assertThat(fileStream.readAllBytes()).asString().isEqualTo("baz");
 
         final boolean deleted = storage.delete(fileMetadata);
         assertThat(deleted).isTrue();
@@ -90,57 +88,23 @@ public class LocalFileStorageTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void storeShouldCompressFileWithSizeAboveCompressionThreshold() throws Exception {
-        final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.ofEntries(
-                Map.entry(CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()),
-                Map.entry(CONFIG_COMPRESSION_THRESHOLD_BYTES.name(), "64")))));
-
-        final var storage = (LocalFileStorage) storageFactory.create();
-
-        final byte[] fileContent = "a".repeat(256).getBytes();
-        final String fileContentDigestHex = DigestUtils.sha256Hex(fileContent);
-
-        final FileMetadata fileMetadata = storage.store("foo", fileContent);
-        assertThat(fileMetadata).isNotNull();
-
-        // Digest must be calculated on the compressed file content.
-        assertThat(fileMetadata.getSha256Digest()).isNotEqualTo(fileContentDigestHex);
-
-        // File on disk must in fact be smaller as a result of compression.
-        final Path filePath = storage.resolveFilePath(fileMetadata);
-        assertThat(Files.readAllBytes(filePath)).hasSizeLessThan(32);
-
-        // File must be transparently decompressed during retrieval.
-        final byte[] retrievedFileContent = storage.get(fileMetadata);
-        assertThat(retrievedFileContent).isEqualTo(fileContent);
-    }
-
-    @Test
-    @SuppressWarnings("resource")
-    public void storeShouldOverwriteExistingFile() throws Exception {
+    void storeShouldOverwriteExistingFile() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
                 CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
 
         final FileStorage storage = storageFactory.create();
 
-        final FileMetadata fileMetadataA = storage.store("foo/bar", "baz".getBytes());
-        final FileMetadata fileMetadataB = storage.store("foo/bar", "qux".getBytes());
+        final FileMetadata fileMetadataA = storage.store("foo/bar", new ByteArrayInputStream("baz".getBytes()));
+        final FileMetadata fileMetadataB = storage.store("foo/bar", new ByteArrayInputStream("qux".getBytes()));
 
-        assertThatExceptionOfType(IOException.class)
-                .isThrownBy(() -> storage.get(fileMetadataA))
-                .withMessage("""
-                        SHA256 digest mismatch: \
-                        actual=21f58d27f827d295ffcd860c65045685e3baf1ad4506caa0140113b316647534, \
-                        expected=baa5a0964d3320fbc0c6a922140453c8513ea24ab8fd0577034804a967248096""");
-
-        assertThat(storage.get(fileMetadataB)).asString().isEqualTo("qux");
+        assertThat(storage.get(fileMetadataA).readAllBytes()).asString().isEqualTo("qux");
+        assertThat(storage.get(fileMetadataB).readAllBytes()).asString().isEqualTo("qux");
     }
 
     @Test
     @SuppressWarnings("resource")
-    public void storeShouldThrowWhenFileNameAttemptsTraversal() {
+    void storeShouldThrowWhenFileNameAttemptsTraversal() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
                 CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
@@ -148,7 +112,7 @@ public class LocalFileStorageTest {
         final FileStorage storage = storageFactory.create();
 
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> storage.store("foo/../../../bar", "bar".getBytes()))
+                .isThrownBy(() -> storage.store("foo/../../../bar", new ByteArrayInputStream("bar".getBytes())))
                 .withMessage("""
                         The provided filePath foo/../../../bar does not resolve to a path \
                         within the configured base directory (%s)""", tempDirPath);
@@ -156,7 +120,7 @@ public class LocalFileStorageTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void storeShouldThrowWhenFileHasInvalidName() {
+    void storeShouldThrowWhenFileHasInvalidName() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
                 CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
@@ -164,13 +128,13 @@ public class LocalFileStorageTest {
         final FileStorage storage = storageFactory.create();
 
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> storage.store("foo$bar", "bar".getBytes()))
+                .isThrownBy(() -> storage.store("foo$bar", new ByteArrayInputStream("bar".getBytes())))
                 .withMessage("fileName must match pattern: [a-zA-Z0-9_/\\-.]+");
     }
 
     @Test
     @SuppressWarnings("resource")
-    public void getShouldThrowWhenFileLocationHasInvalidScheme() {
+    void getShouldThrowWhenFileLocationHasInvalidScheme() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
                 CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
@@ -187,7 +151,7 @@ public class LocalFileStorageTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void getShouldThrowWhenFileNameAttemptsTraversal() {
+    void getShouldThrowWhenFileNameAttemptsTraversal() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
                 CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
@@ -207,7 +171,7 @@ public class LocalFileStorageTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void getShouldThrowWhenFileDoesNotExist() {
+    void getShouldThrowWhenFileDoesNotExist() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
                 CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
@@ -224,32 +188,7 @@ public class LocalFileStorageTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void getShouldThrowWhenFileWithDigestMismatch() throws Exception {
-        final var storageFactory = new LocalFileStorageFactory();
-        storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
-                CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
-
-        final FileStorage storage = storageFactory.create();
-
-        final FileMetadata fileMetadata = storage.store("foo", "bar".getBytes());
-
-        // It doesn't matter whether we modify the expected digest, or the actual file content.
-        // Modifying the expected digest is easier for testing purposes.
-        final FileMetadata modifiedFileMetadata = fileMetadata.toBuilder()
-                .setSha256Digest(HexFormat.of().formatHex("mismatch".getBytes()))
-                .build();
-
-        assertThatExceptionOfType(IOException.class)
-                .isThrownBy(() -> storage.get(modifiedFileMetadata))
-                .withMessage("""
-                        SHA256 digest mismatch: \
-                        actual=fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9, \
-                        expected=6d69736d61746368""");
-    }
-
-    @Test
-    @SuppressWarnings("resource")
-    public void deleteShouldReturnFalseWhenFileDoesNotExist() throws Exception {
+    void deleteShouldReturnFalseWhenFileDoesNotExist() throws Exception {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
                 CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));
@@ -265,7 +204,7 @@ public class LocalFileStorageTest {
 
     @Test
     @SuppressWarnings("resource")
-    public void deleteShouldThrowWhenFileLocationHasInvalidScheme() {
+    void deleteShouldThrowWhenFileLocationHasInvalidScheme() {
         final var storageFactory = new LocalFileStorageFactory();
         storageFactory.init(new ExtensionContext(new MockConfigRegistry(Map.of(
                 CONFIG_DIRECTORY.name(), tempDirPath.toAbsolutePath().toString()))));

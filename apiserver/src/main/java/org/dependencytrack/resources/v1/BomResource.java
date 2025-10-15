@@ -637,7 +637,9 @@ public class BomResource extends AbstractApiResource {
         //  Consider also attaching the detected version, i.e. application/vnd.cyclonedx+xml; version=1.6
         //  See https://cyclonedx.org/specification/overview/ -> Media Types.
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
-            return fileStorage.store("bom-upload/%s_%s".formatted(Instant.now().toEpochMilli(), project.getUuid()), bomBytes);
+            return fileStorage.store(
+                    "bom-upload/%s_%s".formatted(Instant.now().toEpochMilli(), project.getUuid()),
+                    new ByteArrayInputStream(bomBytes));
         }
     }
 

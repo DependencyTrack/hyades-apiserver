@@ -16,12 +16,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.filestorage.local;
 
-import com.github.luben.zstd.Zstd;
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.http.client.utils.URIBuilder;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.slf4j.Logger;
@@ -29,12 +25,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
+import java.nio.file.StandardOpenOption;
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.plugin.api.filestorage.FileStorage.requireValidFileName;
@@ -48,22 +49,15 @@ final class LocalFileStorage implements FileStorage {
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorage.class);
 
     private final Path baseDirPath;
-    private final int compressionThresholdBytes;
-    private final int compressionLevel;
 
-    LocalFileStorage(
-            final Path baseDirPath,
-            final int compressionThresholdBytes,
-            final int compressionLevel) {
+    LocalFileStorage(final Path baseDirPath) {
         this.baseDirPath = baseDirPath;
-        this.compressionThresholdBytes = compressionThresholdBytes;
-        this.compressionLevel = compressionLevel;
     }
 
     @Override
-    public FileMetadata store(final String fileName, final String mediaType, final byte[] content) throws IOException {
+    public FileMetadata store(final String fileName, final String mediaType, final InputStream contentStream) throws IOException {
         requireValidFileName(fileName);
-        requireNonNull(content, "content must not be null");
+        requireNonNull(contentStream, "contentStream must not be null");
 
         final Path filePath = resolveFilePath(fileName);
         if (Files.isDirectory(filePath)) {
@@ -75,57 +69,36 @@ final class LocalFileStorage implements FileStorage {
         }
 
         final Path relativeFilePath = baseDirPath.relativize(filePath);
+        final URI locationUri = URI.create("%s:///%s".formatted(EXTENSION_NAME, relativeFilePath));
 
-        final URI locationUri;
+        final MessageDigest messageDigest;
         try {
-            locationUri = new URIBuilder()
-                    .setScheme(EXTENSION_NAME)
-                    .setHost("")
-                    .setPath(relativeFilePath.toString())
-                    .build();
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException("Failed to build URI for " + relativeFilePath, e);
+            messageDigest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
 
-        final byte[] maybeCompressedContent = content.length >= compressionThresholdBytes
-                ? Zstd.compress(content, compressionLevel)
-                : content;
-
-        final byte[] contentDigest = DigestUtils.sha256(maybeCompressedContent);
-
         try (final var fileOutputStream = Files.newOutputStream(filePath);
-             final var bufferedOutputStream = new BufferedOutputStream(fileOutputStream)) {
-            bufferedOutputStream.write(maybeCompressedContent);
+             final var bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+             final var digestOutputStream = new DigestOutputStream(bufferedOutputStream, messageDigest);
+             final var gzipOutputStream = new GZIPOutputStream(digestOutputStream)) {
+            contentStream.transferTo(gzipOutputStream);
         }
 
         return FileMetadata.newBuilder()
                 .setLocation(locationUri.toString())
                 .setMediaType(mediaType)
-                .setSha256Digest(HexFormat.of().formatHex(contentDigest))
+                .setSha256Digest(HexFormat.of().formatHex(messageDigest.digest()))
                 .build();
     }
 
     @Override
-    public byte[] get(final FileMetadata fileMetadata) throws IOException {
+    public InputStream get(final FileMetadata fileMetadata) throws IOException {
         requireNonNull(fileMetadata, "fileMetadata must not be null");
 
         final Path filePath = resolveFilePath(fileMetadata);
 
-        final byte[] maybeCompressedContent = Files.readAllBytes(filePath);
-        final byte[] actualContentDigest = DigestUtils.sha256(maybeCompressedContent);
-        final byte[] expectedContentDigest = HexFormat.of().parseHex(fileMetadata.getSha256Digest());
-
-        if (!Arrays.equals(actualContentDigest, expectedContentDigest)) {
-            throw new IOException("SHA256 digest mismatch: actual=%s, expected=%s".formatted(
-                    HexFormat.of().formatHex(actualContentDigest), fileMetadata.getSha256Digest()));
-        }
-
-        final long decompressedSize = Zstd.decompressedSize(maybeCompressedContent);
-        if (Zstd.decompressedSize(maybeCompressedContent) <= 0) {
-            return maybeCompressedContent; // Not compressed.
-        }
-
-        return Zstd.decompress(maybeCompressedContent, Math.toIntExact(decompressedSize));
+        return new GZIPInputStream(Files.newInputStream(filePath, StandardOpenOption.READ));
     }
 
     @Override
@@ -148,7 +121,6 @@ final class LocalFileStorage implements FileStorage {
         return resolvedFilePath;
     }
 
-    @VisibleForTesting
     Path resolveFilePath(final FileMetadata fileMetadata) {
         final URI locationUri = URI.create(fileMetadata.getLocation());
         if (!EXTENSION_NAME.equals(locationUri.getScheme())) {

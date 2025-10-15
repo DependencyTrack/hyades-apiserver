@@ -16,9 +16,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.filestorage.local;
 
-import alpine.Config;
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.config.ConfigDefinition;
 import org.dependencytrack.plugin.api.config.ConfigTypes;
@@ -35,20 +34,14 @@ import java.nio.file.Path;
 /**
  * @since 5.6.0
  */
-public final class LocalFileStorageFactory implements FileStorageFactory {
+final class LocalFileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorageFactory.class);
 
     static final ConfigDefinition<Path> CONFIG_DIRECTORY =
-            new DeploymentConfigDefinition<>("directory", ConfigTypes.PATH, /* isRequired */ false);
-    static final ConfigDefinition<Integer> CONFIG_COMPRESSION_THRESHOLD_BYTES =
-            new DeploymentConfigDefinition<>("compression.threshold.bytes", ConfigTypes.INTEGER, /* isRequired */ false);
-    static final ConfigDefinition<Integer> CONFIG_COMPRESSION_LEVEL =
-            new DeploymentConfigDefinition<>("compression.level", ConfigTypes.INTEGER, /* isRequired */ false);
+            new DeploymentConfigDefinition<>("directory", ConfigTypes.PATH, /* isRequired */ true);
 
     private Path directoryPath;
-    private int compressionThresholdBytes;
-    private int compressionLevel;
 
     @Override
     public String extensionName() {
@@ -67,10 +60,7 @@ public final class LocalFileStorageFactory implements FileStorageFactory {
 
     @Override
     public void init(final ExtensionContext ctx) {
-        directoryPath = ctx.configRegistry().getOptionalValue(CONFIG_DIRECTORY)
-                .orElseGet(() -> Config.getInstance().getDataDirectorty().toPath().resolve("storage"))
-                .normalize()
-                .toAbsolutePath();
+        directoryPath = ctx.configRegistry().getValue(CONFIG_DIRECTORY).normalize().toAbsolutePath();
 
         try {
             Files.createDirectories(directoryPath);
@@ -89,14 +79,11 @@ public final class LocalFileStorageFactory implements FileStorageFactory {
         }
 
         LOGGER.debug("Files will be stored in {}", directoryPath);
-
-        compressionThresholdBytes = ctx.configRegistry().getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES).orElse(4096);
-        compressionLevel = ctx.configRegistry().getOptionalValue(CONFIG_COMPRESSION_LEVEL).orElse(5);
     }
 
     @Override
     public FileStorage create() {
-        return new LocalFileStorage(directoryPath, compressionThresholdBytes, compressionLevel);
+        return new LocalFileStorage(directoryPath);
     }
 
 }
