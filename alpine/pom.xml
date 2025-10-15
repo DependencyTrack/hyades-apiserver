@@ -85,12 +85,10 @@
         <lib.hikaricp.version>7.0.2</lib.hikaricp.version>
         <lib.javassist.version>3.30.2-GA</lib.javassist.version>
         <lib.jaxb-runtime.version>4.0.6</lib.jaxb-runtime.version>
-        <lib.jdo.api.version>3.2.1</lib.jdo.api.version>
         <lib.jsonwebtoken.version>0.13.0</lib.jsonwebtoken.version>
         <lib.jsr305.version>3.0.2</lib.jsr305.version>
         <lib.logback.version>1.5.19</lib.logback.version>
         <lib.logstash-logback-encoder.version>8.1</lib.logstash-logback-encoder.version>
-        <lib.micrometer.version>1.15.5</lib.micrometer.version>
         <lib.microprofile-health-api.version>4.0.1</lib.microprofile-health-api.version>
         <lib.nimbus-oauth2-oidc-sdk.version>11.29.2</lib.nimbus-oauth2-oidc-sdk.version>
         <lib.owasp.encoder.version>1.3.1</lib.owasp.encoder.version>
@@ -99,7 +97,6 @@
         <lib.swagger.version>2.2.39</lib.swagger.version>
         <!-- Unit test libraries -->
         <lib.junit-pioneer.version>2.3.0</lib.junit-pioneer.version>
-        <lib.wiremock.version>2.35.2</lib.wiremock.version>
     </properties>
 
     <dependencyManagement>
@@ -169,17 +166,6 @@
                 <groupId>com.nimbusds</groupId>
                 <artifactId>oauth2-oidc-sdk</artifactId>
                 <version>${lib.nimbus-oauth2-oidc-sdk.version}</version>
-            </dependency>
-            <!-- Metrics -->
-            <dependency>
-                <groupId>io.micrometer</groupId>
-                <artifactId>micrometer-registry-prometheus</artifactId>
-                <version>${lib.micrometer.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.micrometer</groupId>
-                <artifactId>micrometer-registry-prometheus-simpleclient</artifactId>
-                <version>${lib.micrometer.version}</version>
             </dependency>
             <!-- Health -->
             <dependency>
@@ -259,12 +245,6 @@
                         <artifactId>junit-platform-launcher</artifactId>
                     </exclusion>
                 </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>com.github.tomakehurst</groupId>
-                <artifactId>wiremock-jre8-standalone</artifactId>
-                <version>${lib.wiremock.version}</version>
-                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
