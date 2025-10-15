@@ -33,12 +33,9 @@
     <properties>
         <project.parentBaseDir>${project.basedir}/../..</project.parentBaseDir>
 
-        <lib.awaitility.version>4.3.0</lib.awaitility.version>
         <lib.caffeine.version>3.2.0</lib.caffeine.version>
         <lib.java-uuid-generator.version>5.1.0</lib.java-uuid-generator.version>
         <lib.javacron.version>1.4.0</lib.javacron.version>
-        <lib.micrometer.version>1.14.6</lib.micrometer.version>
-        <lib.resilience4j.version>2.2.0</lib.resilience4j.version>
     </properties>
 
     <dependencies>
@@ -124,7 +121,6 @@
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-core</artifactId>
-            <version>${lib.micrometer.version}</version>
         </dependency>
 
         <dependency>
@@ -155,7 +151,6 @@
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-core</artifactId>
-            <version>${lib.resilience4j.version}</version>
         </dependency>
 
         <dependency>
@@ -165,7 +160,6 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>${lib.slf4j.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
