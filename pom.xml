@@ -123,8 +123,9 @@
         <lib.junit-jupiter.version>6.0.0</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.micrometer.version>1.15.5</lib.micrometer.version>
-        <lib.minio.version>8.5.17</lib.minio.version>
+        <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
+        <lib.okhttp.version>5.2.1</lib.okhttp.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
@@ -308,6 +309,12 @@
                 <version>${lib.mockito.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp-jvm</artifactId>
+                <version>${lib.okhttp.version}</version>
             </dependency>
 
             <dependency>
