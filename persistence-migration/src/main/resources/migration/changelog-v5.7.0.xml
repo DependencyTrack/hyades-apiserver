@@ -22,6 +22,7 @@
 
     <changeSet id="v5.7.0-4" author="nscuro">
         <modifyDataType tableName="VULNERABLESOFTWARE" columnName="PURL" newDataType="VARCHAR(1024)"/>
+        <modifyDataType tableName="CONFIGPROPERTY" columnName="PROPERTYVALUE" newDataType="TEXT"/>
     </changeSet>
 
     <changeSet id="v5.7.0-5" author="nscuro">
