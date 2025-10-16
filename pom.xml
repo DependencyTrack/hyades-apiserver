@@ -124,7 +124,7 @@
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
-        <lib.protobuf-java.version>4.32.1</lib.protobuf-java.version>
+        <lib.protobuf-java.version>4.33.0</lib.protobuf-java.version>
         <lib.resilience4j.version>2.3.0</lib.resilience4j.version>
         <lib.slf4j.version>2.0.17</lib.slf4j.version>
         <lib.smallrye-config.version>3.14.1</lib.smallrye-config.version>
