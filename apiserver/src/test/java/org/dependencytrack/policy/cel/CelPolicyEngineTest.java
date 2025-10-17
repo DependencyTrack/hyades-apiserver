@@ -59,6 +59,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -1978,11 +1979,12 @@ public class CelPolicyEngineTest extends PersistenceCapableTest {
 
     private static FileMetadata storeBomFile(final String testFileName) throws Exception {
         final Path bomFilePath = Paths.get(resourceToURL("/unit/" + testFileName).toURI());
-        final byte[] bomBytes = Files.readAllBytes(bomFilePath);
 
-        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+        try (final InputStream fileInputStream = Files.newInputStream(bomFilePath);
+             final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             return fileStorage.store(
-                    "test/%s-%s".formatted(CelPolicyEngineTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
+                    "test/%s-%s".formatted(CelPolicyEngineTest.class.getSimpleName(), UUID.randomUUID()),
+                    fileInputStream);
         }
     }
 

@@ -16,19 +16,21 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.filestorage.memory;
 
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.http.client.utils.URIBuilder;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Map;
 
@@ -49,36 +51,36 @@ final class MemoryFileStorage implements FileStorage {
     }
 
     @Override
-    public FileMetadata store(final String fileName, final String mediaType, final byte[] content) {
+    public FileMetadata store(final String fileName, final String mediaType, final InputStream contentStream) throws IOException {
         requireValidFileName(fileName);
-        requireNonNull(content, "content must not be null");
+        requireNonNull(contentStream, "contentStream must not be null");
 
         final String normalizedFileName = normalizeFileName(fileName);
+        final URI locationUri = URI.create(EXTENSION_NAME + ":///" + normalizedFileName);
 
-        final URI locationUri;
+        final MessageDigest messageDigest;
         try {
-            locationUri = new URIBuilder()
-                    .setScheme(EXTENSION_NAME)
-                    .setHost("")
-                    .setPath(normalizedFileName)
-                    .build();
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException("Failed to build URI for " + fileName, e);
+            messageDigest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
 
-        final byte[] contentDigest = DigestUtils.sha256(content);
+        final var byteArrayOutputStream = new ByteArrayOutputStream();
+        try (final var digestOutputStream = new DigestOutputStream(byteArrayOutputStream, messageDigest)) {
+            contentStream.transferTo(digestOutputStream);
+        }
 
-        fileContentByKey.put(fileName, content);
+        fileContentByKey.put(fileName, byteArrayOutputStream.toByteArray());
 
         return FileMetadata.newBuilder()
                 .setLocation(locationUri.toString())
                 .setMediaType(mediaType)
-                .setSha256Digest(HexFormat.of().formatHex(contentDigest))
+                .setSha256Digest(HexFormat.of().formatHex(messageDigest.digest()))
                 .build();
     }
 
     @Override
-    public byte[] get(final FileMetadata fileMetadata) throws IOException {
+    public InputStream get(final FileMetadata fileMetadata) throws IOException {
         requireNonNull(fileMetadata, "fileMetadata must not be null");
 
         final String fileName = resolveFileName(fileMetadata);
@@ -88,15 +90,7 @@ final class MemoryFileStorage implements FileStorage {
             throw new NoSuchFileException(fileMetadata.getLocation());
         }
 
-        final byte[] actualContentDigest = DigestUtils.sha256(fileContent);
-        final byte[] expectedContentDigest = HexFormat.of().parseHex(fileMetadata.getSha256Digest());
-
-        if (!Arrays.equals(actualContentDigest, expectedContentDigest)) {
-            throw new IOException("SHA256 digest mismatch: actual=%s, expected=%s".formatted(
-                    HexFormat.of().formatHex(actualContentDigest), fileMetadata.getSha256Digest()));
-        }
-
-        return fileContent;
+        return new ByteArrayInputStream(fileContent);
     }
 
     @Override

@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.filestorage.s3;
 
 import org.dependencytrack.plugin.api.ExtensionFactory;
 import org.dependencytrack.plugin.api.ExtensionPoint;
@@ -26,16 +26,13 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * @since 5.6.0
+ * @since 5.7.0
  */
-public final class FileStoragePlugin implements Plugin {
+public class S3FileStoragePlugin implements Plugin {
 
     @Override
     public Collection<? extends ExtensionFactory<? extends ExtensionPoint>> extensionFactories() {
-        return List.of(
-                new LocalFileStorageFactory(),
-                new MemoryFileStorageFactory(),
-                new S3FileStorageFactory());
+        return List.of(new S3FileStorageFactory());
     }
 
 }

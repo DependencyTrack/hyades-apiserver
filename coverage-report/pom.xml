@@ -98,6 +98,25 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
+            <artifactId>file-storage-local</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>file-storage-memory</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>file-storage-s3</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-data-source-github</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>

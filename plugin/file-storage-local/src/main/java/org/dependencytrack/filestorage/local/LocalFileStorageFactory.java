@@ -16,13 +16,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.filestorage.local;
 
-import alpine.Config;
+import com.github.luben.zstd.Zstd;
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.config.ConfigDefinition;
-import org.dependencytrack.plugin.api.config.ConfigTypes;
-import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
 import org.slf4j.Logger;
@@ -32,22 +29,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_COMPRESSION_LEVEL;
+import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_COMPRESSION_LEVEL_DEFAULT;
+import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_DIRECTORY;
+
 /**
  * @since 5.6.0
  */
-public final class LocalFileStorageFactory implements FileStorageFactory {
+final class LocalFileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorageFactory.class);
 
-    static final ConfigDefinition<Path> CONFIG_DIRECTORY =
-            new DeploymentConfigDefinition<>("directory", ConfigTypes.PATH, /* isRequired */ false);
-    static final ConfigDefinition<Integer> CONFIG_COMPRESSION_THRESHOLD_BYTES =
-            new DeploymentConfigDefinition<>("compression.threshold.bytes", ConfigTypes.INTEGER, /* isRequired */ false);
-    static final ConfigDefinition<Integer> CONFIG_COMPRESSION_LEVEL =
-            new DeploymentConfigDefinition<>("compression.level", ConfigTypes.INTEGER, /* isRequired */ false);
-
     private Path directoryPath;
-    private int compressionThresholdBytes;
     private int compressionLevel;
 
     @Override
@@ -67,10 +60,16 @@ public final class LocalFileStorageFactory implements FileStorageFactory {
 
     @Override
     public void init(final ExtensionContext ctx) {
-        directoryPath = ctx.configRegistry().getOptionalValue(CONFIG_DIRECTORY)
-                .orElseGet(() -> Config.getInstance().getDataDirectorty().toPath().resolve("storage"))
-                .normalize()
-                .toAbsolutePath();
+        directoryPath = ctx.configRegistry().getValue(CONFIG_DIRECTORY);
+
+        // Legacy behavior: The default data directory is specified as ~/.dependency-track,
+        // but ~ is not resolved by Java's file API. Manual substitution is required.
+        if (directoryPath.toString().startsWith("~")) {
+            final Path userHomePath = Path.of(System.getProperty("user.home"));
+            directoryPath = Path.of(directoryPath.toString().replaceFirst(
+                    "^~", userHomePath.toAbsolutePath().toString()));
+        }
+        directoryPath = directoryPath.normalize().toAbsolutePath();
 
         try {
             Files.createDirectories(directoryPath);
@@ -88,15 +87,23 @@ public final class LocalFileStorageFactory implements FileStorageFactory {
                             directoryPath, canRead, canWrite));
         }
 
-        LOGGER.debug("Files will be stored in {}", directoryPath);
+        compressionLevel = ctx.configRegistry()
+                .getOptionalValue(CONFIG_COMPRESSION_LEVEL)
+                .orElse(CONFIG_COMPRESSION_LEVEL_DEFAULT);
+        if (compressionLevel < Zstd.minCompressionLevel() || compressionLevel > Zstd.maxCompressionLevel()) {
+            throw new IllegalStateException(
+                    "Invalid compression level: must be between %d and %d, but is %d".formatted(
+                            Zstd.minCompressionLevel(),
+                            Zstd.maxCompressionLevel(),
+                            compressionLevel));
+        }
 
-        compressionThresholdBytes = ctx.configRegistry().getOptionalValue(CONFIG_COMPRESSION_THRESHOLD_BYTES).orElse(4096);
-        compressionLevel = ctx.configRegistry().getOptionalValue(CONFIG_COMPRESSION_LEVEL).orElse(5);
+        LOGGER.debug("Files will be stored in {}", directoryPath);
     }
 
     @Override
     public FileStorage create() {
-        return new LocalFileStorage(directoryPath, compressionThresholdBytes, compressionLevel);
+        return new LocalFileStorage(directoryPath, compressionLevel);
     }
 
 }

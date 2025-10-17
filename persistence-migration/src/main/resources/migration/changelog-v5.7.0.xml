@@ -213,4 +213,41 @@
              WHERE "IS_LATEST"
         </sql>
     </changeSet>
+
+    <changeSet id="v5.7.0-11" author="oxisto">
+        <sql splitStatements="false">
+            DO $$
+            DECLARE
+                mat_view_def TEXT;
+                index_defs TEXT[];
+                index_def TEXT;
+            BEGIN
+                SELECT pg_get_viewdef('"PORTFOLIOMETRICS_GLOBAL"', true)
+                    INTO mat_view_def;
+
+            SELECT array_agg(indexdef)
+                INTO index_defs
+                FROM pg_indexes
+                WHERE tablename = 'PORTFOLIOMETRICS_GLOBAL';
+
+            DROP MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL";
+
+            ALTER TABLE "CONFIGPROPERTY"
+            ALTER COLUMN "PROPERTYVALUE" TYPE TEXT;
+
+            EXECUTE format(
+                'CREATE MATERIALIZED VIEW "PORTFOLIOMETRICS_GLOBAL" AS %s WITH DATA'
+                , TRIM(TRAILING ';' FROM mat_view_def)
+            );
+
+            IF index_defs IS NOT NULL THEN
+                FOREACH index_def IN ARRAY index_defs
+                LOOP
+                    EXECUTE index_def;
+                END LOOP;
+                END IF;
+            END
+            $$;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

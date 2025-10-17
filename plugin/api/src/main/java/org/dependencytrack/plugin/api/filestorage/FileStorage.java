@@ -23,6 +23,7 @@ import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.regex.Pattern;
 
 import static java.util.Objects.requireNonNull;
@@ -40,23 +41,23 @@ public interface FileStorage extends ExtensionPoint {
      * Implementations may transparently perform additional steps,
      * such as encryption and compression.
      *
-     * @param fileName  Name of the file. This fileName is not guaranteed to be reflected
-     *                  in storage as-is. It may be modified or changed entirely.
-     * @param mediaType Media type of the file.
-     * @param content   Data to store.
+     * @param fileName      Name of the file. This fileName is not guaranteed to be reflected
+     *                      in storage as-is. It may be modified or changed entirely.
+     * @param mediaType     Media type of the file.
+     * @param contentStream Data stream to store.
      * @return Metadata of the stored file.
      * @throws IOException When storing the file failed.
      * @see <a href="https://www.iana.org/assignments/media-types/media-types.xhtml">IANA Media Types</a>
      */
-    FileMetadata store(final String fileName, final String mediaType, final byte[] content) throws IOException;
+    FileMetadata store(String fileName, String mediaType, InputStream contentStream) throws IOException;
 
     /**
      * Persist data to a file in storage, assuming the media type to be {@code application/octet-stream}.
      *
-     * @see #store(String, String, byte[])
+     * @see #store(String, String, InputStream)
      */
-    default FileMetadata store(final String fileName, final byte[] content) throws IOException {
-        return store(fileName, "application/octet-stream", content);
+    default FileMetadata store(final String fileName, final InputStream contentStream) throws IOException {
+        return store(fileName, "application/octet-stream", contentStream);
     }
 
     /**
@@ -69,11 +70,11 @@ public interface FileStorage extends ExtensionPoint {
      * is an illegal operation and yields an exception.
      *
      * @param fileMetadata Metadata of the file to retrieve.
-     * @return The file's content.
+     * @return The file's content stream.
      * @throws IOException           When retrieving the file failed.
      * @throws FileNotFoundException When the requested file was not found.
      */
-    byte[] get(final FileMetadata fileMetadata) throws IOException;
+    InputStream get(FileMetadata fileMetadata) throws IOException;
 
     /**
      * Deletes a file from storage.
@@ -85,7 +86,7 @@ public interface FileStorage extends ExtensionPoint {
      * @return {@code true} when the file was deleted, otherwise {@code false}.
      * @throws IOException When deleting the file failed.
      */
-    boolean delete(final FileMetadata fileMetadata) throws IOException;
+    boolean delete(FileMetadata fileMetadata) throws IOException;
 
     // TODO: deleteMany. Some remote storage backends support batch deletes.
     //  https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html
