@@ -63,7 +63,6 @@ import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.tasks.CsafMirrorTask;
 import org.dependencytrack.util.CsafUtil;
-import org.dependencytrack.util.LockProvider;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.jetbrains.annotations.Nullable;
@@ -72,7 +71,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URL;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,7 +80,6 @@ import java.util.function.Predicate;
 import static org.dependencytrack.model.Vulnerability.Source.CSAF;
 import static org.dependencytrack.resources.v1.CsafSourceConfigProvider.getCsafSourceByIdFromConfig;
 import static org.dependencytrack.resources.v1.CsafSourceConfigProvider.updateSourcesInConfig;
-import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
 
 /**
  * Resource for vulnerability policies.
@@ -242,7 +239,7 @@ public class CsafResource extends AbstractApiResource {
     @Operation(summary = "Returns a list of CSAF documents", description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS_READ</strong></p>")
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "A list of CSAF documents", content = @Content(array = @ArraySchema(schema = @Schema(implementation = Advisory.class)))),
+            @ApiResponse(responseCode = "200", description = "A list of CSAF documents", headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of advisories"), content = @Content(array = @ArraySchema(schema = @Schema(implementation = Advisory.class)))),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_READ)

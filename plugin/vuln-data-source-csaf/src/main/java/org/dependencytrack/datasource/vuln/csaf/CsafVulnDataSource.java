@@ -101,7 +101,7 @@ public class CsafVulnDataSource implements VulnDataSource {
             currentProviderIndex++;
         }
 
-        if (currentProviderIndex < enabledProviders.size()) {
+        while (currentProviderIndex < enabledProviders.size()) {
             final boolean nextEcosystemOpened = openNextProvider();
             if (nextEcosystemOpened) {
                 final Bom item = readNextDocument();

@@ -180,19 +180,23 @@ public interface AdvisoryDao {
             FROM "ADVISORY"
             LEFT JOIN "ADVISORIES_VULNERABILITIES" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
             LEFT JOIN "FINDINGATTRIBUTION" ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
+            WHERE (:searchTerm IS NULL OR :searchTerm = '' OR LOWER("ADVISORY"."TITLE") LIKE CONCAT('%', LOWER(:searchTerm), '%'))
             GROUP BY "ADVISORY"."ID","ADVISORY"."TITLE","URL"
             
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(AdvisoryDao.AdvisoriesPortfolioRow.class)
-    List<AdvisoriesPortfolioRow> getAllAdvisories();
+    List<AdvisoriesPortfolioRow> getAllAdvisories(@Bind("searchTerm") String searchTerm);
 
     @AllowUnusedBindings
     @SqlQuery(/* language=InjectedFreeMarker */ """            
-            SELECT COUNT(DISTINCT ("ID", "NAME", "URL")) as "totalCount"
+            SELECT COALESCE(COUNT(DISTINCT "ADVISORY"."ID"), 0) as "totalCount"
             FROM "ADVISORY"
+            LEFT JOIN "ADVISORIES_VULNERABILITIES" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
+            LEFT JOIN "FINDINGATTRIBUTION" ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
+            WHERE (:searchTerm IS NULL OR :searchTerm = '' OR LOWER("ADVISORY"."TITLE") LIKE CONCAT('%', LOWER(:searchTerm), '%'))
             """)
-    long getAllAdvisoriesTotal();
+    long getAllAdvisoriesTotal(@Bind("searchTerm") String searchTerm);
 
     record ProjectAdvisoryFinding(
             String name,

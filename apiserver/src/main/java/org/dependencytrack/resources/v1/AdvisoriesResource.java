@@ -95,11 +95,14 @@ public class AdvisoriesResource extends AbstractApiResource {
     })
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
-    public Response getAllAdvisories() {
+    public Response getAllAdvisories(@QueryParam("searchText") String searchText) {
+        // normalize search term: trim and treat empty as null so DAO SQL conditional behaves predictably
+        final String searchParam = (searchText == null || searchText.trim().isEmpty()) ? null : searchText.trim();
+
         List<AdvisoryDao.AdvisoriesPortfolioRow> advisoryRows = withJdbiHandle(getAlpineRequest(), handle ->
-                    handle.attach(AdvisoryDao.class).getAllAdvisories());
+                    handle.attach(AdvisoryDao.class).getAllAdvisories(searchParam));
         final long totalCount = withJdbiHandle(getAlpineRequest(), handle ->
-                    handle.attach(AdvisoryDao.class).getAllAdvisoriesTotal());
+                    handle.attach(AdvisoryDao.class).getAllAdvisoriesTotal(searchParam));
         return Response.ok(advisoryRows.stream().toList()).header(TOTAL_COUNT_HEADER, totalCount).build();
     }
 
