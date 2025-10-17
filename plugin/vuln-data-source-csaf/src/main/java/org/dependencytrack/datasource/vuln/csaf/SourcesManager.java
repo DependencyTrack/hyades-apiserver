@@ -45,18 +45,18 @@ public class SourcesManager {
 
     private final ConfigRegistry configRegistry;
     private final ObjectMapper objectMapper;
-    private final List<CsafSource> commitedSources;
+    private final List<CsafSource> committedSources;
     private final List<CsafSource> pendingSources;
     private Boolean isDirty = false;
 
     public SourcesManager(
             ConfigRegistry configRegistry,
             ObjectMapper objectMapper,
-            List<CsafSource> commitedSources) {
+            List<CsafSource> committedSources) {
         this.configRegistry = configRegistry;
         this.objectMapper = objectMapper;
-        this.commitedSources = commitedSources;
-        this.pendingSources = new ArrayList<>(commitedSources);
+        this.committedSources = committedSources;
+        this.pendingSources = new ArrayList<>(committedSources);
     }
 
     static SourcesManager create(
@@ -71,11 +71,11 @@ public class SourcesManager {
     }
 
     public List<CsafSource> listAggregators() {
-        return this.commitedSources.stream().filter(CsafSource::isAggregator).toList();
+        return this.committedSources.stream().filter(CsafSource::isAggregator).toList();
     }
 
     public List<CsafSource> listProviders(Predicate<CsafSource> filter) {
-        return this.commitedSources.stream().filter(filter).toList();
+        return this.committedSources.stream().filter(filter).toList();
     }
 
     /**
@@ -87,7 +87,10 @@ public class SourcesManager {
      */
     public boolean maybeDiscover(final CsafSource source) {
         if (this.pendingSources.stream().noneMatch(s -> s.getUrl().equals(source.getUrl()))) {
-            source.setId(this.pendingSources.size());
+            source.setId(this.committedSources.stream()
+                    .mapToInt(CsafSource::getId)
+                    .max()
+                    .orElse(-1) + 1);
             this.pendingSources.add(source);
             this.isDirty = true;
             return true;

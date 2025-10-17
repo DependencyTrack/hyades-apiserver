@@ -100,7 +100,8 @@ public class CsafResource extends AbstractApiResource {
         LOGGER.info("Triggering CSAF mirror task manually");
 
         var lockConfig = getLockConfigForTask(CsafMirrorTask.class);
-        System.out.println(lockConfig);
+
+        LOGGER.info("Lock config: " + lockConfig + " Unlock time " + lockConfig.getLockAtLeastUntil());
 
         var mirror = new CsafMirrorTask();
         mirror.inform(new CsafMirrorEvent());
@@ -118,7 +119,7 @@ public class CsafResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VULNERABILITY_MANAGEMENT_READ)
-    public Response listCsafAggregators(@QueryParam("searchText") String searchText, @QueryParam("pageSize") int pageSize, @QueryParam("pageNumber") int pageNumber) {
+    public Response listCsafAggregators(@QueryParam("searchText") String searchText) {
         return listSources(searchText, true, false);
     }
 
@@ -408,7 +409,7 @@ public class CsafResource extends AbstractApiResource {
                         ((searchText == null || searchText.isEmpty()) || (filter.getName().toLowerCase().contains(searchText.toLowerCase()) ||
                 filter.getUrl().toLowerCase().contains(searchText.toLowerCase()))));
 
-        return Response.ok(sources).header(TOTAL_COUNT_HEADER, sources).build();
+        return Response.ok(sources).header(TOTAL_COUNT_HEADER, sources.size()).build();
     }
 
     /**
@@ -433,9 +434,16 @@ public class CsafResource extends AbstractApiResource {
                     .entity("An aggregator with the specified URL already exists").build();
         }
 
+        // Compute globally unique ID
+        var allSources = getCsafSourcesFromConfig(filter -> true);
+        int newId = allSources.stream()
+                .mapToInt(CsafSource::getId)
+                .max()
+                .orElse(-1) + 1;
+
         // Add the new source to the list. Make sure that the aggregator flag is set appropriately.
         source.setAggregator(isAggregator);
-        source.setId(sources.size());
+        source.setId(newId);
         source.setDomain(CsafUtil.validateDomain(source.getUrl()));
         sources.add(source);
 
