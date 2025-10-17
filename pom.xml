@@ -32,6 +32,7 @@
         <module>support/smallrye-config-source-memory</module>
         <module>api</module>
         <module>alpine</module>
+        <module>workflow</module>
         <module>proto</module>
         <module>plugin/api</module>
         <module>plugin/file-storage-local</module>
@@ -119,6 +120,7 @@
         <lib.jetty.version>12.1.2</lib.jetty.version>
         <lib.jooq.version>3.20.8</lib.jooq.version>
         <lib.json-unit.version>4.1.1</lib.json-unit.version>
+        <lib.jspecify.version>1.0.0</lib.jspecify.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>6.0.0</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
@@ -271,6 +273,12 @@
             </dependency>
 
             <dependency>
+                <groupId>org.jspecify</groupId>
+                <artifactId>jspecify</artifactId>
+                <version>${lib.jspecify.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>${lib.junit4.version}</version>
@@ -415,8 +423,7 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.14.1</version>
                     <configuration>
-                        <source>21</source>
-                        <target>21</target>
+                        <release>21</release>
                         <compilerArgs>
                             <arg>-Xlint:all</arg>
                             <arg>-Xlint:-processing</arg>
