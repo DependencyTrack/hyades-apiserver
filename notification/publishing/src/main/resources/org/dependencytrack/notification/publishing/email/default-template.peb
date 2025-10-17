@@ -1,3 +1,6 @@
+{#- @pebvariable name="baseUrl" type="String" -#}
+{#- @pebvariable name="notification" type="org.dependencytrack.notification.proto.v1.Notification" -#}
+{#- @pebvariable name="timestamp" type="String" -#}
 {{ notification.title }}
 
 --------------------------------------------------------------------------------
