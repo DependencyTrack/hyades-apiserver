@@ -20,6 +20,7 @@ package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.Component;
 import org.dependencytrack.model.ComponentOccurrence;
+import org.dependencytrack.model.IntegrityMatchStatus;
 import org.dependencytrack.model.License;
 import org.dependencytrack.persistence.pagination.Page;
 import org.jdbi.v3.core.mapper.RowMapper;
@@ -35,6 +36,8 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -88,21 +91,23 @@ public interface ComponentDao extends SqlObject {
             """)
     Long getComponentId(@Bind UUID componentUuid);
 
-    default Page<Component> listProjectComponents(final long projectId, final Boolean onlyOutdated,
+    default Page<ComponentRow> listProjectComponents(final long projectId, final Boolean onlyOutdated,
                                                     final Boolean onlyDirect, final int limit, final String pageToken) {
         final var decodedPageToken = decodePageToken(getHandle(), pageToken, ListComponentPageToken.class);
 
-        final List<Component> rows = listProjectComponents(projectId, limit + 1, onlyOutdated, onlyDirect,
+        final List<ComponentRow> rows = listProjectComponents(projectId, limit + 1, onlyOutdated, onlyDirect,
                 decodedPageToken != null ? decodedPageToken.lastName() : null,
                 decodedPageToken != null ? decodedPageToken.lastVersion() : null,
                 decodedPageToken != null ? decodedPageToken.lastId() : null);
 
-        final List<Component> resultRows = rows.size() > 1
+        final List<ComponentRow> resultRows = rows.size() > 1
                 ? rows.subList(0, Math.min(rows.size(), limit))
                 : rows;
 
         final ListComponentPageToken nextPageToken = rows.size() > limit
-                ? new ListComponentPageToken(resultRows.getLast().getName(), resultRows.getLast().getVersion(), resultRows.getLast().getId())
+                ? new ListComponentPageToken(resultRows.getLast().component.getName(),
+                                            resultRows.getLast().component.getVersion(),
+                                            resultRows.getLast().component.getId())
                 : null;
 
         return new Page<>(resultRows, encodePageToken(getHandle(), nextPageToken));
@@ -149,9 +154,38 @@ public interface ComponentDao extends SqlObject {
                         "L"."ISOSIAPPROVED",
                         "L"."UUID" AS "licenseUuid",
                         "L"."NAME" AS "licenseName",
+                        "INTEGRITY_META_COMPONENT"."PUBLISHED_AT" AS "published",
+                        "INTEGRITY_META_COMPONENT"."LAST_FETCH" AS "lastFetched",
+                        "INTEGRITY_META_COMPONENT"."REPOSITORY_URL" AS "integrityRepoUrl",
+                        "INTEGRITY_ANALYSIS"."INTEGRITY_CHECK_STATUS" AS "integrityCheckStatus",
+                        "DEPENDENCYMETRICS"."VULNERABILITIES" AS "vulnCount",
+                        "DEPENDENCYMETRICS"."CRITICAL" AS "critical",
+                        "DEPENDENCYMETRICS"."HIGH" AS "high",
+                        "DEPENDENCYMETRICS"."MEDIUM" AS "medium",
+                        "DEPENDENCYMETRICS"."LOW" AS "low",
+                        "DEPENDENCYMETRICS"."UNASSIGNED_SEVERITY" AS "unassigned",
+                        "R"."LATEST_VERSION" AS "latestVersion",
                         (SELECT COUNT(*) FROM "COMPONENT_OCCURRENCE" WHERE "COMPONENT_ID" = "C"."ID") AS "occurrenceCount"
                 FROM "COMPONENT" "C"
                 INNER JOIN "PROJECT" ON "C"."PROJECT_ID" = "PROJECT"."ID"
+                LEFT JOIN "INTEGRITY_META_COMPONENT" ON "C"."PURL" = "INTEGRITY_META_COMPONENT"."PURL"
+                LEFT JOIN "INTEGRITY_ANALYSIS" ON "C"."ID" = "INTEGRITY_ANALYSIS"."COMPONENT_ID"
+                LEFT JOIN (
+                      SELECT DISTINCT ON ("COMPONENT_ID")
+                          "COMPONENT_ID",
+                          "VULNERABILITIES",
+                          "CRITICAL",
+                          "HIGH",
+                          "MEDIUM",
+                          "LOW",
+                          "UNASSIGNED_SEVERITY"
+                      FROM "DEPENDENCYMETRICS"
+                      ORDER BY "COMPONENT_ID", "LAST_OCCURRENCE" DESC
+                    ) "DEPENDENCYMETRICS" ON "C"."ID" = "DEPENDENCYMETRICS"."COMPONENT_ID"
+                LEFT JOIN "REPOSITORY_META_COMPONENT" "R"
+                       ON "R"."NAME" = "C"."NAME"
+                      AND ("R"."NAMESPACE" = "C"."GROUP" OR "R"."NAMESPACE" IS NULL OR "C"."GROUP" IS NULL)
+                      AND "C"."PURL" LIKE (('pkg:' || LOWER("R"."REPOSITORY_TYPE")) || '/%') ESCAPE E'\\\\'
                 LEFT OUTER JOIN "LICENSE" "L" ON "C"."LICENSE_ID" = "L"."ID"
                 WHERE ${apiProjectAclCondition}
                 AND "C"."PROJECT_ID" = :projectId
@@ -177,7 +211,7 @@ public interface ComponentDao extends SqlObject {
     @DefineNamedBindings
     @DefineApiProjectAclCondition(projectIdColumn = "\"PROJECT_ID\"")
     @RegisterRowMapper(ComponentListRowMapper.class)
-    List<Component> listProjectComponents(
+    List<ComponentRow> listProjectComponents(
             @Bind long projectId,
             @Bind int limit,
             @Bind Boolean onlyOutdated,
@@ -187,12 +221,28 @@ public interface ComponentDao extends SqlObject {
             @Bind Long lastId
     );
 
-    class ComponentListRowMapper implements RowMapper<Component> {
+    record ComponentRow(
+            Component component,
+            String latestVersion,
+            Instant published,
+            Instant lastFetched,
+            IntegrityMatchStatus integrityCheckStatus,
+            String integrityRepoUrl,
+            int vulnerabilities,
+            int critical,
+            int medium,
+            int high,
+            int low,
+            int unassigned
+            ) {
+    }
+
+    class ComponentListRowMapper implements RowMapper<ComponentRow> {
 
         private final RowMapper<Component> componentRowMapper = BeanMapper.of(Component.class);
 
         @Override
-        public Component map(final ResultSet rs, final StatementContext ctx) throws SQLException {
+        public ComponentRow map(final ResultSet rs, final StatementContext ctx) throws SQLException {
             final Component component = componentRowMapper.map(rs, ctx);
             maybeSet(rs, "componentPurl", ResultSet::getString, component::setPurl);
             if (rs.getString("licenseUuid") != null) {
@@ -206,7 +256,29 @@ public interface ComponentDao extends SqlObject {
                 component.setResolvedLicense(license);
             }
             maybeSet(rs, "occurrenceCount", ResultSet::getLong, component::setOccurrenceCount);
-            return component;
+
+            final Timestamp publishedTs = rs.getTimestamp("published");
+            final Instant published = (publishedTs != null ? publishedTs.toInstant() : null);
+            final Timestamp lastFetchedTs = rs.getTimestamp("lastFetched");
+            final Instant lastFetched = (lastFetchedTs != null ? lastFetchedTs.toInstant() : null);
+            final String integrityCheckStatus = rs.getString("integrityCheckStatus");
+            final IntegrityMatchStatus integrityStatus =
+                    (integrityCheckStatus != null ? IntegrityMatchStatus.valueOf(integrityCheckStatus) : null);
+
+            return new ComponentRow(
+                    component,
+                    rs.getString("latestVersion"),
+                    published,
+                    lastFetched,
+                    integrityStatus,
+                    rs.getString("integrityRepoUrl"),
+                    rs.getInt("vulnCount"),
+                    rs.getInt("critical"),
+                    rs.getInt("high"),
+                    rs.getInt("medium"),
+                    rs.getInt("low"),
+                    rs.getInt("unassigned")
+            );
         }
     }
 }
