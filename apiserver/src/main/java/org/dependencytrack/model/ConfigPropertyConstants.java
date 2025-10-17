@@ -69,6 +69,7 @@ public enum ConfigPropertyConstants {
     SCANNER_CSAF_ENABLED("scanner", "csaf.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable CSAF Vulnerability Analysis", ConfigPropertyAccessMode.READ_WRITE),
     SCANNER_CSAF_THRESHOLD("scanner", "csaf.threshold", "75", PropertyType.INTEGER, "Matching threshold for CSAF Vulnerability Analysis", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_POLICY_FILE_LAST_MODIFIED_HASH("vulnerability-policy", "vulnerability.policy.file.last.modified.hash", null,  PropertyType.STRING, "Hash value or etag of the last fetched bundle if any", ConfigPropertyAccessMode.READ_ONLY),
+    VULNERABILITY_SOURCE_CSAF_ENABLED("vuln-source", "csaf.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable CSAF Advisories", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ENABLED("vuln-source", "github.advisories.enabled", "false", PropertyType.BOOLEAN, "Flag to enable/disable GitHub Advisories", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ALIAS_SYNC_ENABLED("vuln-source", "github.advisories.alias.sync.enabled", "true", PropertyType.BOOLEAN, "Flag to enable/disable alias synchronization for GitHub Advisories", ConfigPropertyAccessMode.READ_WRITE),
     VULNERABILITY_SOURCE_GITHUB_ADVISORIES_ACCESS_TOKEN("vuln-source", "github.advisories.access.token", null, PropertyType.STRING, "The access token used for GitHub API authentication", ConfigPropertyAccessMode.READ_WRITE),
