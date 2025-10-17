@@ -36,6 +36,7 @@ import org.dependencytrack.event.maintenance.WorkflowMaintenanceEvent;
 import org.dependencytrack.tasks.BomUploadProcessingTask;
 import org.dependencytrack.tasks.CallbackTask;
 import org.dependencytrack.tasks.CloneProjectTask;
+import org.dependencytrack.tasks.CsafMirrorTask;
 import org.dependencytrack.tasks.DefectDojoUploadTask;
 import org.dependencytrack.tasks.EpssMirrorTask;
 import org.dependencytrack.tasks.FortifySscUploadTask;
@@ -97,6 +98,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.subscribe(LdapSyncEvent.class, LdapSyncTaskWrapper.class);
         EVENT_SERVICE.subscribe(GitHubAdvisoryMirrorEvent.class, GitHubAdvisoryMirrorTask.class);
         EVENT_SERVICE.subscribe(OsvMirrorEvent.class, OsvMirrorTask.class);
+        EVENT_SERVICE.subscribe(CsafMirrorEvent.class, CsafMirrorTask.class);
         EVENT_SERVICE.subscribe(ProjectVulnerabilityAnalysisEvent.class, VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.subscribe(PortfolioVulnerabilityAnalysisEvent.class, VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.subscribe(ProjectRepositoryMetaAnalysisEvent.class, RepositoryMetaAnalysisTask.class);
@@ -144,6 +146,7 @@ public class EventSubsystemInitializer implements ServletContextListener {
         EVENT_SERVICE.unsubscribe(LdapSyncTaskWrapper.class);
         EVENT_SERVICE.unsubscribe(GitHubAdvisoryMirrorTask.class);
         EVENT_SERVICE.unsubscribe(OsvMirrorTask.class);
+        EVENT_SERVICE.unsubscribe(CsafMirrorTask.class);
         EVENT_SERVICE.unsubscribe(VulnerabilityAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(RepositoryMetaAnalysisTask.class);
         EVENT_SERVICE.unsubscribe(ProjectMetricsUpdateTask.class);

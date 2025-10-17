@@ -22,6 +22,7 @@ import alpine.model.IConfigProperty;
 import alpine.test.config.ConfigPropertyRule;
 import alpine.test.config.WithConfigProperty;
 import org.dependencytrack.PersistenceCapableTest;
+import org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourcePlugin;
 import org.dependencytrack.datasource.vuln.github.GitHubVulnDataSourcePlugin;
 import org.dependencytrack.datasource.vuln.nvd.NvdVulnDataSourcePlugin;
 import org.dependencytrack.datasource.vuln.osv.OsvVulnDataSourcePlugin;
@@ -61,6 +62,7 @@ public class PluginManagerTest extends PersistenceCapableTest {
         assertThat(loadedPlugins).satisfiesExactlyInAnyOrder(
                 plugin -> assertThat(plugin).isOfAnyClassIn(DummyPlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(FileStoragePlugin.class),
+                plugin -> assertThat(plugin).isInstanceOf(CsafVulnDataSourcePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(GitHubVulnDataSourcePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(NvdVulnDataSourcePlugin.class),
                 plugin -> assertThat(plugin).isInstanceOf(OsvVulnDataSourcePlugin.class));

@@ -83,6 +83,10 @@ public class FindingAttribution implements Serializable {
     private Vulnerability vulnerability;
 
     @Persistent
+    @Column(name = "MATCHING_PERCENTAGE", allowsNull = "true")
+    private Float matchingPercentage;
+
+    @Persistent
     @Column(name = "ALT_ID", allowsNull = "true")
     private String alternateIdentifier;
 
@@ -148,6 +152,14 @@ public class FindingAttribution implements Serializable {
 
     public void setVulnerability(Vulnerability vulnerability) {
         this.vulnerability = vulnerability;
+    }
+
+    public Float getMatchingPercentage() {
+        return matchingPercentage;
+    }
+
+    public void setMatchingPercentage(Float matchingPercentage) {
+        this.matchingPercentage = matchingPercentage;
     }
 
     public String getAlternateIdentifier() {

@@ -15,6 +15,9 @@ target/
 # windows
 ~
 
+# macos
+.DS_Store
+
 # IntelliJ
 .idea/*
 !.idea/icon.svg

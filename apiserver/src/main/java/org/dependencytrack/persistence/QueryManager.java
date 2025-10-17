@@ -53,6 +53,7 @@ import org.dependencytrack.model.ComponentIdentity;
 import org.dependencytrack.model.ComponentOccurrence;
 import org.dependencytrack.model.ComponentProperty;
 import org.dependencytrack.model.ConfigPropertyConstants;
+import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.Epss;
 import org.dependencytrack.model.FindingAttribution;
 import org.dependencytrack.model.IntegrityAnalysis;
@@ -94,6 +95,7 @@ import org.dependencytrack.persistence.jdbi.JdbiFactory;
 import org.dependencytrack.resources.v1.vo.DependencyGraphResponse;
 import org.dependencytrack.tasks.IntegrityMetaInitializerTask;
 
+import javax.annotation.Nullable;
 import javax.jdo.FetchPlan;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
@@ -150,6 +152,7 @@ public class QueryManager extends AlpineQueryManager {
     private IntegrityAnalysisQueryManager integrityAnalysisQueryManager;
     private TagQueryManager tagQueryManager;
     private EpssQueryManager epssQueryManager;
+    private AdvisoryQueryManager advisoryQueryManager;
 
     /**
      * Default constructor.
@@ -405,6 +408,17 @@ public class QueryManager extends AlpineQueryManager {
             metricsQueryManager = (request == null) ? new MetricsQueryManager(getPersistenceManager()) : new MetricsQueryManager(getPersistenceManager(), request);
         }
         return metricsQueryManager;
+    }
+
+    /**
+     * Lazy instantiation of AdvisoryQueryManager.
+     * @return an AdvisoryQueryManager object
+     */
+    private AdvisoryQueryManager getAdvisoryQueryManager() {
+        if (advisoryQueryManager == null) {
+            advisoryQueryManager = (request == null) ? new AdvisoryQueryManager(getPersistenceManager()) : new AdvisoryQueryManager(getPersistenceManager(), request);
+        }
+        return advisoryQueryManager;
     }
 
     /**
@@ -1038,6 +1052,26 @@ public class QueryManager extends AlpineQueryManager {
 
     public void synchronizeVulnerabilityMetrics(List<VulnerabilityMetrics> metrics) {
         getMetricsQueryManager().synchronizeVulnerabilityMetrics(metrics);
+    }
+
+    public PaginatedResult getAllAdvisories(String format, String searchText, int pageSize, int pageNumber, String sortName, String sortOrder) {
+        return getAdvisoryQueryManager().getAllAdvisories(format, searchText, pageSize, pageNumber, sortName, sortOrder);
+    }
+
+    public Advisory synchronizeAdvisory(Advisory advisory) {
+        return getAdvisoryQueryManager().synchronizeAdvisory(advisory);
+    }
+
+    public Advisory updateAdvisory(Advisory advisory) {
+        return getAdvisoryQueryManager().updateAdvisory(advisory);
+    }
+
+    public void toggleAdvisorySeen(Advisory advisory) {
+        getAdvisoryQueryManager().toggleAdvisorySeen(advisory);
+    }
+
+    public @Nullable Advisory getAdvisoryByPublisherAndName(String publisher, String name) {
+        return getAdvisoryQueryManager().getAdvisoryByPublisherAndName(publisher, name);
     }
 
     public PaginatedResult getRepositories() {

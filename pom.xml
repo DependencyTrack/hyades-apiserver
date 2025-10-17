@@ -34,6 +34,7 @@
         <module>alpine</module>
         <module>proto</module>
         <module>plugin/api</module>
+        <module>plugin/vuln-data-source-csaf</module>
         <module>plugin/vuln-data-source-github</module>
         <module>plugin/vuln-data-source-nvd</module>
         <module>plugin/vuln-data-source-osv</module>
