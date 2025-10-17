@@ -37,6 +37,9 @@
         <module>plugin/file-storage-local</module>
         <module>plugin/file-storage-memory</module>
         <module>plugin/file-storage-s3</module>
+        <module>plugin/notification-publisher-console</module>
+        <module>plugin/notification-publisher-webhook</module>
+        <module>plugin/notification-publisher-kafka</module>
         <module>plugin/vuln-data-source-github</module>
         <module>plugin/vuln-data-source-nvd</module>
         <module>plugin/vuln-data-source-osv</module>
