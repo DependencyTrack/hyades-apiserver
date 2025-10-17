@@ -66,6 +66,7 @@ import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import javax.jdo.JDOObjectNotFoundException;
+import java.io.ByteArrayInputStream;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -1996,18 +1997,20 @@ public class BomUploadProcessingTaskTest extends PersistenceCapableTest {
 
     private static FileMetadata storeBomFile(final String testFileName) throws Exception {
         final Path bomFilePath = Paths.get(resourceToURL("/unit/" + testFileName).toURI());
-        final byte[] bomBytes = Files.readAllBytes(bomFilePath);
 
-        try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
+        try (final var fileInputStream = Files.newInputStream(bomFilePath);
+             final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             return fileStorage.store(
-                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
+                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()),
+                    fileInputStream);
         }
     }
 
     private static FileMetadata storeBomFile(final byte[] bomBytes) throws Exception {
         try (final var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             return fileStorage.store(
-                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()), bomBytes);
+                    "test/%s-%s".formatted(BomUploadProcessingTaskTest.class.getSimpleName(), UUID.randomUUID()),
+                    new ByteArrayInputStream(bomBytes));
         }
     }
 

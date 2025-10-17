@@ -34,6 +34,9 @@
         <module>alpine</module>
         <module>proto</module>
         <module>plugin/api</module>
+        <module>plugin/file-storage-local</module>
+        <module>plugin/file-storage-memory</module>
+        <module>plugin/file-storage-s3</module>
         <module>plugin/vuln-data-source-csaf</module>
         <module>plugin/vuln-data-source-github</module>
         <module>plugin/vuln-data-source-nvd</module>
@@ -116,12 +119,14 @@
         <lib.jersey.version>3.1.11</lib.jersey.version>
         <lib.jetty.version>12.1.2</lib.jetty.version>
         <lib.jooq.version>3.20.8</lib.jooq.version>
-        <lib.json-unit.version>4.1.1</lib.json-unit.version>
+        <lib.json-unit.version>5.0.0</lib.json-unit.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>6.0.0</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
         <lib.micrometer.version>1.15.5</lib.micrometer.version>
+        <lib.minio.version>8.6.0</lib.minio.version>
         <lib.mockito.version>5.20.0</lib.mockito.version>
+        <lib.okhttp.version>5.2.1</lib.okhttp.version>
         <lib.open-vulnerability-clients.version>9.0.1</lib.open-vulnerability-clients.version>
         <lib.packageurl.version>1.5.0</lib.packageurl.version>
         <lib.postgresql.version>42.7.8</lib.postgresql.version>
@@ -132,6 +137,7 @@
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
         <lib.wiremock.version>3.13.1</lib.wiremock.version>
+        <lib.zstd-jni.version>1.5.7-5</lib.zstd-jni.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
 
@@ -294,11 +300,23 @@
             </dependency>
 
             <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${lib.minio.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-bom</artifactId>
                 <version>${lib.mockito.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp-jvm</artifactId>
+                <version>${lib.okhttp.version}</version>
             </dependency>
 
             <dependency>
@@ -373,6 +391,12 @@
                 <artifactId>wiremock-standalone</artifactId>
                 <version>${lib.wiremock.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.github.luben</groupId>
+                <artifactId>zstd-jni</artifactId>
+                <version>${lib.zstd-jni.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -427,7 +451,7 @@
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>0.8.13</version>
+                    <version>0.8.14</version>
                 </plugin>
 
                 <plugin>

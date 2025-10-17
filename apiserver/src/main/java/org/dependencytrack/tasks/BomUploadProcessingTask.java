@@ -72,6 +72,7 @@ import org.slf4j.MDC;
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -184,8 +185,8 @@ public class BomUploadProcessingTask implements Subscriber {
              var ignoredMdcBomUploadToken = MDC.putCloseable(MDC_BOM_UPLOAD_TOKEN, ctx.token.toString());
              var fileStorage = PluginManager.getInstance().getExtension(FileStorage.class)) {
             final byte[] cdxBomBytes;
-            try {
-                cdxBomBytes = fileStorage.get(event.getFileMetadata());
+            try (final InputStream cdxBomStream = fileStorage.get(event.getFileMetadata())) {
+                cdxBomBytes = cdxBomStream.readAllBytes();
             } catch (IOException ex) {
                 LOGGER.error("Failed to retrieve BOM file %s from storage".formatted(
                         event.getFileMetadata().getLocation()), ex);

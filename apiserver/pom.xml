@@ -18,7 +18,7 @@
         <maven.install.skip>true</maven.install.skip>
 
         <!-- Dependency Versions -->
-        <lib.cloud-sql-postgres-socket-factory.version>1.25.3</lib.cloud-sql-postgres-socket-factory.version>
+        <lib.cloud-sql-postgres-socket-factory.version>1.26.1</lib.cloud-sql-postgres-socket-factory.version>
         <lib.commons-compress.version>1.28.0</lib.commons-compress.version>
         <lib.commons-validator.version>1.9.0</lib.commons-validator.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
@@ -26,7 +26,6 @@
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.kafka.version>3.9.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.minio.version>8.5.17</lib.minio.version>
         <lib.kotlin-stdlib.version>2.2.20</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.4</lib.pebble.version>
@@ -102,11 +101,29 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
+<<<<<<< HEAD
             <artifactId>vuln-data-source-csaf</artifactId>
+=======
+            <artifactId>file-storage-local</artifactId>
+>>>>>>> upstream/main
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
+<<<<<<< HEAD
+=======
+            <artifactId>file-storage-memory</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>file-storage-s3</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+>>>>>>> upstream/main
             <artifactId>vuln-data-source-github</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -400,7 +417,10 @@
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
-            <version>${lib.minio.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-jvm</artifactId>
         </dependency>
 
         <!-- Test Dependencies -->
