@@ -28,10 +28,10 @@ import org.dependencytrack.model.Project;
 import org.dependencytrack.model.Severity;
 import org.dependencytrack.model.Vulnerability;
 import org.dependencytrack.model.VulnerabilityAlias;
+import org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject;
+import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.dependencytrack.persistence.command.MakeAnalysisCommand;
-import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
-import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
-import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.junit.Test;
 
 import java.math.BigDecimal;
