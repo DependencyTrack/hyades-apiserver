@@ -23,18 +23,18 @@ import io.micrometer.core.instrument.Meter.MeterProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.dependencytrack.common.MdcScope;
-import org.dependencytrack.proto.notification.v1.BomConsumedOrProcessedSubject;
-import org.dependencytrack.proto.notification.v1.BomProcessingFailedSubject;
-import org.dependencytrack.proto.notification.v1.BomValidationFailedSubject;
-import org.dependencytrack.proto.notification.v1.NewVulnerabilitySubject;
-import org.dependencytrack.proto.notification.v1.NewVulnerableDependencySubject;
-import org.dependencytrack.proto.notification.v1.Notification;
-import org.dependencytrack.proto.notification.v1.PolicyViolationAnalysisDecisionChangeSubject;
-import org.dependencytrack.proto.notification.v1.PolicyViolationSubject;
-import org.dependencytrack.proto.notification.v1.Project;
-import org.dependencytrack.proto.notification.v1.ProjectVulnAnalysisCompleteSubject;
-import org.dependencytrack.proto.notification.v1.VexConsumedOrProcessedSubject;
-import org.dependencytrack.proto.notification.v1.VulnerabilityAnalysisDecisionChangeSubject;
+import org.dependencytrack.notification.proto.v1.BomConsumedOrProcessedSubject;
+import org.dependencytrack.notification.proto.v1.BomProcessingFailedSubject;
+import org.dependencytrack.notification.proto.v1.BomValidationFailedSubject;
+import org.dependencytrack.notification.proto.v1.NewVulnerabilitySubject;
+import org.dependencytrack.notification.proto.v1.NewVulnerableDependencySubject;
+import org.dependencytrack.notification.proto.v1.Notification;
+import org.dependencytrack.notification.proto.v1.PolicyViolationAnalysisDecisionChangeSubject;
+import org.dependencytrack.notification.proto.v1.PolicyViolationSubject;
+import org.dependencytrack.notification.proto.v1.Project;
+import org.dependencytrack.notification.proto.v1.ProjectVulnAnalysisCompleteSubject;
+import org.dependencytrack.notification.proto.v1.VexConsumedOrProcessedSubject;
+import org.dependencytrack.notification.proto.v1.VulnerabilityAnalysisDecisionChangeSubject;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.mapper.reflect.ConstructorMapper;
 import org.jdbi.v3.core.statement.Query;
@@ -53,8 +53,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.notification.ModelConverter.convert;
-import static org.dependencytrack.proto.notification.v1.Scope.SCOPE_PORTFOLIO;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
+import static org.dependencytrack.notification.proto.v1.Scope.SCOPE_PORTFOLIO;
 
 /**
  * @since 5.7.0

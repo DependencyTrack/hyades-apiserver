@@ -46,21 +46,20 @@ import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.model.validation.ValidUuid;
-import org.dependencytrack.notification.NotificationEmitter;
-import org.dependencytrack.notification.NotificationLevel;
+import org.dependencytrack.notification.JdoNotificationEmitter;
 import org.dependencytrack.notification.publisher.PublisherClass;
-import org.dependencytrack.persistence.DatabaseSeedingInitTask;
 import org.dependencytrack.persistence.QueryManager;
-import org.dependencytrack.persistence.jdbi.ConfigPropertyDao;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static org.dependencytrack.model.ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED;
-import static org.dependencytrack.notification.TestNotificationFactory.createTestNotification;
-import static org.dependencytrack.persistence.jdbi.JdbiFactory.useJdbiTransaction;
+import static org.dependencytrack.notification.NotificationModelConverter.convert;
+import static org.dependencytrack.notification.api.TestNotificationFactory.createTestNotification;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_ERROR;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_INFORMATIONAL;
+import static org.dependencytrack.notification.proto.v1.Level.LEVEL_WARNING;
 
 /**
  * JAX-RS resources for processing notification publishers.
@@ -253,30 +252,6 @@ public class NotificationPublisherResource extends AlpineResource {
     }
 
     @POST
-    @Path("/restoreDefaultTemplates")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(
-            summary = "Restore the default notification publisher templates using the ones in the solution classpath",
-            description = "<p>Requires permission <strong>SYSTEM_CONFIGURATION</strong> or <strong>SYSTEM_CONFIGURATION_CREATE</strong></p>"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Default templates restored successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    @PermissionRequired({Permissions.Constants.SYSTEM_CONFIGURATION, Permissions.Constants.SYSTEM_CONFIGURATION_CREATE})
-    public Response restoreDefaultTemplates() {
-        useJdbiTransaction(handle -> {
-            handle.attach(ConfigPropertyDao.class).setValue(
-                    NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED, "false");
-
-            DatabaseSeedingInitTask.seedDefaultNotificationPublishers(handle);
-        });
-
-        return Response.ok().build();
-    }
-
-    @POST
     @Path("/test/{uuid}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.APPLICATION_JSON)
@@ -300,7 +275,7 @@ public class NotificationPublisherResource extends AlpineResource {
                     return Response.status(Response.Status.NOT_FOUND).build();
                 }
 
-                final List<org.dependencytrack.proto.notification.v1.Notification> notifications =
+                final List<org.dependencytrack.notification.proto.v1.Notification> notifications =
                         rule.getNotifyOn().stream()
                                 // Notifications of the same group may have different contents,
                                 // depending on the level, or may only support a single level.
@@ -308,14 +283,14 @@ public class NotificationPublisherResource extends AlpineResource {
                                 // generate notifications for all applicable levels.
                                 .flatMap(group -> switch (rule.getNotificationLevel()) {
                                     case INFORMATIONAL -> Stream.of(
-                                            createTestNotification(rule.getScope(), group, NotificationLevel.INFORMATIONAL),
-                                            createTestNotification(rule.getScope(), group, NotificationLevel.WARNING),
-                                            createTestNotification(rule.getScope(), group, NotificationLevel.ERROR));
+                                            createTestNotification(convert(rule.getScope()), convert(group), LEVEL_INFORMATIONAL),
+                                            createTestNotification(convert(rule.getScope()), convert(group), LEVEL_WARNING),
+                                            createTestNotification(convert(rule.getScope()), convert(group), LEVEL_ERROR));
                                     case WARNING -> Stream.of(
-                                            createTestNotification(rule.getScope(), group, NotificationLevel.WARNING),
-                                            createTestNotification(rule.getScope(), group, NotificationLevel.ERROR));
+                                            createTestNotification(convert(rule.getScope()), convert(group), LEVEL_WARNING),
+                                            createTestNotification(convert(rule.getScope()), convert(group), LEVEL_ERROR));
                                     case ERROR -> Stream.of(
-                                            createTestNotification(rule.getScope(), group, NotificationLevel.ERROR));
+                                            createTestNotification(convert(rule.getScope()), convert(group), LEVEL_ERROR));
                                 })
                                 .filter(Objects::nonNull)
                                 .peek(notification -> notification.toBuilder()
@@ -323,7 +298,7 @@ public class NotificationPublisherResource extends AlpineResource {
                                         .build())
                                 .toList();
 
-                NotificationEmitter.using(qm).emitAll(notifications);
+                new JdoNotificationEmitter(qm).emitAll(notifications);
 
                 return Response.ok().build();
             });
