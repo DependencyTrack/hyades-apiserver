@@ -112,7 +112,6 @@ class GitHubVulnDataSourceFactoryTest {
     void createShouldThrowWhenApiUrlIsNull() {
         final var configRegistry = new MockConfigRegistry();
         configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_API_URL, null);
         configRegistry.setValue(CONFIG_API_TOKEN, "apiToken");
 
         try (final var dataSourceFactory = new GitHubVulnDataSourceFactory()) {

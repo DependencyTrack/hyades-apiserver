@@ -1,0 +1,50 @@
+/*
+ * This file is part of Dependency-Track.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
+ */
+package org.dependencytrack.notification.publishing.console;
+
+import org.dependencytrack.plugin.api.notification.publishing.NotificationPublisher;
+import org.dependencytrack.plugin.api.notification.publishing.PublishContext;
+import org.dependencytrack.proto.notification.v1.Notification;
+
+import java.io.IOException;
+import java.io.OutputStream;
+
+import static java.util.Objects.requireNonNull;
+
+/**
+ * @since 5.7.0
+ */
+final class ConsoleNotificationPublisher implements NotificationPublisher {
+
+    private final OutputStream outputStream;
+
+    ConsoleNotificationPublisher(final OutputStream outputStream) {
+        this.outputStream = outputStream;
+    }
+
+    @Override
+    public void publish(final PublishContext ctx, final Notification notification) throws IOException {
+        requireNonNull(ctx, "ctx must not be null");
+        requireNonNull(ctx.template(), "template must not be null");
+        requireNonNull(notification, "notification must not be null");
+
+        outputStream.write(ctx.templateRenderer().render(ctx.template(), notification).getBytes());
+    }
+
+}
