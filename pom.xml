@@ -118,7 +118,7 @@
         <lib.jersey.version>3.1.11</lib.jersey.version>
         <lib.jetty.version>12.1.2</lib.jetty.version>
         <lib.jooq.version>3.20.8</lib.jooq.version>
-        <lib.json-unit.version>4.1.1</lib.json-unit.version>
+        <lib.json-unit.version>5.0.0</lib.json-unit.version>
         <lib.junit4.version>4.13.2</lib.junit4.version>
         <lib.junit-jupiter.version>6.0.0</lib.junit-jupiter.version>
         <lib.liquibase.version>4.33.0</lib.liquibase.version>
