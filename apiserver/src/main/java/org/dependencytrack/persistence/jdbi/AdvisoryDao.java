@@ -20,6 +20,7 @@ package org.dependencytrack.persistence.jdbi;
 
 import org.dependencytrack.model.Advisory;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
+import org.jdbi.v3.sqlobject.customizer.AllowUnusedBindings;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 
@@ -134,32 +135,30 @@ public interface AdvisoryDao {
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
             
-            SELECT COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID") AS "findingsWithAnalysis"
+            SELECT COALESCE(COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID"), 0) AS "findingsWithAnalysis"
             FROM "FINDINGATTRIBUTION"
             INNER JOIN "ADVISORIES_VULNERABILITIES"
             ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
             INNER JOIN "ANALYSIS" ON
             "FINDINGATTRIBUTION"."PROJECT_ID" = "ANALYSIS"."PROJECT_ID"
             WHERE "ADVISORY_ID" = :advisoryId
-            GROUP BY "ADVISORY_ID"
             
              ${apiOffsetLimitClause!}
             """)
-    long getAmountFindingsMarked(long advisoryId);
+    Long getAmountFindingsMarked(long advisoryId);
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
             
-            SELECT COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID") AS "findingsWithAnalysis"
+            SELECT COALESCE(COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID"), 0) AS "findingsWithAnalysis"
             FROM "FINDINGATTRIBUTION"
             INNER JOIN "ADVISORIES_VULNERABILITIES"
             ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
             WHERE "ADVISORY_ID" = :advisoryId
-            GROUP BY "ADVISORY_ID"
             
              ${apiOffsetLimitClause!}
             """)
-    long getAmountFindingsTotal(long advisoryId);
+    Long getAmountFindingsTotal(long advisoryId);
 
     record AdvisoriesPortfolioRow(
             String name,
@@ -188,6 +187,12 @@ public interface AdvisoryDao {
     @RegisterConstructorMapper(AdvisoryDao.AdvisoriesPortfolioRow.class)
     List<AdvisoriesPortfolioRow> getAllAdvisories();
 
+    @AllowUnusedBindings
+    @SqlQuery(/* language=InjectedFreeMarker */ """            
+            SELECT COUNT(DISTINCT ("ID", "NAME", "URL")) as "totalCount"
+            FROM "ADVISORY"
+            """)
+    long getAllAdvisoriesTotal();
 
     record ProjectAdvisoryFinding(
             String name,

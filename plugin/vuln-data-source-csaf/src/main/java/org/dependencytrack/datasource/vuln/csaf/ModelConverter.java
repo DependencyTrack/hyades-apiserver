@@ -38,7 +38,7 @@ import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.*;
  *
  * @since 5.7.0
  */
-final class ModelConverter {
+public final class ModelConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ModelConverter.class);
 
@@ -52,7 +52,7 @@ final class ModelConverter {
      * @param currentProvider the current CSAF source provider
      * @return the converted CycloneDX BOM, or null if the result is a failure
      */
-    static Bom convert(final ResultCompat<RetrievedDocument> result, final CsafSource currentProvider) {
+    public static Bom convert(final ResultCompat<RetrievedDocument> result, final CsafSource currentProvider) {
         if (result.isFailure()) {
             return null;
         }

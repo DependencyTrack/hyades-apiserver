@@ -22,6 +22,7 @@ import alpine.common.logging.Logger;
 import alpine.server.auth.PermissionRequired;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.csaf.retrieval.RetrievedDocument;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -48,10 +49,14 @@ import jakarta.ws.rs.ext.Provider;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.datasource.vuln.csaf.CsafSource;
 import org.dependencytrack.datasource.vuln.csaf.CsafVulnDataSourceConfigs;
+import org.dependencytrack.datasource.vuln.csaf.ModelConverter;
 import org.dependencytrack.datasource.vuln.csaf.SourcesManager;
 import org.dependencytrack.event.CsafMirrorEvent;
 import org.dependencytrack.model.Advisory;
 import org.dependencytrack.model.Repository;
+import org.dependencytrack.model.Vulnerability;
+import org.dependencytrack.model.VulnerableSoftware;
+import org.dependencytrack.parser.dependencytrack.BovModelConverter;
 import org.dependencytrack.persistence.QueryManager;
 import org.dependencytrack.plugin.ConfigRegistryImpl;
 import org.dependencytrack.resources.AbstractApiResource;
@@ -66,12 +71,15 @@ import org.jetbrains.annotations.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Predicate;
 
+import static org.dependencytrack.model.Vulnerability.Source.CSAF;
 import static org.dependencytrack.resources.v1.CsafSourceConfigProvider.getCsafSourceByIdFromConfig;
 import static org.dependencytrack.resources.v1.CsafSourceConfigProvider.updateSourcesInConfig;
 import static org.dependencytrack.util.TaskUtil.getLockConfigForTask;
@@ -265,30 +273,55 @@ public class CsafResource extends AbstractApiResource {
             uploadStream.transferTo(uploadBuffer);
             String content = uploadBuffer.toString();
 
-            // We do not have access to the complete CSAF library in the api server, but we do a quick
-            // sanity check to ensure the file is a JSON and contains required CSAF fields for computing
-            // the ID
-            var doc = new ObjectMapper().readTree(content);
-            var publisherNamespace = doc.get("document").get("publisher").get("namespace").asText();
-            var trackingID = doc.get("document").get("tracking").get("id").asText();
-            var trackingVersion = doc.get("document").get("tracking").get("version").asText();
-            var title = doc.get("document").get("title").asText();
+            final var result = RetrievedDocument.fromJson(content, fileDetail.getFileName());
+            if (result.isFailure()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("The uploaded file is not a valid CSAF document: " +
+                                (result.exceptionOrNull() != null ? result.exceptionOrNull().getMessage() : null)).build();
+            }
+            assert result.getOrNull() != null;
+            final var doc = result.getOrNull().getJson();
+            final var publisher = doc.getDocument().getPublisher().getNamespace().toString();
 
-            // Create a new CSAF document that we have already "seen" and was just fetched
-            final var csaf = new Advisory();
-            csaf.setTitle(title);
-            csaf.setUrl(fileDetail.getFileName());
-            csaf.setContent(content);
-            csaf.setLastFetched(Instant.now());
-            csaf.setPublisher(publisherNamespace);
-            csaf.setName(trackingID);
-            csaf.setVersion(trackingVersion);
-            csaf.setFormat("CSAF");
-            csaf.setSeen(true);
+            // Create a new advisory that we have already "seen" and was just fetched
+            final var advisory = new Advisory();
+            advisory.setTitle(doc.getDocument().getTitle());
+            advisory.setUrl(fileDetail.getFileName());
+            advisory.setContent(content);
+            advisory.setLastFetched(Instant.now());
+            advisory.setPublisher(publisher);
+            advisory.setName(doc.getDocument().getTracking().getId());
+            advisory.setVersion(doc.getDocument().getTracking().getVersion());
+            advisory.setFormat("CSAF");
+            advisory.setSeen(true);
+
+            // Create a pseudo-source populated by the information we have
+            var manual = new CsafSource();
+            manual.setDomain(true);
+            manual.setUrl(URI.create(publisher).getHost());
+            manual.setName(publisher);
+
+            final var bov = ModelConverter.convert(result, manual);
+            if (bov == null) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("Could not extract vulnerability information").build();
+            }
+
+            for (final var v : bov.getVulnerabilitiesList()) {
+                final Vulnerability vuln = BovModelConverter.convert(bov, v, true);
+                final List<VulnerableSoftware> vsList = BovModelConverter.extractVulnerableSoftware(bov);
+
+                LOGGER.debug("Synchronizing vulnerability " + vuln.getVulnId());
+                final Vulnerability persistentVuln = qm.synchronizeVulnerability(vuln, false);
+                qm.synchronizeVulnerableSoftware(persistentVuln, vsList, CSAF);
+
+                advisory.addVulnerability(persistentVuln);
+            }
 
             // Sync the document into the database, replacing an older version with the same combination
             // of tracking ID and publisher namespace if necessary
-            qm.synchronizeAdvisory(csaf);
+            qm.synchronizeAdvisory(advisory);
+
             return Response.ok("File uploaded successfully: " + fileDetail.getFileName()).build();
         } catch (IOException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)

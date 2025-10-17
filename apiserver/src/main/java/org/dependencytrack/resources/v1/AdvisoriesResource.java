@@ -96,29 +96,11 @@ public class AdvisoriesResource extends AbstractApiResource {
     @PaginatedApi
     @PermissionRequired(Permissions.Constants.VIEW_VULNERABILITY)
     public Response getAllAdvisories() {
-        try (QueryManager qm = new QueryManager(getAlpineRequest())) {
-
-
-            List<AdvisoryDao.AdvisoriesPortfolioRow> advisoryRows = withJdbiHandle(getAlpineRequest(), handle ->
+        List<AdvisoryDao.AdvisoriesPortfolioRow> advisoryRows = withJdbiHandle(getAlpineRequest(), handle ->
                     handle.attach(AdvisoryDao.class).getAllAdvisories());
-            final long totalCount = advisoryRows.size();
-
-//                List<Finding> findings = findingRows.stream().map(Finding::new).toList();
-//                findings = mapComponentLatestVersion(findings);
-//                if (acceptHeader != null && acceptHeader.contains(MEDIA_TYPE_SARIF_JSON)) {
-//                    try {
-//                        return Response.ok(generateSARIF(findings), MEDIA_TYPE_SARIF_JSON)
-//                                .header("content-disposition", "attachment; filename=\"findings-" + uuid + ".sarif\"")
-//                                .build();
-//                    } catch (IOException ioException) {
-//                        LOGGER.error(ioException.getMessage(), ioException);
-//                        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("An error occurred while generating SARIF file").build();
-//                    }
-//                }
-
-            return Response.ok(advisoryRows.stream().toList()).header(TOTAL_COUNT_HEADER, totalCount).build();
-
-        }
+        final long totalCount = withJdbiHandle(getAlpineRequest(), handle ->
+                    handle.attach(AdvisoryDao.class).getAllAdvisoriesTotal());
+        return Response.ok(advisoryRows.stream().toList()).header(TOTAL_COUNT_HEADER, totalCount).build();
     }
 
     @GET
@@ -146,8 +128,9 @@ public class AdvisoriesResource extends AbstractApiResource {
                 List<AdvisoryDao.VulnerabilityRow> vulnerabilities = withJdbiHandle(getAlpineRequest(), handle ->
                         handle.attach(AdvisoryDao.class).getVulnerabilitiesByAdvisory(advisoryEntity.getId()));
 
-                long numAffectedComponents = withJdbiHandle(getAlpineRequest(), handle ->
+                Long numAffectedComponentsBoxed = withJdbiHandle(getAlpineRequest(), handle ->
                         handle.attach(AdvisoryDao.class).getAmountFindingsTotal(advisoryEntity.getId()));
+                long numAffectedComponents = numAffectedComponentsBoxed != null ? numAffectedComponentsBoxed : 0L;
 
                 return Response.ok(new AdvisoryDao.AdvisoryResult(
                         advisoryEntity,
