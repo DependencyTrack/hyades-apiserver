@@ -53,7 +53,7 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void isDataSourceEnabledShouldReturnTrueWhenEnabledAndFalseOtherwise(final boolean isEnabled) {
-        final var config = (OSVVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
+        final var config = (OsvVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
         config.setEnabled(isEnabled);
 
         factory.init(new ExtensionContext(new MockConfigRegistry(factory.runtimeConfigSpec(), config)));
@@ -62,7 +62,7 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
 
     @Test
     void createShouldReturnNullWhenDisabled() {
-        final var config = (OSVVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
+        final var config = (OsvVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
         config.setEnabled(false);
 
         final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);
@@ -73,7 +73,7 @@ class OsvVulnDataSourceFactoryTest extends AbstractExtensionFactoryTest<@NonNull
 
     @Test
     void createShouldReturnDataSource() {
-        final var config = (OSVVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
+        final var config = (OsvVulnDataSourceConfig) factory.runtimeConfigSpec().defaultConfig();
         config.setEnabled(true);
 
         final var configRegistry = new MockConfigRegistry(factory.runtimeConfigSpec(), config);

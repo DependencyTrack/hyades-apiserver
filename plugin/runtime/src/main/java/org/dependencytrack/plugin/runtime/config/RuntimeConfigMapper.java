@@ -97,7 +97,7 @@ public final class RuntimeConfigMapper {
     }
 
     /**
-     * Deserialize a given runtime config in JSON format.
+     * Deserialize a given config in JSON format.
      *
      * @param configJson  The config in JSON format.
      * @param configClass Class to deserialize the config into.
@@ -125,7 +125,7 @@ public final class RuntimeConfigMapper {
     }
 
     /**
-     * Serialize a given runtime config to JSON.
+     * Serialize a given config to JSON.
      *
      * @param config The config to serialize.
      * @return The serialized config in JSON format.
@@ -147,17 +147,17 @@ public final class RuntimeConfigMapper {
     /**
      * Validate a given config against its JSON schema.
      *
-     * @param config     The config to validate.
-     * @param configSpec The applicable runtime config spec.
+     * @param config            The config to validate.
+     * @param runtimeConfigSpec The applicable config spec.
      * @throws NullPointerException             When either {@code config} or {@code configSchemaJson} are {@code null}.
      * @throws UncheckedIOException             When parsing the config JSON failed.
      * @throws RuntimeConfigValidationException When the config failed validation.
      */
-    public JsonNode validate(RuntimeConfig config, RuntimeConfigSpec configSpec) {
+    public <T extends RuntimeConfig> JsonNode validate(T config, RuntimeConfigSpec runtimeConfigSpec) {
         requireNonNull(config, "config must not be null");
-        requireNonNull(configSpec, "configSpec must not be null");
+        requireNonNull(runtimeConfigSpec, "configSpec must not be null");
 
-        final JsonSchema schema = getSchema(configSpec);
+        final JsonSchema schema = getSchema(runtimeConfigSpec);
         final JsonNode configNode = jsonMapper.convertValue(config, JsonNode.class);
 
         final Set<ValidationMessage> validationMessages = schema.validate(configNode);
@@ -171,17 +171,17 @@ public final class RuntimeConfigMapper {
     /**
      * Validate a given config in JSON format against its schema.
      *
-     * @param configJson The config to validate in JSON format.
-     * @param configSpec The applicable runtime config spec.
+     * @param configJson        The config to validate in JSON format.
+     * @param runtimeConfigSpec The applicable config spec.
      * @throws NullPointerException             When either {@code configJson} or {@code configSchemaJson} are {@code null}.
      * @throws UncheckedIOException             When parsing the config JSON failed.
      * @throws RuntimeConfigValidationException When the config failed validation.
      */
-    public JsonNode validateJson(String configJson, RuntimeConfigSpec configSpec) {
+    public JsonNode validateJson(String configJson, RuntimeConfigSpec runtimeConfigSpec) {
         requireNonNull(configJson, "configJson must not be null");
-        requireNonNull(configSpec, "configSpec must not be null");
+        requireNonNull(runtimeConfigSpec, "configSpec must not be null");
 
-        final JsonSchema schema = getSchema(configSpec);
+        final JsonSchema schema = getSchema(runtimeConfigSpec);
 
         final JsonNode configNode;
         try {
@@ -202,13 +202,13 @@ public final class RuntimeConfigMapper {
         return jsonMapper;
     }
 
-    private JsonSchema getSchema(RuntimeConfigSpec configSpec) {
+    private JsonSchema getSchema(RuntimeConfigSpec runtimeConfigSpec) {
         return schemaCache.computeIfAbsent(
-                configSpec,
+                runtimeConfigSpec,
                 clazz -> {
                     final JsonNode schemaNode;
                     try {
-                        schemaNode = jsonMapper.readValue(configSpec.schema(), JsonNode.class);
+                        schemaNode = jsonMapper.readValue(runtimeConfigSpec.schema(), JsonNode.class);
                     } catch (IOException e) {
                         throw new UncheckedIOException(e);
                     }

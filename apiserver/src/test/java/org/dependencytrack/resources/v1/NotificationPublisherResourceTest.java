@@ -28,7 +28,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dependencytrack.JerseyTestExtension;
 import org.dependencytrack.ResourceTest;
-import org.dependencytrack.model.ConfigPropertyConstants;
 import org.dependencytrack.model.NotificationPublisher;
 import org.dependencytrack.model.NotificationRule;
 import org.dependencytrack.notification.NotificationGroup;
@@ -297,29 +296,6 @@ public class NotificationPublisherResourceTest extends ResourceTest {
         Assertions.assertNull(response.getHeaderString(TOTAL_COUNT_HEADER));
         String body = getPlainTextBody(response);
         Assertions.assertEquals("Deleting a default notification publisher is forbidden.", body);
-    }
-
-    @Test
-    public void restoreDefaultTemplatesTest() {
-        NotificationPublisher slackPublisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.SLACK.getPublisherName());
-        slackPublisher.setName(slackPublisher.getName()+" Updated");
-        qm.persist(slackPublisher);
-        qm.detach(NotificationPublisher.class, slackPublisher.getId());
-        qm.createConfigProperty(
-                ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getGroupName(),
-                ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getPropertyName(),
-                "true",
-                ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getPropertyType(),
-                ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getDescription()
-        );
-        Response response = jersey.target(V1_NOTIFICATION_PUBLISHER + "/restoreDefaultTemplates").request()
-                .header(X_API_KEY, apiKey)
-                .post(Entity.json(""));
-        qm.getPersistenceManager().refreshAll();
-        Assertions.assertEquals(200, response.getStatus(), 0);
-        Assertions.assertFalse(qm.isEnabled(ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED));
-        slackPublisher = qm.getDefaultNotificationPublisherByName(DefaultNotificationPublishers.SLACK.getPublisherName());
-        Assertions.assertEquals(DefaultNotificationPublishers.SLACK.getPublisherName(), slackPublisher.getName());
     }
 
     @Test

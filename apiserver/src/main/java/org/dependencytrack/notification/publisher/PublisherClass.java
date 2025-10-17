@@ -18,6 +18,12 @@
  */
 package org.dependencytrack.notification.publisher;
 
+import org.dependencytrack.notification.api.publishing.NotificationPublisher;
+
+/**
+ * @deprecated To be removed in favour of dynamically discovered {@link NotificationPublisher}s.
+ */
+@Deprecated(forRemoval = true, since = "5.7.0")
 public enum PublisherClass {
 
     SlackPublisher,

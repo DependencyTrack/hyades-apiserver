@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "javaInterfaces": [
+    "org.dependencytrack.plugin.api.config.RuntimeConfig"
+  ],
+  "properties": {
+    "smtpHost": {
+      "type": "string",
+      "title": "SMTP Host",
+      "minLength": 1
+    },
+    "smtpPort": {
+      "type": "integer",
+      "title": "SMTP Port",
+      "minimum": 1
+    },
+    "smtpUsername": {
+      "type": "string",
+      "title": "SMTP Username"
+    },
+    "smtpPassword": {
+      "type": "string",
+      "title": "SMTP Password"
+    },
+    "senderAddress": {
+      "type": "string",
+      "format": "email",
+      "title": "Sender Address",
+      "minLength": 1
+    },
+    "subjectPrefix": {
+      "type": "string",
+      "title": "Subject Prefix"
+    },
+    "recipientAddresses": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "email",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "smtpHost",
+    "smtpPort",
+    "senderAddress"
+  ]
+}

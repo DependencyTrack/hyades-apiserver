@@ -22,7 +22,6 @@
         <lib.commons-compress.version>1.28.0</lib.commons-compress.version>
         <lib.owasp-rr-calculator.version>1.0.1</lib.owasp-rr-calculator.version>
         <lib.cyclonedx-java.version>11.0.1</lib.cyclonedx-java.version>
-        <lib.kafka.version>4.1.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
         <lib.swagger-parser.version>2.1.37</lib.swagger-parser.version>
@@ -80,6 +79,16 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>notification-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-publishing</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>notification-templating</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -306,7 +315,6 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
-            <version>${lib.kafka.version}</version>
         </dependency>
 
         <!-- shedlock dependencies -->
