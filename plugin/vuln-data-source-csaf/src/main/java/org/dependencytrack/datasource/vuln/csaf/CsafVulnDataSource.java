@@ -68,7 +68,7 @@ public class CsafVulnDataSource implements VulnDataSource {
     ) {
         this.sourcesManager = sourcesManager;
         this.csafLoader = CsafLoader.Companion.getLazyLoader();
-        this.enabledProviders = sourcesManager.listProviders(CsafSource::isEnabled);
+        this.enabledProviders = sourcesManager.listProviders(filter -> filter.isEnabled() && !filter.isAggregator());
         this.successfullyCompletedProviders = new HashSet<>();
     }
 
@@ -165,6 +165,10 @@ public class CsafVulnDataSource implements VulnDataSource {
         // Loop through all enabled aggregators and discover providers from them
         var aggregators = sourcesManager.listAggregators();
         for (var aggregator : aggregators) {
+            if (!aggregator.isEnabled()) {
+                continue;
+            }
+
             try {
                 discoverProvider(aggregator);
             } catch (ExecutionException | InterruptedException e) {

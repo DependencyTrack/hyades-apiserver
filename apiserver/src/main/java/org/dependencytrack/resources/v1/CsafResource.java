@@ -58,6 +58,7 @@ import org.dependencytrack.resources.AbstractApiResource;
 import org.dependencytrack.resources.v1.openapi.PaginatedApi;
 import org.dependencytrack.tasks.CsafMirrorTask;
 import org.dependencytrack.util.CsafUtil;
+import org.dependencytrack.util.LockProvider;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.jetbrains.annotations.Nullable;
@@ -98,10 +99,6 @@ public class CsafResource extends AbstractApiResource {
     @PermissionRequired(Permissions.Constants.VULNERABILITY_MANAGEMENT_UPDATE)
     public Response triggerMirror() {
         LOGGER.info("Triggering CSAF mirror task manually");
-
-        var lockConfig = getLockConfigForTask(CsafMirrorTask.class);
-
-        LOGGER.info("Lock config: " + lockConfig + " Unlock time " + lockConfig.getLockAtLeastUntil());
 
         var mirror = new CsafMirrorTask();
         mirror.inform(new CsafMirrorEvent());
@@ -426,7 +423,7 @@ public class CsafResource extends AbstractApiResource {
         }
 
         // Fetch existing sources
-        var sources = new ArrayList<>(getCsafSourcesFromConfig(filter -> filter.isAggregator() == isAggregator));
+        var sources = new ArrayList<>(getCsafSourcesFromConfig(filter -> true));
 
         // Ensure that the new source does not already exist, by the URL
         if (sources.stream().anyMatch(s -> s.getUrl().equalsIgnoreCase(source.getUrl()))) {
@@ -435,8 +432,7 @@ public class CsafResource extends AbstractApiResource {
         }
 
         // Compute globally unique ID
-        var allSources = getCsafSourcesFromConfig(filter -> true);
-        int newId = allSources.stream()
+        int newId = sources.stream()
                 .mapToInt(CsafSource::getId)
                 .max()
                 .orElse(-1) + 1;
@@ -467,7 +463,7 @@ public class CsafResource extends AbstractApiResource {
         }
 
         // Fetch an existing source and look for the one to update
-        var sources = getCsafSourcesFromConfig(filter -> filter.isAggregator() == isAggregator);
+        var sources = getCsafSourcesFromConfig(filter -> true);
         var existingSource = getCsafSourceByIdFromConfig(sources, source.getId());
         if (existingSource == null) {
             return Response.status(Response.Status.NOT_FOUND)

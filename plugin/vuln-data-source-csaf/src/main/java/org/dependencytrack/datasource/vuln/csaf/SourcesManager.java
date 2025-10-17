@@ -87,7 +87,7 @@ public class SourcesManager {
      */
     public boolean maybeDiscover(final CsafSource source) {
         if (this.pendingSources.stream().noneMatch(s -> s.getUrl().equals(source.getUrl()))) {
-            source.setId(this.committedSources.stream()
+            source.setId(this.pendingSources.stream()
                     .mapToInt(CsafSource::getId)
                     .max()
                     .orElse(-1) + 1);

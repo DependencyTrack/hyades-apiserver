@@ -101,17 +101,11 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
-<<<<<<< HEAD
-            <artifactId>vuln-data-source-csaf</artifactId>
-=======
             <artifactId>file-storage-local</artifactId>
->>>>>>> upstream/main
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.dependencytrack</groupId>
-<<<<<<< HEAD
-=======
             <artifactId>file-storage-memory</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -123,7 +117,11 @@
 
         <dependency>
             <groupId>org.dependencytrack</groupId>
->>>>>>> upstream/main
+            <artifactId>vuln-data-source-csaf</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
             <artifactId>vuln-data-source-github</artifactId>
             <version>${project.version}</version>
         </dependency>
