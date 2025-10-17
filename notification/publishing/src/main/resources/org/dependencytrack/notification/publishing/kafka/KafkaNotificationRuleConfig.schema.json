@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "javaInterfaces": [
+    "org.dependencytrack.plugin.api.config.RuntimeConfig"
+  ],
+  "properties": {
+    "bootstrapServers": {
+      "type": "array",
+      "title": "Kafka Bootstrap Servers",
+      "description": "Addresses of servers that may be used to establish the initial connection to the Kafka cluster.",
+      "items": {
+        "type": "string",
+        "title": "Kafka Server Address",
+        "description": "Address of a Kafka server in `host:port` format.",
+        "minLength": 1,
+        "examples": [
+          "kafka.example.com:9092"
+        ]
+      },
+      "minLength": 1,
+      "uniqueItems": true
+    },
+    "topicName": {
+      "type": "string",
+      "title": "Kafka Topic Name",
+      "description": "Name of the Kafka topic to publish to.",
+      "minLength": 1
+    },
+    "publishProtobuf": {
+      "type": "boolean",
+      "title": "Publish Protobuf",
+      "description": "Whether to publish notifications in Protobuf format instead of applying a template."
+    }
+  },
+  "required": [
+    "bootstrapServers",
+    "topicName",
+    "publishProtobuf"
+  ]
+}

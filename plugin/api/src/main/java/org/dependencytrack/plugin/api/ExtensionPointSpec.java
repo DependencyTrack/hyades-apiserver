@@ -23,7 +23,7 @@ package org.dependencytrack.plugin.api;
  *
  * @since 5.6.0
  */
-public interface ExtensionPointSpec<T extends ExtensionPoint> {
+public interface ExtensionPointSpec {
 
     /**
      * @return The name of the extension point.
@@ -40,6 +40,6 @@ public interface ExtensionPointSpec<T extends ExtensionPoint> {
     /**
      * @return The {@link Class} of the {@link ExtensionPoint}.
      */
-    Class<T> extensionPointClass();
+    Class<? extends ExtensionPoint> extensionPointClass();
 
 }

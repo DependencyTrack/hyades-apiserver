@@ -98,7 +98,6 @@
                     <outputDirectory>${project.build.directory}/generated-test-sources/jsonschema2pojo</outputDirectory>
                     <targetPackage>org.dependencytrack.plugin.runtime.config</targetPackage>
                     <generateBuilders>true</generateBuilders>
-                    <useTitleAsClassname>true</useTitleAsClassname>
                 </configuration>
             </plugin>
 

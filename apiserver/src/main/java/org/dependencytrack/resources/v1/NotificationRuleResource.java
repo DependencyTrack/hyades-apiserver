@@ -160,6 +160,8 @@ public class NotificationRuleResource extends AbstractApiResource {
                 validator.validateProperty(jsonRule, "publisherConfig")
         );
 
+        // TODO: Validate publisherConfig against the JSON schema of the applicable NotificationPublisher extension.
+
         try (QueryManager qm = new QueryManager()) {
             NotificationRule rule = qm.getObjectByUuid(NotificationRule.class, jsonRule.getUuid());
             if (rule != null) {

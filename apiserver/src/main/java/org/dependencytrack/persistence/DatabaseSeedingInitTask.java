@@ -21,6 +21,10 @@ package org.dependencytrack.persistence;
 import alpine.common.config.BuildInfoConfig;
 import alpine.common.config.BuildInfoConfig.ApplicationBuildInfo;
 import alpine.server.auth.PasswordService;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
 import org.apache.commons.lang3.SerializationUtils;
 import org.dependencytrack.auth.Permissions;
 import org.dependencytrack.init.InitTask;
@@ -38,17 +42,9 @@ import org.jdbi.v3.core.statement.Update;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -57,8 +53,6 @@ import java.util.stream.Stream;
 
 import static alpine.common.config.ConfigUtil.getConfigMapping;
 import static org.dependencytrack.model.ConfigPropertyConstants.INTERNAL_DEFAULT_OBJECTS_VERSION;
-import static org.dependencytrack.model.ConfigPropertyConstants.NOTIFICATION_TEMPLATE_BASE_DIR;
-import static org.dependencytrack.model.ConfigPropertyConstants.NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED;
 
 /**
  * @since 5.6.0
@@ -417,6 +411,10 @@ public final class DatabaseSeedingInitTask implements InitTask {
                 .execute();
     }
 
+    // TODO:
+    //   * Move to a separate init task or ServletContextListener.
+    //   * Replace DefaultNotificationPublishers enum with dynamic
+    //     discovery of NotificationPublisher extensions.
     public static void seedDefaultNotificationPublishers(final Handle jdbiHandle) {
         final PreparedBatch preparedBatch = jdbiHandle.prepareBatch("""
                 INSERT INTO "NOTIFICATIONPUBLISHER" (
@@ -437,43 +435,19 @@ public final class DatabaseSeedingInitTask implements InitTask {
                    OR "NOTIFICATIONPUBLISHER"."TEMPLATE_MIME_TYPE" IS DISTINCT FROM EXCLUDED."TEMPLATE_MIME_TYPE"
                 """);
 
-        final var configPropertyDao = jdbiHandle.attach(ConfigPropertyDao.class);
-        final var templateOverrideEnabled = configPropertyDao.getOptionalValue(
-                NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED, Boolean.class).orElse(false);
-        final var templateOverrideBaseDir = configPropertyDao.getOptionalValue(
-                NOTIFICATION_TEMPLATE_BASE_DIR).orElse(null);
-        if (templateOverrideEnabled && templateOverrideBaseDir == null) {
-            throw new IllegalStateException("%s is enabled but %s is not configured".formatted(
-                    NOTIFICATION_TEMPLATE_DEFAULT_OVERRIDE_ENABLED.getPropertyName(),
-                    NOTIFICATION_TEMPLATE_BASE_DIR.getPropertyName()));
-        }
-
         for (final DefaultNotificationPublishers publisher : DefaultNotificationPublishers.values()) {
-            final URL templateFileUrl = DatabaseSeedingInitTask.class.getResource(publisher.getPublisherTemplateFile());
-            if (templateFileUrl == null) {
-                throw new IllegalStateException("Template file %s of default publisher %s does not exist".formatted(
-                        publisher.getPublisherTemplateFile(), publisher.getPublisherName()));
-            }
-
-            Path templateFilePath;
-            try {
-                templateFilePath = Paths.get(templateFileUrl.toURI());
-            } catch (URISyntaxException e) {
-                throw new IllegalStateException("Failed to construct path for template file: " + templateFileUrl, e);
-            }
-
-            if (templateOverrideEnabled) {
-                final Path customTemplateFilePath = Paths.get(templateOverrideBaseDir, publisher.getPublisherTemplateFile());
-                if (Files.exists(customTemplateFilePath)) {
-                    templateFilePath = customTemplateFilePath;
-                }
-            }
-
             final String templateContent;
-            try {
-                templateContent = Files.readString(templateFilePath);
+            try (final InputStream inputStream =
+                         DatabaseSeedingInitTask.class
+                                 .getResourceAsStream(
+                                         publisher.getPublisherTemplateFile())) {
+                if (inputStream == null) {
+                    throw new IllegalStateException(
+                            "Template file could not be found: " + publisher.getPublisherTemplateFile());
+                }
+                templateContent = new String(inputStream.readAllBytes());
             } catch (IOException e) {
-                throw new IllegalStateException("Failed to read template file: " + templateFilePath, e);
+                throw new UncheckedIOException("Failed to read template file", e);
             }
 
             preparedBatch.bindBean(publisher);

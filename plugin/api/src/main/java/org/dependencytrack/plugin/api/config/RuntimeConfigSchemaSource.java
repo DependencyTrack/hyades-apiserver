@@ -54,7 +54,7 @@ public sealed interface RuntimeConfigSchemaSource {
 
         @Override
         public String getSchema(Class<? extends RuntimeConfig> configClass) {
-            final InputStream inputStream = configClass.getResourceAsStream(resourcePath);
+            final InputStream inputStream = configClass.getClassLoader().getResourceAsStream(resourcePath);
             if (inputStream == null) {
                 throw new NoSuchElementException("No resource found at " + resourcePath);
             }

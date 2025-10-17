@@ -91,7 +91,7 @@ public final class ConfigRegistryImpl implements MutableConfigRegistry {
     public boolean setRuntimeConfig(RuntimeConfig config) {
         requireNonNull(runtimeConfigSpec, "runtimeConfigSpec is not initialized");
         requireNonNull(runtimeConfigMapper, "runtimeConfigMapper is not initialized");
-        requireNonNull(config, "runtimeConfig must not be null");
+        requireNonNull(config, "config must not be null");
 
         if (!runtimeConfigSpec.configClass().isInstance(config)) {
             throw new IllegalArgumentException("""

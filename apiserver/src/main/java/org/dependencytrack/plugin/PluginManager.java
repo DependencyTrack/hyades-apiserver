@@ -80,7 +80,7 @@ public class PluginManager {
     private final SequencedMap<Class<? extends Plugin>, Plugin> loadedPluginByClass;
     private final Map<ExtensionIdentity, Plugin> pluginByExtensionIdentity;
     private final Map<Plugin, List<ExtensionFactory<?>>> factoriesByPlugin;
-    private final Map<Class<? extends ExtensionPoint>, ExtensionPointSpec<?>> specByExtensionPointClass;
+    private final Map<Class<? extends ExtensionPoint>, ExtensionPointSpec> specByExtensionPointClass;
     private final Map<Class<? extends ExtensionPoint>, Set<String>> extensionNamesByExtensionPointClass;
     private final Map<ExtensionIdentity, ExtensionFactory<?>> factoryByExtensionIdentity;
     private final Map<ExtensionIdentity, ConfigRegistry> configRegistryByExtensionIdentity;
@@ -110,7 +110,7 @@ public class PluginManager {
         return INSTANCE;
     }
 
-    public SequencedCollection<ExtensionPointSpec<?>> getExtensionPoints() {
+    public SequencedCollection<ExtensionPointSpec> getExtensionPoints() {
         return List.copyOf(specByExtensionPointClass.values());
     }
 
@@ -232,7 +232,7 @@ public class PluginManager {
                             extensionName, extensionPointClass.getName()));
         }
 
-        final ExtensionPointSpec<?> extensionPointSpec =
+        final ExtensionPointSpec extensionPointSpec =
                 specByExtensionPointClass.get(extensionPointClass);
         return new DatabaseExtensionKVStore(extensionPointSpec.name(), extensionName);
     }
@@ -258,7 +258,7 @@ public class PluginManager {
 
         LOGGER.debug("Discovering extension points");
         final var extensionPointSpecLoader = ServiceLoader.load(ExtensionPointSpec.class);
-        for (final ExtensionPointSpec<?> spec : extensionPointSpecLoader) {
+        for (final ExtensionPointSpec spec : extensionPointSpecLoader) {
             if (!EXTENSION_POINT_NAME_PATTERN.matcher(spec.name()).matches()) {
                 throw new IllegalStateException(
                         "%s is not a valid extension point name".formatted(spec.name()));
@@ -320,7 +320,7 @@ public class PluginManager {
                         extensionFactory.extensionName(), MDC.get(MDC_PLUGIN)));
             }
 
-            final ExtensionPointSpec<?> extensionPointSpec =
+            final ExtensionPointSpec extensionPointSpec =
                     requireKnownExtensionPoint(extensionFactory.extensionClass());
 
             try (var ignored = new MdcScope(Map.ofEntries(
@@ -336,7 +336,7 @@ public class PluginManager {
     private void loadExtension(
             Plugin plugin,
             ExtensionFactory<? extends ExtensionPoint> extensionFactory,
-            ExtensionPointSpec<?> extensionPointSpec) {
+            ExtensionPointSpec extensionPointSpec) {
         final var extensionIdentity = new ExtensionIdentity(
                 extensionPointSpec.extensionPointClass(),
                 extensionFactory.extensionName());
@@ -421,7 +421,7 @@ public class PluginManager {
 
     private void determineDefaultExtensions() {
         for (final Class<? extends ExtensionPoint> extensionPointClass : extensionNamesByExtensionPointClass.keySet()) {
-            final ExtensionPointSpec<?> extensionPointSpec = specByExtensionPointClass.get(extensionPointClass);
+            final ExtensionPointSpec extensionPointSpec = specByExtensionPointClass.get(extensionPointClass);
             if (extensionPointSpec == null) {
                 throw new IllegalStateException("""
                         No specification exists for extension point %s; \
@@ -468,7 +468,7 @@ public class PluginManager {
         }
     }
 
-    private ExtensionPointSpec<?> requireKnownExtensionPoint(Class<? extends ExtensionPoint> concreteExtensionClass) {
+    private ExtensionPointSpec requireKnownExtensionPoint(Class<? extends ExtensionPoint> concreteExtensionClass) {
         for (final Class<? extends ExtensionPoint> extensionPointClass : specByExtensionPointClass.keySet()) {
             if (extensionPointClass.isAssignableFrom(concreteExtensionClass)) {
                 return specByExtensionPointClass.get(extensionPointClass);
@@ -481,7 +481,7 @@ public class PluginManager {
     }
 
     private void assertRequiredExtensionPoints() {
-        for (final ExtensionPointSpec<?> spec : specByExtensionPointClass.values()) {
+        for (final ExtensionPointSpec spec : specByExtensionPointClass.values()) {
             if (!spec.required()) {
                 continue;
             }
@@ -533,7 +533,7 @@ public class PluginManager {
 
         // Close factories in reverse order in which they were initialized.
         for (final ExtensionFactory<?> extensionFactory : factories.reversed()) {
-            final ExtensionPointSpec<?> extensionPointSpec = requireKnownExtensionPoint(extensionFactory.extensionClass());
+            final ExtensionPointSpec extensionPointSpec = requireKnownExtensionPoint(extensionFactory.extensionClass());
 
             final String extensionPointClassName = extensionPointSpec.extensionPointClass().getName();
             final String extensionClassName = extensionFactory.extensionClass().getName();

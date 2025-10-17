@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.plugin.api.config;
 
+import org.jspecify.annotations.Nullable;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -27,19 +29,18 @@ public final class RuntimeConfigSpec {
 
     private final Class<? extends RuntimeConfig> configClass;
     private final RuntimeConfig defaultConfig;
-    private final String configSchema;
+    private final String schema;
 
     public RuntimeConfigSpec(
             RuntimeConfig defaultConfig,
-            RuntimeConfigSchemaSource configSchemaSource) {
+            @Nullable RuntimeConfigSchemaSource schemaSource) {
         this.defaultConfig = requireNonNull(defaultConfig, "defaultConfig must not be null");
         this.configClass = defaultConfig.getClass();
-        requireNonNull(configSchemaSource, "configSchemaSource must not be null");
-        this.configSchema = requireNonNull(configSchemaSource.getSchema(configClass), "configSchema must not be null");
+        this.schema = loadSchema(configClass, schemaSource);
     }
 
     public RuntimeConfigSpec(RuntimeConfig defaultConfig) {
-        this(defaultConfig, new RuntimeConfigSchemaSource.Resource("runtime-config.schema.json"));
+        this(defaultConfig, null);
     }
 
     public Class<? extends RuntimeConfig> configClass() {
@@ -51,7 +52,22 @@ public final class RuntimeConfigSpec {
     }
 
     public String schema() {
-        return configSchema;
+        return schema;
+    }
+
+    private static String loadSchema(
+            Class<? extends RuntimeConfig> configClass,
+            @Nullable RuntimeConfigSchemaSource schemaSource) {
+        final String schema;
+        if (schemaSource != null) {
+            schema = schemaSource.getSchema(configClass);
+        } else {
+            final String schemaResourcePath = "%s.schema.json".formatted(
+                    configClass.getName().replaceAll("\\.", "/"));
+            schema = new RuntimeConfigSchemaSource.Resource(schemaResourcePath).getSchema(configClass);
+        }
+
+        return requireNonNull(schema, "schema must not be null");
     }
 
 }

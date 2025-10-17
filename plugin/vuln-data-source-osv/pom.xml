@@ -127,7 +127,6 @@
                             <sourceDirectory>${basedir}/src/main/resources/org/dependencytrack/datasource/vuln/osv</sourceDirectory>
                             <targetPackage>org.dependencytrack.datasource.vuln.osv</targetPackage>
                             <generateBuilders>true</generateBuilders>
-                            <useTitleAsClassname>true</useTitleAsClassname>
                         </configuration>
                     </execution>
                     <execution>

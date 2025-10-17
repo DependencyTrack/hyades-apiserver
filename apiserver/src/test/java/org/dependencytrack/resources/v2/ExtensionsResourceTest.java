@@ -341,7 +341,7 @@ public class ExtensionsResourceTest extends ResourceTest {
     private interface DummyExtensionPoint extends ExtensionPoint {
     }
 
-    private static class DummyExtensionPointSpec implements ExtensionPointSpec<@NonNull DummyExtensionPoint> {
+    private static class DummyExtensionPointSpec implements ExtensionPointSpec {
 
         private final String name;
 
@@ -360,7 +360,7 @@ public class ExtensionsResourceTest extends ResourceTest {
         }
 
         @Override
-        public @NonNull Class<DummyExtensionPoint> extensionPointClass() {
+        public @NonNull Class<? extends ExtensionPoint> extensionPointClass() {
             return DummyExtensionPoint.class;
         }
 
