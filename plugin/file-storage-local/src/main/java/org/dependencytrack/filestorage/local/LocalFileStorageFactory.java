@@ -60,7 +60,16 @@ final class LocalFileStorageFactory implements FileStorageFactory {
 
     @Override
     public void init(final ExtensionContext ctx) {
-        directoryPath = ctx.configRegistry().getValue(CONFIG_DIRECTORY).normalize().toAbsolutePath();
+        directoryPath = ctx.configRegistry().getValue(CONFIG_DIRECTORY);
+
+        // Legacy behavior: The default data directory is specified as ~/.dependency-track,
+        // but ~ is not resolved by Java's file API. Manual substitution is required.
+        if (directoryPath.toString().startsWith("~")) {
+            final Path userHomePath = Path.of(System.getProperty("user.home"));
+            directoryPath = Path.of(directoryPath.toString().replaceFirst(
+                    "^~", userHomePath.toAbsolutePath().toString()));
+        }
+        directoryPath = directoryPath.normalize().toAbsolutePath();
 
         try {
             Files.createDirectories(directoryPath);
