@@ -25,7 +25,6 @@
         <lib.jaxb.runtime.version>4.0.5</lib.jaxb.runtime.version>
         <lib.kafka.version>3.9.1</lib.kafka.version>
         <lib.micrometer-jvm-extras.version>0.2.2</lib.micrometer-jvm-extras.version>
-        <lib.minio.version>8.5.17</lib.minio.version>
         <lib.kotlin-stdlib.version>2.2.20</lib.kotlin-stdlib.version>
         <lib.parallel-consumer.version>0.5.3.3</lib.parallel-consumer.version>
         <lib.pebble.version>3.2.4</lib.pebble.version>
@@ -96,6 +95,22 @@
         <dependency>
             <groupId>org.dependencytrack</groupId>
             <artifactId>proto</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>file-storage-local</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>file-storage-memory</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dependencytrack</groupId>
+            <artifactId>file-storage-s3</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -386,7 +401,10 @@
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
-            <version>${lib.minio.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-jvm</artifactId>
         </dependency>
 
         <!-- Test Dependencies -->

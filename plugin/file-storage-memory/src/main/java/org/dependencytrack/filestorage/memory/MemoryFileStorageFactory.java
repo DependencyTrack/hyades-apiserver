@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) OWASP Foundation. All Rights Reserved.
  */
-package org.dependencytrack.filestorage;
+package org.dependencytrack.filestorage.memory;
 
 import org.dependencytrack.plugin.api.ExtensionContext;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * @since 5.6.0
  */
-public final class MemoryFileStorageFactory implements FileStorageFactory {
+final class MemoryFileStorageFactory implements FileStorageFactory {
 
     private Map<String, byte[]> fileContentByKey;
 
