@@ -136,6 +136,7 @@
         <lib.testcontainers.version>1.21.3</lib.testcontainers.version>
         <lib.versatile.version>0.7.0</lib.versatile.version>
         <lib.wiremock.version>3.13.1</lib.wiremock.version>
+        <lib.zstd-jni.version>1.5.7-5</lib.zstd-jni.version>
         <!-- Number of JVM processes to use for unit test parallelization -->
         <unitTestForkCount>2</unitTestForkCount>
 
@@ -388,6 +389,12 @@
                 <groupId>org.wiremock</groupId>
                 <artifactId>wiremock-standalone</artifactId>
                 <version>${lib.wiremock.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.github.luben</groupId>
+                <artifactId>zstd-jni</artifactId>
+                <version>${lib.zstd-jni.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

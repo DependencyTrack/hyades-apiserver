@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.filestorage.s3;
 
+import com.github.luben.zstd.ZstdInputStream;
+import com.github.luben.zstd.ZstdOutputStream;
 import io.minio.GetObjectArgs;
 import io.minio.GetObjectResponse;
 import io.minio.MinioClient;
@@ -27,18 +29,18 @@ import io.minio.errors.ErrorResponseException;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.NoSuchFileException;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
+import java.util.concurrent.CompletableFuture;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.plugin.api.filestorage.FileStorage.requireValidFileName;
@@ -52,10 +54,15 @@ final class S3FileStorage implements FileStorage {
 
     private final MinioClient s3Client;
     private final String bucketName;
+    private final int compressionLevel;
 
-    S3FileStorage(final MinioClient s3Client, final String bucketName) {
+    S3FileStorage(
+            final MinioClient s3Client,
+            final String bucketName,
+            final int compressionLevel) {
         this.s3Client = s3Client;
         this.bucketName = bucketName;
+        this.compressionLevel = compressionLevel;
     }
 
     private record S3FileLocation(String bucket, String object) {
@@ -101,26 +108,40 @@ final class S3FileStorage implements FileStorage {
             throw new IllegalStateException(e);
         }
 
-        final var byteArrayOutputStream = new ByteArrayOutputStream();
-        try (final var digestOutputStream = new DigestOutputStream(byteArrayOutputStream, messageDigest);
-             final var gzipOutputStream = new GZIPOutputStream(digestOutputStream)) {
-            contentStream.transferTo(gzipOutputStream);
-        }
+        final var pipedOutputStream = new PipedOutputStream();
+        final var pipedInputStream = new PipedInputStream(pipedOutputStream, 65536 /* (64KiB) */);
 
-        final byte[] compressedContent = byteArrayOutputStream.toByteArray();
+        // Transparently compress in a separate thread so reading the entire contentStream can be avoided.
+        final var compressionFuture = CompletableFuture.runAsync(() -> {
+            try (final var digestOutputStream = new DigestOutputStream(pipedOutputStream, messageDigest);
+                 final var zstdOutputStream = new ZstdOutputStream(digestOutputStream, compressionLevel)) {
+                contentStream.transferTo(zstdOutputStream);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        });
 
         try {
             s3Client.putObject(PutObjectArgs.builder()
                     .bucket(fileLocation.bucket())
                     .object(fileLocation.object())
-                    .stream(new ByteArrayInputStream(compressedContent), compressedContent.length, -1)
+                    .stream(
+                            pipedInputStream,
+                            /* objectSize */ -1,
+                            /* partSize */ 10485760 /* (10MiB) */)
                     .build());
+
+            compressionFuture.join();
         } catch (Exception e) {
+            compressionFuture.cancel(true);
+
             if (e instanceof final IOException ioe) {
                 throw ioe;
             }
 
             throw new IOException(e);
+        } finally {
+            pipedInputStream.close();
         }
 
         return FileMetadata.newBuilder()
@@ -158,7 +179,7 @@ final class S3FileStorage implements FileStorage {
             throw new IOException(e);
         }
 
-        return new GZIPInputStream(response);
+        return new ZstdInputStream(response);
     }
 
     @Override

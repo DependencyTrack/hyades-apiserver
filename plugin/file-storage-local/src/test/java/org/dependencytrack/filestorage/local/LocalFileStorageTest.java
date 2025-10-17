@@ -34,7 +34,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.filestorage.local.LocalFileStorageFactory.CONFIG_DIRECTORY;
+import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_DIRECTORY;
 
 class LocalFileStorageTest {
 
@@ -73,7 +73,7 @@ class LocalFileStorageTest {
         assertThat(fileMetadata).isNotNull();
         assertThat(fileMetadata.getLocation()).isEqualTo("local:///foo/bar");
         assertThat(fileMetadata.getMediaType()).isEqualTo("application/octet-stream");
-        assertThat(fileMetadata.getSha256Digest()).isEqualTo("907533ab5846b12a6ef7a1f2ac1c0168f652dcecf4f6a54c1286ba2ef8a82579");
+        assertThat(fileMetadata.getSha256Digest()).isEqualTo("018e647e32f8c2b320b731ddd7de9842616209d93a3aeeea985a48b7fe0e5eda");
 
         assertThat(tempDirPath.resolve("foo/bar")).exists();
 

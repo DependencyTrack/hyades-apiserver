@@ -39,10 +39,10 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.dependencytrack.filestorage.s3.S3FileStorageFactory.CONFIG_ACCESS_KEY;
-import static org.dependencytrack.filestorage.s3.S3FileStorageFactory.CONFIG_BUCKET;
-import static org.dependencytrack.filestorage.s3.S3FileStorageFactory.CONFIG_ENDPOINT;
-import static org.dependencytrack.filestorage.s3.S3FileStorageFactory.CONFIG_SECRET_KEY;
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_ACCESS_KEY;
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_BUCKET;
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_ENDPOINT;
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_SECRET_KEY;
 
 class S3FileStorageTest {
 
@@ -136,7 +136,7 @@ class S3FileStorageTest {
             final FileMetadata fileMetadata = storage.store("foo/bar", new ByteArrayInputStream("baz".getBytes()));
             assertThat(fileMetadata.getLocation()).isEqualTo("s3://test/foo/bar");
             assertThat(fileMetadata.getMediaType()).isEqualTo("application/octet-stream");
-            assertThat(fileMetadata.getSha256Digest()).isEqualTo("907533ab5846b12a6ef7a1f2ac1c0168f652dcecf4f6a54c1286ba2ef8a82579");
+            assertThat(fileMetadata.getSha256Digest()).isEqualTo("018e647e32f8c2b320b731ddd7de9842616209d93a3aeeea985a48b7fe0e5eda");
 
             final InputStream fileStream = storage.get(fileMetadata);
             assertThat(fileStream).isNotNull();

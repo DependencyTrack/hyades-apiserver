@@ -18,6 +18,8 @@
  */
 package org.dependencytrack.filestorage.local;
 
+import com.github.luben.zstd.ZstdInputStream;
+import com.github.luben.zstd.ZstdOutputStream;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.proto.filestorage.v1.FileMetadata;
 import org.slf4j.Logger;
@@ -34,8 +36,6 @@ import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 import static java.util.Objects.requireNonNull;
 import static org.dependencytrack.plugin.api.filestorage.FileStorage.requireValidFileName;
@@ -49,9 +49,11 @@ final class LocalFileStorage implements FileStorage {
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorage.class);
 
     private final Path baseDirPath;
+    private final int compressionLevel;
 
-    LocalFileStorage(final Path baseDirPath) {
+    LocalFileStorage(final Path baseDirPath, final int compressionLevel) {
         this.baseDirPath = baseDirPath;
+        this.compressionLevel = compressionLevel;
     }
 
     @Override
@@ -81,8 +83,8 @@ final class LocalFileStorage implements FileStorage {
         try (final var fileOutputStream = Files.newOutputStream(filePath);
              final var bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
              final var digestOutputStream = new DigestOutputStream(bufferedOutputStream, messageDigest);
-             final var gzipOutputStream = new GZIPOutputStream(digestOutputStream)) {
-            contentStream.transferTo(gzipOutputStream);
+             final var zstdOutputStream = new ZstdOutputStream(digestOutputStream, compressionLevel)) {
+            contentStream.transferTo(zstdOutputStream);
         }
 
         return FileMetadata.newBuilder()
@@ -98,7 +100,7 @@ final class LocalFileStorage implements FileStorage {
 
         final Path filePath = resolveFilePath(fileMetadata);
 
-        return new GZIPInputStream(Files.newInputStream(filePath, StandardOpenOption.READ));
+        return new ZstdInputStream(Files.newInputStream(filePath, StandardOpenOption.READ));
     }
 
     @Override

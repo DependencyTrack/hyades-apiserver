@@ -18,19 +18,25 @@
  */
 package org.dependencytrack.filestorage.s3;
 
+import com.github.luben.zstd.Zstd;
 import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
 import okhttp3.OkHttpClient;
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.config.ConfigDefinition;
-import org.dependencytrack.plugin.api.config.ConfigTypes;
-import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
+
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_ACCESS_KEY;
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_BUCKET;
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_COMPRESSION_LEVEL;
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_COMPRESSION_LEVEL_DEFAULT;
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_ENDPOINT;
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_REGION;
+import static org.dependencytrack.filestorage.s3.S3FileStorageConfigs.CONFIG_SECRET_KEY;
 
 /**
  * @since 5.6.0
@@ -39,19 +45,9 @@ public final class S3FileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3FileStorageFactory.class);
 
-    static final ConfigDefinition<String> CONFIG_ENDPOINT =
-            new DeploymentConfigDefinition<>("endpoint", ConfigTypes.STRING, /* isRequired */ true);
-    static final ConfigDefinition<String> CONFIG_BUCKET =
-            new DeploymentConfigDefinition<>("bucket", ConfigTypes.STRING, /* isRequired */ true);
-    static final ConfigDefinition<String> CONFIG_ACCESS_KEY =
-            new DeploymentConfigDefinition<>("access.key", ConfigTypes.STRING, /* isRequired */ false);
-    static final ConfigDefinition<String> CONFIG_SECRET_KEY =
-            new DeploymentConfigDefinition<>("secret.key", ConfigTypes.STRING, /* isRequired */ false);
-    static final ConfigDefinition<String> CONFIG_REGION =
-            new DeploymentConfigDefinition<>("region", ConfigTypes.STRING, /* isRequired */ false);
-
     private MinioClient s3Client;
     private String bucketName;
+    private int compressionLevel;
 
     @Override
     public String extensionName() {
@@ -91,11 +87,22 @@ public final class S3FileStorageFactory implements FileStorageFactory {
 
         LOGGER.debug("Verifying existence of bucket {}", bucketName);
         requireBucketExists(s3Client, bucketName);
+
+        compressionLevel = ctx.configRegistry()
+                .getOptionalValue(CONFIG_COMPRESSION_LEVEL)
+                .orElse(CONFIG_COMPRESSION_LEVEL_DEFAULT);
+        if (compressionLevel < Zstd.minCompressionLevel() || compressionLevel > Zstd.maxCompressionLevel()) {
+            throw new IllegalStateException(
+                    "Invalid compression level: must be between %d and %d, but is %d".formatted(
+                            Zstd.minCompressionLevel(),
+                            Zstd.maxCompressionLevel(),
+                            compressionLevel));
+        }
     }
 
     @Override
     public FileStorage create() {
-        return new S3FileStorage(s3Client, bucketName);
+        return new S3FileStorage(s3Client, bucketName, compressionLevel);
     }
 
     @Override

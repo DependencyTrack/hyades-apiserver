@@ -18,10 +18,8 @@
  */
 package org.dependencytrack.filestorage.local;
 
+import com.github.luben.zstd.Zstd;
 import org.dependencytrack.plugin.api.ExtensionContext;
-import org.dependencytrack.plugin.api.config.ConfigDefinition;
-import org.dependencytrack.plugin.api.config.ConfigTypes;
-import org.dependencytrack.plugin.api.config.DeploymentConfigDefinition;
 import org.dependencytrack.plugin.api.filestorage.FileStorage;
 import org.dependencytrack.plugin.api.filestorage.FileStorageFactory;
 import org.slf4j.Logger;
@@ -31,6 +29,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_COMPRESSION_LEVEL;
+import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_COMPRESSION_LEVEL_DEFAULT;
+import static org.dependencytrack.filestorage.local.LocalFileStorageConfigs.CONFIG_DIRECTORY;
+
 /**
  * @since 5.6.0
  */
@@ -38,10 +40,8 @@ final class LocalFileStorageFactory implements FileStorageFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocalFileStorageFactory.class);
 
-    static final ConfigDefinition<Path> CONFIG_DIRECTORY =
-            new DeploymentConfigDefinition<>("directory", ConfigTypes.PATH, /* isRequired */ true);
-
     private Path directoryPath;
+    private int compressionLevel;
 
     @Override
     public String extensionName() {
@@ -87,12 +87,23 @@ final class LocalFileStorageFactory implements FileStorageFactory {
                             directoryPath, canRead, canWrite));
         }
 
+        compressionLevel = ctx.configRegistry()
+                .getOptionalValue(CONFIG_COMPRESSION_LEVEL)
+                .orElse(CONFIG_COMPRESSION_LEVEL_DEFAULT);
+        if (compressionLevel < Zstd.minCompressionLevel() || compressionLevel > Zstd.maxCompressionLevel()) {
+            throw new IllegalStateException(
+                    "Invalid compression level: must be between %d and %d, but is %d".formatted(
+                            Zstd.minCompressionLevel(),
+                            Zstd.maxCompressionLevel(),
+                            compressionLevel));
+        }
+
         LOGGER.debug("Files will be stored in {}", directoryPath);
     }
 
     @Override
     public FileStorage create() {
-        return new LocalFileStorage(directoryPath);
+        return new LocalFileStorage(directoryPath, compressionLevel);
     }
 
 }
