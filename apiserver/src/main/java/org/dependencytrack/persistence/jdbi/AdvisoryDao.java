@@ -27,7 +27,8 @@ import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import java.util.List;
 
 /**
- * JDBI Data Access Object for performing operations on {@link Advisory} objects.
+ * JDBI Data Access Object for performing operations on {@link Advisory}
+ * objects.
  */
 public interface AdvisoryDao {
 
@@ -45,20 +46,20 @@ public interface AdvisoryDao {
             int projectId,
             String url,
             int documentId,
-            int findingsPerDoc
-    ) {
+            int findingsPerDoc) {
     }
 
     record VulnerabilityRow(
             String id,
             String source,
-            String vulnId
-    ) {
+            String vulnId,
+            String title,
+            String severity) {
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-            
+
             SELECT "TITLE" AS "name"
                  , "PROJECT_ID" AS "projectId"
                  , "URL" AS "url"
@@ -70,7 +71,7 @@ public interface AdvisoryDao {
             INNER JOIN "ADVISORY" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
             WHERE "PROJECT_ID" = :projectId
             GROUP BY "ADVISORY_ID", "TITLE", "URL", "PROJECT_ID"
-            
+
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(AdvisoryInProjectRow.class)
@@ -80,8 +81,7 @@ public interface AdvisoryDao {
             Advisory entity,
             List<ProjectRow> affectedProjects,
             long numAffectedComponents,
-            List<AdvisoryDao.VulnerabilityRow> vulnerabilities
-    ) {
+            List<AdvisoryDao.VulnerabilityRow> vulnerabilities) {
     }
 
     record ProjectRow(
@@ -89,27 +89,26 @@ public interface AdvisoryDao {
             String name,
             String uuid,
             String desc,
-            String version
-    ) {
+            String version) {
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-            
+
             SELECT DISTINCT "PROJECT_ID" AS "id",
             "PROJECT"."NAME" AS "name",
             "PROJECT"."UUID" AS "uuid",
             "PROJECT"."DESCRIPTION" AS "desc",
             "PROJECT"."VERSION" AS "version"
             --Latest,Classifier,Last BOM Import,BOM Format,Risk Score,Active,Policy Violations,Vulnerabilities
-            
+
             FROM "FINDINGATTRIBUTION"
             INNER JOIN "ADVISORIES_VULNERABILITIES"
             ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
             INNER JOIN "ADVISORY" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
             INNER JOIN "PROJECT" ON "PROJECT_ID" = "PROJECT"."ID"
             WHERE "ADVISORY_ID" = :advisoryId
-            
+
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(AdvisoryDao.ProjectRow.class)
@@ -117,16 +116,18 @@ public interface AdvisoryDao {
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-            
+
             SELECT DISTINCT "VULNERABILITY"."ID" AS "id",
-            "SOURCE" AS "source",
-            "VULNID" AS "vulnId"
-            
+            "VULNERABILITY"."SOURCE" AS "source",
+            "VULNERABILITY"."VULNID" AS "vulnId",
+            "VULNERABILITY"."TITLE" AS "title",
+            "VULNERABILITY"."SEVERITY" AS "severity"
+
             FROM "ADVISORIES_VULNERABILITIES"
             INNER JOIN "ADVISORY" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
             INNER JOIN "VULNERABILITY" ON "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID" = "VULNERABILITY"."ID"
             WHERE "ADVISORY_ID" = :advisoryId
-            
+
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(AdvisoryDao.VulnerabilityRow.class)
@@ -134,7 +135,7 @@ public interface AdvisoryDao {
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-            
+
             SELECT COALESCE(COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID"), 0) AS "findingsWithAnalysis"
             FROM "FINDINGATTRIBUTION"
             INNER JOIN "ADVISORIES_VULNERABILITIES"
@@ -142,20 +143,20 @@ public interface AdvisoryDao {
             INNER JOIN "ANALYSIS" ON
             "FINDINGATTRIBUTION"."PROJECT_ID" = "ANALYSIS"."PROJECT_ID"
             WHERE "ADVISORY_ID" = :advisoryId
-            
+
              ${apiOffsetLimitClause!}
             """)
     Long getAmountFindingsMarked(long advisoryId);
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-            
+
             SELECT COALESCE(COUNT(DISTINCT "FINDINGATTRIBUTION"."COMPONENT_ID"), 0) AS "findingsWithAnalysis"
             FROM "FINDINGATTRIBUTION"
             INNER JOIN "ADVISORIES_VULNERABILITIES"
             ON "FINDINGATTRIBUTION"."VULNERABILITY_ID" = "ADVISORIES_VULNERABILITIES"."VULNERABILITY_ID"
             WHERE "ADVISORY_ID" = :advisoryId
-            
+
              ${apiOffsetLimitClause!}
             """)
     Long getAmountFindingsTotal(long advisoryId);
@@ -170,15 +171,14 @@ public interface AdvisoryDao {
             String name,
             String version,
             int affectedComponents,
-            int affectedProjects
-    ) {
+            int affectedProjects) {
     }
 
     @AllowUnusedBindings
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOrderByClause" type="String" -->
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-            
+
             SELECT "ADVISORY"."ID" AS "id",
                    "ADVISORY"."TITLE" AS "title",
                    "ADVISORY"."URL" AS "url",
@@ -196,7 +196,7 @@ public interface AdvisoryDao {
             AND (:format IS NULL OR "ADVISORY"."FORMAT" = :format)
             AND (:searchText IS NULL OR "ADVISORY"."searchvector" @@ websearch_to_tsquery(:searchText))
             GROUP BY "ADVISORY"."ID", "ADVISORY"."TITLE", "ADVISORY"."URL", "ADVISORY"."SEEN", "ADVISORY"."LASTFETCHED", "ADVISORY"."PUBLISHER", "ADVISORY"."NAME", "ADVISORY"."VERSION"
-            
+
              ${apiOrderByClause!}
              ${apiOffsetLimitClause!}
             """)
@@ -232,13 +232,12 @@ public interface AdvisoryDao {
             String desc,
             String group,
             String version,
-            String componentUuid
-    ) {
+            String componentUuid) {
     }
 
     @SqlQuery(/* language=InjectedFreeMarker */ """
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
-            
+
             SELECT "COMPONENT"."NAME" AS "name"
                , "MATCHING_PERCENTAGE" AS "confidence"
                , "DESCRIPTION" AS "desc"
@@ -252,10 +251,11 @@ public interface AdvisoryDao {
             INNER JOIN "ADVISORY" ON "ADVISORIES_VULNERABILITIES"."ADVISORY_ID" = "ADVISORY"."ID"
             WHERE "FINDINGATTRIBUTION"."PROJECT_ID" = :projectId
             AND "ADVISORY_ID" = :advisoryId
-            
+
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(AdvisoryDao.ProjectAdvisoryFinding.class)
-    List<AdvisoryDao.ProjectAdvisoryFinding> getFindingsByProjectAdvisory(@Bind long projectId, @Bind long advisoryId);
+    List<AdvisoryDao.ProjectAdvisoryFinding> getFindingsByProjectAdvisory(@Bind long projectId,
+            @Bind long advisoryId);
 
 }
