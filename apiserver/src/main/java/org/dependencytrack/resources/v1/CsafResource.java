@@ -241,7 +241,7 @@ public class CsafResource extends AbstractApiResource {
     @Operation(summary = "Returns a list of CSAF documents", description = "<p>Requires permission <strong>VULNERABILITY_ANALYSIS_READ</strong></p>")
     @PaginatedApi
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "A list of CSAF documents", headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of advisories"), content = @Content(array = @ArraySchema(schema = @Schema(implementation = Advisory.class)))),
+            @ApiResponse(responseCode = "200", description = "A list of CSAF documents", headers = @Header(name = TOTAL_COUNT_HEADER, description = "The total number of advisories", schema = @Schema(format = "integer")), content = @Content(array = @ArraySchema(schema = @Schema(implementation = Advisory.class)))),
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_READ)

@@ -211,10 +211,6 @@ public class Advisory implements Serializable {
         this.lastFetched = lastFetched;
     }
 
-    public void setLastFetched(java.sql.Timestamp lastFetched) {
-        setLastFetched(lastFetched.toInstant());
-    }
-
     public java.util.List<Vulnerability> getVulnerabilities() {
         return vulnerabilities;
     }

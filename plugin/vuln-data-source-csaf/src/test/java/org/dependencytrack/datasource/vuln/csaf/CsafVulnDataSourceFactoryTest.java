@@ -89,7 +89,7 @@ class CsafVulnDataSourceFactoryTest {
     void createShouldReturnDataSource() throws Exception {
         final var configRegistry = new MockConfigRegistry();
         configRegistry.setValue(CONFIG_ENABLED, true);
-        configRegistry.setValue(CONFIG_SOURCES, "{ \"sources\": [ { \"url\": \"https://example.com/csaf.json\", \"name\": \"test\"} ] }");
+        configRegistry.setValue(CONFIG_SOURCES, "[ { \"url\": \"https://example.com/csaf.json\", \"name\": \"test\"} ]");
 
         try (final var dataSourceFactory = new CsafVulnDataSourceFactory()) {
             dataSourceFactory.init(new ExtensionContext(configRegistry));
