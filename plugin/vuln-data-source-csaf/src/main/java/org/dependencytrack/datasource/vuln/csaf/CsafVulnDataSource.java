@@ -39,7 +39,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
-import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.*;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_PROVIDER_ID;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_UPDATED;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.extractProperty;
 
 /**
  * A Vulnerability Data Source that retrieves and processes CSAF documents from configured sources.

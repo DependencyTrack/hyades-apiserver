@@ -1,3 +1,21 @@
+/*
+ * This file is part of Dependency-Track.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) OWASP Foundation. All Rights Reserved.
+ */
 package org.dependencytrack.datasource.vuln.csaf;
 
 import com.google.protobuf.Timestamp;
@@ -30,8 +48,20 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static org.cyclonedx.proto.v1_6.Severity.*;
-import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.*;
+import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_CRITICAL;
+import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_HIGH;
+import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_LOW;
+import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_MEDIUM;
+import static org.cyclonedx.proto.v1_6.Severity.SEVERITY_UNKNOWN;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_FORMAT;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_JSON;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_NAME;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_PROVIDER_ID;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_PUBLISHER_NAMESPACE;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_TITLE;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_UPDATED;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_URL;
+import static org.dependencytrack.datasource.vuln.csaf.CycloneDxPropertyNames.PROPERTY_ADVISORY_VERSION;
 
 /**
  * This class takes care of converting a CSAF document to a CycloneDX BOM.
