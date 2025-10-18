@@ -245,7 +245,7 @@ public class CsafResource extends AbstractApiResource {
             @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     @PermissionRequired(Permissions.Constants.VULNERABILITY_ANALYSIS_READ)
-    public Response getCsafDocuments(@QueryParam("searchText") String searchText, @QueryParam("pageSize") int pageSize, @QueryParam("pageNumber") int pageNumber, @QueryParam("sortName") String sortName, @QueryParam("sortOrder") String sortOrder) {
+    public Response getCsafDocuments(@QueryParam("searchText") String searchText) {
         // normalize search term: trim and treat empty as null so DAO SQL conditional behaves predictably
         final String searchParam = (searchText == null || searchText.trim().isEmpty()) ? null : searchText.trim();
 

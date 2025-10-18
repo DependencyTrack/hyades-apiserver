@@ -176,6 +176,7 @@ public interface AdvisoryDao {
 
     @AllowUnusedBindings
     @SqlQuery(/* language=InjectedFreeMarker */ """
+            <#-- @ftlvariable name="apiOrderByClause" type="String" -->
             <#-- @ftlvariable name="apiOffsetLimitClause" type="String" -->
             
             SELECT "ADVISORY"."ID" AS "id",
@@ -196,6 +197,7 @@ public interface AdvisoryDao {
             AND (:searchText IS NULL OR "ADVISORY"."searchvector" @@ websearch_to_tsquery(:searchText))
             GROUP BY "ADVISORY"."ID", "ADVISORY"."TITLE", "ADVISORY"."URL", "ADVISORY"."SEEN", "ADVISORY"."LASTFETCHED", "ADVISORY"."PUBLISHER", "ADVISORY"."NAME", "ADVISORY"."VERSION"
             
+             ${apiOrderByClause!}
              ${apiOffsetLimitClause!}
             """)
     @RegisterConstructorMapper(AdvisoryDetailRow.class)

@@ -28,6 +28,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import alpine.persistence.OrderDirection;
+import alpine.resources.AlpineRequest;
+
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -35,6 +38,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.dependencytrack.model.Vulnerability.Source.CSAF;
 import static org.dependencytrack.persistence.jdbi.JdbiFactory.openJdbiHandle;
+import static org.dependencytrack.persistence.jdbi.JdbiFactory.withJdbiHandle;
 
 public class AdvisoryDaoTest extends PersistenceCapableTest {
 
@@ -168,13 +172,39 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         createAdvisory("Alpha Advisory", "CSAF", "pub2", "ADV-002", "1.0");
         createAdvisory("Gamma Advisory", "CSAF", "pub3", "ADV-003", "1.0");
 
-        // Get advisories and check default ordering (should be by id)
+        // Get advisories without sorting - verify all are present
         List<AdvisoryDao.AdvisoryDetailRow> results = advisoryDao.getAllAdvisories("CSAF", null);
         assertThat(results).hasSize(3);
-
-        // Verify results contain all three advisories
         assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::title)
                 .containsExactlyInAnyOrder("Zebra Advisory", "Alpha Advisory", "Gamma Advisory");
+
+        // Test sorting by title ascending
+        final var ascRequest = new AlpineRequest(
+                /* principal */ null,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ "title",
+                /* orderDirection */ OrderDirection.ASCENDING
+        );
+        results = withJdbiHandle(ascRequest, handle ->
+                handle.attach(AdvisoryDao.class).getAllAdvisories("CSAF", null)
+        );
+        assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::title)
+                .containsExactly("Alpha Advisory", "Gamma Advisory", "Zebra Advisory");
+
+        // Test sorting by title descending
+        final var descRequest = new AlpineRequest(
+                /* principal */ null,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ "title",
+                /* orderDirection */ OrderDirection.DESCENDING
+        );
+        results = withJdbiHandle(descRequest, handle ->
+                handle.attach(AdvisoryDao.class).getAllAdvisories("CSAF", null)
+        );
+        assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::title)
+                .containsExactly("Zebra Advisory", "Gamma Advisory", "Alpha Advisory");
     }
 
     @Test
@@ -184,12 +214,39 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         createAdvisory("Title 2", "CSAF", "pub2", "AAA-002", "1.0");
         createAdvisory("Title 3", "CSAF", "pub3", "MMM-003", "1.0");
 
+        // Verify all advisories are returned without sorting
         List<AdvisoryDao.AdvisoryDetailRow> results = advisoryDao.getAllAdvisories("CSAF", null);
         assertThat(results).hasSize(3);
-
-        // Verify all advisories are returned
         assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::name)
                 .containsExactlyInAnyOrder("ZZZ-001", "AAA-002", "MMM-003");
+
+        // Test sorting by name ascending
+        final var ascRequest = new AlpineRequest(
+                /* principal */ null,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ "name",
+                /* orderDirection */ OrderDirection.ASCENDING
+        );
+        results = withJdbiHandle(ascRequest, handle ->
+                handle.attach(AdvisoryDao.class).getAllAdvisories("CSAF", null)
+        );
+        assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::name)
+                .containsExactly("AAA-002", "MMM-003", "ZZZ-001");
+
+        // Test sorting by name descending
+        final var descRequest = new AlpineRequest(
+                /* principal */ null,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ "name",
+                /* orderDirection */ OrderDirection.DESCENDING
+        );
+        results = withJdbiHandle(descRequest, handle ->
+                handle.attach(AdvisoryDao.class).getAllAdvisories("CSAF", null)
+        );
+        assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::name)
+                .containsExactly("ZZZ-001", "MMM-003", "AAA-002");
     }
 
     @Test
@@ -199,11 +256,39 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         createAdvisory("Advisory 2", "CSAF", "alpha-corp", "ADV-002", "1.0");
         createAdvisory("Advisory 3", "CSAF", "beta-corp", "ADV-003", "1.0");
 
+        // Verify all advisories are returned without sorting
         List<AdvisoryDao.AdvisoryDetailRow> results = advisoryDao.getAllAdvisories("CSAF", null);
         assertThat(results).hasSize(3);
-
         assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::publisher)
                 .containsExactlyInAnyOrder("zebra-corp", "alpha-corp", "beta-corp");
+
+        // Test sorting by publisher ascending
+        final var ascRequest = new AlpineRequest(
+                /* principal */ null,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ "publisher",
+                /* orderDirection */ OrderDirection.ASCENDING
+        );
+        results = withJdbiHandle(ascRequest, handle ->
+                handle.attach(AdvisoryDao.class).getAllAdvisories("CSAF", null)
+        );
+        assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::publisher)
+                .containsExactly("alpha-corp", "beta-corp", "zebra-corp");
+
+        // Test sorting by publisher descending
+        final var descRequest = new AlpineRequest(
+                /* principal */ null,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ "publisher",
+                /* orderDirection */ OrderDirection.DESCENDING
+        );
+        results = withJdbiHandle(descRequest, handle ->
+                handle.attach(AdvisoryDao.class).getAllAdvisories("CSAF", null)
+        );
+        assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::publisher)
+                .containsExactly("zebra-corp", "beta-corp", "alpha-corp");
     }
 
     @Test
@@ -213,11 +298,39 @@ public class AdvisoryDaoTest extends PersistenceCapableTest {
         createAdvisory("Advisory B", "CSAF", "pub", "ADV-001", "1.0");
         createAdvisory("Advisory C", "CSAF", "pub", "ADV-001", "2.0");
 
+        // Verify all advisories are returned without sorting
         List<AdvisoryDao.AdvisoryDetailRow> results = advisoryDao.getAllAdvisories("CSAF", null);
         assertThat(results).hasSize(3);
-
         assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::version)
                 .containsExactlyInAnyOrder("3.0", "1.0", "2.0");
+
+        // Test sorting by version ascending
+        final var ascRequest = new AlpineRequest(
+                /* principal */ null,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ "version",
+                /* orderDirection */ OrderDirection.ASCENDING
+        );
+        results = withJdbiHandle(ascRequest, handle ->
+                handle.attach(AdvisoryDao.class).getAllAdvisories("CSAF", null)
+        );
+        assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::version)
+                .containsExactly("1.0", "2.0", "3.0");
+
+        // Test sorting by version descending
+        final var descRequest = new AlpineRequest(
+                /* principal */ null,
+                /* pagination */ null,
+                /* filter */ null,
+                /* orderBy */ "version",
+                /* orderDirection */ OrderDirection.DESCENDING
+        );
+        results = withJdbiHandle(descRequest, handle ->
+                handle.attach(AdvisoryDao.class).getAllAdvisories("CSAF", null)
+        );
+        assertThat(results).extracting(AdvisoryDao.AdvisoryDetailRow::version)
+                .containsExactly("3.0", "2.0", "1.0");
     }
 
     @Test
